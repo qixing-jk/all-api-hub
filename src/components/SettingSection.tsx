@@ -108,9 +108,16 @@ export function SettingSection({
 
   return (
     <>
-      <section id={id} className={`space-y-density-6 ${className}`.trim()}>
+      <section
+        id={id}
+        data-slot="setting-section"
+        className={`space-y-density-6 ${className}`.trim()}
+      >
         {actions || titleActions ? (
-          <div className="space-y-density-1-5">
+          <div
+            data-slot="setting-section-header"
+            className="space-y-density-1-5"
+          >
             <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-4">
               <div className="gap-y-density-1 flex min-w-0 flex-wrap items-baseline gap-x-2">
                 <Heading3>{title}</Heading3>
@@ -124,7 +131,10 @@ export function SettingSection({
             {description && <BodySmall>{description}</BodySmall>}
           </div>
         ) : (
-          <div className="gap-y-density-4 flex items-start justify-between gap-x-4">
+          <div
+            data-slot="setting-section-header"
+            className="gap-y-density-4 flex items-start justify-between gap-x-4"
+          >
             <div className="space-y-density-1-5 flex-1">
               <Heading3>{title}</Heading3>
               {description && <BodySmall>{description}</BodySmall>}

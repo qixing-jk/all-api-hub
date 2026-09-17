@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "API 認証情報庫からチャネルを取り込む",
       "title": "セルフホスト AI ゲートウェイチャネルがまだありません"
     },
-    "headerDescription": "セルフホスト AI ゲートウェイのチャネルを管理し、複数のアカウントキーや API キーを 1 つの AI API にまとめます。",
+    "headerDescription": "自前の AI ゲートウェイのチャネルを管理し、複数の API 接続先を一つの窓口にまとめます。",
     "openChannelConsole": "ゲートウェイのチャネル管理を開く",
     "unconfiguredValueDescription": "設定後は、分散しているアカウントキーや API キーをゲートウェイチャネルとして取り込み、All API Hub で直接確認・管理できます。"
   },

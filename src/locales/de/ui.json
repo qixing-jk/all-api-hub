@@ -1,6 +1,5 @@
 {
   "app": {
-    "description": "Verwalten Sie KI-Relays sowie Ihre Konten und Guthaben an einem Ort",
     "name": "All API Hub"
   },
   "billing": {

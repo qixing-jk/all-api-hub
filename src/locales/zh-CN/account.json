@@ -93,7 +93,7 @@
   "currentLoginAdded": "⚠️{{siteName}} 的当前登录账号已在列表中",
   "currentSiteAdded": "⚠️{{siteName}} 已有账号",
   "currentSiteAddedCount": "⚠️当前站点已有 {{count}} 个账号",
-  "description": "集中管理站点账号，查看余额、健康状态、API Key 与使用情况。",
+  "description": "管理站点账号，查看余额、用量与健康状态。",
   "emptyState": "暂无站点账号",
   "emptyStateDescription": "添加账号后，可以集中查看余额、健康状态、API Key 和使用情况。",
   "filter": {

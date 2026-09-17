@@ -54,7 +54,7 @@ function SearchTrigger({
       type="button"
       onClick={onClick}
       className={cn(
-        "dark:bg-background dark:hover:bg-secondary border-border bg-surface-subtle hover:bg-muted flex h-(--density-control-lg) w-full items-center justify-between rounded-md border px-4 text-left transition-colors",
+        "border-border/70 bg-surface-subtle hover:border-border-strong hover:bg-muted focus-visible:ring-ring flex h-(--density-control-lg) w-full items-center justify-between gap-2 rounded-xl border px-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         className,
       )}
       aria-label={ariaLabel}
@@ -67,7 +67,7 @@ function SearchTrigger({
         <span className="truncate">{placeholder}</span>
       </span>
       {showShortcutHint ? (
-        <span className="border-border bg-card text-muted-foreground dark:border-foreground/10 dark:bg-foreground/5 rounded-md border px-2 py-0.5 text-xs">
+        <span className="border-border bg-card text-muted-foreground shrink-0 rounded-md border px-1.5 py-0.5 text-xs shadow-xs">
           {navigator.platform.includes("Mac") ? "Cmd+K" : "Ctrl+K"}
         </span>
       ) : null}
@@ -121,11 +121,11 @@ function Header({
   return (
     <header
       className={cn(
-        "border-border bg-card sticky top-0 h-(--options-header-height) border-b shadow-sm",
+        "border-workspace-border bg-workspace sticky top-0 h-(--options-header-height) border-b",
         Z_INDEX.pageHeader,
       )}
     >
-      <div className="mx-auto h-full px-2 sm:px-4 md:px-6 lg:px-8">
+      <div className="mx-auto h-full px-2 sm:px-4 md:px-5">
         <div className="gap-y-density-2 flex h-full items-center gap-x-2">
           <div
             className={cn(
@@ -153,23 +153,24 @@ function Header({
             </IconButton>
 
             {/* 插件图标和名称 */}
-            <div className="tap-highlight-transparent flex min-w-0 touch-manipulation items-center space-x-2 sm:space-x-3">
+            <div className="tap-highlight-transparent @container flex min-w-7.5 flex-1 touch-manipulation items-center gap-x-2 sm:min-w-8.5 sm:gap-x-3">
               <button
                 type="button"
                 onClick={onTitleClick}
-                className="tap-highlight-transparent focus-visible:ring-ring touch-manipulation rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="tap-highlight-transparent focus-visible:ring-ring shrink-0 touch-manipulation rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 aria-label={t("app.name")}
+                title={t("app.name")}
               >
                 <img
                   src={iconImage}
                   alt={t("app.name")}
-                  className="h-7.5 w-7.5 rounded-lg shadow-sm sm:h-8.5 sm:w-8.5"
+                  className="h-7.5 w-7.5 rounded-lg object-contain shadow-sm sm:h-8.5 sm:w-8.5"
                 />
               </button>
               {!showMobileExpandedSearch ? (
-                <div className="min-w-0">
+                <div className="hidden min-w-0 @min-[8rem]:block">
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <Heading5 className="text-foreground truncate text-sm leading-tight font-semibold sm:text-lg">
+                    <Heading5 className="text-foreground truncate text-sm leading-tight font-semibold tracking-tight sm:text-lg">
                       <a
                         href={repositoryUrl}
                         target="_blank"
@@ -191,12 +192,11 @@ function Header({
               ) : null}
             </div>
           </div>
-          <div className="ml-3 hidden min-w-0 flex-1 md:flex">
+          <div className="mr-3 ml-auto hidden w-60 min-w-0 md:flex lg:w-72">
             <SearchTrigger
               onClick={onSearchOpen}
               ariaLabel={t("optionsSearch.open")}
               placeholder={t("optionsSearch.placeholder")}
-              className="max-w-md"
               productTourTarget={PRODUCT_TOUR_TARGETS.Workspace}
             />
           </div>
@@ -213,7 +213,7 @@ function Header({
 
           <div
             className={cn(
-              "gap-y-density-1-5 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1.5 sm:gap-x-2",
+              "flex shrink-0 items-center gap-1 sm:gap-2",
               showMobileExpandedSearch && "hidden md:flex",
             )}
           >
@@ -221,17 +221,15 @@ function Header({
             <IconButton
               onClick={onSearchOpen}
               variant="ghost"
-              size="default"
+              size="sm"
               className="md:hidden"
               aria-label={t("optionsSearch.open")}
             >
               <Search className="h-5 w-5" />
             </IconButton>
-            <div className="flex items-center gap-x-1.5 sm:gap-x-2">
-              <ProductAnnouncementButton surface="options-header" />
-              <FeedbackDropdownMenu language={i18n.language} />
-            </div>
-            <div className="border-border flex items-center gap-x-1.5 sm:gap-x-2 sm:border-s sm:ps-2">
+            <ProductAnnouncementButton surface="options-header" />
+            <FeedbackDropdownMenu language={i18n.language} />
+            <div className="border-border flex items-center gap-1 sm:gap-2 sm:border-s sm:ps-3">
               <LanguageSwitcher variant="icon-dropdown" />
               <HeaderThemeSwitcher />
               <HeaderAppearanceButton />

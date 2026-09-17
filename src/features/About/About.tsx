@@ -97,7 +97,7 @@ export default function About() {
       <PageHeader
         icon={Info}
         title={t("title")}
-        description={t("ui:app.description")}
+        description={t("description")}
       />
 
       <div className="space-y-density-6">

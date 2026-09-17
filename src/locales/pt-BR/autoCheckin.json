@@ -1,5 +1,5 @@
 {
-  "description": "Faça check-in automático de contas qualificadas todos os dias dentro de um período de tempo configurável. A lista de resultados abaixo mostra registros de execução concluídos, não uma fila pendente.",
+  "description": "Faça check-in agendado de contas elegíveis, consulte execuções concluídas e tente novamente as tarefas com falha.",
   "execution": {
     "actions": {
       "devModeHint": "Modo Dev: botões de ação são sempre mostrados para teste.",
@@ -86,7 +86,7 @@
     },
     "title": "Check-in automático"
   },
-  "manualDescription": "Você pode executar um check-in em lote para contas qualificadas. A lista de resultados abaixo mostra registros de execução concluídos, não uma fila pendente.",
+  "manualDescription": "Faça check-in manual em lote de contas elegíveis, consulte execuções concluídas e tente novamente as tarefas com falha.",
   "messages": {
     "error": {
       "accountDisabled": "Conta desativada",

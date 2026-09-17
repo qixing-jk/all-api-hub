@@ -1,6 +1,5 @@
 {
   "app": {
-    "description": "Gerencie relays de IA, contas e saldos em um só lugar",
     "name": "All API Hub"
   },
   "billing": {

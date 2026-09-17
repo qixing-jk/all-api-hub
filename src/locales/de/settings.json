@@ -255,7 +255,7 @@
       "title": "Import & Export"
     }
   },
-  "description": "Verwalten Sie die grundlegenden Konfigurationsoptionen des Plugins",
+  "description": "Darstellung, Kontoverwaltung, automatische Aufgaben und Datensicherung anpassen.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Legen Sie die Standardwährungseinheit für die Saldo- und Cashflow-Anzeige fest",

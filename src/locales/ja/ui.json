@@ -1,6 +1,5 @@
 {
   "app": {
-    "description": "AI 中継サービスとアカウント、残高をひとつの場所で管理",
     "name": "All API Hub"
   },
   "billing": {

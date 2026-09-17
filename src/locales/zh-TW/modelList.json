@@ -109,7 +109,7 @@
   },
   "copyAllNames": "複製所有模型名稱",
   "currentUsableGroups": "當前帳號可用分組",
-  "description": "檢視和管理可用的AI模型",
+  "description": "瀏覽帳號與 API 憑證的模型，查看價格、能力和可用性。",
   "detailedPricing": "詳細定價",
   "diagnostics": {
     "all": "全部報價",

@@ -1,5 +1,5 @@
 {
-  "description": "備份、遷移或同步 All API Hub 資料。",
+  "description": "透過本機檔案或雲端備份、還原和遷移擴充功能資料。",
   "export": {
     "accountData": "帳號資料",
     "accountDataDescription": "僅匯出帳號、書籤和標籤。",

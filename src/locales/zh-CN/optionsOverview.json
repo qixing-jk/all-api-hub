@@ -174,7 +174,7 @@
     "needs_setup": "待设置",
     "not_applicable": "不适用"
   },
-  "description": "查看账号、密钥、用量和自动任务的当前状态。",
+  "description": "查看账号、密钥与用量概况，跟进自动任务和待处理事项。",
   "sections": {
     "automationOverview": "自动化执行",
     "configurationOverview": "配置概览",

@@ -111,7 +111,7 @@
   "currentSiteAddedCount_one": "⚠️Este sitio ya tiene {{count}} cuenta guardada",
   "currentSiteAddedCount_many": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
   "currentSiteAddedCount_other": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
-  "description": "Administra cuentas de sitios y consulta saldos, estado de salud, claves de API y uso en un solo lugar.",
+  "description": "Administra cuentas de sitios y consulta saldos, uso y estado.",
   "emptyState": "Todavía no hay cuentas",
   "emptyStateDescription": "Agrega una cuenta para administrar saldos, estado, claves de API y uso en un solo lugar.",
   "filter": {

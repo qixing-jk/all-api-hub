@@ -193,13 +193,14 @@ export default function HeaderSection({
       className={`py-density-2 sm:py-density-3 flex items-center justify-between px-3 sm:px-5 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
     >
       {/* Logo and Title Section */}
-      <div className="gap-y-density-2-5 sm:gap-y-density-3 flex min-w-0 flex-1 items-center gap-x-2.5 sm:gap-x-3">
+      <div className="gap-y-density-2-5 sm:gap-y-density-3 @container flex min-w-7 flex-1 items-center gap-x-2.5 sm:min-w-8 sm:gap-x-3">
         <img
           src={iconImage}
           alt={t("ui:app.name")}
-          className="h-7 w-7 shrink-0 rounded-lg shadow-sm sm:h-8 sm:w-8"
+          title={t("ui:app.name")}
+          className="h-7 w-7 shrink-0 rounded-lg object-contain shadow-sm sm:h-8 sm:w-8"
         />
-        <div className="min-w-0 flex-1">
+        <div className="hidden min-w-0 flex-1 @min-[8rem]:block">
           <div className="flex min-w-0 flex-col gap-0.5">
             <BodySmall weight="semibold" className="truncate leading-tight">
               {t("ui:app.name")}

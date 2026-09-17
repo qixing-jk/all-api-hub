@@ -102,7 +102,7 @@
   "currentSiteAdded": "⚠️{{siteName}} already has a saved account",
   "currentSiteAddedCount_one": "⚠️This site already has {{count}} saved account",
   "currentSiteAddedCount_other": "⚠️This site already has {{count}} saved accounts",
-  "description": "Manage site accounts and view balances, health status, API keys, and usage in one place.",
+  "description": "Manage site accounts and check balances, usage and health.",
   "emptyState": "No accounts yet",
   "emptyStateDescription": "Add an account to manage balances, health, API keys, and usage in one place.",
   "filter": {

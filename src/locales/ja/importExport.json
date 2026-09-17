@@ -1,5 +1,5 @@
 {
-  "description": "All API Hub のデータをバックアップ、移行、同期します。",
+  "description": "ローカルファイルやクラウドを使って、拡張機能のデータをバックアップ、復元、移行します。",
   "export": {
     "accountData": "アカウントデータ",
     "accountDataDescription": "アカウント、ブックマーク、タグのみをエクスポートします。",

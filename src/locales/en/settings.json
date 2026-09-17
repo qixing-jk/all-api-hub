@@ -255,7 +255,7 @@
       "title": "Import & Export"
     }
   },
-  "description": "Manage the basic configuration options of the plugin",
+  "description": "Adjust appearance, account management, automated tasks and data backup settings.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Set the default currency unit for balance and cashflow display",

@@ -1,5 +1,5 @@
 {
-  "description": "Trong khoảng thời gian được chỉ định mỗi ngày, tự động thực hiện điểm danh cho các tài khoản đủ điều kiện; danh sách kết quả bên dưới hiển thị lịch sử điểm danh đã thực hiện, không phải là hàng đợi chờ điểm danh.",
+  "description": "Điểm danh theo lịch cho tài khoản đủ điều kiện, xem lịch sử thực thi và thử lại tác vụ thất bại.",
   "execution": {
     "actions": {
       "devModeHint": "Chế độ phát triển: Để thuận tiện cho việc kiểm tra, các nút thao tác sẽ luôn hiển thị.",
@@ -84,7 +84,7 @@
     },
     "title": "Điểm danh tự động"
   },
-  "manualDescription": "Có thể thực hiện điểm danh hàng loạt cho các tài khoản đủ điều kiện; danh sách kết quả bên dưới hiển thị lịch sử điểm danh đã thực hiện, không phải là hàng đợi chờ điểm danh.",
+  "manualDescription": "Điểm danh thủ công hàng loạt cho tài khoản đủ điều kiện, xem lịch sử thực thi và thử lại tác vụ thất bại.",
   "messages": {
     "error": {
       "accountDisabled": "Tài khoản đã bị vô hiệu hóa",

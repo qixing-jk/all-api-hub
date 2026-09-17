@@ -93,7 +93,7 @@
   "currentLoginAdded": "⚠️{{siteName}} 的當前登入帳號已在清單中",
   "currentSiteAdded": "⚠️{{siteName}} 已有帳號",
   "currentSiteAddedCount_other": "⚠️當前站點已有 {{count}} 個帳號",
-  "description": "集中管理站點帳號，查看餘額、健康狀態、API Key 與使用情況。",
+  "description": "管理站點帳號，查看餘額、用量與健康狀態。",
   "emptyState": "暫無站點帳號",
   "emptyStateDescription": "新增帳號後，即可集中查看餘額、健康狀態、API Key 與使用情況。",
   "filter": {

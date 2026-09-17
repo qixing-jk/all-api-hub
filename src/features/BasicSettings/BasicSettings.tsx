@@ -1,3 +1,5 @@
+import "./settingsLayout.css"
+
 import type { TFunction } from "i18next"
 import { ChevronDown, Settings } from "lucide-react"
 import {
@@ -388,7 +390,7 @@ function DesktopTabs({
     >
       <div
         aria-hidden="true"
-        className="gap-y-density-2 pointer-events-none absolute top-0 left-0 -z-10 flex gap-x-2 opacity-0"
+        className="gap-y-density-2 pointer-events-none absolute top-0 left-0 -z-10 flex w-full gap-x-2 overflow-hidden opacity-0"
       >
         {tabs.map((tab) => (
           <button
@@ -593,7 +595,7 @@ export default function BasicSettings() {
 
   return (
     <div
-      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      className="settings-workspace py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={BASIC_SETTINGS_TEST_IDS.page}
     >
       <PageHeader

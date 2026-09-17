@@ -1,5 +1,5 @@
 {
-  "description": "Back up, migrate, or sync All API Hub data.",
+  "description": "Back up, restore and migrate extension data using local files or cloud storage.",
   "export": {
     "accountData": "Account Data",
     "accountDataDescription": "Export only accounts, bookmarks, and tags.",

@@ -11,7 +11,7 @@
     "description": "將永久刪除“{{name}}”。",
     "title": "刪除書籤？"
   },
-  "description": "儲存站點控制台/文件/管理頁等快捷連結，無需建立完整帳號。",
+  "description": "收藏站點、控制台與文件連結，依標籤整理並快速存取。",
   "dialog": {
     "currentPageLabel": "目前頁面",
     "currentPageUnavailable": "暫時無法讀取目前頁面",

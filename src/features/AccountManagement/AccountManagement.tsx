@@ -15,8 +15,9 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
+import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
-import { ActionGroup, Button } from "~/components/ui"
+import { Button } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -361,7 +362,7 @@ function AccountManagementContent({
   }, [handleRefreshDisabledAccounts, t])
 
   return (
-    <div className="bg-card py-density-6 flex flex-col px-6">
+    <div className="py-density-4 sm:py-density-6 flex flex-col px-4 sm:px-6">
       <PageHeader
         icon={UserRound}
         title={t("account:title")}
@@ -378,9 +379,21 @@ function AccountManagementContent({
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
             surfaceId={headerSurface}
           >
-            <ActionGroup
+            <PageActions
               className="w-full"
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.headerActions}
+              primary={
+                <Button
+                  size="sm"
+                  onClick={openAddAccount}
+                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog
+                  }
+                >
+                  {t("account:addAccount")}
+                </Button>
+              }
             >
               <Button
                 size="sm"
@@ -451,17 +464,7 @@ function AccountManagementContent({
               >
                 {t("account:actions.scanDuplicates")}
               </Button>
-              <Button
-                size="sm"
-                onClick={openAddAccount}
-                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog
-                }
-              >
-                {t("account:addAccount")}
-              </Button>
-            </ActionGroup>
+            </PageActions>
           </ProductAnalyticsScope>
         }
       />
@@ -495,7 +498,7 @@ function AccountManagementContent({
         onConfirm={() => void guidanceDismissal.confirmPermanentDismiss()}
       />
 
-      <div className="bg-card flex flex-col">
+      <div className="flex flex-col">
         <AccountList
           initialSearchQuery={searchQuery}
           onAddAccount={openAddAccount}

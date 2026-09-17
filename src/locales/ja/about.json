@@ -1,5 +1,6 @@
 {
   "copyrightAck": "著作権と謝辞",
+  "description": "拡張機能のバージョン、変更履歴、プロジェクトのリンクを確認し、ヘルプや問題報告にアクセスします。",
   "devMaintenance": "開発と保守",
   "features": "機能",
   "feedbackSection": {

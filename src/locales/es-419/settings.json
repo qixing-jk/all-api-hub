@@ -255,7 +255,7 @@
       "title": "Importar y exportar"
     }
   },
-  "description": "Administra las opciones básicas de configuración del plugin",
+  "description": "Ajusta la apariencia, la gestión de cuentas, las tareas automáticas y los respaldos de datos.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Define la unidad de moneda predeterminada para mostrar saldo y flujo de efectivo",

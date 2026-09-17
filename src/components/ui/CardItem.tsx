@@ -68,6 +68,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
     return (
       <Component
         ref={ref}
+        data-slot="card-item"
         className={cn(
           cardItemVariants({
             padding,
@@ -86,7 +87,10 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           >
             <div className="gap-density-3 flex w-full min-w-0 flex-1 items-center [@container(min-width:42rem)]:w-auto">
               {icon && (
-                <div className="dark:bg-secondary bg-muted py-density-1 sm:py-density-2 shrink-0 rounded-sm px-1 transition-colors sm:px-2">
+                <div
+                  data-slot="card-item-icon"
+                  className="dark:bg-secondary bg-muted py-density-1 sm:py-density-2 shrink-0 rounded-sm px-1 transition-colors sm:px-2"
+                >
                   {icon}
                 </div>
               )}

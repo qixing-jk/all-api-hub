@@ -163,7 +163,7 @@ function OptionsSidebar({
             aria-disabled={isCollapsePending}
             onClick={handleCollapseButtonClick}
             style={{ top: "calc(50vh - var(--options-header-height))" }}
-            className="border-sidebar-border bg-sidebar text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute right-0 z-10 hidden h-13 w-6 translate-x-1/2 -translate-y-1/2 rounded-full border shadow-md md:inline-flex"
+            className="border-sidebar-border bg-sidebar text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute right-0 z-10 hidden h-13 w-6 translate-x-1/2 -translate-y-1/2 rounded-full border shadow-sm md:inline-flex"
           >
             {shouldShowCollapsedState ? (
               <ChevronRight className="size-3.5" />
@@ -175,7 +175,7 @@ function OptionsSidebar({
         <div className="h-full overflow-hidden">
           <div
             style={{ width: targetWidth }}
-            className="border-sidebar-border bg-sidebar text-sidebar-foreground flex h-full flex-col border-r"
+            className="border-workspace-border bg-sidebar text-sidebar-foreground flex h-full flex-col border-r"
           >
             {isMobileOpen && (
               <div className="py-density-2 flex shrink-0 items-center justify-end px-3">
@@ -194,7 +194,7 @@ function OptionsSidebar({
 
             <nav
               aria-label={navAriaLabel}
-              className="py-density-3 space-y-density-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+              className="py-density-4 space-y-density-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
             >
               {menuGroups.map((group, groupIndex) => {
                 const categoryLabel = group.category
@@ -230,7 +230,7 @@ function OptionsSidebar({
                       />
                     )}
                     {categoryLabel && !shouldShowCollapsedState && (
-                      <div className="mb-density-1 px-3">
+                      <div className="min-h-density-8 py-density-1 flex items-center px-3">
                         <Heading3
                           id={categoryHeadingId}
                           className="text-muted-foreground text-xs font-medium"
@@ -265,7 +265,7 @@ function OptionsSidebar({
                                 shouldShowCollapsedState &&
                                   "justify-center px-0",
                                 isActive
-                                  ? "border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground"
+                                  ? "bg-surface-subtle text-primary-soft-foreground dark:bg-primary-soft"
                                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                               )}
                             >

@@ -93,7 +93,7 @@
   "currentLoginAdded": "⚠️{{siteName}} の現在のログインは一覧に追加済みです",
   "currentSiteAdded": "⚠️{{siteName}} には保存済みアカウントがあります",
   "currentSiteAddedCount_other": "⚠️このサイトには保存済みアカウントが {{count}} 件あります",
-  "description": "サイトアカウントを管理し、残高、稼働状況、API キー、使用状況をまとめて確認",
+  "description": "サイトのアカウントを管理し、残高、使用量、状態を確認します。",
   "emptyState": "まだアカウントがありません",
   "emptyStateDescription": "アカウントを追加すると、残高、稼働状況、API キー、使用状況をまとめて管理できます。",
   "filter": {

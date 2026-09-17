@@ -93,7 +93,7 @@
   "currentLoginAdded": "⚠️Tài khoản đăng nhập hiện tại của {{siteName}} đã có trong danh sách",
   "currentSiteAdded": "⚠️{{siteName}} đã có tài khoản",
   "currentSiteAddedCount_other": "⚠️Trang hiện tại đã có {{count}} tài khoản",
-  "description": "Quản lý tài khoản trang web và xem số dư, trạng thái, khóa API cùng mức sử dụng tại một nơi.",
+  "description": "Quản lý tài khoản trang web và xem số dư, mức sử dụng cùng trạng thái hoạt động.",
   "emptyState": "Chưa có tài khoản trang web",
   "emptyStateDescription": "Thêm tài khoản để quản lý số dư, trạng thái, khóa API và mức sử dụng tại một nơi.",
   "filter": {

@@ -174,7 +174,7 @@
     "needs_setup": "Requiere configuración",
     "not_applicable": "No aplica"
   },
-  "description": "Revisa el estado actual de cuentas, claves, uso y tareas automatizadas.",
+  "description": "Consulta el resumen de cuentas, claves y uso, y da seguimiento a tareas automáticas y acciones pendientes.",
   "sections": {
     "automationOverview": "Ejecuciones de automatización",
     "configurationOverview": "Resumen de configuración",

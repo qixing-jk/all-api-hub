@@ -1,6 +1,5 @@
 {
   "app": {
-    "description": "Quản lý tập trung tài khoản và số dư của các trạm trung chuyển bên thứ ba và trang web tự lưu trữ",
     "name": "All API Hub"
   },
   "billing": {

@@ -255,7 +255,7 @@
       "title": "Nhập và xuất"
     }
   },
-  "description": "Quản lý các tùy chọn cấu hình cơ bản của tiện ích",
+  "description": "Điều chỉnh giao diện, quản lý tài khoản, tác vụ tự động và sao lưu dữ liệu.",
   "display": {
     "cny": "Nhân dân tệ (¥)",
     "currencyDesc": "Đặt đơn vị tiền tệ mặc định để hiển thị số dư và thu chi",

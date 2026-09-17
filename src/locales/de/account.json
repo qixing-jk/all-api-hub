@@ -102,7 +102,7 @@
   "currentSiteAdded": "⚠️{{siteName}} hat bereits ein gespeichertes Konto",
   "currentSiteAddedCount_one": "⚠️Diese Website hat bereits {{count}} gespeichertes Konto",
   "currentSiteAddedCount_other": "⚠️Diese Website verfügt bereits über {{count}} gespeicherte Konten",
-  "description": "Verwalten Sie Website-Konten und sehen Sie Kontostände, Gesundheitsstatus, API-Schlüssel und Nutzung an einem Ort.",
+  "description": "Website-Konten verwalten und Guthaben, Nutzung und Status prüfen.",
   "emptyState": "Noch keine Konten",
   "emptyStateDescription": "Fügen Sie ein Konto hinzu, um Kontostände, Gesundheitsstatus, API-Schlüssel und Nutzung an einem Ort zu verwalten.",
   "filter": {

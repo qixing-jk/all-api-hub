@@ -116,7 +116,7 @@
   },
   "copyAllNames": "Copy All Model Names",
   "currentUsableGroups": "Current usable groups",
-  "description": "View and manage available AI models",
+  "description": "Browse models from accounts and API credentials, including pricing, capabilities and availability.",
   "detailedPricing": "Detailed Pricing",
   "diagnostics": {
     "all": "All offers",

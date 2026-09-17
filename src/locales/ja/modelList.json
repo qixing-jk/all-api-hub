@@ -109,7 +109,7 @@
   },
   "copyAllNames": "すべてのモデル名をコピー",
   "currentUsableGroups": "現在のアカウントで利用可能なグループ",
-  "description": "利用可能な AI モデルを確認・管理します",
+  "description": "アカウントや API 認証情報のモデルを一覧し、料金、機能、利用可否を確認します。",
   "detailedPricing": "詳細料金",
   "diagnostics": {
     "all": "すべての料金",

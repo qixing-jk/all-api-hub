@@ -20,6 +20,9 @@ older backups to `default`, and provide searchable, translated choice labels.
   ramp plus readable solid-action foreground, link and focus-ring colors.
 - Use `popover` / `popover-foreground` for portals and floating surfaces;
   `sidebar-*` for navigation. Shared button variables also drive the preview.
+- Use `workspace` for the options canvas and header, with `workspace-border`
+  for their structural separators. Page roots stay transparent; `card` is for
+  individual data surfaces. Presets retain their own canvas and sidebar palette.
 - Status roles (`success`, `warning`, `destructive`, `info`) remain independent
   of accent and preset selection. Use their paired foregrounds; the foreground
   of a solid action is different from inline text or a tinted message.

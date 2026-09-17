@@ -174,7 +174,7 @@
     "needs_setup": "待設定",
     "not_applicable": "不適用"
   },
-  "description": "查看帳戶、金鑰、用量和自動任務的目前狀態。",
+  "description": "查看帳號、金鑰與用量概況，追蹤自動任務和待處理事項。",
   "sections": {
     "automationOverview": "自動化執行",
     "configurationOverview": "配置概覽",

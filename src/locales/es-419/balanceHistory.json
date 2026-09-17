@@ -20,7 +20,7 @@
     },
     "title": "Desglose de cuentas"
   },
-  "description": "Registra instantáneas diarias de saldo y flujo de caja, y visualiza tendencias a lo largo del tiempo.",
+  "description": "Consulta las tendencias diarias de saldo, ingresos y gastos para seguir los cambios en los fondos de tus cuentas.",
   "empty": {
     "description": "Habilita Historial de saldo y actualiza una cuenta para registrar la primera instantánea.",
     "title": "Aún no hay instantáneas"

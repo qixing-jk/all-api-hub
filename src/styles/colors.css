@@ -4,6 +4,13 @@
 :host,
 [data-color-scope] {
   --background: #ffffff;
+  /* Options canvas is separate from data cards and floating surfaces. */
+  --workspace: var(--background);
+  --workspace-border: color-mix(
+    in srgb,
+    var(--foreground) 9%,
+    var(--workspace)
+  );
   --foreground: #111827;
   --card: #ffffff;
   --card-foreground: var(--foreground);
@@ -110,8 +117,8 @@
   --chart-border: var(--border);
   --chart-heatmap-low: var(--theme-color-50);
   --chart-heatmap-high: var(--theme-color-700);
-  --sidebar: var(--card);
-  --sidebar-foreground: var(--foreground);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--secondary-foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: var(--accent);
@@ -137,6 +144,8 @@
 
 .dark {
   --background: #0f172a;
+  --workspace: #171d27;
+  --sidebar: #111720;
   --foreground: #f1f5f9;
   --card: #1e293b;
   --surface-subtle: #1e293b;

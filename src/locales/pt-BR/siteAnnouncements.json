@@ -13,9 +13,9 @@
     "unread": "Não lido"
   },
   "description": {
-    "disabledSummary": "A pesquisa automática está desativada; você ainda pode acionar uma verificação manual.",
-    "enabledInterval": "Intervalo atual: a cada {{intervalMinutes}} minutos.",
-    "enabledSummary": "A consulta automática está ativada; revise os anúncios encontrados, gerencie o estado de leitura e inicie uma verificação manual.",
+    "disabledSummary": "Leia avisos de sites e gerencie o status de leitura. As verificações automáticas estão desativadas; você pode verificar manualmente.",
+    "enabledInterval": "Verificação a cada {{intervalMinutes}} minutos.",
+    "enabledSummary": "Leia avisos de sites e gerencie o status de leitura. As verificações automáticas estão ativadas.",
     "pollingSettingsLink": "Configurar consulta automática"
   },
   "empty": {

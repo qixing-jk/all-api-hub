@@ -174,7 +174,7 @@
     },
     "viewCredential": "Ver credencial de API vinculada"
   },
-  "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
+  "description": "Gerencie e crie chaves de API de contas de sites e consulte suas configurações e uso.",
   "details": {
     "empty": "Não há detalhes adicionais",
     "loading": "Carregando detalhes",
@@ -763,7 +763,7 @@
   "totalKeys_many": "Total de {{count}} chaves",
   "totalKeys_other": "Total de {{count}} chaves",
   "unifiedApiGuidance": {
-    "headerBridge": "Importe as chaves das contas para seu gateway de IA auto-hospedado e use várias chaves por meio de uma única API de IA. A exportação direta para ferramentas cliente continua sendo a opção sem gateway."
+    "headerBridge": "Importe chaves para um gateway próprio ou exporte para um cliente."
   },
   "unsupportedSource": {
     "description": "É possível salvar este tipo de site na conta, mas a extensão ainda não adaptou o protocolo de listagem de chaves. Envie uma solicitação de compatibilidade para nos ajudar a adicionar o gerenciamento de chaves.",

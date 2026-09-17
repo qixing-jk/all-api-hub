@@ -1,5 +1,5 @@
 {
-  "description": "备份、迁移或同步 All API Hub 数据。",
+  "description": "通过本地文件或云端备份、恢复和迁移扩展数据。",
   "export": {
     "accountData": "账号数据",
     "accountDataDescription": "仅导出账号、书签和标签。",

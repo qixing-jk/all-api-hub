@@ -1,5 +1,5 @@
 {
-  "description": "Berechtigte Konten automatisch jeden Tag innerhalb eines konfigurierbaren Zeitfensters einchecken. Die Ergebnisliste unten zeigt abgeschlossene Laufdatensätze und keine ausstehende Warteschlange.",
+  "description": "Berechtigte Konten planmäßig einchecken, abgeschlossene Ausführungen prüfen und fehlgeschlagene Aufgaben wiederholen.",
   "execution": {
     "actions": {
       "devModeHint": "Entwicklungsmodus: Aktionsschaltflächen werden zum Testen immer angezeigt.",
@@ -85,7 +85,7 @@
     },
     "title": "Automatischer Check-in"
   },
-  "manualDescription": "Batch-Check-in für berechtigte Konten ausführen. Die Ergebnisliste unten zeigt abgeschlossene Laufdatensätze und keine ausstehende Warteschlange.",
+  "manualDescription": "Berechtigte Konten manuell gesammelt einchecken, abgeschlossene Ausführungen prüfen und fehlgeschlagene Aufgaben wiederholen.",
   "messages": {
     "error": {
       "accountDisabled": "Konto ist deaktiviert",

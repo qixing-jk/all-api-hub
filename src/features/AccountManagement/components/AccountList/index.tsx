@@ -1136,7 +1136,7 @@ export default function AccountList({
   return (
     <Card
       padding="none"
-      className="border-border/80 dark:border-foreground/10 [container-type:inline-size] flex flex-col overflow-hidden rounded-xl shadow-xs"
+      className="border-border/80 [container-type:inline-size] flex flex-col overflow-hidden rounded-lg border shadow-none"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>

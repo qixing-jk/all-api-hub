@@ -169,7 +169,7 @@
     },
     "viewCredential": "Verknüpfte API-Zugangsdaten anzeigen"
   },
-  "description": "Auf dieser Seite werden API-Schlüsselinformationen für alle Konten angezeigt, einschließlich Nutzung und Ablaufzeit. Sie können neue Schlüssel für bestimmte Konten erstellen, indem Sie auf die Schaltfläche „Schlüssel hinzufügen“ in der oberen rechten Ecke oder auf die Schaltfläche „+“ neben jedem Schlüsselelement klicken. Bitte bewahren Sie Ihre API-Schlüssel sicher auf und geben Sie sie nicht an andere weiter.",
+  "description": "API-Schlüssel für Website-Konten verwalten und erstellen sowie Einstellungen und Nutzung prüfen.",
   "details": {
     "empty": "Keine weiteren Details",
     "loading": "Details werden geladen",
@@ -738,7 +738,7 @@
   "totalKeys_one": "Gesamt {{count}} Schlüssel",
   "totalKeys_other": "Insgesamt {{count}} Schlüssel",
   "unifiedApiGuidance": {
-    "headerBridge": "Importieren Sie Kontoschlüssel in Ihr selbst gehostetes KI-Gateway, damit mehrere Schlüssel über eine KI-API verwendet werden können. Der direkte Export in Client-Tools bleibt der Pfad ohne Gateway."
+    "headerBridge": "Schlüssel in ein selbst gehostetes Gateway importieren oder an einen Client exportieren."
   },
   "unsupportedSource": {
     "description": "Der Website-Typ dieses Kontos kann gespeichert werden, aber die Erweiterung hat ihr Schlüssellistenprotokoll noch nicht angepasst. Senden Sie eine Website-Support-Anfrage, um uns dabei zu helfen, Unterstützung für die Schlüsselverwaltung hinzuzufügen.",

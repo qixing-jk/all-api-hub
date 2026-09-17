@@ -500,10 +500,10 @@ export function ControlPanel({
 
   return (
     <Card
-      className="mb-density-6"
+      className="mb-density-3 rounded-none border-x-0 border-t-0 bg-transparent shadow-none"
       data-testid={MODEL_LIST_TEST_IDS.controlPanel}
     >
-      <CardContent className="[container-type:inline-size]">
+      <CardContent className="[container-type:inline-size] px-0 pt-0">
         {isProfileSource && (
           <Alert
             variant="default"

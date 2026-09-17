@@ -255,7 +255,7 @@
       "title": "Importação e Exportação"
     }
   },
-  "description": "Gerencie as configurações básicas da extensão",
+  "description": "Ajuste a aparência, a gestão de contas, as tarefas automáticas e o backup de dados.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Definir a unidade monetária padrão para exibição de saldo e fluxo de caixa",

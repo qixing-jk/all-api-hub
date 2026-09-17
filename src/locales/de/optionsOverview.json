@@ -174,7 +174,7 @@
     "needs_setup": "Muss eingerichtet werden",
     "not_applicable": "Nicht anwendbar"
   },
-  "description": "Überprüfen Sie den aktuellen Status von Konten, Schlüsseln, Nutzung und automatisierten Aufgaben.",
+  "description": "Konten, Schlüssel und Nutzung überblicken sowie automatische Aufgaben und offene Aktionen verfolgen.",
   "sections": {
     "automationOverview": "Automatisierung läuft",
     "configurationOverview": "Konfigurationsübersicht",

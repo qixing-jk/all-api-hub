@@ -73,6 +73,8 @@
   --color-theme-950: var(--theme-color-950);
 
   --color-background: var(--background);
+  --color-workspace: var(--workspace);
+  --color-workspace-border: var(--workspace-border);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);

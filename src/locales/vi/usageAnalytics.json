@@ -100,7 +100,7 @@
       "title": "Điểm nóng Thời gian Sử dụng"
     }
   },
-  "description": "Đồng bộ và trực quan hóa lịch sử sử dụng được tổng hợp cục bộ, hỗ trợ xuất.",
+  "description": "Xem số yêu cầu, lượng token và chi phí theo tài khoản, mô hình và thời gian.",
   "empty": {
     "description": "Vui lòng bật đồng bộ trong Cài đặt → Lượng dùng Tài khoản trước, sau đó nhấp vào \"Đồng bộ Ngay\" để lấy lịch sử sử dụng gần đây.",
     "title": "Chưa có dữ liệu lịch sử sử dụng"

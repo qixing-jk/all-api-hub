@@ -174,7 +174,7 @@
     },
     "viewCredential": "Ver credencial de API vinculada"
   },
-  "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",
+  "description": "Administra y crea claves API de cuentas de sitios, y consulta su configuración y uso.",
   "details": {
     "empty": "No hay detalles adicionales",
     "loading": "Cargando detalles",
@@ -763,7 +763,7 @@
   "totalKeys_many": "Total {{count}} claves",
   "totalKeys_other": "Total {{count}} claves",
   "unifiedApiGuidance": {
-    "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
+    "headerBridge": "Importa claves a una puerta de enlace propia o expórtalas a un cliente."
   },
   "unsupportedSource": {
     "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",

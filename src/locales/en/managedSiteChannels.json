@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "Import channel from API Credential Library",
       "title": "No self-hosted AI gateway channels yet"
     },
-    "headerDescription": "Manage channels in your self-hosted AI gateway and combine multiple account keys or API keys into one unified AI API.",
+    "headerDescription": "Manage channels in your self-hosted AI gateway to bring API sources into one endpoint.",
     "openChannelConsole": "Open gateway channel management",
     "unconfiguredValueDescription": "After configuration, you can import scattered account keys and API keys as gateway channels, then view and manage them directly in All API Hub."
   },

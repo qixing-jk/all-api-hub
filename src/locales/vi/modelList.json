@@ -109,7 +109,7 @@
   },
   "copyAllNames": "Sao chép tất cả tên mô hình",
   "currentUsableGroups": "Nhóm tài khoản hiện tại có thể dùng",
-  "description": "Xem và quản lý các mô hình AI khả dụng",
+  "description": "Xem mô hình từ tài khoản và thông tin xác thực API, cùng giá, khả năng và tình trạng khả dụng.",
   "detailedPricing": "Định giá chi tiết",
   "diagnostics": {
     "all": "Tất cả báo giá",

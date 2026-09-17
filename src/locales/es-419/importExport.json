@@ -1,5 +1,5 @@
 {
-  "description": "Respalda, migra o sincroniza los datos de All API Hub.",
+  "description": "Respalda, restaura y migra datos de la extensión mediante archivos locales o almacenamiento en la nube.",
   "export": {
     "accountData": "Datos de cuenta",
     "accountDataDescription": "Exporta solo cuentas, marcadores y etiquetas.",

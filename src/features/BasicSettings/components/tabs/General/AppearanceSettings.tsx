@@ -2,7 +2,8 @@ import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
-import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardItem, CardList } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { AppearanceControls } from "~/features/Appearance/AppearanceControls"
 import ThemeModeSettings from "~/features/Appearance/ThemeModeSettings"
@@ -14,12 +15,11 @@ export default function AppearanceSettings() {
   const { t } = useTranslation("settings")
 
   return (
-    <section id={SETTINGS_ANCHORS.APPEARANCE} className="space-y-density-6">
-      <div className="space-y-density-1-5">
-        <Heading3>{t("theme.appearance")}</Heading3>
-        <BodySmall>{t("display.description")}</BodySmall>
-      </div>
-
+    <SettingSection
+      id={SETTINGS_ANCHORS.APPEARANCE}
+      title={t("theme.appearance")}
+      description={t("display.description")}
+    >
       <Card padding="none">
         <CardList>
           <ThemeModeSettings />
@@ -37,6 +37,6 @@ export default function AppearanceSettings() {
       <Card padding="md">
         <AppearanceControls anchors />
       </Card>
-    </section>
+    </SettingSection>
   )
 }

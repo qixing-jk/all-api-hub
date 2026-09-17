@@ -1,6 +1,5 @@
 {
   "app": {
-    "description": "Manage AI relays and your accounts and balances in one place",
     "name": "All API Hub"
   },
   "billing": {

@@ -151,7 +151,7 @@ function OptionsPage() {
       onMobileSidebarOpenChange={setIsMobileSidebarOpen}
     >
       <div
-        className="dark:bg-background bg-surface-subtle flex min-h-screen flex-col"
+        className="bg-workspace flex min-h-screen flex-col"
         data-testid={OPTIONS_TEST_IDS.app}
       >
         <Header
@@ -161,7 +161,7 @@ function OptionsPage() {
           isMobileSidebarOpen={isMobileSidebarOpen}
         />
 
-        <div className="dark:bg-background bg-surface-subtle flex flex-1 flex-col md:flex-row">
+        <div className="flex flex-1 flex-col md:flex-row">
           <Sidebar
             activeMenuItem={activeMenuItem}
             onMenuItemClick={handleMenuItemClick}
@@ -180,22 +180,22 @@ function OptionsPage() {
           >
             <div
               className={cn(
-                "py-density-3 sm:py-density-5 md:py-density-6 mx-auto w-full px-2 sm:px-4 md:px-6",
+                "mx-auto w-full",
                 appearance.contentWidth === THEME_CONTENT_WIDTH.CENTERED &&
                   "max-w-7xl",
               )}
             >
-              <PopupInterruptionHintBanner className="mb-density-3 sm:mb-density-4" />
+              <PopupInterruptionHintBanner className="mt-density-4 mx-4 sm:mx-6" />
               {appearanceSaveFailed && (
                 <p
                   role="alert"
-                  className="text-destructive-text mb-density-3 text-sm"
+                  className="text-destructive-text mt-density-4 mx-4 text-sm sm:mx-6"
                 >
                   {t("settings:appearance.saveFailed")}
                 </p>
               )}
               <div
-                className="bg-background border-border overflow-hidden rounded-2xl border shadow-sm"
+                className="min-w-0"
                 data-testid={OPTIONS_TEST_IDS.contentCard}
                 {...{
                   [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,

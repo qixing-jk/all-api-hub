@@ -164,7 +164,7 @@
     },
     "viewCredential": "查看关联的 API 凭据"
   },
-  "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",
+  "description": "管理各站点账号的 API 密钥，创建密钥并查看配置与用量。",
   "details": {
     "empty": "没有更多详情",
     "loading": "正在加载详情",
@@ -713,7 +713,7 @@
   "title": "密钥管理",
   "totalKeys": "总计 {{count}} 个密钥",
   "unifiedApiGuidance": {
-    "headerBridge": "将账号 Key 一键导入自建 AI 网关后，多个 Key 即可通过同一个 AI API 使用；直接导出到客户端工具仍是免网关路径。"
+    "headerBridge": "可将密钥导入自建网关，或导出到客户端使用。"
   },
   "unsupportedSource": {
     "description": "当前账号的站点类型已支持保存账号，但插件还没有适配该站点的密钥列表协议。你可以提交站点支持请求，帮助我们补齐密钥管理能力。",

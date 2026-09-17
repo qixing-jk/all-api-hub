@@ -1,5 +1,5 @@
 {
-  "description": "Aktualisieren Sie automatisch Modelllisten in Ihrem selbstgehosteten KI-Gateway und reduzieren Sie die manuelle Wartung. Aktivieren Sie die Funktion bei Bedarf, nachdem Kanäle vorhanden sind.",
+  "description": "Modelllisten der Gateway-Kanäle aktualisieren und Synchronisierungsergebnisse sowie Fehlerursachen prüfen.",
   "execution": {
     "actions": {
       "refresh": "Ergebnisse aktualisieren",

@@ -90,7 +90,8 @@ describe("options Header", () => {
     vi.unstubAllEnvs()
   })
 
-  it("exposes shared utility menus from the options header", async () => {
+  it("opens feedback directly and keeps language available in the header", async () => {
+    const user = userEvent.setup()
     render(
       <Header
         onSearchOpen={vi.fn()}
@@ -100,12 +101,21 @@ describe("options Header", () => {
       />,
     )
 
+    await screen.findByRole("link", { name: "ui:app.name" })
+    expect(screen.getByTestId("language-switcher")).toBeVisible()
+    const feedback = screen.getByRole("button", { name: "ui:feedback.trigger" })
+    await user.click(feedback)
     expect(
-      await screen.findByRole("button", { name: "ui:feedback.trigger" }),
-    ).toBeInTheDocument()
+      await screen.findByRole("menuitem", { name: "ui:feedback.bugReport" }),
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
     expect(
       await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
     ).toBeInTheDocument()
+    await waitFor(() => expect(feedback).toHaveFocus())
+    expect(
+      screen.queryByRole("button", { name: "common:actions.more" }),
+    ).not.toBeInTheDocument()
   })
 
   it("opens appearance directly and restores focus to its independent button", async () => {

@@ -123,7 +123,7 @@
   },
   "copyAllNames": "Copiar todos los nombres de modelos",
   "currentUsableGroups": "Grupos utilizables por la cuenta actual",
-  "description": "Ver y administrar modelos de IA disponibles",
+  "description": "Explora modelos de cuentas y credenciales API, con sus precios, capacidades y disponibilidad.",
   "detailedPricing": "Precios detallados",
   "diagnostics": {
     "all": "Todas las ofertas",

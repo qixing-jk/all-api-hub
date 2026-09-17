@@ -164,7 +164,7 @@
     },
     "viewCredential": "查看關聯的 API 憑據"
   },
-  "description": "此頁面顯示所有帳號的 API 金鑰資訊，包括使用情況和過期時間。可以透過右上角的\"新增金鑰\"按鈕或點擊各金鑰專案旁的\"+\"按鈕為指定帳號建立新金鑰。請妥善保管您的 API 金鑰，避免洩露給他人",
+  "description": "管理各站點帳號的 API 金鑰，建立金鑰並查看設定與用量。",
   "details": {
     "empty": "沒有更多詳情",
     "loading": "正在載入詳情",
@@ -713,7 +713,7 @@
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰",
   "unifiedApiGuidance": {
-    "headerBridge": "將帳號 Key 一鍵匯入自建 AI 閘道後，多個 Key 即可透過同一個 AI API 使用；直接匯出到客戶端工具仍是免閘道路徑。"
+    "headerBridge": "可將金鑰匯入自建閘道，或匯出至用戶端使用。"
   },
   "unsupportedSource": {
     "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",

@@ -1,5 +1,5 @@
 {
-  "description": "自動更新自建 AI 閘道中的模型列表，減少手動維護；渠道建立後可按需開啟。",
+  "description": "更新閘道渠道的模型清單，查看同步結果與失敗原因。",
   "execution": {
     "actions": {
       "refresh": "重新整理結果",

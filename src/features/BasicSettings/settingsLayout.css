@@ -1,0 +1,46 @@
+/* Settings use one workspace surface; only independent controls need a box. */
+.settings-workspace {
+  container: settings-workspace / inline-size;
+}
+
+.settings-workspace [data-slot="setting-section"] {
+  padding-block: calc(1.5rem * var(--density-space-scale));
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-workspace
+  [data-slot="setting-section"]
+  > fieldset
+  > [data-slot="card"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-workspace [data-slot="card-item"] {
+  padding-inline: 0;
+}
+
+.settings-workspace [data-slot="card-item-icon"] {
+  padding: 0;
+  background: transparent;
+}
+
+@container settings-workspace (min-width: 56rem) {
+  .settings-workspace [data-slot="setting-section"] {
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    column-gap: 2rem;
+    align-items: start;
+  }
+
+  .settings-workspace [data-slot="setting-section"] > * {
+    margin-block: 0;
+    min-width: 0;
+  }
+
+  .settings-workspace [data-slot="setting-section-header"] {
+    flex-direction: column;
+    align-items: start;
+  }
+}

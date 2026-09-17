@@ -100,7 +100,7 @@
       "title": "Usage time heatmap"
     }
   },
-  "description": "Sync and visualize aggregated usage history across accounts, with export support.",
+  "description": "Explore requests, token usage and costs by account, model and time.",
   "empty": {
     "description": "Enable sync in Settings → Account usage, then click \"Sync now\" to pull recent usage history.",
     "title": "No usage history data yet"

@@ -174,7 +174,7 @@
     "needs_setup": "設定が必要",
     "not_applicable": "対象外"
   },
-  "description": "アカウント、キー、利用状況、自動タスクの現在の状態を確認します。",
+  "description": "アカウント、キー、使用量の概要を確認し、自動タスクや未処理の項目を把握します。",
   "sections": {
     "automationOverview": "自動化実行",
     "configurationOverview": "設定概要",

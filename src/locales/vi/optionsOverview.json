@@ -174,7 +174,7 @@
     "needs_setup": "Cần thiết lập",
     "not_applicable": "Không áp dụng"
   },
-  "description": "Xem trạng thái hiện tại của tài khoản, khóa, sử dụng và tác vụ tự động.",
+  "description": "Xem tổng quan tài khoản, khóa và mức sử dụng; theo dõi tác vụ tự động và việc cần xử lý.",
   "sections": {
     "automationOverview": "Tác vụ tự động",
     "configurationOverview": "Tổng quan cấu hình",

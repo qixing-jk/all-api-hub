@@ -13,9 +13,9 @@
     "unread": "Ungelesen"
   },
   "description": {
-    "disabledSummary": "Automatische Abfrage ist deaktiviert; Sie können weiterhin eine manuelle Prüfung auslösen.",
-    "enabledInterval": "Aktuelles Intervall: alle {{intervalMinutes}} Minuten.",
-    "enabledSummary": "Automatische Abfrage ist aktiviert; Überprüfen Sie abgerufene Ankündigungen, verwalten Sie den Status „Ungelesen“ und veranlassen Sie eine manuelle Prüfung.",
+    "disabledSummary": "Website-Mitteilungen lesen und den Ungelesen-Status verwalten. Automatische Prüfungen sind aus; manuelle Prüfungen bleiben möglich.",
+    "enabledInterval": "Prüfung alle {{intervalMinutes}} Minuten.",
+    "enabledSummary": "Website-Mitteilungen lesen und den Ungelesen-Status verwalten. Automatische Prüfungen sind aktiv.",
     "pollingSettingsLink": "Automatische Abfrage konfigurieren"
   },
   "empty": {

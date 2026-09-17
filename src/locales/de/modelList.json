@@ -116,7 +116,7 @@
   },
   "copyAllNames": "Alle Modellnamen kopieren",
   "currentUsableGroups": "Aktuell nutzbare Gruppen",
-  "description": "Verfügbare KI-Modelle anzeigen und verwalten",
+  "description": "Modelle aus Konten und API-Zugangsdaten mit Preisen, Fähigkeiten und Verfügbarkeit durchsuchen.",
   "detailedPricing": "Detaillierte Preise",
   "diagnostics": {
     "all": "Alle Angebote",

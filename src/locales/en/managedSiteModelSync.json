@@ -1,5 +1,5 @@
 {
-  "description": "Automatically update model lists in your self-hosted AI gateway and reduce manual maintenance; enable it after channels exist when needed.",
+  "description": "Update gateway channel model lists and review sync results and failure reasons.",
   "execution": {
     "actions": {
       "refresh": "Refresh Results",

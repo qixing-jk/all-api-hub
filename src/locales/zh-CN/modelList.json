@@ -109,7 +109,7 @@
   },
   "copyAllNames": "复制所有模型名称",
   "currentUsableGroups": "当前账号可用分组",
-  "description": "查看和管理可用的AI模型",
+  "description": "浏览账号与 API 凭据的模型，查看价格、能力和可用性。",
   "detailedPricing": "详细定价",
   "diagnostics": {
     "all": "全部报价",

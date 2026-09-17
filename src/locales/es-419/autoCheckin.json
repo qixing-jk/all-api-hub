@@ -1,5 +1,5 @@
 {
-  "description": "Realiza automáticamente el check-in de cuentas elegibles todos los días dentro de una ventana de tiempo configurable. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
+  "description": "Realiza el registro diario programado de cuentas elegibles, revisa ejecuciones completadas y reintenta tareas fallidas.",
   "execution": {
     "actions": {
       "devModeHint": "Modo dev: los botones de acción siempre se muestran para pruebas.",
@@ -86,7 +86,7 @@
     },
     "title": "Check-in automático"
   },
-  "manualDescription": "Puedes realizar un check-in por lotes para las cuentas elegibles. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
+  "manualDescription": "Realiza manualmente el registro diario de cuentas elegibles en lote, revisa ejecuciones completadas y reintenta tareas fallidas.",
   "messages": {
     "error": {
       "accountDisabled": "La cuenta está deshabilitada",

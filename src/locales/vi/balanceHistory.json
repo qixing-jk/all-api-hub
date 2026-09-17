@@ -20,7 +20,7 @@
     },
     "title": "Phân bổ tài khoản"
   },
-  "description": "Ghi lại số dư hàng ngày và ảnh chụp nhanh thu chi, đồng thời trực quan hóa xu hướng.",
+  "description": "Xem xu hướng số dư và thu chi hằng ngày để theo dõi biến động tài khoản.",
   "empty": {
     "description": "Bật lịch sử số dư và làm mới bất kỳ tài khoản nào để ghi lại ảnh chụp nhanh đầu tiên.",
     "title": "Chưa có ảnh chụp nhanh"

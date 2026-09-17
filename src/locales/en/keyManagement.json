@@ -169,7 +169,7 @@
     },
     "viewCredential": "View linked API credential"
   },
-  "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
+  "description": "Manage API keys for site accounts, create keys and review their settings and usage.",
   "details": {
     "empty": "No additional details",
     "loading": "Loading details",
@@ -738,7 +738,7 @@
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
   "unifiedApiGuidance": {
-    "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
+    "headerBridge": "Import keys into a self-hosted gateway or export them to a client."
   },
   "unsupportedSource": {
     "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",

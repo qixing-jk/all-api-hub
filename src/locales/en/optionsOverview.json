@@ -174,7 +174,7 @@
     "needs_setup": "Needs setup",
     "not_applicable": "Not applicable"
   },
-  "description": "Review the current state of accounts, keys, usage, and automated tasks.",
+  "description": "Review accounts, keys and usage, and follow up on automated tasks and pending actions.",
   "sections": {
     "automationOverview": "Automation runs",
     "configurationOverview": "Configuration Overview",

@@ -13,9 +13,9 @@
     "unread": "Chưa đọc"
   },
   "description": {
-    "disabledSummary": "Tự động lấy hiện đang tắt; bạn vẫn có thể kích hoạt kiểm tra thủ công.",
-    "enabledInterval": "Khoảng thời gian hiện tại: mỗi {{intervalMinutes}} phút.",
-    "enabledSummary": "Tự động lấy hiện đang bật; xem các thông báo trang web đã lấy, xử lý trạng thái chưa đọc và kích hoạt kiểm tra thủ công.",
+    "disabledSummary": "Đọc thông báo trang web và quản lý trạng thái chưa đọc. Kiểm tra tự động đang tắt; vẫn có thể kiểm tra thủ công.",
+    "enabledInterval": "Kiểm tra mỗi {{intervalMinutes}} phút.",
+    "enabledSummary": "Đọc thông báo trang web và quản lý trạng thái chưa đọc. Kiểm tra tự động đang bật.",
     "pollingSettingsLink": "Cấu hình tự động lấy"
   },
   "empty": {
