@@ -3,6 +3,7 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { OverviewAutoCheckinPanel } from "~/features/OptionsOverview/components/OverviewAutoCheckinPanel"
 import { OverviewAutomationPanel } from "~/features/OptionsOverview/components/OverviewAutomationPanel"
 import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
@@ -152,6 +153,72 @@ function createDisabledSiteAnnouncementsItem(): OptionsOverviewAutomationItem {
   }
 }
 
+function createSiteAnnouncementsItem(
+  unread: string,
+): OptionsOverviewAutomationItem {
+  return {
+    id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.siteAnnouncements,
+    status: "success",
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    primaryTarget: { menuItemId: MENU_ITEM_IDS.BASIC },
+    summaryRows: [
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.lastChecked,
+        value: "2026-09-17T12:00:00.000Z",
+        valueType: "datetime",
+      },
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.unread,
+        value: unread,
+      },
+    ],
+    actions: [],
+    defaultExpanded: false,
+  }
+}
+
+function createManagedSiteModelSyncItem(): OptionsOverviewAutomationItem {
+  return {
+    id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.managedSiteModelSync,
+    status: "success",
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    primaryTarget: { menuItemId: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC },
+    summaryRows: [
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.interval,
+        value: "60",
+      },
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.concurrency,
+        value: "3",
+      },
+    ],
+    actions: [],
+    defaultExpanded: false,
+  }
+}
+
+function createWebdavAutoSyncItem(): OptionsOverviewAutomationItem {
+  return {
+    id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.webdavAutoSync,
+    status: "success",
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    primaryTarget: { menuItemId: MENU_ITEM_IDS.IMPORT_EXPORT },
+    summaryRows: [
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.interval,
+        value: "30",
+      },
+      {
+        id: OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS.strategy,
+        value: "",
+      },
+    ],
+    actions: [],
+    defaultExpanded: false,
+  }
+}
+
 function createOverview(
   items: OptionsOverviewAutomationItem[],
 ): OptionsOverviewAutomationOverview {
@@ -186,6 +253,57 @@ describe("OverviewAutomationPanel", () => {
     ).toBeInTheDocument()
   })
 
+  it("exposes the collapsed status and summary on the row trigger", () => {
+    const item = createAutoCheckinItem()
+    renderPanel(item)
+
+    expect(
+      screen.getByRole("button", {
+        name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
+      }),
+    ).toHaveAccessibleName(
+      `optionsOverview:automation.items.autoCheckin.label, optionsOverview:autoCheckin.status.partial, optionsOverview:autoCheckin.lastRun: ${new Date(
+        item.autoCheckinPanel!.lastRunAt!,
+      ).toLocaleString()}`,
+    )
+  })
+
+  it("includes the unread count for site announcements when it is non-zero", () => {
+    renderPanel(createSiteAnnouncementsItem("2"))
+
+    expect(
+      screen.getByText(
+        /optionsOverview:automation\.items\.siteAnnouncements\.lastChecked:/,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/unread: 2/)).toBeInTheDocument()
+  })
+
+  it("omits a zero unread count from the site announcement summary", () => {
+    renderPanel(createSiteAnnouncementsItem("0"))
+
+    expect(screen.queryByText(/unread: 0/)).not.toBeInTheDocument()
+  })
+
+  it("joins managed-site model sync configuration facts", () => {
+    renderPanel(createManagedSiteModelSyncItem())
+
+    expect(
+      screen.getByText(
+        /managedSiteModelSync\.interval: 60 · optionsOverview:automation\.items\.managedSiteModelSync\.concurrency: 3/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("omits empty facts from the WebDAV auto-sync summary", () => {
+    renderPanel(createWebdavAutoSyncItem())
+
+    expect(screen.getByText(/webdavAutoSync\.interval: 30/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/webdavAutoSync\.strategy:/),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps disabled rows compact and offers the enable action when expanded", async () => {
     const user = userEvent.setup()
     const onNavigate = renderPanel(createDisabledSiteAnnouncementsItem())
@@ -198,7 +316,7 @@ describe("OverviewAutomationPanel", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.siteAnnouncements.label",
+        name: /^optionsOverview:automation\.items\.siteAnnouncements\.label/,
       }),
     )
 
@@ -229,7 +347,7 @@ describe("OverviewAutomationPanel", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.autoCheckin.label",
+        name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
       }),
     )
 
@@ -266,7 +384,7 @@ describe("OverviewAutomationPanel", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.autoCheckin.label",
+        name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
       }),
     )
 
@@ -276,5 +394,54 @@ describe("OverviewAutomationPanel", () => {
     expect(
       screen.getAllByText("optionsOverview:autoCheckin.status.partial"),
     ).toHaveLength(1)
+  })
+
+  it("renders the standalone auto check-in card and forwards every action", async () => {
+    const user = userEvent.setup()
+    const panel = createAutoCheckinItem().autoCheckinPanel!
+    const onNavigate = vi.fn()
+
+    render(
+      <OverviewAutoCheckinPanel panel={panel} t={t} onNavigate={onNavigate} />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:autoCheckin.actions.open",
+      }),
+    )
+    expect(onNavigate).toHaveBeenCalledWith(panel.actions[0].target)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:autoCheckin.actions.retryFailed",
+      }),
+    )
+    expect(onNavigate).toHaveBeenCalledWith(panel.actions[1].target)
+  })
+
+  it("omits actions when the standalone auto check-in panel has none", () => {
+    const panel = {
+      ...createAutoCheckinItem().autoCheckinPanel!,
+      actions: [],
+    }
+
+    render(
+      <OverviewAutoCheckinPanel panel={panel} t={t} onNavigate={vi.fn()} />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: /^optionsOverview:autoCheckin\.actions\./,
+      }),
+    ).not.toBeInTheDocument()
   })
 })

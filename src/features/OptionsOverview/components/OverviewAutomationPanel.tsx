@@ -92,6 +92,10 @@ function AutomationItemRow({
   const label = getAutomationItemLabel(item.id, t)
   const disabled = isAutomationItemDisabled(item)
   const summaryLine = disabled ? "" : getAutomationItemSummaryLine(item, t)
+  const statusLabel = getAutomationStatusLabel(item, t)
+  const accessibleLabel = [label, statusLabel, summaryLine]
+    .filter(Boolean)
+    .join(", ")
 
   return (
     <li className="border-border-subtle dark:border-foreground/10 border-b last:border-b-0">
@@ -107,7 +111,7 @@ function AutomationItemRow({
               type="button"
               variant="ghost"
               className="focus-visible:ring-ring py-density-2-5 gap-x-density-2 flex h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start rounded-none ps-3 pe-2 text-left whitespace-normal hover:bg-transparent focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset dark:hover:bg-transparent"
-              aria-label={label}
+              aria-label={accessibleLabel}
               aria-expanded={open}
               aria-controls={contentId}
             >
@@ -136,7 +140,7 @@ function AutomationItemRow({
                     size="sm"
                     className="shrink-0"
                   >
-                    {getAutomationStatusLabel(item, t)}
+                    {statusLabel}
                   </Badge>
                 </span>
                 {summaryLine ? (

@@ -122,11 +122,6 @@ export function OverviewAutoCheckinPanel({
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm leading-6">
             {t("optionsOverview:autoCheckin.summary")}
           </div>
-          {emptyDescription ? (
-            <div className="text-muted-foreground text-sm leading-6">
-              {emptyDescription}
-            </div>
-          ) : null}
         </div>
 
         <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-3">
