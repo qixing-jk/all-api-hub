@@ -37,7 +37,10 @@ async function expectGuideBelowHeader(page: Page, guide: Locator) {
     .poll(async () => {
       const card = await guide.boundingBox()
       const header = await page.getByRole("banner").boundingBox()
-      return card && header ? card.y - (header.y + header.height) : -1
+      // Layout may land on half pixels while scroll offsets use whole pixels.
+      return card && header
+        ? Math.round(card.y - (header.y + header.height))
+        : -1
     })
     .toBeGreaterThanOrEqual(16)
 }

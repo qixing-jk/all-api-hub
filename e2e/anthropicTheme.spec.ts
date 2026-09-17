@@ -107,7 +107,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
     )
     await expect(page.locator("aside div.bg-sidebar")).toHaveCSS(
       "background-color",
-      dark ? "rgb(32, 31, 28)" : "rgb(238, 235, 226)",
+      dark ? "rgb(32, 31, 28)" : "rgb(250, 249, 245)",
     )
     // Readability is checked against actual browser-resolved foreground/background pairs.
     // The complete preview lives on the settings page; the drawer has option previews.

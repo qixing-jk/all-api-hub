@@ -284,20 +284,26 @@ test("keeps account management controls reachable across constrained widths", as
         const headerActionGroupBox = await headerActionGroup.boundingBox()
         const boxes = await readElementBounds(headerActions)
 
-        const rowRightEdges = new Map<number, number>()
+        const rowEdges = new Map<number, number>()
+        const alignsRight = await headerActionGroup.evaluate(
+          (element) => getComputedStyle(element).justifyContent === "flex-end",
+        )
         for (const box of boxes) {
           const rowCenter = Math.round(box.y + box.height / 2)
-          rowRightEdges.set(
+          rowEdges.set(
             rowCenter,
-            Math.max(rowRightEdges.get(rowCenter) ?? 0, box.right),
+            alignsRight
+              ? Math.max(rowEdges.get(rowCenter) ?? 0, box.right)
+              : Math.min(rowEdges.get(rowCenter) ?? Infinity, box.x),
           )
         }
-        const actionGroupRight = headerActionGroupBox
-          ? headerActionGroupBox.x + headerActionGroupBox.width
+        const actionGroupEdge = headerActionGroupBox
+          ? headerActionGroupBox.x +
+            (alignsRight ? headerActionGroupBox.width : 0)
           : 0
         const rowAlignmentError = Math.max(
-          ...Array.from(rowRightEdges.values()).map((rightEdge) =>
-            Math.abs(rightEdge - actionGroupRight),
+          ...Array.from(rowEdges.values()).map((edge) =>
+            Math.abs(edge - actionGroupEdge),
           ),
         )
 
@@ -309,15 +315,15 @@ test("keeps account management controls reachable across constrained widths", as
                 isHorizontallyContained(box, contentCardBox),
               ),
           ),
-          actionsWrapped: rowRightEdges.size > 1,
-          rowsRightAligned: rowAlignmentError <= 1,
+          actionsWrapped: rowEdges.size > 1,
+          rowsAligned: rowAlignmentError <= 1,
         }
       })
       .toEqual({
         hasLayout: true,
         actionsContained: true,
         actionsWrapped: true,
-        rowsRightAligned: true,
+        rowsAligned: true,
       })
 
     expect(
