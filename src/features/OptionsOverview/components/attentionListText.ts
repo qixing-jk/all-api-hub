@@ -1,7 +1,10 @@
 import type { TFunction } from "i18next"
 
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "../ids"
-import type { OptionsOverviewAttentionItem } from "../types"
+import type {
+  OptionsOverviewAttentionCategory,
+  OptionsOverviewAttentionItem,
+} from "../types"
 
 type AttentionKind = OptionsOverviewAttentionItem["kind"]
 type AttentionSeverity = OptionsOverviewAttentionItem["severity"]
@@ -11,6 +14,19 @@ const severityLabelResolvers = {
   warning: (t: TFunction) => t("optionsOverview:severity.warning"),
   info: (t: TFunction) => t("optionsOverview:severity.info"),
 } as const satisfies Record<AttentionSeverity, (t: TFunction) => string>
+
+const attentionCategoryLabelResolvers = {
+  accounts: (t: TFunction) =>
+    t("optionsOverview:attention.categories.accounts"),
+  credentials: (t: TFunction) =>
+    t("optionsOverview:attention.categories.credentials"),
+  automation: (t: TFunction) =>
+    t("optionsOverview:attention.categories.automation"),
+  data: (t: TFunction) => t("optionsOverview:attention.categories.data"),
+} as const satisfies Record<
+  OptionsOverviewAttentionCategory,
+  (t: TFunction) => string
+>
 
 const attentionTitleResolvers = {
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy]: (
@@ -199,6 +215,16 @@ export function getAttentionSeverityLabel(
   t: TFunction,
 ) {
   return severityLabelResolvers[severity](t)
+}
+
+/**
+ * Resolves attention category labels from normalized category values.
+ */
+export function getAttentionCategoryLabel(
+  category: OptionsOverviewAttentionCategory,
+  t: TFunction,
+) {
+  return attentionCategoryLabelResolvers[category](t)
 }
 
 /**

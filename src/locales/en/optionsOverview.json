@@ -33,6 +33,13 @@
       "description": "The latest run had failures or unconfirmed results. Open auto check-in to review the reasons and retry.",
       "title": "Automatic check-in needs attention for {{total}} account(s)"
     },
+    "categories": {
+      "accounts": "Accounts",
+      "automation": "Automation",
+      "credentials": "Credentials",
+      "data": "Data"
+    },
+    "categoryFilterLabel": "Category",
     "checkInMethodUnresolved": {
       "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
       "title": "{{name}} needs a check-in method"
@@ -42,6 +49,7 @@
       "title": "{{total}} account(s) were skipped and need action"
     },
     "filterAll": "All",
+    "severityFilterLabel": "Severity",
     "siteTypeUnknown": {
       "description": "Automatic check-in cannot determine this site's protocol. Edit the account and choose the correct site type, or run auto-detection again.",
       "title": "{{name}} has an unknown site type"

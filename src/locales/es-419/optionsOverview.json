@@ -33,6 +33,13 @@
       "description": "La última ejecución tuvo fallos o resultados sin confirmar. Abre el check-in automático para revisar los motivos y reintentar.",
       "title": "{{total}} cuenta(s) necesitan revisión de check-in"
     },
+    "categories": {
+      "accounts": "Cuentas",
+      "automation": "Automatización",
+      "credentials": "Credenciales",
+      "data": "Datos"
+    },
+    "categoryFilterLabel": "Categoría",
     "checkInMethodUnresolved": {
       "description": "El check-in automático está activado, pero aún no hay un método disponible. En Cuentas, vuelve a detectar o elige un método antes de la próxima ejecución.",
       "title": "{{name}} necesita un método de check-in"
@@ -42,6 +49,7 @@
       "title": "{{total}} cuenta(s) se omitieron y necesitan acción"
     },
     "filterAll": "Todos",
+    "severityFilterLabel": "Gravedad",
     "siteTypeUnknown": {
       "description": "El check-in automático no puede determinar el protocolo de este sitio. Edita la cuenta y elige el tipo correcto, o vuelve a ejecutar la detección automática.",
       "title": "{{name}} tiene un tipo de sitio desconocido"

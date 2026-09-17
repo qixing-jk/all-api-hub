@@ -33,6 +33,13 @@
       "description": "前回の実行で失敗または未確認の結果があります。自動チェックインを開いて原因を確認し、再試行してください。",
       "title": "{{total}} 件のアカウントでチェックインの確認が必要です"
     },
+    "categories": {
+      "accounts": "アカウント",
+      "automation": "自動化",
+      "credentials": "認証情報",
+      "data": "データ"
+    },
+    "categoryFilterLabel": "カテゴリ",
     "checkInMethodUnresolved": {
       "description": "自動チェックインは有効ですが、利用できる方法がまだありません。アカウント管理で方法を再検出または選択してから実行してください。",
       "title": "{{name}} のチェックイン方法を確認してください"
@@ -42,6 +49,7 @@
       "title": "{{total}} 件のアカウントがスキップされ、対応が必要です"
     },
     "filterAll": "すべて",
+    "severityFilterLabel": "重大度",
     "siteTypeUnknown": {
       "description": "自動チェックインでこのサイトのプロトコルを判定できません。アカウントを編集して正しいサイト種別を選択するか、自動検出を再実行してください。",
       "title": "{{name}} のサイト種別が不明です"

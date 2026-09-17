@@ -326,9 +326,19 @@ test("overview attention list surfaces skipped check-ins that need action", asyn
   const itemTitle = "1 account(s) were skipped and need action"
   await expect(attention).toBeVisible()
   await expect(attention.getByText(itemTitle)).toBeVisible()
-  await expect(
-    attention.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityCounts),
-  ).toContainText("Warning 1")
+
+  const severityFilters = attention.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityFilters,
+  )
+  await expect(severityFilters).toContainText("Warning 1")
+
+  const categoryFilters = attention.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.attentionCategoryFilters,
+  )
+  await expect(categoryFilters).toContainText("Automation 1")
+  await categoryFilters.getByRole("button", { name: "Automation 1" }).click()
+  await expect(attention.getByText("No API profiles yet")).toHaveCount(0)
+  await expect(attention.getByText(itemTitle)).toBeVisible()
 
   await attention
     .getByRole("button", { name: `Handle check-in: ${itemTitle}` })

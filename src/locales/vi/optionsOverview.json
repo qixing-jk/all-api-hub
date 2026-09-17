@@ -33,6 +33,13 @@
       "description": "Lần chạy gần nhất có lỗi hoặc kết quả chưa được xác nhận. Hãy mở trang điểm danh tự động để xem nguyên nhân và thử lại.",
       "title": "{{total}} tài khoản cần xử lý điểm danh"
     },
+    "categories": {
+      "accounts": "Tài khoản",
+      "automation": "Tự động hóa",
+      "credentials": "Thông tin xác thực",
+      "data": "Dữ liệu"
+    },
+    "categoryFilterLabel": "Danh mục",
     "checkInMethodUnresolved": {
       "description": "Điểm danh tự động đã bật nhưng chưa có phương thức khả dụng. Trong Tài khoản, hãy phát hiện lại hoặc chọn phương thức trước lần chạy tiếp theo.",
       "title": "{{name}} cần xác nhận phương thức điểm danh"
@@ -42,6 +49,7 @@
       "title": "{{total}} tài khoản bị bỏ qua và cần xử lý"
     },
     "filterAll": "Tất cả",
+    "severityFilterLabel": "Mức độ",
     "siteTypeUnknown": {
       "description": "Điểm danh tự động không thể xác định giao thức của trang này. Hãy chỉnh sửa tài khoản và chọn đúng loại trang, hoặc chạy lại tự động phát hiện.",
       "title": "{{name}} có loại trang web không xác định"

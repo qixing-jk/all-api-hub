@@ -192,12 +192,14 @@ const setupViewModel: OptionsOverviewViewModel = {
     {
       id: "setup:add-account",
       kind: "addAccount",
+      category: "accounts",
       severity: "info",
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
     },
     {
       id: "account:error",
       kind: "accountUnhealthy",
+      category: "accounts",
       severity: "error",
       titleOptions: { name: "Broken Relay" },
       descriptionOptions: { reason: "sync failed" },
@@ -1180,7 +1182,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:actions.open: optionsOverview:attention.accountUnhealthy.title",
+        name: "optionsOverview:attention.actions.viewAccount: optionsOverview:attention.accountUnhealthy.title",
       }),
     )
 
@@ -1378,7 +1380,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:actions.open: optionsOverview:attention.accountUnhealthy.title",
+        name: "optionsOverview:attention.actions.viewAccount: optionsOverview:attention.accountUnhealthy.title",
       }),
     )
 
@@ -1461,7 +1463,7 @@ describe("OptionsOverview", () => {
     expect(attentionCard).not.toHaveClass("overscroll-contain")
     expect(
       screen.getByText("optionsOverview:attention.addAccount.description"),
-    ).toHaveClass("line-clamp-2", "break-words")
+    ).toHaveClass("line-clamp-3", "break-words")
     expect(
       screen.getByText("optionsOverview:attention.addAccount.description"),
     ).toHaveAttribute(

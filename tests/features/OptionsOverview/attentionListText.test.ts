@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   getAttentionActionLabel,
+  getAttentionCategoryLabel,
   getAttentionDescription,
   getAttentionSeverityLabel,
   getAttentionTitle,
@@ -19,6 +20,7 @@ function createAttentionItem(
   return {
     id: item.kind,
     kind: item.kind,
+    category: item.category ?? "accounts",
     severity: item.severity ?? "info",
     titleOptions: item.titleOptions,
     descriptionOptions: item.descriptionOptions,
@@ -222,6 +224,23 @@ describe("attention list text helpers", () => {
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.description",
       descriptionOptions,
+    )
+  })
+
+  it("resolves attention category labels", () => {
+    const t = ((key: string) => key) as TFunction
+
+    expect(getAttentionCategoryLabel("accounts", t)).toBe(
+      "optionsOverview:attention.categories.accounts",
+    )
+    expect(getAttentionCategoryLabel("credentials", t)).toBe(
+      "optionsOverview:attention.categories.credentials",
+    )
+    expect(getAttentionCategoryLabel("automation", t)).toBe(
+      "optionsOverview:attention.categories.automation",
+    )
+    expect(getAttentionCategoryLabel("data", t)).toBe(
+      "optionsOverview:attention.categories.data",
     )
   })
 

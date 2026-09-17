@@ -11,7 +11,10 @@ import {
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
-import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "./ids"
+import {
+  OPTIONS_OVERVIEW_ATTENTION_CATEGORIES,
+  OPTIONS_OVERVIEW_ATTENTION_KINDS,
+} from "./ids"
 import {
   buildAccountNavigationTarget,
   buildBasicSettingsAnchorTarget,
@@ -61,6 +64,7 @@ export function buildAttentionItems(input: {
     (account) => ({
       id: `account:${account.id}:${account.health.status}`,
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
       severity:
         account.health.status === SiteHealthStatus.Error ? "error" : "warning",
       titleOptions: { name: account.name },
@@ -100,6 +104,7 @@ export function buildAttentionItems(input: {
           ? {
               id: `checkin:${account.id}:site-type-unknown`,
               kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
+              category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
               severity: "warning",
               titleOptions: { name: account.name },
               target: buildAccountNavigationTarget(account.id),
@@ -107,6 +112,7 @@ export function buildAttentionItems(input: {
           : {
               id: `checkin:${account.id}:method-unresolved`,
               kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
+              category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
               severity: "warning",
               titleOptions: { name: account.name },
               target: buildAccountNavigationTarget(account.id),
@@ -128,6 +134,7 @@ export function buildAttentionItems(input: {
       items.push({
         id: "auto-checkin:skipped-needs-action",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+        category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
         severity: "warning",
         titleOptions: { total: skippedCheckInCount },
         target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
@@ -143,6 +150,7 @@ export function buildAttentionItems(input: {
       items.push({
         id: "auto-checkin:globally-disabled",
         kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
         severity: "warning",
         descriptionOptions: { total: pausedAccountCount },
         target: buildBasicSettingsAnchorTarget(SETTINGS_ANCHORS.AUTO_CHECKIN),
@@ -157,6 +165,7 @@ export function buildAttentionItems(input: {
     items.push({
       id: "usage:pending-refresh",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.data,
       severity: "info",
       titleOptions: { total: input.usageRefreshPendingCount },
       target: buildAccountNavigationTarget(),
@@ -168,6 +177,7 @@ export function buildAttentionItems(input: {
     items.push({
       id: "announcements:unread",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
       severity: "info",
       titleOptions: { total: unreadAnnouncementCount },
       target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
@@ -181,6 +191,7 @@ export function buildAttentionItems(input: {
     items.push({
       id: "setup:add-account",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
       severity: "info",
       target: buildAccountNavigationTarget(),
     })
@@ -190,6 +201,7 @@ export function buildAttentionItems(input: {
     items.push({
       id: "setup:add-profile",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.credentials,
       severity: "info",
       target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
     })
@@ -251,6 +263,7 @@ function buildAutoCheckinAttentionItem(
   return {
     id: "auto-checkin:needs-attention",
     kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
+    category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
     severity: failedCount > 0 ? "error" : "warning",
     titleOptions: { total: count },
     target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },

@@ -33,6 +33,13 @@
       "description": "最近一次執行中有失敗或結果待確認。請前往自動簽到查看原因並重試。",
       "title": "{{total}} 個帳號的自動簽到未完成"
     },
+    "categories": {
+      "accounts": "帳號",
+      "automation": "自動化",
+      "credentials": "憑據",
+      "data": "資料"
+    },
+    "categoryFilterLabel": "類別",
     "checkInMethodUnresolved": {
       "description": "自動簽到已開啟，但目前尚無可用的簽到方式。請在帳號管理中重新偵測或選擇簽到方式後再執行。",
       "title": "{{name}} 的簽到方式待確認"
@@ -42,6 +49,7 @@
       "title": "{{total}} 個帳號的簽到被跳過，需要處理"
     },
     "filterAll": "全部",
+    "severityFilterLabel": "嚴重度",
     "siteTypeUnknown": {
       "description": "自動簽到暫時無法判斷該站點的協定。請編輯帳號並選擇正確的站點類型，或重新自動偵測。",
       "title": "{{name}} 的站點類型未知"
