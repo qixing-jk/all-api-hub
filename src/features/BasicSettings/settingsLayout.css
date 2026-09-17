@@ -1,6 +1,11 @@
 /* Settings use one workspace surface; only independent controls need a box. */
 .settings-workspace {
   container: settings-workspace / inline-size;
+  overflow-wrap: anywhere;
+}
+
+.settings-workspace [data-slot="setting-section-header"] > div {
+  min-width: 0;
 }
 
 .settings-workspace [data-slot="setting-section"] {

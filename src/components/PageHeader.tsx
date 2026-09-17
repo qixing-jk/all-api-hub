@@ -48,12 +48,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "[container-type:inline-size]",
+        "[container-type:inline-size] [overflow-wrap:anywhere]",
         spacing === "compact" ? "mb-density-4" : "mb-density-6",
         className,
       )}
     >
-      <div className="grid gap-x-4 [@container(min-width:42rem)]:grid-cols-[minmax(16rem,1fr)_auto] [@container(min-width:42rem)]:items-start">
+      <div className="grid grid-cols-1 gap-x-4 [@container(min-width:42rem)]:grid-cols-[minmax(16rem,1fr)_auto] [@container(min-width:42rem)]:items-start">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2.5">
             <Icon
