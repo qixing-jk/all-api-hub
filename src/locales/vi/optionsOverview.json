@@ -14,6 +14,7 @@
       "handleCheckIn": "Xử lý điểm danh",
       "refreshAccounts": "Làm mới tài khoản",
       "viewAccount": "Xem tài khoản",
+      "viewAnnouncements": "Xem thông báo",
       "viewCheckIn": "Xem điểm danh"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "Thêm thông tin API để các công cụ và luồng xuất có thể dùng lại.",
       "title": "Chưa có hồ sơ API"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} tài khoản đã bật điểm danh tự động nhưng sẽ không chạy khi công tắc toàn cục đang tắt. Hãy bật lại trong cài đặt điểm danh.",
+      "title": "Điểm danh tự động đang tắt toàn cục"
     },
     "autoCheckinNeedsAttention": {
       "description": "Lần chạy gần nhất có lỗi hoặc kết quả chưa được xác nhận. Hãy mở trang điểm danh tự động để xem nguyên nhân và thử lại.",
@@ -38,6 +43,10 @@
     },
     "sortHint": "Sắp xếp theo mức ảnh hưởng",
     "summary": "{{total}} việc cần xử lý",
+    "unreadSiteAnnouncements": {
+      "description": "Mở thông báo trang để đánh dấu đã đọc và tránh bỏ lỡ thông tin bảo trì hoặc rủi ro.",
+      "title": "{{total}} thông báo trang chưa đọc"
+    },
     "usageRefreshPending": {
       "description": "Làm mới tài khoản để hoàn tất thống kê yêu cầu, token và chi phí hôm nay.",
       "title": "{{total}} tài khoản cần làm mới thống kê hôm nay"

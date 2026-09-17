@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAttentionItems } from "~/features/OptionsOverview/attentionItems"
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
@@ -238,5 +239,101 @@ describe("overview attention items", () => {
       titleOptions: { total: 2 },
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
     })
+  })
+
+  it("flags accounts paused by the global auto check-in switch", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "paused-a",
+        name: "Paused A",
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
+      buildDisplaySiteData({
+        id: "paused-b",
+        name: "Paused B",
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
+      buildDisplaySiteData({
+        id: "manual-account",
+        name: "Manual Relay",
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: false }),
+      }),
+      buildDisplaySiteData({
+        id: "disabled-account",
+        name: "Disabled Relay",
+        disabled: true,
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
+    ]
+
+    const items = buildAttentionItems({
+      enabledAccountCount: 3,
+      profileCount: 1,
+      problemAccounts: [],
+      accounts,
+      globalAutomaticExecutionEnabled: false,
+    })
+
+    expect(items).toContainEqual({
+      id: "auto-checkin:globally-disabled",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+      severity: "warning",
+      descriptionOptions: { total: 2 },
+      target: {
+        menuItemId: MENU_ITEM_IDS.BASIC,
+        params: {
+          anchor: SETTINGS_ANCHORS.AUTO_CHECKIN,
+          highlight: SETTINGS_ANCHORS.AUTO_CHECKIN,
+          tab: "checkinRedeem",
+        },
+      },
+    })
+    expect(items.some((item) => item.id.startsWith("checkin:"))).toBe(false)
+  })
+
+  it("skips the global switch item when no account keeps automatic check-in on", () => {
+    const account = buildDisplaySiteData({
+      id: "manual-account",
+      name: "Manual Relay",
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: false }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: false,
+      }).map((item) => item.id),
+    ).not.toContain("auto-checkin:globally-disabled")
+  })
+
+  it("adds an unread announcement item", () => {
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        unreadAnnouncementCount: 3,
+      }),
+    ).toContainEqual({
+      id: "announcements:unread",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+      severity: "info",
+      titleOptions: { total: 3 },
+      target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
+    })
+  })
+
+  it("skips the unread announcement item without unread records", () => {
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        unreadAnnouncementCount: 0,
+      }).map((item) => item.id),
+    ).not.toContain("announcements:unread")
   })
 })

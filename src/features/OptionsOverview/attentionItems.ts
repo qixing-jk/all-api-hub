@@ -1,5 +1,6 @@
 import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { isUnknownAccountSiteType } from "~/constants/siteType"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -9,7 +10,10 @@ import {
 } from "~/types/autoCheckin"
 
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "./ids"
-import { buildAccountNavigationTarget } from "./navigationTargets"
+import {
+  buildAccountNavigationTarget,
+  buildBasicSettingsAnchorTarget,
+} from "./navigationTargets"
 import type {
   OptionsOverviewAttentionItem,
   OptionsOverviewSeverity,
@@ -35,6 +39,7 @@ export function buildAttentionItems(input: {
   autoCheckinStatus?: AutoCheckinStatus | null
   globalAutomaticExecutionEnabled?: boolean
   usageRefreshPendingCount?: number
+  unreadAnnouncementCount?: number
   accountsDataAvailable?: boolean
   profilesDataAvailable?: boolean
 }): OptionsOverviewAttentionItem[] {
@@ -52,8 +57,9 @@ export function buildAttentionItems(input: {
 
   const automaticExecutionEnabled =
     input.globalAutomaticExecutionEnabled !== false
+  const accounts = input.accounts ?? []
   if (automaticExecutionEnabled) {
-    for (const account of input.accounts ?? []) {
+    for (const account of accounts) {
       if (
         account.disabled === true ||
         account.checkIn?.automaticExecutionEnabled !== true
@@ -100,6 +106,21 @@ export function buildAttentionItems(input: {
     if (autoCheckinAttentionItem) {
       items.push(autoCheckinAttentionItem)
     }
+  } else {
+    const pausedAccountCount = accounts.filter(
+      (account) =>
+        account.disabled !== true &&
+        account.checkIn?.automaticExecutionEnabled === true,
+    ).length
+    if (pausedAccountCount > 0) {
+      items.push({
+        id: "auto-checkin:globally-disabled",
+        kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        severity: "warning",
+        descriptionOptions: { total: pausedAccountCount },
+        target: buildBasicSettingsAnchorTarget(SETTINGS_ANCHORS.AUTO_CHECKIN),
+      })
+    }
   }
 
   if (
@@ -112,6 +133,17 @@ export function buildAttentionItems(input: {
       severity: "info",
       titleOptions: { total: input.usageRefreshPendingCount },
       target: buildAccountNavigationTarget(),
+    })
+  }
+
+  const unreadAnnouncementCount = input.unreadAnnouncementCount ?? 0
+  if (unreadAnnouncementCount > 0) {
+    items.push({
+      id: "announcements:unread",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+      severity: "info",
+      titleOptions: { total: unreadAnnouncementCount },
+      target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
     })
   }
 

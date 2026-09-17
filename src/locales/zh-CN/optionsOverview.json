@@ -14,6 +14,7 @@
       "handleCheckIn": "处理签到",
       "refreshAccounts": "刷新账号",
       "viewAccount": "查看账号",
+      "viewAnnouncements": "查看公告",
       "viewCheckIn": "查看签到"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "添加 API 凭据后，可在工具和导出流程中复用。",
       "title": "还没有 API 凭据"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} 个账号已开启自动签到，但全局开关关闭后不会执行。请在签到设置中重新开启。",
+      "title": "自动签到已全局关闭"
     },
     "autoCheckinNeedsAttention": {
       "description": "最近一次运行中有失败或结果待确认。前往自动签到查看原因并重试。",
@@ -38,6 +43,10 @@
     },
     "sortHint": "按影响程度排序",
     "summary": "{{total}} 项待处理",
+    "unreadSiteAnnouncements": {
+      "description": "查看站点公告后可标记为已读，避免遗漏站点维护或风险通知。",
+      "title": "{{total}} 条站点公告未读"
+    },
     "usageRefreshPending": {
       "description": "刷新账号后即可补齐今日请求、Token 和消耗统计。",
       "title": "{{total}} 个账号的今日统计待刷新"

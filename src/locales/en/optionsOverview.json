@@ -14,6 +14,7 @@
       "handleCheckIn": "Handle check-in",
       "refreshAccounts": "Refresh accounts",
       "viewAccount": "View account",
+      "viewAnnouncements": "View announcements",
       "viewCheckIn": "View check-in"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "Add API credentials so tools and export flows can reuse them.",
       "title": "No API profiles yet"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} account(s) have automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
+      "title": "Automatic check-in is off globally"
     },
     "autoCheckinNeedsAttention": {
       "description": "The latest run had failures or unconfirmed results. Open auto check-in to review the reasons and retry.",
@@ -38,6 +43,10 @@
     },
     "sortHint": "Sorted by impact",
     "summary": "{{total}} pending",
+    "unreadSiteAnnouncements": {
+      "description": "Open site announcements to mark them as read and avoid missing maintenance or risk notices.",
+      "title": "{{total}} unread site announcement(s)"
+    },
     "usageRefreshPending": {
       "description": "Refresh accounts to complete today's request, token, and cost statistics.",
       "title": "{{total}} account(s) need a stats refresh"

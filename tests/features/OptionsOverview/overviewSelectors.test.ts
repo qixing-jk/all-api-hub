@@ -1246,4 +1246,59 @@ describe("Options overview selectors", () => {
       ]),
     )
   })
+
+  it("surfaces paused check-in accounts and unread announcements as pending work", () => {
+    const pausedAccount: SiteAccount = {
+      ...healthyAccount,
+      id: "paused-account",
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    }
+    const pausedDisplayData: DisplaySiteData = {
+      ...healthyDisplayData,
+      id: "paused-account",
+      name: "Paused Relay",
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    }
+
+    const view = buildOptionsOverviewViewModel({
+      accounts: [pausedAccount],
+      displayData: [pausedDisplayData],
+      accountStats: emptyStats,
+      apiCredentialProfiles: [profile],
+      usageStore: emptyUsageStore,
+      preferences: {
+        ...basePreferences,
+        autoCheckin: {
+          ...basePreferences.autoCheckin,
+          globalEnabled: false,
+        },
+      },
+      managedSiteType: undefined,
+      autoCheckinStatus: null,
+      siteAnnouncementRecords: [unreadAnnouncement],
+      siteAnnouncementStatuses: [announcementStatus],
+    })
+
+    expect(view.attentionItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "auto-checkin:globally-disabled",
+          severity: "warning",
+          descriptionOptions: { total: 1 },
+          target: {
+            menuItemId: MENU_ITEM_IDS.BASIC,
+            params: expect.objectContaining({
+              anchor: SETTINGS_ANCHORS.AUTO_CHECKIN,
+            }),
+          },
+        }),
+        expect.objectContaining({
+          id: "announcements:unread",
+          severity: "info",
+          titleOptions: { total: 1 },
+          target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
+        }),
+      ]),
+    )
+  })
 })

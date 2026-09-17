@@ -14,6 +14,7 @@
       "handleCheckIn": "Resolver check-in",
       "refreshAccounts": "Actualizar cuentas",
       "viewAccount": "Ver cuenta",
+      "viewAnnouncements": "Ver anuncios",
       "viewCheckIn": "Ver check-in"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "Agrega credenciales de API para que las herramientas y los flujos de exportación puedan reutilizarlas.",
       "title": "Aún no hay perfiles de API"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} cuenta(s) tienen el check-in automático activado, pero no se ejecutará mientras el interruptor global esté desactivado. Vuelve a activarlo en los ajustes de check-in.",
+      "title": "El check-in automático está desactivado globalmente"
     },
     "autoCheckinNeedsAttention": {
       "description": "La última ejecución tuvo fallos o resultados sin confirmar. Abre el check-in automático para revisar los motivos y reintentar.",
@@ -39,6 +44,10 @@
     "sortHint": "Ordenado por impacto",
     "summary": "{{total}} pendientes",
     "summary_many": "optionsOverview:attention.summary",
+    "unreadSiteAnnouncements": {
+      "description": "Abre los anuncios del sitio para marcarlos como leídos y no perder avisos de mantenimiento o riesgos.",
+      "title": "{{total}} anuncio(s) del sitio sin leer"
+    },
     "usageRefreshPending": {
       "description": "Actualiza las cuentas para completar las estadísticas de solicitudes, tokens y costo de hoy.",
       "title": "{{total}} cuenta(s) necesitan actualizar sus estadísticas"

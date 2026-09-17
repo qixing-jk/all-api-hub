@@ -214,6 +214,69 @@ test("overview attention list surfaces unknown site type check-in setup", async 
       search: "unknown-site-account",
     })
 })
+
+test("overview attention list surfaces accounts paused by the global check-in switch", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const account = createStoredAccount({
+    id: "paused-checkin-account",
+    site_name: "Paused Relay",
+    site_url: "https://paused.example.com",
+    site_type: SITE_TYPES.NEW_API,
+    checkIn: {
+      automaticExecutionEnabled: true,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [account])
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      globalEnabled: false,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "Automatic check-in is off globally"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(
+    attention.getByText(
+      /1 account\(s\) have automatic check-in enabled, but nothing runs/u,
+    ),
+  ).toBeVisible()
+
+  await attention
+    .getByRole("button", { name: `Handle check-in: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        tab: url.searchParams.get("tab"),
+        anchor: url.searchParams.get("anchor"),
+      }
+    })
+    .toEqual({
+      hash: `#${MENU_ITEM_IDS.BASIC}`,
+      tab: "checkinRedeem",
+      anchor: SETTINGS_ANCHORS.AUTO_CHECKIN,
+    })
+
+  await expect(
+    page.locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`),
+  ).toBeInViewport()
+})
 test("overview action center opens disabled auto check-in settings", async ({
   context,
   extensionId,

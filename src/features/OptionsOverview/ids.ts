@@ -19,7 +19,9 @@ export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   siteTypeUnknown: "siteTypeUnknown",
   checkInMethodUnresolved: "checkInMethodUnresolved",
   autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
+  autoCheckinGloballyDisabled: "autoCheckinGloballyDisabled",
   usageRefreshPending: "usageRefreshPending",
+  unreadSiteAnnouncements: "unreadSiteAnnouncements",
   addAccount: "addAccount",
   addProfile: "addProfile",
 } as const

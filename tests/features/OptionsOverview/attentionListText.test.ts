@@ -102,6 +102,22 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.usageRefreshPending.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.autoCheckinGloballyDisabled.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.unreadSiteAnnouncements.title")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.title",
@@ -170,6 +186,22 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.usageRefreshPending.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.autoCheckinGloballyDisabled.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.unreadSiteAnnouncements.description")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.description",
@@ -212,5 +244,21 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.actions.refreshAccounts")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.handleCheckIn")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.viewAnnouncements")
   })
 })

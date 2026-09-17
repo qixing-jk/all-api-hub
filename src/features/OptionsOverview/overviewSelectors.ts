@@ -79,6 +79,9 @@ export function buildOptionsOverviewViewModel(
   const usageRefreshPendingCount = usageSnapshot.hasUsageData
     ? resolveUsageRefreshPendingCount(input.accountStats.todayStatsCoverage)
     : 0
+  const unreadAnnouncementCount = input.siteAnnouncementRecords.filter(
+    (record) => !record.read,
+  ).length
   const attentionItems = buildAttentionItems({
     enabledAccountCount: enabledAccounts.length,
     profileCount: input.apiCredentialProfiles.length,
@@ -87,6 +90,7 @@ export function buildOptionsOverviewViewModel(
     autoCheckinStatus: input.autoCheckinStatus,
     globalAutomaticExecutionEnabled,
     usageRefreshPendingCount,
+    unreadAnnouncementCount,
     accountsDataAvailable: input.accountsDataAvailable,
     profilesDataAvailable: input.profilesDataAvailable,
   })

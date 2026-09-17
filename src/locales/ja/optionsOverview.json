@@ -14,6 +14,7 @@
       "handleCheckIn": "チェックインを処理",
       "refreshAccounts": "アカウントを更新",
       "viewAccount": "アカウントを表示",
+      "viewAnnouncements": "お知らせを表示",
       "viewCheckIn": "チェックインを表示"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "API 認証情報を追加すると、ツールやエクスポートで再利用できます。",
       "title": "API 認証情報がありません"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} 件のアカウントで自動チェックインが有効ですが、全体スイッチが無効のため実行されません。チェックイン設定で再度有効にしてください。",
+      "title": "自動チェックインは全体で無効です"
     },
     "autoCheckinNeedsAttention": {
       "description": "前回の実行で失敗または未確認の結果があります。自動チェックインを開いて原因を確認し、再試行してください。",
@@ -38,6 +43,10 @@
     },
     "sortHint": "影響度順",
     "summary": "{{total}} 件の未処理",
+    "unreadSiteAnnouncements": {
+      "description": "サイトのお知らせを開くと既読になり、メンテナンスやリスクの通知を見落としにくくなります。",
+      "title": "未読のサイトお知らせが {{total}} 件あります"
+    },
     "usageRefreshPending": {
       "description": "アカウントを更新すると、今日のリクエスト、Token、消費統計が補完されます。",
       "title": "{{total}} 件のアカウントで今日の統計を更新してください"

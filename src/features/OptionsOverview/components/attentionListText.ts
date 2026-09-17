@@ -42,6 +42,22 @@ const attentionTitleResolvers = {
     t: TFunction,
   ) =>
     t("optionsOverview:attention.usageRefreshPending.title", item.titleOptions),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.autoCheckinGloballyDisabled.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.unreadSiteAnnouncements.title",
+      item.titleOptions,
+    ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -96,6 +112,22 @@ const attentionDescriptionResolvers = {
       "optionsOverview:attention.usageRefreshPending.description",
       item.descriptionOptions,
     ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.autoCheckinGloballyDisabled.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.unreadSiteAnnouncements.description",
+      item.descriptionOptions,
+    ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -129,6 +161,11 @@ const attentionActionResolvers = {
   ) => t("optionsOverview:attention.actions.viewCheckIn"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending]: (t: TFunction) =>
     t("optionsOverview:attention.actions.refreshAccounts"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled]: (
+    t: TFunction,
+  ) => t("optionsOverview:attention.actions.handleCheckIn"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.viewAnnouncements"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (t: TFunction) =>
     t("optionsOverview:attention.actions.addAccount"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile]: (t: TFunction) =>

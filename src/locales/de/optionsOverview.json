@@ -14,6 +14,7 @@
       "handleCheckIn": "Check-in bearbeiten",
       "refreshAccounts": "Konten aktualisieren",
       "viewAccount": "Konto anzeigen",
+      "viewAnnouncements": "Ankündigungen anzeigen",
       "viewCheckIn": "Check-in anzeigen"
     },
     "addAccount": {
@@ -23,6 +24,10 @@
     "addProfile": {
       "description": "Fügen Sie API-Anmeldeinformationen hinzu, damit Tools und Exportflüsse sie wiederverwenden können.",
       "title": "Noch keine API-Profile"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{total}} Konto/Konten haben den automatischen Check-in aktiviert, aber er läuft nicht, solange der globale Schalter aus ist. Aktivieren Sie ihn in den Check-in-Einstellungen erneut.",
+      "title": "Automatischer Check-in ist global deaktiviert"
     },
     "autoCheckinNeedsAttention": {
       "description": "Im letzten Lauf gab es Fehler oder unbestätigte Ergebnisse. Öffnen Sie den automatischen Check-in, um die Ursachen zu prüfen und es erneut zu versuchen.",
@@ -38,6 +43,10 @@
     },
     "sortHint": "Nach Auswirkung sortiert",
     "summary": "{{total}} offen",
+    "unreadSiteAnnouncements": {
+      "description": "Öffnen Sie die Website-Ankündigungen, um sie als gelesen zu markieren und Wartungs- oder Risikohinweise nicht zu verpassen.",
+      "title": "{{total}} ungelesene Website-Ankündigung(en)"
+    },
     "usageRefreshPending": {
       "description": "Aktualisieren Sie die Konten, um die heutigen Anfrage-, Token- und Kostenstatistiken zu vervollständigen.",
       "title": "Für {{total}} Konto/Konten müssen die heutigen Statistiken aktualisiert werden"
