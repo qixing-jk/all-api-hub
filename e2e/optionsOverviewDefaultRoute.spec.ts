@@ -147,8 +147,7 @@ test("automation row shortcut hides again after mouse interaction", async ({
   await expect(automation).toBeVisible()
 
   const row = automation.getByRole("button", {
-    name: "Auto check-in",
-    exact: true,
+    name: /^Auto check-in/,
   })
   const shortcut = automation.getByRole("button", {
     name: "Open Auto check-in",
