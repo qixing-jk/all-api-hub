@@ -19,13 +19,19 @@ import { waitForExtensionRoot } from "./utils/lazyLoading"
  * These buttons are separate from the virtualized key-account groups below them.
  */
 async function waitForKeyAccountSummaries(page: Page, count: number) {
-  for (let index = 0; index < count; index++) {
-    await expect(
-      page.getByRole("button", {
-        name: new RegExp(`^Performance Account ${index}\\s*1 key$`),
-      }),
-    ).toBeVisible({ timeout: 30_000 })
-  }
+  // Match the complete visible set in one browser query instead of scanning the
+  // accessibility tree separately for every account on every inventory reload.
+  await expect(
+    page
+      .getByRole("button", { name: /^Performance Account \d+\s*1 key$/ })
+      .filter({ visible: true }),
+  ).toHaveText(
+    Array.from(
+      { length: count },
+      (_, index) => new RegExp(`^Performance Account ${index}\\s*1 key$`),
+    ),
+    { timeout: 30_000 },
+  )
   await expect(
     page.getByText(`Total ${count} keys`, { exact: true }),
   ).toBeVisible()
