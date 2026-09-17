@@ -52,13 +52,13 @@ test("theme mode keeps supporting copy close and does not reserve an invisible r
     exact: true,
   })
   const currentTheme = card.getByText(/^Current:/)
-  await expect
-    .poll(async () => {
-      const descriptionBox = (await description.boundingBox())!
-      const currentBox = (await currentTheme.boundingBox())!
-      return currentBox.y - descriptionBox.y - descriptionBox.height
-    })
-    .toBeLessThanOrEqual(4)
+  await expect(async () => {
+    const descriptionBox = (await description.boundingBox())!
+    const currentBox = (await currentTheme.boundingBox())!
+    const gap = currentBox.y - descriptionBox.y - descriptionBox.height
+    expect(gap).toBeGreaterThanOrEqual(0)
+    expect(gap).toBeLessThanOrEqual(4)
+  }).toPass({ timeout: 10_000 })
 })
 
 for (const width of [1280, 390, 320]) {

@@ -188,7 +188,8 @@ test("settings preserve inset corners, circular switches and focus in both theme
       await button.focus()
       await expect(button).toBeFocused()
       await expect(button).not.toHaveCSS("box-shadow", "none")
-      await expect(button).toHaveCSS("border-top-left-radius", "8px")
+      await expect(group).toHaveCSS("border-top-left-radius", "20px")
+      await expect(button).toHaveCSS("border-top-left-radius", "16px")
       await expectCornerShape(button, "superellipse(1.5)")
       const toggle = page.getByRole("switch").first()
       await expect(toggle).toHaveCSS("border-top-left-radius", "9999px")
@@ -211,11 +212,11 @@ test("settings preserve inset corners, circular switches and focus in both theme
 
   // Changing the outer token must also change the inset; no independent child radius.
   await group.evaluate((element) => {
-    element.style.setProperty("--radius-md", "20px")
+    element.style.setProperty("--radius-xl", "24px")
     element.style.setProperty("--corner-inset", "6px")
   })
-  await expect(group).toHaveCSS("border-top-left-radius", "20px")
-  await expect(button).toHaveCSS("border-top-left-radius", "14px")
+  await expect(group).toHaveCSS("border-top-left-radius", "24px")
+  await expect(button).toHaveCSS("border-top-left-radius", "18px")
 })
 
 test("portalled menus and search dialog keep their nested outlines", async ({
