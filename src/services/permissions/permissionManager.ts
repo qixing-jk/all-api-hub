@@ -3,9 +3,7 @@ import {
   getManifest,
   onPermissionsAdded,
   onPermissionsRemoved,
-  removePermissions,
   removePermissionsDetailed,
-  requestPermissions,
   requestPermissionsDetailed,
   type PermissionOperationResult,
 } from "~/utils/browser/browserApi"
@@ -66,22 +64,6 @@ export async function hasCookieInterceptorPermissions(): Promise<boolean> {
   return await hasPermissions(COOKIE_INTERCEPTOR_PERMISSIONS)
 }
 
-interface PermissionDefinition {
-  id: ManifestOptionalPermissions
-  titleKey: string
-  descriptionKey: string
-}
-
-/**
- * Optional permission definitions with i18n keys for UI rendering.
- */
-export const OPTIONAL_PERMISSION_DEFINITIONS: PermissionDefinition[] =
-  OPTIONAL_PERMISSIONS.map((id) => ({
-    id,
-    titleKey: `permissions.items.${id}.title`,
-    descriptionKey: `permissions.items.${id}.description`,
-  }))
-
 /**
  * Check a single optional permission.
  */
@@ -106,34 +88,12 @@ export async function hasPermissions(
 }
 
 /**
- * Request a single optional permission from the user.
- */
-export async function requestPermission(
-  id: ManifestOptionalPermissions,
-): Promise<boolean> {
-  return await requestPermissions({
-    permissions: [id as unknown as browser._manifest.OptionalPermission],
-  })
-}
-
-/**
  * Request a single optional permission while preserving API failure metadata.
  */
 export async function requestPermissionDetailed(
   id: ManifestOptionalPermissions,
 ): Promise<PermissionOperationResult> {
   return await requestPermissionsDetailed({
-    permissions: [id as unknown as browser._manifest.OptionalPermission],
-  })
-}
-
-/**
- * Remove a single optional permission (revocation).
- */
-export async function removePermission(
-  id: ManifestOptionalPermissions,
-): Promise<boolean> {
-  return await removePermissions({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })
 }
@@ -147,15 +107,6 @@ export async function removePermissionDetailed(
   return await removePermissionsDetailed({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })
-}
-
-/**
- * Ensure a set of optional permissions; prompts only for missing ones.
- */
-export async function ensurePermissions(
-  ids: ManifestOptionalPermissions[],
-): Promise<boolean> {
-  return (await ensurePermissionsDetailed(ids)).success
 }
 
 /**

@@ -5,7 +5,6 @@ import {
   isDevBuild,
   isDevelopmentMode,
   isProdBuild,
-  isProductionMode,
   isTestMode,
 } from "~/utils/core/environment"
 
@@ -18,7 +17,6 @@ describe("environment helpers", () => {
     vi.stubEnv("MODE", "development")
 
     expect(isDevelopmentMode()).toBe(true)
-    expect(isProductionMode()).toBe(false)
     expect(isTestMode()).toBe(false)
     expect(getRuntimeMode()).toBe("development")
   })
@@ -27,7 +25,6 @@ describe("environment helpers", () => {
     vi.stubEnv("MODE", "test")
 
     expect(isDevelopmentMode()).toBe(false)
-    expect(isProductionMode()).toBe(false)
     expect(isTestMode()).toBe(true)
     expect(getRuntimeMode()).toBe("test")
   })
@@ -36,7 +33,6 @@ describe("environment helpers", () => {
     vi.stubEnv("MODE", "production")
 
     expect(isDevelopmentMode()).toBe(false)
-    expect(isProductionMode()).toBe(true)
     expect(isTestMode()).toBe(false)
     expect(getRuntimeMode()).toBe("production")
   })
@@ -45,7 +41,6 @@ describe("environment helpers", () => {
     vi.stubEnv("MODE", "staging")
 
     expect(isDevelopmentMode()).toBe(false)
-    expect(isProductionMode()).toBe(false)
     expect(isTestMode()).toBe(false)
     expect(getRuntimeMode()).toBe("staging")
   })
@@ -55,7 +50,6 @@ describe("environment helpers", () => {
     vi.stubEnv("DEV", false)
     vi.stubEnv("PROD", true)
 
-    expect(isProductionMode()).toBe(false)
     expect(isProdBuild()).toBe(true)
   })
 

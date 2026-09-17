@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SharedRead } from "~/services/apiTransport/requestScheduling"
-import { createSiteRequestLimiter } from "~/services/apiTransport/siteRequestLimiter"
+import { createTaskLimiter } from "~~/tests/test-utils/siteRequestLease"
 
 describe("shared scheduled reads", () => {
   beforeEach(() => vi.useFakeTimers())
@@ -24,7 +24,7 @@ describe("shared scheduled reads", () => {
   })
 
   it("promotes a queued list lookup for export and keeps it when the list unmounts", async () => {
-    const limit = createSiteRequestLimiter({
+    const limit = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -67,7 +67,7 @@ describe("shared scheduled reads", () => {
   })
 
   it("removes orphaned queued reads without consuming the next rate-limit token", async () => {
-    const limit = createSiteRequestLimiter({
+    const limit = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,

@@ -122,6 +122,20 @@ const productProfileSiteTypeIsForbidden: "siteType" extends keyof NonNullable<
   : true = true
 
 describe("account site definition registry", () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "/keys"],
+    [SITE_TYPES.SUB2API, "/keys"],
+    [SITE_TYPES.VELOERA, "/app/tokens"],
+    [SITE_TYPES.DONE_HUB, "/panel/token"],
+    [SITE_TYPES.OCTOPUS, "/keys"],
+    [SITE_TYPES.AXON_HUB, "/api-keys"],
+    [SITE_TYPES.CLAUDE_CODE_HUB, "/dashboard/users"],
+  ])("preserves the registered token console path for %s", (siteType, path) => {
+    expect(
+      getAccountSiteDefinition(siteType)?.managedResource?.consoleRoutes.tokens,
+    ).toBe(path)
+  })
+
   it("requires every account registration to explicitly declare every page or null", () => {
     const routeKeys = [
       "loginPath",

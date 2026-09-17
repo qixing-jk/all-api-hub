@@ -3,10 +3,6 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
-  TodayIncomeData,
-  TodayIncomeDataWithAvailability,
-  TodayUsageData,
-  TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
@@ -42,17 +38,6 @@ const AIHUBMIX_API_USER_SELF_ENDPOINT = "/api/user/self"
 // importing an account from the logged-in browser session.
 const AIHUBMIX_USER_INFO_ENDPOINT = "/call/usr/self"
 const AIHUBMIX_ACCESS_TOKEN_ENDPOINT = "/call/usr/tkn"
-
-const EMPTY_TODAY_USAGE: TodayUsageData = {
-  today_quota_consumption: 0,
-  today_prompt_tokens: 0,
-  today_completion_tokens: 0,
-  today_requests_count: 0,
-}
-
-const EMPTY_TODAY_INCOME: TodayIncomeData = {
-  today_income: 0,
-}
 
 const createAIHubMixTodayStatsAvailability =
   (): AccountTodayStatsAvailability => ({
@@ -217,15 +202,6 @@ export async function fetchSupportCheckIn(
 }
 
 /**
- * AIHubMix check-in state is not supported by the first adapter version.
- */
-export async function fetchCheckInStatus(
-  _request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  return undefined
-}
-
-/**
  * Fetch the current AIHubMix raw quota balance.
  */
 export async function fetchAccountQuota(
@@ -268,34 +244,6 @@ export async function fetchInviteLink(
   const inviteUrl = new URL(AIHUBMIX_API_ORIGIN)
   inviteUrl.searchParams.set("aff", inviteCode)
   return inviteUrl.toString()
-}
-
-/**
- * Return zeroed daily usage until AIHubMix exposes a stable daily stat endpoint.
- */
-export async function fetchTodayUsage(
-  _request: ApiServiceRequest,
-): Promise<TodayUsageDataWithAvailability> {
-  const { consumption, requests, tokens } =
-    createAIHubMixTodayStatsAvailability()
-  return {
-    ...EMPTY_TODAY_USAGE,
-    todayStatsAvailability: { consumption, requests, tokens },
-  }
-}
-
-/**
- * Return zeroed daily income until AIHubMix exposes a stable daily stat endpoint.
- */
-export async function fetchTodayIncome(
-  _request: ApiServiceRequest,
-): Promise<TodayIncomeDataWithAvailability> {
-  return {
-    ...EMPTY_TODAY_INCOME,
-    todayStatsAvailability: {
-      income: createAIHubMixTodayStatsAvailability().income,
-    },
-  }
 }
 
 /**
@@ -346,21 +294,6 @@ export async function refreshAccountData(
       success: false,
       healthStatus: determineHealthStatus(error),
     }
-  }
-}
-
-/**
- * Validate that the saved AIHubMix access token can read account quota.
- */
-export async function validateAccountConnection(
-  request: ApiServiceRequest,
-): Promise<boolean> {
-  try {
-    await fetchAccountQuota(request)
-    return true
-  } catch (error) {
-    logger.error("AIHubMix account connection validation failed", error)
-    return false
   }
 }
 

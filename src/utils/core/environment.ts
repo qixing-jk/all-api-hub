@@ -1,6 +1,5 @@
 const RUNTIME_MODES = {
   Development: "development",
-  Production: "production",
   Test: "test",
 } as const
 
@@ -18,13 +17,6 @@ export function getRuntimeMode(): RuntimeMode {
  */
 export function isDevelopmentMode(): boolean {
   return getRuntimeMode() === RUNTIME_MODES.Development
-}
-
-/**
- * Checks whether the current Vite/WXT mode name is production.
- */
-export function isProductionMode(): boolean {
-  return getRuntimeMode() === RUNTIME_MODES.Production
 }
 
 /**

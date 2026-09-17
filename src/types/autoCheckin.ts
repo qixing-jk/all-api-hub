@@ -7,7 +7,6 @@ import type { TFunction } from "i18next"
 
 import { type RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
-import { type AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 
 /**
  * Check-in result status
@@ -228,9 +227,6 @@ export const AUTO_CHECKIN_RUN_RESULT = {
 } as const
 export type AutoCheckinRunResult =
   (typeof AUTO_CHECKIN_RUN_RESULT)[keyof typeof AUTO_CHECKIN_RUN_RESULT]
-export const AUTO_CHECKIN_RUN_RESULTS = Object.values(
-  AUTO_CHECKIN_RUN_RESULT,
-) as AutoCheckinRunResult[]
 
 /**
  * Returns the localized label for a persisted auto check-in run result.
@@ -287,9 +283,6 @@ export const AUTO_CHECKIN_RUN_TYPE = {
 } as const
 export type AutoCheckinRunType =
   (typeof AUTO_CHECKIN_RUN_TYPE)[keyof typeof AUTO_CHECKIN_RUN_TYPE]
-export const AUTO_CHECKIN_RUN_TYPES = Object.values(
-  AUTO_CHECKIN_RUN_TYPE,
-) as AutoCheckinRunType[]
 
 /**
  * Auto check-in run kind used for run-completion notifications.
@@ -313,19 +306,6 @@ export interface AutoCheckinRunSummary {
   skippedCount: number
   uncertainCount?: number
   needsRetry: boolean
-}
-
-/**
- * Runtime message request for a manual auto check-in execution.
- *
- * When `accountIds` is provided and non-empty, the background scopes the run to that account set.
- * When omitted, the background runs the full eligible set (backward compatible).
- */
-export type AutoCheckinRunNowRuntimeMessage = {
-  type: typeof AutoCheckinMessageTypes.RunNow
-  data?: {
-    accountIds?: string[]
-  }
 }
 
 /**
@@ -438,9 +418,6 @@ export const AUTO_CHECKIN_SCHEDULE_MODE = {
 } as const
 export type AutoCheckinScheduleMode =
   (typeof AUTO_CHECKIN_SCHEDULE_MODE)[keyof typeof AUTO_CHECKIN_SCHEDULE_MODE]
-export const AUTO_CHECKIN_SCHEDULE_MODES = Object.values(
-  AUTO_CHECKIN_SCHEDULE_MODE,
-) as AutoCheckinScheduleMode[]
 
 export interface AutoCheckinRetryStrategy {
   enabled: boolean

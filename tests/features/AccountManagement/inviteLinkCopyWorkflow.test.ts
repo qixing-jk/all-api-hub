@@ -6,12 +6,12 @@ import {
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
-import { createSiteRequestLimiter } from "~/services/apiTransport/siteRequestLimiter"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
 } from "~/services/inviteLinks/errors"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { createTaskLimiter } from "~~/tests/test-utils/siteRequestLease"
 
 const {
   canFetchDisplayAccountInviteLinkMock,
@@ -124,7 +124,7 @@ describe("runInviteLinkCopyWorkflow", () => {
 
   it("forwards request deadlines without expiring site-limiter queue time", async () => {
     vi.useFakeTimers()
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60_000,
       burst: 1,

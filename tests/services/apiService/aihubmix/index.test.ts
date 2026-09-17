@@ -5,14 +5,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountData,
   fetchAccountQuota,
-  fetchCheckInStatus,
   fetchSupportCheckIn,
-  fetchTodayIncome,
-  fetchTodayUsage,
   fetchUserInfo,
   getOrCreateAccessToken,
   refreshAccountData,
-  validateAccountConnection,
 } from "~/services/apiService/aihubmix"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -26,8 +22,8 @@ import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
-const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
-  mockWithSiteApiRequestLimit: vi.fn(),
+const { mockWithSiteApiRequestLease } = vi.hoisted(() => ({
+  mockWithSiteApiRequestLease: vi.fn(),
 }))
 
 vi.mock(
@@ -39,8 +35,7 @@ vi.mock(
       >()
     return {
       ...actual,
-      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLease,
     }
   },
 )
@@ -67,45 +62,15 @@ describe("apiService AIHubMix", () => {
         HttpResponse.json({ success: true, data: [] }),
       ),
     )
-    mockWithSiteApiRequestLimit.mockClear()
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockClear()
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any, _signal?: AbortSignal) =>
         await runMockSiteRequestTask(task),
     )
   })
 
-  it("returns no built-in daily/check-in metrics", async () => {
+  it("reports built-in check-in as unsupported", async () => {
     await expect(fetchSupportCheckIn(baseRequest)).resolves.toBe(false)
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
-    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
-      today_quota_consumption: 0,
-      today_prompt_tokens: 0,
-      today_completion_tokens: 0,
-      today_requests_count: 0,
-      todayStatsAvailability: {
-        consumption: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
-        },
-        requests: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
-        },
-        tokens: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-        },
-      },
-    })
-    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
-      today_income: 0,
-      todayStatsAvailability: {
-        income: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-        },
-      },
-    })
   })
 
   it("returns independent availability snapshots", async () => {
@@ -125,6 +90,27 @@ describe("apiService AIHubMix", () => {
 
     const second = await fetchAccountData(baseAccountRequest)
 
+    expect(second).toMatchObject({
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      todayStatsAvailability: {
+        requests: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+        },
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+        income: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      },
+    })
     expect(second.todayStatsAvailability!.consumption).toEqual({
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
       reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
@@ -209,8 +195,8 @@ describe("apiService AIHubMix", () => {
       },
     })
 
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(1)
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(1)
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
       "https://aihubmix.com",
       expect.any(Function),
       abortController.signal,
@@ -266,7 +252,7 @@ describe("apiService AIHubMix", () => {
 
       await vi.advanceTimersByTimeAsync(0)
       expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://aihubmix.com",
         expect.any(Function),
         abortDeadline.signal,
@@ -314,7 +300,7 @@ describe("apiService AIHubMix", () => {
         })
       })
 
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any) =>
         await new Promise<unknown>((resolve, reject) => {
           dispatchRequest = () => {
@@ -892,7 +878,7 @@ describe("apiService AIHubMix", () => {
     })
   })
 
-  it("fetches raw account quota and validates connection health", async () => {
+  it("fetches raw account quota", async () => {
     server.use(
       http.get("https://aihubmix.com/api/user/self", () =>
         HttpResponse.json({
@@ -908,7 +894,6 @@ describe("apiService AIHubMix", () => {
     )
 
     await expect(fetchAccountQuota(baseRequest)).resolves.toBe(900000)
-    await expect(validateAccountConnection(baseRequest)).resolves.toBe(true)
   })
 
   it("maps refresh and connection failures to shared health/failure shapes", async () => {
@@ -933,7 +918,6 @@ describe("apiService AIHubMix", () => {
         },
       },
     )
-    await expect(validateAccountConnection(baseRequest)).resolves.toBe(false)
   })
 
   it("reports healthy refresh data when the account read succeeds", async () => {

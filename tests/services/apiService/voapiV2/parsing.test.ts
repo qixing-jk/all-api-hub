@@ -5,7 +5,6 @@ import {
   amountToQuota,
   isVoApiV2AuthExpiredError,
   parseVoApiV2Envelope,
-  quotaToAmountString,
 } from "~/services/apiService/voapiV2/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 
@@ -71,6 +70,5 @@ describe("VoAPI v2 parsing", () => {
     expect(amountToQuota(1.25)).toBe(Math.round(1.25 * QUOTA_PER_USD))
     expect(amountToQuota("1.25")).toBe(Math.round(1.25 * QUOTA_PER_USD))
     expect(amountToQuota("invalid")).toBe(0)
-    expect(quotaToAmountString(QUOTA_PER_USD)).toBe("1")
   })
 })

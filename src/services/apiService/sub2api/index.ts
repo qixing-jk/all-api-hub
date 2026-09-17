@@ -14,7 +14,6 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
-  TodayIncomeDataWithAvailability,
   TodayUsageData,
   TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
@@ -707,15 +706,6 @@ export async function fetchSupportCheckIn(
   return false
 }
 
-/**
- * Sub2API check-in is unsupported; always return undefined.
- */
-export async function fetchCheckInStatus(
-  _request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  return undefined
-}
-
 const ZERO_TODAY_USAGE_DATA: TodayUsageData = {
   today_quota_consumption: 0,
   today_prompt_tokens: 0,
@@ -770,18 +760,6 @@ export async function fetchTodayUsage(
         authenticatedRequest as ApiServiceAccountRequest,
       ),
   )
-}
-
-/**
- * Sub2API income stats are not mapped separately; return zero.
- */
-export async function fetchTodayIncome(
-  _request: ApiServiceRequest,
-): Promise<TodayIncomeDataWithAvailability> {
-  return {
-    today_income: 0,
-    todayStatsAvailability: { income: createSub2ApiIncomeAvailability() },
-  }
 }
 
 /**

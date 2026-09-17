@@ -73,8 +73,8 @@ const logger = createLogger("AccountKeyRepair")
 
 // A job can accumulate target/resource pairs until the next manual run, so
 // retain recency eviction independently of the browser's storage quota.
-export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
-export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
+const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
+const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
   "invalid_managed_site_import_results_request"
 const ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT = 500
 const INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS = 30_000
@@ -1227,7 +1227,7 @@ export async function startAccountKeyRepair(
 /**
  * Read the latest account-key repair progress snapshot.
  */
-export async function getAccountKeyRepairProgress() {
+async function getAccountKeyRepairProgress() {
   const progress = await accountKeyRepairRunner.getProgress()
   return { success: true as const, data: progress }
 }
@@ -1235,7 +1235,7 @@ export async function getAccountKeyRepairProgress() {
 /**
  * Cancel the active background repair job, if one is running.
  */
-export async function cancelAccountKeyRepair() {
+async function cancelAccountKeyRepair() {
   return await accountKeyRepairRunner.cancel()
 }
 

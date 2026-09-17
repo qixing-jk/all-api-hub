@@ -15,7 +15,7 @@ interface ResponsiveButtonGroupProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /** Resolves the shared responsive group layout for runtime CSS validation. */
-export function responsiveButtonGroupClassName(className?: string) {
+function responsiveButtonGroupClassName(className?: string) {
   return cn(
     "flex w-full flex-wrap [@container(min-width:42rem)]:w-auto",
     `${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`,

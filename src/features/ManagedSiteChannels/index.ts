@@ -1,4 +1,1 @@
-export {
-  ManagedSiteChannelsRoute as default,
-  ManagedSiteChannelsRoute,
-} from "./ManagedSiteChannelsRoute"
+export { ManagedSiteChannelsRoute } from "./ManagedSiteChannelsRoute"

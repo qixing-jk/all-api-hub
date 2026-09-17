@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { createTaskLease } from "~~/tests/test-utils/siteRequestLease"
+
 vi.mock("~/utils/core/environment", () => ({
   isTestMode: () => false,
 }))
@@ -15,20 +17,22 @@ describe("production site request limiter wrappers", () => {
     vi.useRealTimers()
   })
 
-  it("shares concurrency state between legacy tasks and leases", async () => {
+  it("shares concurrency state between leases until transport completion", async () => {
     vi.useFakeTimers()
-    const { withSiteApiRequestLease, withSiteApiRequestLimit } = await import(
+    const { withSiteApiRequestLease } = await import(
       "~/services/apiTransport/siteRequestLimiter"
     )
     const releases: Array<() => void> = []
-    const startLegacyTask = () =>
-      withSiteApiRequestLimit("https://example.invalid", async () => {
-        await new Promise<void>((resolve) => {
-          releases.push(resolve)
-        })
-      })
-    const first = startLegacyTask()
-    const second = startLegacyTask()
+    const startTaskLease = () =>
+      withSiteApiRequestLease("https://example.invalid", () =>
+        createTaskLease(async () => {
+          await new Promise<void>((resolve) => {
+            releases.push(resolve)
+          })
+        }),
+      )
+    const first = startTaskLease()
+    const second = startTaskLease()
     const leaseFactory = vi.fn(() => ({
       result: Promise.resolve("lease result"),
       completion: Promise.resolve(),

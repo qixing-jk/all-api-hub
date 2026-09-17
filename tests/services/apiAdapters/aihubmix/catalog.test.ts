@@ -31,8 +31,8 @@ import diagnostic40 from "./diagnostic40Fixtures.json"
 import reportedCatalogFixtures from "./reportedCatalogFixtures.json"
 import taskBillingFixtures from "./taskBillingFixtures.json"
 
-const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
-  mockWithSiteApiRequestLimit: vi.fn(),
+const { mockWithSiteApiRequestLease } = vi.hoisted(() => ({
+  mockWithSiteApiRequestLease: vi.fn(),
 }))
 
 vi.mock(
@@ -44,8 +44,7 @@ vi.mock(
       >()
     return {
       ...actual,
-      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLease,
     }
   },
 )
@@ -68,8 +67,8 @@ describe("AIHubMix catalog adapter", () => {
         HttpResponse.json({ success: true, data: [] }),
       ),
     )
-    mockWithSiteApiRequestLimit.mockClear()
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockClear()
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any, _signal?: AbortSignal) =>
         await runMockSiteRequestTask(task),
     )

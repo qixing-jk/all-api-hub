@@ -156,13 +156,6 @@ export function isMobileDevice(options?: DeviceDetectionOptions): boolean {
 }
 
 /**
- * Convenience wrapper for callers that only need tablet detection.
- */
-export function isTabletDevice(options?: DeviceDetectionOptions): boolean {
-  return getDeviceTypeInfo(options).isTablet
-}
-
-/**
  * Convenience wrapper for desktop-only flows such as popup-specific warnings.
  */
 export function isDesktopDevice(options?: DeviceDetectionOptions): boolean {

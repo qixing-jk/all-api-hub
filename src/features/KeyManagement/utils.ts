@@ -1,4 +1,3 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildServiceCredentialRuntimeKey,
@@ -10,7 +9,6 @@ import {
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
-import { t } from "~/utils/i18n/core"
 
 import {
   KEY_MANAGEMENT_LOAD_STATUSES,
@@ -78,10 +76,4 @@ export const formatKey = (
     return key
   }
   return maskSecretForDisplay(key)
-}
-
-// 格式化额度
-export const formatQuota = (quota: number, unlimited: boolean) => {
-  if (unlimited || quota < 0) return t("keyManagement:dialog.unlimitedQuota")
-  return `$${(quota / QUOTA_PER_USD).toFixed(2)}`
 }

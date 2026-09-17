@@ -3,16 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   createSiteRequestLeaseLimiter,
-  createSiteRequestLimiter,
-  withSiteApiRequestLimit,
+  withSiteApiRequestLease,
 } from "~/services/apiTransport/siteRequestLimiter"
+import {
+  createTaskLease,
+  createTaskLimiter,
+} from "~~/tests/test-utils/siteRequestLease"
 
 const flushMicrotasks = async () => {
   await Promise.resolve()
   await Promise.resolve()
 }
 
-describe("createSiteRequestLimiter", () => {
+describe("createTaskLimiter", () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(0)
@@ -23,7 +26,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("limits concurrent work for the same site key", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 2,
       requestsPerMinute: 600,
       burst: 10,
@@ -82,7 +85,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("dispatches an export before queued automatic checks without bypassing rate limits", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -113,7 +116,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("starts export at the next refill despite twenty waiting automatic checks", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -134,7 +137,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("observes promotion of shared queued work and gives background work bounded turns", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -177,7 +180,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("keeps FIFO order for queued same-site work", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 600,
       burst: 10,
@@ -229,7 +232,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("removes queued aborted work without running it or consuming a token", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -283,7 +286,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("removes a queued request when its started shared deadline expires", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 600,
       burst: 10,
@@ -322,7 +325,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("does not start work admitted with an already aborted signal", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -339,7 +342,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("does not start disabled limiter work with an already aborted signal", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       enabled: false,
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
@@ -357,7 +360,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("keeps an acquired task active and detaches its queue abort listener", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -392,7 +395,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("does not remove queued work when an acquired item's stale abort listener fires", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 600,
       burst: 10,
@@ -442,7 +445,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("does not block different site keys", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -472,7 +475,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("waits for token refill after the configured burst is consumed", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 2,
@@ -503,7 +506,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("reschedules a pending token refill when more same-site work is queued", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -543,7 +546,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("runs the idle cleanup timer after a site queue drains", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 60,
       burst: 1,
@@ -557,7 +560,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("releases the concurrency slot when a task rejects", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 600,
       burst: 10,
@@ -579,7 +582,7 @@ describe("createSiteRequestLimiter", () => {
   })
 
   it("releases the concurrency slot when a task throws synchronously", async () => {
-    const limiter = createSiteRequestLimiter({
+    const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 600,
       burst: 10,
@@ -730,13 +733,13 @@ describe("createSiteRequestLimiter", () => {
   )
 
   it("runs immediately when disabled or when the key is empty", async () => {
-    const disabledLimiter = createSiteRequestLimiter({
+    const disabledLimiter = createTaskLimiter({
       enabled: false,
       maxConcurrentPerSite: 1,
       requestsPerMinute: 1,
       burst: 1,
     })
-    const enabledLimiter = createSiteRequestLimiter({
+    const enabledLimiter = createTaskLimiter({
       maxConcurrentPerSite: 1,
       requestsPerMinute: 1,
       burst: 1,
@@ -775,7 +778,7 @@ describe("createSiteRequestLimiter", () => {
     ["requestsPerMinute", -1],
   ])("rejects malformed %s config values", (field, value) => {
     expect(() =>
-      createSiteRequestLimiter({
+      createTaskLimiter({
         maxConcurrentPerSite: 1,
         requestsPerMinute: 1,
         burst: 1,
@@ -784,9 +787,11 @@ describe("createSiteRequestLimiter", () => {
     ).toThrow(TypeError)
   })
 
-  it("withSiteApiRequestLimit runs the wrapped task in test mode", async () => {
+  it("withSiteApiRequestLease runs the wrapped task in test mode", async () => {
     await expect(
-      withSiteApiRequestLimit("site-a", async () => "wrapped"),
+      withSiteApiRequestLease("site-a", () =>
+        createTaskLease(async () => "wrapped"),
+      ),
     ).resolves.toBe("wrapped")
   })
 })

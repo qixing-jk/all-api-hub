@@ -6,7 +6,6 @@ import {
   useIsDesktop,
   useIsMobile,
   useIsSmallScreen,
-  useIsTablet,
   useMediaQuery,
 } from "~/hooks/useMediaQuery"
 
@@ -122,13 +121,6 @@ describe("useMediaQuery", () => {
     it("useIsMobile uses correct media query", () => {
       renderHook(() => useIsMobile())
       expect(matchMediaMock).toHaveBeenCalledWith("(max-width: 767px)")
-    })
-
-    it("useIsTablet uses correct media query", () => {
-      renderHook(() => useIsTablet())
-      expect(matchMediaMock).toHaveBeenCalledWith(
-        "(min-width: 768px) and (max-width: 1023px)",
-      )
     })
 
     it("useIsDesktop uses correct media query", () => {

@@ -167,25 +167,6 @@ export async function removeWindow(windowId: number): Promise<void> {
 }
 
 /**
- * Removes an id that may refer to a window first, then falls back to tab removal.
- */
-export async function removeTabOrWindow(id: number): Promise<void> {
-  if (hasWindowsAPI()) {
-    try {
-      await removeWindow(id)
-      return
-    } catch (error) {
-      logger.warn(
-        "removeTabOrWindow: Failed to remove as window, falling back to tab",
-        { id, error },
-      )
-    }
-  }
-
-  await removeTab(id)
-}
-
-/**
  * 创建新窗口（如果支持）
  * 返回窗口对象，如果不支持则返回 null
  * @param createData 用于创建窗口的配置数据。
@@ -555,13 +536,6 @@ export type BrowserBookmarkTreeReadResult =
       success: false
       reason: "unavailable" | "read_failed"
     }
-
-/**
- * Checks whether the native WebExtension bookmarks API is available.
- */
-export function hasBookmarksAPI(): boolean {
-  return typeof (globalThis as any).browser?.bookmarks?.getTree === "function"
-}
 
 /**
  * Reads the full native browser bookmark tree without exposing browser APIs to UI code.
@@ -1085,17 +1059,6 @@ export async function getAlarm(
 }
 
 /**
- * 获取所有定时任务
- */
-export async function getAllAlarms(): Promise<browser.alarms.Alarm[]> {
-  if (!hasAlarmsAPI()) {
-    logger.warn("Alarms API not supported")
-    return []
-  }
-  return (await browser.alarms.getAll()) || []
-}
-
-/**
  * 监听定时任务触发事件
  * 返回清理函数
  * @param callback 定时任务触发时调用的处理函数。
@@ -1326,14 +1289,6 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
  */
 export function getExtensionVersion(fallback = "0.0.0"): string {
   return getManifest().version?.trim() || fallback
-}
-
-/**
- * Convenience helper returning the manifest_version number from runtime manifest.
- * Falls back to {@link getManifest} when the runtime manifest cannot be read.
- */
-export function getManifestVersion(): number {
-  return getManifest().manifest_version
 }
 
 /**
@@ -1577,17 +1532,6 @@ export interface PermissionOperationResult {
 }
 
 /**
- * Request additional permissions from the user, logging failures for debugging.
- * @param permissions Permission descriptor to be requested from the browser.
- * @returns Resolves true when the user grants the request, false when denied.
- */
-export async function requestPermissions(
-  permissions: browser.permissions.Permissions,
-): Promise<boolean> {
-  return (await requestPermissionsDetailed(permissions)).success
-}
-
-/**
  * Request additional permissions and preserve whether failure came from the API itself.
  */
 export async function requestPermissionsDetailed(
@@ -1602,17 +1546,6 @@ export async function requestPermissionsDetailed(
       failureReason: PERMISSION_OPERATION_FAILURE_REASONS.ApiException,
     }
   }
-}
-
-/**
- * Remove previously granted permissions to minimize the extension's footprint.
- * @param permissions Permission descriptor indicating entries to revoke.
- * @returns Resolves true when the removal succeeds, false when it fails.
- */
-export async function removePermissions(
-  permissions: browser.permissions.Permissions,
-): Promise<boolean> {
-  return (await removePermissionsDetailed(permissions)).success
 }
 
 /**

@@ -52,7 +52,7 @@ const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
 
-export const ACCOUNT_CHECK_IN_TARGET_IDS = {
+const ACCOUNT_CHECK_IN_TARGET_IDS = {
   section: "account-check-in-config",
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",

@@ -13,19 +13,16 @@ import {
 } from "~/utils/browser/browserApi"
 import {
   navigateWithinOptionsPage,
-  openAboutPage,
   openAccountBaseUrl,
   openAccountManagerWithSearch,
   openApiCredentialProfilesPage,
   openAutoCheckinPage,
-  openBookmarkManagerWithSearch,
   openBugReportPage,
   openCheckInAndRedeem,
   openCheckInPage,
   openCheckInPages,
   openCommunityPage,
   openCustomCheckInPage,
-  openDiscussionsPage,
   openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
@@ -33,7 +30,6 @@ import {
   openLanguageRequestPage,
   openManagedSiteChannelsPage,
   openManagedSiteModelSyncForChannel,
-  openManagedSiteModelSyncPage,
   openModelsPage,
   openMultiplePages,
   openOptionsPage,
@@ -820,7 +816,7 @@ describe("navigation utilities", () => {
     await openFullAccountManagerPage()
     await openAccountManagerWithSearch("alpha")
     await openFullBookmarkManagerPage()
-    await openBookmarkManagerWithSearch("beta")
+    await openFullBookmarkManagerPage({ search: "beta" })
     await openSettingsPage()
     await openSettingsTab("permissions")
     await openPermissionsOnboardingPage({ reason: "debug" })
@@ -830,10 +826,6 @@ describe("navigation utilities", () => {
       search: "relay",
     })
     await openManagedSiteChannelsPage({ resourceRef: modelResourceRef(77) })
-    await openManagedSiteModelSyncPage({
-      resourceRef: modelResourceRef(99),
-      tab: "history",
-    })
     await openManagedSiteModelSyncForChannel(
       modelResourceRef("provider/key:100"),
     )
@@ -886,10 +878,6 @@ describe("navigation utilities", () => {
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(99)), tab: "history" })}#managedSiteModelSync`,
-      true,
-    )
-    expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef("provider/key:100")), tab: "manual" })}#managedSiteModelSync`,
       true,
     )
@@ -936,16 +924,11 @@ describe("navigation utilities", () => {
     pushStateSpy.mockRestore()
   })
 
-  it("opens managed-site pages without empty query params when no filters are provided", async () => {
+  it("opens managed-site channels without empty query params when no filters are provided", async () => {
     await openManagedSiteChannelsPage()
-    await openManagedSiteModelSyncPage()
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}#managedSiteChannels`,
-      true,
-    )
-    expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}#managedSiteModelSync`,
       true,
     )
   })
@@ -1183,24 +1166,17 @@ describe("navigation utilities", () => {
       },
     } as any
 
-    await openAboutPage()
     await openBugReportPage()
     await openFeatureRequestPage()
     await openLanguageRequestPage()
     await openSiteSupportRequestPage({
       siteUrl: "https://relay.example.com/console",
     })
-    await openDiscussionsPage()
     await openCommunityPage("ja")
     await openAccountBaseUrl(account)
     await openCheckInPage(account)
     await openCustomCheckInPage(account)
     await openRedeemPage(account)
-
-    expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}#about`,
-      true,
-    )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       "https://feedback.example/bug",
       true,
@@ -1215,10 +1191,6 @@ describe("navigation utilities", () => {
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       "https://feedback.example/site-support?site=https%3A%2F%2Frelay.example.com%2Fconsole",
-      true,
-    )
-    expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://feedback.example/discussions",
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(

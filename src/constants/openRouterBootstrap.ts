@@ -50,8 +50,6 @@ export type OpenRouterBootstrapMutationState =
   (typeof OPENROUTER_BOOTSTRAP_MUTATION_STATES)[keyof typeof OPENROUTER_BOOTSTRAP_MUTATION_STATES]
 export type OpenRouterBootstrapAttemptOutcome =
   (typeof OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES)[keyof typeof OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES]
-export type OpenRouterBootstrapCancellationCertainty =
-  (typeof OPENROUTER_BOOTSTRAP_CANCELLATION_CERTAINTIES)[keyof typeof OPENROUTER_BOOTSTRAP_CANCELLATION_CERTAINTIES]
 export type OpenRouterBootstrapCreatedMutationState =
   typeof OPENROUTER_BOOTSTRAP_MUTATION_STATES.Created
 export type OpenRouterBootstrapNotDispatchedMutationState =

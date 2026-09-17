@@ -6,10 +6,10 @@ import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
   getAutoDetectErrorByCode,
-  getLoginUrl,
   openLoginTab,
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { getBestEffortLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { clearSiteRouteThemeCacheForTests } from "~/services/apiAdapters/newApi/accountRoutes"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -339,84 +339,84 @@ describe("autoDetectUtils", () => {
     })
   })
 
-  describe("getLoginUrl", () => {
+  describe("getBestEffortLoginUrl", () => {
     it("should generate login URL for valid site URL", () => {
       const siteUrl = "https://example.com"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("https://example.com/login")
     })
 
     it("should handle site URL with trailing slash", () => {
       const siteUrl = "https://example.com/"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("https://example.com/login")
     })
 
     it("should handle site URL with path", () => {
       const siteUrl = "https://example.com/dashboard"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("https://example.com/login")
     })
 
     it("should handle site URL with port", () => {
       const siteUrl = "https://example.com:8080"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("https://example.com:8080/login")
     })
 
     it("should handle HTTP protocol", () => {
       const siteUrl = "http://localhost:3000"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("http://localhost:3000/login")
     })
 
     it("should handle site URL with subdomain", () => {
       const siteUrl = "https://api.example.com"
-      const result = getLoginUrl(siteUrl)
+      const result = getBestEffortLoginUrl(siteUrl)
 
       expect(result).toBe("https://api.example.com/login")
     })
 
     it("should use the AIHubMix console sign-in route", () => {
-      expect(getLoginUrl("https://console.aihubmix.com/statistics")).toBe(
-        "https://console.aihubmix.com/sign-in",
-      )
-      expect(getLoginUrl("https://aihubmix.com")).toBe(
+      expect(
+        getBestEffortLoginUrl("https://console.aihubmix.com/statistics"),
+      ).toBe("https://console.aihubmix.com/sign-in")
+      expect(getBestEffortLoginUrl("https://aihubmix.com")).toBe(
         "https://console.aihubmix.com/sign-in",
       )
     })
 
     it("should return original URL for invalid URL", () => {
       const invalidUrl = "not a valid url"
-      const result = getLoginUrl(invalidUrl)
+      const result = getBestEffortLoginUrl(invalidUrl)
 
       expect(result).toBe(invalidUrl)
     })
 
     it("should handle empty string", () => {
-      const result = getLoginUrl("")
+      const result = getBestEffortLoginUrl("")
       expect(result).toBe("")
     })
 
     it("should handle relative URL", () => {
       const relativeUrl = "/dashboard"
-      const result = getLoginUrl(relativeUrl)
+      const result = getBestEffortLoginUrl(relativeUrl)
       expect(result).toBe(relativeUrl)
     })
 
     it("should preserve protocol", () => {
-      expect(getLoginUrl("http://example.com")).toContain("http://")
-      expect(getLoginUrl("https://example.com")).toContain("https://")
+      expect(getBestEffortLoginUrl("http://example.com")).toContain("http://")
+      expect(getBestEffortLoginUrl("https://example.com")).toContain("https://")
     })
 
     it("should handle complex URLs", () => {
       const complexUrl = "https://user:pass@example.com:8080/path?query=1#hash"
-      const result = getLoginUrl(complexUrl)
+      const result = getBestEffortLoginUrl(complexUrl)
 
       expect(result).toBe("https://example.com:8080/login")
     })

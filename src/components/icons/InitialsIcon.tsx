@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, FunctionComponent } from "react"
+import type { ComponentPropsWithoutRef } from "react"
 
 import { cn } from "~/lib/utils"
 
@@ -7,8 +7,6 @@ export interface InitialsIconProps
   /** Explicit one- or two-character monogram chosen by the caller. */
   initials: string
 }
-
-type CreatedInitialsIconProps = Omit<InitialsIconProps, "initials">
 
 /**
  * Renders a compact, neutral monogram that follows the caller's icon sizing.
@@ -32,19 +30,4 @@ export function InitialsIcon({
       {initials}
     </span>
   )
-}
-
-/**
- * Adapts an explicit monogram to icon-component contracts used by static maps.
- */
-export function createInitialsIcon(
-  initials: string,
-): FunctionComponent<CreatedInitialsIconProps> {
-  const CreatedInitialsIcon: FunctionComponent<CreatedInitialsIconProps> = (
-    props,
-  ) => <InitialsIcon {...props} initials={initials} />
-
-  CreatedInitialsIcon.displayName = `InitialsIcon(${initials})`
-
-  return CreatedInitialsIcon
 }

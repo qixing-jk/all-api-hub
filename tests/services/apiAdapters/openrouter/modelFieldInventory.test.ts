@@ -4,7 +4,7 @@ import {
   OPENROUTER_MODEL_FIELD_CATEGORIES,
   OPENROUTER_MODEL_FIELD_CLASSIFICATIONS,
   OPENROUTER_PINNED_MODEL_FIELD_PATHS,
-} from "~/services/apiAdapters/openrouter/modelFieldInventory"
+} from "~~/tests/test-utils/openrouterModelFieldInventory"
 
 describe("OpenRouter documented model field inventory", () => {
   it("classifies every pinned documented field exactly once", () => {

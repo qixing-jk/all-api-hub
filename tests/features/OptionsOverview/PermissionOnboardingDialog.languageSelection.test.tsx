@@ -77,11 +77,6 @@ vi.mock("~/services/permissions/permissionManager", () => {
       Bookmarks: "bookmarks",
     },
     OPTIONAL_PERMISSIONS,
-    OPTIONAL_PERMISSION_DEFINITIONS: OPTIONAL_PERMISSIONS.map((id) => ({
-      id,
-      titleKey: `permissions.items.${id}.title`,
-      descriptionKey: `permissions.items.${id}.description`,
-    })),
     ensurePermissionsDetailed: permissionMocks.ensurePermissionsDetailed,
     hasPermission: permissionMocks.hasPermission,
     onOptionalPermissionsChanged: permissionMocks.onOptionalPermissionsChanged,

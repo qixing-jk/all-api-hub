@@ -46,10 +46,10 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   },
 )
 
-const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
-  const mockWithSiteApiRequestLimit = vi.fn()
+const { mockWithSiteApiRequestLease } = vi.hoisted(() => {
+  const mockWithSiteApiRequestLease = vi.fn()
 
-  return { mockWithSiteApiRequestLimit }
+  return { mockWithSiteApiRequestLease }
 })
 
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
@@ -151,8 +151,7 @@ vi.mock(
       >()
     return {
       ...actual,
-      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLease,
     }
   },
 )
@@ -218,7 +217,7 @@ describe("apiTransport request helpers", () => {
 
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any, _signal?: AbortSignal) =>
         await runMockSiteRequestTask(task),
     )
@@ -435,7 +434,7 @@ describe("apiTransport request helpers", () => {
       },
       { endpoint: "/api/user/self" },
     )
-    expect(mockWithSiteApiRequestLimit.mock.calls[0][3]).toBe(requestScheduling)
+    expect(mockWithSiteApiRequestLease.mock.calls[0][3]).toBe(requestScheduling)
   })
 
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
@@ -459,8 +458,8 @@ describe("apiTransport request helpers", () => {
       ),
     ).resolves.toEqual({ ok: true })
 
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(1)
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(1)
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
       "https://example.com",
       expect.any(Function),
       undefined,
@@ -518,7 +517,7 @@ describe("apiTransport request helpers", () => {
         },
       )
 
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.invalid",
         expect.any(Function),
         expectedSignal,
@@ -571,7 +570,7 @@ describe("apiTransport request helpers", () => {
         })
       })
 
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any) => {
         runDispatchedTask = () => {
           runDispatchedTask = undefined
@@ -652,7 +651,7 @@ describe("apiTransport request helpers", () => {
         { headers: { "content-type": "application/json" } },
       ),
     )
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any) =>
         await new Promise((resolve, reject) => {
           dispatchRequest = () => {
@@ -744,7 +743,7 @@ describe("apiTransport request helpers", () => {
 
       await vi.advanceTimersByTimeAsync(0)
       expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.invalid",
         expect.any(Function),
         abortDeadline.signal,
@@ -903,11 +902,11 @@ describe("apiTransport request helpers", () => {
       { endpoint: "/api/status" },
     )
 
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(2)
-    expect(mockWithSiteApiRequestLimit.mock.calls[0][0]).toBe(
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(2)
+    expect(mockWithSiteApiRequestLease.mock.calls[0][0]).toBe(
       "https://example.com",
     )
-    expect(mockWithSiteApiRequestLimit.mock.calls[1][0]).toBe(
+    expect(mockWithSiteApiRequestLease.mock.calls[1][0]).toBe(
       "https://example.com",
     )
   })
@@ -4184,7 +4183,7 @@ describe("apiTransport request helpers", () => {
         { endpoint },
       )
 
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.com",
         expect.any(Function),
         undefined,
@@ -4222,7 +4221,7 @@ describe("apiTransport request helpers", () => {
       { endpoint: ENDPOINT },
     )
 
-    expect(mockWithSiteApiRequestLimit).not.toHaveBeenCalled()
+    expect(mockWithSiteApiRequestLease).not.toHaveBeenCalled()
   })
 
   it("fetchApi supports text responses", async () => {

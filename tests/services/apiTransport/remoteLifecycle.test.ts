@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   announceRemoteFetchDispatch,
   applyLocalRemoteFetchResultEvidence,
-  hasAffirmativeRemoteFetchPreDispatchEvidence,
+  inspectRemoteFetchLifecycleEvidence,
   observeRemoteFetchLifecycle,
 } from "~/services/apiTransport/remoteLifecycle"
 
@@ -222,7 +222,9 @@ describe("remote fetch lifecycle", () => {
   it.each([null, undefined, "malformed", 42, false])(
     "does not treat non-object result %j as affirmative pre-dispatch evidence",
     (result) => {
-      expect(hasAffirmativeRemoteFetchPreDispatchEvidence(result)).toBe(false)
+      expect(
+        inspectRemoteFetchLifecycleEvidence(result).affirmativePreDispatch,
+      ).toBe(false)
     },
   )
 
@@ -234,7 +236,7 @@ describe("remote fetch lifecycle", () => {
       },
     }
 
-    expect(() => hasAffirmativeRemoteFetchPreDispatchEvidence(result)).toThrow(
+    expect(() => inspectRemoteFetchLifecycleEvidence(result)).toThrow(
       evidenceError,
     )
   })

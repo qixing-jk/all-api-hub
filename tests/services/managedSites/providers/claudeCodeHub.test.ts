@@ -23,9 +23,6 @@ const mockFetchManagedSiteImportModels = vi.fn()
 const mockFetchManagedSiteAvailableModels = vi.fn()
 const mockListProviders = vi.fn()
 const mockSearchProviders = vi.fn()
-const mockCreateProvider = vi.fn()
-const mockUpdateProvider = vi.fn()
-const mockDeleteProvider = vi.fn()
 const mockGetUnmaskedProviderKey = vi.fn()
 const mockGetPreferences = vi.fn()
 const mockLogger = vi.hoisted(() => ({
@@ -41,9 +38,6 @@ vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
 vi.mock("~/services/apiService/claudeCodeHub", () => ({
   listProviders: (...args: unknown[]) => mockListProviders(...args),
   searchProviders: (...args: unknown[]) => mockSearchProviders(...args),
-  createProvider: (...args: unknown[]) => mockCreateProvider(...args),
-  updateProvider: (...args: unknown[]) => mockUpdateProvider(...args),
-  deleteProvider: (...args: unknown[]) => mockDeleteProvider(...args),
   getUnmaskedProviderKey: (...args: unknown[]) =>
     mockGetUnmaskedProviderKey(...args),
   validateClaudeCodeHubConfig: vi.fn(),
@@ -80,9 +74,6 @@ describe("Claude Code Hub managed-site provider", () => {
     mockFetchManagedSiteAvailableModels.mockReset()
     mockListProviders.mockReset()
     mockSearchProviders.mockReset()
-    mockCreateProvider.mockReset()
-    mockUpdateProvider.mockReset()
-    mockDeleteProvider.mockReset()
     mockGetUnmaskedProviderKey.mockReset()
     mockGetPreferences.mockReset()
     mockLogger.warn.mockReset()

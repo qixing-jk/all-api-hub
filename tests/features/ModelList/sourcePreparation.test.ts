@@ -13,13 +13,11 @@ import {
   prepareModelListSources,
 } from "~/features/ModelList/sourcePreparation"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
-import {
-  createAccountRuntimeKeyModelListSourceIdentity,
-  createAccountTokenModelListSourceIdentity,
-} from "~/services/modelCatalog/sourceIdentity"
+import { createAccountRuntimeKeyModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {
@@ -209,7 +207,7 @@ describe("model list source preparation", () => {
   })
 
   it("keeps token and runtime-key identities and access isolated for the same account", () => {
-    const token = createAccountTokenModelListSourceIdentity({
+    const token = createLegacyAccountTokenSourceIdentity({
       accountId: account.id,
       tokenId: 1,
     })

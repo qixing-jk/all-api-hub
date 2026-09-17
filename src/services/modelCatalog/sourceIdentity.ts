@@ -47,22 +47,6 @@ export function createAccountModelListSourceIdentity(
   }
 }
 
-/** Creates a token-scoped account source identity for model-list rows. */
-export function createAccountTokenModelListSourceIdentity(params: {
-  accountId: string
-  tokenId: number
-  tokenName?: string
-}): ModelListSourceIdentity {
-  const tokenName = params.tokenName?.trim()
-
-  return {
-    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
-    id: `${params.accountId}:token:${params.tokenId}`,
-    tokenId: params.tokenId,
-    ...(tokenName ? { tokenName } : {}),
-  }
-}
-
 /** Creates a runtime-key-scoped account source identity for model-list rows. */
 export function createAccountRuntimeKeyModelListSourceIdentity(params: {
   accountId: string

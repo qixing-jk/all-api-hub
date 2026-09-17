@@ -8,7 +8,6 @@
  *
  * 主要功能：
  * - analyzeAutoDetectError: 分析错误消息并返回结构化错误信息
- * - getLoginUrl: 生成站点登录页面URL
  * - openLoginTab: 在新标签页中打开登录页面
  *
  * 使用场景：
@@ -23,10 +22,7 @@ import {
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import { type AccountSiteType } from "~/constants/siteType"
-import {
-  getBestEffortLoginUrl,
-  resolveAccountSiteLoginUrl,
-} from "~/services/accounts/utils/siteRouteResolver"
+import { resolveAccountSiteLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { createTab, queryTabs, reloadTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -219,18 +215,6 @@ export interface AutoDetectErrorProps {
   onHelpClick?: () => void
   onActionClick?: () => void
   onApiCredentialProfilesClick?: () => void
-}
-
-/**
- * Build a best-effort login URL for a given site.
- *
- * Tries to normalize to `{protocol}//{host}/login`; falls back to the
- * original URL if parsing fails.
- * @param siteUrl Base site URL provided by the caller.
- * @returns Login page URL to open in a new tab.
- */
-export function getLoginUrl(siteUrl: string): string {
-  return getBestEffortLoginUrl(siteUrl)
 }
 
 /**

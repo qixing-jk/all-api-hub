@@ -3,10 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountData,
-  fetchCheckInStatus,
   fetchSupportCheckIn,
   refreshAccountData,
-} from "~/services/apiService/anyrouter"
+} from "~/services/apiService/newApiFamily/variants/anyrouter"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -106,134 +105,6 @@ describe("AnyRouter API service", () => {
 
   it("always reports check-in support for AnyRouter sites", async () => {
     await expect(fetchSupportCheckIn(baseRequest)).resolves.toBe(true)
-  })
-
-  it("returns undefined when the AnyRouter user id is not numeric", async () => {
-    const result = await fetchCheckInStatus({
-      ...baseRequest,
-      auth: { ...baseRequest.auth, userId: "not-a-number" },
-    })
-
-    expect(result).toBeUndefined()
-    expect(mockCheckIn).not.toHaveBeenCalled()
-  })
-
-  it("accepts string user ids when they can be coerced into numbers", async () => {
-    mockCheckIn.mockResolvedValueOnce({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
-
-    await expect(
-      fetchCheckInStatus({
-        ...baseRequest,
-        auth: { ...baseRequest.auth, userId: "42" },
-      }),
-    ).resolves.toBe(true)
-
-    expect(mockCheckIn).toHaveBeenCalledWith(
-      {
-        site_url: "https://anyrouter.example.com",
-        id: undefined,
-        account_info: { id: 42 },
-      },
-      backgroundProviderContext,
-    )
-  })
-
-  it("passes request account identity to the AnyRouter check-in provider", async () => {
-    mockCheckIn.mockResolvedValueOnce({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
-
-    await expect(
-      fetchCheckInStatus({
-        ...baseRequest,
-        accountId: "stored-account-id",
-        cookieAuthSessionCookie: "stored-session-cookie",
-      }),
-    ).resolves.toBe(true)
-
-    expect(mockCheckIn).toHaveBeenCalledWith(
-      {
-        site_url: "https://anyrouter.example.com",
-        id: "stored-account-id",
-        cookieAuthSessionCookie: "stored-session-cookie",
-        account_info: { id: 42 },
-      },
-      backgroundProviderContext,
-    )
-  })
-
-  it("passes the Popup request source to the AnyRouter check-in provider", async () => {
-    mockCheckIn.mockResolvedValueOnce({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
-
-    await fetchCheckInStatus({
-      ...baseRequest,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-    })
-
-    expect(mockCheckIn).toHaveBeenCalledWith(expect.any(Object), {
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      protectionBypassExecution: expect.objectContaining({
-        feature: PROTECTION_BYPASS_FEATURES.Checkin,
-      }),
-    })
-  })
-
-  it("normalizes invalid AnyRouter request sources to Background", async () => {
-    mockCheckIn.mockResolvedValueOnce({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
-
-    await fetchCheckInStatus({
-      ...baseRequest,
-      tempWindowRequestSource: "invalid-source",
-    })
-
-    expect(mockCheckIn).toHaveBeenCalledWith(
-      expect.any(Object),
-      backgroundProviderContext,
-    )
-  })
-
-  it("maps provider check-in statuses into the account-facing boolean", async () => {
-    mockCheckIn
-      .mockResolvedValueOnce({
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-      })
-      .mockResolvedValueOnce({
-        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      })
-
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(true)
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(false)
-
-    expect(mockCheckIn).toHaveBeenNthCalledWith(
-      1,
-      {
-        site_url: "https://anyrouter.example.com",
-        id: undefined,
-        account_info: { id: 42 },
-      },
-      backgroundProviderContext,
-    )
-    expect(mockCheckIn).toHaveBeenNthCalledWith(
-      2,
-      {
-        site_url: "https://anyrouter.example.com",
-        id: undefined,
-        account_info: { id: 42 },
-      },
-      backgroundProviderContext,
-    )
-  })
-
-  it("treats provider failures as unsupported check-in detection", async () => {
-    mockCheckIn.mockRejectedValueOnce(new Error("provider down"))
-
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
   })
 
   it("keeps ordinary account refresh read-only for AnyRouter check-in", async () => {

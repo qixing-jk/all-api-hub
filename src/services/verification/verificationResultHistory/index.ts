@@ -1,7 +1,4 @@
-export {
-  subscribeToVerificationResultHistoryChanges,
-  verificationResultHistoryStorage,
-} from "./storage"
+export { verificationResultHistoryStorage } from "./storage"
 export type {
   ApiVerificationHistoryConfig,
   ApiVerificationHistoryDisplayStatus,
@@ -10,11 +7,7 @@ export type {
   PersistedApiVerificationProbeSummary,
   PersistedApiVerificationStatus,
 } from "./types"
-export {
-  API_VERIFICATION_HISTORY_STATUSES,
-  API_VERIFICATION_HISTORY_TARGET_KINDS,
-  API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
-} from "./types"
+export { API_VERIFICATION_HISTORY_STATUSES } from "./types"
 export {
   useLatestProfileVerificationSummaries,
   useVerificationResultHistorySummaries,

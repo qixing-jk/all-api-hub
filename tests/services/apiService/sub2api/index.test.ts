@@ -7,14 +7,12 @@ import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountB
 import {
   deleteApiToken,
   fetchAccountData,
-  fetchCheckInStatus,
   fetchCurrentUser,
   fetchInviteLink,
   fetchSub2ApiAnnouncements,
   fetchSub2ApiPricingCatalogs,
   fetchSub2ApiRuntimeModels,
   fetchSupportCheckIn,
-  fetchTodayIncome,
   fetchTodayUsage,
   fetchUserInfo,
   getOrCreateAccessToken,
@@ -328,7 +326,6 @@ describe("apiService sub2api parsing", () => {
     } as any)
 
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
-    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
     await expect(fetchTodayUsage(request as any)).resolves.toEqual({
       today_quota_consumption: 125000,
       today_prompt_tokens: 12,
@@ -338,15 +335,6 @@ describe("apiService sub2api parsing", () => {
         consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
         requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
         tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-      },
-    })
-    await expect(fetchTodayIncome(request as any)).resolves.toEqual({
-      today_income: 0,
-      todayStatsAvailability: {
-        income: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-        },
       },
     })
   })
@@ -359,11 +347,22 @@ describe("apiService sub2api parsing", () => {
         accessToken: "account-token",
       },
     } as ApiServiceAccountRequest
-    const first = await fetchTodayIncome(request)
+    vi.mocked(fetchApi).mockResolvedValue({
+      code: 0,
+      message: "ok",
+      data: { id: 1, username: "alice", balance: 2 },
+    } as any)
+    const first = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.SUB2API),
+    })
     first.todayStatsAvailability!.income.status =
       ACCOUNT_TODAY_METRIC_STATUSES.Complete
 
-    const second = await fetchTodayIncome(request)
+    const second = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.SUB2API),
+    })
 
     expect(second.todayStatsAvailability!.income).toEqual({
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,

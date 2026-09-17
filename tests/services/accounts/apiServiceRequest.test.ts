@@ -12,7 +12,6 @@ import {
   fetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
-  resolveStoredAccountApiContext,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -22,10 +21,6 @@ import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
-
-const { mockGetAccountById } = vi.hoisted(() => ({
-  mockGetAccountById: vi.fn(),
-}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
@@ -50,12 +45,6 @@ vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
   accountSub2ApiAuthSession: {
     getLatestAuth: vi.fn(),
     persistAuthUpdate: vi.fn(),
-  },
-}))
-
-vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
-  accountQueries: {
-    getAccountById: mockGetAccountById,
   },
 }))
 
@@ -86,12 +75,18 @@ const buildStoredAccount = (overrides: Record<string, unknown> = {}) => ({
   id: "account-1",
   site_name: "Example",
   site_url: "https://example.com",
-  site_type: "new-api",
+  site_type: SITE_TYPES.NEW_API,
   authType: AuthTypeEnum.AccessToken,
   account_info: {
     id: "1",
     username: "Ada",
     access_token: "token",
+    quota: 0,
+    today_prompt_tokens: 0,
+    today_completion_tokens: 0,
+    today_quota_consumption: 0,
+    today_requests_count: 0,
+    today_income: 0,
   },
   cookieAuth: undefined,
   ...overrides,
@@ -120,7 +115,6 @@ describe("display account API context and native runtime keys", () => {
     vi.mocked(getSiteTypeCapabilities).mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
     vi.mocked(resolveAssociatedProfileSecret).mockReset()
-    mockGetAccountById.mockReset()
   })
 
   afterEach(() => {
@@ -478,18 +472,17 @@ describe("display account API context and native runtime keys", () => {
     },
   )
 
-  it("resolves stored account context from the latest persisted account", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        account_info: {
-          id: "stored-user",
-          username: "Latest",
-          access_token: "stored-token",
-        },
-      }),
-    )
+  it("builds a request context from the supplied stored account", () => {
+    const account = buildStoredAccount({
+      account_info: {
+        ...buildStoredAccount().account_info,
+        id: "stored-user",
+        username: "Latest",
+        access_token: "stored-token",
+      },
+    })
 
-    await expect(resolveStoredAccountApiContext("account-1")).resolves.toEqual({
+    expect(createAccountApiRequestFromStoredAccount(account)).toEqual({
       accountId: "account-1",
       siteType: "new-api",
       request: expect.objectContaining({
@@ -503,25 +496,23 @@ describe("display account API context and native runtime keys", () => {
         },
       }),
     })
-    expect(mockGetAccountById).toHaveBeenCalledWith("account-1")
   })
 
-  it("preserves stored cookie-auth session in request auth", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        authType: AuthTypeEnum.Cookie,
-        account_info: {
-          id: "stored-user",
-          username: "Latest",
-          access_token: "",
-        },
-        cookieAuth: {
-          sessionCookie: "session=stored",
-        },
-      }),
-    )
+  it("preserves stored cookie-auth session in request auth", () => {
+    const account = buildStoredAccount({
+      authType: AuthTypeEnum.Cookie,
+      account_info: {
+        ...buildStoredAccount().account_info,
+        id: "stored-user",
+        username: "Latest",
+        access_token: "",
+      },
+      cookieAuth: {
+        sessionCookie: "session=stored",
+      },
+    })
 
-    const context = await resolveStoredAccountApiContext("account-1")
+    const context = createAccountApiRequestFromStoredAccount(account)
 
     expect(context.request).toEqual(
       expect.objectContaining({
@@ -537,14 +528,12 @@ describe("display account API context and native runtime keys", () => {
     expect(context.request).not.toHaveProperty("cookieAuthSessionCookie")
   })
 
-  it("decorates stored Sub2API contexts with the account auth session port", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        site_type: SITE_TYPES.SUB2API,
-      }),
-    )
+  it("decorates stored Sub2API contexts with the account auth session port", () => {
+    const account = buildStoredAccount({
+      site_type: SITE_TYPES.SUB2API,
+    })
 
-    const context = await resolveStoredAccountApiContext("account-1")
+    const context = createAccountApiRequestFromStoredAccount(account)
 
     expect(context.siteType).toBe(SITE_TYPES.SUB2API)
     expect(context.request).toEqual(
@@ -552,27 +541,6 @@ describe("display account API context and native runtime keys", () => {
         sub2apiAuthSession: accountSub2ApiAuthSession,
       }),
     )
-  })
-
-  it("throws a stable error when the stored account id is blank", async () => {
-    await expect(resolveStoredAccountApiContext("   ")).rejects.toMatchObject({
-      name: "StoredAccountApiContextError",
-      code: "MISSING_ACCOUNT_ID",
-      message: "account_api_context_missing_account_id",
-    })
-    expect(mockGetAccountById).not.toHaveBeenCalled()
-  })
-
-  it("throws a stable error when the stored account no longer exists", async () => {
-    mockGetAccountById.mockResolvedValueOnce(null)
-
-    await expect(
-      resolveStoredAccountApiContext("missing"),
-    ).rejects.toMatchObject({
-      name: "StoredAccountApiContextError",
-      code: "ACCOUNT_NOT_FOUND",
-      message: "account_api_context_account_not_found",
-    })
   })
 
   it("throws a stable error when a stored account has a blank id", () => {

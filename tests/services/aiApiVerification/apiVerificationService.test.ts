@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 // Use shared API type constants to keep test inputs aligned with supported values.
 import {
   API_TYPES,
-  runApiVerification,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
+import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockFetchAnthropicModelIds = vi.fn()
@@ -84,7 +84,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ toolResults: [], sources: [] })
       .mockResolvedValueOnce({ output: { ok: true } })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
@@ -121,7 +121,7 @@ describe("apiVerificationService", () => {
       })
       .mockResolvedValueOnce({ output: { ok: true } })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
@@ -147,7 +147,7 @@ describe("apiVerificationService", () => {
       })
       .mockResolvedValueOnce({ output: { ok: true } })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
@@ -171,7 +171,7 @@ describe("apiVerificationService", () => {
         output: { ok: true },
         toolCalls: [{ toolName: "verify_tool" }],
       })
-      const report = await runApiVerification({
+      const report = await runApiVerificationTestSuite({
         mode: "non-streaming",
         baseUrl: "https://example.com",
         apiKey: "secret",
@@ -206,7 +206,7 @@ describe("apiVerificationService", () => {
       .mockRejectedValueOnce(new Error("invalid key: secret"))
       .mockResolvedValueOnce({ output: { ok: true } })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
@@ -224,7 +224,7 @@ describe("apiVerificationService", () => {
     async (mode) => {
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
-      const report = await runApiVerification({
+      const report = await runApiVerificationTestSuite({
         mode,
         baseUrl: "https://example.com",
         apiKey: "secret",
@@ -253,7 +253,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
       .mockResolvedValueOnce({ toolResults: [], sources: [] })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
@@ -287,7 +287,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
       .mockResolvedValueOnce({ toolResults: [], sources: [] })
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",

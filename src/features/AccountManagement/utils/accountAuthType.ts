@@ -32,14 +32,6 @@ export function normalizeOptionalAccountAuthType(
   return isAccountAuthType(value) ? value : false
 }
 
-/** Keeps account form state from inheriting blank or malformed auth values. */
-export function normalizeAccountAuthTypeOrDefault(
-  value: unknown,
-  fallback = AuthTypeEnum.AccessToken,
-): AuthTypeEnum {
-  return isAccountAuthType(value) ? value : fallback
-}
-
 /** Checks whether a value maps to a supported account auth mode. */
 export function isAccountAuthType(value: unknown): value is AuthTypeEnum {
   return typeof value === "string" && AUTH_TYPE_VALUES.has(value)

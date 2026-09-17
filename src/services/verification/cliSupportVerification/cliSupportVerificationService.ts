@@ -1,32 +1,24 @@
 import type { ApiVerificationMode } from "~/services/verification/aiApiVerification"
 import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification/registry"
 
-import { nowMs } from "../aiApiVerification/probeTiming"
-import type { CliSupportReport, CliSupportResult, CliToolId } from "./types"
-import { CLI_TOOL_IDS } from "./types"
+import type { CliSupportResult, CliToolId } from "./types"
 
 /**
- * Shared inputs for running CLI support simulations.
+ * Inputs for running a single CLI tool simulation.
  */
-type RunCliSupportSimulationParams = {
+type RunCliSupportToolParams = {
+  toolId: CliToolId
   baseUrl: string
   apiKey: string
   mode?: ApiVerificationMode
   /**
-   * Model id to use for all tool simulations.
+   * Model id to use for this tool simulation.
    *
-   * The CLI support suite intentionally does not guess model ids from token metadata.
+   * The runner intentionally does not guess model ids from token metadata.
    * Callers (UI/CLI) should pass an explicit `modelId` to keep verification deterministic.
    */
   modelId?: string
   abortSignal?: AbortSignal
-}
-
-/**
- * Inputs for running a single tool simulation.
- */
-type RunCliSupportToolParams = RunCliSupportSimulationParams & {
-  toolId: CliToolId
 }
 
 /**
@@ -44,36 +36,4 @@ export async function runCliSupportTool(
     modelId: params.modelId,
     abortSignal: params.abortSignal,
   })
-}
-
-/**
- * Run the full CLI support simulation suite for a given base URL + API key.
- *
- * The suite executes tools sequentially so the UI can update incrementally and allow
- * per-tool retries without re-running everything.
- */
-export async function runCliSupportSimulation(
-  params: RunCliSupportSimulationParams,
-): Promise<CliSupportReport> {
-  const startedAt = nowMs()
-
-  const results: CliSupportResult[] = []
-  for (const toolId of CLI_TOOL_IDS) {
-    results.push(
-      await runCliSupportToolFromRegistry(toolId, {
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        mode: params.mode,
-        modelId: params.modelId,
-        abortSignal: params.abortSignal,
-      }),
-    )
-  }
-
-  return {
-    baseUrl: params.baseUrl,
-    startedAt,
-    finishedAt: nowMs(),
-    results,
-  }
 }

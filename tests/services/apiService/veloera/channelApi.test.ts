@@ -8,7 +8,6 @@ import {
   fetchAccountData,
   fetchChannel,
   fetchChannelModels,
-  fetchCheckInStatus,
   fetchDraftChannelModels,
   listAllChannels,
   refreshAccountData,
@@ -738,24 +737,6 @@ describe("apiService veloera channel APIs", () => {
     },
   )
 
-  it("returns check-in availability only when the upstream value is explicitly boolean", async () => {
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: "token",
-        userId: "1",
-      },
-    }
-
-    mockFetchApiData
-      .mockResolvedValueOnce({ can_check_in: true })
-      .mockResolvedValueOnce({ can_check_in: "yes" })
-
-    await expect(fetchCheckInStatus(request as any)).resolves.toBe(true)
-    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
-  })
-
   it("reads Veloera check-in support from its public status field", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -769,26 +750,6 @@ describe("apiService veloera channel APIs", () => {
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(true)
     await expect(fetchSupportCheckIn(request as any)).resolves.toBeUndefined()
-  })
-
-  it("treats 404 and other failures as unsupported check-in detection", async () => {
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: "token",
-        userId: "1",
-      },
-    }
-
-    mockFetchApiData
-      .mockRejectedValueOnce(
-        new ApiError("missing", 404, "/api/user/check_in_status"),
-      )
-      .mockRejectedValueOnce(new Error("network"))
-
-    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
-    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
   })
 
   it("aggregates quota, usage, income, and detected check-in state for account refreshes", async () => {

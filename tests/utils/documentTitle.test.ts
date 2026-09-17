@@ -12,7 +12,6 @@ vi.mock("~/utils/i18n", () => ({
 
       return key
     }),
-    on: vi.fn(),
   },
 }))
 
@@ -45,24 +44,6 @@ describe("documentTitle", () => {
       documentTitleModule.setDocumentTitle("options")
 
       expect(document.title).toBe(originalTitle)
-    })
-  })
-
-  describe("initializeDocumentTitle", () => {
-    it("sets title initially and registers languageChanged listener", () => {
-      const onSpy = vi.mocked(i18n.on)
-
-      documentTitleModule.initializeDocumentTitle("options")
-
-      expect(onSpy).toHaveBeenCalledWith(
-        "languageChanged",
-        expect.any(Function),
-      )
-
-      const handler = onSpy.mock.calls[0][1] as () => void
-
-      // handler should be callable without throwing
-      handler()
     })
   })
 })

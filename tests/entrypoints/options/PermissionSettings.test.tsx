@@ -51,12 +51,6 @@ vi.mock("~/services/permissions/permissionManager", () => ({
     "notifications",
     "bookmarks",
   ],
-  OPTIONAL_PERMISSION_DEFINITIONS: [
-    { id: "cookies" },
-    { id: "clipboardRead" },
-    { id: "notifications" },
-    { id: "bookmarks" },
-  ],
   hasPermission: (id: string) => hasPermissionMock(id),
   onOptionalPermissionsChanged: (listener: () => void) =>
     onOptionalPermissionsChangedMock(listener),

@@ -2,13 +2,9 @@ import type { TFunction } from "i18next"
 
 import {
   defineResourceEditorFieldPolicy,
-  resolveResourceFieldPolicy,
   type ResourceEditorFieldPolicy,
 } from "~/features/ResourceEditor/resourceFieldPolicy"
-import type {
-  EditableResourceProjection,
-  ResourceFieldDescriptor,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -230,17 +226,6 @@ const policies: Readonly<
 export const getOpenRouterKeyResourceFieldPolicy = (
   mode: OpenRouterKeyEditorMode,
 ) => policies[mode]
-
-/** Validates the adapter descriptors against the OpenRouter presentation policy. */
-export const resolveOpenRouterKeyResourceFieldPolicy = (
-  descriptors: readonly ResourceFieldDescriptor[],
-  mode: OpenRouterKeyEditorMode,
-) =>
-  resolveResourceFieldPolicy(
-    descriptors,
-    getOpenRouterKeyResourceFieldPolicy(mode),
-    OPENROUTER_KEY_EDITOR_SECTION_ORDER,
-  )
 
 const formatLocalDateTime = (value: string, language: string) => {
   const date = new Date(value)

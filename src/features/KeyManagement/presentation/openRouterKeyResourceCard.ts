@@ -289,27 +289,6 @@ export const buildOpenRouterKeyResourceCardPresentation = (
   }
 }
 
-/** Projects an OpenRouter key into inventory-only actions for compact read views. */
-export const buildReadOnlyOpenRouterKeyResourceCardPresentation = (
-  row: NativeKeyManagementRow,
-  t: TFunction,
-): KeyResourceCardPresentation => {
-  const presentation = buildOpenRouterKeyResourceCardPresentation(row, t)
-
-  return {
-    ...presentation,
-    actions: {
-      copySecret: false,
-      revealSecret: false,
-      verifySecret: false,
-      exportSecret: false,
-      edit: false,
-      delete: false,
-      batchSelect: false,
-    },
-  }
-}
-
 export const openRouterKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
   buildPresentation: buildOpenRouterKeyResourceCardPresentation,
   buildDetailFacts: buildOpenRouterKeyResourceDetailFacts,

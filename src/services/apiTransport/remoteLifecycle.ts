@@ -91,13 +91,6 @@ export function inspectRemoteFetchLifecycleEvidence(
   })
 }
 
-/** Returns whether a remote result proves the upstream request never started. */
-export function hasAffirmativeRemoteFetchPreDispatchEvidence(
-  result: unknown,
-): boolean {
-  return inspectRemoteFetchLifecycleEvidence(result).affirmativePreDispatch
-}
-
 /** Broadcasts dispatch from the context that is about to call upstream fetch. */
 export function announceRemoteFetchDispatch(requestId: string): void {
   if (!isRemoteFetchRequestId(requestId)) return

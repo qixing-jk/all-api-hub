@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  normalizeAccountAuthTypeOrDefault,
   normalizeOptionalAccountAuthType,
   resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
@@ -27,15 +26,6 @@ describe("account auth type utilities", () => {
       AuthTypeEnum.Cookie,
     )
     expect(normalizeOptionalAccountAuthType("bad-auth")).toBe(false)
-  })
-
-  it("keeps the existing explicit-or-default normalization behavior", () => {
-    expect(normalizeAccountAuthTypeOrDefault(AuthTypeEnum.Cookie)).toBe(
-      AuthTypeEnum.Cookie,
-    )
-    expect(normalizeAccountAuthTypeOrDefault("bad-auth")).toBe(
-      AuthTypeEnum.AccessToken,
-    )
   })
 
   it("resolves unknown and unsupported URL defaults to access-token auth", () => {

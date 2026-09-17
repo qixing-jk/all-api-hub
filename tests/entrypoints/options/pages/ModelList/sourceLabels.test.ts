@@ -9,7 +9,6 @@ import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import {
   createAccountModelListSourceIdentity,
   createAccountRuntimeKeyModelListSourceIdentity,
-  createAccountTokenModelListSourceIdentity,
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
@@ -18,6 +17,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,
@@ -105,7 +105,7 @@ describe("formatModelListSourceLabel", () => {
     const label = formatModelListSourceLabel(
       createAccountSource(account),
       labelOptions,
-      createAccountTokenModelListSourceIdentity({
+      createLegacyAccountTokenSourceIdentity({
         accountId: account.id,
         tokenId: 41,
         tokenName: "VIP runtime key",
@@ -131,7 +131,7 @@ describe("formatModelListSourceLabel", () => {
       formatModelListSourceLabel(
         createAccountSource(account),
         labelOptions,
-        createAccountTokenModelListSourceIdentity({
+        createLegacyAccountTokenSourceIdentity({
           accountId: account.id,
           tokenId: 42,
           tokenName: "  ",

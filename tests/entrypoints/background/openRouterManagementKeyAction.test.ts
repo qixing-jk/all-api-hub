@@ -23,7 +23,7 @@ async function settleReadiness() {
 describe("OpenRouter Management Key background action", () => {
   let sendMessageMock: ReturnType<typeof vi.fn>
   let createTabMock: ReturnType<typeof vi.fn>
-  let removeTabOrWindowMock: ReturnType<typeof vi.fn>
+  let removeTabMock: ReturnType<typeof vi.fn>
   let applyTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let removeTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let updateTabMock: ReturnType<typeof vi.fn>
@@ -65,7 +65,7 @@ describe("OpenRouter Management Key background action", () => {
     vi.useFakeTimers()
     vi.resetModules()
     createTabMock = vi.fn().mockResolvedValue({ id: 901 })
-    removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
+    removeTabMock = vi.fn().mockResolvedValue(undefined)
     applyTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(2901)
     removeTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(undefined)
     updateTabMock = vi.fn().mockResolvedValue(undefined)
@@ -89,7 +89,7 @@ describe("OpenRouter Management Key background action", () => {
           url: "https://openrouter.ai/settings/management-keys",
         }),
         query: vi.fn().mockResolvedValue([]),
-        remove: removeTabOrWindowMock,
+        remove: removeTabMock,
         update: updateTabMock,
         sendMessage: sendMessageMock,
       },
@@ -105,7 +105,6 @@ describe("OpenRouter Management Key background action", () => {
         hasWindowsAPI: vi.fn(() => true),
         onTabRemoved: vi.fn(() => () => {}),
         onWindowRemoved: vi.fn(() => () => {}),
-        removeTabOrWindow: removeTabOrWindowMock,
       }
     })
     vi.doMock("~/services/preferences/userPreferences", () => ({
@@ -588,7 +587,7 @@ describe("OpenRouter Management Key background action", () => {
     expect(sendResponse).toHaveBeenCalledWith(
       expect.objectContaining({ attemptOutcome: "cancelled_before_create" }),
     )
-    expect(removeTabOrWindowMock).toHaveBeenCalled()
+    expect(removeTabMock).toHaveBeenCalled()
   })
 
   it("does not mutate when cancellation wins during navigation", async () => {
@@ -948,7 +947,7 @@ describe("OpenRouter Management Key background action", () => {
     )
     await settleReadiness()
     await expect(pending).resolves.toBeUndefined()
-    expect(removeTabOrWindowMock).toHaveBeenCalled()
+    expect(removeTabMock).toHaveBeenCalled()
   })
 
   it("rejects a marker race after cancellation before dispatch", async () => {
@@ -1049,7 +1048,7 @@ describe("OpenRouter Management Key background action", () => {
         action: RuntimeActionIds.ContentOpenRouterManagementKeyAction,
       }),
     )
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
   })
 
   it("owns rejection when a cancelled response port is already closed", async () => {
@@ -1087,7 +1086,7 @@ describe("OpenRouter Management Key background action", () => {
     resolveTab?.({ id: 904 })
     await settleReadiness()
     await expect(pending).resolves.toBeUndefined()
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
   })
 
   it("reconstructs allowlisted results and strips page extras", async () => {
@@ -1355,9 +1354,7 @@ describe("OpenRouter Management Key background action", () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
       "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
-    removeTabOrWindowMock.mockRejectedValueOnce(
-      new Error("temporary cleanup failure"),
-    )
+    removeTabMock.mockRejectedValueOnce(new Error("temporary cleanup failure"))
     const response = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -1369,7 +1366,7 @@ describe("OpenRouter Management Key background action", () => {
     await settleReadiness()
     await pending
     expect(response).toHaveBeenCalledTimes(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
   })
 
   it("does not repeat page mutation or download-rule cleanup when browser removal fails", async () => {
@@ -1379,9 +1376,7 @@ describe("OpenRouter Management Key background action", () => {
     } = await import(
       "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
-    removeTabOrWindowMock.mockRejectedValue(
-      new Error("persistent close failure"),
-    )
+    removeTabMock.mockRejectedValue(new Error("persistent close failure"))
     const dispatch = recordDispatchOutcomes(
       markTempWindowOpenRouterManagementKeyDispatched,
     )
@@ -1420,7 +1415,7 @@ describe("OpenRouter Management Key background action", () => {
           RuntimeActionIds.ContentOpenRouterManagementKeyAction,
       ),
     ).toHaveLength(1)
-    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).toHaveBeenCalledTimes(1)
     expect(applyTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
   })

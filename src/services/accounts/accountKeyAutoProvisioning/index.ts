@@ -1,7 +1,1 @@
-export {
-  accountKeyRepairRunner,
-  cancelAccountKeyRepair,
-  getAccountKeyRepairProgress,
-  setupAccountKeyRepairMessagingListeners,
-  startAccountKeyRepair,
-} from "./repair"
+export { setupAccountKeyRepairMessagingListeners } from "./repair"

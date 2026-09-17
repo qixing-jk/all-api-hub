@@ -16,7 +16,7 @@ export interface ModelRedirectPreferences {
 /**
  * Preset standard models by vendor
  */
-export const PRESET_STANDARD_MODELS = {
+const PRESET_STANDARD_MODELS = {
   OpenAI: [
     "gpt-4o",
     "gpt-4o-mini",

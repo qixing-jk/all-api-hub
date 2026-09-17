@@ -7,7 +7,6 @@ import type {
   TodayUsageData,
   TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
-import type { NewApiCheckInStatus } from "~/services/apiService/newApiFamily/checkInDto"
 import {
   aggregateIncomeData,
   aggregateUsageData,
@@ -19,7 +18,6 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
@@ -150,35 +148,6 @@ export async function fetchAccountQuota(
   )
 
   return userData.quota || 0
-}
-
-/**
- * Fetch default New API-family check-in capability for the user.
- * @param request ApiServiceRequest.
- * @returns True/false when available; undefined if unsupported or errors.
- */
-export async function fetchCheckInStatus(
-  request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  const currentMonth = new Date().toISOString().slice(0, 7)
-  try {
-    const checkInData = await newApiFamilyRequests.data<NewApiCheckInStatus>(
-      request,
-      {
-        endpoint: `/api/user/checkin?month=${currentMonth}`,
-      },
-    )
-    return !checkInData.stats.checked_in_today
-  } catch (error) {
-    if (
-      error instanceof ApiError &&
-      (error.statusCode === 404 || error.statusCode === 500)
-    ) {
-      return undefined
-    }
-    logger.warn("获取签到状态失败", error)
-    return undefined
-  }
 }
 
 /**

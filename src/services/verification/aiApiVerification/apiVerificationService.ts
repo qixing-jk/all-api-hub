@@ -1,5 +1,4 @@
 import { apiVerificationProbeRegistry } from "./probeRegistry"
-import { runApiVerificationSuite } from "./suiteRunner"
 import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
@@ -9,13 +8,13 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
-  ApiVerificationReport,
 } from "./types"
 
 /**
- * Shared inputs for running verification probes or suites.
+ * Inputs for running a single verification probe.
  */
-type RunApiVerificationParams = {
+type RunApiVerificationProbeParams = {
+  probeId: ApiVerificationProbeId
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
@@ -23,13 +22,6 @@ type RunApiVerificationParams = {
   modelId?: string
   fallbackModelId?: string
   abortSignal?: AbortSignal
-}
-
-/**
- * Inputs for running a single verification probe.
- */
-type RunApiVerificationProbeParams = RunApiVerificationParams & {
-  probeId: ApiVerificationProbeId
 }
 
 /**
@@ -67,33 +59,4 @@ export async function runApiVerificationProbe(
     mode: params.mode,
     abortSignal: params.abortSignal,
   })
-}
-
-/**
- * Run the API verification suite for a given base URL + API key.
- */
-export async function runApiVerification(
-  params: RunApiVerificationParams,
-): Promise<ApiVerificationReport> {
-  const startedAt = Date.now()
-  const requestedModelId =
-    params.modelId?.trim() || params.fallbackModelId?.trim() || undefined
-
-  const { results, modelId } = await runApiVerificationSuite({
-    baseUrl: params.baseUrl,
-    apiKey: params.apiKey,
-    apiType: params.apiType,
-    requestedModelId,
-    mode: params.mode,
-    abortSignal: params.abortSignal,
-  })
-
-  return {
-    baseUrl: params.baseUrl,
-    apiType: params.apiType,
-    modelId,
-    startedAt,
-    finishedAt: Date.now(),
-    results,
-  }
 }

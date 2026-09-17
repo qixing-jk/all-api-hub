@@ -11,7 +11,7 @@ const SERVICE_CREDENTIAL_ACTION_POLICY = {
 } as const
 
 /** Renders the bounded secret preview shared by quick-list key sources. */
-export function RuntimeKeySecretPreview({ secret }: { secret: string }) {
+function RuntimeKeySecretPreview({ secret }: { secret: string }) {
   return (
     <code className="text-secondary-foreground">
       {maskSecretForDisplay(secret)}

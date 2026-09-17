@@ -92,11 +92,3 @@ export const amountToQuota = (amount: unknown): number => {
 
   return Math.round(parsed * QUOTA_PER_USD)
 }
-
-export const quotaToAmountString = (quota: unknown): string => {
-  const parsed = typeof quota === "number" && Number.isFinite(quota) ? quota : 0
-  if (parsed <= 0) return "0"
-
-  const amount = parsed / QUOTA_PER_USD
-  return Number(amount.toFixed(6)).toString()
-}

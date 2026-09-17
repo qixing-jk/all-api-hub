@@ -78,12 +78,3 @@ export type ApiVerificationProbeResult = {
   output?: unknown
   details?: Record<string, unknown>
 }
-
-export type ApiVerificationReport = {
-  baseUrl: string
-  apiType: ApiVerificationApiType
-  modelId?: string
-  startedAt: number
-  finishedAt: number
-  results: ApiVerificationProbeResult[]
-}

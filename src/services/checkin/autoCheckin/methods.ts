@@ -9,7 +9,6 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import type { AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -31,7 +30,6 @@ import type { AutoCheckinMethodRegistration } from "~/services/checkin/autoCheck
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import {
-  markCheckInMethodExecuted,
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
@@ -50,21 +48,6 @@ import type {
 } from "~/types/checkIn"
 
 export { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery"
-
-/** Marks the selected method checked using execution evidence. */
-export function markSelectedCheckInExecuted(input: {
-  config: CheckInConfig
-  siteType: AccountSiteType
-  observedAt: number
-}): CheckInConfig {
-  const methodId = resolveSelectedCheckInMethod(input)
-  if (!methodId) return input.config
-  return markCheckInMethodExecuted({
-    config: input.config,
-    methodId,
-    observedAt: input.observedAt,
-  })
-}
 
 type ExecuteSelectedCheckInResult =
   | {

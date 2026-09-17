@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   PROVIDER_MODEL_DISCOVERY_STATUSES,
   useProviderModelDiscovery,
-  type ProviderModelDiscoveryInventory,
 } from "~/hooks/useProviderModelDiscovery"
 import {
   KILO_CODE_PROVIDER_PROTOCOLS,
@@ -25,11 +24,6 @@ import type {
 
 export const KILO_CODE_ACCOUNT_MODEL_STATUSES =
   PROVIDER_MODEL_DISCOVERY_STATUSES
-
-export type KiloCodeAccountModelStatus =
-  (typeof KILO_CODE_ACCOUNT_MODEL_STATUSES)[keyof typeof KILO_CODE_ACCOUNT_MODEL_STATUSES]
-
-export type KiloCodeAccountModelInventory = ProviderModelDiscoveryInventory
 
 interface PreparedAccountCatalog {
   catalog?: PreparedKiloCodeV7Catalog

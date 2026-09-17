@@ -11,9 +11,6 @@ import {
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
-import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
-import { ApiError } from "~/services/apiTransport/errors"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -22,34 +19,6 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("NewApiFamily.Veloera")
 
 export { fetchSupportCheckIn } from "./veloeraCheckIn"
-
-/**
- * Fetch Veloera check-in capability for the user.
- */
-export async function fetchCheckInStatus(
-  request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  try {
-    const checkInData = await newApiFamilyRequests.data<{
-      can_check_in?: boolean
-    }>(request, {
-      endpoint: "/api/user/check_in_status",
-    })
-    if (typeof checkInData.can_check_in === "boolean") {
-      return checkInData.can_check_in
-    }
-    return undefined
-  } catch (error) {
-    if (
-      error instanceof ApiError &&
-      (error.statusCode === 404 || error.statusCode === 500)
-    ) {
-      return undefined
-    }
-    logger.warn("获取签到状态失败:", error)
-    return undefined
-  }
-}
 
 /**
  * Fetch and aggregate all Veloera account data.

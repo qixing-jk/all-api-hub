@@ -20,7 +20,6 @@ import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   createAccountRuntimeKeyModelListSourceIdentity,
-  createAccountTokenModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/services/modelCatalog/sourceIdentity"
@@ -53,6 +52,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -3009,13 +3009,12 @@ describe("useFilteredModels", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2api.example.invalid",
     })
-    const defaultTokenSourceIdentity =
-      createAccountTokenModelListSourceIdentity({
-        accountId: account.id,
-        tokenId: 11,
-        tokenName: "Default key",
-      })
-    const vipTokenSourceIdentity = createAccountTokenModelListSourceIdentity({
+    const defaultTokenSourceIdentity = createLegacyAccountTokenSourceIdentity({
+      accountId: account.id,
+      tokenId: 11,
+      tokenName: "Default key",
+    })
+    const vipTokenSourceIdentity = createLegacyAccountTokenSourceIdentity({
       accountId: account.id,
       tokenId: 12,
       tokenName: "VIP key",
@@ -3222,7 +3221,7 @@ describe("useFilteredModels", () => {
       pricingContexts: [
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 31,
             tokenName: "Default key",
@@ -3243,7 +3242,7 @@ describe("useFilteredModels", () => {
         },
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 32,
             tokenName: "VIP key",
@@ -4499,7 +4498,7 @@ describe("useFilteredModels", () => {
       pricingContexts: [
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 1,
           }),
@@ -4516,7 +4515,7 @@ describe("useFilteredModels", () => {
         },
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 2,
           }),
@@ -4550,7 +4549,7 @@ describe("useFilteredModels", () => {
       pricingContexts: [
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 3,
           }),
@@ -4567,7 +4566,7 @@ describe("useFilteredModels", () => {
         },
         {
           account,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: account.id,
             tokenId: 4,
           }),
@@ -4716,7 +4715,7 @@ describe("useFilteredModels", () => {
       pricingContexts: [
         {
           account: mixedAccount,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: mixedAccount.id,
             tokenId: 1,
           }),
@@ -4733,7 +4732,7 @@ describe("useFilteredModels", () => {
         },
         {
           account: mixedAccount,
-          sourceIdentity: createAccountTokenModelListSourceIdentity({
+          sourceIdentity: createLegacyAccountTokenSourceIdentity({
             accountId: mixedAccount.id,
             tokenId: 2,
           }),

@@ -100,5 +100,3 @@ export function ChannelEditorShell({
     </Modal>
   )
 }
-
-export default ChannelEditorShell

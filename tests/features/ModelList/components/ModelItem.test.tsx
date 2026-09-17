@@ -8,7 +8,6 @@ import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import {
-  createAccountTokenModelListSourceIdentity,
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
 } from "~/services/modelCatalog/sourceIdentity"
@@ -26,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { createTab } from "~/utils/browser/browserApi"
+import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
@@ -389,7 +389,7 @@ describe("ModelItem", () => {
     render(
       <ModelItem
         {...createDefaultProps()}
-        sourceIdentity={createAccountTokenModelListSourceIdentity({
+        sourceIdentity={createLegacyAccountTokenSourceIdentity({
           accountId: "account-1",
           tokenId: 41,
           tokenName: "VIP runtime key",

@@ -19,12 +19,6 @@ interface UsageAnalyticsModelTotalsRow {
   quotaConsumed: number
 }
 
-interface UsageAnalyticsTokenTotalsRow {
-  tokenId: string
-  tokenLabel: string
-  totalTokens: number
-}
-
 interface UsageAnalyticsSlowTotalsRow {
   key: string
   label: string
@@ -390,56 +384,6 @@ export function getModelTotalsRows(params: {
   }
 
   return top
-}
-
-/**
- * Build token totals rows for tables/charts, adding `Other` and handling unknown tokens.
- *
- * Notes:
- * - Token ids are storage-safe identifiers (no secrets).
- * - The special id `unknown` is formatted via `unknownLabel`.
- */
-export function getTokenTotalsRows(params: {
-  exportData: UsageHistoryExport
-  topN: number
-  otherLabel?: string
-  unknownLabel?: string
-}): UsageAnalyticsTokenTotalsRow[] {
-  const {
-    exportData,
-    topN,
-    otherLabel = "Other",
-    unknownLabel = "Unknown token",
-  } = params
-
-  const tokenNamesById = exportData.fused.tokenNamesById
-  const items = Object.entries(exportData.fused.byToken).map(
-    ([tokenId, aggregate]) => ({
-      key: tokenId,
-      value: aggregate.totalTokens,
-    }),
-  )
-
-  const rows = topNWithOther(items, topN, otherLabel).map((item) => {
-    const tokenId = item.key
-    const tokenName = tokenNamesById[tokenId]
-    const tokenLabel =
-      tokenId === otherLabel
-        ? otherLabel
-        : tokenId === "unknown"
-          ? unknownLabel
-          : tokenName
-            ? `${tokenName} (#${tokenId})`
-            : `#${tokenId}`
-
-    return {
-      tokenId,
-      tokenLabel,
-      totalTokens: item.value,
-    }
-  })
-
-  return rows
 }
 
 /**
@@ -810,48 +754,6 @@ export function buildPieOption(params: {
         },
         labelLine: { show: false },
         data,
-      },
-    ],
-  }
-}
-
-/**
- * Build a single-series line chart option for trend views.
- *
- * `null` values are allowed and are connected via `connectNulls` for smoother time-series visuals.
- */
-export function buildLineTrendOption(params: {
-  categories: string[]
-  values: Array<number | null>
-  seriesLabel: string
-  yAxisLabel?: string
-}): EChartsOption {
-  const { categories, values, seriesLabel, yAxisLabel } = params
-
-  return {
-    backgroundColor: "transparent",
-    tooltip: { trigger: "axis" },
-    grid: { left: 16, right: 16, top: 16, bottom: 24, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: categories,
-      axisLabel: { color: CHART_COLORS.axis },
-      axisLine: { lineStyle: { color: CHART_COLORS.border } },
-    },
-    yAxis: {
-      type: "value",
-      name: yAxisLabel,
-      axisLabel: { color: CHART_COLORS.axis },
-      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
-    },
-    series: [
-      {
-        name: seriesLabel,
-        type: "line",
-        data: values,
-        showSymbol: false,
-        smooth: true,
-        connectNulls: true,
       },
     ],
   }

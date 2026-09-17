@@ -6,24 +6,10 @@ import type {
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import { getErrorMessage } from "~/utils/core/error"
 
-interface ClaudeCodeHubActionResponse<T> {
-  ok: boolean
-  data?: T
-  error?: string
-  errorCode?: string
-  errorParams?: Record<string, string | number>
-}
-
 interface ActionSignalHandle {
   signal: AbortSignal
   cleanup: () => void
 }
-
-type ClaudeCodeHubProviderAction =
-  | "getProviders"
-  | "addProvider"
-  | "editProvider"
-  | "removeProvider"
 
 export class ClaudeCodeHubApiError extends Error {
   constructor(
@@ -89,67 +75,6 @@ const getClaudeCodeHubRequestErrorMessage = (error: unknown, status?: number) =>
   )
 
 /**
- * Parses and validates a Claude Code Hub provider action response body.
- * Upstream ErrorResult uses `error`, optional `errorCode`, and `errorParams`:
- * https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/actions/types.ts
- */
-async function parseActionResponse<T>(response: Response): Promise<T> {
-  let parsed: ClaudeCodeHubActionResponse<T>
-  try {
-    parsed = (await response.json()) as ClaudeCodeHubActionResponse<T>
-  } catch {
-    throw new ClaudeCodeHubApiError(
-      `Claude Code Hub returned a non-JSON response (${response.status})`,
-      response.status,
-      {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: false,
-        raw: response,
-      },
-    )
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof parsed.ok !== "boolean"
-  ) {
-    throw new ClaudeCodeHubApiError(
-      `Claude Code Hub returned an invalid action response (${response.status})`,
-      response.status,
-      {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: false,
-        raw: response,
-      },
-    )
-  }
-
-  if (!response.ok || !parsed.ok) {
-    const fallbackMessage = `Claude Code Hub request failed (${response.status})`
-    const message = getErrorMessage(
-      typeof parsed.error === "string" ? parsed.error : undefined,
-      fallbackMessage,
-    )
-    const code =
-      typeof parsed.errorCode === "string" && parsed.errorCode.trim()
-        ? parsed.errorCode.trim()
-        : undefined
-    throw new ClaudeCodeHubApiError(message, response.status, {
-      dispatch: "dispatched",
-      responseReceived: true,
-      confirmedNonApplication: parsed.ok === false,
-      raw: parsed,
-      ...(code ? { code } : {}),
-    })
-  }
-
-  return parsed.data as T
-}
-
-/**
  * Parses a Claude Code Hub v1 JSON response and normalizes problem+json errors.
  * Upstream ProblemJson defines `detail`, `title`, `errorCode`, and `errorParams`:
  * https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/lib/api/v1/_shared/error-envelope.ts
@@ -203,7 +128,7 @@ async function parseV1JsonResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * Calls a Claude Code Hub provider action endpoint and normalizes failures.
+ * Creates a cancellable deadline for a Claude Code Hub request.
  */
 function createTimeoutAbortSignal(timeoutMs: number): ActionSignalHandle {
   if (typeof AbortSignal.timeout === "function") {
@@ -307,72 +232,7 @@ function buildActionSignal(options?: {
 }
 
 /**
- * Calls a Claude Code Hub provider action endpoint and parses its typed response.
- */
-async function callProviderAction<T>(
-  config: ClaudeCodeHubConfig,
-  action: ClaudeCodeHubProviderAction,
-  payload: object = {},
-  options?: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  },
-): Promise<T> {
-  const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
-  let response: Response | undefined
-  let fetchStarted = false
-  const actionSignal = buildActionSignal(options)
-
-  try {
-    if (actionSignal.signal.aborted) {
-      const raw =
-        actionSignal.signal.reason ??
-        new DOMException("The operation was aborted", "AbortError")
-      throw new ClaudeCodeHubApiError(
-        getClaudeCodeHubRequestErrorMessage(raw),
-        undefined,
-        {
-          dispatch: "not-dispatched",
-          responseReceived: false,
-          confirmedNonApplication: true,
-          raw,
-          code: getOperationalErrorCode(raw),
-        },
-      )
-    }
-    fetchStarted = true
-    response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
-      method: "POST",
-      signal: actionSignal.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.adminToken}`,
-      },
-      body: JSON.stringify(payload),
-    })
-    return await parseActionResponse<T>(response)
-  } catch (error) {
-    if (error instanceof ClaudeCodeHubApiError) {
-      throw error
-    }
-    throw new ClaudeCodeHubApiError(
-      getClaudeCodeHubRequestErrorMessage(error, response?.status),
-      response?.status,
-      {
-        dispatch: fetchStarted ? "dispatched" : "not-dispatched",
-        responseReceived: response !== undefined,
-        confirmedNonApplication: !fetchStarted,
-        raw: error,
-        code: getOperationalErrorCode(error),
-      },
-    )
-  } finally {
-    actionSignal.cleanup()
-  }
-}
-
-/**
- * Extracts provider rows from the varying action response payload shapes.
+ * Extracts provider rows from supported V1 list response envelopes.
  */
 function extractProviderList(data: unknown): ClaudeCodeHubProviderDisplay[] {
   if (Array.isArray(data)) {
@@ -392,25 +252,6 @@ function extractProviderList(data: unknown): ClaudeCodeHubProviderDisplay[] {
     }
   }
   return []
-}
-
-/**
- * Lists Claude Code Hub providers through the legacy admin action API.
- */
-export async function listProvidersFromAction(
-  config: ClaudeCodeHubConfig,
-  options?: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  },
-): Promise<ClaudeCodeHubProviderDisplay[]> {
-  const data = await callProviderAction<unknown>(
-    config,
-    "getProviders",
-    {},
-    options,
-  )
-  return extractProviderList(data)
 }
 
 type ClaudeCodeHubV1ProviderListOptions = {
@@ -661,23 +502,6 @@ export async function validateClaudeCodeHubConfig(
 }
 
 /**
- * Creates a provider in Claude Code Hub.
- */
-export async function createProvider(
-  config: ClaudeCodeHubConfig,
-  payload: ClaudeCodeHubProviderCreatePayload,
-  options?: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  },
-): Promise<unknown> {
-  return await callProviderAction(config, "addProvider", payload, {
-    signal: options?.signal,
-    timeoutMs: options?.timeoutMs,
-  })
-}
-
-/**
  * Fetches the real provider key through Claude Code Hub's admin v1 API.
  *
  * Upstream contract: ding113/claude-code-hub
@@ -739,40 +563,4 @@ export async function getUnmaskedProviderKey(
   } finally {
     actionSignal.cleanup()
   }
-}
-
-/**
- * Updates an existing provider in Claude Code Hub.
- */
-export async function updateProvider(
-  config: ClaudeCodeHubConfig,
-  payload: ClaudeCodeHubProviderUpdatePayload,
-  options?: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  },
-): Promise<unknown> {
-  return await callProviderAction(config, "editProvider", payload, {
-    signal: options?.signal,
-    timeoutMs: options?.timeoutMs,
-  })
-}
-
-/**
- * Deletes a provider from Claude Code Hub.
- */
-export async function deleteProvider(
-  config: ClaudeCodeHubConfig,
-  providerId: number,
-  options?: {
-    signal?: AbortSignal
-    timeoutMs?: number
-  },
-): Promise<unknown> {
-  return await callProviderAction(
-    config,
-    "removeProvider",
-    { providerId },
-    options,
-  )
 }

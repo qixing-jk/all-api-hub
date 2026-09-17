@@ -4,10 +4,7 @@ import type {
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
-import {
-  fetchAccountData,
-  fetchAccountQuota,
-} from "~/services/apiService/newApiFamily/default/accountData"
+import { fetchAccountData } from "~/services/apiService/newApiFamily/default/accountData"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -46,21 +43,6 @@ export async function refreshAccountData(
       success: false,
       healthStatus: determineHealthStatus(error),
     }
-  }
-}
-
-/**
- * Validate New API-family account connectivity with a quota probe.
- */
-export async function validateAccountConnection(
-  request: ApiServiceRequest,
-): Promise<boolean> {
-  try {
-    await fetchAccountQuota(request)
-    return true
-  } catch (error) {
-    logger.error("账号连接验证失败", error)
-    return false
   }
 }
 

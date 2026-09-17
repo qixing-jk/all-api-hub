@@ -305,59 +305,10 @@ export function createSiteRequestLeaseLimiter(
   }
 }
 
-const wrapLeaseLimiterForTasks =
-  (limiter: ReturnType<typeof createSiteRequestLeaseLimiter>) =>
-  async <T>(
-    key: string,
-    task: () => Promise<T>,
-    signal?: AbortSignal,
-    scheduling?: RequestScheduling,
-  ): Promise<T> =>
-    await limiter(
-      key,
-      () => {
-        let result: Promise<T>
-        try {
-          result = Promise.resolve(task())
-        } catch (error) {
-          result = Promise.reject(error)
-        }
-        return {
-          result,
-          completion: result.then(
-            () => undefined,
-            () => undefined,
-          ),
-        }
-      },
-      signal,
-      scheduling,
-    )
-
-/** Creates a limiter that retains its slot until each task promise settles. */
-export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
-  return wrapLeaseLimiterForTasks(createSiteRequestLeaseLimiter(config))
-}
-
 const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiter({
   ...SITE_API_REQUEST_LIMITS,
   enabled: !isTestMode(),
 })
-const productionSiteRequestLimiter = wrapLeaseLimiterForTasks(
-  productionSiteRequestLeaseLimiter,
-)
-
-/**
- * Runs a site API request through the process-local per-site limiter.
- */
-export async function withSiteApiRequestLimit<T>(
-  key: string,
-  task: () => Promise<T>,
-  signal?: AbortSignal,
-  scheduling?: RequestScheduling,
-): Promise<T> {
-  return await productionSiteRequestLimiter(key, task, signal, scheduling)
-}
 
 /**
  * Runs a request through the limiter while retaining its slot until the

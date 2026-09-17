@@ -159,18 +159,6 @@ export type RuntimeActionId =
   (typeof RuntimeActionIds)[keyof typeof RuntimeActionIds]
 
 /**
- * Null-safe prefix matcher for runtime action routing.
- * @param action Incoming runtime message action value.
- * @param prefix Canonical prefix to match against.
- */
-export function hasRuntimeActionPrefix(
-  action: unknown,
-  prefix: RuntimeActionPrefix,
-): boolean {
-  return typeof action === "string" && action.startsWith(prefix)
-}
-
-/**
  * Compose a runtime action ID from a canonical prefix and a suffix.
  *
  * This is useful for feature routes that build actions dynamically while preserving

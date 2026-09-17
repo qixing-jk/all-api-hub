@@ -344,13 +344,6 @@ export interface AccountStats {
   todayStatsCoverage: AccountTodayStatsCoverage
 }
 
-// API 响应相关类型
-export interface ApiResponse<T = any> {
-  success: boolean
-  data?: T
-  message: string
-}
-
 // 用于排序的字段类型
 export const SORT_FIELDS = [
   "name",

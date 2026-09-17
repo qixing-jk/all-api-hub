@@ -88,7 +88,6 @@ describe("tempWindowPool window fallback", () => {
   let createWindowMock: ReturnType<typeof vi.fn>
   let removeTabMock: ReturnType<typeof vi.fn>
   let removeWindowMock: ReturnType<typeof vi.fn>
-  let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let hasWindowsApiMock: ReturnType<typeof vi.fn>
   let isAllowedIncognitoAccessMock: ReturnType<typeof vi.fn>
   let onTabRemovedMock: ReturnType<typeof vi.fn>
@@ -116,7 +115,6 @@ describe("tempWindowPool window fallback", () => {
     createWindowMock = vi.fn()
     removeTabMock = vi.fn().mockResolvedValue(undefined)
     removeWindowMock = vi.fn().mockResolvedValue(undefined)
-    removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     hasWindowsApiMock = vi.fn(() => true)
     isAllowedIncognitoAccessMock = vi.fn().mockResolvedValue(true)
     onTabRemovedMock = vi.fn(() => () => {})
@@ -243,7 +241,6 @@ describe("tempWindowPool window fallback", () => {
         onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
         removeTab: removeTabMock,
-        removeTabOrWindow: removeTabOrWindowMock,
         removeWindow: removeWindowMock,
       }
     })
@@ -2084,7 +2081,6 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeWindowMock).toHaveBeenCalledWith(305)
     expect(removeTabMock).not.toHaveBeenCalledWith(306)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(306)
   })
 
   it("preserves a structured unsupported result for incognito temp contexts", async () => {
@@ -3123,7 +3119,6 @@ describe("tempWindowPool window fallback", () => {
     )
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("cleans up a pooled popup context when the browser removes the temp window externally", async () => {
@@ -3178,7 +3173,6 @@ describe("tempWindowPool window fallback", () => {
     )
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("cleans up pooled tab contexts on background suspend without double-closing delayed releases", async () => {
@@ -3372,7 +3366,6 @@ describe("tempWindowPool window fallback", () => {
 
     expect(removeTabMock).toHaveBeenCalledWith(901)
     expect(removeWindowMock).not.toHaveBeenCalledWith(901)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(901)
   })
 
   it("cleans up pooled popup contexts on background suspend and forces a fresh popup next time", async () => {
@@ -3820,7 +3813,6 @@ describe("tempWindowPool window fallback", () => {
         data: "guard-recovered",
       },
     })
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(509)
   })
 
   it("reuses a live same-origin tab context before delayed release and recreates it after idle cleanup", async () => {

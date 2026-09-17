@@ -22,14 +22,6 @@ import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatch
 import { isArraysEqual } from "~/utils"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
-interface FindManagedSiteChannelByComparableInputsParams {
-  channels: ManagedResourceMatchCandidate[]
-  accountBaseUrl: string
-  models: string[]
-  key?: string
-  keyComparisonMode?: ManagedSiteChannelKeyComparisonMode
-}
-
 interface FindManagedSiteChannelsByBaseUrlParams {
   channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
@@ -240,40 +232,6 @@ export function findManagedSiteChannelsByBaseUrlAndModels(
 
     return isArraysEqual(normalizedChannelModels, normalizedDesiredModels)
   })
-}
-
-/**
- * Finds a managed-site channel using the same comparable inputs used by the
- * existing import-time duplicate checks.
- */
-export function findManagedSiteChannelByComparableInputs(
-  params: FindManagedSiteChannelByComparableInputsParams,
-): ManagedResourceMatchCandidate | null {
-  const { channels, accountBaseUrl, models, key } = params
-  const keyComparisonMode =
-    params.keyComparisonMode ?? MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT
-  const normalizedDesiredKey = toComparableChannelKey(
-    key ?? "",
-    keyComparisonMode,
-  )
-  const shouldMatchKey = normalizedDesiredKey.length > 0
-  const comparableChannels = findManagedSiteChannelsByBaseUrlAndModels({
-    channels,
-    accountBaseUrl,
-    models,
-  })
-
-  return (
-    comparableChannels.find((channel) => {
-      if (!shouldMatchKey) {
-        return true
-      }
-
-      return toChannelKeyCandidates(channel, keyComparisonMode).includes(
-        normalizedDesiredKey,
-      )
-    }) ?? null
-  )
 }
 
 /**

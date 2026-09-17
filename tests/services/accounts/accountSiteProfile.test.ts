@@ -19,9 +19,7 @@ import {
   normalizeAccountSiteProfileUrlForStorage,
   normalizeAccountSiteSupplementalAuth,
   resolveAccountSiteContentSessionHintForOrigin,
-  resolveAccountSiteCreatedTokenSecretHandling,
   resolveAccountSiteDefaultAuthType,
-  resolveAccountSiteTokenFormNetworkLimitPolicy,
   resolveAccountSiteUserIdentity,
   shouldDecorateAccountApiRequestWithAuthSession,
 } from "~/services/accounts/accountSiteProfile"
@@ -282,21 +280,18 @@ describe("accountSiteProfile", () => {
     ).toBe(ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE)
   })
 
-  it("resolves token creation and form policy helpers", () => {
+  it("defines token creation and form policies in the product profile", () => {
     expect(
-      resolveAccountSiteCreatedTokenSecretHandling({
-        siteType: SITE_TYPES.AIHUBMIX,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX).createdToken
+        .secretHandling,
     ).toBe(ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog)
     expect(
-      resolveAccountSiteCreatedTokenSecretHandling({
-        siteType: SITE_TYPES.NEW_API,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.NEW_API).createdToken
+        .secretHandling,
     ).toBe(ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey)
     expect(
-      resolveAccountSiteTokenFormNetworkLimitPolicy({
-        siteType: SITE_TYPES.AIHUBMIX,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX).tokenForm
+        .networkLimitPolicy,
     ).toBe(ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit)
   })
 

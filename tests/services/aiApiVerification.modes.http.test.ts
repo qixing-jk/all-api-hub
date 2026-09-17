@@ -2,11 +2,11 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
 import {
-  runApiVerification,
   runApiVerificationProbe,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { server } from "~~/tests/msw/server"
+import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
 
 const baseUrl = "https://verification-modes.example.invalid"
 
@@ -294,7 +294,7 @@ describe("verification mode boundaries", () => {
       ),
     )
 
-    const report = await runApiVerification({
+    const report = await runApiVerificationTestSuite({
       baseUrl,
       apiKey: "sk-synthetic",
       apiType: fixture.apiType,

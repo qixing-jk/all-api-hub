@@ -144,7 +144,7 @@ export function resolveUnavailablePriceReason(
 /**
  * Narrows calculated pricing to rows that can render numeric price values.
  */
-export function isAvailableCalculatedPrice(
+function isAvailableCalculatedPrice(
   calculatedPrice: CalculatedPrice,
 ): calculatedPrice is Exclude<CalculatedPrice, { kind: "unavailable" }> {
   return calculatedPrice.kind !== CALCULATED_PRICE_KINDS.UNAVAILABLE

@@ -5,7 +5,7 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
+import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 const { captureProfileMock } = vi.hoisted(() => ({
@@ -18,7 +18,7 @@ vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
   },
 }))
 
-describe("createProfileFromAccountToken", () => {
+describe("captureProfileFromAccountToken", () => {
   beforeEach(() => {
     captureProfileMock.mockReset()
   })
@@ -32,7 +32,7 @@ describe("createProfileFromAccountToken", () => {
       },
     })
 
-    const profile = await createProfileFromAccountToken({
+    const { profile } = await captureProfileFromAccountToken({
       accountName: "  Example  ",
       fallbackAccountName: "Example",
       baseUrl: "https://api.example.invalid/v1",
@@ -69,7 +69,7 @@ describe("createProfileFromAccountToken", () => {
       },
     })
 
-    await createProfileFromAccountToken({
+    await captureProfileFromAccountToken({
       accountName: "AIHubMix",
       baseUrl: AIHUBMIX_WEB_ORIGIN,
       siteType: SITE_TYPES.AIHUBMIX,
@@ -103,7 +103,7 @@ describe("createProfileFromAccountToken", () => {
       tokenId: 42,
     }
 
-    await createProfileFromAccountToken({
+    await captureProfileFromAccountToken({
       accountName: "Example",
       baseUrl: "https://api.example.invalid",
       siteType: SITE_TYPES.NEW_API,

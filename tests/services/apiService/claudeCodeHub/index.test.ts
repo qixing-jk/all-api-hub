@@ -3,17 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   ClaudeCodeHubApiError,
-  createProvider,
   createProviderV1,
-  deleteProvider,
   deleteProviderV1,
   getProvider,
   getUnmaskedProviderKey,
   listProviders,
-  listProvidersFromAction,
   normalizeClaudeCodeHubBaseUrl,
   searchProviders,
-  updateProvider,
   updateProviderV1,
   validateClaudeCodeHubConfig,
 } from "~/services/apiService/claudeCodeHub"
@@ -24,7 +20,6 @@ const config = {
   adminToken: "admin-secret",
 }
 
-const PROVIDER_ACTION_BASE = "https://cch.example.com/api/actions/providers"
 const PROVIDER_V1_BASE = "https://cch.example.com/api/v1/providers"
 
 function restoreAbortSignalStatic(
@@ -39,100 +34,22 @@ function restoreAbortSignalStatic(
   Reflect.deleteProperty(AbortSignal, key)
 }
 
-describe("Claude Code Hub action API adapter", () => {
+describe("Claude Code Hub V1 API adapter", () => {
   beforeEach(() => {
     server.resetHandlers()
   })
-
-  it("normalizes base URLs and lists providers from action responses", async () => {
-    let capturedBody: unknown
-    let capturedAuthorization: string | null = null
-    let capturedSignal: AbortSignal | null = null
-
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, async ({ request }) => {
-        capturedBody = await request.json()
-        capturedAuthorization = request.headers.get("authorization")
-        capturedSignal = request.signal
-
-        return HttpResponse.json({
-          ok: true,
-          data: [{ id: 1, name: "OpenAI", url: "https://api.example.com" }],
-        })
-      }),
-    )
-
-    await expect(listProvidersFromAction(config)).resolves.toEqual([
-      { id: 1, name: "OpenAI", url: "https://api.example.com" },
-    ])
+  it("normalizes base URLs", () => {
     expect(normalizeClaudeCodeHubBaseUrl(config.baseUrl)).toBe(
       "https://cch.example.com",
     )
-    expect(capturedBody).toEqual({})
-    expect(capturedAuthorization).toBe("Bearer admin-secret")
-    expect(capturedSignal).toBeInstanceOf(AbortSignal)
-  })
-
-  it("posts create, update, and delete provider payloads using action route field names", async () => {
-    const capturedBodies: unknown[] = []
-
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, async ({ request }) => {
-        capturedBodies.push(await request.json())
-        return HttpResponse.json({ ok: true, data: { ok: true } })
-      }),
-      http.post(`${PROVIDER_ACTION_BASE}/editProvider`, async ({ request }) => {
-        capturedBodies.push(await request.json())
-        return HttpResponse.json({ ok: true, data: { ok: true } })
-      }),
-      http.post(
-        `${PROVIDER_ACTION_BASE}/removeProvider`,
-        async ({ request }) => {
-          capturedBodies.push(await request.json())
-          return HttpResponse.json({ ok: true, data: { ok: true } })
-        },
-      ),
-    )
-
-    await createProvider(config, {
-      name: "Provider",
-      url: "https://api.example.com",
-      key: "sk-real-key",
-      provider_type: "openai-compatible",
-      allowed_models: [{ matchType: "exact", pattern: "gpt-4o" }],
-    })
-    await updateProvider(config, {
-      providerId: 12,
-      key: "sk-new-key",
-      group_tag: "default",
-    })
-    await deleteProvider(config, 12)
-
-    expect(capturedBodies).toEqual([
-      {
-        name: "Provider",
-        url: "https://api.example.com",
-        key: "sk-real-key",
-        provider_type: "openai-compatible",
-        allowed_models: [{ matchType: "exact", pattern: "gpt-4o" }],
-      },
-      {
-        providerId: 12,
-        key: "sk-new-key",
-        group_tag: "default",
-      },
-      {
-        providerId: 12,
-      },
-    ])
   })
 
   const mutationActions = [
     {
       name: "create",
-      path: "addProvider",
+      path: "",
       invoke: (signal?: AbortSignal) =>
-        createProvider(
+        createProviderV1(
           config,
           {
             name: "Provider",
@@ -146,22 +63,23 @@ describe("Claude Code Hub action API adapter", () => {
     },
     {
       name: "update",
-      path: "editProvider",
+      path: "/12",
       invoke: (signal?: AbortSignal) =>
-        updateProvider(config, { providerId: 12, name: "Updated" }, { signal }),
+        updateProviderV1(config, 12, { name: "Updated" }, { signal }),
     },
     {
       name: "delete",
-      path: "removeProvider",
-      invoke: (signal?: AbortSignal) => deleteProvider(config, 12, { signal }),
+      path: "/12",
+      invoke: (signal?: AbortSignal) =>
+        deleteProviderV1(config, 12, { signal }),
     },
   ] as const
 
   it.each(mutationActions)(
-    "$name carries affirmative action rejection evidence",
+    "$name carries affirmative V1 rejection evidence",
     async ({ path, invoke }) => {
       server.use(
-        http.post(`${PROVIDER_ACTION_BASE}/${path}`, () =>
+        http.all(`${PROVIDER_V1_BASE}${path}`, () =>
           HttpResponse.json(
             { ok: false, error: "provider rejected" },
             { status: 403 },
@@ -180,14 +98,14 @@ describe("Claude Code Hub action API adapter", () => {
   )
 
   it.each(mutationActions)(
-    "$name keeps malformed post-dispatch responses ambiguous",
+    "$name keeps malformed error responses after dispatch ambiguous",
     async ({ path, invoke }) => {
       server.use(
-        http.post(
-          `${PROVIDER_ACTION_BASE}/${path}`,
+        http.all(
+          `${PROVIDER_V1_BASE}${path}`,
           () =>
             new HttpResponse("not json", {
-              status: 200,
+              status: 502,
               headers: { "Content-Type": "text/plain" },
             }),
         ),
@@ -195,7 +113,7 @@ describe("Claude Code Hub action API adapter", () => {
 
       await expect(invoke()).rejects.toMatchObject({
         name: "ClaudeCodeHubApiError",
-        status: 200,
+        status: 502,
         dispatch: "dispatched",
         responseReceived: true,
         confirmedNonApplication: false,
@@ -207,15 +125,33 @@ describe("Claude Code Hub action API adapter", () => {
     "$name keeps response loss after dispatch ambiguous",
     async ({ path, invoke }) => {
       server.use(
-        http.post(`${PROVIDER_ACTION_BASE}/${path}`, () =>
-          HttpResponse.error(),
-        ),
+        http.all(`${PROVIDER_V1_BASE}${path}`, () => HttpResponse.error()),
       )
 
       await expect(invoke()).rejects.toMatchObject({
         name: "ClaudeCodeHubApiError",
         dispatch: "dispatched",
         responseReceived: false,
+        confirmedNonApplication: false,
+      })
+    },
+  )
+
+  it.each(mutationActions.filter(({ name }) => name !== "delete"))(
+    "$name keeps an HTTP-success response with malformed JSON ambiguous",
+    async ({ path, invoke }) => {
+      server.use(
+        http.all(
+          `${PROVIDER_V1_BASE}${path}`,
+          () => new HttpResponse("not json", { status: 200 }),
+        ),
+      )
+
+      await expect(invoke()).rejects.toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        status: 200,
+        dispatch: "dispatched",
+        responseReceived: true,
         confirmedNonApplication: false,
       })
     },
@@ -272,7 +208,7 @@ describe("Claude Code Hub action API adapter", () => {
     }
   })
 
-  it("uses a default AbortError when an action signal has no reason", async () => {
+  it("uses a default AbortError when a request signal has no reason", async () => {
     const any = vi
       .spyOn(AbortSignal, "any")
       .mockReturnValue({ aborted: true, reason: undefined } as AbortSignal)
@@ -604,6 +540,30 @@ describe("Claude Code Hub action API adapter", () => {
     expect(capturedQuery).toBeNull()
   })
 
+  it.each(["bare", "providers", "data"] as const)(
+    "preserves the %s provider-list compatibility envelope through v1",
+    async (envelope) => {
+      const providers = [
+        { id: 11, name: "Compatible Provider", url: "https://api.example.com" },
+      ]
+      const payload =
+        envelope === "bare" ? providers : { [envelope]: providers }
+      server.use(http.get(PROVIDER_V1_BASE, () => HttpResponse.json(payload)))
+
+      await expect(listProviders(config)).resolves.toEqual(providers)
+    },
+  )
+
+  it("preserves the empty-list fallback for an unsupported v1 payload shape", async () => {
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json({ providers: {}, items: null, data: "not an array" }),
+      ),
+    )
+
+    await expect(listProviders(config)).resolves.toEqual([])
+  })
+
   it("throws when the provider v1 list API returns a non-JSON response", async () => {
     server.use(
       http.get(
@@ -802,161 +762,18 @@ describe("Claude Code Hub action API adapter", () => {
     )
   })
 
-  it("supports provider arrays wrapped in an inner data field", async () => {
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.json({
-          ok: true,
-          data: {
-            data: [{ id: 2, name: "Codex", url: "https://codex.example.com" }],
-          },
-        }),
-      ),
-    )
-
-    await expect(listProvidersFromAction(config)).resolves.toEqual([
-      { id: 2, name: "Codex", url: "https://codex.example.com" },
-    ])
-  })
-
-  it("returns an empty provider list when the payload shape has no provider array", async () => {
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.json({
-          ok: true,
-          data: { value: "unexpected" },
-        }),
-      ),
-    )
-
-    await expect(listProvidersFromAction(config)).resolves.toEqual([])
-  })
-
-  it("keeps a verified action error string and raw response internally", async () => {
-    const failure = {
-      ok: false,
-      error: "bad token admin-secret and key sk-real-key",
-      errorCode: "provider.invalid_key",
-      errorParams: { provider: "Provider" },
-    }
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
-        HttpResponse.json(failure, { status: 403 }),
-      ),
-    )
-
-    await expect(
-      createProvider(config, {
-        name: "Provider",
-        url: "https://api.example.com",
-        key: "sk-real-key",
-        provider_type: "openai-compatible",
-        allowed_models: [],
-      }),
-    ).rejects.toMatchObject({
-      message: "bad token admin-secret and key sk-real-key",
-      status: 403,
-      code: "provider.invalid_key",
-      raw: failure,
-    })
-  })
-
-  it("ignores unverified action error objects and uses the fixed fallback", async () => {
-    const failure = {
-      ok: false,
-      error: { detail: "unverified admin-secret" },
-    }
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
-        HttpResponse.json(failure, {
-          status: 403,
-          statusText: "Forbidden",
-        }),
-      ),
-    )
-
-    await expect(
-      createProvider(config, {
-        name: "Provider",
-        url: "https://api.example.com",
-        key: "sk-real-key",
-        provider_type: "openai-compatible",
-        allowed_models: [],
-      }),
-    ).rejects.toMatchObject({
-      message: "Claude Code Hub request failed (403)",
-      raw: failure,
-    })
-  })
-
-  it("preserves verified action strings and ignores unverified objects", async () => {
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
-        HttpResponse.json(
-          {
-            ok: false,
-            error: "bad token admin-secret and key sk-real-key",
-          },
-          { status: 403 },
-        ),
-      ),
-    )
-
-    await expect(
-      createProvider(config, {
-        name: "Provider",
-        url: "https://api.example.com",
-        key: "sk-real-key",
-        provider_type: "openai-compatible",
-        allowed_models: [],
-      }),
-    ).rejects.toThrow("bad token admin-secret and key sk-real-key")
-
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
-        HttpResponse.json(
-          {
-            ok: false,
-            error: { detail: "bad token admin-secret and key sk-real-key" },
-          },
-          { status: 403 },
-        ),
-      ),
-    )
-
-    await expect(
-      createProvider(config, {
-        name: "Provider",
-        url: "https://api.example.com",
-        key: "sk-real-key",
-        provider_type: "openai-compatible",
-        allowed_models: [],
-      }),
-    ).rejects.toThrow("Claude Code Hub request failed (403)")
-
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.json({ success: true }),
-      ),
-    )
-
-    await expect(listProvidersFromAction(config)).rejects.toThrow(
-      "invalid action response",
-    )
-  })
-
   it("combines a caller-provided signal with the timeout safety floor", async () => {
     const controller = new AbortController()
     let capturedSignal: AbortSignal | null = null
 
     server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, ({ request }) => {
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
         capturedSignal = request.signal
-        return HttpResponse.json({ ok: true, data: [] })
+        return HttpResponse.json({ items: [] })
       }),
     )
 
-    await listProvidersFromAction(config, { signal: controller.signal })
+    await listProviders(config, { signal: controller.signal })
 
     expect(capturedSignal).toBeInstanceOf(AbortSignal)
     expect(capturedSignal).not.toBe(controller.signal)
@@ -989,15 +806,15 @@ describe("Claude Code Hub action API adapter", () => {
     })
 
     server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, ({ request }) => {
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
         capturedSignal = request.signal
-        return HttpResponse.json({ ok: true, data: [] })
+        return HttpResponse.json({ items: [] })
       }),
     )
 
     try {
       await expect(
-        listProvidersFromAction(config, {
+        listProviders(config, {
           signal: controller.signal,
         }),
       ).resolves.toEqual([])
@@ -1041,14 +858,12 @@ describe("Claude Code Hub action API adapter", () => {
     })
 
     server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.json({ ok: true, data: [] }),
-      ),
+      http.get(PROVIDER_V1_BASE, () => HttpResponse.json({ items: [] })),
     )
 
     try {
       await expect(
-        listProvidersFromAction(config, {
+        listProviders(config, {
           signal: controller.signal,
         }),
       ).resolves.toEqual([])
@@ -1082,7 +897,7 @@ describe("Claude Code Hub action API adapter", () => {
 
     try {
       await expect(
-        listProvidersFromAction(config, {
+        listProviders(config, {
           signal: controller.signal,
         }),
       ).rejects.toBeInstanceOf(ClaudeCodeHubApiError)
@@ -1107,13 +922,9 @@ describe("Claude Code Hub action API adapter", () => {
   })
 
   it("wraps network failures in a ClaudeCodeHubApiError", async () => {
-    server.use(
-      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
-        HttpResponse.error(),
-      ),
-    )
+    server.use(http.get(PROVIDER_V1_BASE, () => HttpResponse.error()))
 
-    await expect(listProvidersFromAction(config)).rejects.toBeInstanceOf(
+    await expect(listProviders(config)).rejects.toBeInstanceOf(
       ClaudeCodeHubApiError,
     )
   })

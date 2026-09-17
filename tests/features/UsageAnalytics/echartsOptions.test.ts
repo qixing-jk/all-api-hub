@@ -6,13 +6,11 @@ import {
   buildHorizontalBarOption,
   buildLatencyHistogramOption,
   buildLatencyTrendOption,
-  buildLineTrendOption,
   buildPieOption,
   getAccountTotalsRows,
   getModelTotalsRows,
   getSlowModelRows,
   getSlowTokenRows,
-  getTokenTotalsRows,
   resolveFusedDailyByModelForTokens,
   resolveFusedDailyForTokens,
   resolveFusedHourlyForTokens,
@@ -235,53 +233,6 @@ describe("feature UsageAnalytics echartsOptions", () => {
     })
     expect(merged.buckets.slice(0, 3)).toEqual([1, 1, 1])
     expect(merged.buckets.slice(3).every((value) => value === 0)).toBe(true)
-  })
-
-  it("formats token totals with known, unknown, unlabeled, and Other buckets", () => {
-    const accountStore = createEmptyUsageHistoryAccountStore()
-    const dayKey = "2026-01-01"
-
-    accountStore.tokenNamesById["1"] = "Primary"
-    accountStore.dailyByToken["1"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 10,
-        quotaConsumed: 0,
-      },
-    }
-    accountStore.dailyByToken["2"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 4,
-        quotaConsumed: 0,
-      },
-    }
-    accountStore.dailyByToken["unknown"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 2,
-        quotaConsumed: 0,
-      },
-    }
-
-    const rows = getTokenTotalsRows({
-      exportData: buildExportData({ account: accountStore }, dayKey),
-      topN: 2,
-      otherLabel: "Other",
-      unknownLabel: "Unknown token",
-    })
-
-    expect(rows).toEqual([
-      { tokenId: "1", tokenLabel: "Primary (#1)", totalTokens: 10 },
-      { tokenId: "2", tokenLabel: "#2", totalTokens: 4 },
-      { tokenId: "Other", tokenLabel: "Other", totalTokens: 2 },
-    ])
   })
 
   it("builds slow rows with token filters and a stable Other bucket", () => {
@@ -537,13 +488,5 @@ describe("feature UsageAnalytics echartsOptions", () => {
     }) as any
     expect(pie.series[0].name).toBe("")
     expect(pie.legend.textStyle.color).toBe("var(--chart-axis)")
-
-    const line = buildLineTrendOption({
-      categories: ["2026-01-01"],
-      values: [null],
-      seriesLabel: "Series",
-    }) as any
-    expect(line.yAxis.name).toBeUndefined()
-    expect(line.series[0].connectNulls).toBe(true)
   })
 })

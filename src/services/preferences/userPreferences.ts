@@ -548,9 +548,6 @@ export const PREFERENCE_WRITE_FAILURE_TYPES = {
   StorageError: "storage-error",
 } as const
 
-export type PreferenceWriteFailureType =
-  (typeof PREFERENCE_WRITE_FAILURE_TYPES)[keyof typeof PREFERENCE_WRITE_FAILURE_TYPES]
-
 export type PreferenceWriteConflict = {
   type: typeof PREFERENCE_WRITE_FAILURE_TYPES.Stale
   expectedLastUpdated: number
