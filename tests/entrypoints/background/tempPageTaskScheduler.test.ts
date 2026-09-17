@@ -5,23 +5,7 @@ import {
   TEMP_PAGE_TASK_CONCURRENCY,
   type TempPageTaskScheduler,
 } from "~/entrypoints/background/tempPageTaskScheduler"
-
-interface Deferred<T> {
-  promise: Promise<T>
-  reject: (reason?: unknown) => void
-  resolve: (value: T | PromiseLike<T>) => void
-}
-
-function createDeferred<T>(): Deferred<T> {
-  let resolve!: Deferred<T>["resolve"]
-  let reject!: Deferred<T>["reject"]
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
-    resolve = promiseResolve
-    reject = promiseReject
-  })
-
-  return { promise, reject, resolve }
-}
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 describe("createTempPageTaskScheduler", () => {
   it("limits global concurrency to three and refills a slot as soon as any task finishes", async () => {
