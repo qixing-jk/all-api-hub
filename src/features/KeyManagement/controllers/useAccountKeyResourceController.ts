@@ -990,6 +990,7 @@ export function useAccountKeyResourceController({
         preserveCreatedSecret?: boolean
         preserveEditor?: boolean
         preserveRows?: boolean
+        retryAccountIds?: readonly string[]
         targetScopeKey?: string
         routeTransitionId?: string
       } = {},
@@ -1055,11 +1056,11 @@ export function useAccountKeyResourceController({
       }
       setFailures({})
       setScopeInventoryFailure(null)
-      setSettledAccountIds([])
       setNotice(null)
       setIsLoading(mode !== "idle")
 
       if (mode === "idle") {
+        setSettledAccountIds([])
         clearTerminalResourceState()
         loadInProgress.current = false
         setProgress({ total: 0, loaded: 0, loading: 0, error: 0 })
@@ -1075,10 +1076,23 @@ export function useAccountKeyResourceController({
               ?.keyResourceManagement,
           ),
       )
+      const retryIds =
+        mode === "all" && options.retryAccountIds
+          ? new Set(options.retryAccountIds)
+          : null
+      const loadingAccounts = retryIds
+        ? activeAccounts.filter((account) => retryIds.has(account.id))
+        : activeAccounts
+      const retainedAccountIds = retryIds
+        ? activeAccounts
+            .filter((account) => !retryIds.has(account.id))
+            .map((account) => account.id)
+        : []
+      setSettledAccountIds(retainedAccountIds)
       setProgress({
         total: activeAccounts.length,
-        loaded: 0,
-        loading: activeAccounts.length,
+        loaded: retainedAccountIds.length,
+        loading: loadingAccounts.length,
         error: 0,
       })
 
@@ -1105,7 +1119,7 @@ export function useAccountKeyResourceController({
               rowsByAccount.set(row.ref.accountId, [...rows, row])
             }
           }
-          const settledAccounts = new Set<string>()
+          const settledAccounts = new Set(retainedAccountIds)
           const acceptAccountResult = (
             account: DisplaySiteData,
             result: PromiseSettledResult<AccountKeyResourceFacts[]>,
@@ -1171,7 +1185,7 @@ export function useAccountKeyResourceController({
             }
             return rows
           }
-          const originGroups = groupAccountsByOrigin(activeAccounts)
+          const originGroups = groupAccountsByOrigin(loadingAccounts)
           const settledGroups = await mapSettledWithConcurrency(
             originGroups,
             ALL_ACCOUNT_CONCURRENCY,
@@ -1675,6 +1689,7 @@ export function useAccountKeyResourceController({
     async (
       targetBoundary?: ActiveResourceBoundary,
       routeTransitionId?: string,
+      retryAccountIds?: readonly string[],
     ) => {
       const account = accountsRef.current.find(
         (candidate) => candidate.id === selectedAccount,
@@ -1689,6 +1704,7 @@ export function useAccountKeyResourceController({
         protectionBypassExecution: USER_KEY_MANAGEMENT_EXECUTION,
         preserveCreatedSecret: true,
         preserveRows: true,
+        retryAccountIds,
         ...(targetBoundary ? { targetScopeKey: targetBoundary.scopeKey } : {}),
         ...(routeTransitionId === undefined ? {} : { routeTransitionId }),
       })
@@ -1722,6 +1738,19 @@ export function useAccountKeyResourceController({
     if (createdSecretRef.current !== null) return false
     return await refreshAfterMutation()
   }, [refreshAfterMutation])
+
+  /** Retries a settled failure set without rereading successful inventories. */
+  const retryFailed = useCallback(async () => {
+    const retryAccountIds = Object.keys(failures)
+    if (
+      mode !== "all" ||
+      loadInProgress.current ||
+      createdSecretRef.current !== null ||
+      retryAccountIds.length === 0
+    )
+      return false
+    return await refreshAfterMutation(undefined, undefined, retryAccountIds)
+  }, [failures, mode, refreshAfterMutation])
 
   const setSearch = useCallback((nextSearch: string) => {
     if (createdSecretRef.current !== null) return
@@ -2545,6 +2574,7 @@ export function useAccountKeyResourceController({
     freshReadRequired,
     refresh,
     retryScopeInventory,
+    retryFailed,
     openDetail,
     closeDetail,
     selectScope,

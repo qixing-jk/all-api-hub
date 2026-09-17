@@ -16,6 +16,31 @@ vi.mock("react-i18next", async (importOriginal) => {
 })
 
 describe("KeyManagement AccountSummaryBar", () => {
+  it("waits for active account loads before enabling failed-account retry", () => {
+    const { rerender } = render(
+      <AccountSummaryBar
+        items={[{ accountId: "failed", name: "Failed", count: null }]}
+        failedAccounts={[{ accountId: "failed", accountName: "Failed" }]}
+        tokenLoadProgress={{ total: 2, loaded: 0, loading: 1, error: 1 }}
+        onRetryFailedAccounts={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: "actions.retryFailed" }),
+    ).toBeDisabled()
+    rerender(
+      <AccountSummaryBar
+        items={[{ accountId: "failed", name: "Failed", count: null }]}
+        failedAccounts={[{ accountId: "failed", accountName: "Failed" }]}
+        tokenLoadProgress={{ total: 2, loaded: 1, loading: 0, error: 1 }}
+        onRetryFailedAccounts={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: "actions.retryFailed" }),
+    ).toBeEnabled()
+  })
+
   it("folds only settled unavailable accounts and keeps filtering separate from retry", async () => {
     const user = userEvent.setup()
     const onAccountClick = vi.fn()

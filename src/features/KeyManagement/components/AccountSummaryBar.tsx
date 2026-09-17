@@ -186,7 +186,10 @@ export function AccountSummaryBar({
                   variant="outline"
                   type="button"
                   onClick={onRetryFailedAccounts}
-                  disabled={!onRetryFailedAccounts}
+                  disabled={
+                    !onRetryFailedAccounts ||
+                    Boolean(tokenLoadProgress?.loading)
+                  }
                 >
                   {t("actions.retryFailed")}
                 </Button>

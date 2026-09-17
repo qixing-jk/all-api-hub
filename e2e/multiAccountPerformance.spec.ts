@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test"
+
 import { expect, test } from "./fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -11,6 +13,20 @@ import {
 } from "./utils/commonUserFlows"
 import { getServiceWorker } from "./utils/extensionState"
 import { waitForExtensionRoot } from "./utils/lazyLoading"
+
+/** Require each serialized account load to make progress before checking the total. */
+async function waitForKeyAccounts(page: Page, count: number) {
+  for (let index = 0; index < count; index++) {
+    await expect(
+      page.getByRole("button", {
+        name: new RegExp(`^Performance Account ${index}\\s*1 key$`),
+      }),
+    ).toBeVisible({ timeout: 30_000 })
+  }
+  await expect(
+    page.getByText(`Total ${count} keys`, { exact: true }),
+  ).toBeVisible()
+}
 
 for (const count of [10, 100]) {
   test(`major pages with ${count} accounts`, async ({
@@ -100,9 +116,7 @@ for (const count of [10, 100]) {
           page.getByText("perf-model-0", { exact: true }).first(),
         ).toBeVisible({ timeout: 30_000 })
       } else if (route.includes("#keys")) {
-        await expect(
-          page.getByText(`Total ${count} keys`, { exact: true }),
-        ).toBeVisible({ timeout: 30_000 })
+        await waitForKeyAccounts(page, count)
         const expandStarted = Date.now()
         await page
           .getByRole("button", { name: "Expand all", exact: true })
@@ -179,9 +193,8 @@ for (const count of [10, 100]) {
           page.getByRole("group", { name: /^Performance Account / }),
         ).toHaveCount(0)
         await search.fill("")
-        await expect(
-          page.getByText("Total 100 keys", { exact: true }),
-        ).toBeVisible({ timeout: 30_000 })
+        await waitForKeyAccounts(page, count)
+        // Native search reloads inventory; selection is pruned while its key is absent.
         await expect(
           page.getByText("0/100 visible selected", { exact: true }),
         ).toBeVisible()

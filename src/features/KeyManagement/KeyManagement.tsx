@@ -1089,7 +1089,7 @@ export default function KeyManagement(props: {
   ])
   const retryCombinedFailedAccounts = useCallback(() => {
     retryFailedAccounts()
-    void nativeKeys.refresh()
+    void nativeKeys.retryFailed()
   }, [nativeKeys, retryFailedAccounts])
   const nativeInventoryLoadError =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
