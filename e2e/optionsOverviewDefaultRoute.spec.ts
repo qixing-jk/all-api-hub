@@ -132,6 +132,43 @@ test("options default route opens overview and preserves explicit basic links", 
   await expect(page).toHaveURL(new RegExp(`#${MENU_ITEM_IDS.BASIC}$`))
 })
 
+test("automation row shortcut hides again after mouse interaction", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const automation = page.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.automationOverview,
+  )
+  await expect(automation).toBeVisible()
+
+  const row = automation.getByRole("button", {
+    name: "Auto check-in",
+    exact: true,
+  })
+  const shortcut = automation.getByRole("button", {
+    name: "Open Auto check-in",
+  })
+
+  await expect(shortcut).toHaveCSS("opacity", "0")
+
+  await row.hover()
+  await expect(shortcut).toHaveCSS("opacity", "1")
+
+  await row.click()
+  await page.mouse.move(0, 0)
+  await expect(shortcut).toHaveCSS("opacity", "0")
+
+  // Keyboard focus still reveals the shortcut for keyboard users.
+  await page.keyboard.press("Tab")
+  await expect(shortcut).toBeFocused()
+  await expect(shortcut).toHaveCSS("opacity", "1")
+})
+
 test("overview action center opens disabled auto check-in settings", async ({
   context,
   extensionId,

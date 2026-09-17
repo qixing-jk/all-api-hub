@@ -13,6 +13,7 @@ import {
 import { cn } from "~/lib/utils"
 
 import {
+  OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as AUTO_CHECKIN_PANEL_STATUSES,
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as AUTOMATION_STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS,
 } from "../ids"
@@ -25,14 +26,12 @@ import {
   getAutomationActionLabel,
   getAutomationDisabledDescription,
   getAutomationItemLabel,
+  getAutomationItemSummaryLine,
   getAutomationStatusLabel,
   getAutomationSummaryRowLabel,
 } from "./automationPanelText"
 import { OverviewAutoCheckinPanel } from "./OverviewAutoCheckinPanel"
-import {
-  OVERVIEW_NEUTRAL_PANEL_CLASSES,
-  OVERVIEW_SEVERITY_BADGE_VARIANTS,
-} from "./overviewPresentation"
+import { OVERVIEW_SEVERITY_BADGE_VARIANTS } from "./overviewPresentation"
 
 interface OverviewAutomationPanelProps {
   overview: OptionsOverviewAutomationOverview
@@ -52,7 +51,7 @@ const itemIcons = {
 } satisfies Record<OptionsOverviewAutomationItem["id"], LucideIcon>
 
 /**
- * Renders the automation execution overview as compact expandable rows.
+ * Renders the automation execution overview as one flat disclosure list.
  */
 export function OverviewAutomationPanel({
   overview,
@@ -61,7 +60,7 @@ export function OverviewAutomationPanel({
 }: OverviewAutomationPanelProps) {
   return (
     <Card className="border-border/80 bg-card/95 shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 flex h-full max-h-none flex-col overflow-hidden shadow-sm xl:max-h-[28rem]">
-      <div className="space-y-density-2 py-density-3 min-h-0 flex-1 overflow-y-auto px-3">
+      <ul className="m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0">
         {overview.items.map((item) => (
           <AutomationItemRow
             key={item.id}
@@ -70,10 +69,11 @@ export function OverviewAutomationPanel({
             onNavigate={onNavigate}
           />
         ))}
-      </div>
+      </ul>
     </Card>
   )
 }
+
 /**
  * Renders one automation row with independent disclosure and navigation actions.
  */
@@ -90,44 +90,64 @@ function AutomationItemRow({
   const contentId = useId()
   const Icon = itemIcons[item.id]
   const label = getAutomationItemLabel(item.id, t)
+  const disabled = isAutomationItemDisabled(item)
+  const summaryLine = disabled ? "" : getAutomationItemSummaryLine(item, t)
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div
-        className={cn(
-          "overflow-hidden rounded-lg border transition-colors",
-          OVERVIEW_NEUTRAL_PANEL_CLASSES,
-        )}
-      >
-        <div className="gap-y-density-2 py-density-1-5 flex min-w-0 items-center gap-x-2 px-1.5">
+    <li className="border-border-subtle dark:border-foreground/10 border-b last:border-b-0">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div
+          className={cn(
+            "group/item hover:bg-muted/40 dark:hover:bg-foreground/[0.04] pe-density-1 flex min-w-0 items-center transition-colors",
+            open && "bg-surface-subtle/60 dark:bg-foreground/[0.035]",
+          )}
+        >
           <CollapsibleTrigger asChild>
             <Button
               type="button"
               variant="ghost"
-              className="group hover:bg-muted/70 focus-visible:ring-ring dark:hover:bg-foreground/[0.06] gap-y-density-3 py-density-2-5 flex h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-x-3 rounded-md px-3 text-left whitespace-normal focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring py-density-2-5 gap-x-density-2 flex h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start rounded-none ps-3 pe-2 text-left whitespace-normal hover:bg-transparent focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset dark:hover:bg-transparent"
               aria-label={label}
               aria-expanded={open}
               aria-controls={contentId}
             >
-              <span className="bg-card/80 text-muted-foreground dark:bg-foreground/10 dark:text-secondary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-md shadow-sm">
+              <span
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+                  disabled
+                    ? "bg-muted/50 text-faint-foreground dark:bg-foreground/[0.05]"
+                    : "bg-muted/70 text-secondary-foreground dark:bg-foreground/10",
+                )}
+              >
                 <Icon className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
-                  <span className="text-foreground truncate text-sm font-semibold">
+                <span className="gap-x-density-2 flex min-w-0 items-center">
+                  <span
+                    className={cn(
+                      "text-foreground truncate text-sm font-medium",
+                      disabled && "text-muted-foreground",
+                    )}
+                  >
                     {label}
                   </span>
                   <Badge
                     variant={OVERVIEW_SEVERITY_BADGE_VARIANTS[item.status]}
                     size="sm"
+                    className="shrink-0"
                   >
                     {getAutomationStatusLabel(item, t)}
                   </Badge>
                 </span>
+                {summaryLine ? (
+                  <span className="text-muted-foreground mt-density-1 block truncate text-xs">
+                    {summaryLine}
+                  </span>
+                ) : null}
               </span>
               <ChevronDown
                 className={cn(
-                  "text-faint-foreground group-hover:text-theme-600 dark:group-hover:text-theme-300 h-4 w-4 shrink-0 transition-transform",
+                  "text-faint-foreground group-hover/item:text-secondary-foreground dark:group-hover/item:text-secondary-foreground h-4 w-4 shrink-0 transition-transform",
                   open ? "rotate-180" : "",
                 )}
               />
@@ -138,6 +158,7 @@ function AutomationItemRow({
             type="button"
             size="icon-sm"
             variant="ghost"
+            className="text-faint-foreground hover:text-foreground shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100 max-sm:hidden pointer-coarse:opacity-100"
             aria-label={t("optionsOverview:automation.openItem", {
               name: label,
             })}
@@ -148,7 +169,7 @@ function AutomationItemRow({
         </div>
 
         <CollapsibleContent id={contentId}>
-          <div className="border-border/70 bg-surface-subtle/60 dark:border-foreground/10 dark:bg-foreground/[0.03] py-density-3 border-t px-3">
+          <div className="pb-density-4 ps-3 pe-3">
             {item.autoCheckinPanel ? (
               <OverviewAutoCheckinPanel
                 panel={item.autoCheckinPanel}
@@ -157,50 +178,68 @@ function AutomationItemRow({
                 embedded
               />
             ) : (
-              <AutomationSummary item={item} t={t} onNavigate={onNavigate} />
+              <AutomationSummary
+                item={item}
+                t={t}
+                onNavigate={onNavigate}
+                disabled={disabled}
+              />
             )}
           </div>
         </CollapsibleContent>
-      </div>
-    </Collapsible>
+      </Collapsible>
+    </li>
   )
 }
 
 /**
- * Renders summary facts and explicit actions for a collapsed automation domain.
+ * Resolves whether an automation domain is turned off entirely.
+ */
+function isAutomationItemDisabled(item: OptionsOverviewAutomationItem) {
+  if (item.autoCheckinPanel) {
+    return item.autoCheckinPanel.status === AUTO_CHECKIN_PANEL_STATUSES.disabled
+  }
+
+  return item.statusLabel === AUTOMATION_STATUS_LABELS.disabled
+}
+
+/**
+ * Renders summary facts and explicit actions for an expanded automation domain.
  */
 function AutomationSummary({
   item,
   t,
   onNavigate,
+  disabled,
 }: {
   item: OptionsOverviewAutomationItem
   t: TFunction
   onNavigate: OverviewAutomationPanelProps["onNavigate"]
+  disabled: boolean
 }) {
   return (
     <div className="space-y-density-3">
-      <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
-        {item.summaryRows.map((row) => (
-          <div
-            key={row.id}
-            className="border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-md border px-2.5"
-          >
-            <div className="text-muted-foreground text-xs">
-              {getAutomationSummaryRowLabel(item.id, row.id, t)}
-            </div>
-            <div className="text-foreground mt-density-1 truncate text-sm font-semibold">
-              {formatSummaryValue(item.id, row, t)}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {item.statusLabel === AUTOMATION_STATUS_LABELS.disabled ? (
-        <div className="dark:text-secondary-foreground border-border/70 bg-card/70 text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-md border px-2.5 text-sm leading-6">
+      {disabled ? (
+        <p className="text-muted-foreground text-sm leading-6">
           {getAutomationDisabledDescription(item.id, t)}
+        </p>
+      ) : (
+        <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
+          {item.summaryRows.map((row) => (
+            <div
+              key={row.id}
+              className="border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-md border px-2.5"
+            >
+              <div className="text-muted-foreground text-xs">
+                {getAutomationSummaryRowLabel(item.id, row.id, t)}
+              </div>
+              <div className="text-foreground mt-density-1 truncate text-sm font-semibold">
+                {formatSummaryValue(item.id, row, t)}
+              </div>
+            </div>
+          ))}
         </div>
-      ) : null}
+      )}
 
       {item.actions.length > 0 ? (
         <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row">

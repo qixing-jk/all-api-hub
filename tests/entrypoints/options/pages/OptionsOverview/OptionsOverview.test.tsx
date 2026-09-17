@@ -1496,11 +1496,19 @@ describe("OptionsOverview", () => {
     expect(autoCheckinTrigger).toHaveClass("font-medium")
     expect(autoCheckinTrigger).toHaveClass(
       "flex-1",
-      "px-3",
+      "ps-3",
+      "pe-2",
       "py-density-2-5",
-      "hover:bg-muted/70",
+      "hover:bg-transparent",
     )
     expect(autoCheckinTrigger).toHaveAttribute("aria-expanded", "false")
+    expect(autoCheckinTrigger.parentElement).toHaveClass(
+      "group/item",
+      "hover:bg-muted/40",
+    )
+    expect(
+      screen.getByText(/^optionsOverview:autoCheckin\.lastRun:/),
+    ).toBeVisible()
     expect(
       screen.queryByText("optionsOverview:autoCheckin.metrics.success"),
     ).not.toBeInTheDocument()
