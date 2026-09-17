@@ -4,7 +4,6 @@ export const OPTIONS_OVERVIEW_TEST_IDS = {
   unifiedApiGuidance: "options-overview-unified-api-guidance",
   needsAttention: "options-overview-needs-attention",
   attentionSeverityCounts: "options-overview-attention-severity-counts",
-  attentionToggle: "options-overview-attention-toggle",
   automationOverview: "options-overview-automation-overview",
   recentUsage: "options-overview-recent-usage",
   actionCenter: "options-overview-action-center",

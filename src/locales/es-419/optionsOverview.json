@@ -41,8 +41,7 @@
       "description": "La última ejecución omitió estas cuentas por credenciales faltantes, inicio de sesión requerido o permisos denegados. Abre el check-in automático para resolverlas.",
       "title": "{{total}} cuenta(s) se omitieron y necesitan acción"
     },
-    "showAll": "Mostrar todo ({{total}} más)",
-    "showLess": "Mostrar menos",
+    "filterAll": "Todos",
     "siteTypeUnknown": {
       "description": "El check-in automático no puede determinar el protocolo de este sitio. Edita la cuenta y elige el tipo correcto, o vuelve a ejecutar la detección automática.",
       "title": "{{name}} tiene un tipo de sitio desconocido"

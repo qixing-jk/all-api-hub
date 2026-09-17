@@ -2,7 +2,8 @@ import type { TFunction } from "i18next"
 import { CheckCircle2 } from "lucide-react"
 import { useState } from "react"
 
-import { Badge, Button, Card, WorkflowTransitionButton } from "~/components/ui"
+import { Badge, Card, WorkflowTransitionButton } from "~/components/ui"
+import { cn } from "~/lib/utils"
 
 import { OPTIONS_OVERVIEW_TEST_IDS } from "../testIds"
 import type { OptionsOverviewAttentionItem } from "../types"
@@ -14,16 +15,16 @@ import {
 } from "./attentionListText"
 import { OVERVIEW_ATTENTION_BADGE_VARIANTS } from "./overviewPresentation"
 
-/** Keeps the collapsed card scannable while the rest stays one click away. */
-const COLLAPSED_ATTENTION_ITEM_LIMIT = 3
+type AttentionSeverityFilter = "all" | OptionsOverviewAttentionItem["severity"]
 
-const ATTENTION_SEVERITY_SUMMARY: {
-  severity: OptionsOverviewAttentionItem["severity"]
-  indicatorClassName: string
+const ATTENTION_FILTERS: {
+  filter: AttentionSeverityFilter
+  indicatorClassName?: string
 }[] = [
-  { severity: "error", indicatorClassName: "bg-destructive-indicator" },
-  { severity: "warning", indicatorClassName: "bg-warning-indicator" },
-  { severity: "info", indicatorClassName: "bg-info-indicator" },
+  { filter: "all" },
+  { filter: "error", indicatorClassName: "bg-destructive-indicator" },
+  { filter: "warning", indicatorClassName: "bg-warning-indicator" },
+  { filter: "info", indicatorClassName: "bg-info-indicator" },
 ]
 
 interface OverviewAttentionListProps {
@@ -40,7 +41,8 @@ export function OverviewAttentionList({
   t,
   onNavigate,
 }: OverviewAttentionListProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [activeFilter, setActiveFilter] =
+    useState<AttentionSeverityFilter>("all")
 
   if (items.length === 0) {
     return (
@@ -60,14 +62,25 @@ export function OverviewAttentionList({
     )
   }
 
-  const visibleItems = isExpanded
-    ? items
-    : items.slice(0, COLLAPSED_ATTENTION_ITEM_LIMIT)
-  const hiddenItemCount = items.length - visibleItems.length
-  const severityCounts = ATTENTION_SEVERITY_SUMMARY.map((entry) => ({
+  const filters = ATTENTION_FILTERS.map((entry) => ({
     ...entry,
-    count: items.filter((item) => item.severity === entry.severity).length,
+    count:
+      entry.filter === "all"
+        ? items.length
+        : items.filter((item) => item.severity === entry.filter).length,
+    label:
+      entry.filter === "all"
+        ? t("optionsOverview:attention.filterAll")
+        : getAttentionSeverityLabel(entry.filter, t),
   })).filter((entry) => entry.count > 0)
+  // A reload can remove the filtered severity; fall back to the full queue.
+  const resolvedFilter = filters.some((entry) => entry.filter === activeFilter)
+    ? activeFilter
+    : "all"
+  const visibleItems =
+    resolvedFilter === "all"
+      ? items
+      : items.filter((item) => item.severity === resolvedFilter)
 
   return (
     <Card className="border-border/80 bg-card/95 shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 h-full max-h-[28rem] overflow-x-hidden overflow-y-auto shadow-sm">
@@ -80,44 +93,43 @@ export function OverviewAttentionList({
             {t("optionsOverview:attention.sortHint")}
           </div>
         </div>
-        <div className="gap-y-density-1-5 flex min-w-0 flex-col items-start sm:items-end">
-          <ul
-            className="gap-x-density-3 gap-y-density-1 m-0 flex list-none flex-wrap items-center p-0"
-            data-testid={OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityCounts}
-          >
-            {severityCounts.map((entry) => (
-              <li
-                key={entry.severity}
-                className="text-muted-foreground gap-x-density-1-5 inline-flex items-center text-xs"
-              >
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${entry.indicatorClassName}`}
-                  aria-hidden
-                />
-                <span>
-                  {getAttentionSeverityLabel(entry.severity, t)} {entry.count}
-                </span>
+        <ul
+          className="gap-x-density-1 gap-y-density-1 m-0 flex list-none flex-wrap items-center p-0"
+          data-testid={OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityCounts}
+        >
+          {filters.map((entry) => {
+            const isActive = entry.filter === resolvedFilter
+
+            return (
+              <li key={entry.filter}>
+                <button
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => setActiveFilter(entry.filter)}
+                  className={cn(
+                    "gap-x-density-1-5 inline-flex items-center rounded-full px-2 py-1 text-xs transition-colors",
+                    isActive
+                      ? "bg-surface-subtle text-foreground dark:bg-foreground/[0.08] font-medium"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {entry.indicatorClassName ? (
+                    <span
+                      className={cn(
+                        "h-2 w-2 shrink-0 rounded-full",
+                        entry.indicatorClassName,
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
+                  <span>
+                    {entry.label} {entry.count}
+                  </span>
+                </button>
               </li>
-            ))}
-          </ul>
-          {items.length > COLLAPSED_ATTENTION_ITEM_LIMIT ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground h-auto px-0 text-xs"
-              data-testid={OPTIONS_OVERVIEW_TEST_IDS.attentionToggle}
-              aria-expanded={isExpanded}
-              onClick={() => setIsExpanded((value) => !value)}
-            >
-              {isExpanded
-                ? t("optionsOverview:attention.showLess")
-                : t("optionsOverview:attention.showAll", {
-                    total: hiddenItemCount,
-                  })}
-            </Button>
-          ) : null}
-        </div>
+            )
+          })}
+        </ul>
       </div>
       <ul className="m-0 list-none p-0">
         {visibleItems.map((item) => {

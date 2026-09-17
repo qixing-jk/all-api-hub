@@ -41,8 +41,7 @@
       "description": "最近一次运行中，这些账号因缺少登录凭据、需要重新登录或权限不足被跳过。前往自动签到按原因处理。",
       "title": "{{total}} 个账号的签到被跳过，需要处理"
     },
-    "showAll": "显示全部（还有 {{total}} 项）",
-    "showLess": "收起",
+    "filterAll": "全部",
     "siteTypeUnknown": {
       "description": "自动签到暂时无法确定该站点的协议。请编辑账号并选择正确的站点类型，或重新自动识别。",
       "title": "{{name}} 的站点类型未知"

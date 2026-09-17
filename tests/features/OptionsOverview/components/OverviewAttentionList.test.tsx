@@ -45,7 +45,7 @@ describe("OverviewAttentionList", () => {
     expect(onNavigate).toHaveBeenCalledWith(target)
   })
 
-  it("summarizes severity counts and collapses long queues", async () => {
+  it("summarizes severities and filters the queue by severity", async () => {
     const user = userEvent.setup()
     const t = ((key: string, options?: Record<string, unknown>) =>
       options
@@ -84,25 +84,35 @@ describe("OverviewAttentionList", () => {
         .textContent,
     ).toBe(
       [
+        "optionsOverview:attention.filterAll 5",
         "optionsOverview:severity.error 1",
         "optionsOverview:severity.warning 3",
         "optionsOverview:severity.info 1",
       ].join(""),
     )
 
-    expect(screen.getByText(/Warning Relay 2/u)).toBeVisible()
-    expect(screen.queryByText(/Warning Relay 3/u)).not.toBeInTheDocument()
-
-    const toggle = screen.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.attentionToggle)
-    expect(toggle).toHaveTextContent("optionsOverview:attention.showAll:2")
-
-    await user.click(toggle)
-
     expect(screen.getByText(/Warning Relay 3/u)).toBeVisible()
     expect(
       screen.getByText(/optionsOverview:attention\.addProfile\.title/u),
     ).toBeVisible()
-    expect(toggle).toHaveTextContent("optionsOverview:attention.showLess")
+
+    await user.click(
+      screen.getByRole("button", { name: "optionsOverview:severity.error 1" }),
+    )
+
+    expect(screen.getByText(/Broken Relay/u)).toBeVisible()
+    expect(screen.queryByText(/Warning Relay 1/u)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/optionsOverview:attention\.addProfile\.title/u),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:attention.filterAll 5",
+      }),
+    )
+
+    expect(screen.getByText(/Warning Relay 1/u)).toBeVisible()
   })
 
   it("explains the all-clear state while keeping the card compact", () => {

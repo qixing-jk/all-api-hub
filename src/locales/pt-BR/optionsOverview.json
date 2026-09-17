@@ -41,8 +41,7 @@
       "description": "A última execução ignorou essas contas por credenciais ausentes, necessidade de login ou permissões negadas. Abra o check-in automático para resolver.",
       "title": "{{total}} conta(s) foram ignoradas e precisam de ação"
     },
-    "showAll": "Mostrar tudo (mais {{total}})",
-    "showLess": "Mostrar menos",
+    "filterAll": "Todos",
     "siteTypeUnknown": {
       "description": "O check-in automático não consegue determinar o protocolo deste site. Edite a conta e escolha o tipo correto ou execute a detecção automática novamente.",
       "title": "{{name}} tem um tipo de site desconhecido"

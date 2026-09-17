@@ -41,8 +41,7 @@
       "description": "Lần chạy gần nhất đã bỏ qua các tài khoản này do thiếu thông tin đăng nhập, cần đăng nhập lại hoặc bị từ chối quyền. Mở điểm danh tự động để xử lý.",
       "title": "{{total}} tài khoản bị bỏ qua và cần xử lý"
     },
-    "showAll": "Hiện tất cả (còn {{total}})",
-    "showLess": "Thu gọn",
+    "filterAll": "Tất cả",
     "siteTypeUnknown": {
       "description": "Điểm danh tự động không thể xác định giao thức của trang này. Hãy chỉnh sửa tài khoản và chọn đúng loại trang, hoặc chạy lại tự động phát hiện.",
       "title": "{{name}} có loại trang web không xác định"
