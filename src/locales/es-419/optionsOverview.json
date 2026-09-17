@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} tiene un problema de salud"
     },
+    "actions": {
+      "addAccount": "Agregar cuenta",
+      "addProfile": "Agregar credencial",
+      "editAccount": "Editar cuenta",
+      "handleCheckIn": "Resolver check-in",
+      "refreshAccounts": "Actualizar cuentas",
+      "viewAccount": "Ver cuenta",
+      "viewCheckIn": "Ver check-in"
+    },
     "addAccount": {
       "description": "Agrega una cuenta antes de resumir saldos, uso y automatización.",
       "title": "Aún no hay cuentas"
@@ -14,6 +23,25 @@
     "addProfile": {
       "description": "Agrega credenciales de API para que las herramientas y los flujos de exportación puedan reutilizarlas.",
       "title": "Aún no hay perfiles de API"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "La última ejecución tuvo fallos o resultados sin confirmar. Abre el check-in automático para revisar los motivos y reintentar.",
+      "title": "{{total}} cuenta(s) necesitan revisión de check-in"
+    },
+    "checkInMethodUnresolved": {
+      "description": "El check-in automático está activado, pero aún no hay un método disponible. En Cuentas, vuelve a detectar o elige un método antes de la próxima ejecución.",
+      "title": "{{name}} necesita un método de check-in"
+    },
+    "siteTypeUnknown": {
+      "description": "El check-in automático no puede determinar el protocolo de este sitio. Edita la cuenta y elige el tipo correcto, o vuelve a ejecutar la detección automática.",
+      "title": "{{name}} tiene un tipo de sitio desconocido"
+    },
+    "sortHint": "Ordenado por impacto",
+    "summary": "{{total}} pendientes",
+    "summary_many": "optionsOverview:attention.summary",
+    "usageRefreshPending": {
+      "description": "Actualiza las cuentas para completar las estadísticas de solicitudes, tokens y costo de hoy.",
+      "title": "{{total}} cuenta(s) necesitan actualizar sus estadísticas"
     }
   },
   "autoCheckin": {
@@ -189,6 +217,7 @@
   },
   "states": {
     "allClear": "No hay nada que requiera atención en este momento.",
+    "allClearDescription": "Los problemas de cuentas, métodos de check-in faltantes y estadísticas pendientes aparecerán aquí automáticamente.",
     "loadDetailUnavailable": "Parte de la información del resumen no está disponible temporalmente. Intenta cargarla de nuevo.",
     "loadedWithError": "No se pudo cargar parte de la información. Se muestran los datos disponibles.",
     "loading": "Cargando resumen..."

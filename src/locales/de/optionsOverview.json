@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} hat ein gesundheitliches Problem"
     },
+    "actions": {
+      "addAccount": "Konto hinzufügen",
+      "addProfile": "Anmeldedaten hinzufügen",
+      "editAccount": "Konto bearbeiten",
+      "handleCheckIn": "Check-in bearbeiten",
+      "refreshAccounts": "Konten aktualisieren",
+      "viewAccount": "Konto anzeigen",
+      "viewCheckIn": "Check-in anzeigen"
+    },
     "addAccount": {
       "description": "Fügen Sie ein Konto hinzu, bevor Salden, Nutzung und Automatisierung zusammengefasst werden können.",
       "title": "Noch keine Konten"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "Fügen Sie API-Anmeldeinformationen hinzu, damit Tools und Exportflüsse sie wiederverwenden können.",
       "title": "Noch keine API-Profile"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "Im letzten Lauf gab es Fehler oder unbestätigte Ergebnisse. Öffnen Sie den automatischen Check-in, um die Ursachen zu prüfen und es erneut zu versuchen.",
+      "title": "Automatischer Check-in für {{total}} Konto/Konten prüfen"
+    },
+    "checkInMethodUnresolved": {
+      "description": "Der automatische Check-in ist aktiviert, aber es ist noch keine nutzbare Methode verfügbar. Öffnen Sie die Kontoverwaltung, um eine Methode zu erkennen oder auszuwählen.",
+      "title": "Für {{name}} muss die Check-in-Methode geklärt werden"
+    },
+    "siteTypeUnknown": {
+      "description": "Der automatische Check-in kann das Protokoll dieser Website nicht bestimmen. Bearbeiten Sie das Konto und wählen Sie den richtigen Seitentyp, oder führen Sie die automatische Erkennung erneut aus.",
+      "title": "{{name}} hat einen unbekannten Seitentyp"
+    },
+    "sortHint": "Nach Auswirkung sortiert",
+    "summary": "{{total}} offen",
+    "usageRefreshPending": {
+      "description": "Aktualisieren Sie die Konten, um die heutigen Anfrage-, Token- und Kostenstatistiken zu vervollständigen.",
+      "title": "Für {{total}} Konto/Konten müssen die heutigen Statistiken aktualisiert werden"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "Im Moment gibt es nichts, was Aufmerksamkeit erfordert.",
+    "allClearDescription": "Kontoprobleme, fehlende Check-in-Methoden und Statistiken, die aktualisiert werden müssen, erscheinen hier automatisch.",
     "loadDetailUnavailable": "Einige Übersichtsinformationen sind vorübergehend nicht verfügbar. Versuchen Sie es erneut zu laden.",
     "loadedWithError": "Einige Informationen konnten nicht geladen werden. Verfügbare Daten werden angezeigt.",
     "loading": "Übersicht wird geladen..."

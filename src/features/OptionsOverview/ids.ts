@@ -16,6 +16,10 @@ export const OPTIONS_OVERVIEW_STATUS_CARD_IDS = {
 
 export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   accountUnhealthy: "accountUnhealthy",
+  siteTypeUnknown: "siteTypeUnknown",
+  checkInMethodUnresolved: "checkInMethodUnresolved",
+  autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
+  usageRefreshPending: "usageRefreshPending",
   addAccount: "addAccount",
   addProfile: "addProfile",
 } as const

@@ -1203,4 +1203,47 @@ describe("Options overview selectors", () => {
       ["managedSiteModelSync", "not_applicable"],
     ])
   })
+
+  it("surfaces account check-in method, run failure, and pending stats work in the attention list", () => {
+    const unresolvedAccount: SiteAccount = {
+      ...healthyAccount,
+      id: "unresolved-account",
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    }
+    const unresolvedDisplayData: DisplaySiteData = {
+      ...healthyDisplayData,
+      id: "unresolved-account",
+      name: "Unresolved Relay",
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    }
+    const statsWithPendingRefresh = buildAccountStats({
+      todayStatsCoverage: {
+        ...emptyStats.todayStatsCoverage,
+        requests: {
+          ...emptyStats.todayStatsCoverage.requests,
+          legacyUnclassifiedCount: 1,
+        },
+      },
+    })
+
+    const view = buildOptionsOverviewViewModel({
+      accounts: [unresolvedAccount],
+      displayData: [unresolvedDisplayData],
+      accountStats: statsWithPendingRefresh,
+      apiCredentialProfiles: [profile],
+      usageStore: usageStoreWithTodayAndSevenDays,
+      preferences: basePreferences,
+      managedSiteType: undefined,
+      autoCheckinStatus: autoCheckinStatusWithFailures,
+      ...baseOverviewInput,
+    })
+
+    expect(view.attentionItems.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        "checkin:unresolved-account:method-unresolved",
+        "auto-checkin:needs-attention",
+        "usage:pending-refresh",
+      ]),
+    )
+  })
 })

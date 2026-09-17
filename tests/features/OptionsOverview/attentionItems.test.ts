@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import { buildAttentionItems } from "~/features/OptionsOverview/attentionItems"
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
+import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import {
+  buildCheckInConfig,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const problemAccount = (
   id: string,
@@ -110,5 +116,127 @@ describe("overview attention items", () => {
       ["setup:add-account", "info"],
       ["setup:add-profile", "info"],
     ])
+  })
+
+  it("flags unknown site types when their automatic check-in method is unresolved", () => {
+    const account = buildDisplaySiteData({
+      id: "unknown-account",
+      name: "Unknown Relay",
+      siteType: SITE_TYPES.UNKNOWN,
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }),
+    ).toContainEqual({
+      id: "checkin:unknown-account:site-type-unknown",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
+      severity: "warning",
+      titleOptions: { name: "Unknown Relay" },
+      target: {
+        menuItemId: MENU_ITEM_IDS.ACCOUNT,
+        params: { search: "unknown-account" },
+      },
+    })
+  })
+
+  it("flags known site types whose automatic check-in method is unresolved", () => {
+    const account = buildDisplaySiteData({
+      id: "new-api-account",
+      name: "New API Relay",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }),
+    ).toContainEqual({
+      id: "checkin:new-api-account:method-unresolved",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
+      severity: "warning",
+      titleOptions: { name: "New API Relay" },
+      target: {
+        menuItemId: MENU_ITEM_IDS.ACCOUNT,
+        params: { search: "new-api-account" },
+      },
+    })
+  })
+
+  it("does not flag check-in setup when automatic execution is disabled", () => {
+    const account = buildDisplaySiteData({
+      id: "manual-account",
+      name: "Manual Relay",
+      siteType: SITE_TYPES.UNKNOWN,
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: false }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }).map((item) => item.id),
+    ).not.toContain("checkin:manual-account:site-type-unknown")
+  })
+
+  it("adds one aggregate item for failed or uncertain check-in results", () => {
+    const autoCheckinStatus: AutoCheckinStatus = {
+      summary: {
+        totalEligible: 4,
+        executed: 4,
+        successCount: 2,
+        failedCount: 1,
+        skippedCount: 0,
+        uncertainCount: 1,
+        needsRetry: true,
+      },
+    }
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        autoCheckinStatus,
+        globalAutomaticExecutionEnabled: true,
+      }),
+    ).toContainEqual({
+      id: "auto-checkin:needs-attention",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
+      severity: "error",
+      titleOptions: { total: 2 },
+      target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+    })
+  })
+
+  it("adds a refresh item when today's stats still need confirmation", () => {
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        usageRefreshPendingCount: 2,
+      }),
+    ).toContainEqual({
+      id: "usage:pending-refresh",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+      severity: "info",
+      titleOptions: { total: 2 },
+      target: { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
+    })
   })
 })

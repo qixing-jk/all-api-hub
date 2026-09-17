@@ -168,6 +168,52 @@ test("automation row shortcut hides again after mouse interaction", async ({
   await expect(shortcut).toHaveCSS("opacity", "1")
 })
 
+test("overview attention list surfaces unknown site type check-in setup", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const account = createStoredAccount({
+    id: "unknown-site-account",
+    site_name: "Unknown Site",
+    site_url: "https://unknown.example.com",
+    site_type: SITE_TYPES.UNKNOWN,
+    checkIn: {
+      automaticExecutionEnabled: true,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [account])
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "Unknown Site has an unknown site type"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+
+  await attention
+    .getByRole("button", { name: `Edit account: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        search: url.searchParams.get("search"),
+      }
+    })
+    .toEqual({
+      hash: `#${MENU_ITEM_IDS.ACCOUNT}`,
+      search: "unknown-site-account",
+    })
+})
 test("overview action center opens disabled auto check-in settings", async ({
   context,
   extensionId,

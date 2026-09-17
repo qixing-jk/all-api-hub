@@ -5,6 +5,7 @@ import {
   getAccountSiteApiRouter,
   isAccountSiteType,
   isManagedSiteType,
+  isUnknownAccountSiteType,
   OPENROUTER_HOSTNAMES,
   SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
@@ -31,6 +32,12 @@ describe("siteType constants", () => {
     expect(isAccountSiteType(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(false)
     expect(isAccountSiteType("unsupported-site")).toBe(false)
     expect(isAccountSiteType(null)).toBe(false)
+  })
+
+  it("identifies only the unknown account site fallback", () => {
+    expect(isUnknownAccountSiteType(SITE_TYPES.UNKNOWN)).toBe(true)
+    expect(isUnknownAccountSiteType(SITE_TYPES.NEW_API)).toBe(false)
+    expect(isUnknownAccountSiteType(null)).toBe(false)
   })
 
   it("recognizes managed site type values only", () => {

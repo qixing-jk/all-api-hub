@@ -17,6 +17,31 @@ const attentionTitleResolvers = {
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) => t("optionsOverview:attention.accountUnhealthy.title", item.titleOptions),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) => t("optionsOverview:attention.siteTypeUnknown.title", item.titleOptions),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInMethodUnresolved.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.autoCheckinNeedsAttention.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t("optionsOverview:attention.usageRefreshPending.title", item.titleOptions),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -39,6 +64,38 @@ const attentionDescriptionResolvers = {
       "optionsOverview:attention.accountUnhealthy.description",
       item.descriptionOptions,
     ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.siteTypeUnknown.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInMethodUnresolved.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.autoCheckinNeedsAttention.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.usageRefreshPending.description",
+      item.descriptionOptions,
+    ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -59,6 +116,24 @@ const attentionDescriptionResolvers = {
   AttentionKind,
   (item: OptionsOverviewAttentionItem, t: TFunction) => string
 >
+
+const attentionActionResolvers = {
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.viewAccount"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.editAccount"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.handleCheckIn"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention]: (
+    t: TFunction,
+  ) => t("optionsOverview:attention.actions.viewCheckIn"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.refreshAccounts"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.addAccount"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.addProfile"),
+} as const satisfies Record<AttentionKind, (t: TFunction) => string>
 
 /**
  * Resolves attention severity labels from normalized severity values.
@@ -88,4 +163,14 @@ export function getAttentionDescription(
   t: TFunction,
 ) {
   return attentionDescriptionResolvers[item.kind](item, t)
+}
+
+/**
+ * Resolves a task-specific CTA label instead of one generic action.
+ */
+export function getAttentionActionLabel(
+  item: OptionsOverviewAttentionItem,
+  t: TFunction,
+) {
+  return attentionActionResolvers[item.kind](t)
 }

@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} 状态异常"
     },
+    "actions": {
+      "addAccount": "添加账号",
+      "addProfile": "添加凭据",
+      "editAccount": "编辑账号",
+      "handleCheckIn": "处理签到",
+      "refreshAccounts": "刷新账号",
+      "viewAccount": "查看账号",
+      "viewCheckIn": "查看签到"
+    },
     "addAccount": {
       "description": "先添加账号，才能汇总余额、用量和自动任务状态。",
       "title": "还没有账号"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "添加 API 凭据后，可在工具和导出流程中复用。",
       "title": "还没有 API 凭据"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "最近一次运行中有失败或结果待确认。前往自动签到查看原因并重试。",
+      "title": "{{total}} 个账号的自动签到未完成"
+    },
+    "checkInMethodUnresolved": {
+      "description": "自动签到已开启，但当前还没有可用的签到方式。请在账号管理中重新检测或选择签到方式后再运行。",
+      "title": "{{name}} 的签到方式待确认"
+    },
+    "siteTypeUnknown": {
+      "description": "自动签到暂时无法确定该站点的协议。请编辑账号并选择正确的站点类型，或重新自动识别。",
+      "title": "{{name}} 的站点类型未知"
+    },
+    "sortHint": "按影响程度排序",
+    "summary": "{{total}} 项待处理",
+    "usageRefreshPending": {
+      "description": "刷新账号后即可补齐今日请求、Token 和消耗统计。",
+      "title": "{{total}} 个账号的今日统计待刷新"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "当前没有需要处理的事项。",
+    "allClearDescription": "账号异常、签到方式缺失和待刷新统计会自动出现在这里。",
     "loadDetailUnavailable": "部分总览信息暂时不可用，请重试加载。",
     "loadedWithError": "部分信息加载失败，已显示可用数据。",
     "loading": "正在加载总览..."

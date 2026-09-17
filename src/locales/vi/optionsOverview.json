@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} có vấn đề trạng thái"
     },
+    "actions": {
+      "addAccount": "Thêm tài khoản",
+      "addProfile": "Thêm thông tin xác thực",
+      "editAccount": "Chỉnh sửa tài khoản",
+      "handleCheckIn": "Xử lý điểm danh",
+      "refreshAccounts": "Làm mới tài khoản",
+      "viewAccount": "Xem tài khoản",
+      "viewCheckIn": "Xem điểm danh"
+    },
     "addAccount": {
       "description": "Hãy thêm tài khoản trước khi tổng hợp số dư, sử dụng và tác vụ tự động.",
       "title": "Chưa có tài khoản"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "Thêm thông tin API để các công cụ và luồng xuất có thể dùng lại.",
       "title": "Chưa có hồ sơ API"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "Lần chạy gần nhất có lỗi hoặc kết quả chưa được xác nhận. Hãy mở trang điểm danh tự động để xem nguyên nhân và thử lại.",
+      "title": "{{total}} tài khoản cần xử lý điểm danh"
+    },
+    "checkInMethodUnresolved": {
+      "description": "Điểm danh tự động đã bật nhưng chưa có phương thức khả dụng. Trong Tài khoản, hãy phát hiện lại hoặc chọn phương thức trước lần chạy tiếp theo.",
+      "title": "{{name}} cần xác nhận phương thức điểm danh"
+    },
+    "siteTypeUnknown": {
+      "description": "Điểm danh tự động không thể xác định giao thức của trang này. Hãy chỉnh sửa tài khoản và chọn đúng loại trang, hoặc chạy lại tự động phát hiện.",
+      "title": "{{name}} có loại trang web không xác định"
+    },
+    "sortHint": "Sắp xếp theo mức ảnh hưởng",
+    "summary": "{{total}} việc cần xử lý",
+    "usageRefreshPending": {
+      "description": "Làm mới tài khoản để hoàn tất thống kê yêu cầu, token và chi phí hôm nay.",
+      "title": "{{total}} tài khoản cần làm mới thống kê hôm nay"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "Hiện không có mục nào cần xử lý.",
+    "allClearDescription": "Sự cố tài khoản, thiếu phương thức điểm danh và thống kê cần làm mới sẽ tự động xuất hiện tại đây.",
     "loadDetailUnavailable": "Một số thông tin tổng quan tạm thời không khả dụng. Hãy thử tải lại.",
     "loadedWithError": "Một số thông tin tải thất bại. Đang hiển thị dữ liệu có sẵn.",
     "loading": "Đang tải tổng quan..."

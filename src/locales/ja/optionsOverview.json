@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} に状態の問題があります"
     },
+    "actions": {
+      "addAccount": "アカウントを追加",
+      "addProfile": "認証情報を追加",
+      "editAccount": "アカウントを編集",
+      "handleCheckIn": "チェックインを処理",
+      "refreshAccounts": "アカウントを更新",
+      "viewAccount": "アカウントを表示",
+      "viewCheckIn": "チェックインを表示"
+    },
     "addAccount": {
       "description": "残高、利用状況、自動タスクを集計するには、まずアカウントを追加してください。",
       "title": "アカウントがありません"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "API 認証情報を追加すると、ツールやエクスポートで再利用できます。",
       "title": "API 認証情報がありません"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "前回の実行で失敗または未確認の結果があります。自動チェックインを開いて原因を確認し、再試行してください。",
+      "title": "{{total}} 件のアカウントでチェックインの確認が必要です"
+    },
+    "checkInMethodUnresolved": {
+      "description": "自動チェックインは有効ですが、利用できる方法がまだありません。アカウント管理で方法を再検出または選択してから実行してください。",
+      "title": "{{name}} のチェックイン方法を確認してください"
+    },
+    "siteTypeUnknown": {
+      "description": "自動チェックインでこのサイトのプロトコルを判定できません。アカウントを編集して正しいサイト種別を選択するか、自動検出を再実行してください。",
+      "title": "{{name}} のサイト種別が不明です"
+    },
+    "sortHint": "影響度順",
+    "summary": "{{total}} 件の未処理",
+    "usageRefreshPending": {
+      "description": "アカウントを更新すると、今日のリクエスト、Token、消費統計が補完されます。",
+      "title": "{{total}} 件のアカウントで今日の統計を更新してください"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "現在対応が必要な項目はありません。",
+    "allClearDescription": "アカウントの問題、チェックイン方法の不足、更新が必要な統計がここに自動で表示されます。",
     "loadDetailUnavailable": "概要の一部の情報を一時的に利用できません。もう一度読み込んでください。",
     "loadedWithError": "一部の情報を読み込めませんでした。利用可能なデータを表示しています。",
     "loading": "概要を読み込み中..."

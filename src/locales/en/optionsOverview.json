@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} has a health issue"
     },
+    "actions": {
+      "addAccount": "Add account",
+      "addProfile": "Add credential",
+      "editAccount": "Edit account",
+      "handleCheckIn": "Handle check-in",
+      "refreshAccounts": "Refresh accounts",
+      "viewAccount": "View account",
+      "viewCheckIn": "View check-in"
+    },
     "addAccount": {
       "description": "Add an account before balances, usage, and automation can be summarized.",
       "title": "No accounts yet"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "Add API credentials so tools and export flows can reuse them.",
       "title": "No API profiles yet"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "The latest run had failures or unconfirmed results. Open auto check-in to review the reasons and retry.",
+      "title": "Automatic check-in needs attention for {{total}} account(s)"
+    },
+    "checkInMethodUnresolved": {
+      "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
+      "title": "{{name}} needs a check-in method"
+    },
+    "siteTypeUnknown": {
+      "description": "Automatic check-in cannot determine this site's protocol. Edit the account and choose the correct site type, or run auto-detection again.",
+      "title": "{{name}} has an unknown site type"
+    },
+    "sortHint": "Sorted by impact",
+    "summary": "{{total}} pending",
+    "usageRefreshPending": {
+      "description": "Refresh accounts to complete today's request, token, and cost statistics.",
+      "title": "{{total}} account(s) need a stats refresh"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "There is nothing that needs attention right now.",
+    "allClearDescription": "Account issues, missing check-in methods, and statistics that need refresh will appear here automatically.",
     "loadDetailUnavailable": "Some overview information is temporarily unavailable. Try loading it again.",
     "loadedWithError": "Some information failed to load. Showing available data.",
     "loading": "Loading overview..."

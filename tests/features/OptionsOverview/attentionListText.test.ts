@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  getAttentionActionLabel,
   getAttentionDescription,
   getAttentionSeverityLabel,
   getAttentionTitle,
@@ -69,6 +70,38 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.addProfile.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.siteTypeUnknown.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInMethodUnresolved.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.autoCheckinNeedsAttention.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.usageRefreshPending.title")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.title",
@@ -105,10 +138,79 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.addProfile.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.siteTypeUnknown.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInMethodUnresolved.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.autoCheckinNeedsAttention.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.usageRefreshPending.description")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.description",
       descriptionOptions,
     )
+  })
+
+  it("resolves contextual action labels", () => {
+    const t = ((key: string) => key) as TFunction
+
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.viewAccount")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.editAccount")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.handleCheckIn")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.refreshAccounts")
   })
 })

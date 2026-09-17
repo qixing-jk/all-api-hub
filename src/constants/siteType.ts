@@ -15,6 +15,7 @@ export { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions
 export {
   ACCOUNT_SITE_TYPES,
   ACCOUNT_SITE_TYPE_VALUES,
+  isUnknownAccountSiteType,
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,

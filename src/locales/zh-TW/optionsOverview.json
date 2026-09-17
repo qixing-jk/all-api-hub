@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} 狀態異常"
     },
+    "actions": {
+      "addAccount": "新增帳號",
+      "addProfile": "新增憑據",
+      "editAccount": "編輯帳號",
+      "handleCheckIn": "處理簽到",
+      "refreshAccounts": "重新整理帳號",
+      "viewAccount": "查看帳號",
+      "viewCheckIn": "查看簽到"
+    },
     "addAccount": {
       "description": "先新增帳戶，才能彙總餘額、用量和自動任務狀態。",
       "title": "還沒有帳戶"
@@ -14,6 +23,24 @@
     "addProfile": {
       "description": "新增 API 憑據後，可在工具和匯出流程中重複使用。",
       "title": "還沒有 API 憑據"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "最近一次執行中有失敗或結果待確認。請前往自動簽到查看原因並重試。",
+      "title": "{{total}} 個帳號的自動簽到未完成"
+    },
+    "checkInMethodUnresolved": {
+      "description": "自動簽到已開啟，但目前尚無可用的簽到方式。請在帳號管理中重新偵測或選擇簽到方式後再執行。",
+      "title": "{{name}} 的簽到方式待確認"
+    },
+    "siteTypeUnknown": {
+      "description": "自動簽到暫時無法判斷該站點的協定。請編輯帳號並選擇正確的站點類型，或重新自動偵測。",
+      "title": "{{name}} 的站點類型未知"
+    },
+    "sortHint": "依影響程度排序",
+    "summary": "{{total}} 項待處理",
+    "usageRefreshPending": {
+      "description": "重新整理帳號後即可補齊今日請求、Token 和消耗統計。",
+      "title": "{{total}} 個帳號的今日統計待重新整理"
     }
   },
   "autoCheckin": {
@@ -189,6 +216,7 @@
   },
   "states": {
     "allClear": "目前沒有需要處理的事項。",
+    "allClearDescription": "帳號異常、缺少簽到方式和待重新整理統計會自動出現在這裡。",
     "loadDetailUnavailable": "部分總覽資訊暫時無法使用，請重試載入。",
     "loadedWithError": "部分資訊載入失敗，已顯示可用資料。",
     "loading": "正在載入總覽..."

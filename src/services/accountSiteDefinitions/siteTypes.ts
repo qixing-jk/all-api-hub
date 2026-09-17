@@ -22,6 +22,11 @@ export const ACCOUNT_SITE_TYPES = getAccountSiteTypeValues() as readonly [
 ]
 export const ACCOUNT_SITE_TYPE_VALUES = [...ACCOUNT_SITE_TYPES]
 
+/** Returns whether the value resolves to the unknown account-site fallback. */
+export function isUnknownAccountSiteType(value: unknown): boolean {
+  return value === SITE_TYPES.UNKNOWN
+}
+
 export type ManagedSiteType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 export const MANAGED_SITE_TYPES = getManagedSiteTypeValues() as readonly [
   ...typeof MANAGED_SITE_TYPE_ORDER,

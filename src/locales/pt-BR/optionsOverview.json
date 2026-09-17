@@ -7,6 +7,15 @@
       "description": "{{reason}}",
       "title": "{{name}} tem um problema de integridade"
     },
+    "actions": {
+      "addAccount": "Adicionar conta",
+      "addProfile": "Adicionar credencial",
+      "editAccount": "Editar conta",
+      "handleCheckIn": "Resolver check-in",
+      "refreshAccounts": "Atualizar contas",
+      "viewAccount": "Ver conta",
+      "viewCheckIn": "Ver check-in"
+    },
     "addAccount": {
       "description": "Adicione uma conta para ver resumos de saldos, uso e automações.",
       "title": "Ainda não há contas"
@@ -14,6 +23,25 @@
     "addProfile": {
       "description": "Adicione credenciais de API para que as ferramentas e fluxos de exportação possam reutilizá-las.",
       "title": "Ainda não há perfis de API"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "A última execução teve falhas ou resultados não confirmados. Abra o check-in automático para ver os motivos e tentar novamente.",
+      "title": "{{total}} conta(s) precisam de acompanhamento no check-in"
+    },
+    "checkInMethodUnresolved": {
+      "description": "O check-in automático está ativado, mas ainda não há um método disponível. Em Contas, detecte novamente ou escolha um método antes da próxima execução.",
+      "title": "{{name}} precisa de um método de check-in"
+    },
+    "siteTypeUnknown": {
+      "description": "O check-in automático não consegue determinar o protocolo deste site. Edite a conta e escolha o tipo correto ou execute a detecção automática novamente.",
+      "title": "{{name}} tem um tipo de site desconhecido"
+    },
+    "sortHint": "Ordenado por impacto",
+    "summary": "{{total}} pendentes",
+    "summary_many": "optionsOverview:attention.summary",
+    "usageRefreshPending": {
+      "description": "Atualize as contas para completar as estatísticas de solicitações, tokens e custo de hoje.",
+      "title": "{{total}} conta(s) precisam atualizar as estatísticas"
     }
   },
   "autoCheckin": {
@@ -189,6 +217,7 @@
   },
   "states": {
     "allClear": "Não há nada que exija atenção neste momento.",
+    "allClearDescription": "Problemas de conta, métodos de check-in ausentes e estatísticas pendentes aparecerão aqui automaticamente.",
     "loadDetailUnavailable": "Algumas informações da visão geral estão temporariamente indisponíveis. Tente carregá-las novamente.",
     "loadedWithError": "Falha ao carregar algumas informações. Exibindo dados disponíveis.",
     "loading": "Carregando visão geral..."
