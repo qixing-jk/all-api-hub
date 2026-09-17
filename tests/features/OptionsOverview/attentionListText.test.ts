@@ -118,6 +118,14 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.unreadSiteAnnouncements.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInSkippedNeedsAction.title")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.title",
@@ -202,6 +210,14 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.unreadSiteAnnouncements.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInSkippedNeedsAction.description")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.description",
@@ -260,5 +276,13 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.actions.viewAnnouncements")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.handleCheckIn")
   })
 })

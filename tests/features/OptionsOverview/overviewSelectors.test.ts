@@ -30,6 +30,8 @@ import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 import type {
@@ -1299,6 +1301,41 @@ describe("Options overview selectors", () => {
           target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
         }),
       ]),
+    )
+  })
+
+  it("surfaces skipped check-ins that still need a manual step", () => {
+    const autoCheckinStatus: AutoCheckinStatus = {
+      perAccount: {
+        "credentials-account": {
+          accountId: "credentials-account",
+          accountName: "Credentials Relay",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+          timestamp: 1,
+        },
+      },
+    }
+
+    const view = buildOptionsOverviewViewModel({
+      accounts: [healthyAccount],
+      displayData: [healthyDisplayData],
+      accountStats: emptyStats,
+      apiCredentialProfiles: [profile],
+      usageStore: emptyUsageStore,
+      preferences: basePreferences,
+      managedSiteType: undefined,
+      autoCheckinStatus,
+      ...baseOverviewInput,
+    })
+
+    expect(view.attentionItems).toContainEqual(
+      expect.objectContaining({
+        id: "auto-checkin:skipped-needs-action",
+        severity: "warning",
+        titleOptions: { total: 1 },
+        target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+      }),
     )
   })
 })

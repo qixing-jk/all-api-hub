@@ -16,6 +16,11 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import {
+  AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { getAccountKeyResourceRow } from "~~/e2e/utils/accountLifecycle"
 import {
@@ -30,6 +35,7 @@ import {
 import {
   expectPermissionOnboardingHidden,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -277,6 +283,69 @@ test("overview attention list surfaces accounts paused by the global check-in sw
     page.locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`),
   ).toBeInViewport()
 })
+test("overview attention list surfaces skipped check-ins that need action", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      globalEnabled: true,
+      pretriggerDailyOnUiOpen: false,
+    },
+  })
+  await setPlasmoStorageValue(serviceWorker, "autoCheckin_status", {
+    lastRunAt: new Date().toISOString(),
+    lastRunResult: AUTO_CHECKIN_RUN_RESULT.PARTIAL,
+    perAccount: {
+      "skipped-account": {
+        accountId: "skipped-account",
+        accountName: "Skipped Relay",
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+        timestamp: 1,
+      },
+    },
+    summary: {
+      totalEligible: 2,
+      executed: 2,
+      successCount: 1,
+      failedCount: 0,
+      skippedCount: 1,
+      needsRetry: false,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "1 account(s) were skipped and need action"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(
+    attention.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityCounts),
+  ).toContainText("Warning 1")
+
+  await attention
+    .getByRole("button", { name: `Handle check-in: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return { hash: url.hash }
+    })
+    .toEqual({ hash: `#${MENU_ITEM_IDS.AUTO_CHECKIN}` })
+
+  await expect(
+    page.getByRole("button", { name: "Run now", exact: true }),
+  ).toBeVisible()
+})
+
 test("overview action center opens disabled auto check-in settings", async ({
   context,
   extensionId,

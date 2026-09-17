@@ -5,8 +5,10 @@ import { isUnknownAccountSiteType } from "~/constants/siteType"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
 import {
+  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinStatus,
+  type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "./ids"
@@ -18,6 +20,18 @@ import type {
   OptionsOverviewAttentionItem,
   OptionsOverviewSeverity,
 } from "./types"
+
+/**
+ * Skipped results that need an explicit user step on the site or account.
+ * Method-selection reasons stay out: the per-account check-in items already
+ * derive those from the current configuration, so a stale run would duplicate.
+ */
+const CHECKIN_SKIP_REASONS_NEEDING_USER_ACTION = [
+  AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,
+  AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+  AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+  AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
+] as const
 
 const SEVERITY_ORDER: Record<
   Exclude<OptionsOverviewSeverity, "success">,
@@ -106,6 +120,19 @@ export function buildAttentionItems(input: {
     if (autoCheckinAttentionItem) {
       items.push(autoCheckinAttentionItem)
     }
+
+    const skippedCheckInCount = countSkippedCheckInsNeedingAction(
+      input.autoCheckinStatus,
+    )
+    if (skippedCheckInCount > 0) {
+      items.push({
+        id: "auto-checkin:skipped-needs-action",
+        kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+        severity: "warning",
+        titleOptions: { total: skippedCheckInCount },
+        target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+      })
+    }
   } else {
     const pausedAccountCount = accounts.filter(
       (account) =>
@@ -174,6 +201,25 @@ export function buildAttentionItems(input: {
     if (severityDiff !== 0) return severityDiff
     return left.id.localeCompare(right.id)
   })
+}
+
+/**
+ * Counts skipped results whose reason needs a user-provided fix.
+ */
+function countSkippedCheckInsNeedingAction(
+  status: AutoCheckinStatus | null | undefined,
+): number {
+  const results: CheckinAccountResult[] = Object.values(
+    status?.perAccount ?? {},
+  )
+
+  return results.filter(
+    (result) =>
+      result.status === CHECKIN_RESULT_STATUS.SKIPPED &&
+      CHECKIN_SKIP_REASONS_NEEDING_USER_ACTION.some(
+        (reason) => reason === result.reasonCode,
+      ),
+  ).length
 }
 
 /**

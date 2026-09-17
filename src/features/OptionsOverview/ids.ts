@@ -20,6 +20,7 @@ export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   checkInMethodUnresolved: "checkInMethodUnresolved",
   autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
   autoCheckinGloballyDisabled: "autoCheckinGloballyDisabled",
+  checkInSkippedNeedsAction: "checkInSkippedNeedsAction",
   usageRefreshPending: "usageRefreshPending",
   unreadSiteAnnouncements: "unreadSiteAnnouncements",
   addAccount: "addAccount",

@@ -37,6 +37,12 @@
       "description": "Der automatische Check-in ist aktiviert, aber es ist noch keine nutzbare Methode verfügbar. Öffnen Sie die Kontoverwaltung, um eine Methode zu erkennen oder auszuwählen.",
       "title": "Für {{name}} muss die Check-in-Methode geklärt werden"
     },
+    "checkInSkippedNeedsAction": {
+      "description": "Im letzten Lauf wurden diese Konten wegen fehlender Anmeldedaten, erforderlicher Anmeldung oder fehlender Berechtigungen übersprungen. Öffnen Sie den automatischen Check-in, um sie zu beheben.",
+      "title": "{{total}} Konto/Konten wurden übersprungen und brauchen eine Aktion"
+    },
+    "showAll": "Alle anzeigen ({{total}} weitere)",
+    "showLess": "Weniger anzeigen",
     "siteTypeUnknown": {
       "description": "Der automatische Check-in kann das Protokoll dieser Website nicht bestimmen. Bearbeiten Sie das Konto und wählen Sie den richtigen Seitentyp, oder führen Sie die automatische Erkennung erneut aus.",
       "title": "{{name}} hat einen unbekannten Seitentyp"

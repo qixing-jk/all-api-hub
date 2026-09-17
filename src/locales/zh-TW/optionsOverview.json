@@ -37,6 +37,12 @@
       "description": "自動簽到已開啟，但目前尚無可用的簽到方式。請在帳號管理中重新偵測或選擇簽到方式後再執行。",
       "title": "{{name}} 的簽到方式待確認"
     },
+    "checkInSkippedNeedsAction": {
+      "description": "最近一次執行中，這些帳號因缺少登入憑據、需要重新登入或權限不足而被跳過。請前往自動簽到依原因處理。",
+      "title": "{{total}} 個帳號的簽到被跳過，需要處理"
+    },
+    "showAll": "顯示全部（還有 {{total}} 項）",
+    "showLess": "收合",
     "siteTypeUnknown": {
       "description": "自動簽到暫時無法判斷該站點的協定。請編輯帳號並選擇正確的站點類型，或重新自動偵測。",
       "title": "{{name}} 的站點類型未知"

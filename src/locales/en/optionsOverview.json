@@ -37,6 +37,12 @@
       "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
       "title": "{{name}} needs a check-in method"
     },
+    "checkInSkippedNeedsAction": {
+      "description": "The latest run skipped these accounts because of missing credentials, a required sign-in, or denied permissions. Open auto check-in to resolve them.",
+      "title": "{{total}} account(s) were skipped and need action"
+    },
+    "showAll": "Show all ({{total}} more)",
+    "showLess": "Show less",
     "siteTypeUnknown": {
       "description": "Automatic check-in cannot determine this site's protocol. Edit the account and choose the correct site type, or run auto-detection again.",
       "title": "{{name}} has an unknown site type"

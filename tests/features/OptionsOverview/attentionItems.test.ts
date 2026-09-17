@@ -6,7 +6,13 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { buildAttentionItems } from "~/features/OptionsOverview/attentionItems"
 import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
-import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
+  type AutoCheckinStatus,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
 import {
   buildCheckInConfig,
   buildDisplaySiteData,
@@ -25,6 +31,17 @@ const problemAccount = (
       reason,
     },
   }) as DisplaySiteData
+
+const skippedResult = (
+  accountId: string,
+  reasonCode: AutoCheckinSkipReason,
+): CheckinAccountResult => ({
+  accountId,
+  accountName: accountId,
+  status: CHECKIN_RESULT_STATUS.SKIPPED,
+  reasonCode,
+  timestamp: 1,
+})
 
 describe("overview attention items", () => {
   it("turns unhealthy accounts into sorted actionable attention items", () => {
@@ -324,6 +341,108 @@ describe("overview attention items", () => {
       titleOptions: { total: 3 },
       target: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
     })
+  })
+
+  it("counts skipped check-ins that need a manual step", () => {
+    const autoCheckinStatus: AutoCheckinStatus = {
+      perAccount: {
+        "credentials-account": skippedResult(
+          "credentials-account",
+          AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+        ),
+        "auth-account": skippedResult(
+          "auth-account",
+          AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+        ),
+        "permission-account": skippedResult(
+          "permission-account",
+          AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
+        ),
+        "data-account": skippedResult(
+          "data-account",
+          AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,
+        ),
+        "already-checked": skippedResult(
+          "already-checked",
+          AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+        ),
+        "no-method": skippedResult(
+          "no-method",
+          AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+        ),
+        "network-account": skippedResult(
+          "network-account",
+          AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+        ),
+      },
+    }
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 4,
+        profileCount: 1,
+        problemAccounts: [],
+        autoCheckinStatus,
+        globalAutomaticExecutionEnabled: true,
+      }),
+    ).toContainEqual({
+      id: "auto-checkin:skipped-needs-action",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+      severity: "warning",
+      titleOptions: { total: 4 },
+      target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+    })
+  })
+
+  it("ignores routine and transient skipped check-ins", () => {
+    const autoCheckinStatus: AutoCheckinStatus = {
+      perAccount: {
+        "already-checked": skippedResult(
+          "already-checked",
+          AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+        ),
+        "disabled-account": skippedResult(
+          "disabled-account",
+          AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+        ),
+        "no-method": skippedResult(
+          "no-method",
+          AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+        ),
+        timeout: skippedResult("timeout", AUTO_CHECKIN_SKIP_REASON.TIMEOUT),
+      },
+    }
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 4,
+        profileCount: 1,
+        problemAccounts: [],
+        autoCheckinStatus,
+        globalAutomaticExecutionEnabled: true,
+      }).map((item) => item.id),
+    ).not.toContain("auto-checkin:skipped-needs-action")
+  })
+
+  it("ignores skipped check-ins while the global switch is off", () => {
+    const autoCheckinStatus: AutoCheckinStatus = {
+      perAccount: {
+        "credentials-account": skippedResult(
+          "credentials-account",
+          AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+        ),
+      },
+    }
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        autoCheckinStatus,
+        globalAutomaticExecutionEnabled: false,
+      }).map((item) => item.id),
+    ).not.toContain("auto-checkin:skipped-needs-action")
   })
 
   it("skips the unread announcement item without unread records", () => {
