@@ -75,11 +75,11 @@ export const useAccountData = (): UseAccountDataResult => {
   > | null>(null)
 
   // 动画相关状态
-  const [prevTotalConsumption, setPrevTotalConsumption] = useState({
+  const [prevTotalConsumption] = useState({
     USD: 0,
     CNY: 0,
   })
-  const [prevBalances, setPrevBalances] = useState<{
+  const [prevBalances] = useState<{
     [id: string]: CurrencyAmount
   }>({})
 
@@ -95,7 +95,7 @@ export const useAccountData = (): UseAccountDataResult => {
 
   /**
    * Load the persisted account payloads and recompute UI-ready aggregates.
-   * Ensures animations have previous values to interpolate between renders.
+   * Keep the callback stable so completing the initial load does not reload it.
    */
   const loadAccountData = useCallback(async () => {
     try {
@@ -104,21 +104,6 @@ export const useAccountData = (): UseAccountDataResult => {
         stats: accountStats,
         displayAccounts: displaySiteData,
       } = await accountReadModels.getAccountOverviewSnapshot()
-
-      // 计算新的余额数据
-      const newBalances: CurrencyAmountMap = {}
-      displaySiteData.forEach((site) => {
-        newBalances[site.id] = {
-          USD: site.balance.USD,
-          CNY: site.balance.CNY,
-        }
-      })
-
-      // 如果不是初始加载，保存之前的数值供动画使用
-      if (!isInitialLoad) {
-        setPrevTotalConsumption(prevTotalConsumption)
-        setPrevBalances(prevBalances)
-      }
 
       // 更新状态
       setAccounts(allAccounts)
@@ -136,9 +121,7 @@ export const useAccountData = (): UseAccountDataResult => {
       }
 
       // 标记为非初始加载
-      if (isInitialLoad) {
-        setIsInitialLoad(false)
-      }
+      setIsInitialLoad(false)
 
       logger.debug("账号数据加载完成", {
         accountCount: allAccounts.length,
@@ -147,7 +130,7 @@ export const useAccountData = (): UseAccountDataResult => {
     } catch (error) {
       logger.error("加载账号数据失败", error)
     }
-  }, [isInitialLoad, prevTotalConsumption, prevBalances])
+  }, [])
 
   /**
    * Trigger remote refresh followed by a local reload, bubbling the result

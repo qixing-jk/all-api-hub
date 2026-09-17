@@ -72,6 +72,18 @@ const createOverviewSnapshot = (
 })
 
 describe("useAccountData enabled slices", () => {
+  it("loads one snapshot on mount without repeating the full account read when loading completes", async () => {
+    mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
+    const { result, rerender } = renderHook(() => useAccountData())
+    await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+    rerender()
+    expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await result.current.loadAccountData()
+    })
+    expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(2)
+  })
   it("wraps handleRefresh in one refresh-all intent and forwards its execution", async () => {
     mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
     mockRefreshAllAccounts.mockResolvedValue({ success: 0, failed: 0 })

@@ -280,7 +280,7 @@ export const AccountDataProvider = ({
       currentTagStore: TagStore
       balanceHistoryStore: Awaited<
         ReturnType<typeof dailyBalanceHistoryStorage.getStore>
-      >
+      > | null
       todayKey: string
     }) => {
       const estimatedByAccountId = new Map<string, CurrencyAmount | null>()
@@ -502,7 +502,9 @@ export const AccountDataProvider = ({
         await Promise.all([
           accountReadModels.getAccountManagementSnapshot(),
           tagStorage.getTagStore(),
-          dailyBalanceHistoryStorage.getStore(),
+          estimatedTodayIncomeEnabled
+            ? dailyBalanceHistoryStorage.getStore()
+            : null,
         ])
       const {
         accounts: allAccounts,
@@ -861,15 +863,24 @@ export const AccountDataProvider = ({
             reloadGeneration
         }
 
-        const reloadedAccounts = await Promise.all(
-          uniqueIds.map(async (accountId) => {
-            const account = await accountQueries.getAccountById(accountId)
-            if (!account) {
-              throw new Error(`Account not found: ${accountId}`)
-            }
-            return account
-          }),
+        // Each single-account query reads the complete storage envelope. Read
+        // batches once to avoid repeating that work for every updated account.
+        const storedAccounts =
+          uniqueIds.length === 1
+            ? [await accountQueries.getAccountById(uniqueIds[0])]
+            : await accountQueries.getAllAccounts()
+        const storedById = new Map(
+          storedAccounts
+            .filter((account): account is SiteAccount => account !== null)
+            .map((account) => [account.id, account]),
         )
+        const reloadedAccounts = uniqueIds.map((accountId) => {
+          const account = storedById.get(accountId)
+          if (!account) {
+            throw new Error(`Account not found: ${accountId}`)
+          }
+          return account
+        })
         const activeReloadedAccounts = reloadedAccounts.filter(
           (account) =>
             targetedReloadGenerationByAccountIdRef.current[account.id] ===
@@ -895,7 +906,9 @@ export const AccountDataProvider = ({
 
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
-        const balanceHistoryStore = await dailyBalanceHistoryStorage.getStore()
+        const balanceHistoryStore = estimatedTodayIncomeEnabled
+          ? await dailyBalanceHistoryStorage.getStore()
+          : null
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
           (account) =>
