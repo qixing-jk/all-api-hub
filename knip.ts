@@ -12,12 +12,16 @@ const config: KnipConfig = {
     "scripts/diagnostics/compare-lazy-loading.mjs",
     "scripts/diagnostics/render-extension-memory-report.mjs",
     "scripts/diagnostics/render-lazy-loading-report.mjs",
-    "src/entrypoints/appearance-bootstrap.ts",
-    "src/entrypoints/background/index.ts",
-    "src/entrypoints/content/index.ts",
-    "src/entrypoints/options/main.tsx",
-    "src/entrypoints/popup/main.tsx",
-    "src/entrypoints/sidepanel/main.tsx",
+    // The suffix marks shipped entrypoints for --production; tests and build
+    // tooling above/below remain entrypoints only in the default audit.
+    "src/entrypoints/appearance-bootstrap.ts!",
+    "src/entrypoints/background/index.ts!",
+    "src/entrypoints/content/index.ts!",
+    // Injected by URL as a web-accessible resource, not a static import.
+    "src/entrypoints/openrouter-clerk-session.ts!",
+    "src/entrypoints/options/main.tsx!",
+    "src/entrypoints/popup/main.tsx!",
+    "src/entrypoints/sidepanel/main.tsx!",
     // WXT discovers this local build module from the configured modulesDir.
     "src/locales/runtime-assets.ts",
     "tests/**/*.test.{ts,tsx}",
@@ -29,7 +33,9 @@ const config: KnipConfig = {
     "e2e/setup/build.setup.ts",
   ],
   project: [
-    "src/**/*.{ts,tsx}",
+    "src/**/*.{ts,tsx}!",
+    // WXT build module; its locale tooling is not shipped runtime code.
+    "!src/locales/runtime-assets.ts!",
     "tests/**/*.{ts,tsx}",
     "e2e/**/*.{ts,tsx}",
     "scripts/**/*.{js,mjs}",
@@ -44,82 +50,29 @@ const config: KnipConfig = {
     "@types/chrome",
     "@types/firefox-webext-browser",
     "@types/webextension-polyfill",
+    // Loaded by Vitest's configured V8 coverage provider.
     "@vitest/coverage-v8",
+    // Loaded by string from wxt.config.ts modules.
     "@wxt-dev/auto-icons",
     "@wxt-dev/module-react",
+    // Spawned by plugins/react-devtools-auto.ts during development.
     "react-devtools",
+    // On-demand UI generator configured by components.json.
     "shadcn",
+    // Imported as CSS from src/styles/style.css, outside the TS graph.
     "tw-animate-css",
   ],
+  // Exported props and signature types may be used only within their owning
+  // module. Keep checking types that have no internal or external consumers.
+  ignoreExportsUsedInFile: { interface: true, type: true },
   ignoreIssues: {
-    // Shared/public component surfaces are intentionally broader than current
-    // local usage; do not let Knip collapse those APIs.
-    "src/components/**": ["exports", "types", "duplicates"],
-    "src/features/**/components/**": ["exports", "types", "duplicates"],
-    "src/features/ManagedSiteVerification/NewApiManagedVerificationDialog.tsx":
-      ["exports", "types", "duplicates"],
-
-    // Utility entrypoints often carry semantic names even when current callers
-    // are sparse.
-    "src/utils/navigation/index.ts": ["exports"],
-    "src/utils/browser/index.ts": ["exports"],
-    "src/utils/browser/device.ts": ["exports", "types"],
-
-    // Explicitly protected site vocabulary.
-    "src/constants/siteType.ts": ["exports"],
-
-    // Domain vocabularies and contract/type sources are intentionally kept as
-    // stable naming surfaces for gradual modularization, even when current
-    // local references are sparse.
+    // Reusable UI primitives intentionally expose a composable API beyond
+    // current application usage. Business components are checked normally.
+    "src/components/ui/**": ["exports", "types"],
+    // Design-system tokens accompany the shared UI primitive API.
     "src/constants/designTokens.ts": ["exports"],
-    "src/types/index.ts": ["types"],
-    "src/types/autoCheckin.ts": ["exports", "types"],
-    "src/types/managedSiteModelRedirect.ts": ["exports"],
-    "src/types/managedSiteModelSync.ts": ["types"],
-    "src/types/octopus.ts": ["enumMembers"],
-    "src/services/models/modelMetadata/index.ts": ["types"],
-
-    // apiTransport is the preferred service boundary, while selected
-    // apiService/common modules remain as compatibility aliases during the
-    // staged account-site migration.
-    "src/services/apiTransport/type.ts": ["exports", "types", "duplicates"],
-    "src/services/apiService/common/minIntervalLimiter.ts": ["files"],
-    "src/services/apiService/common/siteRequestLimiter.ts": ["files"],
-    "src/services/apiService/common/type.ts": [
-      "exports",
-      "types",
-      "duplicates",
-    ],
-    "src/services/apiService/common/utils.ts": ["exports"],
-
-    // Shared hook option typing is part of the hook surface even when callers
-    // currently rely on inference instead of importing the interface.
-    "src/hooks/useHorizontalScrollControls.ts": ["types"],
-
-    // Site override modules still expose adapter-specific entrypoints that are
-    // selected by higher-level capability factories.
-    "src/services/apiService/aihubmix/index.ts": ["exports"],
-    "src/services/apiService/anyrouter/index.ts": ["exports"],
-    "src/services/apiService/axonHub/index.ts": ["exports"],
-    "src/services/apiService/doneHub/index.ts": ["exports"],
-    "src/services/apiService/octopus/index.ts": ["exports"],
-    "src/services/apiService/sub2api/index.ts": ["exports"],
-    "src/services/apiService/veloera/index.ts": ["exports"],
-    "src/services/apiService/wong/index.ts": ["exports"],
-
-    // Explicit barrels/entrypoints retained as future module boundaries.
-    "src/features/ApiCredentialProfiles/index.ts": ["exports", "types"],
-    "src/services/accounts/accountKeyAutoProvisioning/index.ts": ["exports"],
-    "src/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken.ts": [
-      "exports",
-    ],
-    "src/services/accounts/accountKeyAutoProvisioning/repair.ts": ["exports"],
-    "src/services/models/modelSync/index.ts": ["exports"],
-    "src/services/verification/verificationResultHistory/index.ts": [
-      "exports",
-      "types",
-    ],
-    "src/services/verification/verificationResultHistory/utils.ts": ["exports"],
+    // Both transport names and legacy service names are actively imported.
+    "src/services/apiTransport/type.ts": ["duplicates"],
   },
   eslint: {
     config: ["eslint.config.js"],

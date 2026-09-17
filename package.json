@@ -29,6 +29,7 @@
     "lint:colors": "node scripts/check-color-tokens.mjs",
     "lint:fix": "eslint . --fix",
     "knip": "knip",
+    "knip:production:audit": "knip --production --reporter compact --no-exit-code",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate:staged": "pnpm lint-staged --concurrent false && pnpm run i18n:check:staged && pnpm lint:colors --staged && pnpm lint:typography --staged",
