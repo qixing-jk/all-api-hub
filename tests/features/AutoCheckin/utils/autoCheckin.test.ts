@@ -98,6 +98,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
       "autoCheckin:providerFallback.nativePageTargetNotFound",
       "autoCheckin:providerFallback.nativePageTriggerFailed",
+      "autoCheckin:providerFallback.sessionBusy",
       "autoCheckin:providerFallback.unknownError",
       "autoCheckin:providerFallback.turnstileManualRequired",
       "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",

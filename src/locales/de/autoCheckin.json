@@ -147,6 +147,7 @@
     "nativePageTargetNotFound": "Der Check-in-Button konnte auf der Seite nicht gefunden werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
     "nativePageTriggerFailed": "Die Aktion zum Einchecken der Seite konnte nicht ausgelöst werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
     "resultPendingConfirmation": "Das Check-in-Ergebnis muss noch bestätigt werden",
+    "sessionBusy": "Eine andere Anmeldung läuft bereits. Bitte später erneut versuchen.",
     "turnstileIncognitoAccessRequired": "Die Erweiterung muss in Inkognito-/privaten Fenstern ausgeführt werden dürfen, um den Turnstile-Token in einem privaten temporären Fenster abzurufen (Szenario mit mehreren Konten). Bitte aktivieren Sie „Inkognito zulassen“ für diese Erweiterung und versuchen Sie es erneut oder öffnen Sie die Check-in-Seite, um die Überprüfung abzuschließen: {{checkInUrl}}",
     "turnstileManualRequired": "Eine Cloudflare-Turnstile-Verifizierung ist erforderlich. Bitte öffnen Sie die Check-in-Seite, um die Verifizierung abzuschließen: {{checkInUrl}}",
     "unknownError": "Ein unbekannter Fehler ist aufgetreten."

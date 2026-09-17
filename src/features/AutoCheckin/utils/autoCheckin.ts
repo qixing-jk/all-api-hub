@@ -119,6 +119,8 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.nativePageTriggerFailed",
         messageParams,
       )
+    case "autoCheckin:providerFallback.sessionBusy":
+      return t("autoCheckin:providerFallback.sessionBusy", messageParams)
     case "autoCheckin:providerFallback.unknownError":
       return t("autoCheckin:providerFallback.unknownError", messageParams)
     case "autoCheckin:providerFallback.turnstileManualRequired":

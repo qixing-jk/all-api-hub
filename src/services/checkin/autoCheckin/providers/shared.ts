@@ -22,6 +22,7 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
   checkinSuccessful: "autoCheckin:providerFallback.checkinSuccessful",
   checkinFailed: "autoCheckin:providerFallback.checkinFailed",
+  sessionBusy: "autoCheckin:providerFallback.sessionBusy",
   endpointNotSupported: "autoCheckin:providerFallback.endpointNotSupported",
   unknownError: "autoCheckin:providerFallback.unknownError",
 } as const

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   agentRouterProvider,
@@ -33,7 +34,7 @@ const account = () =>
   })
 function setup() {
   const authenticate = vi.fn().mockResolvedValue({
-    status: "authenticated",
+    status: BROWSER_OAUTH_STATUS.Authenticated,
     identity: "1",
     evidence: { checkedIn: true },
   })
@@ -87,7 +88,7 @@ describe("AgentRouter login check-in", () => {
     async (checkedIn) => {
       const { provider, authenticate } = setup()
       authenticate.mockResolvedValue({
-        status: "authenticated",
+        status: BROWSER_OAUTH_STATUS.Authenticated,
         identity: "1",
         evidence: { checkedIn },
       })
@@ -96,25 +97,44 @@ describe("AgentRouter login check-in", () => {
       )
     },
   )
-  it.each(["identity_mismatch", "failed", "cancelled"])(
-    "does not retry %s",
-    async (status) => {
-      const { provider, authenticate } = setup()
-      authenticate.mockResolvedValue({ status })
-      await expect(provider.checkIn(account(), context)).resolves.toMatchObject(
-        { status: "failed", retryable: false },
-      )
-    },
-  )
+  it.each([
+    BROWSER_OAUTH_STATUS.IdentityMismatch,
+    BROWSER_OAUTH_STATUS.Failed,
+    BROWSER_OAUTH_STATUS.Cancelled,
+  ])("does not retry %s", async (status) => {
+    const { provider, authenticate } = setup()
+    authenticate.mockResolvedValue({ status })
+    await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
+      status: "failed",
+      retryable: false,
+    })
+  })
   it("reports required browser interaction", async () => {
     const { provider, authenticate } = setup()
-    authenticate.mockResolvedValue({ status: "interaction_required" })
+    authenticate.mockResolvedValue({
+      status: BROWSER_OAUTH_STATUS.InteractionRequired,
+    })
     await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
       status: "failed",
       reasonCode: "authentication_required",
       retryable: false,
     })
   })
+
+  it("reports a session busy with another login without claiming it expired", async () => {
+    const { provider, authenticate } = setup()
+    authenticate.mockResolvedValue({
+      status: BROWSER_OAUTH_STATUS.SessionBusy,
+    })
+    const result = await provider.checkIn(account(), context)
+    expect(result).toMatchObject({
+      status: "failed",
+      messageKey: "autoCheckin:providerFallback.sessionBusy",
+      retryable: false,
+    })
+    expect(result).not.toHaveProperty("reasonCode")
+  })
+
   it("discovers the canonical deployment using either supported login provider", async () => {
     const { provider, fetchStatus } = setup()
     fetchStatus.mockResolvedValue({
@@ -167,7 +187,7 @@ describe("AgentRouter login check-in", () => {
       undefined,
     )
     liveDependencies.login.mockResolvedValue({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
       identity: saved.account_info.id,
       evidence: { checkedIn: true },
     })

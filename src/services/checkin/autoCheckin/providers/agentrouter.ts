@@ -1,3 +1,4 @@
+import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -87,7 +88,7 @@ export function createAgentRouterProvider(
         provider: getLoginCheckInProvider(account.checkIn),
         requestId: deps.createRequestId(),
       })
-      if (result.status === "authenticated") {
+      if (result.status === BROWSER_OAUTH_STATUS.Authenticated) {
         return result.evidence.checkedIn
           ? {
               status: CHECKIN_RESULT_STATUS.SUCCESS,
@@ -101,7 +102,19 @@ export function createAgentRouterProvider(
               retryable: false,
             }
       }
-      if (result.status === "interaction_required") {
+
+      // Another login still holds the shared agentrouter.org browser session,
+      // so this attempt never reached the site. Ask for a later retry instead
+      // of reporting an expired login.
+      if (result.status === BROWSER_OAUTH_STATUS.SessionBusy) {
+        return {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.sessionBusy,
+          retryable: false,
+        }
+      }
+
+      if (result.status === BROWSER_OAUTH_STATUS.InteractionRequired) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
           messageKey: getAutoCheckinSkipReasonTranslationKey(
