@@ -9,6 +9,7 @@ import {
 } from "~/utils/browser/cookieHelper"
 
 import { collectCheckInFeedbackClues } from "./scan"
+import type { ScanFetch } from "./scanReader"
 import { createFeedbackScanRegistry } from "./scanRegistry"
 
 const scans = createFeedbackScanRegistry()
@@ -46,7 +47,7 @@ export function handlePageFeedbackScan(
   }
   const cancel = () => controller.abort()
   window.addEventListener("pagehide", cancel, { once: true })
-  const scanFetch: typeof fetch = async (url, init) => {
+  const scanFetch: ScanFetch = async (url, init) => {
     if (controller.signal.aborted || location.origin !== originUrl)
       throw new Error("scan_cancelled")
     const parsed = new URL(String(url))

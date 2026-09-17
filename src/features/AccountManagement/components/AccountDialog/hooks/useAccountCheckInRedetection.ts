@@ -92,6 +92,7 @@ export function useAccountCheckInRedetection({
     const candidateMethodIds = getAutoCheckinCandidateMethodIds(
       requestedSiteType,
       requestedUrl,
+      draft.checkIn,
     )
     const candidateCount = candidateMethodIds.length
     if (!requestedUrl) {

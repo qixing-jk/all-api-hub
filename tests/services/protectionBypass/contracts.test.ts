@@ -77,6 +77,14 @@ const canonicalTasks = [
     },
   },
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn,
+    params: {
+      pageUrl: "https://example.invalid/checkin",
+      action: { kind: "page_load" },
+      success: { textPattern: "signed" },
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
     params: {
       requestId: "request-openrouter",
@@ -321,6 +329,7 @@ describe("protection bypass runtime contracts", () => {
         "profile_isolated_fetch",
         "turnstile_fetch",
         "native_page_action",
+        "browser_check_in",
         "openrouter_management_key_action",
         "rendered_title",
         "checkin_feedback_scan",
@@ -379,6 +388,17 @@ describe("protection bypass runtime contracts", () => {
           originUrl: "https://example.invalid",
           pageUrl: "https://example.invalid/console/personal",
           siteType: "new-api",
+        },
+      },
+    ],
+    [
+      "browser check-in without success condition",
+      {
+        kind: "browser_check_in",
+        params: {
+          pageUrl: "https://example.invalid/checkin",
+          action: { kind: "page_load" },
+          success: {},
         },
       },
     ],
@@ -560,6 +580,7 @@ describe("protection bypass runtime contracts", () => {
     [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, "pageUrl"],
     [TEMP_CONTEXT_TASK_KINDS.NativePageAction, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.NativePageAction, "pageUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn, "pageUrl"],
     [TEMP_CONTEXT_TASK_KINDS.RenderedTitle, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.SessionRead, "url"],
     [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead, "origin"],

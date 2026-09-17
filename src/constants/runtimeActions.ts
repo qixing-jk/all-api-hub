@@ -148,6 +148,7 @@ export const RuntimeActionIds = {
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
   ContentWaitForTurnstileToken: "waitForTurnstileToken",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
+  ContentRunBrowserCheckIn: "runBrowserCheckIn",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",

@@ -124,6 +124,10 @@ class AccountCheckInState {
           candidateMethodIds: getAutoCheckinCandidateMethodIds(
             account.site_type,
             account.site_url,
+            // The merge only carries over knowledge for candidate methods, so this
+            // must use the same configuration the discovery round used. Otherwise a
+            // discovered browser-automation method is silently dropped here.
+            discovered,
           ),
           discoveryBaseSelection: snapshot.checkIn.selection,
         })
@@ -179,6 +183,7 @@ class AccountCheckInState {
               candidateMethodIds: getAutoCheckinCandidateMethodIds(
                 effectiveSiteType,
                 updates.site_url ?? account.site_url,
+                draft,
               ),
               discoveryBaseSelection: options.discoveryBaseSelection,
               selectionChanged: options.selectionChanged,

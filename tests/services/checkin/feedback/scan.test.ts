@@ -8,6 +8,7 @@ import {
   formatCheckInFeedbackClues,
 } from "~/services/checkin/feedback/scan"
 import { FEEDBACK_SCAN_LIMITS } from "~/services/checkin/feedback/scanLimits"
+import type { ScanFetch } from "~/services/checkin/feedback/scanReader"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -30,7 +31,7 @@ describe("optional check-in clue scan", () => {
     const clues = await collectCheckInFeedbackClues(
       { baseUrl: "https://agentrouter.org", siteType: SITE_TYPES.NEW_API },
       new AbortController().signal,
-      { fetch: fetch as typeof globalThis.fetch },
+      { fetch: fetch as ScanFetch },
     )
     expect(clues.status).toBe("completed")
     expect(clues.authenticatedQueriesUnavailable).toBe(false)

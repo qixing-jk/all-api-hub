@@ -2,11 +2,21 @@ import { FEEDBACK_SCAN_LIMITS } from "./scanLimits"
 
 export type ScanReadIssue = "timeout" | "limit" | "unavailable"
 
+/**
+ * Callable surface the scan needs. Declared structurally so the module does not
+ * depend on the ambient `fetch` type, whose static members differ between the
+ * DOM lib and runtime-augmented globals.
+ */
+export type ScanFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>
+
 /** Shares request and streamed-byte limits across the reads of one scan. */
 export function createScanReader(
   origin: string,
   signal: AbortSignal,
-  fetcher: typeof fetch = fetch,
+  fetcher: ScanFetch = fetch,
 ) {
   let requests = 0
   let bytes = 0

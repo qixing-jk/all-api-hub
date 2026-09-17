@@ -135,6 +135,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "今日已签到",
+    "browserAutomationActionTargetNotFound": "未在页面上找到配置的操作元素。请检查选择器或文本匹配规则。",
+    "browserAutomationIdentityMismatch": "自动签到页面登录的是另一个账号。请使用目标账号登录后重试。",
+    "browserAutomationIdentityMissing": "无法在自动签到页面确认目标账号。请使用目标账号登录后重试。",
+    "browserAutomationInvalidRequest": "浏览器自动签到配置无效，请在账号设置中检查自定义签到配置。",
+    "browserAutomationTimeout": "等待签到成功条件超时，签到结果未确认。请打开签到页面手动确认。",
+    "browserAutomationTriggerFailed": "无法执行页面签到操作。请打开签到页面手动完成签到。",
     "checkinFailed": "签到失败",
     "checkinSuccessful": "签到成功",
     "endpointNotSupported": "不支持该签到接口，请检查账号的站点类型与实际站点是否相同",

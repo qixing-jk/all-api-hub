@@ -6,6 +6,7 @@ import {
   type TempWindowOpenRouterManagementKeyActionParams,
   type TempWindowOpenRouterManagementKeyActionResult,
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+import { isValidBrowserCheckInTaskContract } from "~/services/checkin/autoCheckin/browserAutomation"
 import type {
   CheckInFeedbackClues,
   CheckInFeedbackScanInput,
@@ -18,6 +19,8 @@ import {
   type TempWindowResponseType,
 } from "~/types/tempWindowFetch"
 import type {
+  TempWindowBrowserCheckIn,
+  TempWindowBrowserCheckInParams,
   TempWindowCheckinPageAction,
   TempWindowCheckinPageActionParams,
   TempWindowFetch,
@@ -146,6 +149,7 @@ export const PROTECTION_BYPASS_OPERATIONS = {
   Fetch: "fetch",
   TurnstileFetch: "turnstile_fetch",
   NativePageAction: "native_page_action",
+  BrowserCheckIn: "browser_check_in",
   RenderedTitle: "rendered_title",
   SessionRead: "session_read",
   OpenContext: "open_context",
@@ -397,6 +401,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   ProfileIsolatedFetch: "profile_isolated_fetch",
   TurnstileFetch: "turnstile_fetch",
   NativePageAction: "native_page_action",
+  BrowserCheckIn: "browser_check_in",
   OpenRouterManagementKeyAction: "openrouter_management_key_action",
   RenderedTitle: "rendered_title",
   CheckinFeedbackScan: "checkin_feedback_scan",
@@ -453,6 +458,10 @@ export type TempContextTask =
       params: WithoutProtectionBypassIntent<TempWindowCheckinPageActionParams>
     }
   | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn
+      params: WithoutProtectionBypassIntent<TempWindowBrowserCheckInParams>
+    }
+  | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction
       params: WithoutProtectionBypassIntent<TempWindowOpenRouterManagementKeyActionParams>
     }
@@ -494,6 +503,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: TempWindowTurnstileFetch
   [TEMP_CONTEXT_TASK_KINDS.NativePageAction]: TempWindowCheckinPageAction
+  [TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn]: TempWindowBrowserCheckIn
   [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]: TempWindowOpenRouterManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
@@ -629,6 +639,17 @@ function isNativePageActionParams(value: Record<string, unknown>): boolean {
     isOptionalString(value.cookieAuthSessionCookie) &&
     isOptionalString(value.cookieStoreId) &&
     (value.trigger === undefined || isPlainObject(value.trigger))
+  )
+}
+
+/** Validates the narrow declarative browser check-in task envelope. */
+function isBrowserCheckInParams(value: Record<string, unknown>): boolean {
+  return (
+    isHttpUrl(value.pageUrl) &&
+    isOptionalRequestId(value.requestId) &&
+    isOptionalBoolean(value.suppressMinimize) &&
+    isOptionalBoolean(value.useIncognito) &&
+    isValidBrowserCheckInTaskContract(value)
   )
 }
 
@@ -783,6 +804,8 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       )
     case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
       return isNativePageActionParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn:
+      return isBrowserCheckInParams(params)
     case TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction:
       return isOpenRouterManagementKeyActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
@@ -846,6 +869,10 @@ const TEMP_CONTEXT_TASK_METADATA = {
     operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
     cause: PROTECTION_BYPASS_CAUSES.VerificationRequired,
   },
+  [TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.BrowserCheckIn,
+    cause: PROTECTION_BYPASS_CAUSES.VerificationRequired,
+  },
   [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]: {
     operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
     cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
@@ -896,6 +923,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
     TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
     TEMP_CONTEXT_TASK_KINDS.NativePageAction,
+    TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.RedemptionAssist]: [

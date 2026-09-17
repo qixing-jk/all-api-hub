@@ -138,6 +138,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "Heute schon eingecheckt",
+    "browserAutomationActionTargetNotFound": "Das konfigurierte Ziel der Aktion wurde auf der Seite nicht gefunden. Prüfe Selektor oder Textmuster.",
+    "browserAutomationIdentityMismatch": "Die Check-in-Seite ist mit einem anderen Konto angemeldet. Melde dich mit dem Zielkonto an und versuche es erneut.",
+    "browserAutomationIdentityMissing": "Das Zielkonto konnte auf der Check-in-Seite nicht bestätigt werden. Melde dich mit dem Zielkonto an und versuche es erneut.",
+    "browserAutomationInvalidRequest": "Die Konfiguration für den Browser-Check-in ist ungültig. Prüfe die benutzerdefinierten Check-in-Einstellungen dieses Kontos.",
+    "browserAutomationTimeout": "Zeitüberschreitung beim Warten auf die Erfolgsbedingung des Check-ins; das Ergebnis ist unbestätigt. Öffne die Check-in-Seite zur manuellen Prüfung.",
+    "browserAutomationTriggerFailed": "Die Check-in-Aktion auf der Seite konnte nicht ausgeführt werden. Öffne die Check-in-Seite und führe den Check-in manuell durch.",
     "checkinFailed": "Check-in fehlgeschlagen",
     "checkinSuccessful": "Check-in erfolgreich",
     "endpointNotSupported": "Dieser Check-in-Endpunkt wird nicht unterstützt. Bitte überprüfen Sie, ob der Website-Typ Ihres Kontos mit der tatsächlichen Website übereinstimmt.",

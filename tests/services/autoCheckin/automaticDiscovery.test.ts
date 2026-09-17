@@ -21,18 +21,20 @@ import {
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
-import type { CheckInMethodDetection } from "~/types/checkIn"
+import type { CheckInConfig, CheckInMethodDetection } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
-const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
-  storageData: new Map<string, unknown>(),
-  storageSet: vi.fn(),
-  detectors: [vi.fn(), vi.fn(), vi.fn()],
-  checkIn: vi.fn(),
-}))
+const { storageData, storageSet, detectors, browserDetect, checkIn } =
+  vi.hoisted(() => ({
+    storageData: new Map<string, unknown>(),
+    storageSet: vi.fn(),
+    detectors: [vi.fn(), vi.fn(), vi.fn()],
+    browserDetect: vi.fn(),
+    checkIn: vi.fn(),
+  }))
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
@@ -47,13 +49,18 @@ vi.mock("@plasmohq/storage", () => ({
 
 vi.mock("~/services/checkin/autoCheckin/providers", async () => {
   const { AUTO_CHECKIN_METHOD_IDS } = await import("~/constants/checkIn")
-  const { SITE_TYPES } = await import("~/constants/siteType")
+  const { ACCOUNT_SITE_TYPES, SITE_TYPES } = await import(
+    "~/constants/siteType"
+  )
+  const { isBrowserAutomationCheckInConfigured } = await import(
+    "~/services/checkin/autoCheckin/browserAutomation"
+  )
   const { createAutoCheckinMethodRegistry } = await import(
     "~/services/checkin/autoCheckin/providers/registry"
   )
   return {
-    autoCheckinMethodRegistry: createAutoCheckinMethodRegistry(
-      [
+    autoCheckinMethodRegistry: createAutoCheckinMethodRegistry([
+      ...[
         AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
@@ -66,13 +73,27 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
           checkIn,
         },
       })),
-    ),
+      {
+        id: AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn,
+        siteTypes: ACCOUNT_SITE_TYPES,
+        // User-declared: only a candidate once the configuration opts in, so
+        // accounts without one keep the pre-existing candidate sets.
+        isCandidate: (config?: CheckInConfig) =>
+          isBrowserAutomationCheckInConfigured(config?.customCheckIn),
+        provider: {
+          getReadiness: () => ({ ready: true as const }),
+          detect: browserDetect,
+          checkIn,
+        },
+      },
+    ]),
   }
 })
 
 const NOW = new Date("2026-09-15T01:00:00Z").getTime()
 const PRO = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
 const GENIUS = AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn
+const BROWSER = AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn
 const context = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
   protectionBypassExecution: automaticExecution(
@@ -129,6 +150,24 @@ const saveAccount = (account = createAccount()) => {
   return account
 }
 
+/** An account whose only possible candidate is the configured browser automation. */
+const createBrowserAutomationAccount = (siteType: SiteAccount["site_type"]) => {
+  const account = createAccount()
+  account.site_type = siteType
+  account.checkIn = buildCheckInConfig({
+    automaticExecutionEnabled: true,
+    customCheckIn: {
+      url: "https://checkin.example/console",
+      browserAutomation: {
+        enabled: true,
+        action: { kind: "click_selector", selector: "button.check-in" },
+        success: { textPattern: "checked" },
+      },
+    },
+  })
+  return account
+}
+
 const updateAccount = (update: (account: SiteAccount) => SiteAccount) =>
   accountConfigStore.mutateAccount("account", (account) => {
     const nextAccount = update(account)
@@ -154,6 +193,7 @@ beforeEach(() => {
       .mockReset()
       .mockResolvedValue(detection(index === 0 ? "matched" : "unsupported"))
   })
+  browserDetect.mockReset()
   checkIn.mockReset()
 })
 
@@ -618,5 +658,75 @@ describe("automatic check-in preparation", () => {
     expect(manual.config.selection.methodId).toBe(PRO)
     expect(detectors[0]).toHaveBeenCalledTimes(2)
     expect(checkIn).not.toHaveBeenCalled()
+  })
+
+  it("re-discovers a stale selection when browser automation is the only candidate", async () => {
+    const account = createBrowserAutomationAccount(SITE_TYPES.AIHUBMIX)
+    // A selection left over from another site type is not a candidate here, so
+    // discovery has to run to resolve it. Building the candidate set without the
+    // configuration makes it empty, which skips discovery entirely.
+    account.checkIn.selection = { mode: "automatic", methodId: PRO }
+    saveAccount(account)
+    browserDetect.mockResolvedValue(detection("matched"))
+
+    const prepared = await prepare(account)
+
+    expect(browserDetect).toHaveBeenCalledTimes(1)
+    expect(prepared).toMatchObject({ discovered: true })
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
+  it("carries over the discovered browser automation knowledge when completing discovery", async () => {
+    const account = saveAccount(
+      createBrowserAutomationAccount(SITE_TYPES.AIHUBMIX),
+    )
+    const stored = (await accountQueries.getAccountById(account.id))!
+
+    // The completion merge only carries over knowledge for methods in its
+    // candidate set. Filtering without the configuration drops this result, so
+    // the freshly observed status would be lost. Detection cannot be used here
+    // because the persisted-config normalizer restores `matched` for a
+    // user-configured method on every write.
+    const discovered: CheckInConfig = {
+      ...stored.checkIn,
+      methodKnowledge: {
+        ...stored.checkIn.methodKnowledge,
+        lastFullDiscoveryAt: NOW + 1,
+        methods: {
+          ...stored.checkIn.methodKnowledge.methods,
+          [BROWSER]: {
+            detection: detection("matched", NOW + 1),
+            status: {
+              outcome: "known",
+              today: "checked",
+              evidence: { source: "probe", observedAt: NOW + 1 },
+            },
+          },
+        },
+      },
+    }
+
+    const result = await accountCheckInState.completeAutomaticCheckInDiscovery(
+      stored,
+      discovered,
+    )
+
+    expect(result?.applied).toBe(true)
+    expect(
+      (await accountQueries.getAccountById(account.id))?.checkIn.methodKnowledge
+        .methods[BROWSER]?.status,
+    ).toMatchObject({ today: "checked" })
+  })
+
+  it("does not treat an unconfigured browser automation method as a candidate", async () => {
+    const account = createAccount()
+    account.site_type = SITE_TYPES.AIHUBMIX
+    saveAccount(account)
+
+    // The method stays opt-in: without a browser automation configuration this
+    // site type has no candidates at all, so nothing is probed.
+    expect(await prepare(account)).toMatchObject({ discovered: false })
+    expect(browserDetect).not.toHaveBeenCalled()
+    expect(storageSet).not.toHaveBeenCalled()
   })
 })

@@ -135,6 +135,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "今日已簽到",
+    "browserAutomationActionTargetNotFound": "未在頁面上找到設定的操作元素。請檢查選擇器或文字比對規則。",
+    "browserAutomationIdentityMismatch": "自動簽到頁面登入的是另一個帳號。請使用目標帳號登入後重試。",
+    "browserAutomationIdentityMissing": "無法在自動簽到頁面確認目標帳號。請使用目標帳號登入後重試。",
+    "browserAutomationInvalidRequest": "瀏覽器自動簽到設定無效，請在帳號設定中檢查自訂簽到設定。",
+    "browserAutomationTimeout": "等待簽到成功條件逾時，簽到結果未確認。請開啟簽到頁面手動確認。",
+    "browserAutomationTriggerFailed": "無法執行頁面簽到操作。請開啟簽到頁面手動完成簽到。",
     "checkinFailed": "簽到失敗",
     "checkinSuccessful": "簽到成功",
     "endpointNotSupported": "不支援該簽到介面，請檢查帳號的站點型別與實際站點是否相同",

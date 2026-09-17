@@ -119,6 +119,36 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.nativePageTriggerFailed",
         messageParams,
       )
+    case "autoCheckin:providerFallback.browserAutomationActionTargetNotFound":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationActionTargetNotFound",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.browserAutomationIdentityMismatch":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationIdentityMismatch",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.browserAutomationIdentityMissing":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationIdentityMissing",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.browserAutomationInvalidRequest":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationInvalidRequest",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.browserAutomationTimeout":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationTimeout",
+        messageParams,
+      )
+    case "autoCheckin:providerFallback.browserAutomationTriggerFailed":
+      return t(
+        "autoCheckin:providerFallback.browserAutomationTriggerFailed",
+        messageParams,
+      )
     case "autoCheckin:providerFallback.unknownError":
       return t("autoCheckin:providerFallback.unknownError", messageParams)
     case "autoCheckin:providerFallback.turnstileManualRequired":
