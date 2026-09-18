@@ -413,9 +413,7 @@ export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
   nameMatcher: (tokenName: string) => boolean
 }) {
   await closeTokenCreationDialogsIfPresent(params.page)
-  await expect(
-    params.page.getByRole("button", { name: "Refresh Key List" }),
-  ).toBeEnabled({ timeout: 30_000 })
+  await expectKeyListReady(params.page)
 
   const tokenHeadings = params.page.getByRole("heading")
   let ownedTokenName = (await tokenHeadings.allTextContents()).find(
@@ -432,6 +430,38 @@ export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
       params.nameMatcher,
     )
   }
+}
+
+/**
+ * Waits for the key-list toolbar to be usable. The empty state for a failed
+ * key-list load also renders a "Refresh Key List" action, so the toolbar
+ * lookup stays scoped to its action group and the site-side load error is
+ * reported directly instead of an ambiguous-locator or timeout failure.
+ */
+async function expectKeyListReady(page: Page) {
+  const headerRefreshButton = page
+    .getByRole("group")
+    .getByRole("button", { name: "Refresh Key List" })
+  const loadErrorAlert = page
+    .getByRole("alert")
+    .filter({ hasText: "Failed to load keys" })
+
+  await expect
+    .poll(
+      async () =>
+        (await headerRefreshButton.isEnabled()) ||
+        (await loadErrorAlert.isVisible()),
+      { timeout: 30_000 },
+    )
+    .toBe(true)
+
+  if (!(await loadErrorAlert.isVisible())) return
+
+  const detail = (await loadErrorAlert.innerText())
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 300)
+  throw new Error(`API key list failed to load: ${detail}`)
 }
 
 async function deleteTokenRowFromKeyManagementPage(params: {
