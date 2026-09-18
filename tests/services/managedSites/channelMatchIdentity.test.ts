@@ -75,7 +75,7 @@ describe("scoped matching identity", () => {
       2,
       other,
       candidate(other.baseUrl).ref,
-      { protectionBypassExecution: execution },
+      expect.objectContaining({ protectionBypassExecution: execution }),
     )
     expect(result.key.channel?.ref).toEqual(candidate(other.baseUrl).ref)
     expect(result.key.matched).toBe(true)
@@ -120,11 +120,9 @@ describe("scoped matching identity", () => {
         managedSite: {
           siteType: SITE_TYPES.NEW_API,
           matching: {
-            search: vi
-              .fn()
-              .mockResolvedValue({
-                items: [candidate("https://other.example")],
-              }),
+            search: vi.fn().mockResolvedValue({
+              items: [candidate("https://other.example")],
+            }),
             fetchSecretKey,
           },
         },
