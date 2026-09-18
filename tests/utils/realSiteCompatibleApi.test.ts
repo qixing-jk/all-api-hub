@@ -229,6 +229,119 @@ describe("compatible real-site login", () => {
     expect(messages).not.toContain("must-not-leak")
   })
 
+  it("revokes only stale headless sessions during New API login", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+    const staleTimestamp = new Date(
+      Date.now() - 6 * 60 * 60 * 1000,
+    ).toISOString()
+    const getRequest = vi.fn().mockResolvedValue(
+      createResponse(200, {
+        success: true,
+        data: [
+          {
+            sid: "current-session",
+            current: true,
+            user_agent: "HeadlessChrome/140",
+            last_active_at: staleTimestamp,
+          },
+          {
+            sid: "stale-headless-session",
+            current: false,
+            user_agent:
+              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/140",
+            last_active_at: staleTimestamp,
+          },
+          {
+            sid: "recent-headless-session",
+            current: false,
+            user_agent: "HeadlessChrome/140",
+            last_active_at: new Date().toISOString(),
+          },
+          {
+            sid: "stale-human-session",
+            current: false,
+            user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140",
+            last_active_at: staleTimestamp,
+          },
+          {
+            sid: "stale-agentless-session",
+            current: false,
+            last_active_at: staleTimestamp,
+          },
+        ],
+      }),
+    )
+    const deleteRequest = vi.fn().mockResolvedValue(createResponse(200, {}))
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const { page } = createPage(post, { getRequest, deleteRequest })
+    let messages = ""
+
+    try {
+      await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({
+        reusedSession: false,
+      })
+      messages = info.mock.calls.flat().join(" ")
+    } finally {
+      info.mockRestore()
+    }
+
+    expect(deleteRequest).toHaveBeenCalledTimes(1)
+    expect(deleteRequest).toHaveBeenCalledWith(
+      `${ORIGIN}/api/user/sessions/stale-headless-session`,
+      expect.objectContaining({
+        failOnStatusCode: false,
+        headers: {
+          Origin: ORIGIN,
+          Authorization: "Bearer access-token-placeholder",
+        },
+      }),
+    )
+    expect(messages).toContain("session hygiene: revoked=one candidates=one")
+    expect(messages).not.toContain("stale-headless-session")
+  })
+
+  it("keeps login usable when stale session revocation fails", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+    const getRequest = vi.fn().mockResolvedValue(
+      createResponse(200, {
+        success: true,
+        data: [
+          {
+            sid: "stale-headless-session",
+            current: false,
+            user_agent: "HeadlessChrome/140",
+            last_active_at: new Date(
+              Date.now() - 6 * 60 * 60 * 1000,
+            ).toISOString(),
+          },
+        ],
+      }),
+    )
+    const deleteRequest = vi
+      .fn()
+      .mockRejectedValue(new Error("must-not-leak-transport-details"))
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const { page } = createPage(post, { getRequest, deleteRequest })
+    let messages = ""
+
+    try {
+      await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({
+        reusedSession: false,
+      })
+      messages = info.mock.calls.flat().join(" ")
+    } finally {
+      info.mockRestore()
+    }
+
+    expect(messages).toContain("session hygiene unavailable: request failed")
+    expect(messages).not.toContain("must-not-leak")
+  })
   it("reuses an existing AuthBundle session without taking cleanup ownership", async () => {
     const post = vi
       .fn()

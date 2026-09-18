@@ -23,6 +23,13 @@ const DEFAULT_LOGIN_2FA_API_PATH = "/api/user/login/2fa"
 const AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 const AUTH_LOGOUT_PATH = "/api/user/auth/logout"
 const AUTH_SESSION_PATH = "/api/user/sessions"
+
+/** Automated real-site runs identify themselves through headless user agents. */
+const HEADLESS_AUTH_SESSION_AGENT_PATTERN =
+  /(?:^node(?:\/|$))|HeadlessChrome|Playwright|headless/iu
+/** A session this old cannot belong to an in-flight job. */
+const STALE_AUTH_SESSION_AGE_MS = 60 * 60 * 1000
+const MAX_AUTH_SESSION_REVOCATIONS_PER_LOGIN = 100
 const SECURITY_VERIFICATION_BODY_PATTERN =
   /verify you are human|performing security verification|cloudflare/iu
 const AUTH_BUNDLE_MARKER_FIELDS = [
@@ -86,6 +93,7 @@ type CompatibleApiLoginOptions = {
   envPrefix: string
   authBundle?: boolean
   logSessionDiagnostics?: boolean
+  pruneStaleSessions?: boolean
 }
 
 type CompatibleAuthBundle = {
@@ -656,31 +664,70 @@ async function createAuthBundleLoginResult(
         }),
   }
 
-  if (options.logSessionDiagnostics) {
-    await logVisibleAuthSessionCount(
-      page,
-      config,
-      options,
-      authBundle,
-      reusedSession,
-    )
-  }
+  await maintainVisibleAuthSessions(
+    page,
+    config,
+    options,
+    authBundle,
+    reusedSession,
+  )
 
   return result
 }
 
-async function logVisibleAuthSessionCount(
+/**
+ * New API rc.22 exposes the caller's visible sessions to a Bearer token. Every
+ * real-site CI job logs in from a fresh browser profile, so those sessions
+ * accumulate for weeks unless the suite keeps the list bounded. Revoke only
+ * sessions that are both headless and stale; never touch the current session,
+ * recent sessions, or a human browser session.
+ */
+async function maintainVisibleAuthSessions(
   page: Page,
   config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
   options: CompatibleApiLoginOptions,
   authBundle: CompatibleAuthBundle,
   reusedSession: boolean,
 ) {
-  // New API contract: this Bearer-only endpoint lists current-version active
-  // sessions (up to 100); log counts only because the response contains SIDs,
-  // IPs, and user agents. See https://github.com/QuantumNous/new-api/blob/main/docs/authentication.md.
-  let response
+  if (!options.logSessionDiagnostics && !options.pruneStaleSessions) {
+    return
+  }
 
+  const sessions = await loadVisibleAuthSessions(
+    page,
+    config,
+    options,
+    authBundle,
+  )
+  if (!sessions) {
+    return
+  }
+
+  if (options.logSessionDiagnostics) {
+    logVisibleAuthSessionCount(sessions, options, reusedSession)
+  }
+
+  if (options.pruneStaleSessions) {
+    await revokeStaleAuthSessions(page, config, options, authBundle, sessions)
+  }
+}
+
+/** Reads the caller's visible sessions without leaking identifiers to logs. */
+async function loadVisibleAuthSessions(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+): Promise<Record<string, unknown>[] | null> {
+  const logUnavailable = (reason: string) => {
+    if (!options.logSessionDiagnostics) return
+
+    console.info(
+      `[real-site] ${options.label} session diagnostic unavailable: ${reason}`,
+    )
+  }
+
+  let response
   try {
     response = await page.request.get(
       resolveRealSiteUrl(config.baseUrl, AUTH_SESSION_PATH),
@@ -693,47 +740,149 @@ async function logVisibleAuthSessionCount(
       },
     )
   } catch {
-    console.info(
-      `[real-site] ${options.label} session diagnostic unavailable: request failed`,
-    )
-    return
+    logUnavailable("request failed")
+    return null
   }
 
   if (!response) {
-    return
+    return null
   }
 
   if (!response.ok()) {
-    console.info(
-      `[real-site] ${options.label} session diagnostic unavailable: HTTP ${response.status()}`,
-    )
-    return
+    logUnavailable(`HTTP ${response.status()}`)
+    return null
   }
 
   let payload
   try {
     payload = extractCompatibleApiPayload(safeParseJson(await response.text()))
   } catch {
-    console.info(
-      `[real-site] ${options.label} session diagnostic unavailable: malformed response`,
-    )
-    return
+    logUnavailable("malformed response")
+    return null
   }
 
   if (!Array.isArray(payload)) {
-    console.info(
-      `[real-site] ${options.label} session diagnostic unavailable: unexpected response shape`,
-    )
-    return
+    logUnavailable("unexpected response shape")
+    return null
   }
 
-  const currentCount = payload.filter(
-    (session) => isRecord(session) && session.current === true,
+  return payload.filter(isRecord)
+}
+
+function logVisibleAuthSessionCount(
+  sessions: Record<string, unknown>[],
+  options: CompatibleApiLoginOptions,
+  reusedSession: boolean,
+) {
+  const currentCount = sessions.filter(
+    (session) => session.current === true,
   ).length
 
   console.info(
-    `[real-site] ${options.label} session diagnostic: visible_active=${formatSessionDiagnosticCount(payload.length)} current=${formatSessionDiagnosticCount(currentCount)} login=${reusedSession ? "reused" : "fresh"}`,
+    `[real-site] ${options.label} session diagnostic: visible_active=${formatSessionDiagnosticCount(sessions.length)} current=${formatSessionDiagnosticCount(currentCount)} login=${reusedSession ? "reused" : "fresh"}`,
   )
+}
+
+/** Best-effort cleanup that never blocks or fails the login it follows. */
+async function revokeStaleAuthSessions(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+  sessions: Record<string, unknown>[],
+) {
+  const now = Date.now()
+  const candidates = sessions
+    .filter((session) => isStaleHeadlessAuthSession(session, now))
+    .slice(0, MAX_AUTH_SESSION_REVOCATIONS_PER_LOGIN)
+  if (candidates.length === 0) {
+    return
+  }
+
+  const origin = new URL(config.baseUrl).origin
+  let revoked = 0
+
+  for (const session of candidates) {
+    const sid = typeof session.sid === "string" ? session.sid.trim() : ""
+    if (!sid) continue
+
+    let response
+    try {
+      response = await page.request.delete(
+        resolveRealSiteUrl(
+          config.baseUrl,
+          `${AUTH_SESSION_PATH}/${encodeURIComponent(sid)}`,
+        ),
+        {
+          failOnStatusCode: false,
+          timeout: 10_000,
+          headers: {
+            Origin: origin,
+            Authorization: `Bearer ${authBundle.accessToken}`,
+          },
+        },
+      )
+    } catch {
+      console.info(
+        `[real-site] ${options.label} session hygiene unavailable: request failed`,
+      )
+      break
+    }
+
+    if (!response) continue
+
+    if (response.ok()) {
+      revoked += 1
+      continue
+    }
+
+    // An already-revoked row, or a deployment without revoke support, is an
+    // idempotent outcome; anything else stops this best-effort pass.
+    if ([401, 403, 404, 405].includes(response.status())) continue
+
+    console.info(
+      `[real-site] ${options.label} session hygiene unavailable: HTTP ${response.status()}`,
+    )
+    break
+  }
+
+  console.info(
+    `[real-site] ${options.label} session hygiene: revoked=${formatSessionDiagnosticCount(revoked)} candidates=${formatSessionDiagnosticCount(candidates.length)}`,
+  )
+}
+
+function isStaleHeadlessAuthSession(
+  session: Record<string, unknown>,
+  now: number,
+) {
+  if (session.current === true) return false
+  if (typeof session.sid !== "string" || session.sid.trim().length === 0) {
+    return false
+  }
+  if (
+    typeof session.user_agent !== "string" ||
+    !HEADLESS_AUTH_SESSION_AGENT_PATTERN.test(session.user_agent)
+  ) {
+    return false
+  }
+
+  const lastActive = resolveAuthSessionActivityTime(session)
+  return lastActive !== null && now - lastActive >= STALE_AUTH_SESSION_AGE_MS
+}
+
+function resolveAuthSessionActivityTime(session: Record<string, unknown>) {
+  for (const key of ["last_active_at", "created_at"] as const) {
+    const raw = session[key]
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return raw < 1_000_000_000_000 ? raw * 1_000 : raw
+    }
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      const parsed = Date.parse(raw)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+
+  return null
 }
 
 function formatSessionDiagnosticCount(count: number) {
