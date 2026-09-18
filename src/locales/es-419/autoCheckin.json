@@ -212,6 +212,8 @@
     "auto_checkin_disabled": "Check-in automático deshabilitado",
     "credentials_missing": "Faltan las credenciales guardadas. Vuelve a detectar la cuenta o actualiza sus credenciales.",
     "detection_disabled": "Detección deshabilitada",
+    "execution_context_invalid": "Esta ejecución no pudo abrir una sesión protegida. Vuelve a iniciar el check-in.",
+    "manual_verification_required": "El sitio requiere verificación manual. Complétala en la página de check-in y vuelve a intentarlo.",
     "method_disabled": "La función de check-in de este sitio está deshabilitada",
     "method_not_matched": "El método de check-in seleccionado ya no coincide con este sitio. Vuelve a detectarlo.",
     "method_unavailable": "El método de check-in seleccionado ya no está disponible. Vuelve a detectarlo.",

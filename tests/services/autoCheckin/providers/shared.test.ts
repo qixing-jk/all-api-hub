@@ -93,6 +93,33 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({ reasonCode: "permission_denied" })
   })
 
+  it("classifies unsupported endpoints and invalid protected-context runs", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: Object.assign(new Error("Not found"), { statusCode: 404 }),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "no_provider",
+      messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+    })
+
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "This run cannot continue",
+          undefined,
+          undefined,
+          API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+        ),
+      }),
+    ).toEqual({
+      status: "failed",
+      messageKey: "autoCheckin:skipReasons.execution_context_invalid",
+      reasonCode: "execution_context_invalid",
+    })
+  })
+
   it("classifies a lost result after mutation dispatch as uncertain", () => {
     expect(
       resolveProviderErrorResult({

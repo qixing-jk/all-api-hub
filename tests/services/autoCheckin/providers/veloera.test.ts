@@ -307,6 +307,7 @@ describe("veloeraProvider", () => {
       await expect(checkInForTest(mockAccount)).resolves.toEqual({
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+        reasonCode: "no_provider",
       })
     })
 

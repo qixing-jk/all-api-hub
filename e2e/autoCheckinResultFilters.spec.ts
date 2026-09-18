@@ -55,6 +55,14 @@ const RESULT_CASES: { name: string; result: Partial<CheckinAccountResult> }[] =
     // skips, so they take part in the second-level filtering too.
     { name: "Failed Account", result: { status: "failed" } },
     {
+      name: "Failed Turnstile Account",
+      result: {
+        status: "failed",
+        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        messageParams: { checkInUrl: "https://example.invalid/check-in" },
+      },
+    },
+    {
       name: "Failed Timeout Account",
       result: { status: "failed", reasonCode: "timeout" },
     },
@@ -144,7 +152,7 @@ for (const language of ["en", "zh-CN"] as const) {
         executed: RESULT_CASES.length,
         successCount: 1,
         alreadyCheckedCount: 0,
-        failedCount: 3,
+        failedCount: 4,
         uncertainCount: 1,
         skippedCount: 7,
         needsRetry: false,
@@ -195,6 +203,7 @@ for (const language of ["en", "zh-CN"] as const) {
 
     await expectRowsVisible([
       "Action Account",
+      "Failed Turnstile Account",
       "Uncertain Account",
       "Success Account",
     ])
@@ -202,7 +211,7 @@ for (const language of ["en", "zh-CN"] as const) {
     // Only failures, uncertain results, and user-fixable skips count as
     // attention.
     await expect(
-      page.locator(`[aria-label="${filters.needsAttention}: 6"]`),
+      page.locator(`[aria-label="${filters.needsAttention}: 7"]`),
     ).toBeVisible()
 
     // Status and reason are peer controls: reasons stay reachable without
@@ -239,7 +248,7 @@ for (const language of ["en", "zh-CN"] as const) {
     // The needs-attention preset keeps failed and uncertain rows complete
     // while narrowing skipped rows to the actionable ones.
     await statusTrigger().click()
-    await menuItem(filters.needsAttention, 6).click()
+    await menuItem(filters.needsAttention, 7).click()
     await expect(statusTrigger()).toHaveAccessibleName(
       `${filters.statusLabel}: ${filters.needsAttention}`,
     )
@@ -252,6 +261,7 @@ for (const language of ["en", "zh-CN"] as const) {
       "Failed Account",
       "Failed Timeout Account",
       "Failed Network Account",
+      "Failed Turnstile Account",
       "Uncertain Account",
     ])
     await expectRowsHidden([
@@ -315,7 +325,7 @@ for (const language of ["en", "zh-CN"] as const) {
     await expect(row("Credentials Account")).toBeVisible()
     await expect(
       page.getByText(
-        fillCopy(filters.countFiltered, { filtered: 1, total: 12 }),
+        fillCopy(filters.countFiltered, { filtered: 1, total: 13 }),
       ),
     ).toBeVisible()
     await expectRowsHidden([
@@ -330,6 +340,7 @@ for (const language of ["en", "zh-CN"] as const) {
       "Failed Network Account",
       "Uncertain Account",
       "Success Account",
+      "Failed Turnstile Account",
     ])
 
     for (const width of [1600, 390, 320]) {
@@ -370,6 +381,7 @@ for (const language of ["en", "zh-CN"] as const) {
       "Failed Network Account",
       "Uncertain Account",
       "Success Account",
+      "Failed Turnstile Account",
     ])
 
     for (const width of [1600, 390, 320]) {
@@ -386,9 +398,9 @@ for (const language of ["en", "zh-CN"] as const) {
     // own second-level filtering instead of one opaque bucket.
     await page.setViewportSize({ width: 1600, height: 1100 })
     await statusTrigger().click()
-    await menuItem(filters.all, 12).click()
+    await menuItem(filters.all, 13).click()
     await statusTrigger().click()
-    await checkboxItem(filters.failed, 3).click()
+    await checkboxItem(filters.failed, 4).click()
     await page.keyboard.press("Escape")
     await expect(statusTrigger()).toHaveAccessibleName(
       `${filters.statusLabel}: ${filters.failed}`,
@@ -400,9 +412,11 @@ for (const language of ["en", "zh-CN"] as const) {
     await reasonTrigger().click()
     // Only the reasons present on failed rows stay listed.
     await expect(checkboxItem(filters.skipCategoryWaiting, 2)).toBeVisible()
+    // A legacy Turnstile failure keeps its classification through the
+    // presentation key it persisted.
     await expect(
-      checkboxItem(filters.skipCategoryActionRequired, 2),
-    ).toHaveCount(0)
+      checkboxItem(filters.skipCategoryActionRequired, 1),
+    ).toBeVisible()
     await expect(checkboxItem(skipReasons.timeout, 1)).toBeVisible()
     await expect(checkboxItem(skipReasons.network_error, 1)).toBeVisible()
     // A failure without a reason code is still classified, so the reason
@@ -429,7 +443,7 @@ for (const language of ["en", "zh-CN"] as const) {
     await expect(row("Failed Timeout Account")).toBeVisible()
     await expect(
       page.getByText(
-        fillCopy(filters.countFiltered, { filtered: 1, total: 12 }),
+        fillCopy(filters.countFiltered, { filtered: 1, total: 13 }),
       ),
     ).toBeVisible()
     await expectRowsHidden([
@@ -444,6 +458,7 @@ for (const language of ["en", "zh-CN"] as const) {
       "Detection Off Account",
       "Method Off Account",
       "Success Account",
+      "Failed Turnstile Account",
     ])
 
     for (const width of [1600, 390, 320]) {
@@ -456,24 +471,24 @@ for (const language of ["en", "zh-CN"] as const) {
       })
     }
 
-    // The unclassified bucket keeps failures without a reason code
-    // reachable instead of dropping them out of the reason dimension.
+    // The derived classification narrows to the manual-verification row.
     await page.setViewportSize({ width: 1600, height: 1100 })
     await reasonTrigger().click()
     await page.getByRole("menuitem", { name: filters.clearReasons }).click()
     await reasonTrigger().click()
-    await checkboxItem(filters.skipCategoryUnclassified, 1).click()
+    await checkboxItem(filters.skipCategoryActionRequired, 1).click()
     await page.keyboard.press("Escape")
     await expect(reasonTrigger()).toHaveAccessibleName(
-      `${filters.reasonLabel}: ${filters.skipCategoryUnclassified}`,
+      `${filters.reasonLabel}: ${filters.skipCategoryActionRequired}`,
     )
-    await expect(row("Failed Account")).toBeVisible()
+    await expect(row("Failed Turnstile Account")).toBeVisible()
     await expect(
       page.getByText(
-        fillCopy(filters.countFiltered, { filtered: 1, total: 12 }),
+        fillCopy(filters.countFiltered, { filtered: 1, total: 13 }),
       ),
     ).toBeVisible()
     await expectRowsHidden([
+      "Failed Account",
       "Failed Timeout Account",
       "Failed Network Account",
       "Uncertain Account",
@@ -489,6 +504,43 @@ for (const language of ["en", "zh-CN"] as const) {
     await page.screenshot({
       animations: "disabled",
       fullPage: false,
+      path: testInfo.outputPath("failed-manual-verification-1600.png"),
+    })
+
+    // The unclassified bucket keeps failures without a reason code
+    // reachable instead of dropping them out of the reason dimension.
+    await page.setViewportSize({ width: 1600, height: 1100 })
+    await reasonTrigger().click()
+    await page.getByRole("menuitem", { name: filters.clearReasons }).click()
+    await reasonTrigger().click()
+    await checkboxItem(filters.skipCategoryUnclassified, 1).click()
+    await page.keyboard.press("Escape")
+    await expect(reasonTrigger()).toHaveAccessibleName(
+      `${filters.reasonLabel}: ${filters.skipCategoryUnclassified}`,
+    )
+    await expect(row("Failed Account")).toBeVisible()
+    await expect(
+      page.getByText(
+        fillCopy(filters.countFiltered, { filtered: 1, total: 13 }),
+      ),
+    ).toBeVisible()
+    await expectRowsHidden([
+      "Failed Timeout Account",
+      "Failed Network Account",
+      "Uncertain Account",
+      "Action Account",
+      "Credentials Account",
+      "Routine Account",
+      "Waiting Account",
+      "Disabled Account",
+      "Detection Off Account",
+      "Method Off Account",
+      "Success Account",
+      "Failed Turnstile Account",
+    ])
+    await page.screenshot({
+      animations: "disabled",
+      fullPage: false,
       path: testInfo.outputPath("failed-unclassified-1600.png"),
     })
 
@@ -496,7 +548,7 @@ for (const language of ["en", "zh-CN"] as const) {
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 1000 })
       await statusTrigger().click()
-      await menuItem(filters.all, 12).click()
+      await menuItem(filters.all, 13).click()
       await statusTrigger().click()
       await checkboxItem(filters.skipped, 7).click()
       await page.keyboard.press("Escape")
@@ -519,7 +571,7 @@ for (const language of ["en", "zh-CN"] as const) {
     // instead of leaving an empty slot next to the status filter.
     await page.setViewportSize({ width: 1600, height: 1100 })
     await statusTrigger().click()
-    await menuItem(filters.all, 12).click()
+    await menuItem(filters.all, 13).click()
     await statusTrigger().click()
     await checkboxItem(filters.success, 1).click()
     await page.keyboard.press("Escape")
@@ -528,7 +580,7 @@ for (const language of ["en", "zh-CN"] as const) {
     await expect(row("Success Account")).toBeVisible()
     await expect(
       page.getByText(
-        fillCopy(filters.countFiltered, { filtered: 1, total: 12 }),
+        fillCopy(filters.countFiltered, { filtered: 1, total: 13 }),
       ),
     ).toBeVisible()
     await page.screenshot({

@@ -204,6 +204,8 @@
     "auto_checkin_disabled": "自動チェックインは無効です",
     "credentials_missing": "保存済みの認証情報が不足しています。アカウントを再検出するか、認証情報を更新してください。",
     "detection_disabled": "検出は無効です",
+    "execution_context_invalid": "この実行では保護されたセッションを確立できませんでした。チェックインを再実行してください。",
+    "manual_verification_required": "対象サイトで手動認証が必要です。チェックインページで認証を完了してから再試行してください。",
     "method_disabled": "このサイトのチェックイン機能は無効です",
     "method_not_matched": "選択したチェックイン方法は現在のサイトと一致しません。チェックイン方法を再検出してください。",
     "method_unavailable": "選択したチェックイン方法は利用できなくなりました。チェックイン方法を再検出してください。",

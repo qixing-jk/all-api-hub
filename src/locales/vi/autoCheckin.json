@@ -204,6 +204,8 @@
     "auto_checkin_disabled": "Điểm danh tự động đã tắt",
     "credentials_missing": "Thiếu thông tin xác thực đã lưu. Hãy phát hiện lại tài khoản hoặc cập nhật thông tin xác thực.",
     "detection_disabled": "Phát hiện đã tắt",
+    "execution_context_invalid": "Lần chạy này không thể tạo phiên được bảo vệ. Hãy bắt đầu điểm danh lại.",
+    "manual_verification_required": "Trang cần xác minh thủ công. Hãy hoàn tất trên trang điểm danh rồi thử lại.",
     "method_disabled": "Tính năng điểm danh của trang web này đã bị tắt",
     "method_not_matched": "Phương thức điểm danh đã chọn không còn khớp với trang này. Hãy phát hiện lại phương thức.",
     "method_unavailable": "Phương thức điểm danh đã chọn không còn khả dụng. Hãy phát hiện lại phương thức.",

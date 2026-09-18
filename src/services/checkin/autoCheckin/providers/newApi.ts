@@ -41,7 +41,10 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import type {
   TempWindowCheckinPageAction,
   TempWindowRequestSource,
@@ -826,6 +829,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
             status: CHECKIN_RESULT_STATUS.FAILED,
             messageKey: NEW_API_MESSAGE_KEYS.turnstileIncognitoAccessRequired,
             messageParams: { checkInUrl },
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
             data: assisted ?? undefined,
           }
         }
@@ -845,6 +849,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
         messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
         messageParams: { checkInUrl },
         rawMessage: assisted.error || params.responseMessage || undefined,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
         data: assisted ?? undefined,
       }
     }
@@ -895,6 +900,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
       messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
       messageParams: { checkInUrl },
       rawMessage: params.responseMessage || assistedMessage || undefined,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
       data: assistedPayload ?? undefined,
     }
   }

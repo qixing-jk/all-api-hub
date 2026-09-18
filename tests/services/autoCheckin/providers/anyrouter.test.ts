@@ -398,6 +398,7 @@ describe("anyrouterProvider", () => {
       expect(result).toEqual({
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+        reasonCode: "no_provider",
       })
     })
 

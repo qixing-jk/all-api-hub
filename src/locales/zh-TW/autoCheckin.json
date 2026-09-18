@@ -204,6 +204,8 @@
     "auto_checkin_disabled": "自動簽到已關閉",
     "credentials_missing": "缺少已儲存的帳號憑證，請重新識別帳號或更新憑證。",
     "detection_disabled": "檢測已關閉",
+    "execution_context_invalid": "本次執行未能建立受保護工作階段，請重新發起簽到。",
+    "manual_verification_required": "目標站點要求完成人工驗證，請開啟簽到頁面完成驗證後再試。",
     "method_disabled": "此站點的簽到功能已停用",
     "method_not_matched": "已選簽到方式與目前站點不再相符，請重新偵測簽到方式。",
     "method_unavailable": "已選簽到方式已無法使用，請重新偵測簽到方式。",

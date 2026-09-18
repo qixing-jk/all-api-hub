@@ -208,6 +208,8 @@
     "auto_checkin_disabled": "Automatischer Check-in deaktiviert",
     "credentials_missing": "Gespeicherte Zugangsdaten fehlen. Erkennen Sie das Konto erneut oder aktualisieren Sie die Zugangsdaten.",
     "detection_disabled": "Erkennung deaktiviert",
+    "execution_context_invalid": "Für diesen Lauf konnte keine geschützte Sitzung geöffnet werden. Starte den Check-in erneut.",
+    "manual_verification_required": "Die Seite verlangt eine manuelle Verifizierung. Schließe sie auf der Check-in-Seite ab und versuche es erneut.",
     "method_disabled": "Die Check-in-Funktion dieser Website ist deaktiviert",
     "method_not_matched": "Die ausgewählte Check-in-Methode passt nicht mehr zu dieser Website. Erkennen Sie die Methode erneut.",
     "method_unavailable": "Die ausgewählte Check-in-Methode ist nicht mehr verfügbar. Erkennen Sie die Methode erneut.",

@@ -204,6 +204,8 @@
     "auto_checkin_disabled": "自动签到已关闭",
     "credentials_missing": "缺少已保存的账号凭据，请重新识别账号或更新凭据。",
     "detection_disabled": "检测已关闭",
+    "execution_context_invalid": "本次执行未能建立受保护会话，请重新发起签到。",
+    "manual_verification_required": "目标站点要求完成人工验证，请打开签到页面完成验证后再试。",
     "method_disabled": "该站点的签到功能已停用",
     "method_not_matched": "已选签到方式与当前站点不再匹配，请重新检测签到方式。",
     "method_unavailable": "已选签到方式已不可用，请重新检测签到方式。",

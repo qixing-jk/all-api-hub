@@ -58,11 +58,13 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   ACCOUNT_DATA_MISSING: "account_data_missing",
   AUTHENTICATION_REQUIRED: "authentication_required",
   CREDENTIALS_MISSING: "credentials_missing",
+  MANUAL_VERIFICATION_REQUIRED: "manual_verification_required",
   NETWORK_ERROR: "network_error",
   SOURCE_UNAVAILABLE: "source_unavailable",
   PERMISSION_DENIED: "permission_denied",
   TIMEOUT: "timeout",
   ACCOUNT_UNAVAILABLE: "account_unavailable",
+  EXECUTION_CONTEXT_INVALID: "execution_context_invalid",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
@@ -71,53 +73,61 @@ export const AUTO_CHECKIN_SKIP_REASONS = Object.values(
 ) as AutoCheckinSkipReason[]
 
 /**
+ * Localized label key per reason code. The map is exhaustive by type, so a new
+ * reason code cannot silently miss its copy.
+ */
+const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
+  [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED]:
+    "autoCheckin:skipReasons.account_disabled",
+  [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE]:
+    "autoCheckin:skipReasons.account_unavailable",
+  [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING]:
+    "autoCheckin:skipReasons.account_data_missing",
+  [AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY]:
+    "autoCheckin:skipReasons.already_checked_today",
+  [AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED]:
+    "autoCheckin:skipReasons.authentication_required",
+  [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED]:
+    "autoCheckin:skipReasons.auto_checkin_disabled",
+  [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING]:
+    "autoCheckin:skipReasons.credentials_missing",
+  [AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED]:
+    "autoCheckin:skipReasons.detection_disabled",
+  [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]:
+    "autoCheckin:skipReasons.execution_context_invalid",
+  [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]:
+    "autoCheckin:skipReasons.manual_verification_required",
+  [AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED]:
+    "autoCheckin:skipReasons.method_disabled",
+  [AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED]:
+    "autoCheckin:skipReasons.method_not_matched",
+  [AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE]:
+    "autoCheckin:skipReasons.method_unavailable",
+  [AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED]:
+    "autoCheckin:skipReasons.method_unsupported",
+  [AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR]:
+    "autoCheckin:skipReasons.network_error",
+  [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: "autoCheckin:skipReasons.no_provider",
+  [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD]:
+    "autoCheckin:skipReasons.no_selected_method",
+  [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]:
+    "autoCheckin:skipReasons.permission_denied",
+  [AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE]:
+    "autoCheckin:skipReasons.source_unavailable",
+  [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE]:
+    "autoCheckin:skipReasons.status_unavailable",
+  [AUTO_CHECKIN_SKIP_REASON.TIMEOUT]: "autoCheckin:skipReasons.timeout",
+}
+
+/**
  * Returns the localized skip-reason key for a stable auto-check-in reason code.
  */
 export function getAutoCheckinSkipReasonTranslationKey(
   reason: AutoCheckinSkipReason,
 ): string {
-  switch (reason) {
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED:
-      return "autoCheckin:skipReasons.account_disabled"
-    case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
-      return "autoCheckin:skipReasons.detection_disabled"
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED:
-      return "autoCheckin:skipReasons.method_disabled"
-    case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
-      return "autoCheckin:skipReasons.auto_checkin_disabled"
-    case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
-      return "autoCheckin:skipReasons.already_checked_today"
-    case AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE:
-      return "autoCheckin:skipReasons.status_unavailable"
-    case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
-      return "autoCheckin:skipReasons.no_provider"
-    case AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD:
-      return "autoCheckin:skipReasons.no_selected_method"
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE:
-      return "autoCheckin:skipReasons.method_unavailable"
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
-      return "autoCheckin:skipReasons.method_not_matched"
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED:
-      return "autoCheckin:skipReasons.method_unsupported"
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING:
-      return "autoCheckin:skipReasons.account_data_missing"
-    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
-      return "autoCheckin:skipReasons.authentication_required"
-    case AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING:
-      return "autoCheckin:skipReasons.credentials_missing"
-    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
-      return "autoCheckin:skipReasons.network_error"
-    case AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE:
-      return "autoCheckin:skipReasons.source_unavailable"
-    case AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED:
-      return "autoCheckin:skipReasons.permission_denied"
-    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
-      return "autoCheckin:skipReasons.timeout"
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
-      return "autoCheckin:skipReasons.account_unavailable"
-  }
-
-  return "autoCheckin:skipReasons.unknown"
+  return (
+    SKIP_REASON_TRANSLATION_KEYS[reason] ?? "autoCheckin:skipReasons.unknown"
+  )
 }
 
 /**
@@ -127,46 +137,7 @@ export function translateAutoCheckinSkipReason(
   t: TFunction,
   reason: AutoCheckinSkipReason,
 ): string {
-  switch (reason) {
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED:
-      return t("autoCheckin:skipReasons.account_disabled")
-    case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
-      return t("autoCheckin:skipReasons.detection_disabled")
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED:
-      return t("autoCheckin:skipReasons.method_disabled")
-    case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
-      return t("autoCheckin:skipReasons.auto_checkin_disabled")
-    case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
-      return t("autoCheckin:skipReasons.already_checked_today")
-    case AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE:
-      return t("autoCheckin:skipReasons.status_unavailable")
-    case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
-      return t("autoCheckin:skipReasons.no_provider")
-    case AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD:
-      return t("autoCheckin:skipReasons.no_selected_method")
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE:
-      return t("autoCheckin:skipReasons.method_unavailable")
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
-      return t("autoCheckin:skipReasons.method_not_matched")
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED:
-      return t("autoCheckin:skipReasons.method_unsupported")
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING:
-      return t("autoCheckin:skipReasons.account_data_missing")
-    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
-      return t("autoCheckin:skipReasons.authentication_required")
-    case AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING:
-      return t("autoCheckin:skipReasons.credentials_missing")
-    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
-      return t("autoCheckin:skipReasons.network_error")
-    case AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE:
-      return t("autoCheckin:skipReasons.source_unavailable")
-    case AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED:
-      return t("autoCheckin:skipReasons.permission_denied")
-    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
-      return t("autoCheckin:skipReasons.timeout")
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
-      return t("autoCheckin:skipReasons.account_unavailable")
-  }
+  return t(getAutoCheckinSkipReasonTranslationKey(reason))
 }
 
 interface CheckinAccountResultBase {

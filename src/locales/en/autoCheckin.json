@@ -208,6 +208,8 @@
     "auto_checkin_disabled": "Auto check-in disabled",
     "credentials_missing": "Saved credentials are missing. Re-detect the account or update its credentials.",
     "detection_disabled": "Detection disabled",
+    "execution_context_invalid": "This run could not open a protected session. Start the check-in again.",
+    "manual_verification_required": "The site requires manual verification. Complete it on the check-in page and try again.",
     "method_disabled": "This site's check-in method is disabled",
     "method_not_matched": "The selected check-in method no longer matches this site. Re-detect the check-in method.",
     "method_unavailable": "The selected check-in method is no longer available. Re-detect the check-in method.",

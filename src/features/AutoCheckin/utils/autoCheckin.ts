@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_SKIP_REASON,
   AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
@@ -179,6 +180,29 @@ export function countAutoCheckinResults(
 }
 
 /**
+ * Presentation keys of results persisted before a matching reason code existed.
+ * Deriving the code keeps their classification after the fact.
+ */
+const RESULT_MESSAGE_KEY_REASONS: Record<string, AutoCheckinSkipReason> = {
+  "autoCheckin:providerFallback.endpointNotSupported":
+    AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+  "autoCheckin:providerFallback.turnstileIncognitoAccessRequired":
+    AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+  "autoCheckin:providerFallback.turnstileManualRequired":
+    AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+}
+
+/** Resolves the persisted or implied reason code of a result. */
+function resolveResultReasonCode(
+  result: CheckinAccountResult,
+): AutoCheckinSkipReason | null {
+  if (result.reasonCode) return result.reasonCode
+  if (!result.messageKey) return null
+
+  return RESULT_MESSAGE_KEY_REASONS[result.messageKey] ?? null
+}
+
+/**
  * Resolves the semantic reason category of a result. Unknown or legacy skip
  * reasons keep the routine bucket; other reason-carrying statuses fall back to
  * the unclassified bucket so the reason dimension covers every row, while
@@ -187,7 +211,7 @@ export function countAutoCheckinResults(
 function resolveResultReasonCategory(
   result: CheckinAccountResult,
 ): AutoCheckinSkipCategory | null {
-  const category = getAutoCheckinSkipCategory(result.reasonCode)
+  const category = getAutoCheckinSkipCategory(resolveResultReasonCode(result))
   if (category) return category
 
   if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
@@ -224,7 +248,7 @@ function matchesAutoCheckinResultFilter(
     return true
   }
 
-  const reason = result.reasonCode ?? null
+  const reason = resolveResultReasonCode(result)
   if (reason && filter.reason.reasons.includes(reason)) return true
 
   const category = resolveResultReasonCategory(result)
@@ -264,7 +288,7 @@ export function countAutoCheckinResultReasons(
   ) as Record<AutoCheckinSkipReason, number>
 
   for (const result of results) {
-    const reason = result.reasonCode
+    const reason = resolveResultReasonCode(result)
     if (!reason) continue
     counts[reason] += 1
   }
@@ -364,6 +388,16 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.credentials_missing", messageParams)
     case "autoCheckin:skipReasons.detection_disabled":
       return t("autoCheckin:skipReasons.detection_disabled", messageParams)
+    case "autoCheckin:skipReasons.execution_context_invalid":
+      return t(
+        "autoCheckin:skipReasons.execution_context_invalid",
+        messageParams,
+      )
+    case "autoCheckin:skipReasons.manual_verification_required":
+      return t(
+        "autoCheckin:skipReasons.manual_verification_required",
+        messageParams,
+      )
     case "autoCheckin:skipReasons.method_disabled":
       return t("autoCheckin:skipReasons.method_disabled", messageParams)
     case "autoCheckin:skipReasons.method_not_matched":

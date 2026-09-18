@@ -1001,11 +1001,13 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AccountDataMissing: "account_data_missing",
   AuthenticationRequired: "authentication_required",
   CredentialsMissing: "credentials_missing",
+  ManualVerificationRequired: "manual_verification_required",
   NetworkError: "network_error",
   SourceUnavailable: "source_unavailable",
   PermissionDenied: "permission_denied",
   Timeout: "timeout",
   StatusUnavailable: "status_unavailable",
+  ExecutionContextInvalid: "execution_context_invalid",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =

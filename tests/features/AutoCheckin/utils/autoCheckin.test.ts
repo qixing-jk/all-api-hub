@@ -600,6 +600,73 @@ describe("autoCheckin utils", () => {
       ).toEqual(["failed-network", "skipped-network"])
     })
 
+    it("classifies legacy results from their presentation key", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "failed-endpoint",
+          accountName: "Failed endpoint",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+          timestamp: 3,
+        },
+        {
+          accountId: "failed-turnstile",
+          accountName: "Failed turnstile",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+          timestamp: 2,
+        },
+        {
+          accountId: "failed-unknown",
+          accountName: "Failed unknown",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1,
+        },
+      ]
+      const noop = vi.fn((key: string) => key) as any
+
+      // Runs persisted before the reason codes existed still classify.
+      expect(countAutoCheckinResultReasons(results)).toMatchObject({
+        [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: 1,
+        [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]: 1,
+      })
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.FAILED],
+            [],
+            [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed-turnstile"])
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.FAILED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed-endpoint"])
+      // Genuinely unknown failures stay unclassified.
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.FAILED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed-unknown"])
+    })
+
     it("keeps legacy skips routine while reasonless failures stay unclassified", () => {
       const counts = countAutoCheckinResultReasonCategories([
         {
@@ -698,6 +765,8 @@ describe("autoCheckin utils", () => {
         [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING]: 0,
         [AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED]: 0,
         [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING]: 2,
+        [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]: 0,
         [AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR]: 0,
         [AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE]: 0,
         [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]: 0,

@@ -5,6 +5,7 @@
  * magic strings (message keys, message parsing heuristics) across backends.
  */
 
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
@@ -56,6 +57,23 @@ export function isAlreadyCheckedMessage(message: string): boolean {
   return DEFAULT_ALREADY_CHECKED_MESSAGE_SNIPPETS.some((snippet) =>
     normalized.includes(snippet.toLowerCase()),
   )
+}
+
+/** Platform-level failures that already have a user-facing remedy. */
+const PLATFORM_FAILURE_REASON_CODES: Record<string, AutoCheckinSkipReason> = {
+  [API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID]:
+    AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID,
+}
+
+const getPlatformFailureReasonCode = (
+  error: unknown,
+): AutoCheckinSkipReason | undefined => {
+  if (!(error instanceof Error)) return undefined
+
+  const code = (error as { code?: unknown }).code
+  return typeof code === "string"
+    ? PLATFORM_FAILURE_REASON_CODES[code]
+    : undefined
 }
 
 const getFailureReasonCode = (
@@ -123,6 +141,17 @@ export function resolveProviderErrorResult(params: {
     return typeof record.statusCode === "number" ? record.statusCode : null
   })()
 
+  // The protected-context failure happens before the mutation is dispatched,
+  // so it stays a plain failure the user can re-initiate.
+  const platformReasonCode = getPlatformFailureReasonCode(params.error)
+  if (platformReasonCode) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: getAutoCheckinSkipReasonTranslationKey(platformReasonCode),
+      reasonCode: platformReasonCode,
+    }
+  }
+
   // Only structured transport status is protocol evidence. A backend message
   // can contain the digits "404" for unrelated business data.
   if (statusCode === 404) {
@@ -130,6 +159,7 @@ export function resolveProviderErrorResult(params: {
       status: CHECKIN_RESULT_STATUS.FAILED,
       messageKey:
         AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.endpointNotSupported,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
     }
   }
 

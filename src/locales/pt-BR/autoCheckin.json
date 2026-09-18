@@ -212,6 +212,8 @@
     "auto_checkin_disabled": "Check-in automático desativado",
     "credentials_missing": "As credenciais salvas estão ausentes. Detecte a conta novamente ou atualize as credenciais.",
     "detection_disabled": "Detecção desativada",
+    "execution_context_invalid": "Esta execução não conseguiu abrir uma sessão protegida. Inicie o check-in novamente.",
+    "manual_verification_required": "O site exige verificação manual. Conclua na página de check-in e tente novamente.",
     "method_disabled": "A função de check-in deste site está desativada",
     "method_not_matched": "O método de check-in selecionado não corresponde mais a este site. Detecte-o novamente.",
     "method_unavailable": "O método de check-in selecionado não está mais disponível. Detecte-o novamente.",

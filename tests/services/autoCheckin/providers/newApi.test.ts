@@ -1215,6 +1215,7 @@ describe("newApiProvider", () => {
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
+        reasonCode: "manual_verification_required",
         rawMessage: "Turnstile token invalid",
         data: {
           success: false,
@@ -1468,6 +1469,7 @@ describe("newApiProvider", () => {
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
+        reasonCode: "manual_verification_required",
         rawMessage: "Turnstile token not available",
         data: {
           success: false,
@@ -1560,6 +1562,7 @@ describe("newApiProvider", () => {
       expect(result).toEqual({
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+        reasonCode: "no_provider",
       })
     })
 
