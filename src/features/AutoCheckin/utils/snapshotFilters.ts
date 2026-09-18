@@ -1,8 +1,11 @@
 import type { TFunction } from "i18next"
 
+import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getAutoCheckinSkipCategory,
+} from "~/features/AutoCheckin/utils/skipCategories"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
-  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
   type AutoCheckinAccountSnapshot,
@@ -50,29 +53,18 @@ export function getAutoCheckinSnapshotReadinessCategory(
   snapshot: AutoCheckinAccountSnapshot,
 ): SnapshotReadinessFilter {
   const reason = snapshot.skipReason ?? snapshot.lastResult?.reasonCode
-  switch (reason) {
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED:
-    case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
-    case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED:
-      return SNAPSHOT_READINESS_FILTER.DISABLED
-    case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED:
-      return SNAPSHOT_READINESS_FILTER.UNSUPPORTED
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
-    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
-    case AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE:
-    case AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE:
-    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
-      return SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE
-    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING:
-    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
-    case AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING:
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
-    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE:
-    case AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD:
-    case AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED:
+  switch (getAutoCheckinSkipCategory(reason)) {
+    case AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED:
       return SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED
+    case AUTO_CHECKIN_SKIP_CATEGORY.WAITING:
+      return SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE
+    case AUTO_CHECKIN_SKIP_CATEGORY.DISABLED:
+      return SNAPSHOT_READINESS_FILTER.DISABLED
+    case AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED:
+      return SNAPSHOT_READINESS_FILTER.UNSUPPORTED
+    case AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED:
+      // Routine skips (e.g. already checked today) fall back to live readiness.
+      break
   }
 
   if (isAutoCheckinSnapshotReady(snapshot)) {

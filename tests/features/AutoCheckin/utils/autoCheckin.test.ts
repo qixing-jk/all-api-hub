@@ -2,17 +2,28 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   countAutoCheckinResults,
+  countAutoCheckinResultsNeedingAttention,
+  countAutoCheckinSkippedCategories,
+  createNeedsAttentionResultFilter,
+  EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
+  isAutoCheckinResultNeedingAttention,
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
-  NEEDS_ATTENTION_RESULT_STATUSES,
   resolveAutoCheckinTroubleshootingHintKey,
   translateAutoCheckinMessageKey,
+  type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  type AutoCheckinSkipCategory,
+} from "~/features/AutoCheckin/utils/skipCategories"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
+  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
 describe("autoCheckin utils", () => {
@@ -72,7 +83,10 @@ describe("autoCheckin utils", () => {
     expect(
       filterAutoCheckinResults(
         [result],
-        [CHECKIN_RESULT_STATUS.ALREADY_CHECKED],
+        {
+          statuses: [CHECKIN_RESULT_STATUS.ALREADY_CHECKED],
+          skippedCategories: [],
+        },
         "",
         vi.fn() as any,
       ),
@@ -80,7 +94,10 @@ describe("autoCheckin utils", () => {
     expect(
       filterAutoCheckinResults(
         [result],
-        [CHECKIN_RESULT_STATUS.SUCCESS],
+        {
+          statuses: [CHECKIN_RESULT_STATUS.SUCCESS],
+          skippedCategories: [],
+        },
         "",
         vi.fn() as any,
       ),
@@ -223,6 +240,11 @@ describe("autoCheckin utils", () => {
   })
 
   describe("filterAutoCheckinResults", () => {
+    const buildFilter = (
+      statuses: CheckinResultStatus[],
+      skippedCategories: AutoCheckinSkipCategory[] = [],
+    ): AutoCheckinResultFilter => ({ statuses, skippedCategories })
+
     it("matches trimmed keywords against the localized result message", () => {
       const t = vi.fn((key: string) =>
         key === "autoCheckin:skipReasons.status_unavailable"
@@ -241,14 +263,14 @@ describe("autoCheckin utils", () => {
               timestamp: 1,
             },
           ],
-          [CHECKIN_RESULT_STATUS.SKIPPED],
+          buildFilter([CHECKIN_RESULT_STATUS.SKIPPED]),
           "  无法确认  ",
           t as any,
         ),
       ).toHaveLength(1)
     })
 
-    it("filters uncertain results independently while keeping them in attention", () => {
+    it("keeps only results that actually need attention in the preset", () => {
       const results: CheckinAccountResult[] = [
         {
           accountId: "failed",
@@ -257,8 +279,43 @@ describe("autoCheckin utils", () => {
           timestamp: 3,
         },
         {
-          accountId: "skipped",
-          accountName: "Skipped",
+          accountId: "skipped-action",
+          accountName: "Skipped action",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-waiting",
+          accountName: "Skipped waiting",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-disabled",
+          accountName: "Skipped disabled",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-unsupported",
+          accountName: "Skipped unsupported",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-routine",
+          accountName: "Skipped routine",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-legacy",
+          accountName: "Skipped legacy",
           status: CHECKIN_RESULT_STATUS.SKIPPED,
           timestamp: 2,
         },
@@ -280,16 +337,23 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          NEEDS_ATTENTION_RESULT_STATUSES,
+          createNeedsAttentionResultFilter(),
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
-      ).toEqual(["failed", "skipped", "uncertain"])
+      ).toEqual(["failed", "skipped-action", "uncertain"])
+
+      expect(
+        results
+          .filter((result) => isAutoCheckinResultNeedingAttention(result))
+          .map((result) => result.accountId),
+      ).toEqual(["failed", "skipped-action", "uncertain"])
+      expect(countAutoCheckinResultsNeedingAttention(results)).toBe(3)
 
       expect(
         filterAutoCheckinResults(
           results,
-          [CHECKIN_RESULT_STATUS.FAILED],
+          buildFilter([CHECKIN_RESULT_STATUS.FAILED]),
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
@@ -298,11 +362,91 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          [CHECKIN_RESULT_STATUS.UNCERTAIN],
+          buildFilter([CHECKIN_RESULT_STATUS.UNCERTAIN]),
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
       ).toEqual(["uncertain"])
+    })
+
+    it("narrows skipped results by their semantic reason category", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "skipped-action",
+          accountName: "Skipped action",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-waiting",
+          accountName: "Skipped waiting",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-routine",
+          accountName: "Skipped routine",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+          timestamp: 2,
+        },
+        {
+          accountId: "failed",
+          accountName: "Failed",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 3,
+        },
+      ]
+
+      expect(countAutoCheckinSkippedCategories(results)).toEqual({
+        [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED]: 1,
+        [AUTO_CHECKIN_SKIP_CATEGORY.WAITING]: 1,
+        [AUTO_CHECKIN_SKIP_CATEGORY.DISABLED]: 0,
+        [AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED]: 0,
+        [AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED]: 1,
+      })
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.WAITING],
+          ),
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["skipped-waiting"])
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED],
+            [
+              AUTO_CHECKIN_SKIP_CATEGORY.WAITING,
+              AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED,
+            ],
+          ),
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["skipped-waiting", "skipped-routine"])
+
+      // Category narrowing never hides unrelated non-skipped statuses.
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED, CHECKIN_RESULT_STATUS.FAILED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.WAITING],
+          ),
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["skipped-waiting", "failed"])
     })
 
     it("combines selected result statuses while an empty selection shows all", () => {
@@ -330,17 +474,22 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          [
+          buildFilter([
             CHECKIN_RESULT_STATUS.SUCCESS,
             CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-          ],
+          ]),
           "",
           vi.fn() as any,
         ).map((result) => result.accountId),
       ).toEqual(["success", "already-checked"])
-      expect(filterAutoCheckinResults(results, [], "", vi.fn() as any)).toEqual(
-        results,
-      )
+      expect(
+        filterAutoCheckinResults(
+          results,
+          EMPTY_AUTO_CHECKIN_RESULT_FILTER,
+          "",
+          vi.fn() as any,
+        ),
+      ).toEqual(results)
     })
   })
 

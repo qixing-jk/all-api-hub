@@ -22,10 +22,20 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import {
+  countActiveResultFilterDimensions,
   countAutoCheckinResults,
+  countAutoCheckinResultsNeedingAttention,
+  countAutoCheckinSkippedCategories,
+  createNeedsAttentionResultFilter,
+  EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
-  NEEDS_ATTENTION_RESULT_STATUSES,
+  isAutoCheckinNeedsAttentionFilter,
+  type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_CATEGORIES,
+  type AutoCheckinSkipCategory,
+} from "~/features/AutoCheckin/utils/skipCategories"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -46,9 +56,9 @@ import TableFilterToolbar from "./TableFilterToolbar"
 
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
-  selectedStatuses: CheckinResultStatus[]
+  filter: AutoCheckinResultFilter
   keyword: string
-  onSelectedStatusesChange: (statuses: CheckinResultStatus[]) => void
+  onFilterChange: (filter: AutoCheckinResultFilter) => void
   onKeywordChange: (keyword: string) => void
 }
 
@@ -59,22 +69,39 @@ interface StatusFilterOption {
   icon: ReactNode
 }
 
+interface SkipCategoryFilterOption {
+  value: AutoCheckinSkipCategory
+  label: string
+  count: number
+}
+
+const SKIP_CATEGORY_LABEL_KEYS: Record<
+  AutoCheckinSkipCategory,
+  `execution.filters.${string}`
+> = {
+  action_required: "execution.filters.skipCategoryActionRequired",
+  waiting: "execution.filters.skipCategoryWaiting",
+  disabled: "execution.filters.skipCategoryDisabled",
+  unsupported: "execution.filters.skipCategoryUnsupported",
+  expected: "execution.filters.skipCategoryExpected",
+}
+
 /**
  * Filter controls for the auto-checkin execution list: a status multi-select
- * and keyword search.
+ * with reason narrowing for skipped rows, and keyword search.
  */
 export default function FilterBar({
   accountResults,
-  selectedStatuses,
+  filter,
   keyword,
-  onSelectedStatusesChange,
+  onFilterChange,
   onKeywordChange,
 }: FilterBarProps) {
   const { t } = useTranslation("autoCheckin")
 
   const resultCounts = countAutoCheckinResults(accountResults)
   const needsAttentionCount =
-    resultCounts.failed + resultCounts.uncertain + resultCounts.skipped
+    countAutoCheckinResultsNeedingAttention(accountResults)
   const statusOptions: StatusFilterOption[] = [
     {
       value: CHECKIN_RESULT_STATUS.SUCCESS,
@@ -109,13 +136,15 @@ export default function FilterBar({
   ]
 
   const getFilteredResultCount = (
-    nextStatuses: readonly CheckinResultStatus[],
+    nextFilter: AutoCheckinResultFilter,
     nextKeyword: string,
   ) =>
-    filterAutoCheckinResults(accountResults, nextStatuses, nextKeyword, t)
-      .length
-  const filteredCount = getFilteredResultCount(selectedStatuses, keyword)
-  const isFiltered = selectedStatuses.length > 0 || Boolean(keyword.trim())
+    filterAutoCheckinResults(accountResults, nextFilter, nextKeyword, t).length
+  const filteredCount = getFilteredResultCount(filter, keyword)
+  const isFiltered =
+    filter.statuses.length > 0 ||
+    filter.skippedCategories.length > 0 ||
+    Boolean(keyword.trim())
   const countLabel = isFiltered
     ? t("execution.filters.countFiltered", {
         filtered: filteredCount,
@@ -123,35 +152,63 @@ export default function FilterBar({
       })
     : t("execution.filters.countTotal", { total: resultCounts.total })
 
-  const isNeedsAttentionPreset =
-    selectedStatuses.length === NEEDS_ATTENTION_RESULT_STATUSES.length &&
-    NEEDS_ATTENTION_RESULT_STATUSES.every((status) =>
-      selectedStatuses.includes(status),
-    )
+  const isNeedsAttentionPreset = isAutoCheckinNeedsAttentionFilter(filter)
   const selectedStatusLabels = statusOptions
-    .filter((option) => selectedStatuses.includes(option.value))
+    .filter((option) => filter.statuses.includes(option.value))
     .map((option) => option.label)
-  const selectedStatusSummary =
-    selectedStatuses.length === 0
-      ? t("execution.filters.all")
+  const statusSummary =
+    filter.statuses.length === 0
+      ? null
       : isNeedsAttentionPreset
         ? t("execution.filters.needsAttention")
-        : selectedStatuses.length === 1
+        : filter.statuses.length === 1
           ? selectedStatusLabels[0]
           : t("execution.filters.selectedStatuses", {
-              count: selectedStatuses.length,
+              count: filter.statuses.length,
             })
+  const resolvedCategoryLabels = AUTO_CHECKIN_SKIP_CATEGORIES.filter(
+    (category) => filter.skippedCategories.includes(category),
+  ).map((category) => t(SKIP_CATEGORY_LABEL_KEYS[category]))
+  const categorySummary =
+    filter.skippedCategories.length === 0 || isNeedsAttentionPreset
+      ? null
+      : filter.skippedCategories.length === 1
+        ? resolvedCategoryLabels[0]
+        : t("execution.filters.selectedReasons", {
+            count: filter.skippedCategories.length,
+          })
+  const selectedStatusSummary =
+    [statusSummary, categorySummary].filter(Boolean).join(" · ") ||
+    t("execution.filters.all")
+
+  const showsSkipCategories = filter.statuses.includes(
+    CHECKIN_RESULT_STATUS.SKIPPED,
+  )
+  const skippedCategoryCounts = countAutoCheckinSkippedCategories(
+    filterAutoCheckinResults(
+      accountResults,
+      {
+        statuses: [CHECKIN_RESULT_STATUS.SKIPPED],
+        skippedCategories: [],
+      },
+      keyword,
+      t,
+    ),
+  )
+  const skipCategoryOptions: SkipCategoryFilterOption[] =
+    AUTO_CHECKIN_SKIP_CATEGORIES.map((category) => ({
+      value: category,
+      label: t(SKIP_CATEGORY_LABEL_KEYS[category]),
+      count: skippedCategoryCounts[category],
+    })).filter((option) => option.count > 0)
 
   const trackFilterSelection = (
     mode:
       | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
       | typeof PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-    nextStatuses: readonly CheckinResultStatus[] = selectedStatuses,
+    nextFilter: AutoCheckinResultFilter = filter,
     nextKeyword: string = keyword,
   ) => {
-    const filterCount =
-      (nextStatuses.length > 0 ? 1 : 0) + (nextKeyword.trim() ? 1 : 0)
-
     void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
@@ -161,27 +218,47 @@ export default function FilterBar({
       insights: {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode,
-        filterCount,
-        resultCount: getFilteredResultCount(nextStatuses, nextKeyword),
+        filterCount: countActiveResultFilterDimensions(nextFilter, nextKeyword),
+        resultCount: getFilteredResultCount(nextFilter, nextKeyword),
       },
     })
   }
 
-  const applyStatuses = (nextStatuses: readonly CheckinResultStatus[]) => {
-    const normalizedStatuses = [...nextStatuses]
-    onSelectedStatusesChange(normalizedStatuses)
+  const applyFilter = (nextFilter: AutoCheckinResultFilter) => {
+    const normalizedFilter: AutoCheckinResultFilter = {
+      statuses: [...nextFilter.statuses],
+      skippedCategories: [...nextFilter.skippedCategories],
+    }
+    onFilterChange(normalizedFilter)
     trackFilterSelection(
       PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-      normalizedStatuses,
+      normalizedFilter,
     )
   }
 
   const toggleStatus = (status: CheckinResultStatus) => {
-    applyStatuses(
-      selectedStatuses.includes(status)
-        ? selectedStatuses.filter((value) => value !== status)
-        : [...selectedStatuses, status],
-    )
+    const nextStatuses = filter.statuses.includes(status)
+      ? filter.statuses.filter((value) => value !== status)
+      : [...filter.statuses, status]
+
+    // Manual status selection resets reason narrowing to "every reason".
+    applyFilter({ statuses: nextStatuses, skippedCategories: [] })
+  }
+
+  const toggleSkipCategory = (category: AutoCheckinSkipCategory) => {
+    const nextCategories = filter.skippedCategories.includes(category)
+      ? filter.skippedCategories.filter((value) => value !== category)
+      : [...filter.skippedCategories, category]
+    const nextStatuses = filter.statuses.includes(CHECKIN_RESULT_STATUS.SKIPPED)
+      ? filter.statuses
+      : filter.statuses.length === 0
+        ? [CHECKIN_RESULT_STATUS.SKIPPED]
+        : [...filter.statuses, CHECKIN_RESULT_STATUS.SKIPPED]
+
+    applyFilter({
+      statuses: nextStatuses,
+      skippedCategories: nextCategories,
+    })
   }
 
   const renderMenuCount = (count: number) => (
@@ -196,13 +273,13 @@ export default function FilterBar({
       clearLabel={t("execution.filters.clearAll")}
       showClear={isFiltered && filteredCount > 0}
       onClearFilters={() => {
-        onSelectedStatusesChange([])
+        onFilterChange({ statuses: [], skippedCategories: [] })
         onKeywordChange("")
         trackFilterSelection(
           keyword.trim()
             ? PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
             : PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-          [],
+          EMPTY_AUTO_CHECKIN_RESULT_FILTER,
           "",
         )
       }}
@@ -220,7 +297,7 @@ export default function FilterBar({
             onKeywordChange("")
             trackFilterSelection(
               PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
-              selectedStatuses,
+              filter,
               "",
             )
           }}
@@ -242,9 +319,9 @@ export default function FilterBar({
               <span className="truncate">{selectedStatusSummary}</span>
             </span>
             <span className="gap-y-density-1-5 flex shrink-0 items-center gap-x-1.5">
-              {selectedStatuses.length > 0 ? (
+              {isFiltered && filter.statuses.length > 0 ? (
                 <Badge variant="secondary" size="sm">
-                  {selectedStatuses.length}
+                  {filter.statuses.length}
                 </Badge>
               ) : null}
               <ChevronDown className="h-4 w-4" />
@@ -255,13 +332,15 @@ export default function FilterBar({
           <DropdownMenuLabel>
             {t("execution.filters.statusLabel")}
           </DropdownMenuLabel>
-          <DropdownMenuItem onSelect={() => applyStatuses([])}>
+          <DropdownMenuItem
+            onSelect={() => applyFilter(EMPTY_AUTO_CHECKIN_RESULT_FILTER)}
+          >
             <List className="h-4 w-4" />
             <span>{t("execution.filters.all")}</span>
             {renderMenuCount(resultCounts.total)}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => applyStatuses(NEEDS_ATTENTION_RESULT_STATUSES)}
+            onSelect={() => applyFilter(createNeedsAttentionResultFilter())}
           >
             <CircleAlert className="text-destructive-indicator h-4 w-4" />
             <span>{t("execution.filters.needsAttention")}</span>
@@ -271,7 +350,7 @@ export default function FilterBar({
           {statusOptions.map((option) => (
             <DropdownMenuCheckboxItem
               key={option.value}
-              checked={selectedStatuses.includes(option.value)}
+              checked={filter.statuses.includes(option.value)}
               onCheckedChange={() => toggleStatus(option.value)}
               onSelect={(event) => event.preventDefault()}
               aria-label={`${option.label} ${option.count}`}
@@ -281,6 +360,26 @@ export default function FilterBar({
               {renderMenuCount(option.count)}
             </DropdownMenuCheckboxItem>
           ))}
+          {showsSkipCategories && skipCategoryOptions.length > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>
+                {t("execution.filters.skipReasonLabel")}
+              </DropdownMenuLabel>
+              {skipCategoryOptions.map((option) => (
+                <DropdownMenuCheckboxItem
+                  key={option.value}
+                  checked={filter.skippedCategories.includes(option.value)}
+                  onCheckedChange={() => toggleSkipCategory(option.value)}
+                  onSelect={(event) => event.preventDefault()}
+                  aria-label={`${option.label} ${option.count}`}
+                >
+                  <span className="text-muted-foreground">{option.label}</span>
+                  {renderMenuCount(option.count)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     </TableFilterToolbar>

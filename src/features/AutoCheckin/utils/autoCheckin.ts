@@ -7,12 +7,68 @@ import {
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
-/** Atomic outcomes selected by the needs-attention filter preset. */
-export const NEEDS_ATTENTION_RESULT_STATUSES = [
-  CHECKIN_RESULT_STATUS.FAILED,
-  CHECKIN_RESULT_STATUS.UNCERTAIN,
-  CHECKIN_RESULT_STATUS.SKIPPED,
-] as const satisfies readonly CheckinResultStatus[]
+import {
+  AUTO_CHECKIN_SKIP_CATEGORIES,
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getAutoCheckinSkipCategory,
+  isAutoCheckinSkipReasonActionable,
+  type AutoCheckinSkipCategory,
+} from "./skipCategories"
+
+/**
+ * Result-table filter state. Atomic statuses stay selectable as-is; skip
+ * categories narrow only `skipped` rows so expected skips never inflate the
+ * needs-attention preset.
+ */
+export interface AutoCheckinResultFilter {
+  statuses: CheckinResultStatus[]
+  skippedCategories: AutoCheckinSkipCategory[]
+}
+
+/** Default filter: every result is visible. */
+export const EMPTY_AUTO_CHECKIN_RESULT_FILTER: AutoCheckinResultFilter = {
+  statuses: [],
+  skippedCategories: [],
+}
+
+/** Preset for results that genuinely need a user decision. */
+export function createNeedsAttentionResultFilter(): AutoCheckinResultFilter {
+  return {
+    statuses: [
+      CHECKIN_RESULT_STATUS.FAILED,
+      CHECKIN_RESULT_STATUS.UNCERTAIN,
+      CHECKIN_RESULT_STATUS.SKIPPED,
+    ],
+    skippedCategories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+  }
+}
+
+/** Counts active filter dimensions for analytics without exposing values. */
+export function countActiveResultFilterDimensions(
+  filter: AutoCheckinResultFilter,
+  keyword: string,
+): number {
+  return (
+    (filter.statuses.length > 0 ? 1 : 0) +
+    (filter.skippedCategories.length > 0 ? 1 : 0) +
+    (keyword.trim() ? 1 : 0)
+  )
+}
+
+/** Detects the semantic needs-attention preset behind the filter state. */
+export function isAutoCheckinNeedsAttentionFilter(
+  filter: AutoCheckinResultFilter,
+): boolean {
+  const preset = createNeedsAttentionResultFilter()
+  return (
+    filter.statuses.length === preset.statuses.length &&
+    preset.statuses.every((status) => filter.statuses.includes(status)) &&
+    filter.skippedCategories.length === preset.skippedCategories.length &&
+    preset.skippedCategories.every((category) =>
+      filter.skippedCategories.includes(category),
+    )
+  )
+}
 
 interface AutoCheckinResultCounts {
   total: number
@@ -61,13 +117,81 @@ export function countAutoCheckinResults(
 }
 
 /**
- * Checks whether a result belongs to the selected status filter.
+ * Resolves the semantic category of a skipped result. Unknown or legacy
+ * reasons stay non-actionable so they never create attention noise.
  */
-function matchesAutoCheckinResultStatus(
+function resolveSkippedResultCategory(
   result: CheckinAccountResult,
-  selectedStatuses: ReadonlySet<CheckinResultStatus>,
+): AutoCheckinSkipCategory | null {
+  if (result.status !== CHECKIN_RESULT_STATUS.SKIPPED) return null
+
+  return (
+    getAutoCheckinSkipCategory(result.reasonCode) ??
+    AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
+  )
+}
+
+/**
+ * Checks whether a result matches the selected statuses and, for skipped
+ * rows, the selected skip categories.
+ */
+function matchesAutoCheckinResultFilter(
+  result: CheckinAccountResult,
+  filter: AutoCheckinResultFilter,
 ): boolean {
-  return selectedStatuses.size === 0 || selectedStatuses.has(result.status)
+  if (filter.statuses.length > 0 && !filter.statuses.includes(result.status)) {
+    return false
+  }
+
+  if (filter.skippedCategories.length > 0) {
+    const category = resolveSkippedResultCategory(result)
+    if (category && !filter.skippedCategories.includes(category)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/** Returns whether one result needs an explicit user follow-up. */
+export function isAutoCheckinResultNeedingAttention(
+  result: CheckinAccountResult,
+): boolean {
+  if (
+    result.status === CHECKIN_RESULT_STATUS.FAILED ||
+    result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+  ) {
+    return true
+  }
+
+  return (
+    result.status === CHECKIN_RESULT_STATUS.SKIPPED &&
+    isAutoCheckinSkipReasonActionable(result.reasonCode)
+  )
+}
+
+/** Counts the results surfaced by the needs-attention preset. */
+export function countAutoCheckinResultsNeedingAttention(
+  results: readonly CheckinAccountResult[],
+): number {
+  return results.filter(isAutoCheckinResultNeedingAttention).length
+}
+
+/** Counts skipped results per semantic reason category. */
+export function countAutoCheckinSkippedCategories(
+  results: readonly CheckinAccountResult[],
+): Record<AutoCheckinSkipCategory, number> {
+  const counts = Object.fromEntries(
+    AUTO_CHECKIN_SKIP_CATEGORIES.map((category) => [category, 0]),
+  ) as Record<AutoCheckinSkipCategory, number>
+
+  for (const result of results) {
+    const category = resolveSkippedResultCategory(result)
+    if (!category) continue
+    counts[category] += 1
+  }
+
+  return counts
 }
 
 /**
@@ -211,19 +335,18 @@ export function getAutoCheckinResultMessage<
 }
 
 /**
- * Applies the result-table status and localized keyword filters.
+ * Applies the result-table filter state and localized keyword filter.
  */
 export function filterAutoCheckinResults(
   results: readonly CheckinAccountResult[],
-  selectedStatuses: readonly CheckinResultStatus[],
+  filter: AutoCheckinResultFilter,
   keyword: string,
   t: TFunction,
 ): CheckinAccountResult[] {
   const normalizedKeyword = keyword.trim().toLowerCase()
-  const selectedStatusSet = new Set(selectedStatuses)
 
   return results.filter((result) => {
-    if (!matchesAutoCheckinResultStatus(result, selectedStatusSet)) return false
+    if (!matchesAutoCheckinResultFilter(result, filter)) return false
     if (!normalizedKeyword) return true
 
     return (
