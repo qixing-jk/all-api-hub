@@ -46,6 +46,7 @@
       "selectedReasons_other": "{{count}} reasons selected",
       "selectedStatuses_one": "{{count}} status selected",
       "selectedStatuses_other": "{{count}} statuses selected",
+      "skipCategoryAccountDisabled": "Account disabled",
       "skipCategoryActionRequired": "Needs your action",
       "skipCategoryDisabled": "Disabled",
       "skipCategoryExpected": "No action needed",

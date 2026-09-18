@@ -44,6 +44,7 @@
       "searchPlaceholder": "Tìm theo tên tài khoản, ID hoặc tin nhắn...",
       "selectedReasons_other": "Đã chọn {{count}} lý do",
       "selectedStatuses_other": "Đã chọn {{count}} trạng thái",
+      "skipCategoryAccountDisabled": "Tài khoản bị vô hiệu hóa",
       "skipCategoryActionRequired": "Cần bạn xử lý",
       "skipCategoryDisabled": "Đã tắt",
       "skipCategoryExpected": "Không cần xử lý",

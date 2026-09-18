@@ -46,6 +46,7 @@
       "selectedReasons_other": "{{count}} Gründe ausgewählt",
       "selectedStatuses_one": "{{count}} Status ausgewählt",
       "selectedStatuses_other": "{{count}} Status ausgewählt",
+      "skipCategoryAccountDisabled": "Konto deaktiviert",
       "skipCategoryActionRequired": "Erfordert deine Aktion",
       "skipCategoryDisabled": "Deaktiviert",
       "skipCategoryExpected": "Keine Aktion nötig",

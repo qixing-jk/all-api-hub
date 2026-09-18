@@ -150,7 +150,9 @@ export default function ResultsTable({
 
   const columnFilters = useMemo<ColumnFiltersState>(
     () =>
-      filter.statuses.length === 0 && filter.skippedCategories.length === 0
+      filter.statuses.length === 0 &&
+      filter.skippedCategories.length === 0 &&
+      filter.reasons.length === 0
         ? []
         : [{ id: "status", value: filter }],
     [filter],

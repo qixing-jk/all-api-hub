@@ -8,7 +8,7 @@ import {
   Search,
   TriangleAlert,
 } from "lucide-react"
-import type { ReactNode } from "react"
+import { Fragment, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Input } from "~/components/ui"
@@ -26,6 +26,7 @@ import {
   countAutoCheckinResults,
   countAutoCheckinResultsNeedingAttention,
   countAutoCheckinSkippedCategories,
+  countAutoCheckinSkippedReasons,
   createNeedsAttentionResultFilter,
   EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
@@ -34,6 +35,8 @@ import {
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
   AUTO_CHECKIN_SKIP_CATEGORIES,
+  AUTO_CHECKIN_SKIP_CATEGORY_REASONS,
+  getAutoCheckinSkipCategory,
   type AutoCheckinSkipCategory,
 } from "~/features/AutoCheckin/utils/skipCategories"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
@@ -48,6 +51,8 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   CHECKIN_RESULT_STATUS,
+  translateAutoCheckinSkipReason,
+  type AutoCheckinSkipReason,
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
@@ -69,10 +74,20 @@ interface StatusFilterOption {
   icon: ReactNode
 }
 
+interface SkipReasonFilterOption {
+  value: AutoCheckinSkipReason
+  label: string
+  count: number
+}
+
 interface SkipCategoryFilterOption {
   value: AutoCheckinSkipCategory
   label: string
   count: number
+  selected: boolean
+  /** Precise reasons this category resolves to, derived from the results. */
+  reasons: SkipReasonFilterOption[]
+  selectedReasonCount: number
 }
 
 const SKIP_CATEGORY_LABEL_KEYS: Record<
@@ -81,9 +96,19 @@ const SKIP_CATEGORY_LABEL_KEYS: Record<
 > = {
   action_required: "execution.filters.skipCategoryActionRequired",
   waiting: "execution.filters.skipCategoryWaiting",
+  account_disabled: "execution.filters.skipCategoryAccountDisabled",
   disabled: "execution.filters.skipCategoryDisabled",
   unsupported: "execution.filters.skipCategoryUnsupported",
   expected: "execution.filters.skipCategoryExpected",
+}
+
+/** Right-aligned count rendered next to a filter entry label. */
+function MenuCount({ count }: { count: number }) {
+  return (
+    <Badge variant="secondary" size="sm" className="ml-auto tabular-nums">
+      {count}
+    </Badge>
+  )
 }
 
 /**
@@ -169,13 +194,15 @@ export default function FilterBar({
   const resolvedCategoryLabels = AUTO_CHECKIN_SKIP_CATEGORIES.filter(
     (category) => filter.skippedCategories.includes(category),
   ).map((category) => t(SKIP_CATEGORY_LABEL_KEYS[category]))
+  const selectedReasonFilterCount =
+    filter.skippedCategories.length + filter.reasons.length
   const categorySummary =
-    filter.skippedCategories.length === 0 || isNeedsAttentionPreset
+    selectedReasonFilterCount === 0 || isNeedsAttentionPreset
       ? null
-      : filter.skippedCategories.length === 1
+      : filter.reasons.length === 0 && filter.skippedCategories.length === 1
         ? resolvedCategoryLabels[0]
         : t("execution.filters.selectedReasons", {
-            count: filter.skippedCategories.length,
+            count: selectedReasonFilterCount,
           })
   const selectedStatusSummary =
     [statusSummary, categorySummary].filter(Boolean).join(" · ") ||
@@ -184,23 +211,46 @@ export default function FilterBar({
   const showsSkipCategories = filter.statuses.includes(
     CHECKIN_RESULT_STATUS.SKIPPED,
   )
-  const skippedCategoryCounts = countAutoCheckinSkippedCategories(
-    filterAutoCheckinResults(
-      accountResults,
-      {
-        statuses: [CHECKIN_RESULT_STATUS.SKIPPED],
-        skippedCategories: [],
-      },
-      keyword,
-      t,
-    ),
+  const skippedResults = filterAutoCheckinResults(
+    accountResults,
+    {
+      statuses: [CHECKIN_RESULT_STATUS.SKIPPED],
+      skippedCategories: [],
+      reasons: [],
+    },
+    keyword,
+    t,
   )
+  const skippedCategoryCounts =
+    countAutoCheckinSkippedCategories(skippedResults)
+  const skippedReasonCounts = countAutoCheckinSkippedReasons(skippedResults)
   const skipCategoryOptions: SkipCategoryFilterOption[] =
-    AUTO_CHECKIN_SKIP_CATEGORIES.map((category) => ({
-      value: category,
-      label: t(SKIP_CATEGORY_LABEL_KEYS[category]),
-      count: skippedCategoryCounts[category],
-    })).filter((option) => option.count > 0)
+    AUTO_CHECKIN_SKIP_CATEGORIES.map((category) => {
+      const reasons = AUTO_CHECKIN_SKIP_CATEGORY_REASONS[category]
+        .filter(
+          (reason) =>
+            skippedReasonCounts[reason] > 0 || filter.reasons.includes(reason),
+        )
+        .map((reason) => ({
+          value: reason,
+          label: translateAutoCheckinSkipReason(t, reason),
+          count: skippedReasonCounts[reason],
+        }))
+
+      return {
+        value: category,
+        label: t(SKIP_CATEGORY_LABEL_KEYS[category]),
+        count: skippedCategoryCounts[category],
+        selected: filter.skippedCategories.includes(category),
+        reasons,
+        selectedReasonCount: reasons.filter((reason) =>
+          filter.reasons.includes(reason.value),
+        ).length,
+      }
+    }).filter(
+      (option) =>
+        option.count > 0 || option.selected || option.selectedReasonCount > 0,
+    )
 
   const trackFilterSelection = (
     mode:
@@ -228,6 +278,7 @@ export default function FilterBar({
     const normalizedFilter: AutoCheckinResultFilter = {
       statuses: [...nextFilter.statuses],
       skippedCategories: [...nextFilter.skippedCategories],
+      reasons: [...nextFilter.reasons],
     }
     onFilterChange(normalizedFilter)
     trackFilterSelection(
@@ -242,30 +293,57 @@ export default function FilterBar({
       : [...filter.statuses, status]
 
     // Manual status selection resets reason narrowing to "every reason".
-    applyFilter({ statuses: nextStatuses, skippedCategories: [] })
-  }
-
-  const toggleSkipCategory = (category: AutoCheckinSkipCategory) => {
-    const nextCategories = filter.skippedCategories.includes(category)
-      ? filter.skippedCategories.filter((value) => value !== category)
-      : [...filter.skippedCategories, category]
-    const nextStatuses = filter.statuses.includes(CHECKIN_RESULT_STATUS.SKIPPED)
-      ? filter.statuses
-      : filter.statuses.length === 0
-        ? [CHECKIN_RESULT_STATUS.SKIPPED]
-        : [...filter.statuses, CHECKIN_RESULT_STATUS.SKIPPED]
-
     applyFilter({
       statuses: nextStatuses,
-      skippedCategories: nextCategories,
+      skippedCategories: [],
+      reasons: [],
     })
   }
 
-  const renderMenuCount = (count: number) => (
-    <Badge variant="secondary" size="sm" className="ml-auto tabular-nums">
-      {count}
-    </Badge>
-  )
+  /** Keeps skipped rows in scope whenever a reason is being narrowed. */
+  const withSkippedStatus = (statuses: CheckinResultStatus[]) => {
+    if (statuses.includes(CHECKIN_RESULT_STATUS.SKIPPED)) return statuses
+    if (statuses.length === 0) return [CHECKIN_RESULT_STATUS.SKIPPED]
+
+    return [...statuses, CHECKIN_RESULT_STATUS.SKIPPED]
+  }
+
+  const toggleSkipCategory = (category: AutoCheckinSkipCategory) => {
+    const isSelected = filter.skippedCategories.includes(category)
+    const nextCategories = isSelected
+      ? filter.skippedCategories.filter((value) => value !== category)
+      : [...filter.skippedCategories, category]
+
+    // A whole category and its precise reasons are one selection, so picking
+    // the category replaces any sub-type that belongs to it.
+    const nextReasons = isSelected
+      ? filter.reasons
+      : filter.reasons.filter(
+          (reason) => getAutoCheckinSkipCategory(reason) !== category,
+        )
+
+    applyFilter({
+      statuses: withSkippedStatus(filter.statuses),
+      skippedCategories: nextCategories,
+      reasons: nextReasons,
+    })
+  }
+
+  const toggleSkipReason = (reason: AutoCheckinSkipReason) => {
+    const isSelected = filter.reasons.includes(reason)
+    const nextReasons = isSelected
+      ? filter.reasons.filter((value) => value !== reason)
+      : [...filter.reasons, reason]
+    const category = getAutoCheckinSkipCategory(reason)
+
+    applyFilter({
+      statuses: withSkippedStatus(filter.statuses),
+      skippedCategories: isSelected
+        ? filter.skippedCategories
+        : filter.skippedCategories.filter((value) => value !== category),
+      reasons: nextReasons,
+    })
+  }
 
   return (
     <TableFilterToolbar
@@ -273,7 +351,7 @@ export default function FilterBar({
       clearLabel={t("execution.filters.clearAll")}
       showClear={isFiltered && filteredCount > 0}
       onClearFilters={() => {
-        onFilterChange({ statuses: [], skippedCategories: [] })
+        onFilterChange({ statuses: [], skippedCategories: [], reasons: [] })
         onKeywordChange("")
         trackFilterSelection(
           keyword.trim()
@@ -328,7 +406,7 @@ export default function FilterBar({
             </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent align="end" className="w-72">
           <DropdownMenuLabel>
             {t("execution.filters.statusLabel")}
           </DropdownMenuLabel>
@@ -337,14 +415,14 @@ export default function FilterBar({
           >
             <List className="h-4 w-4" />
             <span>{t("execution.filters.all")}</span>
-            {renderMenuCount(resultCounts.total)}
+            <MenuCount count={resultCounts.total} />
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => applyFilter(createNeedsAttentionResultFilter())}
           >
             <CircleAlert className="text-destructive-indicator h-4 w-4" />
             <span>{t("execution.filters.needsAttention")}</span>
-            {renderMenuCount(needsAttentionCount)}
+            <MenuCount count={needsAttentionCount} />
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {statusOptions.map((option) => (
@@ -357,7 +435,7 @@ export default function FilterBar({
             >
               {option.icon}
               <span>{option.label}</span>
-              {renderMenuCount(option.count)}
+              <MenuCount count={option.count} />
             </DropdownMenuCheckboxItem>
           ))}
           {showsSkipCategories && skipCategoryOptions.length > 0 ? (
@@ -367,16 +445,36 @@ export default function FilterBar({
                 {t("execution.filters.skipReasonLabel")}
               </DropdownMenuLabel>
               {skipCategoryOptions.map((option) => (
-                <DropdownMenuCheckboxItem
-                  key={option.value}
-                  checked={filter.skippedCategories.includes(option.value)}
-                  onCheckedChange={() => toggleSkipCategory(option.value)}
-                  onSelect={(event) => event.preventDefault()}
-                  aria-label={`${option.label} ${option.count}`}
-                >
-                  <span className="text-muted-foreground">{option.label}</span>
-                  {renderMenuCount(option.count)}
-                </DropdownMenuCheckboxItem>
+                <Fragment key={option.value}>
+                  <DropdownMenuCheckboxItem
+                    checked={option.selected}
+                    onCheckedChange={() => toggleSkipCategory(option.value)}
+                    onSelect={(event) => event.preventDefault()}
+                    aria-label={`${option.label} ${option.count}`}
+                  >
+                    <span className="text-muted-foreground">
+                      {option.label}
+                    </span>
+                    <MenuCount count={option.count} />
+                  </DropdownMenuCheckboxItem>
+                  {option.reasons.length > 1
+                    ? option.reasons.map((reason) => (
+                        <DropdownMenuCheckboxItem
+                          key={reason.value}
+                          className="pl-12 text-xs"
+                          checked={filter.reasons.includes(reason.value)}
+                          onCheckedChange={() => toggleSkipReason(reason.value)}
+                          onSelect={(event) => event.preventDefault()}
+                          aria-label={`${reason.label} ${reason.count}`}
+                        >
+                          <span className="text-muted-foreground">
+                            {reason.label}
+                          </span>
+                          <MenuCount count={reason.count} />
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    : null}
+                </Fragment>
               ))}
             </>
           ) : null}

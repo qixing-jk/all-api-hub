@@ -48,6 +48,7 @@
       "selectedStatuses_one": "{{count}} status selecionado",
       "selectedStatuses_many": "{{count}} status selecionados",
       "selectedStatuses_other": "{{count}} status selecionados",
+      "skipCategoryAccountDisabled": "Conta desativada",
       "skipCategoryActionRequired": "Requer sua ação",
       "skipCategoryDisabled": "Desativado",
       "skipCategoryExpected": "Nenhuma ação necessária",

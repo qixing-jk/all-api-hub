@@ -44,6 +44,7 @@
       "searchPlaceholder": "アカウント名、ID、メッセージで検索...",
       "selectedReasons_other": "{{count}} 件の理由を選択",
       "selectedStatuses_other": "{{count}} 件の状態を選択",
+      "skipCategoryAccountDisabled": "アカウント無効",
       "skipCategoryActionRequired": "対応が必要",
       "skipCategoryDisabled": "無効",
       "skipCategoryExpected": "対応不要",

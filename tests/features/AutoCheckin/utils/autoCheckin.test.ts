@@ -4,6 +4,7 @@ import {
   countAutoCheckinResults,
   countAutoCheckinResultsNeedingAttention,
   countAutoCheckinSkippedCategories,
+  countAutoCheckinSkippedReasons,
   createNeedsAttentionResultFilter,
   EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
@@ -22,6 +23,7 @@ import {
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
@@ -86,6 +88,7 @@ describe("autoCheckin utils", () => {
         {
           statuses: [CHECKIN_RESULT_STATUS.ALREADY_CHECKED],
           skippedCategories: [],
+          reasons: [],
         },
         "",
         vi.fn() as any,
@@ -97,6 +100,7 @@ describe("autoCheckin utils", () => {
         {
           statuses: [CHECKIN_RESULT_STATUS.SUCCESS],
           skippedCategories: [],
+          reasons: [],
         },
         "",
         vi.fn() as any,
@@ -243,7 +247,8 @@ describe("autoCheckin utils", () => {
     const buildFilter = (
       statuses: CheckinResultStatus[],
       skippedCategories: AutoCheckinSkipCategory[] = [],
-    ): AutoCheckinResultFilter => ({ statuses, skippedCategories })
+      reasons: AutoCheckinSkipReason[] = [],
+    ): AutoCheckinResultFilter => ({ statuses, skippedCategories, reasons })
 
     it("matches trimmed keywords against the localized result message", () => {
       const t = vi.fn((key: string) =>
@@ -403,6 +408,7 @@ describe("autoCheckin utils", () => {
       expect(countAutoCheckinSkippedCategories(results)).toEqual({
         [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED]: 1,
         [AUTO_CHECKIN_SKIP_CATEGORY.WAITING]: 1,
+        [AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED]: 0,
         [AUTO_CHECKIN_SKIP_CATEGORY.DISABLED]: 0,
         [AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED]: 0,
         [AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED]: 1,
@@ -447,6 +453,126 @@ describe("autoCheckin utils", () => {
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
       ).toEqual(["skipped-waiting", "failed"])
+    })
+
+    it("narrows skipped results by their precise skip reason", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "skipped-credentials-a",
+          accountName: "Credentials A",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+          timestamp: 4,
+        },
+        {
+          accountId: "skipped-credentials-b",
+          accountName: "Credentials B",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+          timestamp: 3,
+        },
+        {
+          accountId: "skipped-method",
+          accountName: "Method",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-timeout",
+          accountName: "Timeout",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+          timestamp: 2,
+        },
+        {
+          accountId: "skipped-legacy",
+          accountName: "Legacy",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          timestamp: 2,
+        },
+        {
+          accountId: "failed-timeout",
+          accountName: "Failed timeout",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+          timestamp: 1,
+        },
+      ]
+      const noop = vi.fn((key: string) => key) as any
+
+      expect(countAutoCheckinSkippedReasons(results)).toEqual({
+        [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED]: 1,
+        [AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING]: 2,
+        [AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.TIMEOUT]: 1,
+        [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE]: 0,
+      })
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED],
+            [],
+            [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual(["skipped-credentials-a", "skipped-credentials-b"])
+
+      // Sub-types and their parent category combine as one reason selection.
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+            [AUTO_CHECKIN_SKIP_REASON.TIMEOUT],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual([
+        "skipped-credentials-a",
+        "skipped-credentials-b",
+        "skipped-method",
+        "skipped-timeout",
+      ])
+
+      // Reason narrowing stays scoped to skipped rows, and unclassified skips
+      // keep their routine fallback instead of leaking into every subtype.
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.SKIPPED, CHECKIN_RESULT_STATUS.FAILED],
+            [],
+            [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual([
+        "skipped-credentials-a",
+        "skipped-credentials-b",
+        "failed-timeout",
+      ])
     })
 
     it("combines selected result statuses while an empty selection shows all", () => {

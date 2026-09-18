@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  AUTO_CHECKIN_SKIP_CATEGORIES,
   AUTO_CHECKIN_SKIP_CATEGORY,
+  AUTO_CHECKIN_SKIP_CATEGORY_REASONS,
   getAutoCheckinSkipCategory,
 } from "~/features/AutoCheckin/utils/skipCategories"
-import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  AUTO_CHECKIN_SKIP_REASONS,
+} from "~/types/autoCheckin"
 
 describe("auto check-in skip categories", () => {
   it("classifies every known skip reason into one semantic category", () => {
     const expectedCategories = {
       [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED]:
-        AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
+        AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED,
       [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED]:
         AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
       [AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED]:
@@ -54,6 +59,40 @@ describe("auto check-in skip categories", () => {
     for (const [reason, category] of Object.entries(expectedCategories)) {
       expect(getAutoCheckinSkipCategory(reason)).toBe(category)
     }
+  })
+
+  it("groups the shared reason vocabulary without losing entries", () => {
+    expect(Object.keys(AUTO_CHECKIN_SKIP_CATEGORY_REASONS).sort()).toEqual(
+      [...AUTO_CHECKIN_SKIP_CATEGORIES].sort(),
+    )
+
+    const grouped = AUTO_CHECKIN_SKIP_CATEGORIES.flatMap((category) =>
+      AUTO_CHECKIN_SKIP_CATEGORY_REASONS[category].map((reason) => ({
+        category,
+        reason,
+      })),
+    )
+
+    expect(grouped.map(({ reason }) => reason).sort()).toEqual(
+      [...AUTO_CHECKIN_SKIP_REASONS].sort(),
+    )
+    for (const { category, reason } of grouped) {
+      expect(getAutoCheckinSkipCategory(reason)).toBe(category)
+    }
+  })
+
+  it("keeps account-disabled skips distinct from other disabled reasons", () => {
+    expect(
+      getAutoCheckinSkipCategory(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED),
+    ).toBe(AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED)
+    expect(
+      AUTO_CHECKIN_SKIP_CATEGORY_REASONS[
+        AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED
+      ],
+    ).toEqual([AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED])
+    expect(
+      AUTO_CHECKIN_SKIP_CATEGORY_REASONS[AUTO_CHECKIN_SKIP_CATEGORY.DISABLED],
+    ).not.toContain(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED)
   })
 
   it("treats missing or unknown reason codes as uncategorized", () => {

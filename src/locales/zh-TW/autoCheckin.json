@@ -44,6 +44,7 @@
       "searchPlaceholder": "搜尋帳號名稱、ID 或結果訊息...",
       "selectedReasons_other": "已選 {{count}} 個原因",
       "selectedStatuses_other": "已選 {{count}} 類",
+      "skipCategoryAccountDisabled": "帳號已禁用",
       "skipCategoryActionRequired": "需要你處理",
       "skipCategoryDisabled": "已停用",
       "skipCategoryExpected": "無需處理",

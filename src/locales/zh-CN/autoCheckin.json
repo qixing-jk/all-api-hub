@@ -44,6 +44,7 @@
       "searchPlaceholder": "搜索账号名称、ID 或结果信息...",
       "selectedReasons": "已选 {{count}} 个原因",
       "selectedStatuses": "已选 {{count}} 类",
+      "skipCategoryAccountDisabled": "账号已禁用",
       "skipCategoryActionRequired": "需要你处理",
       "skipCategoryDisabled": "已停用",
       "skipCategoryExpected": "无需处理",

@@ -78,6 +78,73 @@ const results: CheckinAccountResult[] = [
   },
 ]
 
+const subtypeResults: CheckinAccountResult[] = [
+  {
+    accountId: "skipped-auth",
+    accountName: "Skipped auth",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    timestamp: 7,
+  },
+  {
+    accountId: "skipped-credentials",
+    accountName: "Skipped credentials",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+    timestamp: 6,
+  },
+  {
+    accountId: "skipped-account-disabled",
+    accountName: "Skipped account disabled",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+    timestamp: 5,
+  },
+  {
+    accountId: "skipped-auto-disabled",
+    accountName: "Skipped auto disabled",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+    timestamp: 4,
+  },
+  {
+    accountId: "skipped-detection-disabled",
+    accountName: "Skipped detection disabled",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED,
+    timestamp: 3,
+  },
+  {
+    accountId: "skipped-already",
+    accountName: "Skipped already",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+    timestamp: 2,
+  },
+  {
+    accountId: "failed",
+    accountName: "Failed",
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    timestamp: 1,
+  },
+]
+
+function StatefulSubtypeFilterBar() {
+  const [filter, setFilter] = useState<AutoCheckinResultFilter>(
+    EMPTY_AUTO_CHECKIN_RESULT_FILTER,
+  )
+
+  return (
+    <FilterBar
+      accountResults={subtypeResults}
+      filter={filter}
+      keyword=""
+      onFilterChange={setFilter}
+      onKeywordChange={vi.fn()}
+    />
+  )
+}
+
 function StatefulFilterBar() {
   const [filter, setFilter] = useState<AutoCheckinResultFilter>(
     EMPTY_AUTO_CHECKIN_RESULT_FILTER,
@@ -103,6 +170,21 @@ async function renderWithEnglishResults() {
   rtlRender(
     <I18nextProvider i18n={i18n}>
       <StatefulFilterBar />
+    </I18nextProvider>,
+  )
+
+  return user
+}
+
+async function renderSubtypeResults() {
+  const i18n = await createResourceTestI18n({
+    en: { autoCheckin: enAutoCheckin },
+  })
+  const user = userEvent.setup()
+
+  rtlRender(
+    <I18nextProvider i18n={i18n}>
+      <StatefulSubtypeFilterBar />
     </I18nextProvider>,
   )
 
@@ -292,6 +374,7 @@ describe("AutoCheckin FilterBar", () => {
         CHECKIN_RESULT_STATUS.SKIPPED,
       ],
       skippedCategories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+      reasons: [],
     })
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -322,6 +405,7 @@ describe("AutoCheckin FilterBar", () => {
               CHECKIN_RESULT_STATUS.SUCCESS,
             ],
             skippedCategories: [],
+            reasons: [],
           }}
           keyword="private"
           onFilterChange={vi.fn()}
@@ -344,6 +428,7 @@ describe("AutoCheckin FilterBar", () => {
           filter={{
             statuses: [CHECKIN_RESULT_STATUS.FAILED],
             skippedCategories: [],
+            reasons: [],
           }}
           keyword="Private"
           onFilterChange={onFilterChange}
@@ -361,6 +446,7 @@ describe("AutoCheckin FilterBar", () => {
     expect(onFilterChange).toHaveBeenCalledWith({
       statuses: [],
       skippedCategories: [],
+      reasons: [],
     })
     expect(onKeywordChange).toHaveBeenCalledWith("")
   })
@@ -374,6 +460,7 @@ describe("AutoCheckin FilterBar", () => {
           filter={{
             statuses: [CHECKIN_RESULT_STATUS.FAILED],
             skippedCategories: [],
+            reasons: [],
           }}
           keyword="private-keyword"
           onFilterChange={vi.fn()}
@@ -390,5 +477,108 @@ describe("AutoCheckin FilterBar", () => {
     expect(
       JSON.stringify(trackProductAnalyticsActionCompletedMock.mock.calls),
     ).not.toContain("private-keyword")
+  })
+
+  it("keeps account-disabled skips as their own reason category", async () => {
+    const user = await renderSubtypeResults()
+    const trigger = screen.getByRole("button", {
+      name: /Filter by execution status/,
+    })
+
+    await user.click(trigger)
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
+    )
+
+    // Account disabling is a user decision, so it gets its own subtype entry
+    // instead of hiding inside the generic disabled bucket.
+    const accountDisabled = screen.getByRole("menuitemcheckbox", {
+      name: /Account disabled 1/,
+    })
+    expect(accountDisabled).toBeVisible()
+
+    // Detection/method switches stay grouped behind one category row while
+    // their precise reasons are listed as sub-types underneath it.
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /^Disabled 2/ }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Auto check-in disabled 1/,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /^Detection disabled 1/ }),
+    ).toBeVisible()
+
+    await user.click(accountDisabled)
+    await user.keyboard("{Escape}")
+
+    expect(trigger).toHaveAccessibleName(
+      "Filter by execution status: Not executed · Account disabled",
+    )
+    expect(screen.getByText("Showing 1 of 7")).toBeVisible()
+  })
+
+  it("lists the precise reasons behind a category and narrows by one", async () => {
+    const user = await renderSubtypeResults()
+    const trigger = screen.getByRole("button", {
+      name: /Filter by execution status/,
+    })
+
+    await user.click(trigger)
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
+    )
+
+    const reasonItem = screen.getByRole("menuitemcheckbox", {
+      name: /Saved credentials are missing.*1/,
+    })
+    expect(reasonItem).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /^Needs your action 2/ }),
+    ).toHaveAttribute("aria-checked", "false")
+    await user.click(reasonItem)
+    await user.keyboard("{Escape}")
+
+    expect(trigger).toHaveAccessibleName(
+      "Filter by execution status: Not executed · 1 reason selected",
+    )
+    expect(screen.getByText("Showing 1 of 7")).toBeVisible()
+  })
+
+  it("swaps between a whole category and its precise reasons", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(
+      screen.getByRole("button", { name: /Filter by execution status/ }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /Saved credentials are missing.*1/,
+      }),
+    )
+
+    const wholeCategory = screen.getByRole("menuitemcheckbox", {
+      name: /^Needs your action 2/,
+    })
+    expect(wholeCategory).toHaveAttribute("aria-checked", "false")
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /Saved credentials are missing.*1/,
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+
+    // Selecting the whole category again drops the precise subtype.
+    await user.click(wholeCategory)
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /Saved credentials are missing.*1/,
+      }),
+    ).toHaveAttribute("aria-checked", "false")
+    expect(wholeCategory).toHaveAttribute("aria-checked", "true")
   })
 })

@@ -1,5 +1,6 @@
 import {
   AUTO_CHECKIN_SKIP_REASON,
+  AUTO_CHECKIN_SKIP_REASONS,
   type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 
@@ -13,7 +14,9 @@ export const AUTO_CHECKIN_SKIP_CATEGORY = {
   ACTION_REQUIRED: "action_required",
   /** Transient failures that the retry queue or a later run can resolve. */
   WAITING: "waiting",
-  /** Skipped because the account, detection, or method is turned off. */
+  /** The account itself is turned off, which is a user decision. */
+  ACCOUNT_DISABLED: "account_disabled",
+  /** Skipped because detection or the selected method is turned off. */
   DISABLED: "disabled",
   /** The site type has no check-in provider for this method. */
   UNSUPPORTED: "unsupported",
@@ -28,6 +31,7 @@ export type AutoCheckinSkipCategory =
 export const AUTO_CHECKIN_SKIP_CATEGORIES = [
   AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
   AUTO_CHECKIN_SKIP_CATEGORY.WAITING,
+  AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED,
   AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
   AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED,
   AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED,
@@ -35,7 +39,7 @@ export const AUTO_CHECKIN_SKIP_CATEGORIES = [
 
 const SKIP_REASON_CATEGORIES = {
   [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED]:
-    AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
+    AUTO_CHECKIN_SKIP_CATEGORY.ACCOUNT_DISABLED,
   [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED]:
     AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
   [AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED]:
@@ -71,6 +75,24 @@ const SKIP_REASON_CATEGORIES = {
   [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]:
     AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
 } as const satisfies Record<AutoCheckinSkipReason, AutoCheckinSkipCategory>
+
+/**
+ * Concrete reason codes per category, in persistence order. Filters and
+ * summaries derive their subtype entries from this map, so a new reason only
+ * needs a category assignment to show up everywhere.
+ */
+export const AUTO_CHECKIN_SKIP_CATEGORY_REASONS: Record<
+  AutoCheckinSkipCategory,
+  readonly AutoCheckinSkipReason[]
+> = AUTO_CHECKIN_SKIP_CATEGORIES.reduce(
+  (groups, category) => {
+    groups[category] = AUTO_CHECKIN_SKIP_REASONS.filter(
+      (reason) => SKIP_REASON_CATEGORIES[reason] === category,
+    )
+    return groups
+  },
+  {} as Record<AutoCheckinSkipCategory, readonly AutoCheckinSkipReason[]>,
+)
 
 /**
  * Resolves the semantic category of a persisted skip reason. Unknown or
