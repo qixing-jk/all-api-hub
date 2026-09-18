@@ -1251,6 +1251,101 @@ describe("resolveManagedSiteChannelMatch", () => {
     )
   })
 
+  it("keeps a shared channel search for the consumers that did not abort", async () => {
+    let resolveSearch: (value: ManagedResourceMatchList) => void = () => {}
+    const searchChannel = vi.fn(
+      () =>
+        new Promise<ManagedResourceMatchList>((resolve) => {
+          resolveSearch = resolve
+        }),
+    )
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search: searchChannel },
+    })
+    const requestCache = createManagedSiteChannelMatchRequestCache()
+    const aborted = new AbortController()
+    const request = {
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4o"],
+      key: "sk-match",
+      requestCache,
+    }
+
+    // Both consumers join the search this batch already started.
+    const abortedResult = resolveManagedSiteChannelMatch({
+      ...request,
+      signal: aborted.signal,
+    })
+    const survivingResult = resolveManagedSiteChannelMatch(request)
+    expect(searchChannel).toHaveBeenCalledTimes(1)
+
+    aborted.abort()
+    await expect(abortedResult).rejects.toThrow()
+    // The shared search must outlive a consumer that gave up on it.
+    expect(requestCache.searchResultsByTargetKey.size).toBe(1)
+
+    resolveSearch({
+      items: [
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(84),
+          key: "sk-match",
+          base_url: "https://api.example.com",
+          models: "gpt-4o",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    })
+
+    await expect(survivingResult).resolves.toMatchObject({
+      key: { matched: true },
+    })
+    expect(searchChannel).toHaveBeenCalledTimes(1)
+  })
+
+  it("reuses a completed channel search for the rest of the batch", async () => {
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(85),
+          key: "sk-match",
+          base_url: "https://api.example.com",
+          models: "gpt-4o",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    })
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search: searchChannel },
+    })
+    const requestCache = createManagedSiteChannelMatchRequestCache()
+    const request = {
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4o"],
+      requestCache,
+    }
+
+    // Keys of one account resolve the same channel list once per batch, however
+    // far apart their lookups run.
+    const matched = await resolveManagedSiteChannelMatch({
+      ...request,
+      key: "sk-match",
+    })
+    const unmatched = await resolveManagedSiteChannelMatch({
+      ...request,
+      key: "sk-other",
+    })
+
+    expect(searchChannel).toHaveBeenCalledTimes(1)
+    expect(matched.key).toMatchObject({ matched: true })
+    expect(unmatched.key).toMatchObject({ matched: false })
+  })
+
   it("evicts failed cached channel searches so later lookups can retry", async () => {
     const requestCache = createManagedSiteChannelMatchRequestCache()
     const searchChannel = vi

@@ -179,6 +179,105 @@ describe("createTaskLimiter", () => {
     expect(events.indexOf("background")).toBeLessThanOrEqual(5)
   })
 
+  it("keeps a free slot for waiting foreground work instead of starting background work", async () => {
+    const limiter = createTaskLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 600,
+      burst: 10,
+    })
+    const events: string[] = []
+    const releases: Array<() => void> = []
+    const hold = (label: string) => async () => {
+      events.push(`${label}:start`)
+      await new Promise<void>((resolve) => {
+        releases.push(resolve)
+      })
+    }
+
+    // Both slots are held by automatic work that outlives the user's request.
+    const background = { priority: "background" } as const
+    const held = [
+      limiter("site", hold("automatic-1"), undefined, background),
+      limiter("site", hold("automatic-2"), undefined, background),
+    ]
+    await flushMicrotasks()
+    expect(events).toEqual(["automatic-1:start", "automatic-2:start"])
+
+    // Six instant foreground turns put the queue in debt to the background
+    // request, which must still leave the last slot to the held seventh one.
+    const foreground = [
+      ...Array.from({ length: 6 }, (_, index) =>
+        limiter("site", async () => {
+          events.push(`user-${index}`)
+        }),
+      ),
+      limiter("site", hold("user-6")),
+    ]
+    const automaticController = new AbortController()
+    const automatic = limiter(
+      "site",
+      hold("automatic-3"),
+      automaticController.signal,
+      background,
+    )
+
+    releases[0]?.()
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(events.filter((event) => event.startsWith("user-"))).toHaveLength(7)
+    expect(events).not.toContain("automatic-3:start")
+
+    automaticController.abort()
+    for (const release of releases) release()
+    await Promise.allSettled([...held, automatic, ...foreground])
+  })
+
+  it("never spends the token a queued foreground request is waiting for", async () => {
+    const limiter = createTaskLimiter({
+      maxConcurrentPerSite: 2,
+      requestsPerMinute: 60,
+      burst: 2,
+    })
+    const dispatchedAt = new Map<string, number>()
+    const releases: Array<() => void> = []
+    const record = (label: string) => () => {
+      dispatchedAt.set(label, Date.now())
+    }
+
+    // Five foreground turns put the queue in debt to background work while more
+    // foreground requests still wait, so every queued foreground request must
+    // keep the refill it is waiting for and the background turn must wait for a
+    // second token instead of spending the reserved one.
+    const foreground = Array.from({ length: 9 }, (_, index) =>
+      limiter("site", async () => {
+        record(`user-${index}`)()
+      }),
+    )
+    const automatic = limiter(
+      "site",
+      async () => {
+        record("automatic")()
+        await new Promise<void>((resolve) => {
+          releases.push(resolve)
+        })
+      },
+      undefined,
+      { priority: "background" },
+    )
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(dispatchedAt.get("user-7")).toBeLessThan(
+      dispatchedAt.get("automatic")!,
+    )
+    expect(dispatchedAt.get("user-8")).toBeLessThan(
+      dispatchedAt.get("automatic")!,
+    )
+
+    releases[0]?.()
+    await Promise.all([...foreground, automatic])
+  })
+
   it("keeps FIFO order for queued same-site work", async () => {
     const limiter = createTaskLimiter({
       maxConcurrentPerSite: 1,

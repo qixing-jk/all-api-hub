@@ -144,6 +144,9 @@ export function useManagedSiteKeyStatuses(
   const check = useCallback(
     async (ids: readonly string[], options: CheckOptions = {}) => {
       if (!supported) return {}
+      // One operation context per scan: every key in it reuses the channel search
+      // and candidate-secret reads that an earlier key's base URL already resolved.
+      const operationContext = createManagedSiteOperationContext()
       const queue = ids.flatMap((id) => {
         const target = targetsRef.current.get(id)
         if (
@@ -156,7 +159,15 @@ export function useManagedSiteKeyStatuses(
         if (options.force) channelKeysRef.current.delete(id)
         const controller = new AbortController()
         controllersRef.current.set(id, controller)
-        return [{ ...target, id, controller, runId: ++nextRunRef.current }]
+        return [
+          {
+            ...target,
+            id,
+            controller,
+            runId: ++nextRunRef.current,
+            operationContext,
+          },
+        ]
       })
       if (!queue.length) return {}
       update({
@@ -193,7 +204,7 @@ export function useManagedSiteKeyStatuses(
                 requestScheduling: {
                   priority: options.force ? "foreground" : "background",
                 },
-                operationContext: createManagedSiteOperationContext(),
+                operationContext: target.operationContext,
                 resolvedChannelKeysByResourceKey:
                   options.resolvedChannelKeysByResourceKey ??
                   channelKeysRef.current.get(target.id),

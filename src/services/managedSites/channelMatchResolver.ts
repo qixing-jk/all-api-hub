@@ -41,9 +41,10 @@ export type ManagedSiteChannelMatchContext = Pick<
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
+  /** Shared reads stay reusable for the life of the batch that owns this cache. */
   searchResultsByTargetKey: Map<
     string,
-    Promise<ManagedResourceMatchList | null>
+    SharedRead<ManagedResourceMatchList | null>
   >
   channelSecretKeysByResourceKey: Map<string, Promise<string>>
   resolvedChannelKeysByResourceKey: Record<string, string>
@@ -61,8 +62,7 @@ function getPendingSearch(
   managedSite: ManagedSiteChannelMatchContext,
   managedConfig: ManagedSiteRuntimeConfigValue,
   searchBaseUrl: string,
-  options: ScheduledReadOptions,
-): Promise<ManagedResourceMatchList | null> {
+): SharedRead<ManagedResourceMatchList | null> {
   let searches = pendingSearches.get(managedSite.matching)
   if (!searches) {
     searches = new Map()
@@ -76,7 +76,7 @@ function getPendingSearch(
     searchBaseUrl,
   ])
   const existing = searches.get(key)
-  if (existing && !existing.signal.aborted) return existing.read(options)
+  if (existing && !existing.signal.aborted) return existing
   const read = new SharedRead<ManagedResourceMatchList | null>(
     async (sharedOptions) => {
       try {
@@ -91,7 +91,7 @@ function getPendingSearch(
     },
   )
   searches.set(key, read)
-  return read.read(options)
+  return read
 }
 
 export const createManagedSiteChannelMatchRequestCache =
@@ -238,31 +238,30 @@ export async function resolveManagedSiteChannelMatch(
     searchBaseUrl,
   ])
 
-  let searchResultsPromise =
-    requestCache?.searchResultsByTargetKey.get(searchCacheKey)
+  // Every consumer of a cached read joins it independently, so one caller's
+  // abort neither cancels the search nor fails the callers still waiting on it.
+  let searchRead = requestCache?.searchResultsByTargetKey.get(searchCacheKey)
 
-  if (!searchResultsPromise) {
-    const cache = requestCache
-    searchResultsPromise = getPendingSearch(
-      managedSite,
-      managedConfig,
-      searchBaseUrl,
-      params,
-    )
-    cache?.searchResultsByTargetKey.set(searchCacheKey, searchResultsPromise)
-    searchResultsPromise.catch(() => {
-      if (
-        cache &&
-        cache.searchResultsByTargetKey.get(searchCacheKey) ===
-          searchResultsPromise
-      ) {
-        cache.searchResultsByTargetKey.delete(searchCacheKey)
-      }
-    })
+  if (!searchRead || searchRead.signal.aborted) {
+    searchRead = getPendingSearch(managedSite, managedConfig, searchBaseUrl)
+    requestCache?.searchResultsByTargetKey.set(searchCacheKey, searchRead)
   }
 
   params.signal?.throwIfAborted()
-  const searchResults = await searchResultsPromise
+  let searchResults: ManagedResourceMatchList | null
+  try {
+    searchResults = await searchRead.read(params)
+  } catch (error) {
+    // A caller's own abort leaves the shared read to its other consumers, but a
+    // failed search is not reusable: a later lookup in this batch retries it.
+    if (
+      !params.signal?.aborted &&
+      requestCache?.searchResultsByTargetKey.get(searchCacheKey) === searchRead
+    ) {
+      requestCache.searchResultsByTargetKey.delete(searchCacheKey)
+    }
+    throw error
+  }
   params.signal?.throwIfAborted()
 
   if (!searchResults) {
