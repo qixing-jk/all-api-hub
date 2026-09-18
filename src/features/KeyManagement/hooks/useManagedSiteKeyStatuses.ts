@@ -146,7 +146,10 @@ export function useManagedSiteKeyStatuses(
       if (!supported) return {}
       // One operation context per scan: every key in it reuses the channel search
       // and candidate-secret reads that an earlier key's base URL already resolved.
-      const operationContext = createManagedSiteOperationContext()
+      // Each scan is also fresh, so it never joins a search that predates its start.
+      const operationContext = createManagedSiteOperationContext({
+        freshChannelSearches: true,
+      })
       const queue = ids.flatMap((id) => {
         const target = targetsRef.current.get(id)
         if (

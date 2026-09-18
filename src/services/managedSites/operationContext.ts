@@ -12,8 +12,11 @@ export interface ManagedSiteOperationContext {
   defaultChannelGroups: ManagedSiteDefaultChannelGroupsCache
 }
 
-export const createManagedSiteOperationContext =
-  (): ManagedSiteOperationContext => ({
-    channelMatch: createManagedSiteChannelMatchRequestCache(),
-    defaultChannelGroups: {},
-  })
+export const createManagedSiteOperationContext = (
+  options: { freshChannelSearches?: boolean } = {},
+): ManagedSiteOperationContext => ({
+  channelMatch: createManagedSiteChannelMatchRequestCache({
+    bypassPendingSearches: options.freshChannelSearches,
+  }),
+  defaultChannelGroups: {},
+})
