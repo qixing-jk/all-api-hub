@@ -1008,6 +1008,10 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   Timeout: "timeout",
   StatusUnavailable: "status_unavailable",
   ExecutionContextInvalid: "execution_context_invalid",
+  CheckinUnconfirmed: "checkin_unconfirmed",
+  CheckinPageUnavailable: "checkin_page_unavailable",
+  SessionBusy: "session_busy",
+  UpstreamError: "upstream_error",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =

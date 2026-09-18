@@ -276,6 +276,8 @@ describe("anyrouterProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "upstream_error",
+        retryable: true,
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: {

@@ -38,6 +38,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 import type {
@@ -352,6 +353,10 @@ const reconcileUncertainResult = async (input: {
       status.availability === CHECK_IN_METHOD_AVAILABILITIES.Enabled
         ? {
             status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+            messageKey: getAutoCheckinSkipReasonTranslationKey(
+              AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+            ),
             retryable: true,
           }
         : { retryable: false }),

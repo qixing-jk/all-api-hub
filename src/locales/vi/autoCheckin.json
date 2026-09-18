@@ -202,6 +202,8 @@
     "already_checked_today": "Hôm nay đã điểm danh",
     "authentication_required": "Phiên đăng nhập đã hết hạn hoặc cần đăng nhập. Hãy đăng nhập vào trang đích rồi thử lại.",
     "auto_checkin_disabled": "Điểm danh tự động đã tắt",
+    "checkin_page_unavailable": "Không thể mở hoặc kích hoạt trang điểm danh của site. Hãy thử lại sau.",
+    "checkin_unconfirmed": "Yêu cầu điểm danh đã được gửi nhưng site chưa xác nhận kết quả. Hãy thử lại sau.",
     "credentials_missing": "Thiếu thông tin xác thực đã lưu. Hãy phát hiện lại tài khoản hoặc cập nhật thông tin xác thực.",
     "detection_disabled": "Phát hiện đã tắt",
     "execution_context_invalid": "Lần chạy này không thể tạo phiên được bảo vệ. Hãy bắt đầu điểm danh lại.",
@@ -214,9 +216,11 @@
     "no_provider": "Loại trang web của tài khoản hiện không hỗ trợ điểm danh",
     "no_selected_method": "Chưa chọn phương thức điểm danh. Hãy phát hiện lại hoặc chọn trong cài đặt tài khoản.",
     "permission_denied": "Trang đích từ chối quyền điểm danh. Hãy đăng nhập lại hoặc kiểm tra quyền tài khoản.",
+    "session_busy": "Một phiên đăng nhập khác đang diễn ra. Hãy thử lại sau.",
     "source_unavailable": "Trang đích tạm thời không khả dụng. Hãy thử lại sau.",
     "status_unavailable": "Không thể xác nhận trạng thái điểm danh hiện tại nên hệ thống không thực hiện điểm danh",
-    "timeout": "Kết nối đã hết thời gian chờ trước khi hoàn tất điểm danh. Hãy thử lại."
+    "timeout": "Kết nối đã hết thời gian chờ trước khi hoàn tất điểm danh. Hãy thử lại.",
+    "upstream_error": "Site trả về kết quả điểm danh không nhận diện được. Hãy thử lại sau."
   },
   "snapshot": {
     "badges": {

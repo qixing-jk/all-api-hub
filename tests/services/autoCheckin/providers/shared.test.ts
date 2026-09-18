@@ -61,13 +61,15 @@ describe("auto-checkin provider error normalization", () => {
     })
   })
 
-  it("does not label an unstructured provider failure as a network problem", () => {
+  it("keeps unstructured provider failures out of the network bucket", () => {
     expect(
       resolveProviderErrorResult({ error: new Error("Invalid response") }),
     ).toEqual({
       status: "failed",
+      reasonCode: "upstream_error",
       rawMessage: "Invalid response",
       messageKey: undefined,
+      retryable: true,
     })
 
     const businessFailure = resolveProviderErrorResult({
@@ -75,9 +77,9 @@ describe("auto-checkin provider error normalization", () => {
     })
     expect(businessFailure).toMatchObject({
       status: "failed",
+      reasonCode: "upstream_error",
       rawMessage: "Database connection failed",
     })
-    expect(businessFailure.reasonCode).toBeUndefined()
   })
 
   it("keeps authentication and permission failures distinct from network problems", () => {
@@ -144,6 +146,7 @@ describe("auto-checkin provider error normalization", () => {
       }),
     ).toEqual({
       status: "uncertain",
+      reasonCode: "upstream_error",
       rawMessage: "Invalid response",
       messageKey: undefined,
     })

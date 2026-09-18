@@ -76,6 +76,7 @@ export function createAgentRouterProvider(
       ) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
           messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
           retryable: false,
         }
@@ -97,6 +98,7 @@ export function createAgentRouterProvider(
             }
           : {
               status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
               messageKey:
                 AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
               retryable: false,
@@ -109,6 +111,7 @@ export function createAgentRouterProvider(
       if (result.status === BROWSER_OAUTH_STATUS.SessionBusy) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY,
           messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.sessionBusy,
           retryable: false,
         }
@@ -126,6 +129,7 @@ export function createAgentRouterProvider(
       }
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
         messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
         retryable: false,
       }

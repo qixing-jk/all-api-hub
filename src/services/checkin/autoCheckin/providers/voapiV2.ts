@@ -26,7 +26,10 @@ import {
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -90,10 +93,14 @@ const runCheckIn = async (
       status: signed
         ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
         : CHECKIN_RESULT_STATUS.FAILED,
+      ...(signed
+        ? {}
+        : { reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR }),
       messageKey: signed
         ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: stats,
+      ...(signed ? {} : { retryable: true }),
     }
   }
 
@@ -101,10 +108,12 @@ const runCheckIn = async (
     status: signed
       ? CHECKIN_RESULT_STATUS.SUCCESS
       : CHECKIN_RESULT_STATUS.FAILED,
+    ...(signed ? {} : { reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR }),
     messageKey: signed
       ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
     data: stats,
+    ...(signed ? {} : { retryable: true }),
   }
 }
 

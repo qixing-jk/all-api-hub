@@ -210,6 +210,8 @@
     "already_checked_today": "Check-in já realizado hoje",
     "authentication_required": "A sessão expirou ou é necessário entrar. Entre no site e tente novamente.",
     "auto_checkin_disabled": "Check-in automático desativado",
+    "checkin_page_unavailable": "Não foi possível abrir ou acionar a página de check-in do site. Tente novamente mais tarde.",
+    "checkin_unconfirmed": "A solicitação de check-in foi enviada, mas o site não confirmou o resultado. Tente novamente mais tarde.",
     "credentials_missing": "As credenciais salvas estão ausentes. Detecte a conta novamente ou atualize as credenciais.",
     "detection_disabled": "Detecção desativada",
     "execution_context_invalid": "Esta execução não conseguiu abrir uma sessão protegida. Inicie o check-in novamente.",
@@ -222,9 +224,11 @@
     "no_provider": "O tipo de site da conta atualmente não suporta check-in",
     "no_selected_method": "Nenhum método de check-in está selecionado. Detecte novamente ou selecione um nas configurações da conta.",
     "permission_denied": "O site negou permissão para o check-in. Entre novamente ou verifique as permissões da conta.",
+    "session_busy": "Já existe outro login em andamento. Tente novamente mais tarde.",
     "source_unavailable": "O site de origem está temporariamente indisponível. Tente novamente mais tarde.",
     "status_unavailable": "Não foi possível confirmar o status atual, portanto o check-in não foi realizado",
-    "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente."
+    "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente.",
+    "upstream_error": "O site retornou um resultado de check-in não reconhecido. Tente novamente mais tarde."
   },
   "snapshot": {
     "badges": {

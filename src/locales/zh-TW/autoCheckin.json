@@ -202,6 +202,8 @@
     "already_checked_today": "今日已簽到",
     "authentication_required": "登入狀態已失效或需要登入。請先登入目標站點，再重試。",
     "auto_checkin_disabled": "自動簽到已關閉",
+    "checkin_page_unavailable": "無法開啟或觸發目標站點的簽到頁面，請稍後重試。",
+    "checkin_unconfirmed": "簽到請求已送出，但目標站點未確認簽到結果，請稍後重試。",
     "credentials_missing": "缺少已儲存的帳號憑證，請重新識別帳號或更新憑證。",
     "detection_disabled": "檢測已關閉",
     "execution_context_invalid": "本次執行未能建立受保護工作階段，請重新發起簽到。",
@@ -214,9 +216,11 @@
     "no_provider": "帳號所屬站點型別暫不支援簽到",
     "no_selected_method": "尚未選擇簽到方式，請在帳號設定中重新偵測或選擇。",
     "permission_denied": "目標站點拒絕了簽到請求，請重新登入或檢查帳號權限。",
+    "session_busy": "另一個登入流程正在進行中，請稍後重試。",
     "source_unavailable": "目標站點暫時無法使用，請稍後重試。",
     "status_unavailable": "暫時無法確認目前簽到狀態，因此未執行簽到",
-    "timeout": "連線逾時，簽到未能完成，請重試。"
+    "timeout": "連線逾時，簽到未能完成，請重試。",
+    "upstream_error": "目標站點回傳了無法識別的簽到結果，請稍後重試。"
   },
   "snapshot": {
     "badges": {

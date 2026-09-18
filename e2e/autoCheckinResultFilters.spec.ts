@@ -58,6 +58,7 @@ const RESULT_CASES: { name: string; result: Partial<CheckinAccountResult> }[] =
       name: "Failed Turnstile Account",
       result: {
         status: "failed",
+        reasonCode: "manual_verification_required",
         messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
         messageParams: { checkInUrl: "https://example.invalid/check-in" },
       },

@@ -537,8 +537,9 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "method_disabled",
+        messageKey: "autoCheckin:providerWong.checkinDisabled",
         rawMessage: "check-in unavailable",
-        messageKey: undefined,
         data: {
           success: false,
           message: "check-in unavailable",
@@ -559,6 +560,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "upstream_error",
+        retryable: true,
         rawMessage: "missing check-in signature header",
         messageKey: undefined,
       })
@@ -567,16 +570,20 @@ describe("newApiProvider", () => {
     })
 
     it.each([
-      "check-in endpoint unsupported",
-      "unauthorized check-in request",
-      "authentication required for check-in",
-      "authenticate before check-in",
-      "permission denied for check-in",
-      "rate limit exceeded for check-in",
-      "too many requests for check-in",
+      ["check-in endpoint unsupported", "no_provider", false],
+      ["unauthorized check-in request", "authentication_required", false],
+      [
+        "authentication required for check-in",
+        "authentication_required",
+        false,
+      ],
+      ["authenticate before check-in", "authentication_required", false],
+      ["permission denied for check-in", "authentication_required", false],
+      ["rate limit exceeded for check-in", "upstream_error", true],
+      ["too many requests for check-in", "upstream_error", true],
     ])(
       "does not use native page check-in for blocked failure message: %s",
-      async (message) => {
+      async (message, expectedReason, retryable) => {
         vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
           success: false,
           message,
@@ -587,6 +594,8 @@ describe("newApiProvider", () => {
 
         expect(result).toEqual({
           status: "failed",
+          reasonCode: expectedReason,
+          retryable,
           rawMessage: message,
           messageKey: undefined,
           data: {
@@ -609,8 +618,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
-        rawMessage: "请求失败: 405",
-        messageKey: undefined,
+        reasonCode: "no_provider",
+        messageKey: "autoCheckin:providerFallback.endpointNotSupported",
       })
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
@@ -632,10 +641,13 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "authentication_required",
         messageKey: "autoCheckin:providerFallback.nativePageIdentityMissing",
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
+        rawMessage: undefined,
+        retryable: false,
         data: { success: false, reason: "identity_missing", identity: null },
       })
     })
@@ -657,10 +669,13 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "authentication_required",
         messageKey: "autoCheckin:providerFallback.nativePageIdentityMismatch",
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
+        rawMessage: undefined,
+        retryable: false,
         data: expect.objectContaining({
           reason: "identity_mismatch",
           expectedUserId: "123",
@@ -743,6 +758,8 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
+        reasonCode: "checkin_page_unavailable",
+        retryable: true,
         status: "failed",
         messageKey: "autoCheckin:providerFallback.nativePageTriggerFailed",
         messageParams: {
@@ -787,6 +804,8 @@ describe("newApiProvider", () => {
         const result = await resultPromise
 
         expect(result.status).toBe("failed")
+        expect(result.reasonCode).toBe("checkin_unconfirmed")
+        expect(result.retryable).toBe(true)
         expect(result.messageKey).toBe(
           "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
         )
@@ -872,6 +891,8 @@ describe("newApiProvider", () => {
 
       await expect(checkInForTest(mockAccount)).resolves.toEqual({
         status: "failed",
+        reasonCode: "checkin_page_unavailable",
+        retryable: true,
         messageKey: "autoCheckin:providerFallback.nativePageTriggerFailed",
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
@@ -1281,6 +1302,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "upstream_error",
+        retryable: true,
         rawMessage: "daily quota exhausted",
         messageKey: undefined,
         data: {
@@ -1310,6 +1333,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "upstream_error",
+        retryable: true,
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: undefined,
@@ -1332,6 +1357,8 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
+        reasonCode: "upstream_error",
+        retryable: true,
         status: "failed",
         rawMessage: "Turnstile token invalid",
         messageKey: "autoCheckin:providerFallback.checkinFailed",
@@ -1358,6 +1385,8 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
+        reasonCode: "upstream_error",
+        retryable: true,
         status: "failed",
         rawMessage: "server rejected assisted replay",
         messageKey: undefined,
@@ -1540,6 +1569,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
+        reasonCode: "manual_verification_required",
+        retryable: false,
         rawMessage: "Turnstile challenge rendered on page",
         messageKey: undefined,
         data: {
@@ -1577,6 +1608,8 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
+        reasonCode: "checkin_page_unavailable",
+        retryable: true,
         status: "failed",
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         rawMessage: "Turnstile token invalid",
@@ -1594,6 +1627,8 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
+        reasonCode: "upstream_error",
+        retryable: true,
         status: "failed",
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",

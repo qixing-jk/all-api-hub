@@ -128,7 +128,11 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.account_disabled",
       "autoCheckin:skipReasons.authentication_required",
       "autoCheckin:skipReasons.credentials_missing",
+      "autoCheckin:skipReasons.checkin_page_unavailable",
+      "autoCheckin:skipReasons.checkin_unconfirmed",
       "autoCheckin:skipReasons.detection_disabled",
+      "autoCheckin:skipReasons.execution_context_invalid",
+      "autoCheckin:skipReasons.manual_verification_required",
       "autoCheckin:skipReasons.method_disabled",
       "autoCheckin:skipReasons.method_not_matched",
       "autoCheckin:skipReasons.method_unavailable",
@@ -136,8 +140,10 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.network_error",
       "autoCheckin:skipReasons.no_selected_method",
       "autoCheckin:skipReasons.permission_denied",
+      "autoCheckin:skipReasons.session_busy",
       "autoCheckin:skipReasons.source_unavailable",
       "autoCheckin:skipReasons.timeout",
+      "autoCheckin:skipReasons.upstream_error",
       "autoCheckin:skipReasons.auto_checkin_disabled",
       "autoCheckin:skipReasons.already_checked_today",
       "autoCheckin:skipReasons.status_unavailable",
@@ -183,6 +189,21 @@ describe("autoCheckin utils", () => {
         timestamp: 1,
       }),
     ).toBe("translated:autoCheckin:skipReasons.authentication_required")
+  })
+
+  it("keeps provider copy when a reason-coded failure has its own message key", () => {
+    const t = vi.fn((key: string) => `translated:${key}`)
+
+    expect(
+      getAutoCheckinResultMessage(t as any, {
+        accountId: "account-1",
+        accountName: "Account",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "manual_verification_required",
+        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        timestamp: 1,
+      }),
+    ).toBe("translated:autoCheckin:providerFallback.turnstileManualRequired")
   })
 
   it("uses the localized unknown fallback when a result has no message", () => {
@@ -600,20 +621,20 @@ describe("autoCheckin utils", () => {
       ).toEqual(["failed-network", "skipped-network"])
     })
 
-    it("classifies legacy results from their presentation key", () => {
+    it("derives reasons only from the persisted reason code", () => {
       const results: CheckinAccountResult[] = [
         {
-          accountId: "failed-endpoint",
-          accountName: "Failed endpoint",
+          accountId: "failed-manual-verification",
+          accountName: "Failed manual verification",
           status: CHECKIN_RESULT_STATUS.FAILED,
-          messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
           timestamp: 3,
         },
         {
-          accountId: "failed-turnstile",
-          accountName: "Failed turnstile",
+          accountId: "failed-upstream",
+          accountName: "Failed upstream",
           status: CHECKIN_RESULT_STATUS.FAILED,
-          messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
           timestamp: 2,
         },
         {
@@ -625,10 +646,9 @@ describe("autoCheckin utils", () => {
       ]
       const noop = vi.fn((key: string) => key) as any
 
-      // Runs persisted before the reason codes existed still classify.
       expect(countAutoCheckinResultReasons(results)).toMatchObject({
-        [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: 1,
         [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]: 1,
+        [AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR]: 1,
       })
       expect(
         filterAutoCheckinResults(
@@ -641,19 +661,19 @@ describe("autoCheckin utils", () => {
           "",
           noop,
         ).map((result) => result.accountId),
-      ).toEqual(["failed-turnstile"])
+      ).toEqual(["failed-manual-verification"])
       expect(
         filterAutoCheckinResults(
           results,
           buildFilter(
             [CHECKIN_RESULT_STATUS.FAILED],
-            [AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.WAITING],
           ),
           "",
           noop,
         ).map((result) => result.accountId),
-      ).toEqual(["failed-endpoint"])
-      // Genuinely unknown failures stay unclassified.
+      ).toEqual(["failed-upstream"])
+      // Rows without a persisted reason stay unclassified.
       expect(
         filterAutoCheckinResults(
           results,
@@ -767,6 +787,10 @@ describe("autoCheckin utils", () => {
         [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING]: 2,
         [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]: 0,
         [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR]: 0,
         [AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR]: 0,
         [AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE]: 0,
         [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]: 0,

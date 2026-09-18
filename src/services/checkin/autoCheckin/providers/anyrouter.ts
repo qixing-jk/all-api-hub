@@ -9,7 +9,10 @@ import {
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import type {
@@ -106,11 +109,13 @@ const checkinAnyRouter = async (
 
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
       rawMessage: rawResponseMessage || undefined,
       messageKey: rawResponseMessage
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: response ?? undefined,
+      retryable: true,
     }
   } catch (error: unknown) {
     return resolveProviderErrorResult({

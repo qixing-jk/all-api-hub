@@ -23,6 +23,7 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
   checkinSuccessful: "autoCheckin:providerFallback.checkinSuccessful",
   checkinFailed: "autoCheckin:providerFallback.checkinFailed",
+  checkinDisabled: "autoCheckin:providerWong.checkinDisabled",
   sessionBusy: "autoCheckin:providerFallback.sessionBusy",
   endpointNotSupported: "autoCheckin:providerFallback.endpointNotSupported",
   unknownError: "autoCheckin:providerFallback.unknownError",
@@ -154,7 +155,7 @@ export function resolveProviderErrorResult(params: {
 
   // Only structured transport status is protocol evidence. A backend message
   // can contain the digits "404" for unrelated business data.
-  if (statusCode === 404) {
+  if (statusCode === 404 || statusCode === 405) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       messageKey:
@@ -181,14 +182,18 @@ export function resolveProviderErrorResult(params: {
     }
   }
 
+  // Nothing matched a known transport or platform cause, so the failure stays
+  // classifiable as a site-side error instead of landing in 未分类.
   return {
     status: mutationResultIsUncertain
       ? CHECKIN_RESULT_STATUS.UNCERTAIN
       : CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
     rawMessage: errorMessage || undefined,
     messageKey: errorMessage
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+    ...(mutationResultIsUncertain ? {} : { retryable: true }),
   }
 }
 

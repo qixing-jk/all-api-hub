@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next"
 
 import {
-  AUTO_CHECKIN_SKIP_REASON,
   AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
@@ -180,29 +179,6 @@ export function countAutoCheckinResults(
 }
 
 /**
- * Presentation keys of results persisted before a matching reason code existed.
- * Deriving the code keeps their classification after the fact.
- */
-const RESULT_MESSAGE_KEY_REASONS: Record<string, AutoCheckinSkipReason> = {
-  "autoCheckin:providerFallback.endpointNotSupported":
-    AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
-  "autoCheckin:providerFallback.turnstileIncognitoAccessRequired":
-    AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-  "autoCheckin:providerFallback.turnstileManualRequired":
-    AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-}
-
-/** Resolves the persisted or implied reason code of a result. */
-function resolveResultReasonCode(
-  result: CheckinAccountResult,
-): AutoCheckinSkipReason | null {
-  if (result.reasonCode) return result.reasonCode
-  if (!result.messageKey) return null
-
-  return RESULT_MESSAGE_KEY_REASONS[result.messageKey] ?? null
-}
-
-/**
  * Resolves the semantic reason category of a result. Unknown or legacy skip
  * reasons keep the routine bucket; other reason-carrying statuses fall back to
  * the unclassified bucket so the reason dimension covers every row, while
@@ -211,7 +187,7 @@ function resolveResultReasonCode(
 function resolveResultReasonCategory(
   result: CheckinAccountResult,
 ): AutoCheckinSkipCategory | null {
-  const category = getAutoCheckinSkipCategory(resolveResultReasonCode(result))
+  const category = getAutoCheckinSkipCategory(result.reasonCode)
   if (category) return category
 
   if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
@@ -248,7 +224,7 @@ function matchesAutoCheckinResultFilter(
     return true
   }
 
-  const reason = resolveResultReasonCode(result)
+  const reason = result.reasonCode ?? null
   if (reason && filter.reason.reasons.includes(reason)) return true
 
   const category = resolveResultReasonCategory(result)
@@ -288,7 +264,7 @@ export function countAutoCheckinResultReasons(
   ) as Record<AutoCheckinSkipReason, number>
 
   for (const result of results) {
-    const reason = resolveResultReasonCode(result)
+    const reason = result.reasonCode
     if (!reason) continue
     counts[reason] += 1
   }
@@ -388,6 +364,13 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.credentials_missing", messageParams)
     case "autoCheckin:skipReasons.detection_disabled":
       return t("autoCheckin:skipReasons.detection_disabled", messageParams)
+    case "autoCheckin:skipReasons.checkin_page_unavailable":
+      return t(
+        "autoCheckin:skipReasons.checkin_page_unavailable",
+        messageParams,
+      )
+    case "autoCheckin:skipReasons.checkin_unconfirmed":
+      return t("autoCheckin:skipReasons.checkin_unconfirmed", messageParams)
     case "autoCheckin:skipReasons.execution_context_invalid":
       return t(
         "autoCheckin:skipReasons.execution_context_invalid",
@@ -420,8 +403,12 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.auto_checkin_disabled", messageParams)
     case "autoCheckin:skipReasons.already_checked_today":
       return t("autoCheckin:skipReasons.already_checked_today", messageParams)
+    case "autoCheckin:skipReasons.session_busy":
+      return t("autoCheckin:skipReasons.session_busy", messageParams)
     case "autoCheckin:skipReasons.status_unavailable":
       return t("autoCheckin:skipReasons.status_unavailable", messageParams)
+    case "autoCheckin:skipReasons.upstream_error":
+      return t("autoCheckin:skipReasons.upstream_error", messageParams)
     case "autoCheckin:skipReasons.no_provider":
       return t("autoCheckin:skipReasons.no_provider", messageParams)
     case "autoCheckin:skipReasons.account_unavailable":
@@ -448,15 +435,15 @@ export function getAutoCheckinResultMessage<
   if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
     return t("autoCheckin:providerFallback.resultPendingConfirmation")
   }
-  if (result.reasonCode) {
-    return translateAutoCheckinSkipReason(t, result.reasonCode)
-  }
   if (result.messageKey) {
     return translateAutoCheckinMessageKey(
       t,
       result.messageKey,
       result.messageParams,
     )
+  }
+  if (result.reasonCode) {
+    return translateAutoCheckinSkipReason(t, result.reasonCode)
   }
   if (result.rawMessage) return result.rawMessage
   if (result.message) return result.message

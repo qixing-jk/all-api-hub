@@ -106,6 +106,7 @@ describe("AgentRouter login check-in", () => {
     authenticate.mockResolvedValue({ status })
     await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
       status: "failed",
+      reasonCode: "upstream_error",
       retryable: false,
     })
   })
@@ -129,10 +130,10 @@ describe("AgentRouter login check-in", () => {
     const result = await provider.checkIn(account(), context)
     expect(result).toMatchObject({
       status: "failed",
+      reasonCode: "session_busy",
       messageKey: "autoCheckin:providerFallback.sessionBusy",
       retryable: false,
     })
-    expect(result).not.toHaveProperty("reasonCode")
   })
 
   it("discovers the canonical deployment using either supported login provider", async () => {

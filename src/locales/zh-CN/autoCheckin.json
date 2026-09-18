@@ -202,6 +202,8 @@
     "already_checked_today": "今日已签到",
     "authentication_required": "登录状态已失效或需要登录。请先登录目标站点，再重试。",
     "auto_checkin_disabled": "自动签到已关闭",
+    "checkin_page_unavailable": "无法打开或触发目标站点的签到页面，请稍后重试。",
+    "checkin_unconfirmed": "签到请求已发出，但目标站点未确认签到结果，请稍后重试。",
     "credentials_missing": "缺少已保存的账号凭据，请重新识别账号或更新凭据。",
     "detection_disabled": "检测已关闭",
     "execution_context_invalid": "本次执行未能建立受保护会话，请重新发起签到。",
@@ -214,9 +216,11 @@
     "no_provider": "账号所属站点类型暂不支持签到",
     "no_selected_method": "尚未选择签到方式，请在账号设置中重新检测或选择。",
     "permission_denied": "目标站点拒绝了签到请求，请重新登录或检查账号权限。",
+    "session_busy": "另一个登录流程正在进行中，请稍后重试。",
     "source_unavailable": "目标站点暂时不可用，请稍后重试。",
     "status_unavailable": "暂时无法确认当前签到状态，因此未执行签到",
-    "timeout": "连接超时，签到未能完成，请重试。"
+    "timeout": "连接超时，签到未能完成，请重试。",
+    "upstream_error": "目标站点返回了无法识别的签到结果，请稍后重试。"
   },
   "snapshot": {
     "badges": {

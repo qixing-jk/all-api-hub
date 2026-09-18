@@ -65,6 +65,10 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   TIMEOUT: "timeout",
   ACCOUNT_UNAVAILABLE: "account_unavailable",
   EXECUTION_CONTEXT_INVALID: "execution_context_invalid",
+  CHECKIN_UNCONFIRMED: "checkin_unconfirmed",
+  CHECKIN_PAGE_UNAVAILABLE: "checkin_page_unavailable",
+  SESSION_BUSY: "session_busy",
+  UPSTREAM_ERROR: "upstream_error",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
@@ -93,8 +97,14 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
     "autoCheckin:skipReasons.credentials_missing",
   [AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED]:
     "autoCheckin:skipReasons.detection_disabled",
+  [AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE]:
+    "autoCheckin:skipReasons.checkin_page_unavailable",
+  [AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED]:
+    "autoCheckin:skipReasons.checkin_unconfirmed",
   [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]:
     "autoCheckin:skipReasons.execution_context_invalid",
+  [AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY]:
+    "autoCheckin:skipReasons.session_busy",
   [AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED]:
     "autoCheckin:skipReasons.manual_verification_required",
   [AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED]:
@@ -117,6 +127,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
   [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE]:
     "autoCheckin:skipReasons.status_unavailable",
   [AUTO_CHECKIN_SKIP_REASON.TIMEOUT]: "autoCheckin:skipReasons.timeout",
+  [AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR]:
+    "autoCheckin:skipReasons.upstream_error",
 }
 
 /**

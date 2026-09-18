@@ -210,6 +210,8 @@
     "already_checked_today": "Ya hizo check-in hoy",
     "authentication_required": "La sesión expiró o es necesario iniciar sesión. Inicia sesión en el sitio y vuelve a intentarlo.",
     "auto_checkin_disabled": "Check-in automático deshabilitado",
+    "checkin_page_unavailable": "No se pudo abrir ni activar la página de check-in del sitio. Inténtalo de nuevo más tarde.",
+    "checkin_unconfirmed": "La solicitud de check-in se envió, pero el sitio no confirmó el resultado. Inténtalo de nuevo más tarde.",
     "credentials_missing": "Faltan las credenciales guardadas. Vuelve a detectar la cuenta o actualiza sus credenciales.",
     "detection_disabled": "Detección deshabilitada",
     "execution_context_invalid": "Esta ejecución no pudo abrir una sesión protegida. Vuelve a iniciar el check-in.",
@@ -222,9 +224,11 @@
     "no_provider": "El tipo de sitio de la cuenta actualmente no admite check-in",
     "no_selected_method": "No hay un método de check-in seleccionado. Vuelve a detectarlo o elige uno en la configuración de la cuenta.",
     "permission_denied": "El sitio rechazó el permiso para hacer check-in. Inicia sesión de nuevo o revisa los permisos de la cuenta.",
+    "session_busy": "Ya hay otro inicio de sesión en curso. Inténtalo de nuevo más tarde.",
     "source_unavailable": "El sitio de origen no está disponible temporalmente. Inténtalo de nuevo más tarde.",
     "status_unavailable": "No se pudo confirmar el estado actual, por lo que no se intentó el check-in",
-    "timeout": "La conexión agotó el tiempo de espera antes de completar el check-in. Vuelve a intentarlo."
+    "timeout": "La conexión agotó el tiempo de espera antes de completar el check-in. Vuelve a intentarlo.",
+    "upstream_error": "El sitio devolvió un resultado de check-in no reconocido. Inténtalo de nuevo más tarde."
   },
   "snapshot": {
     "badges": {

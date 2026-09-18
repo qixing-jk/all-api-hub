@@ -206,6 +206,8 @@
     "already_checked_today": "Already checked today",
     "authentication_required": "Sign-in has expired or is required. Sign in to the site, then try again.",
     "auto_checkin_disabled": "Auto check-in disabled",
+    "checkin_page_unavailable": "The site's check-in page could not be opened or triggered. Try again later.",
+    "checkin_unconfirmed": "The check-in request was sent, but the site did not confirm the result. Try again later.",
     "credentials_missing": "Saved credentials are missing. Re-detect the account or update its credentials.",
     "detection_disabled": "Detection disabled",
     "execution_context_invalid": "This run could not open a protected session. Start the check-in again.",
@@ -218,9 +220,11 @@
     "no_provider": "The account's site type currently does not support check-in",
     "no_selected_method": "No check-in method is selected. Re-detect or select one in account settings.",
     "permission_denied": "The site denied permission to check in. Sign in again or review the account permissions.",
+    "session_busy": "Another login is already in progress. Try again later.",
     "source_unavailable": "The source site is temporarily unavailable. Try again later.",
     "status_unavailable": "The current check-in status could not be confirmed, so no check-in was attempted",
-    "timeout": "The connection timed out before check-in could complete. Try again."
+    "timeout": "The connection timed out before check-in could complete. Try again.",
+    "upstream_error": "The site returned an unrecognized check-in result. Try again later."
   },
   "snapshot": {
     "badges": {
