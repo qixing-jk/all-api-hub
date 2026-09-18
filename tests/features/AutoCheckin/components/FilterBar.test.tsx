@@ -503,6 +503,59 @@ describe("AutoCheckin FilterBar", () => {
     ).toHaveAttribute("aria-checked", "false")
   })
 
+  it("deselects a whole category together with its precise reasons", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(reasonTrigger())
+    const wholeCategory = screen.getByRole("menuitemcheckbox", {
+      name: /^Needs your action 3$/,
+    })
+    await user.click(wholeCategory)
+    expect(wholeCategory).toHaveAttribute("aria-checked", "true")
+
+    await user.click(wholeCategory)
+    expect(wholeCategory).toHaveAttribute("aria-checked", "false")
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Saved credentials are missing.*1$/,
+      }),
+    ).toHaveAttribute("aria-checked", "false")
+
+    await user.keyboard("{Escape}")
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: All reasons",
+    )
+  })
+
+  it("deselects a precise reason without dropping the status filter", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(statusTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Not executed 6$/ }),
+    )
+    await user.keyboard("{Escape}")
+    await user.click(reasonTrigger())
+
+    const preciseReason = screen.getByRole("menuitemcheckbox", {
+      name: /^Saved credentials are missing.*1$/,
+    })
+    await user.click(preciseReason)
+    expect(preciseReason).toHaveAttribute("aria-checked", "true")
+
+    await user.click(preciseReason)
+    expect(preciseReason).toHaveAttribute("aria-checked", "false")
+
+    await user.keyboard("{Escape}")
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: All reasons",
+    )
+    expect(statusTrigger()).toHaveAccessibleName(
+      "Filter by execution status: Not executed",
+    )
+    expect(screen.getByText("Showing 6 of 10")).toBeVisible()
+  })
+
   it("clears the reason selection without touching the status filter", async () => {
     const user = await renderSubtypeResults()
 

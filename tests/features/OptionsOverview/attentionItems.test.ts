@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
 
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_SELECTION_MODES,
+} from "~/constants/checkIn"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -550,12 +556,11 @@ describe("overview attention items", () => {
         problemAccounts: [],
         autoCheckinStatus,
         globalAutomaticExecutionEnabled: true,
-      }).map((item) => item.id),
-    ).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ category: "automation" }),
-      ]),
-    )
+      }).filter(
+        (item) =>
+          item.category === OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
+      ),
+    ).toEqual([])
   })
 
   it("ignores skipped check-ins while the global switch is off", () => {
@@ -576,7 +581,65 @@ describe("overview attention items", () => {
         autoCheckinStatus,
         globalAutomaticExecutionEnabled: false,
       }).map((item) => item.id),
-    ).not.toContain("auto-checkin:skipped-needs-action")
+    ).not.toContain("auto-checkin:account-data-missing")
+  })
+
+  it("skips accounts whose check-in method is already selected", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    const account = buildDisplaySiteData({
+      id: "selected-account",
+      name: "Selected Relay",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: {
+          mode: CHECK_IN_SELECTION_MODES.Automatic,
+          methodId,
+        },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+                evidence: {
+                  source:
+                    CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration,
+                },
+              },
+            },
+          },
+        },
+      }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }).map((item) => item.id),
+    ).not.toContain("checkin:selected-account:method-unresolved")
+  })
+
+  it("ignores site types without a registered check-in method", () => {
+    const account = buildDisplaySiteData({
+      id: "apiyi-account",
+      name: "APIYI Relay",
+      siteType: SITE_TYPES.APIYI,
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }).map((item) => item.id),
+    ).not.toContain("checkin:apiyi-account:method-unresolved")
   })
 
   it("skips the unread announcement item without unread records", () => {
