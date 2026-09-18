@@ -7,14 +7,8 @@ import { cn } from "~/lib/utils"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 
 import type { OptionsOverviewStatusCard } from "../types"
+import { OVERVIEW_SEVERITY_INDICATOR_CLASSES } from "./overviewPresentation"
 import { getStatusCardLabel } from "./statusCardText"
-
-const severityClasses = {
-  error: "bg-destructive-indicator",
-  warning: "bg-warning-indicator",
-  info: "bg-info-indicator",
-  success: "bg-success-indicator",
-} as const
 
 interface OverviewStatusSummaryProps {
   items: OptionsOverviewStatusCard[]
@@ -165,7 +159,7 @@ function StatusMetricContent({
         <span
           className={cn(
             "h-2.5 w-2.5 shrink-0 rounded-full",
-            severityClasses[item.severity],
+            OVERVIEW_SEVERITY_INDICATOR_CLASSES[item.severity],
           )}
         />
         <div className="min-w-0">

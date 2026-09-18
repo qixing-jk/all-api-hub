@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Badge, Card, WorkflowTransitionButton } from "~/components/ui"
 import { cn } from "~/lib/utils"
 
+import { OPTIONS_OVERVIEW_ATTENTION_CATEGORIES } from "../ids"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "../testIds"
 import type { OptionsOverviewAttentionItem } from "../types"
 import {
@@ -14,27 +15,58 @@ import {
   getAttentionSeverityLabel,
   getAttentionTitle,
 } from "./attentionListText"
-import { OVERVIEW_ATTENTION_BADGE_VARIANTS } from "./overviewPresentation"
+import {
+  OVERVIEW_ATTENTION_BADGE_VARIANTS,
+  OVERVIEW_SEVERITY_INDICATOR_CLASSES,
+} from "./overviewPresentation"
 
-type AttentionSeverityFilter = "all" | OptionsOverviewAttentionItem["severity"]
-type AttentionCategoryFilter = "all" | OptionsOverviewAttentionItem["category"]
+const ATTENTION_FILTER_ALL = "all"
+
+type AttentionSeverityFilter =
+  | typeof ATTENTION_FILTER_ALL
+  | OptionsOverviewAttentionItem["severity"]
+type AttentionCategoryFilter =
+  | typeof ATTENTION_FILTER_ALL
+  | OptionsOverviewAttentionItem["category"]
+
+/** Returns whether an item matches the active severity facet. */
+function matchesAttentionSeverity(
+  item: OptionsOverviewAttentionItem,
+  filter: AttentionSeverityFilter,
+): boolean {
+  return filter === ATTENTION_FILTER_ALL || item.severity === filter
+}
+
+/** Returns whether an item matches the active category facet. */
+function matchesAttentionCategory(
+  item: OptionsOverviewAttentionItem,
+  filter: AttentionCategoryFilter,
+): boolean {
+  return filter === ATTENTION_FILTER_ALL || item.category === filter
+}
 
 const ATTENTION_SEVERITY_FILTERS: {
   filter: AttentionSeverityFilter
   indicatorClassName?: string
 }[] = [
-  { filter: "all" },
-  { filter: "error", indicatorClassName: "bg-destructive-indicator" },
-  { filter: "warning", indicatorClassName: "bg-warning-indicator" },
-  { filter: "info", indicatorClassName: "bg-info-indicator" },
+  { filter: ATTENTION_FILTER_ALL },
+  {
+    filter: "error",
+    indicatorClassName: OVERVIEW_SEVERITY_INDICATOR_CLASSES.error,
+  },
+  {
+    filter: "warning",
+    indicatorClassName: OVERVIEW_SEVERITY_INDICATOR_CLASSES.warning,
+  },
+  {
+    filter: "info",
+    indicatorClassName: OVERVIEW_SEVERITY_INDICATOR_CLASSES.info,
+  },
 ]
 
 const ATTENTION_CATEGORY_FILTERS: AttentionCategoryFilter[] = [
-  "all",
-  "accounts",
-  "credentials",
-  "automation",
-  "data",
+  ATTENTION_FILTER_ALL,
+  ...Object.values(OPTIONS_OVERVIEW_ATTENTION_CATEGORIES),
 ]
 
 interface AttentionFilterOption<Filter extends string> {
@@ -133,9 +165,9 @@ export function OverviewAttentionList({
   onNavigate,
 }: OverviewAttentionListProps) {
   const [severityFilter, setSeverityFilter] =
-    useState<AttentionSeverityFilter>("all")
+    useState<AttentionSeverityFilter>(ATTENTION_FILTER_ALL)
   const [categoryFilter, setCategoryFilter] =
-    useState<AttentionCategoryFilter>("all")
+    useState<AttentionCategoryFilter>(ATTENTION_FILTER_ALL)
 
   if (items.length === 0) {
     return (
@@ -159,53 +191,51 @@ export function OverviewAttentionList({
   // to the full queue so the list never renders empty next to a pending count.
   const hasMatchingItem = items.some(
     (item) =>
-      (severityFilter === "all" || item.severity === severityFilter) &&
-      (categoryFilter === "all" || item.category === categoryFilter),
+      matchesAttentionSeverity(item, severityFilter) &&
+      matchesAttentionCategory(item, categoryFilter),
   )
-  const resolvedSeverityFilter = hasMatchingItem ? severityFilter : "all"
-  const resolvedCategoryFilter = hasMatchingItem ? categoryFilter : "all"
+  const resolvedSeverityFilter = hasMatchingItem
+    ? severityFilter
+    : ATTENTION_FILTER_ALL
+  const resolvedCategoryFilter = hasMatchingItem
+    ? categoryFilter
+    : ATTENTION_FILTER_ALL
 
-  const scopedBySeverity = items.filter(
-    (item) =>
-      resolvedSeverityFilter === "all" ||
-      item.severity === resolvedSeverityFilter,
+  const scopedBySeverity = items.filter((item) =>
+    matchesAttentionSeverity(item, resolvedSeverityFilter),
   )
-  const scopedByCategory = items.filter(
-    (item) =>
-      resolvedCategoryFilter === "all" ||
-      item.category === resolvedCategoryFilter,
+  const scopedByCategory = items.filter((item) =>
+    matchesAttentionCategory(item, resolvedCategoryFilter),
   )
 
   // Faceted counts: each row counts within the other row's active selection.
   const severityOptions: AttentionFilterOption<AttentionSeverityFilter>[] =
     ATTENTION_SEVERITY_FILTERS.map((entry) => ({
       ...entry,
-      count: scopedByCategory.filter(
-        (item) => entry.filter === "all" || item.severity === entry.filter,
+      count: scopedByCategory.filter((item) =>
+        matchesAttentionSeverity(item, entry.filter),
       ).length,
       label:
-        entry.filter === "all"
+        entry.filter === ATTENTION_FILTER_ALL
           ? t("optionsOverview:attention.filterAll")
           : getAttentionSeverityLabel(entry.filter, t),
     })).filter((entry) => entry.count > 0)
   const categoryOptions: AttentionFilterOption<AttentionCategoryFilter>[] =
     ATTENTION_CATEGORY_FILTERS.map((filter) => ({
       filter,
-      count: scopedBySeverity.filter(
-        (item) => filter === "all" || item.category === filter,
+      count: scopedBySeverity.filter((item) =>
+        matchesAttentionCategory(item, filter),
       ).length,
       label:
-        filter === "all"
+        filter === ATTENTION_FILTER_ALL
           ? t("optionsOverview:attention.filterAll")
           : getAttentionCategoryLabel(filter, t),
     })).filter((entry) => entry.count > 0)
   const visibleItems = hasMatchingItem
     ? items.filter(
         (item) =>
-          (resolvedSeverityFilter === "all" ||
-            item.severity === resolvedSeverityFilter) &&
-          (resolvedCategoryFilter === "all" ||
-            item.category === resolvedCategoryFilter),
+          matchesAttentionSeverity(item, resolvedSeverityFilter) &&
+          matchesAttentionCategory(item, resolvedCategoryFilter),
       )
     : items
 

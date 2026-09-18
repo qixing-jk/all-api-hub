@@ -30,6 +30,28 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
 } as const
 
 /**
+ * Builds the retryable upstream failure shared by message-only check-in
+ * backends. Backend copy wins when present; the localized generic failure is
+ * the fallback.
+ */
+export function createUpstreamFailureResult(params: {
+  rawMessage?: string
+  data?: unknown
+}): AutoCheckinProviderResult {
+  const rawMessage = params.rawMessage || undefined
+  return {
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    rawMessage,
+    messageKey: rawMessage
+      ? undefined
+      : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+    data: params.data ?? undefined,
+    retryable: true,
+  }
+}
+
+/**
  * Common daily check-in endpoint used by many One-API/New-API family deployments.
  */
 export const AUTO_CHECKIN_USER_CHECKIN_ENDPOINT = "/api/user/checkin" as const

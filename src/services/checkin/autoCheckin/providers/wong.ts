@@ -28,6 +28,7 @@ import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/provide
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  createUpstreamFailureResult,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
@@ -148,16 +149,10 @@ async function checkinWongGongyi(
       }
     }
 
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-      rawMessage: responseMessage || undefined,
-      messageKey: responseMessage
-        ? undefined
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: checkinResponse ?? undefined,
-      retryable: true,
-    }
+    return createUpstreamFailureResult({
+      rawMessage: responseMessage,
+      data: checkinResponse,
+    })
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,

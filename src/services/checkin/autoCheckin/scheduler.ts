@@ -1295,16 +1295,11 @@ class AutoCheckinScheduler {
         } catch (error) {
           // An unexpected throw never dispatched a mutation, so it is a plain
           // failure that still has to carry a filterable reason.
-          const resolved = resolveProviderErrorResult({
-            error,
-            mutationDispatched: false,
-          })
-          const reasonCode =
-            "reasonCode" in resolved ? resolved.reasonCode : undefined
-          const messageKey =
-            "messageKey" in resolved ? resolved.messageKey : undefined
-          const messageParams =
-            "messageParams" in resolved ? resolved.messageParams : undefined
+          const { reasonCode, messageKey, messageParams } =
+            resolveProviderErrorResult({
+              error,
+              mutationDispatched: false,
+            })
           return {
             result: {
               accountId: account.id,

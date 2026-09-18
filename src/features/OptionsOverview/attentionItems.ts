@@ -7,10 +7,7 @@ import {
   getTempWindowFallbackSettingsTab,
   isTempWindowFallbackReminderCode,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
-import {
-  AUTO_CHECKIN_SKIP_CATEGORY,
-  getAutoCheckinSkipCategory,
-} from "~/features/AutoCheckin/utils/skipCategories"
+import { isAutoCheckinSkipReasonActionable } from "~/features/AutoCheckin/utils/skipCategories"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
 import {
@@ -299,14 +296,9 @@ function collectSkippedReasonCounts(
 
   for (const result of results) {
     if (result.status !== CHECKIN_RESULT_STATUS.SKIPPED) continue
-    if (
-      getAutoCheckinSkipCategory(result.reasonCode) !==
-      AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED
-    ) {
-      continue
-    }
+    const reason = result.reasonCode
+    if (!isAutoCheckinSkipReasonActionable(reason)) continue
 
-    const reason = result.reasonCode as AutoCheckinSkipReason
     counts.set(reason, (counts.get(reason) ?? 0) + 1)
   }
 

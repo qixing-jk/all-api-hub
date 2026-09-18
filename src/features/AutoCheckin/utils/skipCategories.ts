@@ -126,7 +126,7 @@ export function getAutoCheckinSkipCategory(
 /** Returns whether the skip reason needs an explicit user step. */
 export function isAutoCheckinSkipReasonActionable(
   reasonCode: string | null | undefined,
-): boolean {
+): reasonCode is AutoCheckinSkipReason {
   return (
     getAutoCheckinSkipCategory(reasonCode) ===
     AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED

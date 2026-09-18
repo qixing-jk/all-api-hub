@@ -16,6 +16,7 @@ import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createUpstreamFailureResult,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
@@ -24,10 +25,7 @@ import {
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import {
-  AUTO_CHECKIN_SKIP_REASON,
-  CHECKIN_RESULT_STATUS,
-} from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -156,16 +154,10 @@ async function checkinVeloera(
       // Preserve the original mutation failure if best-effort readback fails.
     }
 
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-      rawMessage: responseMessage || undefined,
-      messageKey: responseMessage
-        ? undefined
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: response ?? undefined,
-      retryable: true,
-    }
+    return createUpstreamFailureResult({
+      rawMessage: responseMessage,
+      data: response,
+    })
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,

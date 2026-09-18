@@ -30,6 +30,17 @@ export const AUTO_CHECKIN_REASON_FILTERABLE_STATUSES = [
 export type AutoCheckinReasonFilterableStatus =
   (typeof AUTO_CHECKIN_REASON_FILTERABLE_STATUSES)[number]
 
+const REASON_FILTERABLE_STATUS_SET = new Set<string>(
+  AUTO_CHECKIN_REASON_FILTERABLE_STATUSES,
+)
+
+/** Narrows a result status to the subset that persists a reason code. */
+function isReasonFilterableStatus(
+  status: CheckinResultStatus,
+): status is AutoCheckinReasonFilterableStatus {
+  return REASON_FILTERABLE_STATUS_SET.has(status)
+}
+
 /**
  * Reason narrowing shared by every reason-carrying status. Categories and the
  * precise reasons behind them are one selection; `appliesTo` records which
@@ -194,9 +205,7 @@ function resolveResultReasonCategory(
     return AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
   }
 
-  return AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.includes(
-    result.status as AutoCheckinReasonFilterableStatus,
-  )
+  return isReasonFilterableStatus(result.status)
     ? AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED
     : null
 }
@@ -214,12 +223,8 @@ function matchesAutoCheckinResultFilter(
   }
   if (!isAutoCheckinReasonFilterActive(filter)) return true
   if (
-    !AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.includes(
-      result.status as AutoCheckinReasonFilterableStatus,
-    ) ||
-    !filter.reason.appliesTo.includes(
-      result.status as AutoCheckinReasonFilterableStatus,
-    )
+    !isReasonFilterableStatus(result.status) ||
+    !filter.reason.appliesTo.includes(result.status)
   ) {
     return true
   }
