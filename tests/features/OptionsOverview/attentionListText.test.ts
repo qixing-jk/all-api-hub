@@ -167,6 +167,34 @@ describe("attention list text helpers", () => {
     )
   })
 
+  it("forwards aggregate attention totals as plural counts", () => {
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+
+    getAttentionTitle(
+      createAttentionItem({
+        kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending,
+        titleOptions: { total: 3 },
+      }),
+      t,
+    )
+    getAttentionDescription(
+      createAttentionItem({
+        kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled,
+        descriptionOptions: { total: 2 },
+      }),
+      t,
+    )
+
+    expect(t).toHaveBeenCalledWith(
+      "optionsOverview:attention.usageRefreshPending.title",
+      { count: 3 },
+    )
+    expect(t).toHaveBeenCalledWith(
+      "optionsOverview:attention.autoCheckinGloballyDisabled.description",
+      { count: 2 },
+    )
+  })
+
   it("resolves attention descriptions and forwards description options", () => {
     const t = vi.fn((key: string) => key) as unknown as TFunction
     const descriptionOptions = { reason: "sync failed" }
@@ -335,6 +363,14 @@ describe("attention list text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:attention.actions.handleCheckIn")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinNeedsAttention,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.viewCheckIn")
     expect(
       getAttentionActionLabel(
         createAttentionItem({

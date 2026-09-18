@@ -889,6 +889,22 @@ describe("autoCheckin utils", () => {
         ),
       ).toEqual(results)
     })
+    it("ignores persisted reason codes this build does not know", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "legacy",
+          accountName: "Legacy",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: "legacy:unknown-reason" as AutoCheckinSkipReason,
+          timestamp: 1,
+        },
+      ]
+
+      const counts = countAutoCheckinResultReasons(results)
+
+      expect(Object.hasOwn(counts, "legacy:unknown-reason")).toBe(false)
+      expect(Object.values(counts).every(Number.isFinite)).toBe(true)
+    })
   })
 
   describe("isNoTabWithIdMessage", () => {

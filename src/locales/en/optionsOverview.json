@@ -5,7 +5,8 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "Disabled accounts are skipped by refresh, check-in, and other automation. Re-enable the ones you still use.",
-      "title": "All {{total}} account(s) are disabled"
+      "title_one": "The only account is disabled",
+      "title_other": "All {{count}} accounts are disabled"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +40,14 @@
       "title": "No API profiles yet"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} account(s) have automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
+      "description_one": "{{count}} account has automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
+      "description_other": "{{count}} accounts have automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
       "title": "Automatic check-in is off globally"
     },
     "autoCheckinNeedsAttention": {
       "description": "The latest run had failures or unconfirmed results. Open auto check-in to review the reasons and retry.",
-      "title": "Automatic check-in needs attention for {{total}} account(s)"
+      "title_one": "Automatic check-in needs attention for {{count}} account",
+      "title_other": "Automatic check-in needs attention for {{count}} accounts"
     },
     "categories": {
       "accounts": "Accounts",
@@ -55,7 +58,8 @@
     "categoryFilterLabel": "Category",
     "checkInAccountDataMissing": {
       "description": "Saved credentials or account details are incomplete. Re-detect the account in Accounts, then try check-in again.",
-      "title": "{{total}} account(s) are missing saved sign-in data"
+      "title_one": "{{count}} account is missing saved sign-in data",
+      "title_other": "{{count}} accounts are missing saved sign-in data"
     },
     "checkInMethodUnresolved": {
       "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
@@ -63,11 +67,13 @@
     },
     "checkInPermissionDenied": {
       "description": "The site rejected the check-in request. Sign in again or review the account permissions before retrying.",
-      "title": "{{total}} account(s) were denied during check-in"
+      "title_one": "{{count}} account was denied during check-in",
+      "title_other": "{{count}} accounts were denied during check-in"
     },
     "checkInReloginRequired": {
       "description": "The latest run skipped these accounts because the site sign-in expired. Sign in on the site, then run check-in again.",
-      "title": "{{total}} account(s) need a new sign-in"
+      "title_one": "{{count}} account needs a new sign-in",
+      "title_other": "{{count}} accounts need a new sign-in"
     },
     "filterAll": "All",
     "severityFilterLabel": "Severity",
@@ -76,14 +82,17 @@
       "title": "{{name}} has an unknown site type"
     },
     "sortHint": "Sorted by impact",
-    "summary": "{{total}} pending",
+    "summary_one": "{{count}} pending",
+    "summary_other": "{{count}} pending",
     "unreadSiteAnnouncements": {
       "description": "Open site announcements to mark them as read and avoid missing maintenance or risk notices.",
-      "title": "{{total}} unread site announcement(s)"
+      "title_one": "{{count}} unread site announcement",
+      "title_other": "{{count}} unread site announcements"
     },
     "usageRefreshPending": {
       "description": "Refresh accounts to complete today's request, token, and cost statistics.",
-      "title": "{{total}} account(s) need a stats refresh"
+      "title_one": "{{count}} account needs a stats refresh",
+      "title_other": "{{count}} accounts need a stats refresh"
     }
   },
   "autoCheckin": {

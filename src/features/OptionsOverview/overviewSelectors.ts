@@ -76,9 +76,9 @@ export function buildOptionsOverviewViewModel(
   const usageSnapshot = buildUsageSnapshot(input.accountStats, input.usageStore)
   const globalAutomaticExecutionEnabled =
     input.preferences?.autoCheckin?.globalEnabled !== false
-  const usageRefreshPendingCount = usageSnapshot.hasUsageData
-    ? resolveUsageRefreshPendingCount(input.accountStats.todayStatsCoverage)
-    : 0
+  const usageRefreshPendingCount = resolveUsageRefreshPendingCount(
+    input.accountStats.todayStatsCoverage,
+  )
   const unreadAnnouncementCount = input.siteAnnouncementRecords.filter(
     (record) => !record.read,
   ).length

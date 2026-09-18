@@ -5,7 +5,7 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "Tài khoản đã tắt sẽ không tham gia làm mới, điểm danh và các tự động hóa khác. Hãy bật lại những tài khoản bạn còn dùng.",
-      "title": "Tất cả {{total}} tài khoản đều đã tắt"
+      "title_other": "Tất cả {{count}} tài khoản đều đã tắt"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +39,12 @@
       "title": "Chưa có hồ sơ API"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} tài khoản đã bật điểm danh tự động nhưng sẽ không chạy khi công tắc toàn cục đang tắt. Hãy bật lại trong cài đặt điểm danh.",
+      "description_other": "{{count}} tài khoản đã bật điểm danh tự động nhưng sẽ không chạy khi công tắc toàn cục đang tắt. Hãy bật lại trong cài đặt điểm danh.",
       "title": "Điểm danh tự động đang tắt toàn cục"
     },
     "autoCheckinNeedsAttention": {
       "description": "Lần chạy gần nhất có lỗi hoặc kết quả chưa được xác nhận. Hãy mở trang điểm danh tự động để xem nguyên nhân và thử lại.",
-      "title": "{{total}} tài khoản cần xử lý điểm danh"
+      "title_other": "{{count}} tài khoản cần xử lý điểm danh"
     },
     "categories": {
       "accounts": "Tài khoản",
@@ -55,7 +55,7 @@
     "categoryFilterLabel": "Danh mục",
     "checkInAccountDataMissing": {
       "description": "Thông tin đăng nhập hoặc dữ liệu tài khoản chưa đầy đủ. Hãy nhận diện lại tài khoản trong Quản lý tài khoản rồi thử lại.",
-      "title": "{{total}} tài khoản thiếu dữ liệu đăng nhập đã lưu"
+      "title_other": "{{count}} tài khoản thiếu dữ liệu đăng nhập đã lưu"
     },
     "checkInMethodUnresolved": {
       "description": "Điểm danh tự động đã bật nhưng chưa có phương thức khả dụng. Trong Tài khoản, hãy phát hiện lại hoặc chọn phương thức trước lần chạy tiếp theo.",
@@ -63,11 +63,11 @@
     },
     "checkInPermissionDenied": {
       "description": "Trang đã từ chối yêu cầu điểm danh. Hãy đăng nhập lại hoặc kiểm tra quyền của tài khoản trước khi thử lại.",
-      "title": "{{total}} tài khoản bị từ chối khi điểm danh"
+      "title_other": "{{count}} tài khoản bị từ chối khi điểm danh"
     },
     "checkInReloginRequired": {
       "description": "Lần chạy gần nhất đã bỏ qua các tài khoản này vì phiên đăng nhập đã hết hạn. Hãy đăng nhập lại trên trang rồi chạy điểm danh lại.",
-      "title": "{{total}} tài khoản cần đăng nhập lại"
+      "title_other": "{{count}} tài khoản cần đăng nhập lại"
     },
     "filterAll": "Tất cả",
     "severityFilterLabel": "Mức độ",
@@ -76,14 +76,14 @@
       "title": "{{name}} có loại trang web không xác định"
     },
     "sortHint": "Sắp xếp theo mức ảnh hưởng",
-    "summary": "{{total}} việc cần xử lý",
+    "summary_other": "{{count}} việc cần xử lý",
     "unreadSiteAnnouncements": {
       "description": "Mở thông báo trang để đánh dấu đã đọc và tránh bỏ lỡ thông tin bảo trì hoặc rủi ro.",
-      "title": "{{total}} thông báo trang chưa đọc"
+      "title_other": "{{count}} thông báo trang chưa đọc"
     },
     "usageRefreshPending": {
       "description": "Làm mới tài khoản để hoàn tất thống kê yêu cầu, token và chi phí hôm nay.",
-      "title": "{{total}} tài khoản cần làm mới thống kê hôm nay"
+      "title_other": "{{count}} tài khoản cần làm mới thống kê hôm nay"
     }
   },
   "autoCheckin": {

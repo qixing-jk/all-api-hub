@@ -9,6 +9,12 @@ import type {
 type AttentionKind = OptionsOverviewAttentionItem["kind"]
 type AttentionSeverity = OptionsOverviewAttentionItem["severity"]
 
+/** Reads the aggregate total an item passes as its i18next plural count. */
+function resolveAttentionCount(item: OptionsOverviewAttentionItem): number {
+  const total = item.titleOptions?.total ?? item.descriptionOptions?.total
+  return typeof total === "number" ? total : 0
+}
+
 const severityLabelResolvers = {
   error: (t: TFunction) => t("optionsOverview:severity.error"),
   warning: (t: TFunction) => t("optionsOverview:severity.warning"),
@@ -49,15 +55,16 @@ const attentionTitleResolvers = {
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.autoCheckinNeedsAttention.title",
-      item.titleOptions,
-    ),
+    t("optionsOverview:attention.autoCheckinNeedsAttention.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.usageRefreshPending]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t("optionsOverview:attention.usageRefreshPending.title", item.titleOptions),
+    t("optionsOverview:attention.usageRefreshPending.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.autoCheckinGloballyDisabled]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -70,39 +77,37 @@ const attentionTitleResolvers = {
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.unreadSiteAnnouncements.title",
-      item.titleOptions,
-    ),
+    t("optionsOverview:attention.unreadSiteAnnouncements.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.checkInReloginRequired.title",
-      item.titleOptions,
-    ),
+    t("optionsOverview:attention.checkInReloginRequired.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.checkInAccountDataMissing.title",
-      item.titleOptions,
-    ),
+    t("optionsOverview:attention.checkInAccountDataMissing.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.checkInPermissionDenied.title",
-      item.titleOptions,
-    ),
+    t("optionsOverview:attention.checkInPermissionDenied.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t("optionsOverview:attention.accountsAllDisabled.title", item.titleOptions),
+    t("optionsOverview:attention.accountsAllDisabled.title", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -169,10 +174,9 @@ const attentionDescriptionResolvers = {
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
-    t(
-      "optionsOverview:attention.autoCheckinGloballyDisabled.description",
-      item.descriptionOptions,
-    ),
+    t("optionsOverview:attention.autoCheckinGloballyDisabled.description", {
+      count: resolveAttentionCount(item),
+    }),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,

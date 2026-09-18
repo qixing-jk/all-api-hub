@@ -5,7 +5,7 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "已禁用账号不会参与刷新、签到等自动化，请按需重新启用。",
-      "title": "{{total}} 个账号均已禁用"
+      "title": "{{count}} 个账号均已禁用"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +39,12 @@
       "title": "还没有 API 凭据"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} 个账号已开启自动签到，但全局开关关闭后不会执行。请在签到设置中重新开启。",
+      "description": "{{count}} 个账号已开启自动签到，但全局开关关闭后不会执行。请在签到设置中重新开启。",
       "title": "自动签到已全局关闭"
     },
     "autoCheckinNeedsAttention": {
       "description": "最近一次运行中有失败或结果待确认。前往自动签到查看原因并重试。",
-      "title": "{{total}} 个账号的自动签到未完成"
+      "title": "{{count}} 个账号的自动签到未完成"
     },
     "categories": {
       "accounts": "账号",
@@ -55,7 +55,7 @@
     "categoryFilterLabel": "类别",
     "checkInAccountDataMissing": {
       "description": "保存的凭据或账号数据不完整，请在账号管理中重新识别后再签到。",
-      "title": "{{total}} 个账号缺少登录数据"
+      "title": "{{count}} 个账号缺少登录数据"
     },
     "checkInMethodUnresolved": {
       "description": "自动签到已开启，但当前还没有可用的签到方式。请在账号管理中重新检测或选择签到方式后再运行。",
@@ -63,11 +63,11 @@
     },
     "checkInPermissionDenied": {
       "description": "站点拒绝了签到请求，请重新登录或检查账号权限后重试。",
-      "title": "{{total}} 个账号的签到请求被拒绝"
+      "title": "{{count}} 个账号的签到请求被拒绝"
     },
     "checkInReloginRequired": {
       "description": "最近一次运行因登录状态失效跳过了这些账号。请在站点重新登录后再签到。",
-      "title": "{{total}} 个账号需要重新登录"
+      "title": "{{count}} 个账号需要重新登录"
     },
     "filterAll": "全部",
     "severityFilterLabel": "严重度",
@@ -76,14 +76,14 @@
       "title": "{{name}} 的站点类型未知"
     },
     "sortHint": "按影响程度排序",
-    "summary": "{{total}} 项待处理",
+    "summary": "{{count}} 项待处理",
     "unreadSiteAnnouncements": {
       "description": "查看站点公告后可标记为已读，避免遗漏站点维护或风险通知。",
-      "title": "{{total}} 条站点公告未读"
+      "title": "{{count}} 条站点公告未读"
     },
     "usageRefreshPending": {
       "description": "刷新账号后即可补齐今日请求、Token 和消耗统计。",
-      "title": "{{total}} 个账号的今日统计待刷新"
+      "title": "{{count}} 个账号的今日统计待刷新"
     }
   },
   "autoCheckin": {

@@ -5,7 +5,7 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "無効なアカウントは更新やチェックインなどの自動処理の対象外です。必要に応じて有効にしてください。",
-      "title": "{{total}} 件のアカウントがすべて無効です"
+      "title_other": "{{count}} 件のアカウントがすべて無効です"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +39,12 @@
       "title": "API 認証情報がありません"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} 件のアカウントで自動チェックインが有効ですが、全体スイッチが無効のため実行されません。チェックイン設定で再度有効にしてください。",
+      "description_other": "{{count}} 件のアカウントで自動チェックインが有効ですが、全体スイッチが無効のため実行されません。チェックイン設定で再度有効にしてください。",
       "title": "自動チェックインは全体で無効です"
     },
     "autoCheckinNeedsAttention": {
       "description": "前回の実行で失敗または未確認の結果があります。自動チェックインを開いて原因を確認し、再試行してください。",
-      "title": "{{total}} 件のアカウントでチェックインの確認が必要です"
+      "title_other": "{{count}} 件のアカウントでチェックインの確認が必要です"
     },
     "categories": {
       "accounts": "アカウント",
@@ -55,7 +55,7 @@
     "categoryFilterLabel": "カテゴリ",
     "checkInAccountDataMissing": {
       "description": "保存された資格情報またはアカウント情報が不完全です。アカウント管理で再検出してから再実行してください。",
-      "title": "{{total}} 件のアカウントで保存済みログイン情報が不足しています"
+      "title_other": "{{count}} 件のアカウントで保存済みログイン情報が不足しています"
     },
     "checkInMethodUnresolved": {
       "description": "自動チェックインは有効ですが、利用できる方法がまだありません。アカウント管理で方法を再検出または選択してから実行してください。",
@@ -63,11 +63,11 @@
     },
     "checkInPermissionDenied": {
       "description": "サイトがチェックイン要求を拒否しました。再ログインまたは権限の確認後に再試行してください。",
-      "title": "{{total}} 件のアカウントでチェックインが拒否されました"
+      "title_other": "{{count}} 件のアカウントでチェックインが拒否されました"
     },
     "checkInReloginRequired": {
       "description": "直近の実行ではログインの有効期限が切れていたためスキップされました。サイトに再ログインしてから再実行してください。",
-      "title": "{{total}} 件のアカウントで再ログインが必要です"
+      "title_other": "{{count}} 件のアカウントで再ログインが必要です"
     },
     "filterAll": "すべて",
     "severityFilterLabel": "重大度",
@@ -76,14 +76,14 @@
       "title": "{{name}} のサイト種別が不明です"
     },
     "sortHint": "影響度順",
-    "summary": "{{total}} 件の未処理",
+    "summary_other": "{{count}} 件の未処理",
     "unreadSiteAnnouncements": {
       "description": "サイトのお知らせを開くと既読になり、メンテナンスやリスクの通知を見落としにくくなります。",
-      "title": "未読のサイトお知らせが {{total}} 件あります"
+      "title_other": "未読のサイトお知らせが {{count}} 件あります"
     },
     "usageRefreshPending": {
       "description": "アカウントを更新すると、今日のリクエスト、Token、消費統計が補完されます。",
-      "title": "{{total}} 件のアカウントで今日の統計を更新してください"
+      "title_other": "{{count}} 件のアカウントで今日の統計を更新してください"
     }
   },
   "autoCheckin": {

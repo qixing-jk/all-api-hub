@@ -1250,6 +1250,34 @@ describe("Options overview selectors", () => {
     )
   })
 
+  it("surfaces pending stats refresh when only legacy coverage remains", () => {
+    const statsWithLegacyOnly = buildAccountStats({
+      todayStatsCoverage: {
+        ...emptyStats.todayStatsCoverage,
+        requests: {
+          ...emptyStats.todayStatsCoverage.requests,
+          legacyUnclassifiedCount: 1,
+        },
+      },
+    })
+
+    const view = buildOptionsOverviewViewModel({
+      accounts: [healthyAccount],
+      displayData: [healthyDisplayData],
+      accountStats: statsWithLegacyOnly,
+      apiCredentialProfiles: [profile],
+      usageStore: emptyUsageStore,
+      preferences: basePreferences,
+      managedSiteType: undefined,
+      autoCheckinStatus: null,
+      ...baseOverviewInput,
+    })
+
+    expect(view.attentionItems.map((item) => item.id)).toContain(
+      "usage:pending-refresh",
+    )
+  })
+
   it("surfaces paused check-in accounts and unread announcements as pending work", () => {
     const pausedAccount: SiteAccount = {
       ...healthyAccount,

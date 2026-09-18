@@ -24,7 +24,9 @@ describe("OverviewAttentionList", () => {
       target,
     }
     const t = ((key: string, options?: Record<string, unknown>) =>
-      options ? `${key}:${String(options.total ?? "")}` : key) as TFunction
+      options
+        ? `${key}:${String(options.count ?? options.total ?? "")}`
+        : key) as TFunction
 
     render(
       <OverviewAttentionList items={[item]} t={t} onNavigate={onNavigate} />,
@@ -50,7 +52,7 @@ describe("OverviewAttentionList", () => {
     const user = userEvent.setup()
     const t = ((key: string, options?: Record<string, unknown>) =>
       options
-        ? `${key}:${String(options.name ?? options.total ?? "")}`
+        ? `${key}:${String(options.name ?? options.count ?? options.total ?? "")}`
         : key) as TFunction
     const items: OptionsOverviewAttentionItem[] = [
       {

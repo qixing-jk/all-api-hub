@@ -5,7 +5,7 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "已停用帳號不會參與重新整理、簽到等自動化，請視需要重新啟用。",
-      "title": "{{total}} 個帳號均已停用"
+      "title_other": "{{count}} 個帳號均已停用"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +39,12 @@
       "title": "還沒有 API 憑據"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} 個帳號已開啟自動簽到，但全域開關關閉後不會執行。請在簽到設定中重新開啟。",
+      "description_other": "{{count}} 個帳號已開啟自動簽到，但全域開關關閉後不會執行。請在簽到設定中重新開啟。",
       "title": "自動簽到已全域關閉"
     },
     "autoCheckinNeedsAttention": {
       "description": "最近一次執行中有失敗或結果待確認。請前往自動簽到查看原因並重試。",
-      "title": "{{total}} 個帳號的自動簽到未完成"
+      "title_other": "{{count}} 個帳號的自動簽到未完成"
     },
     "categories": {
       "accounts": "帳號",
@@ -55,7 +55,7 @@
     "categoryFilterLabel": "類別",
     "checkInAccountDataMissing": {
       "description": "已儲存的憑證或帳號資料不完整，請在帳號管理中重新辨識後再簽到。",
-      "title": "{{total}} 個帳號缺少登入資料"
+      "title_other": "{{count}} 個帳號缺少登入資料"
     },
     "checkInMethodUnresolved": {
       "description": "自動簽到已開啟，但目前尚無可用的簽到方式。請在帳號管理中重新偵測或選擇簽到方式後再執行。",
@@ -63,11 +63,11 @@
     },
     "checkInPermissionDenied": {
       "description": "網站拒絕了簽到請求，請重新登入或檢查帳號權限後重試。",
-      "title": "{{total}} 個帳號的簽到請求遭拒"
+      "title_other": "{{count}} 個帳號的簽到請求遭拒"
     },
     "checkInReloginRequired": {
       "description": "最近一次執行因登入狀態失效而略過這些帳號。請在網站重新登入後再簽到。",
-      "title": "{{total}} 個帳號需要重新登入"
+      "title_other": "{{count}} 個帳號需要重新登入"
     },
     "filterAll": "全部",
     "severityFilterLabel": "嚴重度",
@@ -76,14 +76,14 @@
       "title": "{{name}} 的站點類型未知"
     },
     "sortHint": "依影響程度排序",
-    "summary": "{{total}} 項待處理",
+    "summary_other": "{{count}} 項待處理",
     "unreadSiteAnnouncements": {
       "description": "查看站點公告後即可標記為已讀，避免漏掉站點維護或風險通知。",
-      "title": "{{total}} 則站點公告未讀"
+      "title_other": "{{count}} 則站點公告未讀"
     },
     "usageRefreshPending": {
       "description": "重新整理帳號後即可補齊今日請求、Token 和消耗統計。",
-      "title": "{{total}} 個帳號的今日統計待重新整理"
+      "title_other": "{{count}} 個帳號的今日統計待重新整理"
     }
   },
   "autoCheckin": {

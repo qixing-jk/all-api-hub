@@ -5,7 +5,8 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "Deaktivierte Konten werden bei Aktualisierung, Check-in und anderen Automatisierungen übersprungen. Aktiviere die Konten, die du weiter nutzt.",
-      "title": "Alle {{total}} Konten sind deaktiviert"
+      "title_one": "Das einzige Konto ist deaktiviert",
+      "title_other": "Alle {{count}} Konten sind deaktiviert"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +40,14 @@
       "title": "Noch keine API-Profile"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} Konto/Konten haben den automatischen Check-in aktiviert, aber er läuft nicht, solange der globale Schalter aus ist. Aktivieren Sie ihn in den Check-in-Einstellungen erneut.",
+      "description_one": "{{count}} Konto hat den automatischen Check-in aktiviert, aber er läuft nicht, solange der globale Schalter aus ist. Aktivieren Sie ihn in den Check-in-Einstellungen erneut.",
+      "description_other": "{{count}} Konten haben den automatischen Check-in aktiviert, aber er läuft nicht, solange der globale Schalter aus ist. Aktivieren Sie ihn in den Check-in-Einstellungen erneut.",
       "title": "Automatischer Check-in ist global deaktiviert"
     },
     "autoCheckinNeedsAttention": {
       "description": "Im letzten Lauf gab es Fehler oder unbestätigte Ergebnisse. Öffnen Sie den automatischen Check-in, um die Ursachen zu prüfen und es erneut zu versuchen.",
-      "title": "Automatischer Check-in für {{total}} Konto/Konten prüfen"
+      "title_one": "Automatischer Check-in für {{count}} Konto prüfen",
+      "title_other": "Automatischer Check-in für {{count}} Konten prüfen"
     },
     "categories": {
       "accounts": "Konten",
@@ -55,7 +58,8 @@
     "categoryFilterLabel": "Kategorie",
     "checkInAccountDataMissing": {
       "description": "Gespeicherte Zugangsdaten oder Kontodaten sind unvollständig. Erkenne das Konto in der Kontoverwaltung neu und starte den Check-in erneut.",
-      "title": "{{total}} Konto/Konten fehlen gespeicherte Anmeldedaten"
+      "title_one": "{{count}} Konto hat keine gespeicherten Anmeldedaten",
+      "title_other": "{{count}} Konten haben keine gespeicherten Anmeldedaten"
     },
     "checkInMethodUnresolved": {
       "description": "Der automatische Check-in ist aktiviert, aber es ist noch keine nutzbare Methode verfügbar. Öffnen Sie die Kontoverwaltung, um eine Methode zu erkennen oder auszuwählen.",
@@ -63,11 +67,13 @@
     },
     "checkInPermissionDenied": {
       "description": "Die Seite hat die Check-in-Anfrage abgelehnt. Melde dich erneut an oder prüfe die Kontoberechtigungen und versuche es noch einmal.",
-      "title": "{{total}} Konto/Konten wurden beim Check-in abgelehnt"
+      "title_one": "{{count}} Konto wurde beim Check-in abgelehnt",
+      "title_other": "{{count}} Konten wurden beim Check-in abgelehnt"
     },
     "checkInReloginRequired": {
       "description": "Der letzte Lauf hat diese Konten übersprungen, weil die Anmeldung abgelaufen ist. Melde dich auf der Seite an und starte den Check-in erneut.",
-      "title": "{{total}} Konto/Konten benötigen eine neue Anmeldung"
+      "title_one": "{{count}} Konto benötigt eine neue Anmeldung",
+      "title_other": "{{count}} Konten benötigen eine neue Anmeldung"
     },
     "filterAll": "Alle",
     "severityFilterLabel": "Schweregrad",
@@ -76,14 +82,17 @@
       "title": "{{name}} hat einen unbekannten Seitentyp"
     },
     "sortHint": "Nach Auswirkung sortiert",
-    "summary": "{{total}} offen",
+    "summary_one": "{{count}} offen",
+    "summary_other": "{{count}} offen",
     "unreadSiteAnnouncements": {
       "description": "Öffnen Sie die Website-Ankündigungen, um sie als gelesen zu markieren und Wartungs- oder Risikohinweise nicht zu verpassen.",
-      "title": "{{total}} ungelesene Website-Ankündigung(en)"
+      "title_one": "{{count}} ungelesene Website-Ankündigung",
+      "title_other": "{{count}} ungelesene Website-Ankündigungen"
     },
     "usageRefreshPending": {
       "description": "Aktualisieren Sie die Konten, um die heutigen Anfrage-, Token- und Kostenstatistiken zu vervollständigen.",
-      "title": "Für {{total}} Konto/Konten müssen die heutigen Statistiken aktualisiert werden"
+      "title_one": "Für {{count}} Konto müssen die heutigen Statistiken aktualisiert werden",
+      "title_other": "Für {{count}} Konten müssen die heutigen Statistiken aktualisiert werden"
     }
   },
   "autoCheckin": {

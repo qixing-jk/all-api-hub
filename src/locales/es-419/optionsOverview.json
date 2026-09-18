@@ -5,7 +5,9 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "Las cuentas desactivadas quedan fuera de la actualización, el registro y otras automatizaciones. Reactiva las que sigas usando.",
-      "title": "Las {{total}} cuentas están desactivadas"
+      "title_one": "La única cuenta está desactivada",
+      "title_many": "Las {{count}} cuentas están desactivadas",
+      "title_other": "Las {{count}} cuentas están desactivadas"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +41,16 @@
       "title": "Aún no hay perfiles de API"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} cuenta(s) tienen el check-in automático activado, pero no se ejecutará mientras el interruptor global esté desactivado. Vuelve a activarlo en los ajustes de check-in.",
+      "description_one": "{{count}} cuenta tiene el check-in automático activado, pero no se ejecutará mientras el interruptor global esté desactivado. Vuelve a activarlo en los ajustes de check-in.",
+      "description_many": "{{count}} cuentas tienen el check-in automático activado, pero no se ejecutará mientras el interruptor global esté desactivado. Vuelve a activarlo en los ajustes de check-in.",
+      "description_other": "{{count}} cuentas tienen el check-in automático activado, pero no se ejecutará mientras el interruptor global esté desactivado. Vuelve a activarlo en los ajustes de check-in.",
       "title": "El check-in automático está desactivado globalmente"
     },
     "autoCheckinNeedsAttention": {
       "description": "La última ejecución tuvo fallos o resultados sin confirmar. Abre el check-in automático para revisar los motivos y reintentar.",
-      "title": "{{total}} cuenta(s) necesitan revisión de check-in"
+      "title_one": "{{count}} cuenta necesita revisión de check-in",
+      "title_many": "{{count}} cuentas necesitan revisión de check-in",
+      "title_other": "{{count}} cuentas necesitan revisión de check-in"
     },
     "categories": {
       "accounts": "Cuentas",
@@ -55,7 +61,9 @@
     "categoryFilterLabel": "Categoría",
     "checkInAccountDataMissing": {
       "description": "Las credenciales o los datos de la cuenta están incompletos. Vuelve a detectar la cuenta en Gestión de cuentas y reintenta el registro.",
-      "title": "{{total}} cuenta(s) no tienen datos de inicio de sesión guardados"
+      "title_one": "{{count}} cuenta no tiene datos de inicio de sesión guardados",
+      "title_many": "{{count}} cuentas no tienen datos de inicio de sesión guardados",
+      "title_other": "{{count}} cuentas no tienen datos de inicio de sesión guardados"
     },
     "checkInMethodUnresolved": {
       "description": "El check-in automático está activado, pero aún no hay un método disponible. En Cuentas, vuelve a detectar o elige un método antes de la próxima ejecución.",
@@ -63,11 +71,15 @@
     },
     "checkInPermissionDenied": {
       "description": "El sitio rechazó la solicitud de registro. Inicia sesión de nuevo o revisa los permisos de la cuenta antes de reintentar.",
-      "title": "{{total}} cuenta(s) recibieron un rechazo durante el registro"
+      "title_one": "{{count}} cuenta recibió un rechazo durante el registro",
+      "title_many": "{{count}} cuentas recibieron un rechazo durante el registro",
+      "title_other": "{{count}} cuentas recibieron un rechazo durante el registro"
     },
     "checkInReloginRequired": {
       "description": "La última ejecución omitió estas cuentas porque la sesión del sitio expiró. Inicia sesión en el sitio y vuelve a ejecutar el registro.",
-      "title": "{{total}} cuenta(s) necesitan iniciar sesión de nuevo"
+      "title_one": "{{count}} cuenta necesita iniciar sesión de nuevo",
+      "title_many": "{{count}} cuentas necesitan iniciar sesión de nuevo",
+      "title_other": "{{count}} cuentas necesitan iniciar sesión de nuevo"
     },
     "filterAll": "Todos",
     "severityFilterLabel": "Gravedad",
@@ -76,14 +88,20 @@
       "title": "{{name}} tiene un tipo de sitio desconocido"
     },
     "sortHint": "Ordenado por impacto",
-    "summary": "{{total}} pendientes",
+    "summary_one": "{{count}} pendiente",
+    "summary_many": "{{count}} pendientes",
+    "summary_other": "{{count}} pendientes",
     "unreadSiteAnnouncements": {
       "description": "Abre los anuncios del sitio para marcarlos como leídos y no perder avisos de mantenimiento o riesgos.",
-      "title": "{{total}} anuncio(s) del sitio sin leer"
+      "title_one": "{{count}} anuncio del sitio sin leer",
+      "title_many": "{{count}} anuncios del sitio sin leer",
+      "title_other": "{{count}} anuncios del sitio sin leer"
     },
     "usageRefreshPending": {
       "description": "Actualiza las cuentas para completar las estadísticas de solicitudes, tokens y costo de hoy.",
-      "title": "{{total}} cuenta(s) necesitan actualizar sus estadísticas"
+      "title_one": "{{count}} cuenta necesita actualizar sus estadísticas",
+      "title_many": "{{count}} cuentas necesitan actualizar sus estadísticas",
+      "title_other": "{{count}} cuentas necesitan actualizar sus estadísticas"
     }
   },
   "autoCheckin": {

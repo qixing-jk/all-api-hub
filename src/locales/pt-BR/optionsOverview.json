@@ -5,7 +5,9 @@
   "attention": {
     "accountsAllDisabled": {
       "description": "Contas desativadas ficam fora da atualização, do check-in e de outras automações. Reative as que você ainda usa.",
-      "title": "Todas as {{total}} contas estão desativadas"
+      "title_one": "A única conta está desativada",
+      "title_many": "Todas as {{count}} contas estão desativadas",
+      "title_other": "Todas as {{count}} contas estão desativadas"
     },
     "accountTempWindowIssue": {
       "description": "{{reason}}",
@@ -39,12 +41,16 @@
       "title": "Ainda não há perfis de API"
     },
     "autoCheckinGloballyDisabled": {
-      "description": "{{total}} conta(s) têm o check-in automático ativado, mas nada será executado enquanto o interruptor global estiver desativado. Reative-o nas configurações de check-in.",
+      "description_one": "{{count}} conta tem o check-in automático ativado, mas nada será executado enquanto o interruptor global estiver desativado. Reative-o nas configurações de check-in.",
+      "description_many": "{{count}} contas têm o check-in automático ativado, mas nada será executado enquanto o interruptor global estiver desativado. Reative-o nas configurações de check-in.",
+      "description_other": "{{count}} contas têm o check-in automático ativado, mas nada será executado enquanto o interruptor global estiver desativado. Reative-o nas configurações de check-in.",
       "title": "O check-in automático está desativado globalmente"
     },
     "autoCheckinNeedsAttention": {
       "description": "A última execução teve falhas ou resultados não confirmados. Abra o check-in automático para ver os motivos e tentar novamente.",
-      "title": "{{total}} conta(s) precisam de acompanhamento no check-in"
+      "title_one": "{{count}} conta precisa de acompanhamento no check-in",
+      "title_many": "{{count}} contas precisam de acompanhamento no check-in",
+      "title_other": "{{count}} contas precisam de acompanhamento no check-in"
     },
     "categories": {
       "accounts": "Contas",
@@ -55,7 +61,9 @@
     "categoryFilterLabel": "Categoria",
     "checkInAccountDataMissing": {
       "description": "As credenciais ou os dados da conta estão incompletos. Redetecte a conta em Gerenciar contas e tente o check-in novamente.",
-      "title": "{{total}} conta(s) estão sem dados de login salvos"
+      "title_one": "{{count}} conta está sem dados de login salvos",
+      "title_many": "{{count}} contas estão sem dados de login salvos",
+      "title_other": "{{count}} contas estão sem dados de login salvos"
     },
     "checkInMethodUnresolved": {
       "description": "O check-in automático está ativado, mas ainda não há um método disponível. Em Contas, detecte novamente ou escolha um método antes da próxima execução.",
@@ -63,11 +71,15 @@
     },
     "checkInPermissionDenied": {
       "description": "O site recusou a solicitação de check-in. Entre novamente ou revise as permissões da conta antes de tentar de novo.",
-      "title": "{{total}} conta(s) tiveram o check-in recusado"
+      "title_one": "{{count}} conta teve o check-in recusado",
+      "title_many": "{{count}} contas tiveram o check-in recusado",
+      "title_other": "{{count}} contas tiveram o check-in recusado"
     },
     "checkInReloginRequired": {
       "description": "A última execução ignorou estas contas porque a sessão do site expirou. Entre no site e execute o check-in novamente.",
-      "title": "{{total}} conta(s) precisam entrar novamente"
+      "title_one": "{{count}} conta precisa entrar novamente",
+      "title_many": "{{count}} contas precisam entrar novamente",
+      "title_other": "{{count}} contas precisam entrar novamente"
     },
     "filterAll": "Todos",
     "severityFilterLabel": "Gravidade",
@@ -76,14 +88,20 @@
       "title": "{{name}} tem um tipo de site desconhecido"
     },
     "sortHint": "Ordenado por impacto",
-    "summary": "{{total}} pendentes",
+    "summary_one": "{{count}} pendente",
+    "summary_many": "{{count}} pendentes",
+    "summary_other": "{{count}} pendentes",
     "unreadSiteAnnouncements": {
       "description": "Abra os avisos do site para marcá-los como lidos e não perder comunicados de manutenção ou risco.",
-      "title": "{{total}} aviso(s) do site não lido(s)"
+      "title_one": "{{count}} aviso do site não lido",
+      "title_many": "{{count}} avisos do site não lidos",
+      "title_other": "{{count}} avisos do site não lidos"
     },
     "usageRefreshPending": {
       "description": "Atualize as contas para completar as estatísticas de solicitações, tokens e custo de hoje.",
-      "title": "{{total}} conta(s) precisam atualizar as estatísticas"
+      "title_one": "{{count}} conta precisa atualizar as estatísticas",
+      "title_many": "{{count}} contas precisam atualizar as estatísticas",
+      "title_other": "{{count}} contas precisam atualizar as estatísticas"
     }
   },
   "autoCheckin": {

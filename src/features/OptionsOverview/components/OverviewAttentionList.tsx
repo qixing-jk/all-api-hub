@@ -244,7 +244,7 @@ export function OverviewAttentionList({
       <div className="border-border-subtle dark:border-foreground/10 gap-x-density-3 gap-y-density-2 py-density-3 flex flex-wrap items-center justify-between border-b px-4 sm:items-start">
         <div className="space-y-density-1 min-w-0 sm:pt-0.5">
           <div className="text-sm font-medium">
-            {t("optionsOverview:attention.summary", { total: items.length })}
+            {t("optionsOverview:attention.summary", { count: items.length })}
           </div>
           <div className="text-faint-foreground text-xs">
             {t("optionsOverview:attention.sortHint")}

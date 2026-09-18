@@ -271,6 +271,7 @@ export function countAutoCheckinResultReasons(
   for (const result of results) {
     const reason = result.reasonCode
     if (!reason) continue
+    if (!Object.hasOwn(counts, reason)) continue
     counts[reason] += 1
   }
 
