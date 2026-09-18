@@ -90,6 +90,10 @@ const SKIP_REASON_CATEGORIES = {
     AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
   [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]:
     AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
+  // Another account owns this browser login context, so the user has to pick
+  // the other login method or change it on the owning account.
+  [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE]:
+    AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
 } as const satisfies Record<AutoCheckinSkipReason, AutoCheckinSkipCategory>
 
 /**

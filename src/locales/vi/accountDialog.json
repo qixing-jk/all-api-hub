@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "Nhập từ phiên đăng nhập hiện tại",
     "loginCheckInProvider": "Phương thức đăng nhập để điểm danh",
     "loginCheckInProviderDesc": "Đăng nhập qua trình duyệt để điểm danh. Bạn có thể cần hoàn tất đăng nhập, CAPTCHA hoặc xác thực hai yếu tố.",
+    "loginCheckInProviderNotSelected": "Chưa chọn",
     "manualBalanceUsd": "Số dư thủ công (USD)",
     "manualBalanceUsdDesc": "Khi trang web không thể tự động lấy số dư/hạn mức, bạn có thể điền thủ công",
     "manualBalanceUsdError": "Vui lòng nhập số tiền hợp lệ (>= 0)",

@@ -207,6 +207,80 @@ describe("AccountDialog AccountForm", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("disables login providers already claimed by another AgentRouter account", async () => {
+    const props = createAgentRouterProps()
+    props.claimedLoginProviders = [
+      {
+        provider: "github",
+        owner: { id: "other-account", site_name: "Other AgentRouter" },
+      },
+    ]
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const user = userEvent.setup()
+
+    expect(
+      await screen.findByText(/agentRouterLoginProviderInUse/),
+    ).toBeInTheDocument()
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.loginCheckInProvider",
+      }),
+    )
+    expect(screen.getByRole("option", { name: "GitHub" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    )
+    expect(
+      screen.getByRole("option", { name: "Linux DO" }),
+    ).not.toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("keeps a claimed provider selectable while it is the stored selection", async () => {
+    const props = createAgentRouterProps()
+    props.draft.checkIn.loginCheckIn = { provider: "github" }
+    props.claimedLoginProviders = [
+      {
+        provider: "github",
+        owner: { id: "other-account", site_name: "Other AgentRouter" },
+      },
+    ]
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const user = userEvent.setup()
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.loginCheckInProvider",
+      }),
+    )
+    expect(screen.getByRole("option", { name: "GitHub" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    )
+  })
+
+  it("clears the stored login provider when the user selects none", async () => {
+    const props = createAgentRouterProps()
+    props.draft.checkIn.loginCheckIn = { provider: "github" }
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const user = userEvent.setup()
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.loginCheckInProvider",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "accountDialog:form.loginCheckInProviderNotSelected",
+      }),
+    )
+
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ loginCheckIn: expect.anything() }),
+    )
+  })
+
   it("presents optional editable identity with the protected OpenRouter management key", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.OPENROUTER

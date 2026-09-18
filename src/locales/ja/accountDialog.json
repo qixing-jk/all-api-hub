@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "現在のログインから取り込む",
     "loginCheckInProvider": "チェックインのログイン方法",
     "loginCheckInProviderDesc": "ブラウザーでログインしてチェックインします。ログイン、CAPTCHA、二要素認証の画面では操作が必要になる場合があります。",
+    "loginCheckInProviderNotSelected": "未選択",
     "manualBalanceUsd": "手動残高（USD）",
     "manualBalanceUsdDesc": "サイトで残高 / クォータを自動取得できない場合に使用します",
     "manualBalanceUsdError": "有効な金額（0 以上）を入力してください",

@@ -1,5 +1,6 @@
 import { vi } from "vitest"
 
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -82,21 +83,32 @@ function createAccountCompletionCheckInConfigMock(
     isCheckedInToday?: boolean
   },
 ) {
-  return vi.fn(({ supported }: { supported: boolean }) => ({
-    ...createCheckInConfig(siteType, {
-      matched: supported,
-      automaticExecutionEnabled: options.automaticExecutionEnabled,
-      ...(typeof options.isCheckedInToday === "boolean"
-        ? { isCheckedInToday: options.isCheckedInToday }
+  return vi.fn(
+    ({
+      supported,
+      loginCheckInProvider,
+    }: {
+      supported: boolean
+      loginCheckInProvider?: AccountLoginProvider
+    }) => ({
+      ...createCheckInConfig(siteType, {
+        matched: supported,
+        automaticExecutionEnabled: options.automaticExecutionEnabled,
+        ...(typeof options.isCheckedInToday === "boolean"
+          ? { isCheckedInToday: options.isCheckedInToday }
+          : {}),
+      }),
+      ...(loginCheckInProvider
+        ? { loginCheckIn: { provider: loginCheckInProvider } }
         : {}),
+      customCheckIn: {
+        url: "",
+        redeemUrl: "",
+        openRedeemWithCheckIn: true,
+        isCheckedInToday: false,
+      },
     }),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  }))
+  )
 }
 
 /** Creates the shared helper spies used by account-completion adapter tests. */

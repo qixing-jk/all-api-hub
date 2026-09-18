@@ -1012,6 +1012,7 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   CheckinPageUnavailable: "checkin_page_unavailable",
   SessionBusy: "session_busy",
   UpstreamError: "upstream_error",
+  LoginProviderInUse: "login_provider_in_use",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =

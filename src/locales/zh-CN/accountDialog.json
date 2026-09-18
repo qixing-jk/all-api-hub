@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "从当前登录导入",
     "loginCheckInProvider": "签到登录方式",
     "loginCheckInProviderDesc": "使用浏览器登录完成签到。遇到登录、验证码或二次验证提示时，需要你完成操作。",
+    "loginCheckInProviderNotSelected": "未选择",
     "manualBalanceUsd": "手动余额 (USD)",
     "manualBalanceUsdDesc": "当站点无法自动获取余额/额度时，可手动填写",
     "manualBalanceUsdError": "请输入有效的金额（>= 0）",

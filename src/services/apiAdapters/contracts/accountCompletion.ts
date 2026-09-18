@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type {
@@ -51,6 +52,8 @@ export type AccountCompletionHelpers = {
   trimString(value: unknown): string
   createInitialCheckInConfig(input: {
     supported: boolean
+    /** Login provider proven by the remote account binding, when unambiguous. */
+    loginCheckInProvider?: AccountLoginProvider
   }): AutoDetectCompletionData["checkIn"]
   handleCheckInSupportFetchFailure(error: unknown): false
   captureRecoveryData(data: AccountAutoDetectRecoveryData): void

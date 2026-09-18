@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "Importar desde sesión actual",
     "loginCheckInProvider": "Método de inicio de sesión para el registro diario",
     "loginCheckInProviderDesc": "Inicia sesión en el navegador para realizar el registro diario. Es posible que debas completar el inicio de sesión, un CAPTCHA o la verificación en dos pasos.",
+    "loginCheckInProviderNotSelected": "Sin seleccionar",
     "manualBalanceUsd": "Saldo manual (USD)",
     "manualBalanceUsdDesc": "Úsalo cuando el sitio no pueda obtener saldo/cuota automáticamente",
     "manualBalanceUsdError": "Ingresa un monto válido (>= 0)",

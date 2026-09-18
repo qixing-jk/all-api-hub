@@ -48,6 +48,7 @@ import {
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountFormValidation"
+import type { AgentRouterLoginProviderConflict } from "~/services/checkin/autoCheckin/accountConstraints"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -76,6 +77,8 @@ interface AccountFormProps {
   draft: AccountDialogDraft
   siteUrl?: string
   sitePolicy: AccountFormPresentationSitePolicy
+  /** Login providers already claimed by another enabled AgentRouter account. */
+  claimedLoginProviders?: readonly AgentRouterLoginProviderConflict[]
   isDetected: boolean
   isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean
@@ -123,6 +126,7 @@ export default function AccountForm({
   ref,
   draft,
   sitePolicy,
+  claimedLoginProviders,
   isDetected,
   isManualBalanceUsdInvalid,
   showAccessToken,
@@ -597,6 +601,7 @@ export default function AccountForm({
         checkIn={checkIn}
         siteType={siteType}
         siteUrl={siteUrl}
+        claimedLoginProviders={claimedLoginProviders}
         onCheckInChange={onCheckInChange}
         onCheckInSelectionChange={onCheckInSelectionChange}
         onRedetectCheckInMethods={onRedetectCheckInMethods}

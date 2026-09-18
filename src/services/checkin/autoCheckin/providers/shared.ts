@@ -25,6 +25,8 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   checkinFailed: "autoCheckin:providerFallback.checkinFailed",
   checkinDisabled: "autoCheckin:providerWong.checkinDisabled",
   sessionBusy: "autoCheckin:providerFallback.sessionBusy",
+  /** A login-based provider was selected but its browser login method is unset. */
+  loginProviderRequired: "autoCheckin:providerFallback.loginProviderRequired",
   endpointNotSupported: "autoCheckin:providerFallback.endpointNotSupported",
   unknownError: "autoCheckin:providerFallback.unknownError",
 } as const

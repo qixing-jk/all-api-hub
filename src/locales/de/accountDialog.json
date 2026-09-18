@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "Aus aktueller Anmeldung importieren",
     "loginCheckInProvider": "Anmeldemethode für den Check-in",
     "loginCheckInProviderDesc": "Meldet dich im Browser an, um den Check-in durchzuführen. Anmelde-, CAPTCHA- oder Zwei-Faktor-Abfragen können deine Eingabe erfordern.",
+    "loginCheckInProviderNotSelected": "Nicht ausgewählt",
     "manualBalanceUsd": "Manueller Kontostand (USD)",
     "manualBalanceUsdDesc": "Verwenden Sie dies, wenn die Website das Guthaben/Kontingent nicht automatisch abrufen kann",
     "manualBalanceUsdError": "Bitte geben Sie einen gültigen Betrag ein (>= 0)",

@@ -110,6 +110,11 @@ export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
   RATE_LIMITS: "accountBrowserIdentity_rateLimits_v1",
 } as const
 
+export const LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS = {
+  /** Last observed browser login outcome per account, keyed by account id. */
+  EVIDENCE: "agentrouter_login_provider_evidence",
+} as const
+
 export const TAG_STORAGE_KEYS = {
   TAG_STORE: "global_tag_store",
 } as const
@@ -206,6 +211,8 @@ export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
 export const STORAGE_KEYS = {
   PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
   ...ACCOUNT_STORAGE_KEYS,
+  ...ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS,
+  ...LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   ...CHANNEL_CONFIG_STORAGE_KEYS,

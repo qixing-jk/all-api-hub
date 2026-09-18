@@ -95,6 +95,7 @@
     },
     "unknown": "未知错误",
     "validation": {
+      "agentRouterLoginProviderInUse": "{{provider}} 登录方式已被启用自动签到的 AgentRouter 账号「{{account}}」占用。请改用另一种登录方式，或先停用该账号的自动签到，或清空本账号的选择。",
       "bookmarkNameRequired": "书签名称不能为空",
       "bookmarkUrlRequired": "书签链接不能为空",
       "incompleteAccountInfo": "请填写完整的账号信息",

@@ -319,6 +319,16 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.endpointNotSupported",
         messageParams,
       )
+    case "autoCheckin:providerFallback.loginProviderRequired":
+      return t(
+        "autoCheckin:providerFallback.loginProviderRequired",
+        messageParams,
+      )
+    case "messages:errors.validation.agentRouterLoginProviderInUse":
+      return t(
+        "messages:errors.validation.agentRouterLoginProviderInUse",
+        messageParams,
+      )
     case "autoCheckin:providerFallback.nativePageIdentityMismatch":
       return t(
         "autoCheckin:providerFallback.nativePageIdentityMismatch",
@@ -419,6 +429,8 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.no_provider", messageParams)
     case "autoCheckin:skipReasons.account_unavailable":
       return t("autoCheckin:skipReasons.account_unavailable", messageParams)
+    case "autoCheckin:skipReasons.login_provider_in_use":
+      return t("autoCheckin:skipReasons.login_provider_in_use", messageParams)
     default:
       return messageKey
   }

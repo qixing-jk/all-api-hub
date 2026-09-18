@@ -1,9 +1,20 @@
-import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
+import {
+  isAccountLoginProvider,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
 import type { CheckInConfig } from "~/types/checkIn"
 
-/** Existing login check-in configurations default to GitHub. */
-export function getLoginCheckInProvider(config?: CheckInConfig) {
-  return config?.loginCheckIn?.provider === ACCOUNT_LOGIN_PROVIDERS.LinuxDo
-    ? ACCOUNT_LOGIN_PROVIDERS.LinuxDo
-    : ACCOUNT_LOGIN_PROVIDERS.Github
+/**
+ * Reads the login provider selected for AgentRouter check-in.
+ *
+ * There is deliberately no GitHub fallback: the browser flow signs in with
+ * whichever GitHub / Linux DO identity the browser currently holds, so guessing
+ * a provider would run the wrong OAuth identity and report a misleading
+ * `identity_mismatch` instead of asking the user to choose.
+ */
+export function resolveLoginCheckInProvider(
+  config?: CheckInConfig,
+): AccountLoginProvider | null {
+  const provider = config?.loginCheckIn?.provider
+  return isAccountLoginProvider(provider) ? provider : null
 }

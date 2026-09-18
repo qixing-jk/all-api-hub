@@ -69,6 +69,8 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   CHECKIN_PAGE_UNAVAILABLE: "checkin_page_unavailable",
   SESSION_BUSY: "session_busy",
   UPSTREAM_ERROR: "upstream_error",
+  /** Another enabled account already owns this login method's browser context. */
+  LOGIN_PROVIDER_IN_USE: "login_provider_in_use",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
@@ -101,6 +103,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
     "autoCheckin:skipReasons.checkin_page_unavailable",
   [AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED]:
     "autoCheckin:skipReasons.checkin_unconfirmed",
+  [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE]:
+    "autoCheckin:skipReasons.login_provider_in_use",
   [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]:
     "autoCheckin:skipReasons.execution_context_invalid",
   [AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY]:

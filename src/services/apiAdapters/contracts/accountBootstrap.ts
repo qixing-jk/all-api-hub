@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { AccountIdentity } from "~/types"
@@ -23,11 +24,18 @@ export interface UserInfo {
   id: AccountIdentity
   username: string
   access_token: string | null
+  /**
+   * Browser login identities the remote account is bound to, when the
+   * deployment exposes them. Absent means "not observed", not "none bound".
+   */
+  loginProviders?: readonly AccountLoginProvider[]
 }
 
 export interface AccessTokenInfo {
   username: string
   access_token: string
+  /** See {@link UserInfo.loginProviders}. */
+  loginProviders?: readonly AccountLoginProvider[]
 }
 
 /** Optional product facts from one provider-native bootstrap snapshot. */

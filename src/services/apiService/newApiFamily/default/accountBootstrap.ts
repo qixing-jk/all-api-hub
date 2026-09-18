@@ -1,3 +1,8 @@
+import {
+  ACCOUNT_LOGIN_PROVIDERS,
+  isAccountLoginProvider,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type {
   AccessTokenInfo,
@@ -91,6 +96,45 @@ export const extractDefaultExchangeRate = (
   return null
 }
 
+/** A bound provider id is a non-empty string or a finite number; empty means unbound. */
+function isBoundProviderId(value: unknown): boolean {
+  return (
+    (typeof value === "string" && value.trim().length > 0) ||
+    (typeof value === "number" && Number.isFinite(value))
+  )
+}
+
+/**
+ * Reads the browser login identities an account is bound to.
+ *
+ * `/api/user/self` returns the provider account ids (`github_id`,
+ * `linux_do_id`) that New API writes when a user registers or binds through
+ * OAuth, so they are the deployment's own statement of how the account signs
+ * in. They are empty when unbound, and `linux_do_id` is absent on deployments
+ * older than New API v0.9.0 - a missing field stays "no evidence" rather than
+ * being treated as a negative answer.
+ *
+ * Upstream: https://github.com/QuantumNous/new-api/blob/v0.9.0/controller/user.go
+ * (`buildSelfUserData`) and `model/user.go` (`GitHubId`/`LinuxDOId`).
+ */
+function extractLoginProviders(
+  userData: unknown,
+): readonly AccountLoginProvider[] {
+  if (!userData || typeof userData !== "object" || Array.isArray(userData)) {
+    return []
+  }
+
+  const user = userData as Record<string, unknown>
+  const providers: AccountLoginProvider[] = []
+  if (isBoundProviderId(user.github_id)) {
+    providers.push(ACCOUNT_LOGIN_PROVIDERS.Github)
+  }
+  if (isBoundProviderId(user.linux_do_id)) {
+    providers.push(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
+  }
+  return providers.filter(isAccountLoginProvider)
+}
+
 /**
  * Fetch default New API-family user info for account detection.
  */
@@ -101,6 +145,7 @@ export async function fetchUserInfo(
   id: string
   username: string
   access_token: string
+  loginProviders?: readonly AccountLoginProvider[]
   user: UserInfo
 }> {
   const userData = await newApiFamilyRequests.data<UserInfo>(request, {
@@ -128,10 +173,13 @@ export async function fetchUserInfo(
     )
   }
 
+  const loginProviders = extractLoginProviders(userData)
+
   return {
     id: userId,
     username: userData.username,
     access_token: userData.access_token || "",
+    ...(loginProviders.length > 0 ? { loginProviders } : {}),
     user: userData,
   }
 }
@@ -199,6 +247,9 @@ export async function getOrCreateAccessToken(
   return {
     username: userInfo.username,
     access_token: accessToken,
+    ...(userInfo.loginProviders?.length
+      ? { loginProviders: userInfo.loginProviders }
+      : {}),
   }
 }
 

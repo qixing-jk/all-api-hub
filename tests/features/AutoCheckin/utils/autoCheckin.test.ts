@@ -114,6 +114,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.checkinSuccessful",
       "autoCheckin:providerFallback.checkinFailed",
       "autoCheckin:providerFallback.endpointNotSupported",
+      "autoCheckin:providerFallback.loginProviderRequired",
       "autoCheckin:providerFallback.nativePageIdentityMismatch",
       "autoCheckin:providerFallback.nativePageIdentityMissing",
       "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
@@ -149,6 +150,8 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.status_unavailable",
       "autoCheckin:skipReasons.no_provider",
       "autoCheckin:skipReasons.account_unavailable",
+      "autoCheckin:skipReasons.login_provider_in_use",
+      "messages:errors.validation.agentRouterLoginProviderInUse",
     ])("translates the known key %s", (messageKey) => {
       const t = vi.fn(
         (key: string, params?: Record<string, unknown>) =>
@@ -797,6 +800,7 @@ describe("autoCheckin utils", () => {
         // The failed row carries the same persisted reason vocabulary.
         [AUTO_CHECKIN_SKIP_REASON.TIMEOUT]: 2,
         [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE]: 0,
       })
 
       expect(

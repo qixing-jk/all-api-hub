@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
@@ -116,21 +117,27 @@ function createInitialCheckInConfig(input: {
   supported: boolean
   siteType: AccountSiteType
   siteUrl: string
+  loginCheckInProvider?: AccountLoginProvider
 }) {
-  return createCompatibilityCheckInConfig({
-    siteType: input.siteType,
-    supported: input.supported,
-    automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
-      input.siteType,
-      input.siteUrl,
-    ),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  })
+  return {
+    ...createCompatibilityCheckInConfig({
+      siteType: input.siteType,
+      supported: input.supported,
+      automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
+        input.siteType,
+        input.siteUrl,
+      ),
+      customCheckIn: {
+        url: "",
+        redeemUrl: "",
+        openRedeemWithCheckIn: true,
+        isCheckedInToday: false,
+      },
+    }),
+    ...(input.loginCheckInProvider
+      ? { loginCheckIn: { provider: input.loginCheckInProvider } }
+      : {}),
+  }
 }
 
 const createMissingAccountCompletionCapabilityError = (siteType: string) =>

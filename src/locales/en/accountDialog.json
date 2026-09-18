@@ -158,6 +158,7 @@
     "importCookieAuthSessionCookie": "Import from current login",
     "loginCheckInProvider": "Check-in login method",
     "loginCheckInProviderDesc": "Signs in through your browser to check in. Login, CAPTCHA, or two-factor prompts may require your action.",
+    "loginCheckInProviderNotSelected": "Not selected",
     "manualBalanceUsd": "Manual Balance (USD)",
     "manualBalanceUsdDesc": "Use this when the site cannot fetch balance/quota automatically",
     "manualBalanceUsdError": "Please enter a valid amount (>= 0)",

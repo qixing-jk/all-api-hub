@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import {
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
@@ -13,8 +14,14 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import {
+  AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_SKIP_REASON,
+  getAgentRouterLoginProviderClaimedByAnother,
+  resolveAgentRouterLoginProviderOwners,
+} from "~/services/checkin/autoCheckin/accountConstraints"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { loginProviderEvidence } from "~/services/checkin/autoCheckin/loginProviderEvidence"
 import {
   onAutoCheckinMessage,
   type AutoCheckinDebugScheduleDailyAlarmForTodayRequest,
@@ -1000,9 +1007,28 @@ class AutoCheckinScheduler {
     return updated ? nextSnapshots : snapshots
   }
 
+  /**
+   * Resolves provider ownership together with the last observed login outcomes.
+   *
+   * Callers resolve this once per run so ownership cannot shift mid-run while
+   * their own attempts are producing new evidence.
+   */
+  private async resolveLoginProviderOwners(
+    accounts: readonly SiteAccount[],
+  ): Promise<Map<AccountLoginProvider, SiteAccount>> {
+    return resolveAgentRouterLoginProviderOwners(
+      accounts,
+      await loginProviderEvidence.readAll(),
+    )
+  }
+
   private buildAccountSnapshot(
     account: SiteAccount,
     accountName: string,
+    agentRouterLoginProviderOwners?: ReadonlyMap<
+      AccountLoginProvider,
+      SiteAccount
+    >,
   ): AutoCheckinAccountSnapshot {
     const compatibility = inspectSelectedCheckInCompatibility({
       account,
@@ -1024,6 +1050,17 @@ class AutoCheckinScheduler {
       executionEligibility.eligible === false
         ? toSchedulerSkipReason(executionEligibility.skipReason)
         : undefined
+
+    // The provider itself may be ready, but another account holds the browser
+    // login context this account would need, so the run cannot use it.
+    if (
+      getAgentRouterLoginProviderClaimedByAnother(
+        account,
+        agentRouterLoginProviderOwners,
+      )
+    ) {
+      skipReason = AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_SKIP_REASON
+    }
 
     const providerAvailable = compatibility.providerAvailable
     if (!skipReason && !providerAvailable) {
@@ -1069,12 +1106,17 @@ class AutoCheckinScheduler {
     accounts: SiteAccount[],
     accountDisplayNameById: Map<string, string>,
     results: Record<string, CheckinAccountResult>,
+    agentRouterLoginProviderOwners?: ReadonlyMap<
+      AccountLoginProvider,
+      SiteAccount
+    >,
   ): AutoCheckinAccountSnapshot[] {
     return this.attachResultsToSnapshots(
       accounts.map((account) =>
         this.buildAccountSnapshot(
           account,
           accountDisplayNameById.get(account.id) ?? account.id,
+          agentRouterLoginProviderOwners,
         ),
       ),
       results,
@@ -1096,9 +1138,18 @@ class AutoCheckinScheduler {
     {
       requireStatusConfirmationBeforeMutation = false,
       allowAutomaticDiscovery = false,
+      agentRouterLoginProviderOwners,
     }: {
       requireStatusConfirmationBeforeMutation?: boolean
       allowAutomaticDiscovery?: boolean
+      /**
+       * Provider ownership resolved over the full stored account list. Absent
+       * means the guard could not be evaluated and the run stays unblocked.
+       */
+      agentRouterLoginProviderOwners?: ReadonlyMap<
+        AccountLoginProvider,
+        SiteAccount
+      >
     } = {},
   ): Promise<{
     result: CheckinAccountResult
@@ -1127,6 +1178,26 @@ class AutoCheckinScheduler {
         ...(partial ?? {}),
         timestamp: Date.now(),
       }) as CheckinAccountResult
+
+    // One shared browser login context per provider: only the owning account may
+    // run, so stale or imported duplicates are skipped before any network or
+    // browser work instead of driving a second OAuth identity. Callers that
+    // already filtered the account out through its snapshot never reach this.
+    if (
+      getAgentRouterLoginProviderClaimedByAnother(
+        account,
+        agentRouterLoginProviderOwners,
+      )
+    ) {
+      return {
+        result: buildResult(CHECKIN_RESULT_STATUS.SKIPPED, {
+          messageKey: getAutoCheckinSkipReasonTranslationKey(
+            AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_SKIP_REASON,
+          ),
+          reasonCode: AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_SKIP_REASON,
+        }),
+      }
+    }
 
     try {
       const context = { tempWindowRequestSource, protectionBypassExecution }
@@ -1274,6 +1345,10 @@ class AutoCheckinScheduler {
     accountDisplayNameById: Map<string, string>
     tempWindowRequestSource: TempWindowRequestSource
     protectionBypassExecution: ProtectionBypassExecution
+    agentRouterLoginProviderOwners: ReadonlyMap<
+      AccountLoginProvider,
+      SiteAccount
+    >
     allowAutomaticDiscovery?: boolean
   }): Promise<
     Array<{
@@ -1290,7 +1365,11 @@ class AutoCheckinScheduler {
             accountName,
             params.tempWindowRequestSource,
             params.protectionBypassExecution,
-            { allowAutomaticDiscovery: params.allowAutomaticDiscovery },
+            {
+              allowAutomaticDiscovery: params.allowAutomaticDiscovery,
+              agentRouterLoginProviderOwners:
+                params.agentRouterLoginProviderOwners,
+            },
           )
         } catch (error) {
           // An unexpected throw never dispatched a mutation, so it is a plain
@@ -2241,6 +2320,12 @@ class AutoCheckinScheduler {
       const availableAccounts = await accountQueries.getAllAccounts()
       const accountDisplayNameById =
         buildAccountDisplayNameMap(availableAccounts)
+      // Resolve claims over every stored account, not the run's target subset:
+      // a manual run of one account must still see the accounts that hold the
+      // other provider claims. Last login outcomes decide between duplicates so
+      // ownership settles on whichever account can actually sign in.
+      const agentRouterLoginProviderOwners =
+        await this.resolveLoginProviderOwners(availableAccounts)
       let allAccounts = targetAccountIdSet
         ? availableAccounts.filter((account) =>
             targetAccountIdSet.has(account.id),
@@ -2280,6 +2365,7 @@ class AutoCheckinScheduler {
         const snapshot = this.buildAccountSnapshot(
           account,
           accountDisplayNameById.get(account.id) ?? account.id,
+          agentRouterLoginProviderOwners,
         )
         if (!automaticExecutionEnabled) {
           snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
@@ -2350,6 +2436,7 @@ class AutoCheckinScheduler {
           allAccounts,
           accountDisplayNameById,
           results,
+          agentRouterLoginProviderOwners,
         )
         const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
 
@@ -2412,6 +2499,7 @@ class AutoCheckinScheduler {
         accountDisplayNameById,
         tempWindowRequestSource,
         protectionBypassExecution,
+        agentRouterLoginProviderOwners,
         allowAutomaticDiscovery: isDailyRun,
       })
 
@@ -2509,6 +2597,7 @@ class AutoCheckinScheduler {
         allAccounts,
         accountDisplayNameById,
         results,
+        agentRouterLoginProviderOwners,
       )
       const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
       const overallResult = getAutoCheckinRunResultFromSummary(mergedSummary)
@@ -2687,6 +2776,8 @@ class AutoCheckinScheduler {
     const remaining: string[] = []
     const updatedAccountIds: string[] = []
     const accountIdsToRefresh: string[] = []
+    const agentRouterLoginProviderOwners =
+      await this.resolveLoginProviderOwners(allAccounts)
 
     for (const accountId of retryState.pendingAccountIds) {
       // Default to 1 to represent the initial daily run failure when the stored map is missing.
@@ -2716,6 +2807,7 @@ class AutoCheckinScheduler {
       const snapshot = this.buildAccountSnapshot(
         account,
         accountDisplayNameById.get(account.id) ?? account.id,
+        agentRouterLoginProviderOwners,
       )
       if (snapshot.skipReason) {
         updates[accountId] = {
@@ -2736,7 +2828,10 @@ class AutoCheckinScheduler {
         accountDisplayNameById.get(account.id) ?? account.id,
         tempWindowRequestSource,
         protectionBypassExecution,
-        { requireStatusConfirmationBeforeMutation: true },
+        {
+          requireStatusConfirmationBeforeMutation: true,
+          agentRouterLoginProviderOwners,
+        },
       )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
@@ -2927,6 +3022,8 @@ class AutoCheckinScheduler {
     const allAccounts = await accountQueries.getAllAccounts()
     const account = allAccounts.find((item) => item.id === accountId)
     const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
+    const agentRouterLoginProviderOwners =
+      await this.resolveLoginProviderOwners(allAccounts)
 
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
@@ -2950,6 +3047,7 @@ class AutoCheckinScheduler {
               accountDisplayNameById.get(account.id) ?? account.id,
               tempWindowRequestSource,
               protectionBypassExecution,
+              { agentRouterLoginProviderOwners },
             )
           ).result
 

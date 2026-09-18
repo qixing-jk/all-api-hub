@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import {
   parseManualQuotaFromUsd,
   resolveExchangeRate,
@@ -6,9 +7,15 @@ import {
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import type { AccountPersistenceIdentityInput } from "~/services/apiAdapters/contracts/accountPersistence"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  findAgentRouterLoginProviderConflict,
+  type AgentRouterLoginProviderConflict,
+} from "~/services/checkin/autoCheckin/accountConstraints"
+import { loginProviderEvidence } from "~/services/checkin/autoCheckin/loginProviderEvidence"
 import {
   AuthTypeEnum,
   type CheckInConfig,
@@ -167,5 +174,32 @@ export function buildAccountPersistenceContext(
         username: input.username.trim(),
       },
     },
+  }
+}
+
+/**
+ * Reads the persisted AgentRouter login-provider claim for save-time checks.
+ *
+ * A storage lookup failure never blocks the save on its own: the execution-time
+ * guard still keeps an unattended run away from a conflicting provider.
+ */
+export async function findAgentRouterLoginProviderConflictForSave(input: {
+  siteUrl?: string
+  checkIn?: CheckInConfig
+  accountId?: string
+}): Promise<AgentRouterLoginProviderConflict | null> {
+  if (!isAgentRouterLoginUrl(input.siteUrl)) return null
+  try {
+    return findAgentRouterLoginProviderConflict({
+      accounts: await accountQueries.getAllAccountsOrThrow(),
+      evidence: await loginProviderEvidence.readAll(),
+      ...input,
+    })
+  } catch (error) {
+    accountPersistenceLogger.warn(
+      "AgentRouter login provider conflict lookup failed",
+      { error: getErrorMessage(error) },
+    )
+    return null
   }
 }

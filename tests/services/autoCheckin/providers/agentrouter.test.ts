@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 
+import {
+  ACCOUNT_LOGIN_PROVIDERS,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -10,6 +14,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const liveDependencies = vi.hoisted(() => ({ login: vi.fn(), status: vi.fn() }))
@@ -26,11 +31,14 @@ const context = {
     PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
   ),
 }
-const account = () =>
+const account = (
+  provider: AccountLoginProvider | null = ACCOUNT_LOGIN_PROVIDERS.Github,
+) =>
   buildSiteAccount({
     site_url: "https://agentrouter.org",
     site_type: SITE_TYPES.NEW_API,
     authType: AuthTypeEnum.AccessToken,
+    checkIn: buildCheckInConfig(provider ? { loginCheckIn: { provider } } : {}),
   })
 function setup() {
   const authenticate = vi.fn().mockResolvedValue({
@@ -38,6 +46,7 @@ function setup() {
     identity: "1",
     evidence: { checkedIn: true },
   })
+  const recordLoginProviderEvidence = vi.fn().mockResolvedValue(undefined)
   const deps = {
     loginAccount: authenticate,
     fetchStatus: vi.fn().mockResolvedValue({
@@ -45,10 +54,12 @@ function setup() {
       data: { system_name: "Agent Router", github_oauth: true },
     }),
     createRequestId: () => "checkin-request",
+    recordLoginProviderEvidence,
   }
   return {
     ...deps,
     authenticate,
+    recordLoginProviderEvidence,
     provider: createAgentRouterProvider(deps),
   }
 }
@@ -74,14 +85,90 @@ describe("AgentRouter login check-in", () => {
   )
   it("uses the provider selected in check-in settings", async () => {
     const { provider, authenticate } = setup()
-    const saved = account()
-    saved.checkIn.loginCheckIn = { provider: "linuxdo" }
+    const saved = account(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
     await provider.checkIn(saved, context)
     expect(authenticate).toHaveBeenCalledWith({
       account: saved,
       provider: "linuxdo",
       requestId: "checkin-request",
     })
+  })
+  it("records the provider identity a successful login proved", async () => {
+    const { provider, recordLoginProviderEvidence } = setup()
+    await provider.checkIn(account(ACCOUNT_LOGIN_PROVIDERS.LinuxDo), context)
+
+    expect(recordLoginProviderEvidence).toHaveBeenCalledWith({
+      accountId: "account-1",
+      provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
+      outcome: "success",
+    })
+  })
+
+  it("records a proven identity mismatch as a rejection", async () => {
+    const { provider, authenticate, recordLoginProviderEvidence } = setup()
+    authenticate.mockResolvedValue({
+      status: BROWSER_OAUTH_STATUS.IdentityMismatch,
+    })
+
+    await provider.checkIn(account(), context)
+
+    expect(recordLoginProviderEvidence).toHaveBeenCalledWith({
+      accountId: "account-1",
+      provider: ACCOUNT_LOGIN_PROVIDERS.Github,
+      outcome: "identity_mismatch",
+    })
+  })
+
+  it.each([
+    BROWSER_OAUTH_STATUS.Cancelled,
+    BROWSER_OAUTH_STATUS.Failed,
+    BROWSER_OAUTH_STATUS.InteractionRequired,
+    BROWSER_OAUTH_STATUS.SessionBusy,
+  ])("records no evidence for an inconclusive %s login", async (status) => {
+    const { provider, authenticate, recordLoginProviderEvidence } = setup()
+    authenticate.mockResolvedValue({ status })
+
+    await provider.checkIn(account(), context)
+
+    expect(recordLoginProviderEvidence).not.toHaveBeenCalled()
+  })
+
+  it("records evidence even when the check-in benefit was not granted", async () => {
+    const { provider, authenticate, recordLoginProviderEvidence } = setup()
+    authenticate.mockResolvedValue({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+      identity: "1",
+      evidence: { checkedIn: false },
+    })
+
+    await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
+      status: "uncertain",
+    })
+    expect(recordLoginProviderEvidence).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "success" }),
+    )
+  })
+
+  it("does not fall back to GitHub when no provider is selected", async () => {
+    const { provider, authenticate } = setup()
+    await expect(
+      provider.checkIn(account(null), context),
+    ).resolves.toMatchObject({
+      status: "failed",
+      messageKey: "autoCheckin:providerFallback.loginProviderRequired",
+      retryable: false,
+    })
+    expect(authenticate).not.toHaveBeenCalled()
+  })
+  it("rejects an unknown persisted provider without a login attempt", async () => {
+    const { provider, authenticate } = setup()
+    const saved = account()
+    saved.checkIn.loginCheckIn = { provider: "untrusted" as never }
+    await expect(provider.checkIn(saved, context)).resolves.toMatchObject({
+      status: "failed",
+      messageKey: "autoCheckin:providerFallback.loginProviderRequired",
+    })
+    expect(authenticate).not.toHaveBeenCalled()
   })
   it.each([false, undefined])(
     "does not report success without confirmed check-in (%s)",

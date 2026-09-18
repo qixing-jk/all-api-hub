@@ -63,6 +63,8 @@ describe("auto check-in skip categories", () => {
         AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
       [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]:
         AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
+      [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE]:
+        AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED,
     } as const
 
     expect(Object.keys(expectedCategories).sort()).toEqual(

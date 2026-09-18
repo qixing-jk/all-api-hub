@@ -95,6 +95,7 @@
     },
     "unknown": "不明なエラー",
     "validation": {
+      "agentRouterLoginProviderInUse": "{{provider}} のログイン方法は、自動チェックインを有効にした AgentRouter アカウント「{{account}}」が使用中です。もう一方の方法に変更するか、そのアカウントの自動チェックインを無効にするか、この選択をクリアしてください。",
       "bookmarkNameRequired": "ブックマーク名は空にできません",
       "bookmarkUrlRequired": "ブックマーク URL は空にできません",
       "incompleteAccountInfo": "アカウント情報をすべて入力してください",

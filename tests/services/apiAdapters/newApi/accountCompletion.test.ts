@@ -738,4 +738,104 @@ describe("newApiAccountCompletion", () => {
     })
     expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })
+
+  it("preselects the AgentRouter login provider proven by the account binding", async () => {
+    const {
+      helpers: agentRouterHelpers,
+      createInitialCheckInConfig: agentRouterCheckInConfig,
+    } = createAccountCompletionHelpersMock(SITE_TYPES.NEW_API, {
+      automaticExecutionEnabled: true,
+    })
+    mockFetchUserInfo.mockResolvedValueOnce({
+      id: "9",
+      username: "  alice  ",
+      access_token: "  session-token  ",
+      loginProviders: ["linuxdo"],
+    })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: true })
+
+    const result = await newApiAccountCompletion.complete(
+      {
+        url: "https://agentrouter.org",
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: {
+          userId: "9",
+          siteType: SITE_TYPES.NEW_API,
+        },
+        context: {},
+      },
+      agentRouterHelpers,
+    )
+
+    expect(agentRouterCheckInConfig).toHaveBeenCalledWith({
+      supported: true,
+      loginCheckInProvider: "linuxdo",
+    })
+    expect(result.checkIn.loginCheckIn).toEqual({ provider: "linuxdo" })
+  })
+
+  it.each([
+    ["an ambiguous binding", { loginProviders: ["github", "linuxdo"] }],
+    ["no binding evidence", {}],
+  ])(
+    "does not preselect a login provider with %s",
+    async (_case, bindingFacts) => {
+      const {
+        helpers: agentRouterHelpers,
+        createInitialCheckInConfig: agentRouterCheckInConfig,
+      } = createAccountCompletionHelpersMock(SITE_TYPES.NEW_API, {
+        automaticExecutionEnabled: true,
+      })
+      mockFetchUserInfo.mockResolvedValueOnce({
+        id: "9",
+        username: "  alice  ",
+        access_token: "  session-token  ",
+        ...bindingFacts,
+      })
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: true })
+
+      const result = await newApiAccountCompletion.complete(
+        {
+          url: "https://agentrouter.org",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "9",
+            siteType: SITE_TYPES.NEW_API,
+          },
+          context: {},
+        },
+        agentRouterHelpers,
+      )
+
+      expect(agentRouterCheckInConfig).toHaveBeenCalledWith({
+        supported: true,
+      })
+      expect(result.checkIn).not.toHaveProperty("loginCheckIn")
+    },
+  )
+
+  it("keeps other New API-family sites free of login check-in defaults", async () => {
+    mockFetchUserInfo.mockResolvedValueOnce({
+      id: "9",
+      username: "  alice  ",
+      access_token: "  session-token  ",
+      loginProviders: ["github"],
+    })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: true })
+
+    await newApiAccountCompletion.complete(
+      {
+        url: "https://new.example.com",
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: {
+          userId: "9",
+          siteType: SITE_TYPES.NEW_API,
+        },
+        context: {},
+      },
+      helpers,
+    )
+
+    expect(createInitialCheckInConfig).toHaveBeenCalledWith({ supported: true })
+  })
 })

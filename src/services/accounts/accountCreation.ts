@@ -11,6 +11,7 @@ import {
 } from "~/services/accounts/accountPersistence/constants"
 import {
   buildAccountPersistenceContext,
+  findAgentRouterLoginProviderConflictForSave,
   getAccountHealthFailureReason,
   getAccountOperationLogDetails,
   getCredentialValidationMessage,
@@ -22,6 +23,7 @@ import {
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { getAgentRouterLoginProviderConflictMessage } from "~/services/checkin/autoCheckin/accountConstraints"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -125,6 +127,22 @@ export async function validateAndSaveAccount(
       message: getCredentialValidationMessage(normalizedSiteType, error),
     }
   }
+  // Two enabled AgentRouter accounts cannot share one browser login context,
+  // so a second claim of the same provider is rejected before it is persisted.
+  const loginProviderConflict =
+    await findAgentRouterLoginProviderConflictForSave({
+      siteUrl: url,
+      checkIn: checkInConfig,
+    })
+  if (loginProviderConflict) {
+    return {
+      success: false,
+      message: getAgentRouterLoginProviderConflictMessage(
+        loginProviderConflict,
+      ),
+    }
+  }
+
   const productProfile = getAccountSiteProductProfile(normalizedSiteType)
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
