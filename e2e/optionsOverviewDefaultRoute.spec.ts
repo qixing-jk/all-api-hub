@@ -243,7 +243,7 @@ test("overview attention list flags disabled-only accounts", async ({
   await waitForExtensionRoot(page)
 
   const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
-  const itemTitle = "All 1 account(s) are disabled"
+  const itemTitle = "The only account is disabled"
   await expect(attention).toBeVisible()
   await expect(attention.getByText(itemTitle)).toBeVisible()
   await expect(attention.getByText("No accounts yet")).toHaveCount(0)
@@ -295,7 +295,7 @@ test("overview attention list surfaces accounts paused by the global check-in sw
   await expect(attention.getByText(itemTitle)).toBeVisible()
   await expect(
     attention.getByText(
-      /1 account\(s\) have automatic check-in enabled, but nothing runs/u,
+      /1 account has automatic check-in enabled, but nothing runs/u,
     ),
   ).toBeVisible()
 
@@ -369,7 +369,7 @@ test("overview attention list surfaces missing sign-in data as a todo", async ({
   await waitForExtensionRoot(page)
 
   const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
-  const itemTitle = "1 account(s) are missing saved sign-in data"
+  const itemTitle = "1 account is missing saved sign-in data"
   await expect(attention).toBeVisible()
   await expect(attention.getByText(itemTitle)).toBeVisible()
   await expect(attention.getByText("Routine Relay")).toHaveCount(0)
