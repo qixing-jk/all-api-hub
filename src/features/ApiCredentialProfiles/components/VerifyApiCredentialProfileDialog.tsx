@@ -841,6 +841,7 @@ export function VerifyApiCredentialProfileDialog({
               value={verificationMode}
               onChange={setVerificationMode}
               disabled={!canClose}
+              labelRowClassName="min-h-(--density-control-tight)"
             />
 
             <div className="space-y-density-1-5 sm:col-span-2">
