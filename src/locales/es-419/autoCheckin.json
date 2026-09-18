@@ -55,6 +55,7 @@
       "skipCategoryActionRequired": "Requiere tu acción",
       "skipCategoryDisabled": "Desactivado",
       "skipCategoryExpected": "No requiere acción",
+      "skipCategoryUnclassified": "Sin clasificar",
       "skipCategoryUnsupported": "No compatible",
       "skipCategoryWaiting": "Se reintentará automáticamente",
       "skipped": "No ejecutados",

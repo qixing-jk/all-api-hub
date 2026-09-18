@@ -180,8 +180,9 @@ export function countAutoCheckinResults(
 
 /**
  * Resolves the semantic reason category of a result. Unknown or legacy skip
- * reasons fall back to the routine bucket; statuses without a reason
- * vocabulary stay uncategorized.
+ * reasons keep the routine bucket; other reason-carrying statuses fall back to
+ * the unclassified bucket so the reason dimension covers every row, while
+ * statuses without a reason vocabulary stay uncategorized.
  */
 function resolveResultReasonCategory(
   result: CheckinAccountResult,
@@ -189,8 +190,14 @@ function resolveResultReasonCategory(
   const category = getAutoCheckinSkipCategory(result.reasonCode)
   if (category) return category
 
-  return result.status === CHECKIN_RESULT_STATUS.SKIPPED
-    ? AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
+  if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
+    return AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
+  }
+
+  return AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.includes(
+    result.status as AutoCheckinReasonFilterableStatus,
+  )
+    ? AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED
     : null
 }
 

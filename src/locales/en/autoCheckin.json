@@ -53,6 +53,7 @@
       "skipCategoryActionRequired": "Needs your action",
       "skipCategoryDisabled": "Disabled",
       "skipCategoryExpected": "No action needed",
+      "skipCategoryUnclassified": "Unclassified",
       "skipCategoryUnsupported": "Unsupported",
       "skipCategoryWaiting": "Will retry automatically",
       "skipped": "Not executed",

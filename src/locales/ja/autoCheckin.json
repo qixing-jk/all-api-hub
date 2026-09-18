@@ -51,6 +51,7 @@
       "skipCategoryActionRequired": "対応が必要",
       "skipCategoryDisabled": "無効",
       "skipCategoryExpected": "対応不要",
+      "skipCategoryUnclassified": "未分類",
       "skipCategoryUnsupported": "未対応",
       "skipCategoryWaiting": "自動で再試行",
       "skipped": "未実行",

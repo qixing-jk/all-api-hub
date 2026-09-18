@@ -105,6 +105,7 @@ const REASON_CATEGORY_LABEL_KEYS: Record<
   disabled: "execution.filters.skipCategoryDisabled",
   unsupported: "execution.filters.skipCategoryUnsupported",
   expected: "execution.filters.skipCategoryExpected",
+  unclassified: "execution.filters.skipCategoryUnclassified",
 }
 
 /** Right-aligned count rendered next to a filter entry label. */

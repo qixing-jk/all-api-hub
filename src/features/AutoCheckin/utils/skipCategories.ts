@@ -22,6 +22,11 @@ export const AUTO_CHECKIN_SKIP_CATEGORY = {
   UNSUPPORTED: "unsupported",
   /** Routine skips that need no follow-up, e.g. already checked in today. */
   EXPECTED: "expected",
+  /**
+   * Reason-carrying statuses whose persisted result has no known reason code,
+   * so the reason dimension still accounts for every row.
+   */
+  UNCLASSIFIED: "unclassified",
 } as const
 
 export type AutoCheckinSkipCategory =
@@ -35,6 +40,7 @@ export const AUTO_CHECKIN_SKIP_CATEGORIES = [
   AUTO_CHECKIN_SKIP_CATEGORY.DISABLED,
   AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED,
   AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED,
+  AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED,
 ] as const satisfies readonly AutoCheckinSkipCategory[]
 
 const SKIP_REASON_CATEGORIES = {

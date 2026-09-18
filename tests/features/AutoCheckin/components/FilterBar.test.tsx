@@ -151,23 +151,17 @@ const subtypeResults: CheckinAccountResult[] = [
   },
 ]
 
-const reasonlessResults: CheckinAccountResult[] = [
+const resolvedResults: CheckinAccountResult[] = [
   {
     accountId: "success",
     accountName: "Success",
     status: CHECKIN_RESULT_STATUS.SUCCESS,
-    timestamp: 3,
+    timestamp: 2,
   },
   {
     accountId: "already-checked",
     accountName: "Already checked",
     status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-    timestamp: 2,
-  },
-  {
-    accountId: "failed-unclassified",
-    accountName: "Failed unclassified",
-    status: CHECKIN_RESULT_STATUS.FAILED,
     timestamp: 1,
   },
 ]
@@ -304,14 +298,14 @@ describe("AutoCheckin FilterBar", () => {
     ).toBeVisible()
   })
 
-  it("hides the reason control and its column when no result is classified", async () => {
+  it("hides the reason control and its column when only resolved results exist", async () => {
     const i18n = await createResourceTestI18n({
       en: { autoCheckin: enAutoCheckin },
     })
     rtlRender(
       <I18nextProvider i18n={i18n}>
         <FilterBar
-          accountResults={reasonlessResults}
+          accountResults={resolvedResults}
           filter={EMPTY_AUTO_CHECKIN_RESULT_FILTER}
           keyword=""
           onFilterChange={vi.fn()}
@@ -324,7 +318,7 @@ describe("AutoCheckin FilterBar", () => {
       screen.queryByRole("button", { name: /^Filter by reason: / }),
     ).not.toBeInTheDocument()
     expect(statusTrigger()).toBeVisible()
-    expect(screen.getByText("3 total")).toBeVisible()
+    expect(screen.getByText("2 total")).toBeVisible()
     // The toolbar collapses to search plus status instead of leaving an
     // empty column where the reason filter would be.
     expect(statusTrigger().parentElement).toHaveClass(
@@ -369,6 +363,7 @@ describe("AutoCheckin FilterBar", () => {
       ["Account disabled", 1],
       ["Disabled", 2],
       ["No action needed", 1],
+      ["Unclassified", 1],
     ] as const) {
       expect(
         screen.getByRole("menuitemcheckbox", {
@@ -450,6 +445,31 @@ describe("AutoCheckin FilterBar", () => {
     )
     expect(reasonTrigger()).toHaveAccessibleName(
       "Filter by reason: Will retry automatically",
+    )
+    expect(screen.getByText("Showing 1 of 10")).toBeVisible()
+  })
+
+  it("keeps reasonless failures reachable as unclassified", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(statusTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Failed 3$/ }),
+    )
+    await user.keyboard("{Escape}")
+    await user.click(reasonTrigger())
+
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /^Unclassified 1$/ }),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Unclassified 1$/ }),
+    )
+    await user.keyboard("{Escape}")
+
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: Unclassified",
     )
     expect(screen.getByText("Showing 1 of 10")).toBeVisible()
   })

@@ -51,6 +51,7 @@
       "skipCategoryActionRequired": "需要你處理",
       "skipCategoryDisabled": "已停用",
       "skipCategoryExpected": "無需處理",
+      "skipCategoryUnclassified": "未分類",
       "skipCategoryUnsupported": "暫不支援",
       "skipCategoryWaiting": "稍後自動重試",
       "skipped": "未執行",

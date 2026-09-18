@@ -425,6 +425,7 @@ describe("autoCheckin utils", () => {
         [AUTO_CHECKIN_SKIP_CATEGORY.DISABLED]: 0,
         [AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED]: 0,
         [AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED]: 1,
+        [AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED]: 1,
       })
 
       expect(
@@ -568,6 +569,20 @@ describe("autoCheckin utils", () => {
         ).map((result) => result.accountId),
       ).toEqual(["failed-network", "uncertain-timeout"])
 
+      // Reasonless failures stay reachable instead of vanishing from the
+      // reason dimension.
+      expect(
+        filterAutoCheckinResults(
+          results,
+          buildFilter(
+            [CHECKIN_RESULT_STATUS.FAILED],
+            [AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED],
+          ),
+          "",
+          noop,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed-unclassified"])
+
       // Statuses outside the scope keep their own status bucketing, while
       // unclassified rows of a narrowed status drop out.
       expect(
@@ -583,6 +598,43 @@ describe("autoCheckin utils", () => {
           noop,
         ).map((result) => result.accountId),
       ).toEqual(["failed-network", "skipped-network"])
+    })
+
+    it("keeps legacy skips routine while reasonless failures stay unclassified", () => {
+      const counts = countAutoCheckinResultReasonCategories([
+        {
+          accountId: "skipped-legacy",
+          accountName: "Skipped legacy",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          timestamp: 3,
+        },
+        {
+          accountId: "failed-unknown",
+          accountName: "Failed unknown",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 2,
+        },
+        {
+          accountId: "uncertain-unknown",
+          accountName: "Uncertain unknown",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reconciliation: "unknown",
+          timestamp: 1,
+        },
+        {
+          accountId: "success",
+          accountName: "Success",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 0,
+        },
+      ])
+
+      expect(counts[AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED]).toBe(1)
+      expect(counts[AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED]).toBe(2)
+      // Statuses without a reason vocabulary never join the reason dimension.
+      expect(
+        Object.values(counts).reduce((total, count) => total + count, 0),
+      ).toBe(3)
     })
 
     it("narrows skipped results by their precise skip reason", () => {
