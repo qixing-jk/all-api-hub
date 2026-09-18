@@ -58,7 +58,10 @@ describe("New API account recovery dialog readiness", () => {
     password: "test-password",
   }
 
-  function createDetectedDialog(failureText: string | null) {
+  function createDetectedDialog(
+    failureText: string | null,
+    overrides: { confirmAddButton?: Record<string, unknown> } = {},
+  ) {
     const recoveryHeading = {
       isVisible: vi.fn().mockResolvedValue(false),
     }
@@ -80,6 +83,7 @@ describe("New API account recovery dialog readiness", () => {
         confirmAddButton: {
           isVisible: vi.fn().mockResolvedValue(false),
           isEnabled: vi.fn().mockResolvedValue(false),
+          ...overrides.confirmAddButton,
         },
       } as unknown as AccountAddDialog,
       dialogRoot,
@@ -111,6 +115,26 @@ describe("New API account recovery dialog readiness", () => {
 
     await expect(recovery.prepareDetectedDialog(dialog)).rejects.toThrow(
       /never became confirmable/u,
+    )
+  })
+
+  it("rethrows predicate failures instead of reporting a readiness timeout", async () => {
+    const predicateError = new Error(
+      "strict mode violation: ready button resolved to 2 elements",
+    )
+    const { dialog } = createDetectedDialog(null, {
+      confirmAddButton: {
+        isVisible: vi.fn().mockRejectedValue(predicateError),
+      },
+    })
+    const recovery = createNewApiAccountRecovery({
+      page: {} as unknown as Page,
+      config,
+      dialogReadyTimeoutMs: 25,
+    })
+
+    await expect(recovery.prepareDetectedDialog(dialog)).rejects.toBe(
+      predicateError,
     )
   })
 })

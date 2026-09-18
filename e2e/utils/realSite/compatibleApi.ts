@@ -836,9 +836,10 @@ async function revokeStaleAuthSessions(
       continue
     }
 
-    // An already-revoked row, or a deployment without revoke support, is an
-    // idempotent outcome; anything else stops this best-effort pass.
-    if ([401, 403, 404, 405].includes(response.status())) continue
+    // Already-revoked rows are per-candidate idempotent outcomes. A 405 means
+    // the deployment has no revoke route, and any other status is unexpected,
+    // so stop the pass instead of repeating the same failing request.
+    if ([401, 403, 404].includes(response.status())) continue
 
     console.info(
       `[real-site] ${options.label} session hygiene unavailable: HTTP ${response.status()}`,

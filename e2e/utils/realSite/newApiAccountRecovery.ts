@@ -46,6 +46,8 @@ export function createNewApiAccountRecovery(params: {
           )
           .toBe(true)
       } catch (error) {
+        if (!isDetectedDialogPollTimeout(error)) throw error
+
         throw new Error(await describeDetectedDialogFailure(dialog, error))
       }
 
@@ -229,6 +231,18 @@ async function fillSecret(input: Locator, value: string, label: string) {
     // Locator action errors can contain the fill value in their call log.
     throw new Error(`Could not fill the New API ${label} field.`)
   }
+}
+
+/**
+ * Playwright reports poll exhaustion as a timeout in the assertion call log,
+ * while a predicate failure (for example a strict-mode locator error) rejects
+ * immediately with its own error and must keep that identity.
+ */
+function isDetectedDialogPollTimeout(error: unknown) {
+  return (
+    error instanceof Error &&
+    /Timeout \d+ms exceeded while waiting on the predicate/u.test(error.message)
+  )
 }
 
 /**

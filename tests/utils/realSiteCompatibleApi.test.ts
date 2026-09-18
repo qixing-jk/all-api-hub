@@ -303,6 +303,50 @@ describe("compatible real-site login", () => {
     expect(messages).not.toContain("stale-headless-session")
   })
 
+  it("stops session hygiene when the deployment cannot revoke sessions", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+    const staleTimestamp = new Date(
+      Date.now() - 6 * 60 * 60 * 1000,
+    ).toISOString()
+    const getRequest = vi.fn().mockResolvedValue(
+      createResponse(200, {
+        success: true,
+        data: [
+          {
+            sid: "stale-headless-session-one",
+            current: false,
+            user_agent: "HeadlessChrome/140",
+            last_active_at: staleTimestamp,
+          },
+          {
+            sid: "stale-headless-session-two",
+            current: false,
+            user_agent: "HeadlessChrome/140",
+            last_active_at: staleTimestamp,
+          },
+        ],
+      }),
+    )
+    const deleteRequest = vi.fn().mockResolvedValue(createResponse(405, {}))
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const { page } = createPage(post, { getRequest, deleteRequest })
+    let messages = ""
+
+    try {
+      await expect(loginToRealNewApiSite(page, config)).resolves.toMatchObject({
+        reusedSession: false,
+      })
+      messages = info.mock.calls.flat().join(" ")
+    } finally {
+      info.mockRestore()
+    }
+
+    expect(deleteRequest).toHaveBeenCalledTimes(1)
+    expect(messages).toContain("session hygiene unavailable: HTTP 405")
+  })
   it("keeps login usable when stale session revocation fails", async () => {
     const post = vi
       .fn()
