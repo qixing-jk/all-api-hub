@@ -18,23 +18,43 @@ import {
 } from "./skipCategories"
 
 /**
- * Result-table filter state. Atomic statuses stay selectable as-is; reason
- * narrowing (semantic categories plus the precise reason codes behind them)
- * applies to `skipped` rows so expected skips never inflate the
- * needs-attention preset.
+ * Statuses whose results can carry a persisted reason code and therefore take
+ * part in the reason narrowing.
  */
+export const AUTO_CHECKIN_REASON_FILTERABLE_STATUSES = [
+  CHECKIN_RESULT_STATUS.SKIPPED,
+  CHECKIN_RESULT_STATUS.FAILED,
+  CHECKIN_RESULT_STATUS.UNCERTAIN,
+] as const
+
+export type AutoCheckinReasonFilterableStatus =
+  (typeof AUTO_CHECKIN_REASON_FILTERABLE_STATUSES)[number]
+
+/**
+ * Reason narrowing shared by every reason-carrying status. Categories and the
+ * precise reasons behind them are one selection; `appliesTo` records which
+ * statuses the selection narrows.
+ */
+export interface AutoCheckinReasonFilter {
+  appliesTo: AutoCheckinReasonFilterableStatus[]
+  categories: AutoCheckinSkipCategory[]
+  reasons: AutoCheckinSkipReason[]
+}
+
+/** Result-table filter state: status multi-select plus optional reason narrowing. */
 export interface AutoCheckinResultFilter {
   statuses: CheckinResultStatus[]
-  skippedCategories: AutoCheckinSkipCategory[]
-  /** Precise skip reasons, derived from the classifications in the results. */
-  reasons: AutoCheckinSkipReason[]
+  reason: AutoCheckinReasonFilter
 }
 
 /** Default filter: every result is visible. */
 export const EMPTY_AUTO_CHECKIN_RESULT_FILTER: AutoCheckinResultFilter = {
   statuses: [],
-  skippedCategories: [],
-  reasons: [],
+  reason: {
+    appliesTo: [],
+    categories: [],
+    reasons: [],
+  },
 }
 
 /** Preset for results that genuinely need a user decision. */
@@ -45,9 +65,38 @@ export function createNeedsAttentionResultFilter(): AutoCheckinResultFilter {
       CHECKIN_RESULT_STATUS.UNCERTAIN,
       CHECKIN_RESULT_STATUS.SKIPPED,
     ],
-    skippedCategories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
-    reasons: [],
+    // Failed and uncertain rows stay complete: only actionable skips are
+    // narrowed, so the preset still matches the attention queue.
+    reason: {
+      appliesTo: [CHECKIN_RESULT_STATUS.SKIPPED],
+      categories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+      reasons: [],
+    },
   }
+}
+
+/** Returns whether the reason selection currently narrows any result. */
+export function isAutoCheckinReasonFilterActive(
+  filter: AutoCheckinResultFilter,
+): boolean {
+  return (
+    filter.reason.appliesTo.length > 0 &&
+    (filter.reason.categories.length > 0 || filter.reason.reasons.length > 0)
+  )
+}
+
+/**
+ * Resolves the statuses a reason selection would apply to. Without a status
+ * selection every reason-carrying status is narrowed.
+ */
+export function resolveAutoCheckinReasonScope(
+  statuses: readonly CheckinResultStatus[],
+): AutoCheckinReasonFilterableStatus[] {
+  if (statuses.length === 0) return [...AUTO_CHECKIN_REASON_FILTERABLE_STATUSES]
+
+  return AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.filter((status) =>
+    statuses.includes(status),
+  )
 }
 
 /** Counts active filter dimensions for analytics without exposing values. */
@@ -57,7 +106,7 @@ export function countActiveResultFilterDimensions(
 ): number {
   return (
     (filter.statuses.length > 0 ? 1 : 0) +
-    (filter.skippedCategories.length > 0 || filter.reasons.length > 0 ? 1 : 0) +
+    (isAutoCheckinReasonFilterActive(filter) ? 1 : 0) +
     (keyword.trim() ? 1 : 0)
   )
 }
@@ -68,13 +117,18 @@ export function isAutoCheckinNeedsAttentionFilter(
 ): boolean {
   const preset = createNeedsAttentionResultFilter()
   return (
-    filter.statuses.length === preset.statuses.length &&
-    preset.statuses.every((status) => filter.statuses.includes(status)) &&
-    filter.skippedCategories.length === preset.skippedCategories.length &&
-    preset.skippedCategories.every((category) =>
-      filter.skippedCategories.includes(category),
-    ) &&
-    filter.reasons.length === 0
+    matchesSelection(filter.statuses, preset.statuses) &&
+    matchesSelection(filter.reason.appliesTo, preset.reason.appliesTo) &&
+    matchesSelection(filter.reason.categories, preset.reason.categories) &&
+    filter.reason.reasons.length === 0
+  )
+}
+
+/** Compares two selections independent of their order. */
+function matchesSelection<T>(selection: readonly T[], expected: readonly T[]) {
+  return (
+    selection.length === expected.length &&
+    expected.every((value) => selection.includes(value))
   )
 }
 
@@ -125,36 +179,24 @@ export function countAutoCheckinResults(
 }
 
 /**
- * Resolves the precise skip reason of a skipped result. Unknown or legacy
- * reasons stay uncategorized so they never create attention noise.
+ * Resolves the semantic reason category of a result. Unknown or legacy skip
+ * reasons fall back to the routine bucket; statuses without a reason
+ * vocabulary stay uncategorized.
  */
-function resolveSkippedResultReason(
-  result: CheckinAccountResult,
-): AutoCheckinSkipReason | null {
-  if (result.status !== CHECKIN_RESULT_STATUS.SKIPPED) return null
-
-  return result.reasonCode ?? null
-}
-
-/**
- * Resolves the semantic category of a skipped result. Unknown or legacy
- * reasons fall back to the routine bucket so they never create attention
- * noise; other statuses stay uncategorized.
- */
-function resolveSkippedResultCategory(
+function resolveResultReasonCategory(
   result: CheckinAccountResult,
 ): AutoCheckinSkipCategory | null {
-  if (result.status !== CHECKIN_RESULT_STATUS.SKIPPED) return null
+  const category = getAutoCheckinSkipCategory(result.reasonCode)
+  if (category) return category
 
-  return (
-    getAutoCheckinSkipCategory(result.reasonCode) ??
-    AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
-  )
+  return result.status === CHECKIN_RESULT_STATUS.SKIPPED
+    ? AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
+    : null
 }
 
 /**
- * Checks whether a result matches the selected statuses and, for skipped
- * rows, the selected reason categories and precise reasons.
+ * Checks whether a result matches the selected statuses and, for the
+ * reason-carrying statuses in scope, the selected reason selection.
  */
 function matchesAutoCheckinResultFilter(
   result: CheckinAccountResult,
@@ -163,24 +205,23 @@ function matchesAutoCheckinResultFilter(
   if (filter.statuses.length > 0 && !filter.statuses.includes(result.status)) {
     return false
   }
-
-  const reasonsAreNarrowed =
-    filter.skippedCategories.length > 0 || filter.reasons.length > 0
-  if (reasonsAreNarrowed) {
-    const reason = resolveSkippedResultReason(result)
-    const category = resolveSkippedResultCategory(result)
-    const matchesReason = reason !== null && filter.reasons.includes(reason)
-    const matchesCategory =
-      category !== null && filter.skippedCategories.includes(category)
-
-    // Non-skipped rows carry their own status bucketing and stay visible,
-    // while unknown or legacy skip reasons fall back to the routine bucket.
-    if (!matchesReason && !matchesCategory && category !== null) {
-      return false
-    }
+  if (!isAutoCheckinReasonFilterActive(filter)) return true
+  if (
+    !AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.includes(
+      result.status as AutoCheckinReasonFilterableStatus,
+    ) ||
+    !filter.reason.appliesTo.includes(
+      result.status as AutoCheckinReasonFilterableStatus,
+    )
+  ) {
+    return true
   }
 
-  return true
+  const reason = result.reasonCode ?? null
+  if (reason && filter.reason.reasons.includes(reason)) return true
+
+  const category = resolveResultReasonCategory(result)
+  return category !== null && filter.reason.categories.includes(category)
 }
 
 /** Returns whether one result needs an explicit user follow-up. */
@@ -207,8 +248,8 @@ export function countAutoCheckinResultsNeedingAttention(
   return results.filter(isAutoCheckinResultNeedingAttention).length
 }
 
-/** Counts skipped results per persisted reason code. */
-export function countAutoCheckinSkippedReasons(
+/** Counts results per persisted reason code. */
+export function countAutoCheckinResultReasons(
   results: readonly CheckinAccountResult[],
 ): Record<AutoCheckinSkipReason, number> {
   const counts = Object.fromEntries(
@@ -216,7 +257,7 @@ export function countAutoCheckinSkippedReasons(
   ) as Record<AutoCheckinSkipReason, number>
 
   for (const result of results) {
-    const reason = resolveSkippedResultReason(result)
+    const reason = result.reasonCode
     if (!reason) continue
     counts[reason] += 1
   }
@@ -224,8 +265,8 @@ export function countAutoCheckinSkippedReasons(
   return counts
 }
 
-/** Counts skipped results per semantic reason category. */
-export function countAutoCheckinSkippedCategories(
+/** Counts results per semantic reason category. */
+export function countAutoCheckinResultReasonCategories(
   results: readonly CheckinAccountResult[],
 ): Record<AutoCheckinSkipCategory, number> {
   const counts = Object.fromEntries(
@@ -233,7 +274,7 @@ export function countAutoCheckinSkippedCategories(
   ) as Record<AutoCheckinSkipCategory, number>
 
   for (const result of results) {
-    const category = resolveSkippedResultCategory(result)
+    const category = resolveResultReasonCategory(result)
     if (!category) continue
     counts[category] += 1
   }

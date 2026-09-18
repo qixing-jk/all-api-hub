@@ -27,6 +27,7 @@ import {
   EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
+  isAutoCheckinReasonFilterActive,
   type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
@@ -150,9 +151,7 @@ export default function ResultsTable({
 
   const columnFilters = useMemo<ColumnFiltersState>(
     () =>
-      filter.statuses.length === 0 &&
-      filter.skippedCategories.length === 0 &&
-      filter.reasons.length === 0
+      filter.statuses.length === 0 && !isAutoCheckinReasonFilterActive(filter)
         ? []
         : [{ id: "status", value: filter }],
     [filter],

@@ -1,4 +1,4 @@
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
+import { render as rtlRender, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
@@ -84,66 +84,93 @@ const subtypeResults: CheckinAccountResult[] = [
     accountName: "Skipped auth",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-    timestamp: 7,
+    timestamp: 10,
   },
   {
     accountId: "skipped-credentials",
     accountName: "Skipped credentials",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
-    timestamp: 6,
+    timestamp: 9,
   },
   {
     accountId: "skipped-account-disabled",
     accountName: "Skipped account disabled",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-    timestamp: 5,
+    timestamp: 8,
   },
   {
     accountId: "skipped-auto-disabled",
     accountName: "Skipped auto disabled",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
-    timestamp: 4,
+    timestamp: 7,
   },
   {
     accountId: "skipped-detection-disabled",
     accountName: "Skipped detection disabled",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED,
-    timestamp: 3,
+    timestamp: 6,
   },
   {
     accountId: "skipped-already",
     accountName: "Skipped already",
     status: CHECKIN_RESULT_STATUS.SKIPPED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+    timestamp: 5,
+  },
+  {
+    accountId: "failed-network",
+    accountName: "Failed network",
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+    timestamp: 4,
+  },
+  {
+    accountId: "failed-auth",
+    accountName: "Failed auth",
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    timestamp: 3,
+  },
+  {
+    accountId: "failed-unclassified",
+    accountName: "Failed unclassified",
+    status: CHECKIN_RESULT_STATUS.FAILED,
     timestamp: 2,
   },
   {
-    accountId: "failed",
-    accountName: "Failed",
-    status: CHECKIN_RESULT_STATUS.FAILED,
+    accountId: "uncertain-timeout",
+    accountName: "Uncertain timeout",
+    status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+    reconciliation: "unknown",
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
     timestamp: 1,
   },
 ]
 
-function StatefulSubtypeFilterBar() {
-  const [filter, setFilter] = useState<AutoCheckinResultFilter>(
-    EMPTY_AUTO_CHECKIN_RESULT_FILTER,
-  )
-
-  return (
-    <FilterBar
-      accountResults={subtypeResults}
-      filter={filter}
-      keyword=""
-      onFilterChange={setFilter}
-      onKeywordChange={vi.fn()}
-    />
-  )
-}
+const reasonlessResults: CheckinAccountResult[] = [
+  {
+    accountId: "success",
+    accountName: "Success",
+    status: CHECKIN_RESULT_STATUS.SUCCESS,
+    timestamp: 3,
+  },
+  {
+    accountId: "already-checked",
+    accountName: "Already checked",
+    status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    timestamp: 2,
+  },
+  {
+    accountId: "failed-unclassified",
+    accountName: "Failed unclassified",
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    timestamp: 1,
+  },
+]
 
 function StatefulFilterBar() {
   const [filter, setFilter] = useState<AutoCheckinResultFilter>(
@@ -153,6 +180,22 @@ function StatefulFilterBar() {
   return (
     <FilterBar
       accountResults={results}
+      filter={filter}
+      keyword=""
+      onFilterChange={setFilter}
+      onKeywordChange={vi.fn()}
+    />
+  )
+}
+
+function StatefulSubtypeFilterBar() {
+  const [filter, setFilter] = useState<AutoCheckinResultFilter>(
+    EMPTY_AUTO_CHECKIN_RESULT_FILTER,
+  )
+
+  return (
+    <FilterBar
+      accountResults={subtypeResults}
       filter={filter}
       keyword=""
       onFilterChange={setFilter}
@@ -191,42 +234,52 @@ async function renderSubtypeResults() {
   return user
 }
 
+const statusTrigger = () =>
+  screen.getByRole("button", { name: /^Filter by execution status: / })
+const reasonTrigger = () =>
+  screen.getByRole("button", { name: /^Filter by reason: / })
+
 describe("AutoCheckin FilterBar", () => {
+  afterEach(() => {
+    trackProductAnalyticsActionCompletedMock.mockReset()
+  })
+
   it("applies the needs-attention preset for actionable results and resets to all", async () => {
     const user = await renderWithEnglishResults()
-    const trigger = screen.getByRole("button", {
-      name: /Filter by execution status/,
-    })
 
-    await user.click(trigger)
+    await user.click(statusTrigger())
     expect(
       screen.getByRole("menuitem", { name: /Needs attention.*3/ }),
     ).toBeVisible()
     await user.click(screen.getByRole("menuitem", { name: /Needs attention/ }))
 
-    expect(trigger).toHaveAccessibleName(
+    expect(statusTrigger()).toHaveAccessibleName(
       "Filter by execution status: Needs attention",
     )
     expect(screen.getByText("Showing 3 of 6")).toBeVisible()
+    // The preset narrows actionable skips without hiding failures.
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: Needs your action",
+    )
 
-    await user.click(trigger)
-    await user.click(screen.getByRole("menuitemcheckbox", { name: /Failed/ }))
+    await user.click(statusTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Failed 1$/ }),
+    )
     expect(
-      screen.getByRole("menuitemcheckbox", { name: /Failed/ }),
+      screen.getByRole("menuitemcheckbox", { name: /^Failed 1$/ }),
     ).toHaveAttribute("aria-checked", "false")
     await user.keyboard("{Escape}")
-    expect(trigger).not.toHaveAccessibleName(
+    expect(statusTrigger()).not.toHaveAccessibleName(
       "Filter by execution status: Needs attention",
     )
 
-    await user.click(trigger)
-    await user.click(screen.getByRole("menuitem", { name: /All/ }))
-    expect(trigger).toHaveAccessibleName("Filter by execution status: All")
+    await user.click(statusTrigger())
+    await user.click(screen.getByRole("menuitem", { name: /^All\s*6$/ }))
+    expect(statusTrigger()).toHaveAccessibleName(
+      "Filter by execution status: All",
+    )
     expect(screen.getByText("6 total")).toBeVisible()
-  })
-
-  afterEach(() => {
-    trackProductAnalyticsActionCompletedMock.mockReset()
   })
 
   it("uses one multi-select menu for the five result statuses", async () => {
@@ -251,58 +304,207 @@ describe("AutoCheckin FilterBar", () => {
     ).toBeVisible()
   })
 
-  it("reveals skipped reason categories only while skipped stays selected", async () => {
-    const user = await renderWithEnglishResults()
-
-    await user.click(
-      screen.getByRole("button", { name: /Filter by execution status/ }),
+  it("hides the reason control and its column when no result is classified", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckin },
+    })
+    rtlRender(
+      <I18nextProvider i18n={i18n}>
+        <FilterBar
+          accountResults={reasonlessResults}
+          filter={EMPTY_AUTO_CHECKIN_RESULT_FILTER}
+          keyword=""
+          onFilterChange={vi.fn()}
+          onKeywordChange={vi.fn()}
+        />
+      </I18nextProvider>,
     )
-    expect(screen.queryByText("Not executed reasons")).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
-    )
-
-    expect(screen.getByText("Not executed reasons")).toBeVisible()
     expect(
-      screen.getByRole("menuitemcheckbox", { name: /Needs your action 1/ }),
-    ).toBeVisible()
-    expect(
-      screen.getByRole("menuitemcheckbox", {
-        name: /Will retry automatically 1/,
-      }),
-    ).toBeVisible()
-    expect(
-      screen.queryByRole("menuitemcheckbox", {
-        name: /No action needed/,
-      }),
+      screen.queryByRole("button", { name: /^Filter by reason: / }),
     ).not.toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
+    expect(statusTrigger()).toBeVisible()
+    expect(screen.getByText("3 total")).toBeVisible()
+    // The toolbar collapses to search plus status instead of leaving an
+    // empty column where the reason filter would be.
+    expect(statusTrigger().parentElement).toHaveClass(
+      "lg:grid-cols-[minmax(14rem,1fr)_minmax(12rem,auto)]",
     )
-    expect(screen.queryByText("Not executed reasons")).not.toBeInTheDocument()
   })
 
-  it("narrows skipped results by their reason category", async () => {
-    const user = await renderWithEnglishResults()
-    const trigger = screen.getByRole("button", {
-      name: /Filter by execution status/,
-    })
+  it("drops the reason control once the selected status has no reasons", async () => {
+    const user = await renderSubtypeResults()
 
-    await user.click(trigger)
+    expect(reasonTrigger()).toBeVisible()
+
+    await user.click(statusTrigger())
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
-    )
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Needs your action 1/ }),
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Checked in this run 0$/,
+      }),
     )
     await user.keyboard("{Escape}")
 
-    expect(trigger).toHaveAccessibleName(
-      "Filter by execution status: Not executed · Needs your action",
+    expect(
+      screen.queryByRole("button", { name: /^Filter by reason: / }),
+    ).not.toBeInTheDocument()
+    expect(statusTrigger().parentElement).toHaveClass(
+      "lg:grid-cols-[minmax(14rem,1fr)_minmax(12rem,auto)]",
     )
-    expect(screen.getByText("Showing 1 of 6")).toBeVisible()
+  })
+
+  it("derives reason options from every reason-carrying status", async () => {
+    const user = await renderSubtypeResults()
+
+    // No status selection yet: the reason control covers failures, uncertain
+    // results and skips, so the filter never hides behind a status first.
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: All reasons",
+    )
+    await user.click(reasonTrigger())
+
+    for (const [label, count] of [
+      ["Needs your action", 3],
+      ["Will retry automatically", 2],
+      ["Account disabled", 1],
+      ["Disabled", 2],
+      ["No action needed", 1],
+    ] as const) {
+      expect(
+        screen.getByRole("menuitemcheckbox", {
+          name: new RegExp(`^${label} ${count}$`),
+        }),
+      ).toBeVisible()
+    }
+
+    // Multi-reason categories list their precise reasons underneath.
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Auto check-in disabled 1$/,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Detection disabled 1$/,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Sign-in has expired or is required.*2$/,
+      }),
+    ).toBeVisible()
+  })
+
+  it("narrows results by their precise reason", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(reasonTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Account disabled 1$/ }),
+    )
+    await user.keyboard("{Escape}")
+
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: Account disabled",
+    )
+    expect(statusTrigger()).toHaveAccessibleName(
+      "Filter by execution status: All",
+    )
+    expect(screen.getByText("Showing 1 of 10")).toBeVisible()
+  })
+
+  it("narrows a single status by the reasons found in it", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(statusTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Failed 3$/ }),
+    )
+    await user.keyboard("{Escape}")
+    await user.click(reasonTrigger())
+
+    // Only classifications that occur on failures are offered.
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Needs your action 1$/,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Will retry automatically 1$/,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("menuitemcheckbox", { name: /^Account disabled/ }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Will retry automatically 1$/,
+      }),
+    )
+    await user.keyboard("{Escape}")
+
+    expect(statusTrigger()).toHaveAccessibleName(
+      "Filter by execution status: Failed",
+    )
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: Will retry automatically",
+    )
+    expect(screen.getByText("Showing 1 of 10")).toBeVisible()
+  })
+
+  it("keeps a category and its precise reasons in sync", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(reasonTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Saved credentials are missing.*1$/,
+      }),
+    )
+
+    const wholeCategory = screen.getByRole("menuitemcheckbox", {
+      name: /^Needs your action 3$/,
+    })
+    expect(wholeCategory).toHaveAttribute("aria-checked", "false")
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Saved credentials are missing.*1$/,
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+
+    await user.click(wholeCategory)
+    expect(wholeCategory).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /^Saved credentials are missing.*1$/,
+      }),
+    ).toHaveAttribute("aria-checked", "false")
+  })
+
+  it("clears the reason selection without touching the status filter", async () => {
+    const user = await renderSubtypeResults()
+
+    await user.click(statusTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Not executed 6$/ }),
+    )
+    await user.keyboard("{Escape}")
+    await user.click(reasonTrigger())
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: /^Account disabled 1$/ }),
+    )
+    await user.click(screen.getByRole("menuitem", { name: "Clear reasons" }))
+    await user.keyboard("{Escape}")
+
+    expect(reasonTrigger()).toHaveAccessibleName(
+      "Filter by reason: All reasons",
+    )
+    expect(statusTrigger()).toHaveAccessibleName(
+      "Filter by execution status: Not executed",
+    )
+    expect(screen.getByText("Showing 6 of 10")).toBeVisible()
   })
 
   it("keeps multiple atomic statuses selected", async () => {
@@ -373,8 +575,11 @@ describe("AutoCheckin FilterBar", () => {
         CHECKIN_RESULT_STATUS.UNCERTAIN,
         CHECKIN_RESULT_STATUS.SKIPPED,
       ],
-      skippedCategories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
-      reasons: [],
+      reason: {
+        appliesTo: [CHECKIN_RESULT_STATUS.SKIPPED],
+        categories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+        reasons: [],
+      },
     })
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -404,8 +609,7 @@ describe("AutoCheckin FilterBar", () => {
               CHECKIN_RESULT_STATUS.FAILED,
               CHECKIN_RESULT_STATUS.SUCCESS,
             ],
-            skippedCategories: [],
-            reasons: [],
+            reason: { appliesTo: [], categories: [], reasons: [] },
           }}
           keyword="private"
           onFilterChange={vi.fn()}
@@ -427,8 +631,7 @@ describe("AutoCheckin FilterBar", () => {
           accountResults={results}
           filter={{
             statuses: [CHECKIN_RESULT_STATUS.FAILED],
-            skippedCategories: [],
-            reasons: [],
+            reason: { appliesTo: [], categories: [], reasons: [] },
           }}
           keyword="Private"
           onFilterChange={onFilterChange}
@@ -445,13 +648,13 @@ describe("AutoCheckin FilterBar", () => {
 
     expect(onFilterChange).toHaveBeenCalledWith({
       statuses: [],
-      skippedCategories: [],
-      reasons: [],
+      reason: { appliesTo: [], categories: [], reasons: [] },
     })
     expect(onKeywordChange).toHaveBeenCalledWith("")
   })
 
-  it("clears the keyword without exposing it to analytics", () => {
+  it("clears the keyword without exposing it to analytics", async () => {
+    const user = userEvent.setup()
     const onKeywordChange = vi.fn()
     rtlRender(
       <I18nextProvider i18n={testI18n}>
@@ -459,8 +662,7 @@ describe("AutoCheckin FilterBar", () => {
           accountResults={results}
           filter={{
             statuses: [CHECKIN_RESULT_STATUS.FAILED],
-            skippedCategories: [],
-            reasons: [],
+            reason: { appliesTo: [], categories: [], reasons: [] },
           }}
           keyword="private-keyword"
           onFilterChange={vi.fn()}
@@ -469,7 +671,7 @@ describe("AutoCheckin FilterBar", () => {
       </I18nextProvider>,
     )
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
 
@@ -477,108 +679,5 @@ describe("AutoCheckin FilterBar", () => {
     expect(
       JSON.stringify(trackProductAnalyticsActionCompletedMock.mock.calls),
     ).not.toContain("private-keyword")
-  })
-
-  it("keeps account-disabled skips as their own reason category", async () => {
-    const user = await renderSubtypeResults()
-    const trigger = screen.getByRole("button", {
-      name: /Filter by execution status/,
-    })
-
-    await user.click(trigger)
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
-    )
-
-    // Account disabling is a user decision, so it gets its own subtype entry
-    // instead of hiding inside the generic disabled bucket.
-    const accountDisabled = screen.getByRole("menuitemcheckbox", {
-      name: /Account disabled 1/,
-    })
-    expect(accountDisabled).toBeVisible()
-
-    // Detection/method switches stay grouped behind one category row while
-    // their precise reasons are listed as sub-types underneath it.
-    expect(
-      screen.getByRole("menuitemcheckbox", { name: /^Disabled 2/ }),
-    ).toBeVisible()
-    expect(
-      screen.getByRole("menuitemcheckbox", {
-        name: /^Auto check-in disabled 1/,
-      }),
-    ).toBeVisible()
-    expect(
-      screen.getByRole("menuitemcheckbox", { name: /^Detection disabled 1/ }),
-    ).toBeVisible()
-
-    await user.click(accountDisabled)
-    await user.keyboard("{Escape}")
-
-    expect(trigger).toHaveAccessibleName(
-      "Filter by execution status: Not executed · Account disabled",
-    )
-    expect(screen.getByText("Showing 1 of 7")).toBeVisible()
-  })
-
-  it("lists the precise reasons behind a category and narrows by one", async () => {
-    const user = await renderSubtypeResults()
-    const trigger = screen.getByRole("button", {
-      name: /Filter by execution status/,
-    })
-
-    await user.click(trigger)
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
-    )
-
-    const reasonItem = screen.getByRole("menuitemcheckbox", {
-      name: /Saved credentials are missing.*1/,
-    })
-    expect(reasonItem).toBeVisible()
-    expect(
-      screen.getByRole("menuitemcheckbox", { name: /^Needs your action 2/ }),
-    ).toHaveAttribute("aria-checked", "false")
-    await user.click(reasonItem)
-    await user.keyboard("{Escape}")
-
-    expect(trigger).toHaveAccessibleName(
-      "Filter by execution status: Not executed · 1 reason selected",
-    )
-    expect(screen.getByText("Showing 1 of 7")).toBeVisible()
-  })
-
-  it("swaps between a whole category and its precise reasons", async () => {
-    const user = await renderSubtypeResults()
-
-    await user.click(
-      screen.getByRole("button", { name: /Filter by execution status/ }),
-    )
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: /Not executed/ }),
-    )
-    await user.click(
-      screen.getByRole("menuitemcheckbox", {
-        name: /Saved credentials are missing.*1/,
-      }),
-    )
-
-    const wholeCategory = screen.getByRole("menuitemcheckbox", {
-      name: /^Needs your action 2/,
-    })
-    expect(wholeCategory).toHaveAttribute("aria-checked", "false")
-    expect(
-      screen.getByRole("menuitemcheckbox", {
-        name: /Saved credentials are missing.*1/,
-      }),
-    ).toHaveAttribute("aria-checked", "true")
-
-    // Selecting the whole category again drops the precise subtype.
-    await user.click(wholeCategory)
-    expect(
-      screen.getByRole("menuitemcheckbox", {
-        name: /Saved credentials are missing.*1/,
-      }),
-    ).toHaveAttribute("aria-checked", "false")
-    expect(wholeCategory).toHaveAttribute("aria-checked", "true")
   })
 })
