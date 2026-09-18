@@ -23,11 +23,15 @@ export const OPTIONS_OVERVIEW_ATTENTION_CATEGORIES = {
 
 export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   accountUnhealthy: "accountUnhealthy",
+  accountTempWindowIssue: "accountTempWindowIssue",
+  accountsAllDisabled: "accountsAllDisabled",
   siteTypeUnknown: "siteTypeUnknown",
   checkInMethodUnresolved: "checkInMethodUnresolved",
   autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
   autoCheckinGloballyDisabled: "autoCheckinGloballyDisabled",
-  checkInSkippedNeedsAction: "checkInSkippedNeedsAction",
+  checkInReloginRequired: "checkInReloginRequired",
+  checkInAccountDataMissing: "checkInAccountDataMissing",
+  checkInPermissionDenied: "checkInPermissionDenied",
   usageRefreshPending: "usageRefreshPending",
   unreadSiteAnnouncements: "unreadSiteAnnouncements",
   addAccount: "addAccount",

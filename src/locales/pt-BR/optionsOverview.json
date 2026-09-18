@@ -3,6 +3,14 @@
     "open": "Abrir"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "Contas desativadas ficam fora da atualização, do check-in e de outras automações. Reative as que você ainda usa.",
+      "title": "Todas as {{total}} contas estão desativadas"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} precisa revisar as configurações do navegador"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} tem um problema de integridade"
@@ -11,11 +19,16 @@
       "addAccount": "Adicionar conta",
       "addProfile": "Adicionar credencial",
       "editAccount": "Editar conta",
+      "fixAccount": "Corrigir conta",
       "handleCheckIn": "Resolver check-in",
+      "manageAccounts": "Gerenciar contas",
+      "openSettings": "Abrir configurações",
       "refreshAccounts": "Atualizar contas",
+      "signInAgain": "Entrar novamente",
       "viewAccount": "Ver conta",
       "viewAnnouncements": "Ver avisos",
-      "viewCheckIn": "Ver check-in"
+      "viewCheckIn": "Ver check-in",
+      "viewCheckInResults": "Ver resultados"
     },
     "addAccount": {
       "description": "Adicione uma conta para ver resumos de saldos, uso e automações.",
@@ -40,13 +53,21 @@
       "data": "Dados"
     },
     "categoryFilterLabel": "Categoria",
+    "checkInAccountDataMissing": {
+      "description": "As credenciais ou os dados da conta estão incompletos. Redetecte a conta em Gerenciar contas e tente o check-in novamente.",
+      "title": "{{total}} conta(s) estão sem dados de login salvos"
+    },
     "checkInMethodUnresolved": {
       "description": "O check-in automático está ativado, mas ainda não há um método disponível. Em Contas, detecte novamente ou escolha um método antes da próxima execução.",
       "title": "{{name}} precisa de um método de check-in"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "A última execução ignorou essas contas por credenciais ausentes, necessidade de login ou permissões negadas. Abra o check-in automático para resolver.",
-      "title": "{{total}} conta(s) foram ignoradas e precisam de ação"
+    "checkInPermissionDenied": {
+      "description": "O site recusou a solicitação de check-in. Entre novamente ou revise as permissões da conta antes de tentar de novo.",
+      "title": "{{total}} conta(s) tiveram o check-in recusado"
+    },
+    "checkInReloginRequired": {
+      "description": "A última execução ignorou estas contas porque a sessão do site expirou. Entre no site e execute o check-in novamente.",
+      "title": "{{total}} conta(s) precisam entrar novamente"
     },
     "filterAll": "Todos",
     "severityFilterLabel": "Gravidade",
@@ -56,7 +77,6 @@
     },
     "sortHint": "Ordenado por impacto",
     "summary": "{{total}} pendentes",
-    "summary_many": "optionsOverview:attention.summary",
     "unreadSiteAnnouncements": {
       "description": "Abra os avisos do site para marcá-los como lidos e não perder comunicados de manutenção ou risco.",
       "title": "{{total}} aviso(s) do site não lido(s)"

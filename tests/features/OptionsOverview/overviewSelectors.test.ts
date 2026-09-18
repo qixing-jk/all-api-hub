@@ -7,6 +7,7 @@ import {
   WEBDAV_AUTO_SYNC_TARGET_IDS,
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
+import { OPTIONS_OVERVIEW_ATTENTION_KINDS } from "~/features/OptionsOverview/ids"
 import { buildOptionsOverviewViewModel } from "~/features/OptionsOverview/overviewSelectors"
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
@@ -1331,7 +1332,8 @@ describe("Options overview selectors", () => {
 
     expect(view.attentionItems).toContainEqual(
       expect.objectContaining({
-        id: "auto-checkin:skipped-needs-action",
+        id: "auto-checkin:account-data-missing",
+        kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
         severity: "warning",
         titleOptions: { total: 1 },
         target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },

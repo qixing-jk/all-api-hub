@@ -3,6 +3,14 @@
     "open": "Open"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "Disabled accounts are skipped by refresh, check-in, and other automation. Re-enable the ones you still use.",
+      "title": "All {{total}} account(s) are disabled"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} needs a browser settings check"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} has a health issue"
@@ -11,11 +19,16 @@
       "addAccount": "Add account",
       "addProfile": "Add credential",
       "editAccount": "Edit account",
+      "fixAccount": "Fix account",
       "handleCheckIn": "Handle check-in",
+      "manageAccounts": "Manage accounts",
+      "openSettings": "Open settings",
       "refreshAccounts": "Refresh accounts",
+      "signInAgain": "Sign in again",
       "viewAccount": "View account",
       "viewAnnouncements": "View announcements",
-      "viewCheckIn": "View check-in"
+      "viewCheckIn": "View check-in",
+      "viewCheckInResults": "View results"
     },
     "addAccount": {
       "description": "Add an account before balances, usage, and automation can be summarized.",
@@ -40,13 +53,21 @@
       "data": "Data"
     },
     "categoryFilterLabel": "Category",
+    "checkInAccountDataMissing": {
+      "description": "Saved credentials or account details are incomplete. Re-detect the account in Accounts, then try check-in again.",
+      "title": "{{total}} account(s) are missing saved sign-in data"
+    },
     "checkInMethodUnresolved": {
       "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
       "title": "{{name}} needs a check-in method"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "The latest run skipped these accounts because of missing credentials, a required sign-in, or denied permissions. Open auto check-in to resolve them.",
-      "title": "{{total}} account(s) were skipped and need action"
+    "checkInPermissionDenied": {
+      "description": "The site rejected the check-in request. Sign in again or review the account permissions before retrying.",
+      "title": "{{total}} account(s) were denied during check-in"
+    },
+    "checkInReloginRequired": {
+      "description": "The latest run skipped these accounts because the site sign-in expired. Sign in on the site, then run check-in again.",
+      "title": "{{total}} account(s) need a new sign-in"
     },
     "filterAll": "All",
     "severityFilterLabel": "Severity",

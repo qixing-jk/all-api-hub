@@ -3,6 +3,14 @@
     "open": "Öffnen"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "Deaktivierte Konten werden bei Aktualisierung, Check-in und anderen Automatisierungen übersprungen. Aktiviere die Konten, die du weiter nutzt.",
+      "title": "Alle {{total}} Konten sind deaktiviert"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} benötigt eine Prüfung der Browsereinstellungen"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} hat ein gesundheitliches Problem"
@@ -11,11 +19,16 @@
       "addAccount": "Konto hinzufügen",
       "addProfile": "Anmeldedaten hinzufügen",
       "editAccount": "Konto bearbeiten",
+      "fixAccount": "Konto reparieren",
       "handleCheckIn": "Check-in bearbeiten",
+      "manageAccounts": "Konten verwalten",
+      "openSettings": "Einstellungen öffnen",
       "refreshAccounts": "Konten aktualisieren",
+      "signInAgain": "Neu anmelden",
       "viewAccount": "Konto anzeigen",
       "viewAnnouncements": "Ankündigungen anzeigen",
-      "viewCheckIn": "Check-in anzeigen"
+      "viewCheckIn": "Check-in anzeigen",
+      "viewCheckInResults": "Ergebnisse ansehen"
     },
     "addAccount": {
       "description": "Fügen Sie ein Konto hinzu, bevor Salden, Nutzung und Automatisierung zusammengefasst werden können.",
@@ -40,13 +53,21 @@
       "data": "Daten"
     },
     "categoryFilterLabel": "Kategorie",
+    "checkInAccountDataMissing": {
+      "description": "Gespeicherte Zugangsdaten oder Kontodaten sind unvollständig. Erkenne das Konto in der Kontoverwaltung neu und starte den Check-in erneut.",
+      "title": "{{total}} Konto/Konten fehlen gespeicherte Anmeldedaten"
+    },
     "checkInMethodUnresolved": {
       "description": "Der automatische Check-in ist aktiviert, aber es ist noch keine nutzbare Methode verfügbar. Öffnen Sie die Kontoverwaltung, um eine Methode zu erkennen oder auszuwählen.",
       "title": "Für {{name}} muss die Check-in-Methode geklärt werden"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "Im letzten Lauf wurden diese Konten wegen fehlender Anmeldedaten, erforderlicher Anmeldung oder fehlender Berechtigungen übersprungen. Öffnen Sie den automatischen Check-in, um sie zu beheben.",
-      "title": "{{total}} Konto/Konten wurden übersprungen und brauchen eine Aktion"
+    "checkInPermissionDenied": {
+      "description": "Die Seite hat die Check-in-Anfrage abgelehnt. Melde dich erneut an oder prüfe die Kontoberechtigungen und versuche es noch einmal.",
+      "title": "{{total}} Konto/Konten wurden beim Check-in abgelehnt"
+    },
+    "checkInReloginRequired": {
+      "description": "Der letzte Lauf hat diese Konten übersprungen, weil die Anmeldung abgelaufen ist. Melde dich auf der Seite an und starte den Check-in erneut.",
+      "title": "{{total}} Konto/Konten benötigen eine neue Anmeldung"
     },
     "filterAll": "Alle",
     "severityFilterLabel": "Schweregrad",

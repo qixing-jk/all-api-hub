@@ -3,6 +3,14 @@
     "open": "開啟"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "已停用帳號不會參與重新整理、簽到等自動化，請視需要重新啟用。",
+      "title": "{{total}} 個帳號均已停用"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} 需要檢查瀏覽器設定"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} 狀態異常"
@@ -11,11 +19,16 @@
       "addAccount": "新增帳號",
       "addProfile": "新增憑據",
       "editAccount": "編輯帳號",
+      "fixAccount": "修復帳號",
       "handleCheckIn": "處理簽到",
+      "manageAccounts": "管理帳號",
+      "openSettings": "開啟設定",
       "refreshAccounts": "重新整理帳號",
+      "signInAgain": "重新登入",
       "viewAccount": "查看帳號",
       "viewAnnouncements": "查看公告",
-      "viewCheckIn": "查看簽到"
+      "viewCheckIn": "查看簽到",
+      "viewCheckInResults": "查看結果"
     },
     "addAccount": {
       "description": "先新增帳戶，才能彙總餘額、用量和自動任務狀態。",
@@ -40,13 +53,21 @@
       "data": "資料"
     },
     "categoryFilterLabel": "類別",
+    "checkInAccountDataMissing": {
+      "description": "已儲存的憑證或帳號資料不完整，請在帳號管理中重新辨識後再簽到。",
+      "title": "{{total}} 個帳號缺少登入資料"
+    },
     "checkInMethodUnresolved": {
       "description": "自動簽到已開啟，但目前尚無可用的簽到方式。請在帳號管理中重新偵測或選擇簽到方式後再執行。",
       "title": "{{name}} 的簽到方式待確認"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "最近一次執行中，這些帳號因缺少登入憑據、需要重新登入或權限不足而被跳過。請前往自動簽到依原因處理。",
-      "title": "{{total}} 個帳號的簽到被跳過，需要處理"
+    "checkInPermissionDenied": {
+      "description": "網站拒絕了簽到請求，請重新登入或檢查帳號權限後重試。",
+      "title": "{{total}} 個帳號的簽到請求遭拒"
+    },
+    "checkInReloginRequired": {
+      "description": "最近一次執行因登入狀態失效而略過這些帳號。請在網站重新登入後再簽到。",
+      "title": "{{total}} 個帳號需要重新登入"
     },
     "filterAll": "全部",
     "severityFilterLabel": "嚴重度",

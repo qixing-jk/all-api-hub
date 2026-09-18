@@ -3,6 +3,14 @@
     "open": "開く"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "無効なアカウントは更新やチェックインなどの自動処理の対象外です。必要に応じて有効にしてください。",
+      "title": "{{total}} 件のアカウントがすべて無効です"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} はブラウザ設定の確認が必要です"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} に状態の問題があります"
@@ -11,11 +19,16 @@
       "addAccount": "アカウントを追加",
       "addProfile": "認証情報を追加",
       "editAccount": "アカウントを編集",
+      "fixAccount": "アカウントを修正",
       "handleCheckIn": "チェックインを処理",
+      "manageAccounts": "アカウントを管理",
+      "openSettings": "設定を開く",
       "refreshAccounts": "アカウントを更新",
+      "signInAgain": "再ログイン",
       "viewAccount": "アカウントを表示",
       "viewAnnouncements": "お知らせを表示",
-      "viewCheckIn": "チェックインを表示"
+      "viewCheckIn": "チェックインを表示",
+      "viewCheckInResults": "結果を表示"
     },
     "addAccount": {
       "description": "残高、利用状況、自動タスクを集計するには、まずアカウントを追加してください。",
@@ -40,13 +53,21 @@
       "data": "データ"
     },
     "categoryFilterLabel": "カテゴリ",
+    "checkInAccountDataMissing": {
+      "description": "保存された資格情報またはアカウント情報が不完全です。アカウント管理で再検出してから再実行してください。",
+      "title": "{{total}} 件のアカウントで保存済みログイン情報が不足しています"
+    },
     "checkInMethodUnresolved": {
       "description": "自動チェックインは有効ですが、利用できる方法がまだありません。アカウント管理で方法を再検出または選択してから実行してください。",
       "title": "{{name}} のチェックイン方法を確認してください"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "前回の実行では、ログイン情報の不足、再ログインの必要性、権限不足などの理由でスキップされました。自動チェックインを開いて原因ごとに対応してください。",
-      "title": "{{total}} 件のアカウントがスキップされ、対応が必要です"
+    "checkInPermissionDenied": {
+      "description": "サイトがチェックイン要求を拒否しました。再ログインまたは権限の確認後に再試行してください。",
+      "title": "{{total}} 件のアカウントでチェックインが拒否されました"
+    },
+    "checkInReloginRequired": {
+      "description": "直近の実行ではログインの有効期限が切れていたためスキップされました。サイトに再ログインしてから再実行してください。",
+      "title": "{{total}} 件のアカウントで再ログインが必要です"
     },
     "filterAll": "すべて",
     "severityFilterLabel": "重大度",

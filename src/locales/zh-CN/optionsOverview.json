@@ -3,6 +3,14 @@
     "open": "打开"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "已禁用账号不会参与刷新、签到等自动化，请按需重新启用。",
+      "title": "{{total}} 个账号均已禁用"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} 需要检查浏览器设置"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} 状态异常"
@@ -11,11 +19,16 @@
       "addAccount": "添加账号",
       "addProfile": "添加凭据",
       "editAccount": "编辑账号",
+      "fixAccount": "修复账号",
       "handleCheckIn": "处理签到",
+      "manageAccounts": "管理账号",
+      "openSettings": "打开设置",
       "refreshAccounts": "刷新账号",
+      "signInAgain": "去重新登录",
       "viewAccount": "查看账号",
       "viewAnnouncements": "查看公告",
-      "viewCheckIn": "查看签到"
+      "viewCheckIn": "查看签到",
+      "viewCheckInResults": "查看结果"
     },
     "addAccount": {
       "description": "先添加账号，才能汇总余额、用量和自动任务状态。",
@@ -40,13 +53,21 @@
       "data": "数据"
     },
     "categoryFilterLabel": "类别",
+    "checkInAccountDataMissing": {
+      "description": "保存的凭据或账号数据不完整，请在账号管理中重新识别后再签到。",
+      "title": "{{total}} 个账号缺少登录数据"
+    },
     "checkInMethodUnresolved": {
       "description": "自动签到已开启，但当前还没有可用的签到方式。请在账号管理中重新检测或选择签到方式后再运行。",
       "title": "{{name}} 的签到方式待确认"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "最近一次运行中，这些账号因缺少登录凭据、需要重新登录或权限不足被跳过。前往自动签到按原因处理。",
-      "title": "{{total}} 个账号的签到被跳过，需要处理"
+    "checkInPermissionDenied": {
+      "description": "站点拒绝了签到请求，请重新登录或检查账号权限后重试。",
+      "title": "{{total}} 个账号的签到请求被拒绝"
+    },
+    "checkInReloginRequired": {
+      "description": "最近一次运行因登录状态失效跳过了这些账号。请在站点重新登录后再签到。",
+      "title": "{{total}} 个账号需要重新登录"
     },
     "filterAll": "全部",
     "severityFilterLabel": "严重度",

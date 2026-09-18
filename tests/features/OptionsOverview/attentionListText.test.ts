@@ -123,11 +123,43 @@ describe("attention list text helpers", () => {
     expect(
       getAttentionTitle(
         createAttentionItem({
-          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired,
         }),
         t,
       ),
-    ).toBe("optionsOverview:attention.checkInSkippedNeedsAction.title")
+    ).toBe("optionsOverview:attention.checkInReloginRequired.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInAccountDataMissing.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInPermissionDenied.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.accountsAllDisabled.title")
+    expect(
+      getAttentionTitle(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.accountTempWindowIssue.title")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.title",
@@ -215,11 +247,43 @@ describe("attention list text helpers", () => {
     expect(
       getAttentionDescription(
         createAttentionItem({
-          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired,
         }),
         t,
       ),
-    ).toBe("optionsOverview:attention.checkInSkippedNeedsAction.description")
+    ).toBe("optionsOverview:attention.checkInReloginRequired.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInAccountDataMissing.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.checkInPermissionDenied.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.accountsAllDisabled.description")
+    expect(
+      getAttentionDescription(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.accountTempWindowIssue.description")
 
     expect(t).toHaveBeenCalledWith(
       "optionsOverview:attention.accountUnhealthy.description",
@@ -298,10 +362,42 @@ describe("attention list text helpers", () => {
     expect(
       getAttentionActionLabel(
         createAttentionItem({
-          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired,
         }),
         t,
       ),
-    ).toBe("optionsOverview:attention.actions.handleCheckIn")
+    ).toBe("optionsOverview:attention.actions.signInAgain")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.fixAccount")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.viewCheckInResults")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.manageAccounts")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.openSettings")
   })
 })

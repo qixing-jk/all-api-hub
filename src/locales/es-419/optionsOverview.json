@@ -3,6 +3,14 @@
     "open": "Abrir"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "Las cuentas desactivadas quedan fuera de la actualización, el registro y otras automatizaciones. Reactiva las que sigas usando.",
+      "title": "Las {{total}} cuentas están desactivadas"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} necesita revisar la configuración del navegador"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} tiene un problema de salud"
@@ -11,11 +19,16 @@
       "addAccount": "Agregar cuenta",
       "addProfile": "Agregar credencial",
       "editAccount": "Editar cuenta",
+      "fixAccount": "Reparar cuenta",
       "handleCheckIn": "Resolver check-in",
+      "manageAccounts": "Gestionar cuentas",
+      "openSettings": "Abrir ajustes",
       "refreshAccounts": "Actualizar cuentas",
+      "signInAgain": "Iniciar sesión de nuevo",
       "viewAccount": "Ver cuenta",
       "viewAnnouncements": "Ver anuncios",
-      "viewCheckIn": "Ver check-in"
+      "viewCheckIn": "Ver check-in",
+      "viewCheckInResults": "Ver resultados"
     },
     "addAccount": {
       "description": "Agrega una cuenta antes de resumir saldos, uso y automatización.",
@@ -40,13 +53,21 @@
       "data": "Datos"
     },
     "categoryFilterLabel": "Categoría",
+    "checkInAccountDataMissing": {
+      "description": "Las credenciales o los datos de la cuenta están incompletos. Vuelve a detectar la cuenta en Gestión de cuentas y reintenta el registro.",
+      "title": "{{total}} cuenta(s) no tienen datos de inicio de sesión guardados"
+    },
     "checkInMethodUnresolved": {
       "description": "El check-in automático está activado, pero aún no hay un método disponible. En Cuentas, vuelve a detectar o elige un método antes de la próxima ejecución.",
       "title": "{{name}} necesita un método de check-in"
     },
-    "checkInSkippedNeedsAction": {
-      "description": "La última ejecución omitió estas cuentas por credenciales faltantes, inicio de sesión requerido o permisos denegados. Abre el check-in automático para resolverlas.",
-      "title": "{{total}} cuenta(s) se omitieron y necesitan acción"
+    "checkInPermissionDenied": {
+      "description": "El sitio rechazó la solicitud de registro. Inicia sesión de nuevo o revisa los permisos de la cuenta antes de reintentar.",
+      "title": "{{total}} cuenta(s) recibieron un rechazo durante el registro"
+    },
+    "checkInReloginRequired": {
+      "description": "La última ejecución omitió estas cuentas porque la sesión del sitio expiró. Inicia sesión en el sitio y vuelve a ejecutar el registro.",
+      "title": "{{total}} cuenta(s) necesitan iniciar sesión de nuevo"
     },
     "filterAll": "Todos",
     "severityFilterLabel": "Gravedad",
@@ -56,7 +77,6 @@
     },
     "sortHint": "Ordenado por impacto",
     "summary": "{{total}} pendientes",
-    "summary_many": "optionsOverview:attention.summary",
     "unreadSiteAnnouncements": {
       "description": "Abre los anuncios del sitio para marcarlos como leídos y no perder avisos de mantenimiento o riesgos.",
       "title": "{{total}} anuncio(s) del sitio sin leer"

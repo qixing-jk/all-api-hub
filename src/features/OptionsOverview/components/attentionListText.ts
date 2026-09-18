@@ -74,12 +74,41 @@ const attentionTitleResolvers = {
       "optionsOverview:attention.unreadSiteAnnouncements.title",
       item.titleOptions,
     ),
-  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction]: (
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
     t(
-      "optionsOverview:attention.checkInSkippedNeedsAction.title",
+      "optionsOverview:attention.checkInReloginRequired.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInAccountDataMissing.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInPermissionDenied.title",
+      item.titleOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t("optionsOverview:attention.accountsAllDisabled.title", item.titleOptions),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.accountTempWindowIssue.title",
       item.titleOptions,
     ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
@@ -152,12 +181,44 @@ const attentionDescriptionResolvers = {
       "optionsOverview:attention.unreadSiteAnnouncements.description",
       item.descriptionOptions,
     ),
-  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction]: (
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) =>
     t(
-      "optionsOverview:attention.checkInSkippedNeedsAction.description",
+      "optionsOverview:attention.checkInReloginRequired.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInAccountDataMissing.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.checkInPermissionDenied.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.accountsAllDisabled.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.accountTempWindowIssue.description",
       item.descriptionOptions,
     ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (
@@ -198,9 +259,17 @@ const attentionActionResolvers = {
   ) => t("optionsOverview:attention.actions.handleCheckIn"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.unreadSiteAnnouncements]: (t: TFunction) =>
     t("optionsOverview:attention.actions.viewAnnouncements"),
-  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction]: (
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.signInAgain"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing]: (
     t: TFunction,
-  ) => t("optionsOverview:attention.actions.handleCheckIn"),
+  ) => t("optionsOverview:attention.actions.fixAccount"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.viewCheckInResults"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.manageAccounts"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.openSettings"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount]: (t: TFunction) =>
     t("optionsOverview:attention.actions.addAccount"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile]: (t: TFunction) =>

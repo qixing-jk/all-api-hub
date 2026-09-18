@@ -221,6 +221,45 @@ test("overview attention list surfaces unknown site type check-in setup", async 
     })
 })
 
+test("overview attention list flags disabled-only accounts", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "disabled-account",
+      site_name: "Disabled Relay",
+      site_url: "https://disabled.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      disabled: true,
+    }),
+  ])
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "All 1 account(s) are disabled"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(attention.getByText("No accounts yet")).toHaveCount(0)
+
+  await attention
+    .getByRole("button", { name: `Manage accounts: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return url.hash
+    })
+    .toBe(`#${MENU_ITEM_IDS.ACCOUNT}`)
+})
+
 test("overview attention list surfaces accounts paused by the global check-in switch", async ({
   context,
   extensionId,
@@ -283,7 +322,7 @@ test("overview attention list surfaces accounts paused by the global check-in sw
     page.locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`),
   ).toBeInViewport()
 })
-test("overview attention list surfaces skipped check-ins that need action", async ({
+test("overview attention list surfaces missing sign-in data as a todo", async ({
   context,
   extensionId,
   page,
@@ -306,6 +345,13 @@ test("overview attention list surfaces skipped check-ins that need action", asyn
         reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
         timestamp: 1,
       },
+      "routine-account": {
+        accountId: "routine-account",
+        accountName: "Routine Relay",
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+        timestamp: 1,
+      },
     },
     summary: {
       totalEligible: 2,
@@ -323,9 +369,10 @@ test("overview attention list surfaces skipped check-ins that need action", asyn
   await waitForExtensionRoot(page)
 
   const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
-  const itemTitle = "1 account(s) were skipped and need action"
+  const itemTitle = "1 account(s) are missing saved sign-in data"
   await expect(attention).toBeVisible()
   await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(attention.getByText("Routine Relay")).toHaveCount(0)
 
   const severityFilters = attention.getByTestId(
     OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityFilters,
@@ -346,7 +393,7 @@ test("overview attention list surfaces skipped check-ins that need action", asyn
   await expect(attention.getByText(itemTitle)).toBeVisible()
 
   await attention
-    .getByRole("button", { name: `Handle check-in: ${itemTitle}` })
+    .getByRole("button", { name: `Fix account: ${itemTitle}` })
     .click()
 
   await expect

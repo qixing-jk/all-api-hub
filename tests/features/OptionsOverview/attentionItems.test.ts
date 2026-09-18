@@ -8,7 +8,11 @@ import {
   OPTIONS_OVERVIEW_ATTENTION_CATEGORIES,
   OPTIONS_OVERVIEW_ATTENTION_KINDS,
 } from "~/features/OptionsOverview/ids"
-import { SiteHealthStatus, type DisplaySiteData } from "~/types"
+import {
+  SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+  type DisplaySiteData,
+} from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
@@ -357,7 +361,7 @@ describe("overview attention items", () => {
     })
   })
 
-  it("counts skipped check-ins that need a manual step", () => {
+  it("splits skipped check-ins into reason-specific todos", () => {
     const autoCheckinStatus: AutoCheckinStatus = {
       perAccount: {
         "credentials-account": skippedResult(
@@ -388,27 +392,138 @@ describe("overview attention items", () => {
           "network-account",
           AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
         ),
+        "no-provider": skippedResult(
+          "no-provider",
+          AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+        ),
+        "disabled-account": skippedResult(
+          "disabled-account",
+          AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+        ),
       },
     }
 
-    expect(
-      buildAttentionItems({
-        enabledAccountCount: 4,
-        profileCount: 1,
-        problemAccounts: [],
-        autoCheckinStatus,
-        globalAutomaticExecutionEnabled: true,
-      }),
-    ).toContainEqual({
-      id: "auto-checkin:skipped-needs-action",
-      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInSkippedNeedsAction,
+    const items = buildAttentionItems({
+      enabledAccountCount: 4,
+      profileCount: 1,
+      problemAccounts: [],
+      autoCheckinStatus,
+      globalAutomaticExecutionEnabled: true,
+    })
+
+    expect(items).toContainEqual({
+      id: "auto-checkin:relogin-required",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInReloginRequired,
       category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
       severity: "warning",
-      titleOptions: { total: 4 },
+      titleOptions: { total: 1 },
       target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     })
+    expect(items).toContainEqual({
+      id: "auto-checkin:account-data-missing",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInAccountDataMissing,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
+      severity: "warning",
+      titleOptions: { total: 2 },
+      target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+    })
+    expect(items).toContainEqual({
+      id: "auto-checkin:permission-denied",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInPermissionDenied,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.automation,
+      severity: "warning",
+      titleOptions: { total: 1 },
+      target: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
+    })
+    expect(
+      items
+        .filter((item) => item.category === "automation")
+        .map((item) => item.id),
+    ).toEqual([
+      "auto-checkin:account-data-missing",
+      "auto-checkin:permission-denied",
+      "auto-checkin:relogin-required",
+    ])
   })
 
+  it("flags disabled-only accounts instead of a missing-account hint", () => {
+    const items = buildAttentionItems({
+      enabledAccountCount: 0,
+      totalAccountCount: 2,
+      profileCount: 1,
+      problemAccounts: [],
+    })
+
+    expect(items).toContainEqual({
+      id: "accounts:all-disabled",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountsAllDisabled,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
+      severity: "info",
+      titleOptions: { total: 2 },
+      target: { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
+    })
+    expect(items.map((item) => item.id)).not.toContain("setup:add-account")
+  })
+
+  it("routes temp-window health issues to the matching settings tab", () => {
+    const permissionAccount = buildDisplaySiteData({
+      id: "permission-account",
+      name: "Permission Account",
+      health: {
+        status: SiteHealthStatus.Warning,
+        reason: "Permission required",
+        code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      },
+    })
+    const disabledAccount = buildDisplaySiteData({
+      id: "disabled-window-account",
+      name: "Disabled Window Account",
+      health: {
+        status: SiteHealthStatus.Warning,
+        reason: "Temporary window disabled",
+        code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      },
+    })
+
+    const items = buildAttentionItems({
+      enabledAccountCount: 2,
+      profileCount: 1,
+      problemAccounts: [permissionAccount, disabledAccount],
+    })
+
+    expect(items).toContainEqual({
+      id: "account:permission-account:temp-window",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
+      severity: "warning",
+      titleOptions: { name: "Permission Account" },
+      descriptionOptions: { reason: "Permission required" },
+      target: {
+        menuItemId: MENU_ITEM_IDS.BASIC,
+        params: {
+          tab: "permissions",
+          anchor: undefined,
+          highlight: undefined,
+        },
+      },
+    })
+    expect(items).toContainEqual({
+      id: "account:disabled-window-account:temp-window",
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.accountTempWindowIssue,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
+      severity: "warning",
+      titleOptions: { name: "Disabled Window Account" },
+      descriptionOptions: { reason: "Temporary window disabled" },
+      target: {
+        menuItemId: MENU_ITEM_IDS.BASIC,
+        params: {
+          tab: "refresh",
+          anchor: "shield-settings",
+          highlight: "shield-settings",
+        },
+      },
+    })
+  })
   it("ignores routine and transient skipped check-ins", () => {
     const autoCheckinStatus: AutoCheckinStatus = {
       perAccount: {
@@ -436,7 +551,11 @@ describe("overview attention items", () => {
         autoCheckinStatus,
         globalAutomaticExecutionEnabled: true,
       }).map((item) => item.id),
-    ).not.toContain("auto-checkin:skipped-needs-action")
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ category: "automation" }),
+      ]),
+    )
   })
 
   it("ignores skipped check-ins while the global switch is off", () => {

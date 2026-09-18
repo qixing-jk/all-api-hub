@@ -84,6 +84,7 @@ export function buildOptionsOverviewViewModel(
   ).length
   const attentionItems = buildAttentionItems({
     enabledAccountCount: enabledAccounts.length,
+    totalAccountCount: input.accounts.length,
     profileCount: input.apiCredentialProfiles.length,
     problemAccounts,
     accounts: input.displayData,
