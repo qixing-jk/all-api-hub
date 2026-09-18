@@ -1332,6 +1332,60 @@ test("links an existing API credential to an existing key and preserves the asso
   ).toBeVisible()
 })
 
+test("checks listed keys without reloading the source inventory per key", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [createStoredAccount()])
+  await stubNewApiSiteRoutes(context, {
+    initialTokens: [
+      createStubApiToken(),
+      createStubApiToken({ id: 2, name: "Second Key", key: "sk-second-token" }),
+    ],
+  })
+  await seedUserPreferences(worker, {
+    managedSiteType: SITE_TYPES.CLI_PROXY_API,
+    cliProxyApi: {
+      baseUrl: "https://managed-lookup.example.invalid",
+      adminToken: "test-management-key",
+    },
+  })
+  await context.route(
+    "https://managed-lookup.example.invalid/**",
+    async (route) => {
+      const kind = new URL(route.request().url()).pathname.split("/").at(-1)!
+      await route.fulfill({ json: { [kind]: [] } })
+    },
+  )
+  const inventoryPages: string[] = []
+  context.on("request", (request) => {
+    const url = new URL(request.url())
+    if (
+      url.origin === "https://example.com" &&
+      url.pathname === "/api/token/"
+    ) {
+      inventoryPages.push(url.searchParams.get("p")!)
+    }
+  })
+  await openKeyManagementForAccount({
+    page,
+    extensionId,
+    accountId: "e2e-account-1",
+    openFromAccountRow: false,
+  })
+  for (const name of ["Existing Key", "Second Key"]) {
+    await expect(
+      getAccountKeyResourceRow(page, name).getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge,
+      ),
+    ).toContainText("Not added")
+  }
+  // This legacy array-shaped fixture uses a second, empty page to prove completion.
+  expect(inventoryPages).toEqual(["1", "2"])
+})
+
 test("lets scenario cleanup delete only the source key", async ({
   context,
   extensionId,

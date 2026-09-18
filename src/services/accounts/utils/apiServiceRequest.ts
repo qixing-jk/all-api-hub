@@ -455,7 +455,8 @@ const requireResolvedProviderAccountKeyResourceSecret = (
 }
 
 /**
- * Resolves a runtime-key clone with the latest usable secret for its source.
+ * Resolves a runtime-key clone, using an in-hand secret in automatic mode.
+ * Callers that require a fresh provider read select the Provider source.
  */
 export async function resolveDisplayAccountRuntimeKeySecret<
   TRuntimeKey extends AccountRuntimeKey,
@@ -518,7 +519,6 @@ export async function resolveDisplayAccountRuntimeKeySecret<
 
     if (
       source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
-      usesAssociatedProfileByDefault(availability) &&
       hasUsableApiTokenKey(runtimeKey.secret)
     ) {
       return projectResolvedRuntimeKey(runtimeKey.secret)

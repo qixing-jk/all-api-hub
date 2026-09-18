@@ -487,7 +487,7 @@ describe("VoAPI v2 account key resources", () => {
     expect(mockFetchAllVoApiV2RawKeys).not.toHaveBeenCalled()
   })
 
-  it("verifies the exact resource ref before native secret reveal", async () => {
+  it("reveals the exact resource without loading the inventory", async () => {
     const referencedKey = rawKey({ id: 9, tokenMasked: "masked-nine" })
     mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([
       rawKey({ id: 8, tokenMasked: "masked-eight" }),
@@ -510,7 +510,7 @@ describe("VoAPI v2 account key resources", () => {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
       secret: "voapi-full-secret",
     })
-    expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledWith(request)
+    expect(mockFetchAllVoApiV2RawKeys).not.toHaveBeenCalled()
     expect(mockResolveVoApiV2KeySecretById).toHaveBeenCalledWith(request, 9)
   })
 
@@ -526,20 +526,20 @@ describe("VoAPI v2 account key resources", () => {
       resourceId: "9",
     } as const
 
-    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([])
+    mockResolveVoApiV2KeySecretById.mockRejectedValueOnce({ status: 404 })
     await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     })
 
-    mockFetchAllVoApiV2RawKeys.mockRejectedValueOnce(
-      new Error("inventory unavailable"),
+    mockResolveVoApiV2KeySecretById.mockRejectedValueOnce(
+      new Error("reveal unavailable"),
     )
     await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-        message: "inventory unavailable",
+        message: "reveal unavailable",
       },
     })
   })

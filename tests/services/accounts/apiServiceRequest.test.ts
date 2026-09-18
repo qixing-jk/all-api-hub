@@ -768,38 +768,43 @@ describe("display account API context and native runtime keys", () => {
     })
   })
 
-  it("uses an in-hand one-time resource secret before profile lookup or provider recovery", async () => {
-    const open = vi.fn()
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.OPENROUTER,
-      account: {
-        keyResourceManagement: {
-          inventorySecretAvailability:
-            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-          open,
+  it.each([
+    [SITE_TYPES.OPENROUTER, INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly],
+    [SITE_TYPES.NEW_API, INVENTORY_SECRET_AVAILABILITIES.Recoverable],
+  ])(
+    "uses an in-hand %s resource secret before profile lookup or provider recovery",
+    async (siteType, availability) => {
+      const open = vi.fn()
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        siteType,
+        account: {
+          keyResourceManagement: {
+            inventorySecretAvailability: availability,
+            open,
+          },
         },
-      },
-    } as any)
-    const account = { ...ACCOUNT, siteType: SITE_TYPES.OPENROUTER }
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
-      ref: {
-        accountId: ACCOUNT.id,
-        siteType: SITE_TYPES.OPENROUTER,
-        scopeKey: "account",
-        resourceId: "created-key",
-      },
-      label: "Just created",
-      secret: "sk-one-time-secret",
-    })
-    await expect(
-      resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
-    ).resolves.toMatchObject({
-      secret: "sk-one-time-secret",
-      resourceRef: runtimeKey.resourceRef,
-    })
-    expect(open).not.toHaveBeenCalled()
-    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
-  })
+      } as any)
+      const account = { ...ACCOUNT, siteType }
+      const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType,
+          scopeKey: "account",
+          resourceId: "created-key",
+        },
+        label: "Just created",
+        secret: "sk-one-time-secret",
+      })
+      await expect(
+        resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
+      ).resolves.toMatchObject({
+        secret: "sk-one-time-secret",
+        resourceRef: runtimeKey.resourceRef,
+      })
+      expect(open).not.toHaveBeenCalled()
+      expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+    },
+  )
 
   it("automatically resolves create-response-only resource keys from an associated profile", async () => {
     const open = vi.fn()
@@ -855,40 +860,45 @@ describe("display account API context and native runtime keys", () => {
     expect(open).not.toHaveBeenCalled()
   })
 
-  it("keeps provider resolution authoritative for recoverable resource keys", async () => {
-    const resolve = vi.fn().mockResolvedValue({
-      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
-      secret: "provider-secret",
-    })
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      account: {
-        keyResourceManagement: {
-          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
-        },
-      },
-    } as any)
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
-      status: "resolved",
-      secret: "associated-secret",
-      profile: { baseUrl: "https://associated.example.invalid" },
-    } as any)
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
-      ref: {
-        accountId: ACCOUNT.id,
+  it.each(["", "masked********key", "sk-in-hand-secret"])(
+    "honors explicit provider resolution with existing secret %s",
+    async (secret) => {
+      const resolve = vi.fn().mockResolvedValue({
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: "provider-secret",
+      })
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
         siteType: SITE_TYPES.NEW_API,
-        scopeKey: "account",
-        resourceId: "resource-example",
-      },
-      label: "Example key",
-      secret: "",
-    })
+        account: {
+          keyResourceManagement: {
+            open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+          },
+        },
+      } as any)
+      vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+        status: "resolved",
+        secret: "associated-secret",
+        profile: { baseUrl: "https://associated.example.invalid" },
+      } as any)
+      const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "resource-example",
+        },
+        label: "Example key",
+        secret,
+      })
 
-    await expect(
-      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey),
-    ).resolves.toMatchObject({ secret: "sk-provider-secret" })
-    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
-  })
+      await expect(
+        resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey, {
+          secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider,
+        }),
+      ).resolves.toMatchObject({ secret: "sk-provider-secret" })
+      expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+    },
+  )
 
   it("uses an associated resource secret only after explicit provider fallback", async () => {
     const resolve = vi.fn().mockResolvedValue({

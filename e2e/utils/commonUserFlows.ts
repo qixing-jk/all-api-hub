@@ -952,6 +952,20 @@ export async function stubNewApiSiteRoutes(
       return
     }
 
+    if (method === "GET" && /^\/api\/token\/\d+$/.test(url.pathname)) {
+      const tokenId = Number(url.pathname.split("/").pop())
+      const token = tokens.find((item) => item.id === tokenId)
+      await route.fulfill({
+        status: token ? 200 : 404,
+        json: {
+          success: Boolean(token),
+          message: token ? "ok" : "Token not found",
+          data: token,
+        },
+      })
+      return
+    }
+
     if (method === "POST" && url.pathname === "/api/token/") {
       if (options.createTokenError) {
         await route.fulfill({
