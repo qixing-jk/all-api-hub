@@ -65,12 +65,13 @@ const PENDING_LABEL_BY_ACTION_ID: Record<string, string> = {
 }
 
 function DevSectionHarness(props: { refreshStatus?: () => Promise<unknown> }) {
-  const section = useAutoCheckinDevSection({
+  const { section, isDebugPending } = useAutoCheckinDevSection({
     refreshStatus: props.refreshStatus,
   })
 
   return (
     <div>
+      <span data-testid="debug-pending">{String(isDebugPending)}</span>
       {section.actions.map((action) => (
         <button
           key={action.id}
@@ -156,6 +157,8 @@ describe("useAutoCheckinDevSection", () => {
     })
     expect(pendingButton).toBeDisabled()
     expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    // The page uses this flag to keep its own toolbar locked during debug work.
+    expect(screen.getByTestId("debug-pending")).toHaveTextContent("true")
 
     const retryAlarmButton = screen.getByRole("button", {
       name: "autoCheckin:execution.debug.triggerRetryAlarmNow",
@@ -168,6 +171,7 @@ describe("useAutoCheckinDevSection", () => {
       name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
     })
     expect(restoredButton).toBeEnabled()
+    expect(screen.getByTestId("debug-pending")).toHaveTextContent("false")
 
     fireEvent.click(restoredButton)
     await waitFor(() => expect(attempts).toBe(2))
@@ -193,11 +197,14 @@ describe("useAutoCheckinDevSection", () => {
         name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
       }),
     )
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
-      }),
-    )
+
+    // Run sequentially: the first action disables its siblings, so the second
+    // click must wait until the first one has finished and re-enabled them.
+    const triggerButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+    })
+    await waitFor(() => expect(triggerButton).toBeEnabled())
+    fireEvent.click(triggerButton)
 
     const popupExecution = automaticExecution(
       PROTECTION_BYPASS_FEATURES.Checkin,

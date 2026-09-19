@@ -100,6 +100,11 @@ export const STORAGE_LOCKS = {
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
   /** Exclusive claim of a popup account draft by its destination view. */
   ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the
+   * development-only fixture account id registry.
+   */
+  DEV_FIXTURE_ACCOUNTS: "all-api-hub:dev-fixture-accounts",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -205,6 +210,11 @@ export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
  */
 export const STORAGE_KEYS = {
   PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
+  /**
+   * Development-only registry of account ids created by the dev panel fixture
+   * generator, so cleanup never has to match editable account fields.
+   */
+  DEV_FIXTURE_ACCOUNT_IDS: "devFixtureAccountIds_v1",
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,

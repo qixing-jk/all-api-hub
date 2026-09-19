@@ -16,6 +16,8 @@ interface ActionBarProps {
   isRunning: boolean
   isRefreshing?: boolean
   isRefreshLocked?: boolean
+  /** Dev-panel debug action in flight; locks the toolbar without owning it. */
+  isDebugActionPending?: boolean
   isOpeningFailedManualSignIns?: boolean
   isOpeningExternalCheckIns?: boolean
   canOpenFailedManualSignIns?: boolean
@@ -32,6 +34,7 @@ interface ActionBarProps {
  * @param props.isRunning Disables the run-now action while execution is in progress.
  * @param props.isRefreshing Shows loading while a manual refresh is pending.
  * @param props.isRefreshLocked Disables refresh without attributing the pending work to that action.
+ * @param props.isDebugActionPending Disables the toolbar while a dev-panel debug action runs.
  * @param props.isOpeningFailedManualSignIns Disables actions while bulk-opening failed manual sign-in pages.
  * @param props.isOpeningExternalCheckIns Disables actions while opening configured external check-in URLs.
  * @param props.canOpenFailedManualSignIns Whether the current status contains failed accounts that can be bulk-opened.
@@ -45,6 +48,7 @@ export default function ActionBar({
   isRunning,
   isRefreshing,
   isRefreshLocked,
+  isDebugActionPending,
   isOpeningFailedManualSignIns,
   isOpeningExternalCheckIns,
   canOpenFailedManualSignIns,
@@ -57,6 +61,7 @@ export default function ActionBar({
   const { t } = useTranslation("autoCheckin")
   const isBusy =
     isRunning ||
+    isDebugActionPending === true ||
     isOpeningFailedManualSignIns === true ||
     isOpeningExternalCheckIns === true
   const bulkManualHint = t("execution.hints.openFailedManualNewWindow")

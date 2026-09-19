@@ -38,10 +38,13 @@ interface AutoCheckinDevSectionOptions {
  * Auto-checkin alarm debug actions for the dev panel, moved from the page
  * action bar. Handlers only talk to the background service; the pretrigger
  * diagnostics dialog stays on the page where the snapshot is visible.
+ *
+ * Returns the panel section plus the busy flag so the page can keep its own
+ * toolbar locked while a debug action runs.
  */
 export function useAutoCheckinDevSection(
   options: AutoCheckinDevSectionOptions = {},
-): DevPanelSection {
+): { section: DevPanelSection; isDebugPending: boolean } {
   const { t } = useTranslation("autoCheckin")
   const {
     refreshStatus,
@@ -302,13 +305,13 @@ export function useAutoCheckinDevSection(
     [runBasicAction, t],
   )
 
-  return useMemo(
+  const section = useMemo(
     () => ({
       id: "auto-checkin-debug",
       title: "Auto check-in",
       icon: CalendarClock,
       pages: [MENU_ITEM_IDS.AUTO_CHECKIN],
-      surfaces: ["options"],
+      surfaces: ["options"] as const,
       actions: [
         {
           id: "trigger-daily-alarm-now",
@@ -376,5 +379,10 @@ export function useAutoCheckinDevSection(
       handleTriggerUiOpenPretrigger,
       t,
     ],
+  )
+
+  return useMemo(
+    () => ({ section, isDebugPending: activeDebugAction !== null }),
+    [activeDebugAction, section],
   )
 }

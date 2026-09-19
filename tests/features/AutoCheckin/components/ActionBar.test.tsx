@@ -104,4 +104,37 @@ describe("AutoCheckin ActionBar", () => {
       screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
     ).not.toHaveAttribute("aria-busy")
   })
+
+  it("locks the toolbar while a dev panel debug action is pending", () => {
+    render(
+      <ActionBar
+        isRunning={false}
+        isDebugActionPending
+        canOpenFailedManualSignIns
+        onRunNow={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenFailedManualSignIns={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const runNowButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    expect(runNowButton).toBeDisabled()
+    // Debug work must not claim the run-now spinner, only its availability.
+    expect(runNowButton).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.actions.openFailedManual",
+      }),
+    ).toBeDisabled()
+  })
 })

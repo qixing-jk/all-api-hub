@@ -76,7 +76,6 @@ vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   countDevFixtureAccounts: vi.fn(async () => 0),
   addDevFixtureAccounts: vi.fn(async () => 0),
   clearDevFixtureAccounts: vi.fn(async () => 0),
-  DEV_FIXTURE_NOTES_MARKER: "[dev-fixture]",
 }))
 
 const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)

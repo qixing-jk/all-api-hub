@@ -1,7 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistorySettings from "~/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
 import toast from "~/lib/notify"
@@ -333,92 +332,6 @@ describe("BalanceHistorySettings", () => {
     ).not.toBeDisabled()
   })
 
-  it("shows a development-only action to seed estimated-income snapshots", async () => {
-    vi.stubEnv("MODE", "development")
-    const sendMessage = vi
-      .fn()
-      .mockResolvedValue({ success: true, data: { seeded: 2, skipped: 1 } })
-    ;(globalThis as any).browser.runtime.sendMessage = sendMessage
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
-      preferences: {
-        balanceHistory: {
-          enabled: true,
-          endOfDayCapture: { enabled: false },
-          estimatedTodayIncome: { enabled: true },
-          retentionDays: 30,
-        },
-      },
-      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
-    } as any)
-
-    renderSubject()
-
-    fireEvent.click(await screen.findByText("Dev: Seed estimate snapshots"))
-
-    await waitFor(() => {
-      expect(sendMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
-      })
-    })
-  })
-
-  it("shows a local error when the development seed action fails", async () => {
-    vi.stubEnv("MODE", "development")
-    const sendMessage = vi.fn().mockResolvedValue({
-      success: false,
-      error: "seed unavailable",
-    })
-    ;(globalThis as any).browser.runtime.sendMessage = sendMessage
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
-      preferences: {
-        balanceHistory: {
-          enabled: true,
-          endOfDayCapture: { enabled: false },
-          estimatedTodayIncome: { enabled: true },
-          retentionDays: 30,
-        },
-      },
-      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
-    } as any)
-
-    renderSubject()
-
-    fireEvent.click(await screen.findByText("Dev: Seed estimate snapshots"))
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("seed unavailable", {
-        id: "toast-id",
-      })
-    })
-  })
-
-  it("shows exception details when the development seed action throws", async () => {
-    vi.stubEnv("MODE", "development")
-    const sendMessage = vi.fn().mockRejectedValue(new Error("runtime closed"))
-    ;(globalThis as any).browser.runtime.sendMessage = sendMessage
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
-      preferences: {
-        balanceHistory: {
-          enabled: true,
-          endOfDayCapture: { enabled: false },
-          estimatedTodayIncome: { enabled: true },
-          retentionDays: 30,
-        },
-      },
-      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
-    } as any)
-
-    renderSubject()
-
-    fireEvent.click(await screen.findByText("Dev: Seed estimate snapshots"))
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("runtime closed", {
-        id: "toast-id",
-      })
-    })
-  })
-
   it("saves long retention without a permission check", async () => {
     const user = userEvent.setup()
     const contains = vi.spyOn(browser.permissions, "contains")
@@ -454,8 +367,8 @@ describe("BalanceHistorySettings", () => {
     })
   })
 
-  it("hides the estimated-income snapshot seed action outside development mode", () => {
-    vi.stubEnv("MODE", "production")
+  it("no longer hosts the development seed action, which moved to the dev panel", () => {
+    vi.stubEnv("MODE", "development")
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {
         balanceHistory: {

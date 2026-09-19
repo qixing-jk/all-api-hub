@@ -1,10 +1,14 @@
 /** Pure-local fixture accounts for exercising list/stats/empty-state UIs. */
 
+import { Storage } from "@plasmohq/storage"
+
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountSiteType } from "~/constants/siteType"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -15,8 +19,12 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DevFixtureAccounts")
 
-/** Notes prefix that marks an account as generated fixture data. */
-export const DEV_FIXTURE_NOTES_MARKER = "[dev-fixture]"
+/**
+ * Notes label written on generated accounts so they read as fixture data in
+ * the UI. Identification for cleanup uses the persisted id registry instead,
+ * because notes are user-editable.
+ */
+export const DEV_FIXTURE_NOTES_LABEL = "dev fixture"
 
 type FixtureAccountData = Omit<
   SiteAccount,
@@ -91,6 +99,69 @@ const FIXTURE_VARIANTS: readonly FixtureVariant[] = [
   },
 ]
 
+/**
+ * Persisted ids of generated fixture accounts.
+ *
+ * Cleanup and counting read this registry rather than matching editable account
+ * fields, so a renamed fixture stays removable and a real account whose notes
+ * happen to look similar is never deleted.
+ */
+class DevFixtureAccountRegistry {
+  private storage = new Storage({ area: "local" })
+
+  async read(): Promise<string[]> {
+    try {
+      const raw = (await this.storage.get(
+        STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS,
+      )) as unknown
+
+      if (!Array.isArray(raw)) {
+        return []
+      }
+
+      return raw.filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      )
+    } catch (error) {
+      logger.warn("Failed to read dev fixture account registry", error)
+      return []
+    }
+  }
+
+  async write(ids: string[]): Promise<string[]> {
+    const unique = Array.from(new Set(ids))
+    await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.DEV_FIXTURE_ACCOUNTS,
+      () => this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, unique),
+    )
+    return unique
+  }
+
+  async add(ids: string[]): Promise<string[]> {
+    return await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.DEV_FIXTURE_ACCOUNTS,
+      async () => {
+        const existing = await this.read()
+        const unique = Array.from(new Set([...existing, ...ids]))
+        await this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, unique)
+        return unique
+      },
+    )
+  }
+}
+
+const fixtureAccountRegistry = new DevFixtureAccountRegistry()
+
+/** Reads registered fixture ids that still exist in account storage. */
+async function readLiveFixtureAccounts(): Promise<SiteAccount[]> {
+  const [ids, accounts] = await Promise.all([
+    fixtureAccountRegistry.read(),
+    accountQueries.getAllAccounts(),
+  ])
+  const idSet = new Set(ids)
+  return accounts.filter((account) => idSet.has(account.id))
+}
+
 const buildFixtureAccountData = (
   index: number,
   now: number,
@@ -98,13 +169,17 @@ const buildFixtureAccountData = (
   const serial = String(index + 1).padStart(2, "0")
   const variant = FIXTURE_VARIANTS[index % FIXTURE_VARIANTS.length]
 
+  // Ages vary backwards from now so freshness and relative-time states are
+  // realistic; a future timestamp would make every fixture look "just synced".
+  const lastSyncTime = now - (index + 1) * ONE_DAY_MS
+
   return {
     site_name: `Dev Fixture ${serial}`,
     site_url: `https://fixture-${serial}.local`,
     // "unknown" avoids site-profile URL normalization so fixture hosts persist as-is.
     site_type: "unknown" as AccountSiteType,
     exchange_rate: DEFAULT_USD_TO_CNY_RATE,
-    notes: `${DEV_FIXTURE_NOTES_MARKER} ${variant.label}`,
+    notes: `${DEV_FIXTURE_NOTES_LABEL}: ${variant.label}`,
     tagIds: [],
     disabled: variant.disabled,
     excludeFromTotalBalance: variant.excludeFromTotalBalance,
@@ -117,7 +192,7 @@ const buildFixtureAccountData = (
       selection: { mode: CHECK_IN_SELECTION_MODES.Automatic },
     },
     health: variant.health,
-    last_sync_time: now,
+    last_sync_time: lastSyncTime,
     account_info: {
       id: `dev-fixture-user-${serial}`,
       access_token: `dev-fixture-token-${serial}`,
@@ -132,13 +207,10 @@ const buildFixtureAccountData = (
   }
 }
 
-/** Counts persisted accounts created by the fixture generator. */
+/** Counts registered fixture accounts that still exist. */
 export async function countDevFixtureAccounts(): Promise<number> {
   try {
-    const accounts = await accountQueries.getAllAccounts()
-    return accounts.filter((account) =>
-      account.notes.startsWith(DEV_FIXTURE_NOTES_MARKER),
-    ).length
+    return (await readLiveFixtureAccounts()).length
   } catch (error) {
     logger.warn("Failed to count dev fixture accounts", error)
     return 0
@@ -148,37 +220,43 @@ export async function countDevFixtureAccounts(): Promise<number> {
 /** Persists `count` fixture accounts locally without any network activity. */
 export async function addDevFixtureAccounts(count: number): Promise<number> {
   const now = Date.now()
-  const existing = await accountQueries.getAllAccounts()
-  const startIndex = existing.filter((account) =>
-    account.notes.startsWith(DEV_FIXTURE_NOTES_MARKER),
-  ).length
+  const existingCount = await countDevFixtureAccounts()
 
-  let added = 0
+  const addedIds: string[] = []
   for (let offset = 0; offset < count; offset += 1) {
     try {
-      await accountMutations.addAccount(
-        buildFixtureAccountData(startIndex + offset, now + ONE_DAY_MS),
+      const accountId = await accountMutations.addAccount(
+        buildFixtureAccountData(existingCount + offset, now),
       )
-      added += 1
+      addedIds.push(accountId)
     } catch (error) {
       logger.error("Failed to add dev fixture account", error)
       break
     }
   }
-  return added
+
+  if (addedIds.length > 0) {
+    await fixtureAccountRegistry.add(addedIds)
+  }
+  return addedIds.length
 }
 
-/** Deletes every persisted fixture account, leaving real accounts untouched. */
+/** Deletes every registered fixture account, leaving real accounts untouched. */
 export async function clearDevFixtureAccounts(): Promise<number> {
-  const accounts = await accountQueries.getAllAccounts()
-  const fixtureIds = accounts
-    .filter((account) => account.notes.startsWith(DEV_FIXTURE_NOTES_MARKER))
-    .map((account) => account.id)
+  const fixtureAccounts = await readLiveFixtureAccounts()
+  const fixtureIds = fixtureAccounts.map((account) => account.id)
 
   if (fixtureIds.length === 0) {
+    // Drop stale ids (fixtures deleted elsewhere) so the count cannot drift.
+    await fixtureAccountRegistry.write([])
     return 0
   }
 
   const { deletedCount } = await accountMutations.deleteAccounts(fixtureIds)
+  const deletedIdSet = new Set(fixtureIds)
+  const remaining = (await fixtureAccountRegistry.read()).filter(
+    (id) => !deletedIdSet.has(id),
+  )
+  await fixtureAccountRegistry.write(remaining)
   return deletedCount
 }

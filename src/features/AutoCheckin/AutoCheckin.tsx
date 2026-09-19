@@ -306,12 +306,13 @@ export default function AutoCheckin(props: {
   }, [loadStatus])
 
   // Dev-only alarm/pretrigger controls moved into the floating dev panel.
-  const autoCheckinDevSection = useAutoCheckinDevSection({
-    refreshStatus: loadStatus,
-    onShowUiOpenPretriggerDiagnostics: (payload) =>
-      setUiOpenPretriggerDiagnostics({ isOpen: true, payload }),
-    onShowUiOpenPretriggerCompletion: setUiOpenPretriggerCompletion,
-  })
+  const { section: autoCheckinDevSection, isDebugPending } =
+    useAutoCheckinDevSection({
+      refreshStatus: loadStatus,
+      onShowUiOpenPretriggerDiagnostics: (payload) =>
+        setUiOpenPretriggerDiagnostics({ isOpen: true, payload }),
+      onShowUiOpenPretriggerCompletion: setUiOpenPretriggerCompletion,
+    })
   useRegisterDevPanelSection(autoCheckinDevSection)
 
   useEffect(() => {
@@ -1129,6 +1130,7 @@ export default function AutoCheckin(props: {
       isRunning={isRunning}
       isRefreshing={isManualRefreshing}
       isRefreshLocked={isLoading}
+      isDebugActionPending={isDebugPending}
       isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
       isOpeningExternalCheckIns={isOpeningExternalCheckIns}
       canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
