@@ -324,11 +324,8 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.loginProviderRequired",
         messageParams,
       )
-    case "messages:errors.validation.agentRouterLoginProviderInUse":
-      return t(
-        "messages:errors.validation.agentRouterLoginProviderInUse",
-        messageParams,
-      )
+    case "messages:errors.validation.loginProviderInUse":
+      return t("messages:errors.validation.loginProviderInUse", messageParams)
     case "autoCheckin:providerFallback.nativePageIdentityMismatch":
       return t(
         "autoCheckin:providerFallback.nativePageIdentityMismatch",

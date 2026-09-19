@@ -5,7 +5,6 @@ import {
 } from "~/constants/accountLogin"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import type { SiteAccount } from "~/types"
-import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
@@ -14,43 +13,72 @@ import {
 import { t } from "~/utils/i18n/core"
 
 /** The account that owns one provider claim, with the provider it claimed. */
-export interface AgentRouterLoginProviderConflict {
+export interface LoginProviderClaimConflict {
   provider: AccountLoginProvider
   owner: Pick<SiteAccount, "id" | "site_name">
 }
 
 /** Reported when another account already owns the claimed login provider. */
-export const AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_MESSAGE_KEY =
-  "messages:errors.validation.agentRouterLoginProviderInUse"
-
-/**
- * Skip reason carrying the same condition through persisted snapshots, which
- * only hold a stable reason code and no message parameters.
- */
-export const AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_SKIP_REASON =
-  AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE
+const LOGIN_PROVIDER_IN_USE_MESSAGE_KEY =
+  "messages:errors.validation.loginProviderInUse"
 
 /** Builds the translation parameters for the conflict message. */
-export function getAgentRouterLoginProviderConflictMessageParams(
+export function getLoginProviderConflictMessageParams(
   provider: AccountLoginProvider,
 ): Record<string, string> {
   return { provider: ACCOUNT_LOGIN_PROVIDER_LABELS[provider] }
 }
 
 /**
- * Reads the login provider one enabled AgentRouter account claims.
+ * Reads the login provider selected for login-based check-in.
+ *
+ * There is deliberately no GitHub fallback: the browser flow signs in with
+ * whichever GitHub / Linux DO identity the browser currently holds, so guessing
+ * a provider would run the wrong OAuth identity and report a misleading
+ * `identity_mismatch` instead of asking the user to choose.
+ */
+export function resolveLoginCheckInProvider(
+  config?: CheckInConfig,
+): AccountLoginProvider | null {
+  const provider = config?.loginCheckIn?.provider
+  return isAccountLoginProvider(provider) ? provider : null
+}
+
+/**
+ * Sets or clears the login provider selection on a check-in configuration.
+ *
+ * Single write entrance for the stored selection: every UI or bootstrap writer
+ * goes through here, so a future relocation of the field (for example into a
+ * standalone login configuration) only touches this module plus the codec.
+ */
+export function setLoginProviderSelection(
+  config: CheckInConfig,
+  provider: AccountLoginProvider | null,
+): CheckInConfig {
+  if (!provider) {
+    const { loginCheckIn: _cleared, ...rest } = config
+    return rest
+  }
+  return { ...config, loginCheckIn: { provider } }
+}
+
+/**
+ * Reads the login provider one enabled login-based account claims.
  *
  * The browser flow signs in with whichever GitHub / Linux DO identity the
  * browser currently holds rather than with per-account credentials, so two
- * AgentRouter accounts sharing a provider would drive the same identity: the
- * first succeeds, the second reports `identity_mismatch` after being logged out
+ * accounts sharing a provider would drive the same identity: the first
+ * succeeds, the second reports `identity_mismatch` after being logged out
  * and re-authenticated. One provider therefore belongs to one account.
+ *
+ * AgentRouter is currently the only login-based site, so the predicate pins its
+ * canonical URL; the claim mechanics above it are site-agnostic.
  *
  * Only accounts that opted into automatic execution claim a provider; a
  * manually run account with automatic execution disabled still reaches the
  * provider directly, so its selection is not treated as a standing claim.
  */
-export function getAgentRouterLoginProviderClaim(
+export function getLoginProviderClaim(
   account: SiteAccount,
 ): AccountLoginProvider | null {
   if (
@@ -61,8 +89,8 @@ export function getAgentRouterLoginProviderClaim(
     return null
   }
 
-  const provider = account.checkIn.loginCheckIn?.provider
-  return isAccountLoginProvider(provider) ? provider : null
+  const provider = resolveLoginCheckInProvider(account.checkIn)
+  return provider
 }
 
 /**
@@ -127,13 +155,13 @@ function pickProviderOwner(
  * whichever account can actually sign in. The rest are reported as conflicts
  * and skipped.
  */
-export function resolveAgentRouterLoginProviderOwners(
+export function resolveLoginProviderOwners(
   accounts: readonly SiteAccount[],
   evidence: LoginProviderEvidenceMap = {},
 ): Map<AccountLoginProvider, SiteAccount> {
   const claimantsByProvider = new Map<AccountLoginProvider, SiteAccount[]>()
   for (const account of accounts) {
-    const provider = getAgentRouterLoginProviderClaim(account)
+    const provider = getLoginProviderClaim(account)
     if (!provider) continue
     const claimants = claimantsByProvider.get(provider)
     if (claimants) claimants.push(account)
@@ -154,46 +182,45 @@ export function resolveAgentRouterLoginProviderOwners(
  * cannot be evaluated, and an account that owns its provider (or claims nothing)
  * stays unblocked rather than being skipped on missing evidence.
  */
-export function getAgentRouterLoginProviderClaimedByAnother(
+export function getLoginProviderClaimedByAnother(
   account: SiteAccount,
   owners?: ReadonlyMap<AccountLoginProvider, SiteAccount>,
 ): AccountLoginProvider | null {
-  const provider = getAgentRouterLoginProviderClaim(account)
+  const provider = getLoginProviderClaim(account)
   if (!provider || !owners) return null
   const owner = owners.get(provider)
   return owner && owner.id !== account.id ? provider : null
 }
 
 /** Reports the provider claim that another account already owns. */
-export function findAgentRouterLoginProviderConflict(input: {
+export function findLoginProviderConflict(input: {
   accounts: readonly SiteAccount[]
   siteUrl?: string
   checkIn?: CheckInConfig
   /** The account being saved; it never conflicts with itself. */
   accountId?: string
   evidence?: LoginProviderEvidenceMap
-}): AgentRouterLoginProviderConflict | null {
+}): LoginProviderClaimConflict | null {
   if (!isAgentRouterLoginUrl(input.siteUrl)) return null
   if (input.checkIn?.automaticExecutionEnabled !== true) return null
 
-  const provider = input.checkIn.loginCheckIn?.provider
-  if (!isAccountLoginProvider(provider)) return null
+  const provider = resolveLoginCheckInProvider(input.checkIn)
+  if (!provider) return null
 
-  const owner = resolveAgentRouterLoginProviderOwners(
-    input.accounts,
-    input.evidence,
-  ).get(provider)
+  const owner = resolveLoginProviderOwners(input.accounts, input.evidence).get(
+    provider,
+  )
   if (!owner || owner.id === input.accountId) return null
 
   return { provider, owner: { id: owner.id, site_name: owner.site_name } }
 }
 
 /** Renders the save-time rejection message for one provider conflict. */
-export function getAgentRouterLoginProviderConflictMessage(
-  conflict: AgentRouterLoginProviderConflict,
+export function getLoginProviderConflictMessage(
+  conflict: LoginProviderClaimConflict,
 ): string {
-  return t(AGENT_ROUTER_LOGIN_PROVIDER_IN_USE_MESSAGE_KEY, {
-    ...getAgentRouterLoginProviderConflictMessageParams(conflict.provider),
+  return t(LOGIN_PROVIDER_IN_USE_MESSAGE_KEY, {
+    ...getLoginProviderConflictMessageParams(conflict.provider),
     account: conflict.owner.site_name,
   })
 }
@@ -204,14 +231,12 @@ export function getAgentRouterLoginProviderConflictMessage(
  * The editing account is excluded so a stored claim never disables its own
  * value, which would leave an account unable to change or clear the selection.
  */
-export function resolveAgentRouterLoginProviderClaims(input: {
+export function resolveLoginProviderClaims(input: {
   accounts: readonly SiteAccount[]
   accountId?: string
   evidence?: LoginProviderEvidenceMap
-}): AgentRouterLoginProviderConflict[] {
-  return [
-    ...resolveAgentRouterLoginProviderOwners(input.accounts, input.evidence),
-  ]
+}): LoginProviderClaimConflict[] {
+  return [...resolveLoginProviderOwners(input.accounts, input.evidence)]
     .filter(([, owner]) => owner.id !== input.accountId)
     .map(([provider, owner]) => ({
       provider,

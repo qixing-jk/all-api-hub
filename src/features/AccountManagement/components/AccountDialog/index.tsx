@@ -22,9 +22,9 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
-import { resolveAgentRouterLoginProviderClaims } from "~/services/checkin/autoCheckin/accountConstraints"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
@@ -131,7 +131,7 @@ export default function AccountDialog({
   })
   const claimedLoginProviders = useMemo(
     () =>
-      resolveAgentRouterLoginProviderClaims({
+      resolveLoginProviderClaims({
         accounts,
         accountId: account?.id,
         evidence: loginProviderEvidence,

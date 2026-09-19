@@ -112,7 +112,7 @@ export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
 
 export const LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS = {
   /** Last observed browser login outcome per account, keyed by account id. */
-  EVIDENCE: "agentrouter_login_provider_evidence",
+  EVIDENCE: "login_provider_evidence",
 } as const
 
 export const TAG_STORAGE_KEYS = {

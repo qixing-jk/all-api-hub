@@ -3,17 +3,17 @@ import { describe, expect, it } from "vitest"
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  findAgentRouterLoginProviderConflict,
-  getAgentRouterLoginProviderClaim,
-  getAgentRouterLoginProviderClaimedByAnother,
-  getAgentRouterLoginProviderConflictMessageParams,
-  resolveAgentRouterLoginProviderClaims,
-  resolveAgentRouterLoginProviderOwners,
-} from "~/services/checkin/autoCheckin/accountConstraints"
+  findLoginProviderConflict,
+  getLoginProviderClaim,
+  getLoginProviderClaimedByAnother,
+  getLoginProviderConflictMessageParams,
+  resolveLoginProviderClaims,
+  resolveLoginProviderOwners,
+} from "~/services/accountLogin/providerClaims"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
   type LoginProviderEvidenceMap,
-} from "~/services/checkin/autoCheckin/loginProviderEvidence"
+} from "~/services/accountLogin/providerEvidence"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -56,7 +56,7 @@ function agentRouterAccount(
 describe("AgentRouter login provider claims", () => {
   it("claims the provider of an enabled automatic AgentRouter account", () => {
     expect(
-      getAgentRouterLoginProviderClaim(
+      getLoginProviderClaim(
         agentRouterAccount("a", {
           provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
         }),
@@ -74,13 +74,11 @@ describe("AgentRouter login provider claims", () => {
     ["an account with an unknown provider", { provider: "untrusted" }],
     ["another site", { siteUrl: "https://other.example" }],
   ])("does not claim anything for %s", (_case, overrides) => {
-    expect(
-      getAgentRouterLoginProviderClaim(agentRouterAccount("a", overrides)),
-    ).toBeNull()
+    expect(getLoginProviderClaim(agentRouterAccount("a", overrides))).toBeNull()
   })
 
   it("keeps the lowest account id as the owner of a duplicated claim", () => {
-    const owners = resolveAgentRouterLoginProviderOwners([
+    const owners = resolveLoginProviderOwners([
       agentRouterAccount("b"),
       agentRouterAccount("a"),
       agentRouterAccount("c", {
@@ -113,7 +111,7 @@ describe("AgentRouter login provider claims", () => {
     )
 
   it("prefers an account the browser identity actually logged in as", () => {
-    const owners = resolveAgentRouterLoginProviderOwners(
+    const owners = resolveLoginProviderOwners(
       // The id tiebreak would otherwise pick "a".
       [agentRouterAccount("a"), agentRouterAccount("b")],
       evidence({ b: { outcome: "success", at: 100 } }),
@@ -123,7 +121,7 @@ describe("AgentRouter login provider claims", () => {
   })
 
   it("prefers an untried account over one the login rejected", () => {
-    const owners = resolveAgentRouterLoginProviderOwners(
+    const owners = resolveLoginProviderOwners(
       [agentRouterAccount("b"), agentRouterAccount("a")],
       evidence({ a: { outcome: "identity_mismatch", at: 100 } }),
     )
@@ -132,7 +130,7 @@ describe("AgentRouter login provider claims", () => {
   })
 
   it("prefers the freshest successful login between two proven accounts", () => {
-    const owners = resolveAgentRouterLoginProviderOwners(
+    const owners = resolveLoginProviderOwners(
       [agentRouterAccount("b"), agentRouterAccount("a")],
       evidence({
         a: { outcome: "success", at: 100 },
@@ -148,14 +146,14 @@ describe("AgentRouter login provider claims", () => {
 
     // "a" holds the provider by the id tiebreak, then proves the browser
     // identity is not its own. Ownership must move to "b" so it can be tried.
-    const afterRejection = resolveAgentRouterLoginProviderOwners(
+    const afterRejection = resolveLoginProviderOwners(
       accounts,
       evidence({ a: { outcome: "identity_mismatch", at: 1 } }),
     )
     expect(afterRejection.get(ACCOUNT_LOGIN_PROVIDERS.Github)?.id).toBe("b")
 
     // "b" then proves it does own the identity, so ownership stays put.
-    const afterSuccess = resolveAgentRouterLoginProviderOwners(
+    const afterSuccess = resolveLoginProviderOwners(
       accounts,
       evidence({
         a: { outcome: "identity_mismatch", at: 1 },
@@ -166,7 +164,7 @@ describe("AgentRouter login provider claims", () => {
   })
 
   it("ignores evidence for a provider the account no longer claims", () => {
-    const owners = resolveAgentRouterLoginProviderOwners(
+    const owners = resolveLoginProviderOwners(
       [agentRouterAccount("a"), agentRouterAccount("b")],
       {
         b: {
@@ -181,7 +179,7 @@ describe("AgentRouter login provider claims", () => {
   })
 
   it("promotes the next claim when the owner stops claiming", () => {
-    const owners = resolveAgentRouterLoginProviderOwners([
+    const owners = resolveLoginProviderOwners([
       agentRouterAccount("a", { disabled: true }),
       agentRouterAccount("b"),
       agentRouterAccount("c"),
@@ -193,12 +191,10 @@ describe("AgentRouter login provider claims", () => {
   it("names the owner only for the account that does not hold the claim", () => {
     const owner = agentRouterAccount("a")
     const duplicate = agentRouterAccount("b")
-    const owners = resolveAgentRouterLoginProviderOwners([owner, duplicate])
+    const owners = resolveLoginProviderOwners([owner, duplicate])
 
-    expect(
-      getAgentRouterLoginProviderClaimedByAnother(owner, owners),
-    ).toBeNull()
-    expect(getAgentRouterLoginProviderClaimedByAnother(duplicate, owners)).toBe(
+    expect(getLoginProviderClaimedByAnother(owner, owners)).toBeNull()
+    expect(getLoginProviderClaimedByAnother(duplicate, owners)).toBe(
       ACCOUNT_LOGIN_PROVIDERS.Github,
     )
   })
@@ -208,7 +204,7 @@ describe("AgentRouter login provider claims", () => {
     ["the provider has no owner", new Map()],
   ])("keeps an account unblocked when %s", (_case, owners) => {
     expect(
-      getAgentRouterLoginProviderClaimedByAnother(
+      getLoginProviderClaimedByAnother(
         agentRouterAccount("a"),
         owners as never,
       ),
@@ -223,7 +219,7 @@ describe("AgentRouter login provider claims", () => {
     })
 
     expect(
-      findAgentRouterLoginProviderConflict({
+      findLoginProviderConflict({
         accounts,
         siteUrl: "https://agentrouter.org",
         checkIn: claimedGithub,
@@ -231,7 +227,7 @@ describe("AgentRouter login provider claims", () => {
     ).toMatchObject({ provider: ACCOUNT_LOGIN_PROVIDERS.Github })
 
     expect(
-      findAgentRouterLoginProviderConflict({
+      findLoginProviderConflict({
         accounts,
         siteUrl: "https://agentrouter.org",
         checkIn: claimedGithub,
@@ -269,7 +265,7 @@ describe("AgentRouter login provider claims", () => {
     ],
   ])("does not report a conflict for %s", (_case, input) => {
     expect(
-      findAgentRouterLoginProviderConflict({
+      findLoginProviderConflict({
         accounts: [agentRouterAccount("a")],
         ...input,
       }),
@@ -284,9 +280,7 @@ describe("AgentRouter login provider claims", () => {
       }),
     ]
 
-    expect(
-      resolveAgentRouterLoginProviderClaims({ accounts, accountId: "a" }),
-    ).toEqual([
+    expect(resolveLoginProviderClaims({ accounts, accountId: "a" })).toEqual([
       {
         provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
         owner: { id: "b", site_name: "Account b" },
@@ -298,14 +292,12 @@ describe("AgentRouter login provider claims", () => {
     const accounts = [agentRouterAccount("a"), agentRouterAccount("b")]
 
     // Before any login attempt the id tiebreak holds the claim.
-    expect(
-      resolveAgentRouterLoginProviderClaims({ accounts, accountId: "a" }),
-    ).toEqual([])
+    expect(resolveLoginProviderClaims({ accounts, accountId: "a" })).toEqual([])
 
     // Once "b" is the one the browser identity logged in as, editing "a"
     // reports "b" as the holder.
     expect(
-      resolveAgentRouterLoginProviderClaims({
+      resolveLoginProviderClaims({
         accounts,
         accountId: "a",
         evidence: evidence({ b: { outcome: "success", at: 100 } }),
@@ -320,9 +312,7 @@ describe("AgentRouter login provider claims", () => {
 
   it("names the provider in the conflict message parameters", () => {
     expect(
-      getAgentRouterLoginProviderConflictMessageParams(
-        ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
-      ),
+      getLoginProviderConflictMessageParams(ACCOUNT_LOGIN_PROVIDERS.LinuxDo),
     ).toEqual({ provider: "Linux DO" })
   })
 })

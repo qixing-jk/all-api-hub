@@ -1,4 +1,5 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import { getLoginProviderConflictMessage } from "~/services/accountLogin/providerClaims"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { isValidAccount } from "~/services/accounts/accountFormValidation"
 import {
@@ -7,7 +8,7 @@ import {
 } from "~/services/accounts/accountPersistence/constants"
 import {
   buildAccountPersistenceContext,
-  findAgentRouterLoginProviderConflictForSave,
+  findLoginProviderConflictForSave,
   getAccountHealthFailureReason,
   getAccountOperationLogDetails,
   getCredentialValidationMessage,
@@ -19,7 +20,6 @@ import {
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { getAgentRouterLoginProviderConflictMessage } from "~/services/checkin/autoCheckin/accountConstraints"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   AuthTypeEnum,
@@ -109,18 +109,15 @@ export async function validateAndUpdateAccount(
 
   // Two enabled AgentRouter accounts cannot share one browser login context,
   // so a second claim of the same provider is rejected before it is persisted.
-  const loginProviderConflict =
-    await findAgentRouterLoginProviderConflictForSave({
-      siteUrl: url,
-      checkIn: checkInConfig,
-      accountId,
-    })
+  const loginProviderConflict = await findLoginProviderConflictForSave({
+    siteUrl: url,
+    checkIn: checkInConfig,
+    accountId,
+  })
   if (loginProviderConflict) {
     return {
       success: false,
-      message: getAgentRouterLoginProviderConflictMessage(
-        loginProviderConflict,
-      ),
+      message: getLoginProviderConflictMessage(loginProviderConflict),
     }
   }
 

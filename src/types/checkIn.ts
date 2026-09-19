@@ -155,6 +155,12 @@ export interface CheckInInspectionInput {
   candidateMethodIds: readonly CheckInMethodId[]
   accountDisabled?: boolean
   globalAutomaticExecutionEnabled?: boolean
+  /**
+   * Resolved cross-account fact: another enabled account already owns the
+   * browser login provider this account claims. Resolvers without access to
+   * the full account list leave it unset, which keeps the run unblocked.
+   */
+  loginProviderClaimedByAnother?: boolean
   now?: number
   timeZone?: string
 }

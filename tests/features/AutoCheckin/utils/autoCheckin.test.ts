@@ -151,7 +151,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.no_provider",
       "autoCheckin:skipReasons.account_unavailable",
       "autoCheckin:skipReasons.login_provider_in_use",
-      "messages:errors.validation.agentRouterLoginProviderInUse",
+      "messages:errors.validation.loginProviderInUse",
     ])("translates the known key %s", (messageKey) => {
       const t = vi.fn(
         (key: string, params?: Record<string, unknown>) =>

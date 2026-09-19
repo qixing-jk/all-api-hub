@@ -102,6 +102,8 @@ export const CHECK_IN_SELECTION_STALE_REASONS = {
 } as const
 
 export const CHECK_IN_EXECUTION_SKIP_REASONS = {
+  /** Another enabled account holds this account's browser login context. */
+  LoginProviderInUse: "login_provider_in_use",
   AccountDisabled: "account_disabled",
   GlobalAutomaticExecutionDisabled: "global_automatic_execution_disabled",
   AutomaticExecutionDisabled: "automatic_execution_disabled",

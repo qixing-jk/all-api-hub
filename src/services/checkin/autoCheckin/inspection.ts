@@ -19,6 +19,7 @@ export function inspectAccountCheckIn(input: {
   siteUrl?: string
   accountDisabled?: boolean
   globalAutomaticExecutionEnabled?: boolean
+  loginProviderClaimedByAnother?: boolean
 }): CheckInAccountState {
   return inspectCheckInMethods({
     config: input.config,
@@ -28,6 +29,7 @@ export function inspectAccountCheckIn(input: {
     ),
     accountDisabled: input.accountDisabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
 }
 

@@ -2888,7 +2888,7 @@ describe("accountPersistence save and update", () => {
 
     expect(result).toMatchObject({
       success: false,
-      message: "messages:errors.validation.agentRouterLoginProviderInUse",
+      message: "messages:errors.validation.loginProviderInUse",
     })
     // The conflicting save must not have persisted a second account.
     expect(await accountStorage.getAllAccounts()).toHaveLength(1)

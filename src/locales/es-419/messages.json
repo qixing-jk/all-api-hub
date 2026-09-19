@@ -99,10 +99,10 @@
     },
     "unknown": "Error desconocido",
     "validation": {
-      "agentRouterLoginProviderInUse": "El método de inicio de sesión {{provider}} ya lo usa la cuenta de AgentRouter «{{account}}» con el registro automático activado. Elige el otro método, desactiva el registro automático de esa cuenta o borra esta selección.",
       "bookmarkNameRequired": "El nombre del marcador no puede estar vacío",
       "bookmarkUrlRequired": "La URL del marcador no puede estar vacía",
       "incompleteAccountInfo": "Completa toda la información de la cuenta",
+      "loginProviderInUse": "El método de inicio de sesión {{provider}} ya lo usa la cuenta de AgentRouter «{{account}}» con el registro automático activado. Elige el otro método, desactiva el registro automático de esa cuenta o borra esta selección.",
       "updateAccountFailed": "No se pudo actualizar la cuenta {{error}}",
       "urlRequired": "La URL del sitio no puede estar vacía",
       "userIdNumeric": "El ID de usuario debe ser un número"

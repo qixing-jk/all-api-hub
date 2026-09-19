@@ -4,7 +4,7 @@ import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
   loginProviderEvidence,
-} from "~/services/checkin/autoCheckin/loginProviderEvidence"
+} from "~/services/accountLogin/providerEvidence"
 
 const { storageState } = vi.hoisted(() => ({
   storageState: { value: undefined as unknown, fail: false },

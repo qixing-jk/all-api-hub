@@ -19,8 +19,8 @@ const logger = createLogger("LoginProviderEvidence")
 
 const STORAGE_KEY = LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS.EVIDENCE
 
-export const LOGIN_PROVIDER_EVIDENCE_STORAGE_LOCK =
-  "all-api-hub:agentrouter-login-provider-evidence" as const
+const LOGIN_PROVIDER_EVIDENCE_STORAGE_LOCK =
+  "all-api-hub:login-provider-evidence" as const
 
 export {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,

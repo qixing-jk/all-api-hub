@@ -95,10 +95,10 @@
     },
     "unknown": "未知錯誤",
     "validation": {
-      "agentRouterLoginProviderInUse": "{{provider}} 登入方式已被啟用自動簽到的 AgentRouter 帳號「{{account}}」佔用。請改用另一種登入方式，或先停用該帳號的自動簽到，或清空本帳號的選擇。",
       "bookmarkNameRequired": "書籤名稱不能為空",
       "bookmarkUrlRequired": "書籤連結不能為空",
       "incompleteAccountInfo": "請填寫完整的帳號資訊",
+      "loginProviderInUse": "{{provider}} 登入方式已被啟用自動簽到的 AgentRouter 帳號「{{account}}」佔用。請改用另一種登入方式，或先停用該帳號的自動簽到，或清空本帳號的選擇。",
       "updateAccountFailed": "更新帳號失敗 {{error}}",
       "urlRequired": "站點地址不能為空",
       "userIdNumeric": "使用者 ID 必須是數字"

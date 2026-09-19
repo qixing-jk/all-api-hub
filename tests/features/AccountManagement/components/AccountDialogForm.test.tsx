@@ -218,9 +218,7 @@ describe("AccountDialog AccountForm", () => {
     render(<AccountForm {...withSitePolicy(props)} />)
     const user = userEvent.setup()
 
-    expect(
-      await screen.findByText(/agentRouterLoginProviderInUse/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/loginProviderInUse/)).toBeInTheDocument()
 
     await user.click(
       await screen.findByRole("combobox", {

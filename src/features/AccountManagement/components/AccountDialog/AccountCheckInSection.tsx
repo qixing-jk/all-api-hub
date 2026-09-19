@@ -48,10 +48,13 @@ import {
   useCheckInFeedback,
   type CheckInFeedbackSource,
 } from "~/features/CheckInFeedback/useCheckInFeedback"
-import type { AgentRouterLoginProviderConflict } from "~/services/checkin/autoCheckin/accountConstraints"
+import {
+  resolveLoginCheckInProvider,
+  setLoginProviderSelection,
+  type LoginProviderClaimConflict,
+} from "~/services/accountLogin/providerClaims"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
-import { resolveLoginCheckInProvider } from "~/services/checkin/autoCheckin/providers/agentrouter/config"
 import type { CheckInConfig } from "~/types"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
@@ -76,7 +79,7 @@ interface AccountCheckInSectionProps {
   siteType: AccountSiteType
   siteUrl?: string
   /** Login providers already claimed by another enabled AgentRouter account. */
-  claimedLoginProviders?: readonly AgentRouterLoginProviderConflict[]
+  claimedLoginProviders?: readonly LoginProviderClaimConflict[]
   onCheckInChange: (value: CheckInConfig) => void
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
@@ -329,12 +332,13 @@ export function AccountCheckInSection({
                   value={selectedLoginProvider ?? UNSET_LOGIN_PROVIDER_VALUE}
                   onValueChange={(provider) => {
                     if (provider === UNSET_LOGIN_PROVIDER_VALUE) {
-                      const { loginCheckIn: _cleared, ...rest } = checkIn
-                      onCheckInChange(rest)
+                      onCheckInChange(setLoginProviderSelection(checkIn, null))
                       return
                     }
                     if (!isAccountLoginProvider(provider)) return
-                    onCheckInChange({ ...checkIn, loginCheckIn: { provider } })
+                    onCheckInChange(
+                      setLoginProviderSelection(checkIn, provider),
+                    )
                   }}
                 >
                   <SelectTrigger aria-label={t("form.loginCheckInProvider")}>
@@ -364,20 +368,17 @@ export function AccountCheckInSection({
                 </Select>
                 {claimedLoginProviders.length > 0 && (
                   <p className="text-muted-foreground mt-density-1 text-xs">
-                    {t(
-                      "messages:errors.validation.agentRouterLoginProviderInUse",
-                      {
-                        provider: claimedLoginProviders
-                          .map(
-                            (claim) =>
-                              ACCOUNT_LOGIN_PROVIDER_LABELS[claim.provider],
-                          )
-                          .join(" / "),
-                        account: claimedLoginProviders
-                          .map((claim) => claim.owner.site_name)
-                          .join(" / "),
-                      },
-                    )}
+                    {t("messages:errors.validation.loginProviderInUse", {
+                      provider: claimedLoginProviders
+                        .map(
+                          (claim) =>
+                            ACCOUNT_LOGIN_PROVIDER_LABELS[claim.provider],
+                        )
+                        .join(" / "),
+                      account: claimedLoginProviders
+                        .map((claim) => claim.owner.site_name)
+                        .join(" / "),
+                    })}
                   </p>
                 )}
               </FormField>

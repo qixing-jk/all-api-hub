@@ -1,4 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  findLoginProviderConflict,
+  type LoginProviderClaimConflict,
+} from "~/services/accountLogin/providerClaims"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import {
   parseManualQuotaFromUsd,
@@ -11,11 +16,6 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import type { AccountPersistenceIdentityInput } from "~/services/apiAdapters/contracts/accountPersistence"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  findAgentRouterLoginProviderConflict,
-  type AgentRouterLoginProviderConflict,
-} from "~/services/checkin/autoCheckin/accountConstraints"
-import { loginProviderEvidence } from "~/services/checkin/autoCheckin/loginProviderEvidence"
 import {
   AuthTypeEnum,
   type CheckInConfig,
@@ -183,14 +183,14 @@ export function buildAccountPersistenceContext(
  * A storage lookup failure never blocks the save on its own: the execution-time
  * guard still keeps an unattended run away from a conflicting provider.
  */
-export async function findAgentRouterLoginProviderConflictForSave(input: {
+export async function findLoginProviderConflictForSave(input: {
   siteUrl?: string
   checkIn?: CheckInConfig
   accountId?: string
-}): Promise<AgentRouterLoginProviderConflict | null> {
+}): Promise<LoginProviderClaimConflict | null> {
   if (!isAgentRouterLoginUrl(input.siteUrl)) return null
   try {
-    return findAgentRouterLoginProviderConflict({
+    return findLoginProviderConflict({
       accounts: await accountQueries.getAllAccountsOrThrow(),
       evidence: await loginProviderEvidence.readAll(),
       ...input,

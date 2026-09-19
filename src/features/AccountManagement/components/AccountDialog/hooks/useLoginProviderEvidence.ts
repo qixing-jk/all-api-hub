@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import {
   loginProviderEvidence,
   type LoginProviderEvidenceMap,
-} from "~/services/checkin/autoCheckin/loginProviderEvidence"
+} from "~/services/accountLogin/providerEvidence"
 
 const NO_EVIDENCE: LoginProviderEvidenceMap = {}
 

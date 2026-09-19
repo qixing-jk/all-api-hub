@@ -181,6 +181,15 @@ const deriveExecutionEligibility = (
   input: CheckInInspectionInput,
   selectionState: CheckInSelectionState,
 ): CheckInExecutionEligibility => {
+  // A claim held by another account outranks every per-account reason: the
+  // browser login context is shared, so this run cannot use the provider no
+  // matter how ready the account itself looks.
+  if (input.loginProviderClaimedByAnother === true) {
+    return {
+      eligible: false,
+      skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.LoginProviderInUse,
+    }
+  }
   if (input.accountDisabled) {
     return {
       eligible: false,

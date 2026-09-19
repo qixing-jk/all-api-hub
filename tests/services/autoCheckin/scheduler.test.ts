@@ -4,13 +4,13 @@ import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
 } from "~/services/checkin/autoCheckin/inspection"
-import { loginProviderEvidence } from "~/services/checkin/autoCheckin/loginProviderEvidence"
 import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
@@ -248,7 +248,7 @@ vi.mock("~/services/checkin/autoCheckin/automaticDiscovery", () => ({
   prepareAutomaticCheckIn: vi.fn(),
 }))
 
-vi.mock("~/services/checkin/autoCheckin/loginProviderEvidence", () => ({
+vi.mock("~/services/accountLogin/providerEvidence", () => ({
   loginProviderEvidence: {
     readAll: vi.fn(async () => ({})),
     record: vi.fn(),
@@ -406,12 +406,14 @@ beforeEach(() => {
   const inspectForTest = ({
     account,
     globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother,
   }: any) => {
     const state = inspectAccountCheckIn({
       config: account.checkIn,
       siteType: account.site_type,
       accountDisabled: account.disabled,
       globalAutomaticExecutionEnabled,
+      loginProviderClaimedByAnother,
       ...(account.site_url ? { siteUrl: account.site_url } : {}),
     })
     const provider = state.executionEligibility.eligible
@@ -430,10 +432,16 @@ beforeEach(() => {
     inspectForTest,
   )
   mockedMethods.executeSelectedCheckIn.mockImplementation(
-    async ({ account, globalAutomaticExecutionEnabled, context }: any) => {
+    async ({
+      account,
+      globalAutomaticExecutionEnabled,
+      context,
+      loginProviderClaimedByAnother,
+    }: any) => {
       const inspection = inspectForTest({
         account,
         globalAutomaticExecutionEnabled,
+        loginProviderClaimedByAnother,
       })
       if (!inspection.state.executionEligibility.eligible) {
         return {
@@ -7662,7 +7670,8 @@ describe("AgentRouter login provider claims", () => {
       messageKey: "autoCheckin:skipReasons.login_provider_in_use",
       reasonCode: "login_provider_in_use",
     })
-    // Readiness must not advertise the duplicate as runnable either.
+    // The duplicate is blocked in the snapshot like every other
+    // eligibility-restricted account, so readiness shows unavailable too.
     const snapshotById = Object.fromEntries(
       storedStatus.accountsSnapshot.map((snapshot: any) => [
         snapshot.accountId,
@@ -7671,7 +7680,7 @@ describe("AgentRouter login provider claims", () => {
     )
     expect(snapshotById.a.skipReason).toBeUndefined()
     expect(snapshotById.b).toMatchObject({
-      providerAvailable: true,
+      providerAvailable: false,
       skipReason: "login_provider_in_use",
     })
   })
@@ -7731,6 +7740,8 @@ describe("AgentRouter login provider claims", () => {
 
     await runCheckinsForTest({ targetAccountIds: ["b"] })
 
+    // The snapshot-level guard keeps the duplicate out of execution even when
+    // it is the run's only target.
     expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
     expect(storedStatus.perAccount.b).toMatchObject({
       status: "skipped",

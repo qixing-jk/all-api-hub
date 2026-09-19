@@ -72,6 +72,7 @@ type ExecuteSelectedCheckInResult =
 const resolveSelectedCheckInRegistration = (input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
 }) => {
   const state = inspectAccountCheckIn({
     config: input.account.checkIn,
@@ -79,6 +80,7 @@ const resolveSelectedCheckInRegistration = (input: {
     siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const registration = state.executionEligibility.eligible
     ? autoCheckinMethodRegistry.resolveById(state.executionEligibility.methodId)
@@ -375,10 +377,12 @@ const reconcileUncertainResult = async (input: {
 export function inspectSelectedCheckInCompatibility(input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
 }) {
   const { state, registration } = resolveSelectedCheckInRegistration({
     account: input.account,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const providerReadiness = registration?.provider.getReadiness(input.account)
   return {
@@ -397,6 +401,11 @@ export async function executeSelectedCheckIn(input: {
   /** Rechecks unattended-run intent immediately before an initial or recovered POST. */
   isAutomaticExecutionEnabled?: () => Promise<boolean>
   /**
+   * Resolved cross-account fact: another enabled account already owns the
+   * browser login provider this account claims. Unset keeps the run unblocked.
+   */
+  loginProviderClaimedByAnother?: boolean
+  /**
    * Retry safety guard: a provider with readback must confirm current status
    * before another mutation. Providers may also require this for initial
    * daily/manual runs through requiresAuthoritativeStatusBeforeMutation.
@@ -409,6 +418,7 @@ export async function executeSelectedCheckIn(input: {
     siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const canRefreshCachedStatus =
     !initialState.executionEligibility.eligible &&

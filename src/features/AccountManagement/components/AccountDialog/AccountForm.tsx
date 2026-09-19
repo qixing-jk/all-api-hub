@@ -47,8 +47,8 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
+import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import { isValidExchangeRate } from "~/services/accounts/accountFormValidation"
-import type { AgentRouterLoginProviderConflict } from "~/services/checkin/autoCheckin/accountConstraints"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -78,7 +78,7 @@ interface AccountFormProps {
   siteUrl?: string
   sitePolicy: AccountFormPresentationSitePolicy
   /** Login providers already claimed by another enabled AgentRouter account. */
-  claimedLoginProviders?: readonly AgentRouterLoginProviderConflict[]
+  claimedLoginProviders?: readonly LoginProviderClaimConflict[]
   isDetected: boolean
   isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean

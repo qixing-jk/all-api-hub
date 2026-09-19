@@ -95,10 +95,10 @@
     },
     "unknown": "Lỗi không xác định",
     "validation": {
-      "agentRouterLoginProviderInUse": "Phương thức đăng nhập {{provider}} đã được tài khoản AgentRouter «{{account}}» có bật điểm danh tự động sử dụng. Hãy chọn phương thức còn lại, tắt điểm danh tự động của tài khoản đó, hoặc xóa lựa chọn này.",
       "bookmarkNameRequired": "Tên dấu trang không được để trống",
       "bookmarkUrlRequired": "Liên kết dấu trang không được để trống",
       "incompleteAccountInfo": "Vui lòng điền đầy đủ thông tin tài khoản",
+      "loginProviderInUse": "Phương thức đăng nhập {{provider}} đã được tài khoản AgentRouter «{{account}}» có bật điểm danh tự động sử dụng. Hãy chọn phương thức còn lại, tắt điểm danh tự động của tài khoản đó, hoặc xóa lựa chọn này.",
       "updateAccountFailed": "Cập nhật tài khoản thất bại {{error}}",
       "urlRequired": "Địa chỉ trang web không được để trống",
       "userIdNumeric": "ID người dùng phải là số"

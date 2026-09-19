@@ -6,16 +6,17 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { loginAccount } from "~/services/accountLogin"
+import { resolveLoginCheckInProvider } from "~/services/accountLogin/providerClaims"
+import {
+  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
+  loginProviderEvidence,
+  type LoginProviderEvidenceOutcome,
+} from "~/services/accountLogin/providerEvidence"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import {
   fetchAgentRouterPublicStatus,
   type AgentRouterPublicStatusEnvelope,
 } from "~/services/apiService/agentrouter/status"
-import {
-  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
-  loginProviderEvidence,
-  type LoginProviderEvidenceOutcome,
-} from "~/services/checkin/autoCheckin/loginProviderEvidence"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import { AuthTypeEnum } from "~/types/auth"
 import {
@@ -25,7 +26,6 @@ import {
 } from "~/types/autoCheckin"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import { resolveLoginCheckInProvider } from "./agentrouter/config"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderReadContext,
