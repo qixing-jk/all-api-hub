@@ -251,8 +251,7 @@ jobs:
             [ -z "${!key}" ] && missing+=("$key")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error::Managed-site import E2E requires source-account secrets: ${missing[*]}"
-            exit 1
+            echo "::warning::Managed-site import E2E will annotate source-account channel-status checks as skipped without these secrets: ${missing[*]}"
           fi
 
       - name: Run real-site E2E
