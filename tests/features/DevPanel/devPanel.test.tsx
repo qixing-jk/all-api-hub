@@ -1,4 +1,5 @@
 import { act } from "@testing-library/react"
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
@@ -251,6 +252,142 @@ describe("DevPanel", () => {
 
     await openDevPanel()
     expect(screen.queryByText("Page action")).not.toBeInTheDocument()
+  })
+
+  it("closes the panel from the header button", async () => {
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(await screen.findByTestId("dev-panel")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Close dev panel" }))
+    expect(screen.queryByTestId("dev-panel")).not.toBeInTheDocument()
+  })
+
+  it("labels the panel with the hosting surface", async () => {
+    const { unmount } = render(
+      <DevPanelProvider surface="sidepanel">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(await screen.findByText("Side panel")).toBeVisible()
+    unmount()
+
+    render(
+      <DevPanelProvider surface="popup">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(await screen.findByText("Popup")).toBeVisible()
+  })
+
+  it("hides sections that belong to another surface", async () => {
+    function OptionsOnlySectionRegistrar() {
+      useRegisterDevPanelSection({
+        id: "options-only",
+        title: "Options only",
+        surfaces: ["options"],
+        actions: [{ id: "a", label: "Options action", run: () => {} }],
+      })
+      return null
+    }
+
+    render(
+      <DevPanelProvider surface="popup">
+        <OptionsOnlySectionRegistrar />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(screen.queryByText("Options action")).not.toBeInTheDocument()
+  })
+
+  it("runs a section action and shows its pending state", async () => {
+    let release!: () => void
+    const runMock = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+
+    function PendingSectionRegistrar() {
+      const [isPending, setIsPending] = useState(false)
+      useRegisterDevPanelSection({
+        id: "pending-section",
+        title: "Pending section",
+        surfaces: ["options"],
+        actions: [
+          {
+            id: "slow",
+            label: "Slow action",
+            loading: isPending,
+            run: async () => {
+              setIsPending(true)
+              await runMock()
+              setIsPending(false)
+            },
+          },
+        ],
+      })
+      return null
+    }
+
+    render(
+      <DevPanelProvider surface="options">
+        <PendingSectionRegistrar />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    fireEvent.click(await screen.findByRole("button", { name: "Slow action" }))
+
+    await waitFor(() => {
+      expect(runMock).toHaveBeenCalled()
+    })
+    const pendingButton = screen.getByRole("button", { name: "Slow action" })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+
+    release()
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Slow action" })).toBeEnabled()
+    })
   })
 
   it("triggers the root translation crash fallback from the panel", async () => {

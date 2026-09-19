@@ -31,10 +31,14 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 
 /** In-memory stand-in for the extension `local` storage area. */
 const storageBacking = new Map<string, unknown>()
+let storageGetShouldThrow = false
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
     async get(key: string) {
+      if (storageGetShouldThrow) {
+        throw new Error("storage unavailable")
+      }
       return storageBacking.get(key)
     }
 
@@ -68,6 +72,7 @@ describe("dev fixture accounts", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storageBacking.clear()
+    storageGetShouldThrow = false
     addAccountMock.mockImplementation(async () => `fixture-${Date.now()}`)
     deleteAccountsMock.mockResolvedValue({ deletedCount: 0, deletedIds: [] })
     getAllAccountsMock.mockResolvedValue([realAccount])
@@ -183,5 +188,19 @@ describe("dev fixture accounts", () => {
 
     expect(added).toBe(1)
     expect(readRegistry()).toEqual(["fixture-a"])
+  })
+  it("reports zero when the account query fails", async () => {
+    getAllAccountsMock.mockRejectedValue(new Error("accounts unavailable"))
+
+    await expect(countDevFixtureAccounts()).resolves.toBe(0)
+  })
+
+  it("degrades to an empty registry when storage reads fail", async () => {
+    storageGetShouldThrow = true
+
+    await expect(countDevFixtureAccounts()).resolves.toBe(0)
+    // A failed read must not fall back to matching editable account fields.
+    await expect(clearDevFixtureAccounts()).resolves.toBe(0)
+    expect(deleteAccountsMock).not.toHaveBeenCalled()
   })
 })

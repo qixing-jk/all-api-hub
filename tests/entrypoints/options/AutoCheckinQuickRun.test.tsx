@@ -1,10 +1,13 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { UpdateLogDialogProvider } from "~/components/dialogs/UpdateLogDialog"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import * as userPreferencesContext from "~/contexts/UserPreferencesContext"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import { DevPanel } from "~/features/DevPanel/DevPanel"
+import { DevPanelProvider } from "~/features/DevPanel/DevPanelSectionsContext"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
@@ -516,6 +519,48 @@ describe("AutoCheckin quick run", () => {
 
     await user.click(restoredButton)
     await waitFor(() => expect(runNowAttempts).toBe(2))
+  })
+
+  it("passes the popup temp-window source through dev panel pretrigger diagnostics", async () => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen) {
+        return { success: true, eligible: true, started: false }
+      }
+      return { success: true }
+    })
+
+    // The panel's dialog section registers through the app-layout provider.
+    render(
+      <UpdateLogDialogProvider>
+        <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>
+          <AutoCheckin routeParams={{}} />
+          <DevPanel />
+        </DevPanelProvider>
+      </UpdateLogDialogProvider>,
+    )
+
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Dev: Open dev panel" }))
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      }),
+    )
+
+    // The page receives the raw response through the panel bridge and shows
+    // its diagnostics dialog.
+    expect(
+      await screen.findByText(
+        "autoCheckin:execution.debug.uiOpenPretriggerDiagnosticsTitle",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("coalesces rapid run-now clicks into one user command", async () => {

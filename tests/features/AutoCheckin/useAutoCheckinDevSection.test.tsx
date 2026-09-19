@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { useAutoCheckinDevSection } from "~/features/AutoCheckin/useAutoCheckinDevSection"
+import toast from "~/lib/notify"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
@@ -18,7 +19,9 @@ const {
   getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   sendAutoCheckinMessageMock: vi.fn(),
-  onRuntimeMessageMock: vi.fn(() => () => {}),
+  onRuntimeMessageMock: vi.fn(
+    (_listener: (message: unknown) => void) => () => {},
+  ),
   getCurrentTempWindowRequestSourceMock: vi.fn(),
 }))
 
@@ -249,5 +252,449 @@ describe("useAutoCheckinDevSection", () => {
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
       AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
     )
+  })
+
+  it.each([
+    [
+      "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.triggerRetryAlarmNow",
+      AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
+      "autoCheckin:messages.error.retryAlarmTriggerFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.resetLastDailyRunDay",
+      AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
+      "autoCheckin:messages.error.lastDailyRunDayResetFailed",
+    ],
+  ])(
+    "surfaces the backend message when %s fails",
+    async (actionName, messageType, failureKey) => {
+      sendAutoCheckinMessageMock.mockResolvedValue({
+        success: false,
+        error: "alarm unavailable",
+      })
+      const refreshStatus = vi.fn(async () => undefined)
+
+      render(
+        <DevSectionHarness refreshStatus={refreshStatus} />,
+        RENDER_OPTIONS,
+      )
+      fireEvent.click(await screen.findByRole("button", { name: actionName }))
+
+      await waitFor(() => {
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+          expect.stringContaining(failureKey),
+        )
+      })
+      // A failed action must not be reported as a successful refresh.
+      expect(refreshStatus).not.toHaveBeenCalled()
+      expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(messageType)
+    },
+  )
+
+  it.each([
+    [
+      "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.triggerRetryAlarmNow",
+      "autoCheckin:messages.error.retryAlarmTriggerFailed",
+    ],
+  ])(
+    "surfaces exception details when %s throws",
+    async (actionName, failureKey) => {
+      sendAutoCheckinMessageMock.mockRejectedValue(new Error("runtime closed"))
+
+      render(<DevSectionHarness />, RENDER_OPTIONS)
+      fireEvent.click(await screen.findByRole("button", { name: actionName }))
+
+      await waitFor(() => {
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+          expect.stringContaining(failureKey),
+        )
+      })
+      expect(screen.getByTestId("debug-pending")).toHaveTextContent("false")
+    },
+  )
+
+  it("reports a failed schedule action with its backend message", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: false,
+      error: "window closed",
+    })
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("dailyAlarmScheduleForTodayFailed"),
+      )
+    })
+    expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
+      { minutesFromNow: 60 },
+    )
+  })
+
+  it("reports a schedule action that throws", async () => {
+    sendAutoCheckinMessageMock.mockRejectedValue(new Error("runtime closed"))
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("dailyAlarmScheduleForTodayFailed"),
+      )
+    })
+  })
+
+  it("reports a successful schedule action and refreshes the snapshot", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({ success: true })
+    const refreshStatus = vi.fn(async () => undefined)
+
+    render(<DevSectionHarness refreshStatus={refreshStatus} />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(refreshStatus).toHaveBeenCalled()
+    })
+  })
+
+  it("reports an ineligible pre-trigger evaluation with the reason", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      eligible: false,
+      ineligibleReason: "outside window",
+    })
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerIneligible"),
+      )
+    })
+  })
+
+  it("reports a failed pre-trigger evaluation", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: false,
+      error: "evaluation unavailable",
+    })
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerEvaluationFailed"),
+      )
+    })
+  })
+
+  it("reports a pre-trigger evaluation that throws", async () => {
+    sendAutoCheckinMessageMock.mockRejectedValue(new Error("runtime closed"))
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerEvaluationFailed"),
+      )
+    })
+  })
+
+  it("opens the diagnostics payload when a pre-trigger dry run succeeds", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      eligible: true,
+    })
+    const onShowUiOpenPretriggerDiagnostics = vi.fn()
+
+    function DiagnosticsHarness() {
+      const { section } = useAutoCheckinDevSection({
+        onShowUiOpenPretriggerDiagnostics,
+      })
+      const action = section.actions.find(
+        (candidate) => candidate.id === "evaluate-ui-open-pretrigger",
+      )
+      return (
+        <button type="button" onClick={() => void action!.run()}>
+          evaluate
+        </button>
+      )
+    }
+
+    render(<DiagnosticsHarness />, RENDER_OPTIONS)
+    fireEvent.click(screen.getByRole("button", { name: "evaluate" }))
+
+    await waitFor(() => {
+      expect(onShowUiOpenPretriggerDiagnostics).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, eligible: true }),
+      )
+    })
+  })
+
+  it("reports a failed pre-trigger trigger with the backend message", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: false,
+      error: "trigger refused",
+    })
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerTriggerFailed"),
+      )
+    })
+  })
+
+  it("reports a pre-trigger trigger that throws", async () => {
+    sendAutoCheckinMessageMock.mockRejectedValue(new Error("runtime closed"))
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerTriggerFailed"),
+      )
+    })
+  })
+
+  it("opens the completion dialog and refreshes when the pre-trigger starts", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      started: true,
+      summary: {
+        totalEligible: 2,
+        executed: 2,
+        successCount: 2,
+        failedCount: 0,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+      pendingRetry: true,
+    })
+    const refreshStatus = vi.fn(async () => undefined)
+    const onShowUiOpenPretriggerCompletion = vi.fn()
+
+    function CompletionHarness() {
+      const { section } = useAutoCheckinDevSection({
+        refreshStatus,
+        onShowUiOpenPretriggerCompletion,
+      })
+      const action = section.actions.find(
+        (candidate) => candidate.id === "trigger-ui-open-pretrigger",
+      )
+      return (
+        <button type="button" onClick={() => void action!.run()}>
+          trigger
+        </button>
+      )
+    }
+
+    render(<CompletionHarness />, RENDER_OPTIONS)
+    fireEvent.click(screen.getByRole("button", { name: "trigger" }))
+
+    await waitFor(() => {
+      expect(onShowUiOpenPretriggerCompletion).toHaveBeenCalledWith({
+        isOpen: expect.any(Boolean),
+        summary: expect.objectContaining({ executed: 2 }),
+        pendingRetry: true,
+      })
+    })
+    expect(refreshStatus).toHaveBeenCalled()
+  })
+
+  it("opens diagnostics when the pre-trigger is not eligible to start", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      started: false,
+      ineligibleReason: "already ran today",
+    })
+    const onShowUiOpenPretriggerDiagnostics = vi.fn()
+
+    function DiagnosticsHarness() {
+      const { section } = useAutoCheckinDevSection({
+        onShowUiOpenPretriggerDiagnostics,
+      })
+      const action = section.actions.find(
+        (candidate) => candidate.id === "trigger-ui-open-pretrigger",
+      )
+      return (
+        <button type="button" onClick={() => void action!.run()}>
+          trigger
+        </button>
+      )
+    }
+
+    render(<DiagnosticsHarness />, RENDER_OPTIONS)
+    fireEvent.click(screen.getByRole("button", { name: "trigger" }))
+
+    await waitFor(() => {
+      expect(onShowUiOpenPretriggerDiagnostics).toHaveBeenCalledWith(
+        expect.objectContaining({ started: false }),
+      )
+    })
+  })
+
+  it("celebrates the pretrigger start broadcast for the matching request", async () => {
+    sendAutoCheckinMessageMock.mockImplementation(
+      async (_type: string, payload?: { requestId?: string }) => {
+        // Simulate the background broadcasting the start for this request.
+        startListener?.({
+          action: "autoCheckinPretrigger:started",
+          requestId: payload?.requestId,
+        })
+        return { success: true, started: true }
+      },
+    )
+    let startListener: ((message: unknown) => void) | undefined
+    onRuntimeMessageMock.mockImplementation(
+      (listener: (message: unknown) => void) => {
+        startListener = listener
+        return () => {}
+      },
+    )
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.success)).toHaveBeenCalled()
+    })
+  })
+  it.each([
+    [
+      "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+      "autoCheckin:messages.error.dailyAlarmScheduleForTodayFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      "autoCheckin:messages.error.uiOpenPretriggerEvaluationFailed",
+    ],
+    [
+      "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      "autoCheckin:messages.error.uiOpenPretriggerTriggerFailed",
+    ],
+  ])(
+    "falls back to an empty error detail when %s fails without one",
+    async (actionName, failureKey) => {
+      sendAutoCheckinMessageMock.mockResolvedValue({ success: false })
+
+      render(<DevSectionHarness />, RENDER_OPTIONS)
+      fireEvent.click(await screen.findByRole("button", { name: actionName }))
+
+      await waitFor(() => {
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+          expect.stringContaining(failureKey),
+        )
+      })
+    },
+  )
+
+  it("reports an ineligible pre-trigger evaluation without a reason", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      eligible: false,
+    })
+
+    render(<DevSectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        expect.stringContaining("uiOpenPretriggerIneligible"),
+      )
+    })
+  })
+
+  it("opens the completion dialog with a null summary when none is returned", async () => {
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      started: true,
+    })
+    const onShowUiOpenPretriggerCompletion = vi.fn()
+
+    function CompletionHarness() {
+      const { section } = useAutoCheckinDevSection({
+        onShowUiOpenPretriggerCompletion,
+      })
+      const action = section.actions.find(
+        (candidate) => candidate.id === "trigger-ui-open-pretrigger",
+      )
+      return (
+        <button type="button" onClick={() => void action!.run()}>
+          trigger
+        </button>
+      )
+    }
+
+    render(<CompletionHarness />, RENDER_OPTIONS)
+    fireEvent.click(screen.getByRole("button", { name: "trigger" }))
+
+    await waitFor(() => {
+      expect(onShowUiOpenPretriggerCompletion).toHaveBeenCalledWith({
+        isOpen: expect.any(Boolean),
+        summary: null,
+        pendingRetry: false,
+      })
+    })
   })
 })

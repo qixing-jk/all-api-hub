@@ -113,4 +113,35 @@ describe("balance history dev section", () => {
       })
     })
   })
+  it("falls back to a generic message when the failure omits an error", async () => {
+    sendRuntimeMessageMock.mockResolvedValue({ success: false })
+
+    render(<SectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        "Failed to seed test snapshots",
+        { id: "toast-id" },
+      )
+    })
+  })
+
+  it("reports zero counts when a successful seed omits the payload", async () => {
+    sendRuntimeMessageMock.mockResolvedValue({ success: true })
+
+    render(<SectionHarness />, RENDER_OPTIONS)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+        "Seeded 0 account(s), skipped 0. Check Popup stats or Balance History metrics.",
+        { id: "toast-id" },
+      )
+    })
+  })
 })
