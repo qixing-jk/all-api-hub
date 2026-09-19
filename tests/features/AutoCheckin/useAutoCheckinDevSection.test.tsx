@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { useAutoCheckinDevSection } from "~/features/AutoCheckin/useAutoCheckinDevSection"
 import toast from "~/lib/notify"
+import autoCheckinResources from "~/locales/en/autoCheckin.json"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
@@ -11,7 +12,18 @@ import {
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
+
+// The shared test i18n ships no resources; add the real autoCheckin bundle so
+// failure assertions can observe interpolated error/reason details.
+testI18n.addResourceBundle(
+  "en",
+  "autoCheckin",
+  autoCheckinResources,
+  true,
+  true,
+)
 
 const {
   sendAutoCheckinMessageMock,
@@ -52,17 +64,44 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+/**
+ * Real English messages for the failure paths, so assertions fail if the
+ * dynamic error/reason detail is dropped instead of interpolated.
+ */
+type FailureKey =
+  | "dailyAlarmTriggerFailed"
+  | "retryAlarmTriggerFailed"
+  | "lastDailyRunDayResetFailed"
+  | "dailyAlarmScheduleForTodayFailed"
+  | "uiOpenPretriggerEvaluationFailed"
+  | "uiOpenPretriggerTriggerFailed"
+  | "uiOpenPretriggerIneligible"
+
+const FAILURE_MESSAGE: Record<FailureKey, (detail: string) => string> = {
+  dailyAlarmTriggerFailed: (detail: string) =>
+    `Failed to trigger daily alarm: ${detail}`,
+  retryAlarmTriggerFailed: (detail: string) =>
+    `Failed to trigger retry alarm: ${detail}`,
+  lastDailyRunDayResetFailed: (detail: string) =>
+    `Failed to reset last daily marker: ${detail}`,
+  dailyAlarmScheduleForTodayFailed: (detail: string) =>
+    `Failed to schedule daily alarm for today: ${detail}`,
+  uiOpenPretriggerEvaluationFailed: (detail: string) =>
+    `Failed to evaluate UI-open pre-trigger: ${detail}`,
+  uiOpenPretriggerTriggerFailed: (detail: string) =>
+    `Failed to trigger UI-open pre-trigger: ${detail}`,
+  uiOpenPretriggerIneligible: (detail: string) =>
+    `UI-open pre-trigger is not eligible: ${detail}`,
+}
+
 const PENDING_LABEL_BY_ACTION_ID: Record<string, string> = {
-  "trigger-daily-alarm-now":
-    "autoCheckin:messages.loading.triggeringDailyAlarm",
-  "trigger-retry-alarm-now":
-    "autoCheckin:messages.loading.triggeringRetryAlarm",
+  "trigger-daily-alarm-now": "Triggering daily alarm...",
+  "trigger-retry-alarm-now": "Triggering retry alarm...",
   "schedule-daily-alarm-for-today":
     "autoCheckin:messages.loading.schedulingDailyAlarmForToday",
   "evaluate-ui-open-pretrigger":
     "autoCheckin:messages.loading.evaluatingUiOpenPretrigger",
-  "trigger-ui-open-pretrigger":
-    "autoCheckin:messages.loading.triggeringUiOpenPretrigger",
+  "trigger-ui-open-pretrigger": "Triggering UI-open pre-trigger...",
   "reset-last-daily-run-day":
     "autoCheckin:messages.loading.resettingLastDailyRunDay",
 }
@@ -105,32 +144,32 @@ describe("useAutoCheckinDevSection", () => {
     expect(screen.getAllByRole("button")).toHaveLength(6)
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+        name: "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.triggerRetryAlarmNow",
+        name: "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+        name: "Dev: Schedule daily check-in alarm for later today",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+        name: "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "autoCheckin:execution.debug.resetLastDailyRunDay",
+        name: "Dev: Clear 'Daily check-in already run today' flag",
       }),
     ).toBeInTheDocument()
   })
@@ -151,12 +190,12 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
 
     const dailyAlarmButton = await screen.findByRole("button", {
-      name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      name: "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
     })
     fireEvent.click(dailyAlarmButton)
 
     const pendingButton = await screen.findByRole("button", {
-      name: "autoCheckin:messages.loading.triggeringDailyAlarm",
+      name: "Triggering daily alarm...",
     })
     expect(pendingButton).toBeDisabled()
     expect(pendingButton).toHaveAttribute("aria-busy", "true")
@@ -164,14 +203,14 @@ describe("useAutoCheckinDevSection", () => {
     expect(screen.getByTestId("debug-pending")).toHaveTextContent("true")
 
     const retryAlarmButton = screen.getByRole("button", {
-      name: "autoCheckin:execution.debug.triggerRetryAlarmNow",
+      name: "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
     })
     expect(retryAlarmButton).toBeDisabled()
     expect(retryAlarmButton).not.toHaveAttribute("aria-busy")
 
     release()
     const restoredButton = await screen.findByRole("button", {
-      name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      name: "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
     })
     expect(restoredButton).toBeEnabled()
     expect(screen.getByTestId("debug-pending")).toHaveTextContent("false")
@@ -197,14 +236,14 @@ describe("useAutoCheckinDevSection", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     )
 
     // Run sequentially: the first action disables its siblings, so the second
     // click must wait until the first one has finished and re-enabled them.
     const triggerButton = await screen.findByRole("button", {
-      name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      name: "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
     })
     await waitFor(() => expect(triggerButton).toBeEnabled())
     fireEvent.click(triggerButton)
@@ -242,7 +281,7 @@ describe("useAutoCheckinDevSection", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.resetLastDailyRunDay",
+        name: "Dev: Clear 'Daily check-in already run today' flag",
       }),
     )
 
@@ -256,19 +295,19 @@ describe("useAutoCheckinDevSection", () => {
 
   it.each([
     [
-      "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
       AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
-      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+      "dailyAlarmTriggerFailed",
     ],
     [
-      "autoCheckin:execution.debug.triggerRetryAlarmNow",
+      "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
       AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
-      "autoCheckin:messages.error.retryAlarmTriggerFailed",
+      "retryAlarmTriggerFailed",
     ],
     [
-      "autoCheckin:execution.debug.resetLastDailyRunDay",
+      "Dev: Clear 'Daily check-in already run today' flag",
       AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
-      "autoCheckin:messages.error.lastDailyRunDayResetFailed",
+      "lastDailyRunDayResetFailed",
     ],
   ])(
     "surfaces the backend message when %s fails",
@@ -287,7 +326,7 @@ describe("useAutoCheckinDevSection", () => {
 
       await waitFor(() => {
         expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-          expect.stringContaining(failureKey),
+          FAILURE_MESSAGE[failureKey as FailureKey]("alarm unavailable"),
         )
       })
       // A failed action must not be reported as a successful refresh.
@@ -298,12 +337,12 @@ describe("useAutoCheckinDevSection", () => {
 
   it.each([
     [
-      "autoCheckin:execution.debug.triggerDailyAlarmNow",
-      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+      "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
+      "dailyAlarmTriggerFailed",
     ],
     [
-      "autoCheckin:execution.debug.triggerRetryAlarmNow",
-      "autoCheckin:messages.error.retryAlarmTriggerFailed",
+      "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
+      "retryAlarmTriggerFailed",
     ],
   ])(
     "surfaces exception details when %s throws",
@@ -315,7 +354,7 @@ describe("useAutoCheckinDevSection", () => {
 
       await waitFor(() => {
         expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-          expect.stringContaining(failureKey),
+          FAILURE_MESSAGE[failureKey as FailureKey]("runtime closed"),
         )
       })
       expect(screen.getByTestId("debug-pending")).toHaveTextContent("false")
@@ -331,13 +370,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+        name: "Dev: Schedule daily check-in alarm for later today",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("dailyAlarmScheduleForTodayFailed"),
+        FAILURE_MESSAGE.dailyAlarmScheduleForTodayFailed("window closed"),
       )
     })
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
@@ -352,13 +391,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+        name: "Dev: Schedule daily check-in alarm for later today",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("dailyAlarmScheduleForTodayFailed"),
+        FAILURE_MESSAGE.dailyAlarmScheduleForTodayFailed("runtime closed"),
       )
     })
   })
@@ -370,7 +409,7 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness refreshStatus={refreshStatus} />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
+        name: "Dev: Schedule daily check-in alarm for later today",
       }),
     )
 
@@ -389,13 +428,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerIneligible"),
+        FAILURE_MESSAGE.uiOpenPretriggerIneligible("outside window"),
       )
     })
   })
@@ -409,13 +448,15 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerEvaluationFailed"),
+        FAILURE_MESSAGE.uiOpenPretriggerEvaluationFailed(
+          "evaluation unavailable",
+        ),
       )
     })
   })
@@ -426,13 +467,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerEvaluationFailed"),
+        FAILURE_MESSAGE.uiOpenPretriggerEvaluationFailed("runtime closed"),
       )
     })
   })
@@ -477,13 +518,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+        name: "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerTriggerFailed"),
+        FAILURE_MESSAGE.uiOpenPretriggerTriggerFailed("trigger refused"),
       )
     })
   })
@@ -494,13 +535,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+        name: "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerTriggerFailed"),
+        FAILURE_MESSAGE.uiOpenPretriggerTriggerFailed("runtime closed"),
       )
     })
   })
@@ -604,7 +645,7 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+        name: "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
       }),
     )
 
@@ -614,20 +655,20 @@ describe("useAutoCheckinDevSection", () => {
   })
   it.each([
     [
-      "autoCheckin:execution.debug.triggerDailyAlarmNow",
-      "autoCheckin:messages.error.dailyAlarmTriggerFailed",
+      "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
+      "dailyAlarmTriggerFailed",
     ],
     [
-      "autoCheckin:execution.debug.scheduleDailyAlarmForToday",
-      "autoCheckin:messages.error.dailyAlarmScheduleForTodayFailed",
+      "Dev: Schedule daily check-in alarm for later today",
+      "dailyAlarmScheduleForTodayFailed",
     ],
     [
-      "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
-      "autoCheckin:messages.error.uiOpenPretriggerEvaluationFailed",
+      "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
+      "uiOpenPretriggerEvaluationFailed",
     ],
     [
-      "autoCheckin:execution.debug.triggerUiOpenPretrigger",
-      "autoCheckin:messages.error.uiOpenPretriggerTriggerFailed",
+      "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
+      "uiOpenPretriggerTriggerFailed",
     ],
   ])(
     "falls back to an empty error detail when %s fails without one",
@@ -639,7 +680,7 @@ describe("useAutoCheckinDevSection", () => {
 
       await waitFor(() => {
         expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-          expect.stringContaining(failureKey),
+          FAILURE_MESSAGE[failureKey as FailureKey](""),
         )
       })
     },
@@ -654,13 +695,13 @@ describe("useAutoCheckinDevSection", () => {
     render(<DevSectionHarness />, RENDER_OPTIONS)
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+        name: "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-        expect.stringContaining("uiOpenPretriggerIneligible"),
+        FAILURE_MESSAGE.uiOpenPretriggerIneligible(""),
       )
     })
   })
