@@ -1,0 +1,60 @@
+import type { LucideIcon } from "lucide-react"
+
+/** Entry points that can host the floating dev panel. */
+export type DevPanelSurface = "options" | "popup" | "sidepanel"
+
+/** Where the panel is currently shown, used to filter page-specific sections. */
+export interface DevPanelContextValue {
+  surface: DevPanelSurface
+  /**
+   * Page identifier of the active route (options menu id or popup view id).
+   * Omitted on surfaces without page state.
+   */
+  page?: string
+}
+
+/** A single runnable command inside a dev panel section. */
+export interface DevPanelAction {
+  id: string
+  label: string
+  icon?: LucideIcon
+  /** Shows a spinner and disables sibling actions while awaiting the handler. */
+  loading?: boolean
+  disabled?: boolean
+  run: () => void | Promise<void>
+}
+
+/** A titled group of dev actions rendered in the floating panel. */
+export interface DevPanelSection {
+  id: string
+  title: string
+  icon?: LucideIcon
+  /** Optional one-line hint shown under the title. */
+  description?: string
+  /** Surfaces where the section is shown; omit to show on every surface. */
+  surfaces?: readonly DevPanelSurface[]
+  /** Page ids where the section is shown; omit to show on every page. */
+  pages?: readonly string[]
+  /** Higher values render lower in the panel; defaults to `0`. */
+  order?: number
+  actions: readonly DevPanelAction[]
+}
+
+/**
+ * Resolves whether a section should render for the current surface and page.
+ */
+export function isDevPanelSectionVisible(
+  section: DevPanelSection,
+  context: DevPanelContextValue,
+): boolean {
+  if (section.surfaces && !section.surfaces.includes(context.surface)) {
+    return false
+  }
+  if (
+    section.pages &&
+    (context.page === undefined || !section.pages.includes(context.page))
+  ) {
+    return false
+  }
+  return true
+}

@@ -7,6 +7,7 @@ import { SelectViewportResizeProvider } from "~/components/ui/select"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
+import { DevPanel, DevPanelProvider } from "~/features/DevPanel"
 import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
 import { cn } from "~/lib/utils"
 import { markPopupClosedDuringCriticalFlow } from "~/services/popupInterruptionHint"
@@ -127,69 +128,72 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
   const popupHeightClass = onMobile ? "" : inSidePanel ? "" : "h-full"
 
   return (
-    <div
-      ref={setScrollParent}
-      data-testid={POPUP_TEST_IDS.scrollContainer}
-      className={cn(
-        "dark:bg-background bg-card flex flex-col overflow-y-auto",
-        popupWidthClass,
-        popupHeightClass,
-      )}
-    >
-      <HeaderSection
-        showRefresh={activeViewConfig.showRefresh}
-        activeView={activeView}
-      />
-      <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
-
-      <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 space-y-density-2 py-density-3 sm:py-density-4 shrink-0 border-b bg-linear-to-br px-3 sm:px-4">
-        <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
-          <ProductAnalyticsScope
-            entrypoint={entrypoint}
-            surfaceId={viewTabsSurface}
-          >
-            <PopupViewSwitchTabs
-              value={activeView}
-              onChange={(nextView) => {
-                setActiveView(nextView)
-                viewConfig[nextView].preload?.()
-              }}
-              accountsLabel={t("bookmark:switch.accounts")}
-              bookmarksLabel={t("bookmark:switch.bookmarks")}
-              apiCredentialProfilesLabel={t(
-                "apiCredentialProfiles:popup.tabLabel",
-              )}
-              getAnalyticsAction={mapPopupViewToAnalyticsAction}
-            />
-          </ProductAnalyticsScope>
-          <ProductAnalyticsScope
-            entrypoint={entrypoint}
-            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}
-            surfaceId={
-              inSidePanel
-                ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
-                : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
-            }
-          >
-            {activeViewConfig.headerAction}
-          </ProductAnalyticsScope>
-        </div>
-        {!isLoading && activeViewConfig.statsSection
-          ? activeViewConfig.statsSection
-          : null}
-      </section>
-
-      <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>
-        <ActionButtons
-          primaryActionLabel={activeViewConfig.primaryActionLabel}
-          onPrimaryAction={activeViewConfig.onPrimaryAction}
-          primaryActionTestId={activeViewConfig.primaryActionTestId}
-          primaryAnalyticsAction={activeViewConfig.primaryAnalyticsAction}
+    <DevPanelProvider surface={inSidePanel ? "sidepanel" : "popup"}>
+      <div
+        ref={setScrollParent}
+        data-testid={POPUP_TEST_IDS.scrollContainer}
+        className={cn(
+          "dark:bg-background bg-card flex flex-col overflow-y-auto",
+          popupWidthClass,
+          popupHeightClass,
+        )}
+      >
+        <HeaderSection
+          showRefresh={activeViewConfig.showRefresh}
+          activeView={activeView}
         />
+        <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
-        {activeViewConfig.content}
+        <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 space-y-density-2 py-density-3 sm:py-density-4 shrink-0 border-b bg-linear-to-br px-3 sm:px-4">
+          <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
+            <ProductAnalyticsScope
+              entrypoint={entrypoint}
+              surfaceId={viewTabsSurface}
+            >
+              <PopupViewSwitchTabs
+                value={activeView}
+                onChange={(nextView) => {
+                  setActiveView(nextView)
+                  viewConfig[nextView].preload?.()
+                }}
+                accountsLabel={t("bookmark:switch.accounts")}
+                bookmarksLabel={t("bookmark:switch.bookmarks")}
+                apiCredentialProfilesLabel={t(
+                  "apiCredentialProfiles:popup.tabLabel",
+                )}
+                getAnalyticsAction={mapPopupViewToAnalyticsAction}
+              />
+            </ProductAnalyticsScope>
+            <ProductAnalyticsScope
+              entrypoint={entrypoint}
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}
+              surfaceId={
+                inSidePanel
+                  ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
+                  : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
+              }
+            >
+              {activeViewConfig.headerAction}
+            </ProductAnalyticsScope>
+          </div>
+          {!isLoading && activeViewConfig.statsSection
+            ? activeViewConfig.statsSection
+            : null}
+        </section>
+
+        <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>
+          <ActionButtons
+            primaryActionLabel={activeViewConfig.primaryActionLabel}
+            onPrimaryAction={activeViewConfig.onPrimaryAction}
+            primaryActionTestId={activeViewConfig.primaryActionTestId}
+            primaryAnalyticsAction={activeViewConfig.primaryAnalyticsAction}
+          />
+
+          {activeViewConfig.content}
+        </div>
       </div>
-    </div>
+      <DevPanel />
+    </DevPanelProvider>
   )
 }
 

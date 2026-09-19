@@ -3,7 +3,6 @@ import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
-import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { FeedbackDropdownMenu } from "~/components/FeedbackDropdownMenu"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, IconButton } from "~/components/ui"
@@ -217,7 +216,6 @@ export default function HeaderSection({
       {/* Action Buttons Section */}
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
         <div className="gap-y-density-1 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1 sm:gap-x-2">
-          <DevDialogDebugMenu />
           {showRefresh && (
             <div className="flex items-center gap-x-1 sm:gap-x-2">
               <ProductAnalyticsScope

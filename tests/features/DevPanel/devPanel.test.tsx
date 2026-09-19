@@ -1,8 +1,14 @@
+import { act } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import { RootErrorBoundary } from "~/components/RootErrorBoundary"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { DevPanel } from "~/features/DevPanel/DevPanel"
+import {
+  DevPanelProvider,
+  useRegisterDevPanelSection,
+} from "~/features/DevPanel/DevPanelSectionsContext"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
@@ -66,6 +72,13 @@ vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
   }
 })
 
+vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
+  countDevFixtureAccounts: vi.fn(async () => 0),
+  addDevFixtureAccounts: vi.fn(async () => 0),
+  clearDevFixtureAccounts: vi.fn(async () => 0),
+  DEV_FIXTURE_NOTES_MARKER: "[dev-fixture]",
+}))
+
 const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
 const mockedGetExtensionVersion = vi.mocked(getExtensionVersion)
 const mockedOpenPermissionsOnboardingPage = vi.mocked(
@@ -75,14 +88,15 @@ const mockedDebugQueuePopupInterruptionHint = vi.mocked(
   debugQueuePopupInterruptionHint,
 )
 
-async function openDebugMenu() {
-  fireEvent.pointerDown(
-    await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    { button: 0, ctrlKey: false },
-  )
+async function openDevPanel() {
+  await act(async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Dev: Open dev panel" }),
+    )
+  })
 }
 
-describe("DevDialogDebugMenu", () => {
+describe("DevPanel", () => {
   beforeEach(() => {
     vi.stubEnv("MODE", "development")
     mockedUseUpdateLogDialogContext.mockReset()
@@ -111,7 +125,27 @@ describe("DevDialogDebugMenu", () => {
     vi.restoreAllMocks()
   })
 
-  it("groups update-log, onboarding, and popup hint debug actions in one development menu", async () => {
+  it("renders nothing outside development mode", () => {
+    vi.stubEnv("MODE", "production")
+
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Dev: Open dev panel" }),
+    ).not.toBeInTheDocument()
+    expect(mockedUseUpdateLogDialogContext).not.toHaveBeenCalled()
+  })
+
+  it("hosts the global dialog debug actions behind the floating ball", async () => {
     const openDialog = vi.fn()
     mockedUseUpdateLogDialogContext.mockReturnValue({
       state: { isOpen: false, version: null },
@@ -119,36 +153,29 @@ describe("DevDialogDebugMenu", () => {
       closeDialog: vi.fn(),
     })
 
-    render(<DevDialogDebugMenu />, {
-      withReleaseUpdateStatusProvider: false,
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-
-    await openDebugMenu()
-
-    fireEvent.click(
-      await screen.findByRole("menuitem", {
-        name: "Dev: Trigger update log",
-      }),
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
     )
 
+    await openDevPanel()
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Dev: Trigger update log" }),
+    )
     await waitFor(() => {
       expect(openDialog).toHaveBeenCalledWith("3.37.0")
     })
 
-    await openDebugMenu()
-    expect(
-      await screen.findByRole("menuitem", {
-        name: "Dev: Queue popup interruption hint",
-      }),
-    ).toBeInTheDocument()
     fireEvent.click(
-      await screen.findByRole("menuitem", {
-        name: "Dev: Trigger onboarding",
-      }),
+      await screen.findByRole("button", { name: "Dev: Trigger onboarding" }),
     )
-
     expect(mockedOpenPermissionsOnboardingPage).toHaveBeenCalledWith({
       reason: "debug",
     })
@@ -159,15 +186,20 @@ describe("DevDialogDebugMenu", () => {
       new Error("storage blocked"),
     )
 
-    render(<DevDialogDebugMenu />, {
-      withReleaseUpdateStatusProvider: false,
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
 
-    await openDebugMenu()
+    await openDevPanel()
     fireEvent.click(
-      await screen.findByRole("menuitem", {
+      await screen.findByRole("button", {
         name: "Dev: Queue popup interruption hint",
       }),
     )
@@ -179,7 +211,50 @@ describe("DevDialogDebugMenu", () => {
     })
   })
 
-  it("triggers the root translation crash fallback from the development menu", async () => {
+  it("shows page-scoped sections only on their matching page", async () => {
+    function PageScopedSectionRegistrar() {
+      useRegisterDevPanelSection({
+        id: "page-scoped",
+        title: "Page scoped",
+        pages: [MENU_ITEM_IDS.AUTO_CHECKIN],
+        actions: [{ id: "page-action", label: "Page action", run: () => {} }],
+      })
+      return null
+    }
+
+    const { unmount } = render(
+      <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>
+        <PageScopedSectionRegistrar />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(await screen.findByText("Page action")).toBeVisible()
+
+    unmount()
+    render(
+      <DevPanelProvider surface="options" page={MENU_ITEM_IDS.ACCOUNT}>
+        <PageScopedSectionRegistrar />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(screen.queryByText("Page action")).not.toBeInTheDocument()
+  })
+
+  it("triggers the root translation crash fallback from the panel", async () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined)
@@ -187,7 +262,9 @@ describe("DevDialogDebugMenu", () => {
     try {
       render(
         <RootErrorBoundary reloadPage={vi.fn()}>
-          <DevDialogDebugMenu />
+          <DevPanelProvider surface="options">
+            <DevPanel />
+          </DevPanelProvider>
         </RootErrorBoundary>,
         {
           withReleaseUpdateStatusProvider: false,
@@ -196,9 +273,9 @@ describe("DevDialogDebugMenu", () => {
         },
       )
 
-      await openDebugMenu()
+      await openDevPanel()
       fireEvent.click(
-        await screen.findByRole("menuitem", {
+        await screen.findByRole("button", {
           name: "Dev: Trigger translation crash",
         }),
       )
@@ -219,20 +296,5 @@ describe("DevDialogDebugMenu", () => {
     } finally {
       consoleError.mockRestore()
     }
-  })
-
-  it("does not render outside development mode", () => {
-    vi.stubEnv("MODE", "production")
-
-    render(<DevDialogDebugMenu />, {
-      withReleaseUpdateStatusProvider: false,
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-
-    expect(
-      screen.queryByRole("button", { name: "Dev: Dialog debug menu" }),
-    ).not.toBeInTheDocument()
-    expect(mockedUseUpdateLogDialogContext).not.toHaveBeenCalled()
   })
 })

@@ -109,9 +109,6 @@ describe("options Header", () => {
       await screen.findByRole("menuitem", { name: "ui:feedback.bugReport" }),
     ).toBeVisible()
     await user.keyboard("{Escape}")
-    expect(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    ).toBeInTheDocument()
     await waitFor(() => expect(feedback).toHaveFocus())
     expect(
       screen.queryByRole("button", { name: "common:actions.more" }),

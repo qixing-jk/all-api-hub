@@ -1,25 +1,18 @@
-import { Bug, FileText, Languages, Sparkles, TriangleAlert } from "lucide-react"
-import { useCallback, useState } from "react"
+import { FileText, Languages, Sparkles, TriangleAlert } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
-import Tooltip from "~/components/Tooltip"
-import { IconButton } from "~/components/ui"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
 import toast from "~/lib/notify"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
-import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
 
-const logger = createLogger("DevDialogDebugMenu")
+import type { DevPanelSection } from "../types"
+
+const logger = createLogger("DevDialogDebugSection")
 
 /**
  * Builds the DOMException shape React commonly reports after browser translation rewrites DOM nodes.
@@ -32,9 +25,11 @@ function createDevTranslationCrashError() {
 }
 
 /**
- * Renders the development dialog debug dropdown once development mode is confirmed.
+ * Global dialog-debug actions formerly hosted by the header DevDialogDebugMenu.
+ * Throwing state (translation crash) lives here so the failure surfaces through
+ * the same root error boundary as before.
  */
-function DevDialogDebugMenuContent() {
+export function useDialogDebugDevSection(): DevPanelSection {
   const { openDialog } = useUpdateLogDialogContext()
   const [shouldTriggerTranslationCrash, setShouldTriggerTranslationCrash] =
     useState(false)
@@ -84,53 +79,42 @@ function DevDialogDebugMenuContent() {
     }
   }, [])
 
-  return (
-    <DropdownMenu>
-      <Tooltip content="Dev: Dialog debug menu">
-        <DropdownMenuTrigger asChild>
-          <IconButton
-            variant="outline"
-            size="sm"
-            aria-label="Dev: Dialog debug menu"
-            className="touch-manipulation"
-          >
-            <Bug className="h-4 w-4" />
-          </IconButton>
-        </DropdownMenuTrigger>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => void handleTriggerUpdateLog()}>
-          <FileText className="h-4 w-4" />
-          Dev: Trigger update log
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => void handleTriggerOnboarding()}>
-          <Sparkles className="h-4 w-4" />
-          Dev: Trigger onboarding
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => void handleQueuePopupInterruptionHint()}
-        >
-          <TriangleAlert className="h-4 w-4" />
-          Dev: Queue popup interruption hint
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setShouldTriggerTranslationCrash(true)}
-        >
-          <Languages className="h-4 w-4" />
-          Dev: Trigger translation crash
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  return useMemo(
+    () => ({
+      id: "dialog-debug",
+      title: "Dialogs",
+      surfaces: ["options", "popup", "sidepanel"] as const,
+      actions: [
+        {
+          id: "trigger-update-log",
+          label: "Dev: Trigger update log",
+          icon: FileText,
+          run: handleTriggerUpdateLog,
+        },
+        {
+          id: "trigger-onboarding",
+          label: "Dev: Trigger onboarding",
+          icon: Sparkles,
+          run: handleTriggerOnboarding,
+        },
+        {
+          id: "queue-popup-interruption-hint",
+          label: "Dev: Queue popup interruption hint",
+          icon: TriangleAlert,
+          run: handleQueuePopupInterruptionHint,
+        },
+        {
+          id: "trigger-translation-crash",
+          label: "Dev: Trigger translation crash",
+          icon: Languages,
+          run: () => setShouldTriggerTranslationCrash(true),
+        },
+      ],
+    }),
+    [
+      handleQueuePopupInterruptionHint,
+      handleTriggerOnboarding,
+      handleTriggerUpdateLog,
+    ],
   )
-}
-
-/**
- * Development-only menu for manually reopening first-run/update dialogs.
- */
-export function DevDialogDebugMenu() {
-  if (!isDevelopmentMode()) {
-    return null
-  }
-
-  return <DevDialogDebugMenuContent />
 }

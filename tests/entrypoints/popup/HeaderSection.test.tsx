@@ -466,8 +466,5 @@ describe("popup HeaderSection", () => {
     expect(
       await screen.findByRole("button", { name: "ui:feedback.trigger" }),
     ).toBeInTheDocument()
-    expect(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
-    ).toBeInTheDocument()
   })
 })

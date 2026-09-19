@@ -20,7 +20,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
-import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/utils/pretriggerFeedback"
+import { useRegisterDevPanelSection } from "~/features/DevPanel"
 import toast from "~/lib/notify"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -44,15 +44,8 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/contracts"
-import {
-  createAutomaticProtectionBypassExecution,
-  withProtectionBypassUserCommand,
-} from "~/services/protectionBypass/client"
-import {
-  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
-  PROTECTION_BYPASS_FEATURES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-} from "~/services/protectionBypass/contracts"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData } from "~/types"
 import {
@@ -65,7 +58,6 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
-import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 import {
@@ -76,10 +68,6 @@ import {
   pushWithinOptionsPage,
 } from "~/utils/navigation"
 
-import {
-  AUTO_CHECKIN_DEBUG_ACTIONS,
-  type AutoCheckinDebugAction,
-} from "./actionState"
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
 import AutoCheckinDataWorkspace from "./components/AutoCheckinDataWorkspace"
@@ -87,6 +75,7 @@ import EmptyResults from "./components/EmptyResults"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
+import { useAutoCheckinDevSection } from "./useAutoCheckinDevSection"
 
 /**
  * Unified logger scoped to the Auto Check-in options page.
@@ -224,8 +213,6 @@ export default function AutoCheckin(props: {
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
-  const [activeDebugAction, setActiveDebugAction] =
-    useState<AutoCheckinDebugAction | null>(null)
   const [isOpeningFailedManualSignIns, setIsOpeningFailedManualSignIns] =
     useState(false)
   const [isOpeningExternalCheckIns, setIsOpeningExternalCheckIns] =
@@ -318,6 +305,15 @@ export default function AutoCheckin(props: {
     void loadStatus()
   }, [loadStatus])
 
+  // Dev-only alarm/pretrigger controls moved into the floating dev panel.
+  const autoCheckinDevSection = useAutoCheckinDevSection({
+    refreshStatus: loadStatus,
+    onShowUiOpenPretriggerDiagnostics: (payload) =>
+      setUiOpenPretriggerDiagnostics({ isOpen: true, payload }),
+    onShowUiOpenPretriggerCompletion: setUiOpenPretriggerCompletion,
+  })
+  useRegisterDevPanelSection(autoCheckinDevSection)
+
   useEffect(() => {
     return onRuntimeMessage((message) => {
       if (message?.action === RuntimeActionIds.AutoCheckinRunCompleted) {
@@ -386,282 +382,6 @@ export default function AutoCheckin(props: {
   }, [loadStatus, t])
 
   const showDebugButtons = isDevelopmentMode()
-
-  const handleDebugTriggerDailyAlarmNow = useCallback(async () => {
-    try {
-      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_DAILY_ALARM)
-      toast.loading(t("messages.loading.triggeringDailyAlarm"))
-
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
-      )
-
-      toast.dismiss()
-
-      if (response.success) {
-        toast.success(t("messages.success.dailyAlarmTriggered"))
-        await loadStatus()
-      } else {
-        toast.error(
-          t("messages.error.dailyAlarmTriggerFailed", {
-            error: response.error ?? "",
-          }),
-        )
-      }
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.dailyAlarmTriggerFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setActiveDebugAction(null)
-    }
-  }, [loadStatus, t])
-
-  const handleDebugTriggerRetryAlarmNow = useCallback(async () => {
-    try {
-      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_RETRY_ALARM)
-      toast.loading(t("messages.loading.triggeringRetryAlarm"))
-
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
-      )
-
-      toast.dismiss()
-
-      if (response.success) {
-        toast.success(t("messages.success.retryAlarmTriggered"))
-        await loadStatus()
-      } else {
-        toast.error(
-          t("messages.error.retryAlarmTriggerFailed", {
-            error: response.error ?? "",
-          }),
-        )
-      }
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.retryAlarmTriggerFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setActiveDebugAction(null)
-    }
-  }, [loadStatus, t])
-
-  // Dev-only: schedule the daily alarm to target today so UI-open pre-trigger eligibility can be tested.
-  const handleDebugScheduleDailyAlarmForToday = useCallback(async () => {
-    try {
-      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.SCHEDULE_DAILY_ALARM)
-      toast.loading(t("messages.loading.schedulingDailyAlarmForToday"))
-
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
-        {
-          minutesFromNow: 60,
-        },
-      )
-
-      toast.dismiss()
-
-      if (response.success) {
-        toast.success(t("messages.success.dailyAlarmScheduledForToday"))
-        await loadStatus()
-      } else {
-        toast.error(
-          t("messages.error.dailyAlarmScheduleForTodayFailed", {
-            error: response.error ?? "",
-          }),
-        )
-      }
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.dailyAlarmScheduleForTodayFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setActiveDebugAction(null)
-    }
-  }, [loadStatus, t])
-
-  // Dev-only: evaluate eligibility and show the decision inputs without executing the daily run.
-  const handleDebugEvaluateUiOpenPretrigger = useCallback(async () => {
-    try {
-      setActiveDebugAction(
-        AUTO_CHECKIN_DEBUG_ACTIONS.EVALUATE_UI_OPEN_PRETRIGGER,
-      )
-      toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
-
-      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const protectionBypassExecution =
-        createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.Checkin,
-          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-          tempWindowRequestSource,
-        )
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
-        {
-          dryRun: true,
-          debug: true,
-          protectionBypassExecution,
-        },
-      )
-
-      toast.dismiss()
-
-      if (response.success) {
-        setUiOpenPretriggerDiagnostics({
-          isOpen: true,
-          payload: response,
-        })
-
-        if (response.eligible) {
-          toast.success(t("messages.success.uiOpenPretriggerEligible"))
-        } else {
-          toast.error(
-            t("messages.error.uiOpenPretriggerIneligible", {
-              reason: response.ineligibleReason ?? "",
-            }),
-          )
-        }
-      } else {
-        toast.error(
-          t("messages.error.uiOpenPretriggerEvaluationFailed", {
-            error: response.error ?? "",
-          }),
-        )
-      }
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.uiOpenPretriggerEvaluationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setActiveDebugAction(null)
-    }
-  }, [t])
-
-  // Dev-only: trigger the same UI-open pre-trigger entry point with outcome-appropriate feedback.
-  const handleDebugTriggerUiOpenPretrigger = useCallback(async () => {
-    const requestId = safeRandomUUID()
-    let unsubscribe = () => {}
-
-    try {
-      setActiveDebugAction(
-        AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_UI_OPEN_PRETRIGGER,
-      )
-      toast.loading(t("messages.loading.triggeringUiOpenPretrigger"))
-
-      unsubscribe = onRuntimeMessage((message) => {
-        if (
-          message?.action === "autoCheckinPretrigger:started" &&
-          message?.requestId === requestId
-        ) {
-          toast.success(t("messages.success.pretriggerStarted"))
-        }
-      })
-
-      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const protectionBypassExecution =
-        createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.Checkin,
-          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-          tempWindowRequestSource,
-        )
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
-        {
-          requestId,
-          debug: true,
-          protectionBypassExecution,
-        },
-      )
-
-      toast.dismiss()
-
-      if (!response.success) {
-        toast.error(
-          t("messages.error.uiOpenPretriggerTriggerFailed", {
-            error: response.error ?? "",
-          }),
-        )
-        return
-      }
-
-      if (!response.started) {
-        toast.error(
-          t("messages.error.uiOpenPretriggerDidNotStart", {
-            reason: response.ineligibleReason ?? "",
-          }),
-        )
-        setUiOpenPretriggerDiagnostics({
-          isOpen: true,
-          payload: response,
-        })
-        return
-      }
-
-      setUiOpenPretriggerCompletion({
-        isOpen: presentUiOpenPretriggerCompletion(response.summary, t),
-        summary: response.summary ?? null,
-        pendingRetry: Boolean(response.pendingRetry),
-      })
-      await loadStatus()
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.uiOpenPretriggerTriggerFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      unsubscribe()
-      setActiveDebugAction(null)
-    }
-  }, [loadStatus, t])
-
-  // Dev-only: reset the stored daily marker so the UI-open pre-trigger can be tested again on the same day.
-  const handleDebugResetLastDailyRunDay = useCallback(async () => {
-    try {
-      setActiveDebugAction(AUTO_CHECKIN_DEBUG_ACTIONS.RESET_LAST_DAILY_RUN_DAY)
-      toast.loading(t("messages.loading.resettingLastDailyRunDay"))
-
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
-      )
-
-      toast.dismiss()
-
-      if (response.success) {
-        toast.success(t("messages.success.lastDailyRunDayReset"))
-        await loadStatus()
-      } else {
-        toast.error(
-          t("messages.error.lastDailyRunDayResetFailed", {
-            error: response.error ?? "",
-          }),
-        )
-      }
-    } catch (error: unknown) {
-      toast.dismiss()
-      toast.error(
-        t("messages.error.lastDailyRunDayResetFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setActiveDebugAction(null)
-    }
-  }, [loadStatus, t])
 
   useEffect(() => {
     if (quickRunTriggeredRef.current) {
@@ -1409,7 +1129,6 @@ export default function AutoCheckin(props: {
       isRunning={isRunning}
       isRefreshing={isManualRefreshing}
       isRefreshLocked={isLoading}
-      activeDebugAction={activeDebugAction}
       isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
       isOpeningExternalCheckIns={isOpeningExternalCheckIns}
       canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
@@ -1418,13 +1137,6 @@ export default function AutoCheckin(props: {
       onRefresh={handleRefresh}
       onOpenFailedManualSignIns={handleOpenFailedManualSignIns}
       onOpenExternalCheckIns={handleOpenExternalCheckIns}
-      showDebugButtons={showDebugButtons}
-      onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
-      onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}
-      onDebugScheduleDailyAlarmForToday={handleDebugScheduleDailyAlarmForToday}
-      onDebugEvaluateUiOpenPretrigger={handleDebugEvaluateUiOpenPretrigger}
-      onDebugTriggerUiOpenPretrigger={handleDebugTriggerUiOpenPretrigger}
-      onDebugResetLastDailyRunDay={handleDebugResetLastDailyRunDay}
     />
   )
 
