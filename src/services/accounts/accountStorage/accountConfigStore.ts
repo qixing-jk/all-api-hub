@@ -5,6 +5,7 @@ import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/accountDefaults"
+import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -95,7 +96,18 @@ class AccountConfigStore {
     })
   }
 
-  async mutateAccount<T>(id: string, mutation: AccountMutation<T>): Promise<T> {
+  /**
+   * Mutates one account under the account storage lock.
+   *
+   * An optional guard runs inside that lock against the config being written, so
+   * a rule that must hold across accounts cannot race a concurrent write. The
+   * guard's throw aborts the write untouched.
+   */
+  async mutateAccount<T>(
+    id: string,
+    mutation: AccountMutation<T>,
+    options: { guard?: AccountWriteGuard } = {},
+  ): Promise<T> {
     return this.mutate((config) => {
       const index = config.accounts.findIndex((account) => account.id === id)
       if (index === -1) {
@@ -103,6 +115,7 @@ class AccountConfigStore {
       }
 
       const { nextAccount, result, changed } = mutation(config.accounts[index])
+      options.guard?.(config, nextAccount)
       config.accounts[index] = nextAccount
       return { result, changed }
     })

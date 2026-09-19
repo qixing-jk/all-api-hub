@@ -4,6 +4,10 @@ import {
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
+import {
+  AccountWriteRejectedError,
+  type AccountWriteGuard,
+} from "~/services/core/accountWriteGuard"
 import type { SiteAccount } from "~/types"
 import type { CheckInConfig } from "~/types/checkIn"
 import {
@@ -11,6 +15,8 @@ import {
   type LoginProviderEvidenceMap,
 } from "~/types/loginProviderEvidence"
 import { t } from "~/utils/i18n/core"
+
+import { loginProviderEvidence } from "./providerEvidence"
 
 /** The account that owns one provider claim, with the provider it claimed. */
 export interface LoginProviderClaimConflict {
@@ -215,8 +221,13 @@ export function findLoginProviderConflict(input: {
   return { provider, owner: { id: owner.id, site_name: owner.site_name } }
 }
 
-/** Renders the save-time rejection message for one provider conflict. */
-export function getLoginProviderConflictMessage(
+/**
+ * Renders the rejection message for one provider conflict.
+ *
+ * Reached through {@link LoginProviderClaimConflictError}, which raises it as the
+ * reason a refused write could not be saved.
+ */
+function getLoginProviderConflictMessage(
   conflict: LoginProviderClaimConflict,
 ): string {
   return t(LOGIN_PROVIDER_IN_USE_MESSAGE_KEY, {
@@ -242,4 +253,57 @@ export function resolveLoginProviderClaims(input: {
       provider,
       owner: { id: owner.id, site_name: owner.site_name },
     }))
+}
+
+/** Raised when a write would leave two enabled accounts owning one provider. */
+export class LoginProviderClaimConflictError extends AccountWriteRejectedError {
+  constructor(readonly conflict: LoginProviderClaimConflict) {
+    super(getLoginProviderConflictMessage(conflict))
+    this.name = "LoginProviderClaimConflictError"
+  }
+}
+
+/**
+ * Rejects a write that would let two enabled accounts own one login provider.
+ *
+ * The check runs against the config being written, so a rule that spans accounts
+ * cannot race a concurrent save. The candidate replaces its stored self (updates)
+ * or is appended conceptually (creations); either way it is compared against the
+ * claims of every other account.
+ */
+function assertLoginProviderClaimAllowed(input: {
+  accounts: readonly SiteAccount[]
+  candidate: SiteAccount
+  evidence: LoginProviderEvidenceMap
+}): void {
+  const conflict = findLoginProviderConflict({
+    accounts: input.accounts,
+    siteUrl: input.candidate.site_url,
+    checkIn: input.candidate.checkIn,
+    accountId: input.candidate.id,
+    evidence: input.evidence,
+  })
+  if (conflict) throw new LoginProviderClaimConflictError(conflict)
+}
+
+/**
+ * Builds the write guard for saves of one site, or nothing when the site has no
+ * login-provider claim to protect.
+ *
+ * The observed login outcomes are read once here: they only order claimants that
+ * already share a provider, and the guard still rejects the write when they are
+ * unavailable, so a read failure narrows the tiebreak rather than the rule.
+ */
+export async function createLoginProviderClaimGuard(input: {
+  siteUrl?: string
+}): Promise<AccountWriteGuard | undefined> {
+  if (!isAgentRouterLoginUrl(input.siteUrl)) return undefined
+
+  const evidence = await loginProviderEvidence.readAll()
+  return (config, nextAccount) =>
+    assertLoginProviderClaimAllowed({
+      accounts: config.accounts,
+      candidate: nextAccount,
+      evidence,
+    })
 }

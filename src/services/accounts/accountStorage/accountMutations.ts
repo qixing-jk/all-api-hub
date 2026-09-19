@@ -6,6 +6,7 @@ import {
 } from "~/services/accounts/accountDefaults"
 import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -42,11 +43,19 @@ const removeAccountsFromConfig = (
 }
 
 class AccountMutations {
+  /**
+   * Appends one account under the account storage lock.
+   *
+   * An optional guard runs inside that lock before the account is appended, so a
+   * cross-account rule cannot race a concurrent save. Throwing aborts the write
+   * with the in-memory config untouched.
+   */
   async addAccount(
     accountData: Omit<
       SiteAccount,
       "id" | "created_at" | "updated_at" | "user_updated_at"
     >,
+    options: { guard?: AccountWriteGuard } = {},
   ): Promise<string> {
     try {
       logger.info("开始添加新账号", { siteName: accountData.site_name })
@@ -57,6 +66,7 @@ class AccountMutations {
           id: safeRandomUUID("account"),
           now,
         })
+        options.guard?.(config, account)
         config.accounts.push(account)
         return { result: account.id, changed: true }
       })

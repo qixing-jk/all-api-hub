@@ -7722,11 +7722,7 @@ describe("AgentRouter login provider claims", () => {
     const fallback = agentRouterAccount("b")
     mockedAccountStorage.getAllAccounts.mockResolvedValue([owner, fallback])
 
-    try {
-      await runCheckinsForTest({})
-    } catch (error) {
-      console.log("DBG_THROWN", error)
-    }
+    await runCheckinsForTest({})
 
     expect(
       mockedMethods.executeSelectedCheckIn.mock.calls[0][0].account.id,

@@ -1,5 +1,8 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
-import { getLoginProviderConflictMessage } from "~/services/accountLogin/providerClaims"
+import {
+  createLoginProviderClaimGuard,
+  LoginProviderClaimConflictError,
+} from "~/services/accountLogin/providerClaims"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { isValidAccount } from "~/services/accounts/accountFormValidation"
 import {
@@ -8,7 +11,6 @@ import {
 } from "~/services/accounts/accountPersistence/constants"
 import {
   buildAccountPersistenceContext,
-  findLoginProviderConflictForSave,
   getAccountHealthFailureReason,
   getAccountOperationLogDetails,
   getCredentialValidationMessage,
@@ -30,8 +32,40 @@ import {
 } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
+import type { DeepPartial } from "~/types/utils"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { t } from "~/utils/i18n/core"
+
+/**
+ * Saves one check-in draft, mapping a refused login-provider claim onto the
+ * message the user must see instead of the generic update failure.
+ */
+async function saveCheckInDraft(
+  accountId: string,
+  updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
+  draft: SiteAccount["checkIn"],
+  options: Parameters<
+    typeof accountCheckInState.updateAccountWithCheckInDraft
+  >[3],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const genericMessage = t("messages:errors.validation.updateAccountFailed", {
+    error: "",
+  })
+  try {
+    const saved = await accountCheckInState.updateAccountWithCheckInDraft(
+      accountId,
+      updates,
+      draft,
+      options,
+    )
+    return saved ? { ok: true } : { ok: false, message: genericMessage }
+  } catch (error) {
+    if (error instanceof LoginProviderClaimConflictError) {
+      return { ok: false, message: error.message }
+    }
+    return { ok: false, message: genericMessage }
+  }
+}
 
 interface ValidateAndUpdateAccountOptions {
   deferDataRefresh?: boolean
@@ -107,19 +141,12 @@ export async function validateAndUpdateAccount(
     }
   }
 
-  // Two enabled AgentRouter accounts cannot share one browser login context,
-  // so a second claim of the same provider is rejected before it is persisted.
-  const loginProviderConflict = await findLoginProviderConflictForSave({
+  // Two enabled AgentRouter accounts cannot share one browser login context. The
+  // guard runs inside the account storage transaction below, so two concurrent
+  // saves cannot both pass it.
+  const loginProviderGuard = await createLoginProviderClaimGuard({
     siteUrl: url,
-    checkIn: checkInConfig,
-    accountId,
   })
-  if (loginProviderConflict) {
-    return {
-      success: false,
-      message: getLoginProviderConflictMessage(loginProviderConflict),
-    }
-  }
 
   const persistence =
     getSiteTypeCapabilities(normalizedSiteType).account?.persistence
@@ -204,24 +231,14 @@ export async function validateAndUpdateAccount(
       },
     }
 
-    const success = await accountCheckInState.updateAccountWithCheckInDraft(
-      accountId,
-      updateData,
-      checkInConfig,
-      {
-        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-        selectionChanged: options.selectionChanged,
-        discoveryBaseSelection: options.discoveryBaseSelection,
-      },
-    )
-
-    if (!success) {
-      return {
-        success: false,
-        message: t("messages:errors.validation.updateAccountFailed", {
-          error: "",
-        }),
-      }
+    const save = await saveCheckInDraft(accountId, updateData, checkInConfig, {
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      selectionChanged: options.selectionChanged,
+      discoveryBaseSelection: options.discoveryBaseSelection,
+      guard: loginProviderGuard,
+    })
+    if (!save.ok) {
+      return { success: false, message: save.message }
     }
 
     logger.info(
@@ -309,24 +326,15 @@ export async function validateAndUpdateAccount(
       last_sync_time: Date.now(),
     }
 
-    const success = await accountCheckInState.updateAccountWithCheckInDraft(
-      accountId,
-      updateData,
-      checkInConfig,
-      {
-        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-        selectionChanged: options.selectionChanged,
-        discoveryBaseSelection: options.discoveryBaseSelection,
-        refreshed: freshAccountData.checkIn,
-      },
-    )
-    if (!success) {
-      return {
-        success: false,
-        message: t("messages:errors.validation.updateAccountFailed", {
-          error: "",
-        }),
-      }
+    const save = await saveCheckInDraft(accountId, updateData, checkInConfig, {
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      selectionChanged: options.selectionChanged,
+      discoveryBaseSelection: options.discoveryBaseSelection,
+      refreshed: freshAccountData.checkIn,
+      guard: loginProviderGuard,
+    })
+    if (!save.ok) {
+      return { success: false, message: save.message }
     }
 
     logger.info(
@@ -352,6 +360,11 @@ export async function validateAndUpdateAccount(
       feedbackLevel: ACCOUNT_SAVE_FEEDBACK_LEVELS.Success,
     }
   } catch (error) {
+    // A refused claim is decided, not a data failure: the fallback save would be
+    // rejected for the same reason, so report it instead of retrying.
+    if (error instanceof LoginProviderClaimConflictError) {
+      return { success: false, message: error.message }
+    }
     // FALLBACK: 即使获取数据失败也要保存配置
     logger.warn(
       "Data fetch failed; saving configuration only",
@@ -375,7 +388,7 @@ export async function validateAndUpdateAccount(
     }
 
     // Try to save partial update
-    const success = await accountCheckInState.updateAccountWithCheckInDraft(
+    const save = await saveCheckInDraft(
       accountId,
       partialUpdateData,
       checkInConfig,
@@ -383,16 +396,11 @@ export async function validateAndUpdateAccount(
         userTimestampMode: AccountUpdateUserTimestampMode.Touch,
         selectionChanged: options.selectionChanged,
         discoveryBaseSelection: options.discoveryBaseSelection,
+        guard: loginProviderGuard,
       },
     )
-
-    if (!success) {
-      return {
-        success: false,
-        message: t("messages:errors.validation.updateAccountFailed", {
-          error: "",
-        }),
-      }
+    if (!save.ok) {
+      return { success: false, message: save.message }
     }
 
     return {

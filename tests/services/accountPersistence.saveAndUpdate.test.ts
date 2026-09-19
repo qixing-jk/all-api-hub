@@ -2255,6 +2255,7 @@ describe("accountPersistence save and update", () => {
       expect.objectContaining({
         sub2apiAuth: undefined,
       }),
+      expect.anything(),
     )
   })
 
@@ -2523,6 +2524,7 @@ describe("accountPersistence save and update", () => {
           reason: "quota fetch failed",
         }),
       }),
+      expect.anything(),
     )
   })
 
@@ -2891,6 +2893,45 @@ describe("accountPersistence save and update", () => {
       message: "messages:errors.validation.loginProviderInUse",
     })
     // The conflicting save must not have persisted a second account.
+    expect(await accountStorage.getAllAccounts()).toHaveLength(1)
+  })
+
+  it("rejects a concurrent AgentRouter claim that loses the storage race", async () => {
+    // Both saves read the same empty snapshot before either writes. The guard
+    // runs inside the account storage transaction, so the second one sees the
+    // first account and is refused instead of persisting a duplicate claim.
+    const save = () =>
+      validateAndSaveAccount(
+        "https://agentrouter.org",
+        "AgentRouter concurrent",
+        "user",
+        "token",
+        "18",
+        "7",
+        "",
+        [],
+        buildCheckInConfig({
+          automaticExecutionEnabled: true,
+          loginCheckIn: { provider: "github" },
+        }),
+        SITE_TYPES.NEW_API,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      )
+
+    const [first, second] = await Promise.all([save(), save()])
+    const outcomes = [first, second]
+
+    expect(outcomes.filter((outcome) => outcome.success)).toHaveLength(1)
+    expect(outcomes.filter((outcome) => !outcome.success)).toMatchObject([
+      { message: "messages:errors.validation.loginProviderInUse" },
+    ])
+    // Exactly one claim survived the race.
     expect(await accountStorage.getAllAccounts()).toHaveLength(1)
   })
 

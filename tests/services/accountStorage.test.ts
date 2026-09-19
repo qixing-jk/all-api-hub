@@ -5,7 +5,9 @@ import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
+import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
@@ -1178,6 +1180,80 @@ describe("accountStorage core behaviors", () => {
     const updated = accounts.find((acc) => acc.id === "with-tags")
 
     expect(updated?.tagIds).toEqual([])
+  })
+
+  it("addAccount runs the write guard inside the transaction and aborts on rejection", async () => {
+    seedStorage([])
+    const seenAccountIds: string[][] = []
+
+    await expect(
+      accountStorage.addAccount(createAccount({ site_name: "Guarded" }), {
+        guard: (config, nextAccount) => {
+          seenAccountIds.push(config.accounts.map((account) => account.id))
+          if (nextAccount.site_name === "Guarded") {
+            throw new AccountWriteRejectedError("rejected")
+          }
+        },
+      }),
+    ).rejects.toBeInstanceOf(AccountWriteRejectedError)
+
+    // The guard saw the pre-write snapshot, and nothing was persisted.
+    expect(seenAccountIds).toEqual([[]])
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts,
+    ).toEqual([])
+  })
+
+  it("mutateAccount evaluates the guard against the pending update", async () => {
+    seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
+    const observed: Array<{ id: string; siteName: string }> = []
+
+    const updated = await accountCheckInState.updateAccountWithCheckInDraft(
+      "guarded",
+      { site_name: "After" },
+      createCanonicalCheckIn(),
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        // The guard receives the update as it would be written, so a rule is
+        // evaluated against the new value rather than the stored one.
+        guard: (config, nextAccount) => {
+          observed.push({ id: nextAccount.id, siteName: nextAccount.site_name })
+          expect(
+            config.accounts.find((account) => account.id === "guarded")
+              ?.site_name,
+          ).toBe("Before")
+        },
+      },
+    )
+
+    expect(updated).toBe(true)
+    expect(observed).toEqual([{ id: "guarded", siteName: "After" }])
+  })
+
+  it("mutateAccount leaves the account untouched when its guard rejects", async () => {
+    seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
+
+    await expect(
+      accountCheckInState.updateAccountWithCheckInDraft(
+        "guarded",
+        { site_name: "After" },
+        createCanonicalCheckIn(),
+        {
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          guard: () => {
+            throw new AccountWriteRejectedError("rejected")
+          },
+        },
+      ),
+    ).rejects.toBeInstanceOf(AccountWriteRejectedError)
+
+    // The rejection is decided, so it must not be swallowed into a save failure
+    // that the caller would report as an unrelated storage error.
+    const persisted = storageData.get(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+    ) as AccountStorageConfig
+    expect(persisted.accounts[0].site_name).toBe("Before")
   })
 
   it("addAccount preserves its rejection when the storage write fails", async () => {

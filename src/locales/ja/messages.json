@@ -98,7 +98,7 @@
       "bookmarkNameRequired": "ブックマーク名は空にできません",
       "bookmarkUrlRequired": "ブックマーク URL は空にできません",
       "incompleteAccountInfo": "アカウント情報をすべて入力してください",
-      "loginProviderInUse": "{{provider}} のログイン方法は、自動チェックインを有効にした AgentRouter アカウント「{{account}}」が使用中です。もう一方の方法に変更するか、そのアカウントの自動チェックインを無効にするか、この選択をクリアしてください。",
+      "loginProviderInUse": "{{provider}} のログイン方法は、自動チェックインを有効にした AgentRouter アカウント「{{account}}」で使用されています。もう一方の方法に変更するか、そのアカウントの自動チェックインを無効にするか、この選択をクリアしてください。",
       "updateAccountFailed": "アカウントの更新に失敗しました {{error}}",
       "urlRequired": "サイト URL は空にできません",
       "userIdNumeric": "ユーザー ID は数値である必要があります"
