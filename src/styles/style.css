@@ -401,6 +401,12 @@ body {
      override layered typography, so inherited text also needs this rule. */
   font-size: var(--font-size-xs);
   line-height: 1.5;
+  /* Long unbroken words in a translation (German compounds, long URLs) would
+     otherwise set their box's min-content width and push the document wider
+     than a narrow viewport. `anywhere` is the value that shrinks min-content
+     too, unlike `break-word`; it only breaks a word that cannot otherwise fit
+     on its line, and it inherits to every descendant. */
+  overflow-wrap: anywhere;
 }
 
 /* 禁用 Edge / IE 的密码显示按钮 */
