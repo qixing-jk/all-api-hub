@@ -7,10 +7,11 @@ import type {
   DailyBalanceSnapshot,
 } from "~/types/dailyBalanceHistory"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import { parseDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import { computeRetentionCutoffDayKey, parseDayKey } from "./dayKeys"
+import { computeRetentionCutoffDayKey } from "./dayKeys"
 
 const logger = createLogger("DailyBalanceHistoryStorage")
 

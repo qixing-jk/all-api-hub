@@ -11,7 +11,6 @@ import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { parseDayKey } from "~/services/history/usageHistory/core"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -19,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { parseDayKey } from "~/utils/core/dayKey"
 import { formatTokenCount } from "~/utils/core/formatters"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 

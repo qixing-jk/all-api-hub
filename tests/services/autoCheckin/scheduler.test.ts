@@ -72,6 +72,7 @@ import {
   onAlarm,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   automaticExecution,
@@ -1208,9 +1209,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     })
 
     const expectedTime = new Date(2024, 0, 2, 8, 30, 0, 0)
-    const expectedTargetDay = (autoCheckinScheduler as any).getLocalDay(
-      expectedTime,
-    )
+    const expectedTargetDay = formatLocalDayKey(expectedTime)
 
     await autoCheckinScheduler.scheduleNextRun({
       preserveExisting: true,
@@ -1249,11 +1248,9 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       },
     })
 
-    const today = (autoCheckinScheduler as any).getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const expectedTime = new Date(2024, 0, 2, 8, 30, 0, 0)
-    const expectedTargetDay = (autoCheckinScheduler as any).getLocalDay(
-      expectedTime,
-    )
+    const expectedTargetDay = formatLocalDayKey(expectedTime)
     storedStatus = { lastDailyRunDay: today }
 
     await autoCheckinScheduler.scheduleNextRun()
@@ -1291,7 +1288,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       },
     })
 
-    const today = (autoCheckinScheduler as any).getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const staleTime = new Date(2024, 0, 1, 11, 30, 0, 0)
     const expectedTime = new Date(now.getTime() + catchUpDelayMs)
     alarmStore.autoCheckinDaily = {
@@ -1300,7 +1297,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     }
     storedStatus = {
       nextDailyScheduledAt: staleTime.toISOString(),
-      dailyAlarmTargetDay: (autoCheckinScheduler as any).getLocalDay(staleTime),
+      dailyAlarmTargetDay: formatLocalDayKey(staleTime),
       nextScheduledAt: staleTime.toISOString(),
     }
 
@@ -1344,16 +1341,14 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       },
     })
 
-    const expectedTargetDay = (autoCheckinScheduler as any).getLocalDay(
-      preservedTime,
-    )
+    const expectedTargetDay = formatLocalDayKey(preservedTime)
     alarmStore.autoCheckinDaily = {
       name: "autoCheckinDaily",
       scheduledTime: preservedTime.getTime(),
     }
     storedStatus = {
       nextDailyScheduledAt: staleTime.toISOString(),
-      dailyAlarmTargetDay: (autoCheckinScheduler as any).getLocalDay(staleTime),
+      dailyAlarmTargetDay: formatLocalDayKey(staleTime),
       nextScheduledAt: staleTime.toISOString(),
     }
 
@@ -1383,7 +1378,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       pendingRetry: true,
     }
     const scheduledTime = new Date("2024-01-03T08:30:00.000Z")
-    const targetDay = (autoCheckinScheduler as any).getLocalDay(scheduledTime)
+    const targetDay = formatLocalDayKey(scheduledTime)
 
     storedStatus = freshStatus
 
@@ -1404,7 +1399,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
 
   it("does not rewrite an already synchronized daily schedule", async () => {
     const scheduledTime = new Date("2024-01-03T08:30:00.000Z")
-    const targetDay = (autoCheckinScheduler as any).getLocalDay(scheduledTime)
+    const targetDay = formatLocalDayKey(scheduledTime)
     storedStatus = {
       nextDailyScheduledAt: scheduledTime.toISOString(),
       dailyAlarmTargetDay: targetDay,
@@ -1467,7 +1462,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     storedStatus = {
       lastRunResult: "success",
       nextDailyScheduledAt: staleTime.toISOString(),
-      dailyAlarmTargetDay: (autoCheckinScheduler as any).getLocalDay(staleTime),
+      dailyAlarmTargetDay: formatLocalDayKey(staleTime),
       nextScheduledAt: staleTime.toISOString(),
     }
     mockedBrowserApi.createAlarm.mockRejectedValueOnce(
@@ -1507,9 +1502,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     })
 
     const expectedTime = new Date(2024, 0, 2, 8, 30, 0, 0)
-    const expectedTargetDay = (autoCheckinScheduler as any).getLocalDay(
-      expectedTime,
-    )
+    const expectedTargetDay = formatLocalDayKey(expectedTime)
 
     await autoCheckinScheduler.scheduleNextRun()
 
@@ -1546,7 +1539,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       },
     })
 
-    const today = (autoCheckinScheduler as any).getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const expectedTime = new Date(now.getTime() + catchUpDelayMs)
 
     await autoCheckinScheduler.scheduleNextRun({
@@ -1602,9 +1595,7 @@ describe("autoCheckinScheduler.updateSettings", () => {
       .mockResolvedValueOnce({ autoCheckin: updatedConfig })
 
     const expectedTime = new Date(2024, 0, 2, 8, 30, 0, 0)
-    const expectedTargetDay = (autoCheckinScheduler as any).getLocalDay(
-      expectedTime,
-    )
+    const expectedTargetDay = formatLocalDayKey(expectedTime)
 
     await autoCheckinScheduler.updateSettings({
       scheduleMode: "deterministic",
@@ -6168,7 +6159,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
       scheduledTime: Date.now() + 60_000,
     }
 
-    const today = (autoCheckinScheduler as any).getLocalDay(new Date())
+    const today = formatLocalDayKey(new Date())
 
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
@@ -6335,7 +6326,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))
 
-    const today = (autoCheckinScheduler as any).getLocalDay(new Date())
+    const today = formatLocalDayKey(new Date())
     storedStatus = { lastDailyRunDay: today }
 
     alarmStore.autoCheckinDaily = {
@@ -6361,7 +6352,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))
 
-    const today = (autoCheckinScheduler as any).getLocalDay(new Date())
+    const today = formatLocalDayKey(new Date())
     ;(autoCheckinScheduler as any).dailyRunInFlightDay = today
     ;(autoCheckinScheduler as any).dailyRunInFlightPromise = new Promise(
       () => {},

@@ -58,6 +58,7 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { formatLocalMonthKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { joinUrl } from "~/utils/core/url"
 
@@ -126,7 +127,6 @@ const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 const TURNSTILE_ASSIST_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
 const NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS = 8_000
 const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
-const CHECKIN_STATUS_MONTH_FORMAT_LENGTH = 7
 
 // New API exposes GET /api/user/checkin for readback and POST for mutation.
 // Its official UI treats the public /api/status checkin_enabled flag as the
@@ -330,9 +330,7 @@ async function fetchCheckedInTodayStatus(
     }
   | undefined
 > {
-  const currentMonth = new Date()
-    .toISOString()
-    .slice(0, CHECKIN_STATUS_MONTH_FORMAT_LENGTH)
+  const currentMonth = formatLocalMonthKey()
   const request =
     existingRequest ??
     (account

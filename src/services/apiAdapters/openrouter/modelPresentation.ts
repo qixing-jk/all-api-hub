@@ -35,6 +35,7 @@ import {
   type ModelDisplaySection,
   type ModelPresentation,
 } from "~/services/models/modelDisplayFacts"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 
 /** Parses one optional provider field without coupling sibling validity. */
 function parseOptional<T>(schema: ZodType<T>, value: unknown): T | undefined {
@@ -86,9 +87,7 @@ function normalizeCreatedDate(value: unknown): string | undefined {
   if (timestamp === undefined) return undefined
 
   const date = new Date(timestamp * 1000)
-  return Number.isNaN(date.getTime())
-    ? undefined
-    : date.toISOString().slice(0, 10)
+  return Number.isNaN(date.getTime()) ? undefined : formatUtcDayKey(date)
 }
 
 /** Converts an official USD-per-token string to USD per million tokens. */

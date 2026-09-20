@@ -114,6 +114,7 @@ import {
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -466,19 +467,6 @@ class AutoCheckinScheduler {
   }
 
   /**
-   * Returns the local calendar day string for the provided date.
-   *
-   * We intentionally use a local day boundary for scheduling/retry scoping so that
-   * "once per day" matches user expectations around their configured time window.
-   */
-  private getLocalDay(date: Date = new Date()): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, "0")
-    const day = String(date.getDate()).padStart(2, "0")
-    return `${year}-${month}-${day}`
-  }
-
-  /**
    * Add days using local calendar math (safe across DST changes).
    */
   private addLocalDays(date: Date, days: number): Date {
@@ -751,7 +739,7 @@ class AutoCheckinScheduler {
     now: Date,
     planningOptions?: AutoCheckinDailyPlanningOptions,
   ): AutoCheckinDailyTriggerPlan | null {
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const ranToday = status?.lastDailyRunDay === today
     const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
     const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
@@ -828,7 +816,7 @@ class AutoCheckinScheduler {
 
   private async syncDailyScheduleStatus(
     scheduledTime: Date,
-    targetDay = this.getLocalDay(scheduledTime),
+    targetDay = formatLocalDayKey(scheduledTime),
   ) {
     const scheduledIso = scheduledTime.toISOString()
 
@@ -880,15 +868,15 @@ class AutoCheckinScheduler {
 
     if (nextTriggerPlan.enforceTodayTarget) {
       return (
-        this.getLocalDay(scheduledTime) ===
-          this.getLocalDay(nextTriggerPlan.triggerTime) &&
+        formatLocalDayKey(scheduledTime) ===
+          formatLocalDayKey(nextTriggerPlan.triggerTime) &&
         scheduledTime.getTime() <= nextTriggerPlan.triggerTime.getTime()
       )
     }
 
     return (
-      this.getLocalDay(scheduledTime) ===
-        this.getLocalDay(nextTriggerPlan.triggerTime) &&
+      formatLocalDayKey(scheduledTime) ===
+        formatLocalDayKey(nextTriggerPlan.triggerTime) &&
       scheduledTime.getHours() === nextTriggerPlan.triggerTime.getHours() &&
       scheduledTime.getMinutes() === nextTriggerPlan.triggerTime.getMinutes()
     )
@@ -896,7 +884,7 @@ class AutoCheckinScheduler {
 
   private async createDailyAlarmForToday(desiredWhen: number): Promise<Date> {
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const endOfToday = new Date(now)
     endOfToday.setHours(23, 59, 59, 999)
 
@@ -917,7 +905,7 @@ class AutoCheckinScheduler {
 
     let alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
     let scheduledWhen = alarm?.scheduledTime ?? nextWhen
-    let scheduledDay = this.getLocalDay(new Date(scheduledWhen))
+    let scheduledDay = formatLocalDayKey(new Date(scheduledWhen))
 
     if (scheduledDay !== today) {
       const fallbackWhen = endOfToday.getTime()
@@ -932,7 +920,7 @@ class AutoCheckinScheduler {
       })
       alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
       scheduledWhen = alarm?.scheduledTime ?? fallbackWhen
-      scheduledDay = this.getLocalDay(new Date(scheduledWhen))
+      scheduledDay = formatLocalDayKey(new Date(scheduledWhen))
     }
 
     if (scheduledDay !== today) {
@@ -1503,7 +1491,7 @@ class AutoCheckinScheduler {
 
     if (options?.preserveExisting && existingAlarm?.scheduledTime) {
       const scheduledTime = new Date(existingAlarm.scheduledTime)
-      const targetDay = this.getLocalDay(scheduledTime)
+      const targetDay = formatLocalDayKey(scheduledTime)
 
       if (
         !this.isExistingDailyAlarmReusable(
@@ -1697,7 +1685,7 @@ class AutoCheckinScheduler {
   ) {
     const currentStatus = await autoCheckinStorage.getStatus()
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
 
     if (!config.retryStrategy?.enabled) {
       await this.clearRetryAlarmAndState()
@@ -1737,7 +1725,7 @@ class AutoCheckinScheduler {
     if (options?.preserveExisting && existingAlarm?.scheduledTime) {
       const scheduledTime = new Date(existingAlarm.scheduledTime)
       const scheduledIso = scheduledTime.toISOString()
-      const targetDay = this.getLocalDay(scheduledTime)
+      const targetDay = formatLocalDayKey(scheduledTime)
 
       // If the preserved alarm targets a different day, treat it as stale and clear it.
       if (targetDay !== today) {
@@ -1765,7 +1753,7 @@ class AutoCheckinScheduler {
       currentStatus,
       now,
     )
-    const retryTargetDay = this.getLocalDay(nextRetryTime)
+    const retryTargetDay = formatLocalDayKey(nextRetryTime)
 
     // Do not schedule retries across the day boundary.
     if (retryTargetDay !== today) {
@@ -1783,7 +1771,7 @@ class AutoCheckinScheduler {
         alarm?.scheduledTime != null ? new Date(alarm.scheduledTime) : null
 
       const scheduledIso = (scheduledTime ?? nextRetryTime).toISOString()
-      const targetDay = this.getLocalDay(scheduledTime ?? nextRetryTime)
+      const targetDay = formatLocalDayKey(scheduledTime ?? nextRetryTime)
 
       await this.syncRetryScheduleStatus({
         scheduledIso,
@@ -1813,7 +1801,7 @@ class AutoCheckinScheduler {
     protectionBypassExecution: ProtectionBypassExecution,
   ) {
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
 
     if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
       logger.warn("Daily run already in-flight; ignoring trigger")
@@ -1825,7 +1813,7 @@ class AutoCheckinScheduler {
       const targetDay =
         currentStatus?.dailyAlarmTargetDay ??
         (alarm.scheduledTime != null
-          ? this.getLocalDay(new Date(alarm.scheduledTime))
+          ? formatLocalDayKey(new Date(alarm.scheduledTime))
           : undefined)
 
       // Stale-alarm guard: never execute a normal run for a past day.
@@ -1888,7 +1876,7 @@ class AutoCheckinScheduler {
     debug?: boolean
   }): Promise<AutoCheckinUiOpenPretriggerResult> {
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
 
     const debug: AutoCheckinUiOpenPretriggerDebugInfo | undefined =
       params?.debug === true
@@ -1996,7 +1984,7 @@ class AutoCheckinScheduler {
       return returnIneligible("daily_alarm_missing")
     }
 
-    const scheduledTargetDay = this.getLocalDay(
+    const scheduledTargetDay = formatLocalDayKey(
       new Date(dailyAlarm.scheduledTime),
     )
     const targetDay = currentStatus?.dailyAlarmTargetDay ?? scheduledTargetDay
@@ -2071,12 +2059,12 @@ class AutoCheckinScheduler {
    */
   private async handleRetryAlarm(alarm: browser.alarms.Alarm) {
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const currentStatus = await autoCheckinStorage.getStatus()
     const targetDay =
       currentStatus?.retryAlarmTargetDay ??
       (alarm.scheduledTime != null
-        ? this.getLocalDay(new Date(alarm.scheduledTime))
+        ? formatLocalDayKey(new Date(alarm.scheduledTime))
         : undefined)
 
     // Stale-alarm guard: never retry failures from a past day.
@@ -2225,7 +2213,7 @@ class AutoCheckinScheduler {
     })
     const startTime = Date.now()
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
     const mergeHistory = Boolean(targetAccountIdSet)
 
     // Scoped runs merge their results into whatever the status holds when the
@@ -2752,7 +2740,7 @@ class AutoCheckinScheduler {
   ): Promise<void> {
     const startTime = Date.now()
     const now = new Date()
-    const today = this.getLocalDay(now)
+    const today = formatLocalDayKey(now)
 
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
@@ -3054,7 +3042,7 @@ class AutoCheckinScheduler {
     tempWindowRequestSource: TempWindowRequestSource,
     protectionBypassExecution: ProtectionBypassExecution,
   ) {
-    const today = this.getLocalDay()
+    const today = formatLocalDayKey()
     const allAccounts = await accountQueries.getAllAccounts()
     const account = allAccounts.find((item) => item.id === accountId)
     const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)

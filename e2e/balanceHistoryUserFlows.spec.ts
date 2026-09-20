@@ -3,11 +3,11 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { THEME_ATTRIBUTES, THEME_PRESET } from "~/constants/theme"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
-} from "~/services/history/dailyBalanceHistory/dayKeys"
-import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
+} from "~/utils/core/dayKey"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,

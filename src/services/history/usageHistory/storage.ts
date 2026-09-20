@@ -10,6 +10,7 @@ import {
   type UsageHistoryLatencyAggregate,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
+import { parseDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
@@ -19,7 +20,6 @@ import {
   computeRetentionCutoffDayKey,
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-  parseDayKey,
   pruneUsageHistoryAccountStore,
 } from "./core"
 
