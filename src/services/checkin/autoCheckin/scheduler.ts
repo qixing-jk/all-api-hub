@@ -38,7 +38,6 @@ import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
   refreshSelectedStatus,
 } from "~/services/checkin/autoCheckin/refresh"
-import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_PREFERENCES,
@@ -121,7 +120,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { isRetryableCheckinResult } from "./resultPolicy"
-import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
+import { autoCheckinStorage } from "./storage"
 
 const logger = createLogger("AutoCheckin")
 
@@ -828,45 +827,40 @@ class AutoCheckinScheduler {
   }
 
   private async syncDailyScheduleStatus(
-    currentStatus: AutoCheckinStatus | null,
     scheduledTime: Date,
     targetDay = this.getLocalDay(scheduledTime),
   ) {
     const scheduledIso = scheduledTime.toISOString()
 
-    await withExtensionStorageWriteLock(
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK,
-      async () => {
-        const latestStatus =
-          (await autoCheckinStorage.getStatus()) ?? currentStatus ?? {}
+    await autoCheckinStorage.updateStatus((current) => {
+      if (
+        current?.nextDailyScheduledAt === scheduledIso &&
+        current?.dailyAlarmTargetDay === targetDay &&
+        current?.nextScheduledAt === scheduledIso
+      ) {
+        // Already in sync with the alarm; skip the write and the storage
+        // change notifications it would emit.
+        return { patch: null }
+      }
 
-        await autoCheckinStorage.saveStatus({
-          ...latestStatus,
+      return {
+        patch: {
           nextDailyScheduledAt: scheduledIso,
           dailyAlarmTargetDay: targetDay,
           nextScheduledAt: scheduledIso, // legacy compatibility
-        })
-      },
-    )
+        },
+      }
+    })
   }
 
-  private async clearDailyScheduleStatus(
-    currentStatus: AutoCheckinStatus | null,
-  ) {
-    await withExtensionStorageWriteLock(
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK,
-      async () => {
-        const latestStatus =
-          (await autoCheckinStorage.getStatus()) ?? currentStatus ?? {}
-
-        await autoCheckinStorage.saveStatus({
-          ...latestStatus,
-          nextDailyScheduledAt: undefined,
-          dailyAlarmTargetDay: undefined,
-          nextScheduledAt: undefined,
-        })
+  private async clearDailyScheduleStatus() {
+    await autoCheckinStorage.updateStatus(() => ({
+      patch: {
+        nextDailyScheduledAt: undefined,
+        dailyAlarmTargetDay: undefined,
+        nextScheduledAt: undefined,
       },
-    )
+    }))
   }
 
   private isExistingDailyAlarmReusable(
@@ -1451,7 +1445,6 @@ class AutoCheckinScheduler {
 
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-    const currentStatus = await autoCheckinStorage.getStatus()
     trackAutoCheckinConfigSnapshot(
       config,
       PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
@@ -1464,16 +1457,17 @@ class AutoCheckinScheduler {
       await clearAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
       await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
       logger.info("Auto check-in disabled; alarms cleared")
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        nextDailyScheduledAt: undefined,
-        dailyAlarmTargetDay: undefined,
-        nextRetryScheduledAt: undefined,
-        retryAlarmTargetDay: undefined,
-        retryState: undefined,
-        pendingRetry: false,
-        nextScheduledAt: undefined,
-      })
+      await autoCheckinStorage.updateStatus(() => ({
+        patch: {
+          nextDailyScheduledAt: undefined,
+          dailyAlarmTargetDay: undefined,
+          nextRetryScheduledAt: undefined,
+          retryAlarmTargetDay: undefined,
+          retryState: undefined,
+          pendingRetry: false,
+          nextScheduledAt: undefined,
+        },
+      }))
       return
     }
 
@@ -1505,7 +1499,6 @@ class AutoCheckinScheduler {
 
     if (options?.preserveExisting && existingAlarm?.scheduledTime) {
       const scheduledTime = new Date(existingAlarm.scheduledTime)
-      const scheduledIso = scheduledTime.toISOString()
       const targetDay = this.getLocalDay(scheduledTime)
 
       if (
@@ -1522,19 +1515,11 @@ class AutoCheckinScheduler {
             expectedTriggerTime: nextTriggerPlan?.triggerTime,
           },
         )
-      } else if (
-        currentStatus?.nextDailyScheduledAt !== scheduledIso ||
-        currentStatus?.dailyAlarmTargetDay !== targetDay ||
-        currentStatus?.nextScheduledAt !== scheduledIso
-      ) {
-        await this.syncDailyScheduleStatus(
-          currentStatus,
-          scheduledTime,
-          targetDay,
-        )
-        logger.debug("Synced stored daily schedule with existing alarm")
-        return
       } else {
+        // Reuse the surviving alarm; just make sure the stored schedule
+        // matches it. The sync skips the write when it already does.
+        await this.syncDailyScheduleStatus(scheduledTime, targetDay)
+        logger.debug("Synced stored daily schedule with existing alarm")
         return
       }
     }
@@ -1550,7 +1535,7 @@ class AutoCheckinScheduler {
       Number.isNaN(nextTriggerPlan.triggerTime.getTime())
     ) {
       logger.warn("Invalid schedule configuration; daily alarm not scheduled")
-      await this.clearDailyScheduleStatus(currentStatus)
+      await this.clearDailyScheduleStatus()
       return
     }
 
@@ -1570,7 +1555,7 @@ class AutoCheckinScheduler {
               : nextTriggerPlan.triggerTime
           })()
 
-      await this.syncDailyScheduleStatus(currentStatus, scheduledTime)
+      await this.syncDailyScheduleStatus(scheduledTime)
 
       logger.info("Daily alarm scheduled", {
         name: AutoCheckinScheduler.DAILY_ALARM_NAME,
@@ -1578,29 +1563,26 @@ class AutoCheckinScheduler {
       })
     } catch (error) {
       logger.error("Failed to create daily alarm", error)
-      await this.clearDailyScheduleStatus(currentStatus)
+      await this.clearDailyScheduleStatus()
     }
   }
 
   /**
    * Clear retry alarm + any persisted retry state.
    */
-  private async clearRetryAlarmAndState(
-    currentStatus: AutoCheckinStatus | null,
-  ) {
+  private async clearRetryAlarmAndState() {
     await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
 
-    if (!currentStatus) {
-      return
-    }
-
-    await autoCheckinStorage.saveStatus({
-      ...currentStatus,
-      nextRetryScheduledAt: undefined,
-      retryAlarmTargetDay: undefined,
-      retryState: undefined,
-      pendingRetry: false,
-    })
+    await autoCheckinStorage.updateStatus((current) => ({
+      patch: current
+        ? {
+            nextRetryScheduledAt: undefined,
+            retryAlarmTargetDay: undefined,
+            retryState: undefined,
+            pendingRetry: false,
+          }
+        : null,
+    }))
   }
 
   /**
@@ -1637,6 +1619,68 @@ class AutoCheckinScheduler {
   }
 
   /**
+   * Persist the retry alarm target together with the retry queue it belongs to.
+   *
+   * The queue is re-derived from the stored status under the write lock rather
+   * than from the caller's snapshot, so a run that finished while the alarm was
+   * being (re)created keeps its results and its updated queue.
+   */
+  private async syncRetryScheduleStatus(params: {
+    scheduledIso: string
+    day: string
+    maxAttempts: number
+  }) {
+    const { scheduledIso, day, maxAttempts } = params
+
+    await autoCheckinStorage.updateStatus((current) => {
+      const retryState = current?.retryState
+
+      // Retries are scoped to one local day; a queue from another day, or none
+      // at all, must not be adopted by this alarm.
+      if (!retryState || retryState.day !== day) {
+        return { patch: null }
+      }
+
+      const eligiblePending = retryState.pendingAccountIds.filter(
+        (accountId) =>
+          (retryState.attemptsByAccount?.[accountId] ?? 1) < maxAttempts,
+      )
+      if (eligiblePending.length === 0) {
+        return { patch: null }
+      }
+
+      if (
+        current?.nextRetryScheduledAt === scheduledIso &&
+        current?.retryAlarmTargetDay === day &&
+        current?.pendingRetry === true &&
+        retryState.pendingAccountIds.length === eligiblePending.length
+      ) {
+        // Already in sync with the alarm; skip the write and the storage change
+        // notifications it would emit.
+        return { patch: null }
+      }
+
+      return {
+        patch: {
+          nextRetryScheduledAt: scheduledIso,
+          retryAlarmTargetDay: day,
+          retryState: {
+            ...retryState,
+            pendingAccountIds: eligiblePending,
+            attemptsByAccount: Object.fromEntries(
+              eligiblePending.map((accountId) => [
+                accountId,
+                retryState.attemptsByAccount?.[accountId] ?? 1,
+              ]),
+            ),
+          },
+          pendingRetry: true,
+        },
+      }
+    })
+  }
+
+  /**
    * Schedule the retry alarm and persist the next retry schedule.
    *
    * Invariants:
@@ -1652,7 +1696,7 @@ class AutoCheckinScheduler {
     const today = this.getLocalDay(now)
 
     if (!config.retryStrategy?.enabled) {
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -1661,13 +1705,13 @@ class AutoCheckinScheduler {
       currentStatus?.lastDailyRunDay !== today ||
       currentStatus?.retryState?.day !== today
     ) {
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
     const retryState = currentStatus.retryState
     if (!retryState || retryState.pendingAccountIds.length === 0) {
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -1678,7 +1722,7 @@ class AutoCheckinScheduler {
     })
 
     if (eligiblePending.length === 0) {
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -1693,33 +1737,16 @@ class AutoCheckinScheduler {
 
       // If the preserved alarm targets a different day, treat it as stale and clear it.
       if (targetDay !== today) {
-        await this.clearRetryAlarmAndState(currentStatus)
+        await this.clearRetryAlarmAndState()
         return
       }
 
-      if (
-        currentStatus?.nextRetryScheduledAt !== scheduledIso ||
-        currentStatus?.retryAlarmTargetDay !== targetDay ||
-        currentStatus?.pendingRetry !== true
-      ) {
-        await autoCheckinStorage.saveStatus({
-          ...(currentStatus ?? {}),
-          nextRetryScheduledAt: scheduledIso,
-          retryAlarmTargetDay: targetDay,
-          retryState: {
-            ...retryState,
-            pendingAccountIds: eligiblePending,
-            attemptsByAccount: Object.fromEntries(
-              eligiblePending.map((id) => [
-                id,
-                retryState.attemptsByAccount?.[id] ?? 1,
-              ]),
-            ),
-          },
-          pendingRetry: true,
-        })
-        logger.debug("Synced stored retry schedule with existing alarm")
-      }
+      await this.syncRetryScheduleStatus({
+        scheduledIso,
+        day: targetDay,
+        maxAttempts,
+      })
+      logger.debug("Synced stored retry schedule with existing alarm")
       return
     }
 
@@ -1738,7 +1765,7 @@ class AutoCheckinScheduler {
 
     // Do not schedule retries across the day boundary.
     if (retryTargetDay !== today) {
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -1754,21 +1781,10 @@ class AutoCheckinScheduler {
       const scheduledIso = (scheduledTime ?? nextRetryTime).toISOString()
       const targetDay = this.getLocalDay(scheduledTime ?? nextRetryTime)
 
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        nextRetryScheduledAt: scheduledIso,
-        retryAlarmTargetDay: targetDay,
-        retryState: {
-          ...retryState,
-          pendingAccountIds: eligiblePending,
-          attemptsByAccount: Object.fromEntries(
-            eligiblePending.map((id) => [
-              id,
-              retryState.attemptsByAccount?.[id] ?? 1,
-            ]),
-          ),
-        },
-        pendingRetry: true,
+      await this.syncRetryScheduleStatus({
+        scheduledIso,
+        day: targetDay,
+        maxAttempts,
       })
 
       logger.info("Retry alarm scheduled", {
@@ -2065,7 +2081,7 @@ class AutoCheckinScheduler {
         targetDay,
         today,
       })
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -2127,14 +2143,9 @@ class AutoCheckinScheduler {
    * without waiting for the next day. This intentionally does not modify alarm schedules.
    */
   async debugResetLastDailyRunDay(): Promise<void> {
-    const status = await autoCheckinStorage.getStatus()
-    if (!status?.lastDailyRunDay) {
-      return
-    }
-
-    const updated: AutoCheckinStatus = { ...status }
-    delete updated.lastDailyRunDay
-    await autoCheckinStorage.saveStatus(updated)
+    await autoCheckinStorage.updateStatus((current) => ({
+      patch: current?.lastDailyRunDay ? { lastDailyRunDay: undefined } : null,
+    }))
   }
 
   /**
@@ -2158,12 +2169,11 @@ class AutoCheckinScheduler {
 
     const minutesFromNow = Math.max(1, Math.floor(params?.minutesFromNow ?? 60))
 
-    const currentStatus = await autoCheckinStorage.getStatus()
     const scheduledTime = await this.createDailyAlarmForToday(
       Date.now() + minutesFromNow * 60_000,
     )
 
-    await this.syncDailyScheduleStatus(currentStatus, scheduledTime)
+    await this.syncDailyScheduleStatus(scheduledTime)
 
     logger.debug("Debug scheduled daily alarm for today", {
       when: scheduledTime.getTime(),
@@ -2212,20 +2222,24 @@ class AutoCheckinScheduler {
     const startTime = Date.now()
     const now = new Date()
     const today = this.getLocalDay(now)
-    const currentStatus = await autoCheckinStorage.getStatus()
     const mergeHistory = Boolean(targetAccountIdSet)
 
+    // Scoped runs merge their results into whatever the status holds when the
+    // write happens, so `base` is threaded through from the patch instead of
+    // being captured from a snapshot read here.
     const mergePerAccountIfNeeded = (
+      base: AutoCheckinStatus | null,
       nextResults: Record<string, CheckinAccountResult>,
     ): Record<string, CheckinAccountResult> => {
       if (!mergeHistory) return nextResults
       return {
-        ...(currentStatus?.perAccount ?? {}),
+        ...(base?.perAccount ?? {}),
         ...nextResults,
       }
     }
 
     const mergeAccountsSnapshotIfNeeded = (
+      base: AutoCheckinStatus | null,
       currentRunSnapshots: AutoCheckinAccountSnapshot[],
       nextResults: Record<string, CheckinAccountResult>,
     ): AutoCheckinAccountSnapshot[] => {
@@ -2233,7 +2247,7 @@ class AutoCheckinScheduler {
         return this.attachResultsToSnapshots(currentRunSnapshots, nextResults)
       }
 
-      let nextSnapshots = currentStatus?.accountsSnapshot
+      let nextSnapshots = base?.accountsSnapshot
       if (!nextSnapshots || nextSnapshots.length === 0) {
         return this.attachResultsToSnapshots(currentRunSnapshots, nextResults)
       }
@@ -2258,13 +2272,14 @@ class AutoCheckinScheduler {
     }
 
     const mergeSummaryIfNeeded = (
+      base: AutoCheckinStatus | null,
       summary: AutoCheckinRunSummary,
       perAccount: Record<string, CheckinAccountResult>,
     ): AutoCheckinRunSummary => {
       if (!mergeHistory) return summary
       return this.recalculateSummaryFromResults(
         perAccount,
-        currentStatus?.summary ?? summary,
+        base?.summary ?? summary,
       )
     }
 
@@ -2395,36 +2410,49 @@ class AutoCheckinScheduler {
           skippedCount: accountSnapshots.length,
           needsRetry: false,
         }
-        const perAccount = mergePerAccountIfNeeded(results)
-        const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
-          accountSnapshots,
-          results,
-        )
         const analyticsSnapshots = this.buildAnalyticsSnapshots(
           allAccounts,
           accountDisplayNameById,
           results,
           loginProviderOwners,
         )
-        const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
 
-        await autoCheckinStorage.saveStatus({
-          ...(currentStatus ?? {}),
-          lastRunAt: new Date().toISOString(),
-          lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED,
-          perAccount,
-          summary: mergedSummary,
-          accountsSnapshot,
-          ...(isDailyRun
-            ? {
-                lastDailyRunDay: today,
-                retryState: undefined,
-                nextRetryScheduledAt: undefined,
-                retryAlarmTargetDay: undefined,
-                pendingRetry: false,
-              }
-            : {}),
-        })
+        const { result: runSummary } = await autoCheckinStorage.updateStatus(
+          (current) => {
+            const perAccount = mergePerAccountIfNeeded(current, results)
+            const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
+              current,
+              accountSnapshots,
+              results,
+            )
+            const mergedSummary = mergeSummaryIfNeeded(
+              current,
+              summary,
+              perAccount,
+            )
+
+            return {
+              result: mergedSummary,
+              patch: {
+                lastRunAt: new Date().toISOString(),
+                lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED,
+                perAccount,
+                summary: mergedSummary,
+                accountsSnapshot,
+                ...(isDailyRun
+                  ? {
+                      lastDailyRunDay: today,
+                      retryState: undefined,
+                      nextRetryScheduledAt: undefined,
+                      retryAlarmTargetDay: undefined,
+                      pendingRetry: false,
+                    }
+                  : {}),
+              },
+            }
+          },
+        )
+        const mergedSummary = runSummary ?? summary
 
         if (notifyUiOnCompletion) {
           await this.notifyUiRunCompleted({
@@ -2514,79 +2542,99 @@ class AutoCheckinScheduler {
         )
         .map((outcome) => outcome.result.accountId)
 
-      let retryState: AutoCheckinRetryState | undefined =
-        currentStatus?.retryState
-      if (isDailyRun) {
-        retryState = undefined
-        if (
-          config.retryStrategy?.enabled &&
-          config.retryStrategy.maxAttemptsPerDay > 1 &&
-          summaryNeedsRetry
-        ) {
-          // Retry queue is derived only from today's *failed* runnable accounts.
-          // Provider `already_checked` is treated as success and excluded automatically.
-          const failedAccountIds = checkinOutcomes
-            .filter((outcome) => isRetryableCheckinResult(outcome.result))
-            .map((outcome) => outcome.result.accountId)
-
-          retryState = {
-            day: today,
-            pendingAccountIds: failedAccountIds,
-            // Attempt counter includes the initial daily run failure as attempt=1.
-            attemptsByAccount: Object.fromEntries(
-              failedAccountIds.map((id) => [id, 1]),
-            ),
-          }
-        }
-      } else if (
-        retryState?.day === today &&
-        retryState.pendingAccountIds.length > 0
-      ) {
-        const pending = retryState.pendingAccountIds.filter((accountId) => {
-          const result = results[accountId]
-          return result ? isRetryableCheckinResult(result) : true
-        })
-        retryState =
-          pending.length > 0
-            ? { ...retryState, pendingAccountIds: pending }
-            : undefined
-      }
-
-      const pendingRetry = Boolean(
-        retryState?.day === today && retryState.pendingAccountIds.length > 0,
-      )
-
-      const perAccount = mergePerAccountIfNeeded(results)
-      const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
-        accountSnapshots,
-        results,
-      )
       const analyticsSnapshots = this.buildAnalyticsSnapshots(
         allAccounts,
         accountDisplayNameById,
         results,
         loginProviderOwners,
       )
-      const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
-      const overallResult = getAutoCheckinRunResultFromSummary(mergedSummary)
 
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        lastRunAt: new Date().toISOString(),
-        lastRunResult: overallResult,
-        perAccount,
-        summary: mergedSummary,
-        retryState,
-        pendingRetry,
-        accountsSnapshot,
-        ...(isDailyRun
-          ? {
-              lastDailyRunDay: today,
-              nextRetryScheduledAt: undefined,
-              retryAlarmTargetDay: undefined,
+      // The retry queue and the merged history are derived from the stored
+      // status, so they are computed inside the update: a run that finished
+      // while this one was executing keeps its results instead of being
+      // reverted.
+      const { result: runOutcome } = await autoCheckinStorage.updateStatus(
+        (current) => {
+          let retryState: AutoCheckinRetryState | undefined =
+            current?.retryState
+          if (isDailyRun) {
+            retryState = undefined
+            if (
+              config.retryStrategy?.enabled &&
+              config.retryStrategy.maxAttemptsPerDay > 1 &&
+              summaryNeedsRetry
+            ) {
+              // Retry queue is derived only from today's *failed* runnable accounts.
+              // Provider `already_checked` is treated as success and excluded automatically.
+              const failedAccountIds = checkinOutcomes
+                .filter((outcome) => isRetryableCheckinResult(outcome.result))
+                .map((outcome) => outcome.result.accountId)
+
+              retryState = {
+                day: today,
+                pendingAccountIds: failedAccountIds,
+                // Attempt counter includes the initial daily run failure as attempt=1.
+                attemptsByAccount: Object.fromEntries(
+                  failedAccountIds.map((id) => [id, 1]),
+                ),
+              }
             }
-          : {}),
-      })
+          } else if (
+            retryState?.day === today &&
+            retryState.pendingAccountIds.length > 0
+          ) {
+            const pending = retryState.pendingAccountIds.filter((accountId) => {
+              const result = results[accountId]
+              return result ? isRetryableCheckinResult(result) : true
+            })
+            retryState =
+              pending.length > 0
+                ? { ...retryState, pendingAccountIds: pending }
+                : undefined
+          }
+
+          const perAccount = mergePerAccountIfNeeded(current, results)
+          const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
+            current,
+            accountSnapshots,
+            results,
+          )
+          const mergedSummary = mergeSummaryIfNeeded(
+            current,
+            summary,
+            perAccount,
+          )
+          const pendingRetry = Boolean(
+            retryState?.day === today &&
+              retryState.pendingAccountIds.length > 0,
+          )
+
+          return {
+            result: {
+              mergedSummary,
+              retryPendingAfter: retryState?.pendingAccountIds.length ?? 0,
+            },
+            patch: {
+              lastRunAt: new Date().toISOString(),
+              lastRunResult: getAutoCheckinRunResultFromSummary(mergedSummary),
+              perAccount,
+              summary: mergedSummary,
+              retryState,
+              pendingRetry,
+              accountsSnapshot,
+              ...(isDailyRun
+                ? {
+                    lastDailyRunDay: today,
+                    nextRetryScheduledAt: undefined,
+                    retryAlarmTargetDay: undefined,
+                  }
+                : {}),
+            },
+          }
+        },
+      )
+      const mergedSummary = runOutcome?.mergedSummary ?? summary
+      const retryPendingAfter = runOutcome?.retryPendingAfter ?? 0
 
       await this.refreshAccountsAfterSuccessfulCheckins({
         accountIds: accountIdsToRefresh,
@@ -2627,7 +2675,7 @@ class AutoCheckinScheduler {
           retryPendingBefore: 0,
           retryAttempted: 0,
           retryRescued: 0,
-          retryPendingAfter: retryState?.pendingAccountIds.length ?? 0,
+          retryPendingAfter,
           retryExhausted: 0,
         })
       }
@@ -2640,21 +2688,22 @@ class AutoCheckinScheduler {
       })
     } catch (error) {
       logger.error("Execution failed", error)
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        lastRunAt: new Date().toISOString(),
-        lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
-        perAccount: mergeHistory ? currentStatus?.perAccount ?? {} : {},
-        pendingRetry: false,
-        retryState: isDailyRun ? undefined : currentStatus?.retryState,
-        ...(isDailyRun
-          ? {
-              lastDailyRunDay: today,
-              nextRetryScheduledAt: undefined,
-              retryAlarmTargetDay: undefined,
-            }
-          : {}),
-      })
+      await autoCheckinStorage.updateStatus((current) => ({
+        patch: {
+          lastRunAt: new Date().toISOString(),
+          lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
+          perAccount: mergeHistory ? current?.perAccount ?? {} : {},
+          pendingRetry: false,
+          retryState: isDailyRun ? undefined : current?.retryState,
+          ...(isDailyRun
+            ? {
+                lastDailyRunDay: today,
+                nextRetryScheduledAt: undefined,
+                retryAlarmTargetDay: undefined,
+              }
+            : {}),
+        },
+      }))
 
       if (notifyUiOnCompletion === null) {
         try {
@@ -2711,7 +2760,7 @@ class AutoCheckinScheduler {
 
     if (!config.globalEnabled || !config.retryStrategy?.enabled) {
       logger.info("Retry skipped (feature disabled)")
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -2721,7 +2770,7 @@ class AutoCheckinScheduler {
       currentStatus?.retryState?.day !== today
     ) {
       logger.info("Retry skipped (no normal run today)")
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -2729,7 +2778,7 @@ class AutoCheckinScheduler {
     const retryState = currentStatus.retryState
     if (!retryState || retryState.pendingAccountIds.length === 0) {
       logger.info("Retry skipped (no pending accounts)")
-      await this.clearRetryAlarmAndState(currentStatus)
+      await this.clearRetryAlarmAndState()
       return
     }
 
@@ -2819,46 +2868,61 @@ class AutoCheckinScheduler {
       }
     }
 
-    const perAccount: Record<string, CheckinAccountResult> = {
-      ...(currentStatus?.perAccount ?? {}),
-      ...updates,
-    }
+    // Derived from the stored status inside the update so a run that persisted
+    // while this one was executing is not reverted. The result carries what was
+    // persisted to the notifications and analytics below.
+    const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
+      (current) => {
+        const perAccount: Record<string, CheckinAccountResult> = {
+          ...(current?.perAccount ?? {}),
+          ...updates,
+        }
 
-    const summary = this.recalculateSummaryFromResults(
-      perAccount,
-      currentStatus?.summary,
+        const summary = this.recalculateSummaryFromResults(
+          perAccount,
+          current?.summary,
+        )
+
+        let nextSnapshots = current?.accountsSnapshot
+        for (const result of Object.values(updates)) {
+          nextSnapshots = this.updateSnapshotWithResult(nextSnapshots, result)
+        }
+
+        const nextRetryState: AutoCheckinRetryState | undefined =
+          remaining.length > 0
+            ? {
+                day: today,
+                pendingAccountIds: remaining,
+                attemptsByAccount: Object.fromEntries(
+                  remaining.map((id) => [id, attemptsByAccount[id] ?? 1]),
+                ),
+              }
+            : undefined
+
+        return {
+          result: {
+            summary,
+            accountsSnapshot: nextSnapshots,
+            nextRetryState,
+          },
+          patch: {
+            lastRunAt: new Date().toISOString(),
+            lastRunResult: getAutoCheckinRunResultFromSummary(summary),
+            perAccount,
+            summary,
+            accountsSnapshot: nextSnapshots,
+            retryState: nextRetryState,
+            pendingRetry: Boolean(nextRetryState?.pendingAccountIds.length),
+            nextRetryScheduledAt: undefined,
+            retryAlarmTargetDay: undefined,
+          },
+        }
+      },
     )
-
-    const lastRunResult = getAutoCheckinRunResultFromSummary(summary)
-
-    let accountsSnapshot = currentStatus?.accountsSnapshot
-    for (const result of Object.values(updates)) {
-      accountsSnapshot = this.updateSnapshotWithResult(accountsSnapshot, result)
-    }
-
-    const nextRetryState: AutoCheckinRetryState | undefined =
-      remaining.length > 0
-        ? {
-            day: today,
-            pendingAccountIds: remaining,
-            attemptsByAccount: Object.fromEntries(
-              remaining.map((id) => [id, attemptsByAccount[id] ?? 1]),
-            ),
-          }
-        : undefined
-
-    await autoCheckinStorage.saveStatus({
-      ...(currentStatus ?? {}),
-      lastRunAt: new Date().toISOString(),
-      lastRunResult,
-      perAccount,
-      summary,
-      accountsSnapshot,
-      retryState: nextRetryState,
-      pendingRetry: Boolean(nextRetryState?.pendingAccountIds.length),
-      nextRetryScheduledAt: undefined,
-      retryAlarmTargetDay: undefined,
-    })
+    const summary =
+      retryOutcome?.summary ?? this.recalculateSummaryFromResults(updates)
+    const accountsSnapshot = retryOutcome?.accountsSnapshot
+    const nextRetryState = retryOutcome?.nextRetryState
 
     await this.refreshAccountsAfterSuccessfulCheckins({
       accountIds: accountIdsToRefresh,
@@ -3019,57 +3083,62 @@ class AutoCheckinScheduler {
             )
           ).result
 
-    const currentStatus = (await autoCheckinStorage.getStatus()) || {}
+    // Derived from the stored status inside the update so a run that persisted
+    // while this one was executing is not reverted. The result carries what was
+    // persisted back to the caller below.
+    const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
+      (current) => {
+        const perAccount: Record<string, CheckinAccountResult> = {
+          ...(current?.perAccount ?? {}),
+          [result.accountId]: result,
+        }
 
-    const perAccount: Record<string, CheckinAccountResult> = {
-      ...(currentStatus.perAccount ?? {}),
-      [result.accountId]: result,
-    }
-
-    const summary = this.recalculateSummaryFromResults(
-      perAccount,
-      currentStatus.summary,
-    )
-
-    const lastRunResult = getAutoCheckinRunResultFromSummary(summary)
-
-    let retryState = currentStatus.retryState
-    if (
-      retryState?.day === today &&
-      retryState.pendingAccountIds.includes(accountId)
-    ) {
-      if (!isRetryableCheckinResult(result)) {
-        const nextPending = retryState.pendingAccountIds.filter(
-          (id) => id !== accountId,
+        const summary = this.recalculateSummaryFromResults(
+          perAccount,
+          current?.summary,
         )
-        retryState =
-          nextPending.length > 0
-            ? { ...retryState, pendingAccountIds: nextPending }
-            : undefined
-      }
-    }
 
-    const pendingRetry = Boolean(
-      retryState?.day === today && retryState.pendingAccountIds.length > 0,
+        let retryState = current?.retryState
+        if (
+          retryState?.day === today &&
+          retryState.pendingAccountIds.includes(accountId)
+        ) {
+          if (!isRetryableCheckinResult(result)) {
+            const nextPending = retryState.pendingAccountIds.filter(
+              (id) => id !== accountId,
+            )
+            retryState =
+              nextPending.length > 0
+                ? { ...retryState, pendingAccountIds: nextPending }
+                : undefined
+          }
+        }
+
+        const pendingRetry = Boolean(
+          retryState?.day === today && retryState.pendingAccountIds.length > 0,
+        )
+
+        return {
+          result: { summary, pendingRetry },
+          patch: {
+            lastRunAt: new Date().toISOString(),
+            lastRunResult: getAutoCheckinRunResultFromSummary(summary),
+            perAccount,
+            summary,
+            retryState,
+            pendingRetry,
+            accountsSnapshot: this.updateSnapshotWithResult(
+              current?.accountsSnapshot,
+              result,
+            ),
+          },
+        }
+      },
     )
-
-    const accountsSnapshot = this.updateSnapshotWithResult(
-      currentStatus.accountsSnapshot,
-      result,
-    )
-
-    const updatedStatus: AutoCheckinStatus = {
-      ...currentStatus,
-      lastRunAt: new Date().toISOString(),
-      lastRunResult,
-      perAccount,
-      summary,
-      retryState,
-      pendingRetry,
-      accountsSnapshot,
-    }
-
-    await autoCheckinStorage.saveStatus(updatedStatus)
+    const summary: AutoCheckinRunSummary =
+      retryOutcome?.summary ??
+      this.recalculateSummaryFromResults({ [result.accountId]: result })
+    const pendingRetry = retryOutcome?.pendingRetry ?? false
 
     // Reschedule retry alarm if needed (never touches the daily alarm schedule).
     const prefs = await userPreferences.getPreferences()

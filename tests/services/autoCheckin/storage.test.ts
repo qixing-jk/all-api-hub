@@ -66,24 +66,86 @@ describe("autoCheckinStorage", () => {
     expect(result).toBeNull()
   })
 
-  it("saveStatus should store status and return true", async () => {
-    const { set } = (Storage as any).__mocks as any
+  it("updateStatus should merge the patch into the stored status", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      lastRunResult: "success",
+      perAccount: { a: 1 },
+    })
     set.mockResolvedValueOnce(undefined)
 
-    const status = { lastRunResult: "success" } as any
-    const ok = await autoCheckinStorage.saveStatus(status)
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
 
-    expect(set).toHaveBeenCalledWith("autoCheckin_status", status)
-    expect(ok).toBe(true)
+    expect(set).toHaveBeenCalledWith("autoCheckin_status", {
+      lastRunResult: "failed",
+      perAccount: { a: 1 },
+    })
+    expect(result).toEqual({ ok: true, result: null })
   })
 
-  it("saveStatus should return false on error", async () => {
-    const { set } = (Storage as any).__mocks as any
+  it("updateStatus should skip the write when the patch is null", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
+
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: null,
+    }))
+
+    expect(set).not.toHaveBeenCalled()
+    expect(result).toEqual({ ok: true, result: null })
+  })
+
+  it("updateStatus should hand the derived value back to the caller", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
+    set.mockResolvedValueOnce(undefined)
+
+    const result = await autoCheckinStorage.updateStatus((current) => ({
+      result: `was:${current?.lastRunResult}`,
+      patch: { lastRunResult: "failed" },
+    }))
+
+    expect(result).toEqual({ ok: true, result: "was:success" })
+  })
+
+  it("updateStatus should read the stored status, not a caller snapshot", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ perAccount: { a: 1 } })
+    set.mockResolvedValueOnce(undefined)
+
+    const seen: unknown[] = []
+    await autoCheckinStorage.updateStatus((current) => {
+      seen.push(current)
+      return { patch: { lastRunResult: "failed" } }
+    })
+
+    expect(seen).toEqual([{ perAccount: { a: 1 } }])
+  })
+
+  it("updateStatus should not write when the read fails", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockRejectedValueOnce(new Error("read error"))
+
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
+
+    expect(set).not.toHaveBeenCalled()
+    expect(result).toEqual({ ok: false, result: null })
+  })
+
+  it("updateStatus should report failure on write error", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
     set.mockRejectedValueOnce(new Error("write error"))
 
-    const ok = await autoCheckinStorage.saveStatus({} as any)
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
 
-    expect(ok).toBe(false)
+    expect(result.ok).toBe(false)
   })
 
   it("clearStatus should remove key and return true", async () => {

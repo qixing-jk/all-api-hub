@@ -105,6 +105,11 @@ export const STORAGE_LOCKS = {
    * development-only fixture account id registry.
    */
   DEV_FIXTURE_ACCOUNTS: "all-api-hub:dev-fixture-accounts",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the auto
+   * check-in status blob.
+   */
+  AUTO_CHECKIN_STATUS: "all-api-hub:auto-checkin-status",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {

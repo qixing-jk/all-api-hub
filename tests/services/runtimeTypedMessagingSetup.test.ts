@@ -1479,10 +1479,9 @@ describe("typed runtime messaging setup", () => {
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
     }))
     vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
       autoCheckinStorage: {
         getStatus,
-        saveStatus: vi.fn(),
+        updateStatus: vi.fn(async () => ({ ok: true, result: null })),
       },
     }))
 
@@ -1534,10 +1533,9 @@ describe("typed runtime messaging setup", () => {
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
     }))
     vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
       autoCheckinStorage: {
         getStatus,
-        saveStatus: vi.fn(),
+        updateStatus: vi.fn(async () => ({ ok: true, result: null })),
       },
     }))
 
@@ -1925,12 +1923,16 @@ describe("typed runtime messaging setup", () => {
       accountPresentation: accountSurface,
     }))
     vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
       autoCheckinStorage: {
         getStatus: vi.fn(async () => savedStatus),
-        saveStatus: vi.fn(async (status) => {
-          savedStatus = status
-          return true
+        updateStatus: vi.fn(async (update) => {
+          const applied = update(savedStatus)
+          if (!applied.patch) {
+            return { ok: true, result: applied.result ?? null }
+          }
+
+          savedStatus = { ...(savedStatus ?? {}), ...applied.patch }
+          return { ok: true, result: applied.result ?? null }
         }),
       },
     }))
@@ -2060,10 +2062,9 @@ describe("typed runtime messaging setup", () => {
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
     }))
     vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
-      AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
       autoCheckinStorage: {
         getStatus: vi.fn().mockRejectedValue(new Error("status failed")),
-        saveStatus: vi.fn(),
+        updateStatus: vi.fn(async () => ({ ok: true, result: null })),
       },
     }))
 
