@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryAccountStore,
@@ -557,13 +559,22 @@ class UsageHistoryStorage {
     }
   }
 
+  /**
+   * Update the store under an exclusive write lock to avoid cross-context
+   * read-modify-write races.
+   */
   async updateStore(
     updater: (store: UsageHistoryStore) => UsageHistoryStore | void,
   ): Promise<UsageHistoryStore> {
-    const current = await this.getStore()
-    const updated = updater(current) ?? current
-    await this.setStore(updated)
-    return updated
+    return withExtensionStorageWriteLock(
+      STORAGE_LOCKS.USAGE_HISTORY,
+      async () => {
+        const current = await this.getStore()
+        const updated = updater(current) ?? current
+        await this.setStore(updated)
+        return updated
+      },
+    )
   }
 
   async getAccountStore(accountId: string): Promise<UsageHistoryAccountStore> {
