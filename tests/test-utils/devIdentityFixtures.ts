@@ -24,6 +24,7 @@ export const DEV_PATH_FIXTURES = {
   windowsSpacedName: "C:\\dev\\my repo (copy 2)",
   windowsNonAsciiName: "C:\\dev\\工具目录",
   posixWorktree: "/home/dev/all-api-hub/feature-login",
+  posixNameWithBackslash: "/home/dev/tool\\kit",
   posixShallow: "/home",
   uncShare: "\\\\server\\share\\repo",
   empty: "",

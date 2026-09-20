@@ -82,6 +82,13 @@ describe("getDevPathTail", () => {
     ],
     ["a shallow windows path", PATHS.windowsShallow, "C:\\project"],
     ["a nested posix path", PATHS.posixWorktree, "…/all-api-hub/feature-login"],
+    [
+      // A backslash is a legal character inside a POSIX directory name, so it
+      // stays literal instead of splitting the segment in two.
+      "a posix path with a literal backslash in a directory name",
+      PATHS.posixNameWithBackslash,
+      "…/dev/tool\\kit",
+    ],
     ["a shallow posix path", PATHS.posixShallow, "home"],
     ["a unc share", PATHS.uncShare, "…\\share\\repo"],
     [
@@ -107,6 +114,13 @@ describe("getDevBadgeText", () => {
   it.each([
     ["a windows worktree", PATHS.windowsWorktree, "TEM"],
     ["a nested posix worktree", PATHS.posixWorktree, "FEA"],
+    [
+      // The whole directory name is one segment, so its badge code spans both
+      // words joined by the literal backslash.
+      "a posix directory name with a literal backslash",
+      PATHS.posixNameWithBackslash,
+      "TOO",
+    ],
     ["a shallow path", PATHS.windowsShallow, "PRO"],
     ["a directory name with punctuation", PATHS.windowsSpacedName, "MYR"],
   ])(

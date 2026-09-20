@@ -180,13 +180,29 @@ export function getDevIdentityColor(colorIndex: number): string {
   return hslToRgb(getDevIdentityColorComponents(colorIndex))
 }
 
-/** Segments of a Windows or POSIX path, ignoring repeated separators. */
+/**
+ * Paths in Windows syntax: a drive prefix or a UNC share. Everything else is
+ * treated as POSIX, where a backslash is a legal character inside a directory
+ * name and must not be read as a separator.
+ */
+function isWindowsStylePath(path: string): boolean {
+  return /^[a-z]:/iu.test(path) || path.startsWith("\\\\")
+}
+
+/**
+ * Segments of a path, split on the separators its own syntax uses: both
+ * separators for Windows paths, only `/` for POSIX paths.
+ */
 function splitPathSegments(path: string): string[] {
-  return path.split(/[\\/]+/u).filter(Boolean)
+  const separatorPattern = isWindowsStylePath(path) ? /[\\/]+/u : /\/+/u
+
+  return path.split(separatorPattern).filter(Boolean)
 }
 
 /** Keep a path's own separator style so shortened paths still read naturally. */
 function getPathSeparator(path: string): string {
+  if (!isWindowsStylePath(path)) return "/"
+
   return path.includes("\\") ? "\\" : "/"
 }
 
