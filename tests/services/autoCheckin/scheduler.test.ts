@@ -1430,7 +1430,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     await (autoCheckinScheduler as any).scheduleDailyAlarm({
       ...(DEFAULT_PREFERENCES as any).autoCheckin,
       windowStart: "invalid",
-      windowEnd: "10:00",
+      windowEnd: "invalid",
     })
 
     expect(storedStatus).toEqual({
