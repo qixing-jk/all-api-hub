@@ -80,7 +80,11 @@ describe("getDayKeyFromUnixSeconds", () => {
   })
 
   it("defaults to the device-local timezone", () => {
+    // Derive both sides from one instant: a second call to the clock could
+    // straddle a local midnight and make the assertion flaky.
     const nowUnixSeconds = Math.floor(Date.now() / 1000)
-    expect(getDayKeyFromUnixSeconds(nowUnixSeconds)).toBe(formatLocalDayKey())
+    expect(getDayKeyFromUnixSeconds(nowUnixSeconds)).toBe(
+      formatLocalDayKey(new Date(nowUnixSeconds * 1000)),
+    )
   })
 })
