@@ -13,6 +13,9 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+
+parallelizeShardableSpec()
 
 for (const version of ["jwt", "v0.12", "v0.13"] as const) {
   for (const models of [["gpt-4o-mini", "gpt-4.1-mini"], []]) {
