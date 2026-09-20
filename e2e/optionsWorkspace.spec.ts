@@ -216,13 +216,35 @@ for (const width of [1440, 390, 320]) {
     if (width === 1440) {
       const section = page.locator("#general-display")
       const heading = section.getByRole("heading").first()
-      const field = page.locator("#display-currency-unit")
+      const card = section.locator('[data-slot="card"]').first()
+      // Settings sections stay cards: the title sits above its own bordered
+      // surface instead of the section splitting into a title rail.
       await expect
-        .poll(
-          async () =>
-            (await field.boundingBox())!.x - (await heading.boundingBox())!.x,
-        )
-        .toBeGreaterThan(180)
+        .poll(async () => {
+          const [headingBox, cardBox] = await Promise.all([
+            heading.boundingBox(),
+            card.boundingBox(),
+          ])
+          return headingBox!.y + headingBox!.height - cardBox!.y
+        })
+        .toBeLessThanOrEqual(0)
+      const surface = await card.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { borderTopWidth: style.borderTopWidth }
+      })
+      expect(surface.borderTopWidth).not.toBe("0px")
+      // The card spans its section, so no block of dead space trails it.
+      await expect
+        .poll(async () => {
+          const [sectionBox, cardBox] = await Promise.all([
+            section.boundingBox(),
+            card.boundingBox(),
+          ])
+          return (
+            sectionBox!.x + sectionBox!.width - (cardBox!.x + cardBox!.width)
+          )
+        })
+        .toBeLessThanOrEqual(1)
     }
     await seedUserPreferences(worker, {
       themeMode: "dark",

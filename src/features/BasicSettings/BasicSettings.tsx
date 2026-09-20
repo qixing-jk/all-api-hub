@@ -1,5 +1,3 @@
-import "./settingsLayout.css"
-
 import type { TFunction } from "i18next"
 import { ChevronDown, Settings } from "lucide-react"
 import {
@@ -595,7 +593,7 @@ export default function BasicSettings() {
 
   return (
     <div
-      className="settings-workspace py-density-4 sm:py-density-6 px-4 sm:px-6"
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={BASIC_SETTINGS_TEST_IDS.page}
     >
       <PageHeader
