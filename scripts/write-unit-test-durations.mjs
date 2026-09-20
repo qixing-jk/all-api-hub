@@ -14,6 +14,11 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse } from "flatted"
 
+import {
+  correctForShardLoad,
+  summarizeBlobReports,
+} from "./utils/unitTestDurations.mjs"
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const reportsDir = path.resolve(rootDir, process.argv[2] ?? ".vitest-reports")
 const outputPath = path.resolve(
@@ -22,20 +27,9 @@ const outputPath = path.resolve(
 )
 
 /**
- * A file's cost is not just its test bodies: for the jsdom project, collection and
- * environment setup are per-file costs that a shard pays before a single assertion runs,
- * so a weighting that ignored them would systematically under-rate the dom files.
- * @param file Blob report entry for one test file.
- * @returns Milliseconds this file occupies a worker.
+ * @param blob Parsed blob report.
+ * @returns Its test-file entries.
  */
-const fileCost = (file) =>
-  (file.result?.duration ?? 0) +
-  (file.setupDuration ?? 0) +
-  (file.prepareDuration ?? 0) +
-  (file.collectDuration ?? 0) +
-  (file.environmentLoad ?? 0)
-
-/** @param blob Parsed blob report. */
 const fileEntries = (blob) => {
   // Blob reports are `[version, files, ...]` after flatted decoding.
   const files = Array.isArray(blob) ? blob[1] : undefined
@@ -58,37 +52,42 @@ if (reportFiles.length === 0) {
   )
 }
 
-/** Per-file milliseconds, summed across the reports of every shard. */
-const durations = new Map()
+const reports = []
+const reportedShards = new Set()
+let declaredShards = 0
 for (const reportFile of reportFiles) {
+  const match = /^blob-(\d+)-(\d+)\.json$/.exec(reportFile)
   const blob = parse(fs.readFileSync(path.join(reportsDir, reportFile), "utf8"))
-  for (const file of fileEntries(blob)) {
-    // `name` is relative to the Vitest root, so the manifest stays portable across
-    // machines (CI runners check out under different absolute paths than a laptop).
-    const key = file.name
-    if (typeof key !== "string") continue
-    durations.set(key, (durations.get(key) ?? 0) + fileCost(file))
+  reports.push({
+    shard: match ? Number(match[1]) : null,
+    files: fileEntries(blob),
+  })
+  if (match) {
+    reportedShards.add(Number(match[1]))
+    declaredShards = Number(match[2])
   }
 }
 
 // Blob names carry the shard selection they were produced under (`blob-2-6.json`). When
 // fewer reports arrive than the run had shards, the manifest is partial and the gaps fall
 // back to the median weight, so say so rather than shipping a quietly weaker split.
-const reportedShards = new Set()
-let declaredShards = 0
-for (const reportFile of reportFiles) {
-  const match = /^blob-(\d+)-(\d+)\.json$/.exec(reportFile)
-  if (!match) continue
-  reportedShards.add(Number(match[1]))
-  declaredShards = Number(match[2])
-}
 if (declaredShards > 0 && reportedShards.size < declaredShards) {
   console.warn(
     `Read ${reportedShards.size} of ${declaredShards} shard reports; files without a duration fall back to the median weight.`,
   )
 }
 
-const sorted = [...durations].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+const { entries, shardTotals } = summarizeBlobReports(reports)
+const corrected = correctForShardLoad(entries, shardTotals)
+if (!corrected) {
+  console.warn(
+    "Shard attribution is incomplete, so measured costs are published uncorrected; shard packing will chase this run's imbalance more than usual.",
+  )
+}
+
+const sorted = [...(corrected ?? entries)].sort(([a], [b]) =>
+  a < b ? -1 : a > b ? 1 : 0,
+)
 const rounded = Object.fromEntries(
   sorted.map(([file, ms]) => [file, Math.round(ms)]),
 )
@@ -110,7 +109,7 @@ fs.writeFileSync(
 )
 
 console.log(
-  `Wrote ${sorted.length} file durations (${(totalMs / 1000).toFixed(0)}s of single-worker work) to ${path.relative(rootDir, outputPath)} from ${reportFiles.length} blob report(s)`,
+  `Wrote ${sorted.length} file durations (${(totalMs / 1000).toFixed(0)}s of load-corrected single-worker work) to ${path.relative(rootDir, outputPath)} from ${reportFiles.length} blob report(s)`,
 )
 console.log(
   `Heaviest: ${sorted
