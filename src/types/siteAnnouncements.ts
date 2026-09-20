@@ -19,12 +19,28 @@ export const SITE_ANNOUNCEMENT_STATUS = {
 export type SiteAnnouncementStatus =
   (typeof SITE_ANNOUNCEMENT_STATUS)[keyof typeof SITE_ANNOUNCEMENT_STATUS]
 
+export const SITE_ANNOUNCEMENT_CHECK_TRIGGERS = {
+  Alarm: "alarm",
+  Manual: "manual",
+} as const
+
+export type SiteAnnouncementCheckTrigger =
+  (typeof SITE_ANNOUNCEMENT_CHECK_TRIGGERS)[keyof typeof SITE_ANNOUNCEMENT_CHECK_TRIGGERS]
+
 /**
  * Supported range for the notification age window, in days.
  */
 export const SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE = {
   min: 1,
   max: 365,
+} as const
+
+/**
+ * Supported range for the polling interval, in minutes.
+ */
+export const SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE = {
+  min: 15,
+  max: 24 * 60,
 } as const
 
 export interface SiteAnnouncementPreferences {
@@ -67,6 +83,24 @@ export function clampNotificationMaxAgeDays(value: unknown): number {
     SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.max,
     Math.max(
       SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.min,
+      Math.trunc(parsed),
+    ),
+  )
+}
+
+/**
+ * Constrains the polling interval to the supported range.
+ */
+export function clampPollingIntervalMinutes(value: unknown): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes
+  }
+
+  return Math.min(
+    SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.max,
+    Math.max(
+      SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.min,
       Math.trunc(parsed),
     ),
   )

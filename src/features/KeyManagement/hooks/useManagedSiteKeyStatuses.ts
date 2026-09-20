@@ -11,6 +11,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
@@ -205,7 +206,9 @@ export function useManagedSiteKeyStatuses(
                 runtimeKey: target.key,
                 signal: target.controller.signal,
                 requestScheduling: {
-                  priority: options.force ? "foreground" : "background",
+                  priority: options.force
+                    ? REQUEST_SCHEDULING_PRIORITIES.Foreground
+                    : REQUEST_SCHEDULING_PRIORITIES.Background,
                 },
                 operationContext: target.operationContext,
                 resolvedChannelKeysByResourceKey:

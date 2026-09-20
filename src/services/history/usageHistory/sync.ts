@@ -29,7 +29,14 @@ import {
 } from "./core"
 import { usageHistoryStorage } from "./storage"
 
-export type UsageHistorySyncTrigger = "manual" | "afterRefresh" | "alarm"
+export const USAGE_HISTORY_SYNC_TRIGGERS = {
+  Manual: "manual",
+  AfterRefresh: "afterRefresh",
+  Alarm: "alarm",
+} as const
+
+export type UsageHistorySyncTrigger =
+  (typeof USAGE_HISTORY_SYNC_TRIGGERS)[keyof typeof USAGE_HISTORY_SYNC_TRIGGERS]
 
 interface UsageHistoryAccountSyncSummary {
   accountId: string
@@ -150,7 +157,7 @@ export async function syncUsageHistoryForAccount(params: {
   // Schedule mode checks.
   if (!force) {
     if (
-      trigger === "afterRefresh" &&
+      trigger === USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh &&
       config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH
     ) {
       return {
@@ -164,7 +171,7 @@ export async function syncUsageHistoryForAccount(params: {
     }
 
     if (
-      trigger === "alarm" &&
+      trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm &&
       config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.ALARM
     ) {
       return {

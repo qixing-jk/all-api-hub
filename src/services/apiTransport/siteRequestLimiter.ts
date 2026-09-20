@@ -1,3 +1,4 @@
+import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { isTestMode } from "~/utils/core/environment"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
@@ -229,7 +230,9 @@ export function createSiteRequestLeaseLimiter(
       // token and one concurrency slot out of reach of a background turn, so an
       // automatic scan can never turn a user action into a delayed request.
       const foregroundIndex = state.queue.findIndex(
-        (item) => item.scheduling?.priority !== "background",
+        (item) =>
+          item.scheduling?.priority !==
+          REQUEST_SCHEDULING_PRIORITIES.Background,
       )
       const hasForegroundWork = foregroundIndex >= 0
       if (foregroundIndex > 0) {
@@ -237,7 +240,9 @@ export function createSiteRequestLeaseLimiter(
       }
 
       const backgroundIndex = state.queue.findIndex(
-        (item) => item.scheduling?.priority === "background",
+        (item) =>
+          item.scheduling?.priority ===
+          REQUEST_SCHEDULING_PRIORITIES.Background,
       )
       const backgroundTakesTurn =
         hasForegroundWork &&
@@ -269,7 +274,8 @@ export function createSiteRequestLeaseLimiter(
       // Abort dispatch is synchronous: queued handlers remove their item before
       // this turn, and this turn detaches the handler before starting the task.
       const [item] = state.queue.splice(index, 1)
-      const isBackground = item.scheduling?.priority === "background"
+      const isBackground =
+        item.scheduling?.priority === REQUEST_SCHEDULING_PRIORITIES.Background
       state.foregroundStreak =
         isBackground || backgroundIndex < 0 ? 0 : state.foregroundStreak + 1
       detachAbortListener(item)

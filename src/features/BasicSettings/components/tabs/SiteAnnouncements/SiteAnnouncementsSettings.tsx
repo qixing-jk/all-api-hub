@@ -17,12 +17,12 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE,
+  SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE,
+} from "~/types/siteAnnouncements"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
-
-const MIN_POLLING_INTERVAL_MINUTES = 15
-const MAX_POLLING_INTERVAL_MINUTES = 24 * 60
 
 /**
  * Normalizes user-entered announcement polling minutes to the supported range.
@@ -35,8 +35,8 @@ export function normalizePollingIntervalInput(value: string): number | null {
   const parsed = Number(value)
   if (
     !Number.isInteger(parsed) ||
-    parsed < MIN_POLLING_INTERVAL_MINUTES ||
-    parsed > MAX_POLLING_INTERVAL_MINUTES
+    parsed < SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.min ||
+    parsed > SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.max
   ) {
     return null
   }
@@ -90,8 +90,8 @@ export default function SiteAnnouncementsSettings() {
       if (intervalMinutes == null) {
         toast.error(
           t("siteAnnouncementNotifications.polling.intervalInvalid", {
-            min: MIN_POLLING_INTERVAL_MINUTES,
-            max: MAX_POLLING_INTERVAL_MINUTES,
+            min: SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.min,
+            max: SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.max,
           }),
         )
         return { ok: false }
@@ -213,8 +213,8 @@ export default function SiteAnnouncementsSettings() {
               <Input
                 aria-label={t("siteAnnouncementNotifications.polling.interval")}
                 type="number"
-                min={MIN_POLLING_INTERVAL_MINUTES}
-                max={MAX_POLLING_INTERVAL_MINUTES}
+                min={SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.min}
+                max={SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE.max}
                 step={1}
                 value={intervalField.draft}
                 onChange={(event) => intervalField.setDraft(event.target.value)}
