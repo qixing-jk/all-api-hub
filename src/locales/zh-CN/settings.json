@@ -703,6 +703,7 @@
     "permissions": "权限管理",
     "refresh": "数据刷新",
     "select": "选择一个分组",
+    "siteAnnouncements": "网站公告",
     "webAiApiCheck": "AI API 测试"
   },
   "taskNotifications": {

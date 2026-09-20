@@ -439,7 +439,7 @@ export default function SiteAnnouncementsPage({
   }
 
   const handleOpenPollingSettings = useCallback(() => {
-    void openSettingsTab("general", {
+    void openSettingsTab("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
@@ -456,7 +456,7 @@ export default function SiteAnnouncementsPage({
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="general"
+            tabId="siteAnnouncements"
             anchor={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             label={t("actions.pollingSettings")}
           />

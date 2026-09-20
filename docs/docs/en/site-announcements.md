@@ -29,7 +29,7 @@ If you only want a central announcement inbox without pop-up reminders, enable p
 
 ### Enable or disable background polling
 
-1. Open **`Basic Settings → General`**.
+1. Open **`Basic Settings → Site Announcements`**.
 2. Find **`Site announcements`**.
 3. Use **`Enable site announcement polling`** to control scheduled background checks.
 

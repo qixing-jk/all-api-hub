@@ -63,6 +63,13 @@ vi.mock(
 )
 
 vi.mock(
+  "~/features/BasicSettings/components/tabs/SiteAnnouncements/SiteAnnouncementsTab",
+  () => ({
+    default: () => <div data-testid="site-announcements-tab-content" />,
+  }),
+)
+
+vi.mock(
   "~/features/BasicSettings/components/tabs/AccountManagement/AccountManagementTab",
   () => ({
     default: () => <div data-testid="account-management-tab-content" />,
@@ -350,12 +357,15 @@ describe("BasicSettings tab mounting", () => {
     expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
   })
 
-  it("keeps site announcement anchors on the general tab", async () => {
+  it("routes site announcement anchors to the site announcements tab", async () => {
     window.history.replaceState(null, "", "/#site-announcement-notifications")
 
     render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
-    expect(await screen.findByTestId("general-tab-content")).toBeInTheDocument()
+    expect(
+      await screen.findByTestId("site-announcements-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
     expect(
       screen.queryByTestId("notifications-tab-content"),
     ).not.toBeInTheDocument()

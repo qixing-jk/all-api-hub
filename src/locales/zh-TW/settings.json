@@ -703,6 +703,7 @@
     "permissions": "權限管理",
     "refresh": "資料重新整理",
     "select": "選擇一個分組",
+    "siteAnnouncements": "網站公告",
     "webAiApiCheck": "AI API 測試"
   },
   "taskNotifications": {

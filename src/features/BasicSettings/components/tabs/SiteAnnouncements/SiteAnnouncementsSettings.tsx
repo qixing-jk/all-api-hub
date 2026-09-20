@@ -67,9 +67,9 @@ export function normalizeNotificationMaxAgeDaysInput(
 }
 
 /**
- * General settings section for provider-site announcement polling.
+ * Site announcements settings section for provider-site announcement polling.
  */
-export default function SiteAnnouncementNotificationSettings() {
+export default function SiteAnnouncementsSettings() {
   const { t } = useTranslation("settings")
   const {
     preferences,

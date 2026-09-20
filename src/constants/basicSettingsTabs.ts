@@ -2,6 +2,7 @@ import { SETTINGS_ANCHORS } from "./settingsAnchors"
 
 export type BasicSettingsTabId =
   | "general"
+  | "siteAnnouncements"
   | "notifications"
   | "balanceHistory"
   | "accountManagement"
@@ -49,10 +50,15 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_BALANCE_HISTORY_CAPTURE]:
       "notifications",
     [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS]: "notifications",
-    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS]: "general",
-    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED]: "general",
-    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL]: "general",
-    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE]: "general",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS]: "siteAnnouncements",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED]:
+      "siteAnnouncements",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL]:
+      "siteAnnouncements",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_MAX_AGE]:
+      "siteAnnouncements",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE]:
+      "siteAnnouncements",
     [SETTINGS_ANCHORS.BALANCE_HISTORY]: "balanceHistory",
     "account-management": "accountManagement",
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY]: "accountManagement",

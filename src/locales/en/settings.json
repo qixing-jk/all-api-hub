@@ -704,6 +704,7 @@
     "permissions": "Permissions",
     "refresh": "Data Refresh",
     "select": "Select a tab",
+    "siteAnnouncements": "Site announcements",
     "webAiApiCheck": "AI API Test"
   },
   "taskNotifications": {

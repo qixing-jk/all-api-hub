@@ -703,6 +703,7 @@
     "permissions": "Quản lý quyền",
     "refresh": "Làm mới dữ liệu",
     "select": "Chọn một nhóm",
+    "siteAnnouncements": "Thông báo website",
     "webAiApiCheck": "Kiểm tra AI API"
   },
   "taskNotifications": {

@@ -705,6 +705,7 @@
     "permissions": "Permisos",
     "refresh": "Actualización de datos",
     "select": "Selecciona una pestaña",
+    "siteAnnouncements": "Anuncios del sitio",
     "webAiApiCheck": "Prueba de AI API"
   },
   "taskNotifications": {

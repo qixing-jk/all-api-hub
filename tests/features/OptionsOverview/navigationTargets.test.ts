@@ -31,7 +31,7 @@ describe("options overview navigation targets", () => {
       buildBasicSettingsAnchorTarget(
         SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       ).params?.tab,
-    ).toBe("general")
+    ).toBe("siteAnnouncements")
     expect(
       buildBasicSettingsAnchorTarget(SETTINGS_ANCHORS.USAGE_HISTORY_SYNC).params
         ?.tab,

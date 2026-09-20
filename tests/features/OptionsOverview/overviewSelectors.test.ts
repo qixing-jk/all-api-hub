@@ -446,7 +446,7 @@ describe("Options overview selectors", () => {
     ).toEqual({
       menuItemId: MENU_ITEM_IDS.BASIC,
       params: {
-        tab: "general",
+        tab: "siteAnnouncements",
         anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
         highlight: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       },
@@ -516,7 +516,7 @@ describe("Options overview selectors", () => {
         "siteAnnouncements",
         "disabled",
         MENU_ITEM_IDS.BASIC,
-        "general",
+        "siteAnnouncements",
         SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
         SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       ],
@@ -927,7 +927,7 @@ describe("Options overview selectors", () => {
         {
           menuItemId: MENU_ITEM_IDS.BASIC,
           params: {
-            tab: "general",
+            tab: "siteAnnouncements",
             anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
             highlight: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
           },

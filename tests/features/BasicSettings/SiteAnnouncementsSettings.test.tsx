@@ -2,10 +2,10 @@ import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import SiteAnnouncementNotificationSettings, {
+import SiteAnnouncementsSettings, {
   normalizeNotificationMaxAgeDaysInput,
   normalizePollingIntervalInput,
-} from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
+} from "~/features/BasicSettings/components/tabs/SiteAnnouncements/SiteAnnouncementsSettings"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -56,7 +56,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("resets polling defaults and its drafts without changing notification delivery", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -86,7 +86,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("updates the polling preference through the preferences context", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -121,7 +121,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
       success: false,
     })
 
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -154,7 +154,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("updates the notification age window through the preferences context", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -179,7 +179,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("rejects notification age windows outside the supported range", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -204,7 +204,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("opens the site announcements page from the quick link action", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -221,7 +221,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("updates the polling interval through the preferences context", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -246,7 +246,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("uses normal one-minute steps for polling interval input", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -259,7 +259,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("resets an invalid polling interval without saving", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -283,7 +283,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("keeps the persisted polling interval without saving", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -304,7 +304,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
   })
 
   it("rejects polling intervals above the supported maximum", async () => {
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -328,7 +328,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
       success: false,
     })
 
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -358,7 +358,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
       new Error("runtime failed"),
     )
 
-    render(<SiteAnnouncementNotificationSettings />, {
+    render(<SiteAnnouncementsSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })

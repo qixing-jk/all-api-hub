@@ -703,6 +703,7 @@
     "permissions": "権限",
     "refresh": "データ更新",
     "select": "タブを選択",
+    "siteAnnouncements": "サイト公告",
     "webAiApiCheck": "AI API テスト"
   },
   "taskNotifications": {

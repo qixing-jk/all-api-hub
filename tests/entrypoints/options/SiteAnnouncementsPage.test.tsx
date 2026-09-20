@@ -375,7 +375,7 @@ describe("SiteAnnouncementsPage", () => {
       }),
     )
 
-    expect(openSettingsTab).toHaveBeenCalledWith("general", {
+    expect(openSettingsTab).toHaveBeenCalledWith("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
@@ -1263,7 +1263,7 @@ describe("SiteAnnouncementsPage", () => {
         name: "siteAnnouncements:empty.pollingSettingsLink",
       }),
     )
-    expect(openSettingsTab).toHaveBeenCalledWith("general", {
+    expect(openSettingsTab).toHaveBeenCalledWith("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
