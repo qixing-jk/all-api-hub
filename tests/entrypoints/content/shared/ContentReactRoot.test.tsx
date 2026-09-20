@@ -12,16 +12,32 @@ import {
 } from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { EMPTY_DEV_IDENTITY } from "~/utils/core/devIdentity"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import {
+  buildDevIdentity,
+  DEV_IDENTITY_FIXTURE_PATH,
+  DEV_IDENTITY_FIXTURE_PATH_TAIL,
+} from "~~/tests/test-utils/devIdentityFixtures"
 import { createMatchMediaController } from "~~/tests/test-utils/matchMedia"
 
-const { getPreferencesMock, loggerWarnMock, watchMock, unwatchMock } =
-  vi.hoisted(() => ({
-    getPreferencesMock: vi.fn(),
-    loggerWarnMock: vi.fn(),
-    watchMock: vi.fn(),
-    unwatchMock: vi.fn(),
-  }))
+const {
+  getPreferencesMock,
+  loggerWarnMock,
+  watchMock,
+  unwatchMock,
+  getDevIdentityMock,
+} = vi.hoisted(() => ({
+  getPreferencesMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  watchMock: vi.fn(),
+  unwatchMock: vi.fn(),
+  getDevIdentityMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/extensionIdentity", () => ({
+  getDevIdentity: (...args: unknown[]) => getDevIdentityMock(...args),
+}))
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
@@ -65,6 +81,8 @@ describe("ContentReactRoot", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.resetAllMocks()
+    // Release builds carry no instance color, so the dev marker stays hidden.
+    getDevIdentityMock.mockReturnValue(EMPTY_DEV_IDENTITY)
   })
 
   it("waits for initial appearance before mounting interactive UI", async () => {
@@ -363,5 +381,36 @@ describe("ContentReactRoot", () => {
 
     window.removeEventListener("keydown", hostPageKeyDown)
     window.removeEventListener("keyup", hostPageKeyUp)
+  })
+
+  it("stays unmarked when the build carries no instance color", async () => {
+    getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
+
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+
+    render(<ContentReactRoot />)
+
+    await screen.findByTestId("redemption-toaster")
+    expect(screen.queryByTestId("dev-identity-tag")).not.toBeInTheDocument()
+  })
+
+  it("marks injected UI with the build's identity while it is on the page", async () => {
+    getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
+    getDevIdentityMock.mockReturnValue(buildDevIdentity())
+
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+
+    render(<ContentReactRoot />)
+
+    const tag = await screen.findByTestId("dev-identity-tag")
+
+    expect(tag).toHaveTextContent(DEV_IDENTITY_FIXTURE_PATH_TAIL)
+    expect(tag).toHaveAttribute("title", DEV_IDENTITY_FIXTURE_PATH)
+    // The tag must never take clicks away from the page or from the toasts.
+    expect(tag).toHaveClass("pointer-events-none")
   })
 })

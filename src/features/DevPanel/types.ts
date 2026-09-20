@@ -24,6 +24,25 @@ export interface DevPanelAction {
   run: () => void | Promise<void>
 }
 
+/**
+ * How much a row's value can be trusted, shown next to the value so the panel
+ * never implies more certainty than the value has.
+ */
+export type DevPanelInfoTone = "stable" | "runtime" | "best-effort"
+
+/** A read-only fact rendered inside a dev panel section. */
+export interface DevPanelInfoRow {
+  id: string
+  label: string
+  /** Rendered as unavailable when null, rather than hiding the row. */
+  value: string | null
+  tone?: DevPanelInfoTone
+  /** Extra explanation shown under the value. */
+  hint?: string
+  /** Offers a copy button when the value exists. */
+  copyable?: boolean
+}
+
 /** A titled group of dev actions rendered in the floating panel. */
 export interface DevPanelSection {
   id: string
@@ -31,6 +50,17 @@ export interface DevPanelSection {
   icon?: LucideIcon
   /** Optional one-line hint shown under the title. */
   description?: string
+  /** Read-only facts shown between the description and the actions. */
+  rows?: readonly DevPanelInfoRow[]
+  /**
+   * Allows collapsing the section. Sections that are reference material rather
+   * than controls set this so they do not push the controls down the panel.
+   */
+  collapsible?: boolean
+  /** Starts collapsed; only meaningful with `collapsible`. */
+  defaultCollapsed?: boolean
+  /** Shown in the header while collapsed, e.g. the value the section reports. */
+  summary?: string
   /** Surfaces where the section is shown; omit to show on every surface. */
   surfaces?: readonly DevPanelSurface[]
   /** Page ids where the section is shown; omit to show on every page. */

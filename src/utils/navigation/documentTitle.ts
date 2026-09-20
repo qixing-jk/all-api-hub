@@ -1,3 +1,5 @@
+import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { formatDevTitleSuffix } from "~/utils/core/devBranding"
 import { createLogger } from "~/utils/core/logger"
 import i18n from "~/utils/i18n"
 
@@ -39,7 +41,10 @@ function getDocumentTitle(pageType: DocumentPageType): string {
  */
 export function setDocumentTitle(pageType: DocumentPageType): void {
   try {
-    document.title = getDocumentTitle(pageType)
+    // Development builds append their source path so tabs, side panel titles and
+    // windows opened by the extension identify which checkout they belong to.
+    const identitySuffix = formatDevTitleSuffix(getDevIdentity())
+    document.title = `${getDocumentTitle(pageType)}${identitySuffix}`
   } catch (error) {
     logger.warn("Failed to set document title", error)
   }
