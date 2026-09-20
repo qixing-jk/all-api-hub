@@ -29,8 +29,13 @@ for (const width of [390, 320]) {
     })
     const base = `chrome-extension://${extensionId}/`
     await page.goto(`${base}${OPTIONS_PAGE_PATH}#basic`)
-    const preview = page.getByRole("region", { name: "Preview", exact: true })
-    const sample = preview.getByText("Example account", { exact: true })
+    // The removed appearance preview used to supply these samples. The
+    // theme-mode row title inherits the theme font (`text-sm`), and a real
+    // control on the same page covers the control case.
+    const sample = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE} h6`)
+    const sampleControl = page
+      .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}`)
+      .getByRole("spinbutton")
     const initialFont = await sample.evaluate(
       (element) => getComputedStyle(element).fontFamily,
     )
@@ -40,11 +45,8 @@ for (const width of [390, 320]) {
       .locator("..")
       .click()
     await expect(sample).toHaveCSS("font-family", /Georgia/)
-    await expect(preview.getByRole("textbox")).toHaveCSS(
-      "font-family",
-      /Georgia/,
-    )
-    await expect(sample).toHaveCSS("font-size", "20px")
+    await expect(sampleControl).toHaveCSS("font-family", /Georgia/)
+    await expect(sample).toHaveCSS("font-size", "18px")
     await expect(page.locator("html")).toHaveAttribute(
       "data-theme-density",
       "compact",
