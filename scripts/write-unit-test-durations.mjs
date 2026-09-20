@@ -85,9 +85,11 @@ if (!corrected) {
   )
 }
 
-const sorted = [...(corrected ?? entries)].sort(([a], [b]) =>
-  a < b ? -1 : a > b ? 1 : 0,
-)
+// Without the load correction the entries still carry their source shard, so flatten to
+// plain numeric weights before publishing.
+const weights =
+  corrected ?? new Map([...entries].map(([file, { cost }]) => [file, cost]))
+const sorted = [...weights].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 const rounded = Object.fromEntries(
   sorted.map(([file, ms]) => [file, Math.round(ms)]),
 )
@@ -109,7 +111,7 @@ fs.writeFileSync(
 )
 
 console.log(
-  `Wrote ${sorted.length} file durations (${(totalMs / 1000).toFixed(0)}s of load-corrected single-worker work) to ${path.relative(rootDir, outputPath)} from ${reportFiles.length} blob report(s)`,
+  `Wrote ${sorted.length} file durations (${(totalMs / 1000).toFixed(0)}s of ${corrected ? "load-corrected" : "raw"} single-worker work) to ${path.relative(rootDir, outputPath)} from ${reportFiles.length} blob report(s)`,
 )
 console.log(
   `Heaviest: ${sorted
