@@ -1393,6 +1393,7 @@ describe("preferencesMigration", () => {
           enabled: true,
           notificationEnabled: false,
           intervalMinutes: 120,
+          notificationMaxAgeDays: 7,
         },
       })
 
@@ -1403,6 +1404,7 @@ describe("preferencesMigration", () => {
         enabled: false,
         notificationEnabled: false,
         intervalMinutes: 120,
+        notificationMaxAgeDays: 7,
       })
     })
 

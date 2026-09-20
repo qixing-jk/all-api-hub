@@ -335,11 +335,24 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:site-announcements-max-age",
+    "general",
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_MAX_AGE,
+    "settings:siteAnnouncementNotifications.polling.maxAge",
+    508,
+    {
+      descriptionKey:
+        "settings:siteAnnouncementNotifications.polling.maxAgeDesc",
+      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
+      keywords: ["announcement", "notice", "history", "days", "age"],
+    },
+  ),
+  buildControlDefinition(
     "control:site-announcements-page",
     "general",
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     "settings:siteAnnouncementNotifications.page.title",
-    508,
+    509,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
       breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
@@ -351,7 +364,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "changelog-on-update-toggle",
     "settings:changelogOnUpdate.toggleLabel",
-    509,
+    510,
     {
       descriptionKey: "settings:changelogOnUpdate.toggleDesc",
       breadcrumbsKeys: [
@@ -367,7 +380,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-console-enabled",
     "settings:logging.consoleEnabled",
-    510,
+    511,
     {
       descriptionKey: "settings:logging.consoleEnabledDesc",
       breadcrumbsKeys: [
@@ -383,7 +396,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-min-level",
     "settings:logging.minLevel",
-    511,
+    512,
     {
       descriptionKey: "settings:logging.minLevelDesc",
       breadcrumbsKeys: [
@@ -399,7 +412,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED,
     "settings:productAnalytics.enableLabel",
-    512,
+    513,
     {
       descriptionKey: "settings:productAnalytics.enableDescription",
       breadcrumbsKeys: PRODUCT_ANALYTICS_BREADCRUMBS,
@@ -411,7 +424,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "danger-reset-settings",
     "settings:danger.resetSettings",
-    513,
+    514,
     {
       descriptionKey: "settings:danger.resetDesc",
       breadcrumbsKeys: [

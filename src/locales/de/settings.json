@@ -638,7 +638,10 @@
       "enableDesc": "Wenn deaktiviert, wird die geplante Hintergrundabfrage gestoppt. Vorhandene lokale Aufzeichnungen bleiben erhalten und auf der Ankündigungsseite kann weiterhin eine manuelle Überprüfung durchgeführt werden.",
       "interval": "Abfrageintervall",
       "intervalDesc": "Legen Sie das Abfrageintervall für Hintergrund-Website-Ankündigungen in Minuten fest, von 15 bis 1440.",
-      "intervalInvalid": "Geben Sie eine ganze Minutenzahl zwischen {{min}} und {{max}} ein."
+      "intervalInvalid": "Geben Sie eine ganze Minutenzahl zwischen {{min}} und {{max}} ein.",
+      "maxAge": "Gültigkeitsdauer für Benachrichtigungen",
+      "maxAgeDesc": "Ankündigungen, die früher veröffentlicht wurden, werden als gelesen gespeichert und lösen keine Benachrichtigung aus.",
+      "maxAgeInvalid": "Geben Sie eine ganze Zahl zwischen {{min}} und {{max}} Tagen ein."
     },
     "title": "Website-Ankündigungen"
   },

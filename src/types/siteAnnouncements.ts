@@ -19,6 +19,14 @@ export const SITE_ANNOUNCEMENT_STATUS = {
 export type SiteAnnouncementStatus =
   (typeof SITE_ANNOUNCEMENT_STATUS)[keyof typeof SITE_ANNOUNCEMENT_STATUS]
 
+/**
+ * Supported range for the notification age window, in days.
+ */
+export const SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE = {
+  min: 1,
+  max: 365,
+} as const
+
 export interface SiteAnnouncementPreferences {
   /**
    * Master switch for automatic background announcement polling.
@@ -30,6 +38,12 @@ export interface SiteAnnouncementPreferences {
    */
   notificationEnabled: boolean
   intervalMinutes: number
+  /**
+   * How old a newly discovered announcement may be and still count as news.
+   * Announcements published earlier than this window are stored as already
+   * read, so re-published history never notifies or inflates unread counts.
+   */
+  notificationMaxAgeDays: number
 }
 
 export const DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES: SiteAnnouncementPreferences =
@@ -37,7 +51,26 @@ export const DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES: SiteAnnouncementPreferences 
     enabled: false,
     notificationEnabled: true,
     intervalMinutes: 360,
+    notificationMaxAgeDays: 7,
   }
+
+/**
+ * Constrains the notification age window to the supported range.
+ */
+export function clampNotificationMaxAgeDays(value: unknown): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays
+  }
+
+  return Math.min(
+    SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.max,
+    Math.max(
+      SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.min,
+      Math.trunc(parsed),
+    ),
+  )
+}
 
 /**
  * Merges legacy or partial stored preferences with the current defaults.
@@ -54,6 +87,10 @@ export function normalizeSiteAnnouncementPreferences(
     intervalMinutes:
       preferences?.intervalMinutes ??
       DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes,
+    notificationMaxAgeDays: clampNotificationMaxAgeDays(
+      preferences?.notificationMaxAgeDays ??
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+    ),
   }
 }
 

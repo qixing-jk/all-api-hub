@@ -638,7 +638,10 @@
       "enableDesc": "When disabled, scheduled background polling stops. Existing local records are kept, and the announcement page can still run a manual check.",
       "interval": "Polling interval",
       "intervalDesc": "Set the background site announcement polling interval in minutes, from 15 to 1440.",
-      "intervalInvalid": "Enter a whole number from {{min}} to {{max}} minutes."
+      "intervalInvalid": "Enter a whole number from {{min}} to {{max}} minutes.",
+      "maxAge": "Notification age limit",
+      "maxAgeDesc": "Announcements published earlier than this limit are saved to the list as already read and never notify.",
+      "maxAgeInvalid": "Enter a whole number from {{min}} to {{max}} days."
     },
     "title": "Site announcements"
   },

@@ -593,11 +593,30 @@ class SiteAnnouncementStorage {
   }
 
   async markRead(recordId: string): Promise<boolean> {
+    return (await this.markRecordsRead([recordId])) > 0
+  }
+
+  /**
+   * Marks several records as read in one write, for batches that were stored as
+   * history rather than as news.
+   */
+  async markRecordsRead(recordIds: string[]): Promise<number> {
+    if (recordIds.length === 0) {
+      return 0
+    }
+
+    const recordIdSet = new Set(recordIds)
+
     return await this.mutateStore(async (store) => {
+      const now = Date.now()
+      let markedCount = 0
+
       for (const site of Object.values(store.sites)) {
-        const record = site.records.find((item) => item.id === recordId)
-        if (record && !record.read) {
-          const now = Date.now()
+        for (const record of site.records) {
+          if (!recordIdSet.has(record.id) || record.read) {
+            continue
+          }
+
           const digest = await digestAnnouncementFingerprint(record.fingerprint)
           const markers = (store.identityLedger[site.siteKey] ??= {})
           const marker = (markers[digest] ??= {
@@ -607,10 +626,11 @@ class SiteAnnouncementStorage {
           marker.readAt = now
           record.read = true
           record.readAt = now
-          return { changed: true, result: true }
+          markedCount += 1
         }
       }
-      return { changed: false, result: false }
+
+      return { changed: markedCount > 0, result: markedCount }
     })
   }
 

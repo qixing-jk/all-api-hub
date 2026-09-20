@@ -391,6 +391,7 @@ describe("settings product analytics snapshots", () => {
         enabled: true,
         notificationEnabled: false,
         intervalMinutes: 1_440,
+        notificationMaxAgeDays: 7,
       },
     })
 

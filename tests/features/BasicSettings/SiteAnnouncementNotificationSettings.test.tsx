@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import SiteAnnouncementNotificationSettings, {
+  normalizeNotificationMaxAgeDaysInput,
   normalizePollingIntervalInput,
 } from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
 import toast from "~/lib/notify"
@@ -21,10 +22,14 @@ const {
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
+    preferences: null,
     siteAnnouncementNotifications: {
       enabled: true,
       notificationEnabled: true,
       intervalMinutes: 360,
+      notificationMaxAgeDays:
+        DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+          .notificationMaxAgeDays,
     },
     updateSiteAnnouncementNotifications:
       updateSiteAnnouncementNotificationsMock,
@@ -50,27 +55,33 @@ describe("SiteAnnouncementNotificationSettings", () => {
     updateSiteAnnouncementNotificationsMock.mockResolvedValue({ success: true })
   })
 
-  it("resets polling defaults and its interval draft without changing notification delivery", async () => {
+  it("resets polling defaults and its drafts without changing notification delivery", async () => {
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
-    const input = screen.getByRole("spinbutton")
-    fireEvent.change(input, { target: { value: "720" } })
+    const intervalInput = screen.getByRole("spinbutton", {
+      name: "settings:siteAnnouncementNotifications.polling.interval",
+    })
+    const maxAgeInput = screen.getByRole("spinbutton", {
+      name: "settings:siteAnnouncementNotifications.polling.maxAge",
+    })
+    fireEvent.change(intervalInput, { target: { value: "720" } })
+    fireEvent.change(maxAgeInput, { target: { value: "90" } })
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.reset" }),
     )
-    await waitFor(() =>
-      expect(input).toHaveValue(
-        DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes,
-      ),
-    )
+    const defaults = DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+    await waitFor(() => {
+      expect(intervalInput).toHaveValue(defaults.intervalMinutes)
+      expect(maxAgeInput).toHaveValue(defaults.notificationMaxAgeDays)
+    })
     expect(
       updateSiteAnnouncementNotificationsMock,
     ).toHaveBeenCalledExactlyOnceWith({
-      enabled: DEFAULT_PREFERENCES.siteAnnouncementNotifications!.enabled,
-      intervalMinutes:
-        DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes,
+      enabled: defaults.enabled,
+      intervalMinutes: defaults.intervalMinutes,
+      notificationMaxAgeDays: defaults.notificationMaxAgeDays,
     })
   })
 
@@ -140,6 +151,56 @@ describe("SiteAnnouncementNotificationSettings", () => {
       "settings:siteAnnouncementNotifications.polling.enable",
     )
     expect(pollingSwitch).toHaveAttribute("aria-checked", "true")
+  })
+
+  it("updates the notification age window through the preferences context", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const maxAgeInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.maxAge",
+    )
+
+    fireEvent.change(maxAgeInput, { target: { value: "14" } })
+    fireEvent.blur(maxAgeInput)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        notificationMaxAgeDays: 14,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      { success: true },
+      "settings:siteAnnouncementNotifications.polling.maxAge",
+    )
+  })
+
+  it("rejects notification age windows outside the supported range", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const maxAgeInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.maxAge",
+    )
+
+    fireEvent.change(maxAgeInput, { target: { value: "0" } })
+    fireEvent.blur(maxAgeInput)
+
+    await waitFor(() =>
+      expect(maxAgeInput).toHaveValue(
+        DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+          .notificationMaxAgeDays,
+      ),
+    )
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "settings:siteAnnouncementNotifications.polling.maxAgeInvalid",
+    )
   })
 
   it("opens the site announcements page from the quick link action", async () => {
@@ -336,5 +397,17 @@ describe("normalizePollingIntervalInput", () => {
     expect(normalizePollingIntervalInput("14")).toBeNull()
     expect(normalizePollingIntervalInput("1441")).toBeNull()
     expect(normalizePollingIntervalInput("15.5")).toBeNull()
+  })
+
+  it("accepts whole notification age days within the supported range", () => {
+    expect(normalizeNotificationMaxAgeDaysInput("1")).toBe(1)
+    expect(normalizeNotificationMaxAgeDaysInput("365")).toBe(365)
+  })
+
+  it("rejects out-of-range and fractional notification age values", () => {
+    expect(normalizeNotificationMaxAgeDaysInput("0")).toBeNull()
+    expect(normalizeNotificationMaxAgeDaysInput("366")).toBeNull()
+    expect(normalizeNotificationMaxAgeDaysInput("7.5")).toBeNull()
+    expect(normalizeNotificationMaxAgeDaysInput("")).toBeNull()
   })
 })

@@ -637,7 +637,10 @@
       "enableDesc": "Sau khi tắt sẽ dừng lấy định kỳ trong nền. Bản ghi thông báo cục bộ đã lưu vẫn được giữ, và trang thông báo vẫn có thể kiểm tra thủ công.",
       "interval": "Khoảng thời gian lấy",
       "intervalDesc": "Đặt khoảng thời gian lấy thông báo website trong nền theo phút, hỗ trợ từ 15 đến 1440 phút.",
-      "intervalInvalid": "Nhập số phút nguyên từ {{min}} đến {{max}}."
+      "intervalInvalid": "Nhập số phút nguyên từ {{min}} đến {{max}}.",
+      "maxAge": "Giới hạn thời gian thông báo",
+      "maxAgeDesc": "Thông báo được đăng trước giới hạn này sẽ được lưu ở trạng thái đã đọc và không gửi thông báo.",
+      "maxAgeInvalid": "Nhập số ngày nguyên từ {{min}} đến {{max}}."
     },
     "title": "Thông báo website"
   },

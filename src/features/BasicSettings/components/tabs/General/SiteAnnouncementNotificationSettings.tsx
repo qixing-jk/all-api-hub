@@ -1,4 +1,4 @@
-import { Clock, Megaphone } from "lucide-react"
+import { CalendarDays, Clock, Megaphone } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -17,6 +17,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE } from "~/types/siteAnnouncements"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -36,6 +37,28 @@ export function normalizePollingIntervalInput(value: string): number | null {
     !Number.isInteger(parsed) ||
     parsed < MIN_POLLING_INTERVAL_MINUTES ||
     parsed > MAX_POLLING_INTERVAL_MINUTES
+  ) {
+    return null
+  }
+
+  return parsed
+}
+
+/**
+ * Normalizes user-entered notification age days to the supported range.
+ */
+export function normalizeNotificationMaxAgeDaysInput(
+  value: string,
+): number | null {
+  if (value.trim() === "") {
+    return null
+  }
+
+  const parsed = Number(value)
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.min ||
+    parsed > SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.max
   ) {
     return null
   }
@@ -93,6 +116,43 @@ export default function SiteAnnouncementNotificationSettings() {
     },
   })
 
+  const maxAgeDaysField = useDeferredPreferenceField({
+    savedValue: String(siteAnnouncementNotifications.notificationMaxAgeDays),
+    savedVersion: preferences?.lastUpdated ?? 0,
+    onCommit: async (draft) => {
+      const notificationMaxAgeDays = normalizeNotificationMaxAgeDaysInput(draft)
+      if (notificationMaxAgeDays == null) {
+        toast.error(
+          t("siteAnnouncementNotifications.polling.maxAgeInvalid", {
+            min: SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.min,
+            max: SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.max,
+          }),
+        )
+        return { ok: false }
+      }
+      if (
+        notificationMaxAgeDays ===
+        siteAnnouncementNotifications.notificationMaxAgeDays
+      ) {
+        return { ok: true, value: String(notificationMaxAgeDays) }
+      }
+
+      let response = { success: false }
+      try {
+        response = await updateSiteAnnouncementNotifications({
+          notificationMaxAgeDays,
+        })
+      } catch {
+        response = { success: false }
+      }
+      showUpdateToast(
+        response,
+        t("siteAnnouncementNotifications.polling.maxAge"),
+      )
+      return { ok: response.success, value: String(notificationMaxAgeDays) }
+    },
+  })
+
   return (
     <SettingSection
       resetRequiresConfirmation={false}
@@ -101,16 +161,23 @@ export default function SiteAnnouncementNotificationSettings() {
           DEFAULT_PREFERENCES.siteAnnouncementNotifications!.enabled &&
         siteAnnouncementNotifications.intervalMinutes ===
           DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes &&
-        !intervalField.isDirty
+        siteAnnouncementNotifications.notificationMaxAgeDays ===
+          DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+            .notificationMaxAgeDays &&
+        !intervalField.isDirty &&
+        !maxAgeDaysField.isDirty
       }
       onReset={async () => {
         const defaults = DEFAULT_PREFERENCES.siteAnnouncementNotifications!
         const result = await updateSiteAnnouncementNotifications({
           enabled: defaults.enabled,
           intervalMinutes: defaults.intervalMinutes,
+          notificationMaxAgeDays: defaults.notificationMaxAgeDays,
         })
-        if (result.success)
+        if (result.success) {
           intervalField.setDraft(String(defaults.intervalMinutes))
+          maxAgeDaysField.setDraft(String(defaults.notificationMaxAgeDays))
+        }
         return { ok: result.success }
       }}
       id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS}
@@ -154,6 +221,31 @@ export default function SiteAnnouncementNotificationSettings() {
                 onBlur={() => void intervalField.commit()}
                 onKeyDown={intervalField.handleKeyDown}
                 disabled={intervalField.isCommitting}
+                containerClassName="w-full sm:w-32"
+              />
+            }
+          />
+          <CardItem
+            id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_MAX_AGE}
+            icon={
+              <CalendarDays className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
+            title={t("siteAnnouncementNotifications.polling.maxAge")}
+            description={t("siteAnnouncementNotifications.polling.maxAgeDesc")}
+            rightContent={
+              <Input
+                aria-label={t("siteAnnouncementNotifications.polling.maxAge")}
+                type="number"
+                min={SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.min}
+                max={SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE.max}
+                step={1}
+                value={maxAgeDaysField.draft}
+                onChange={(event) =>
+                  maxAgeDaysField.setDraft(event.target.value)
+                }
+                onBlur={() => void maxAgeDaysField.commit()}
+                onKeyDown={maxAgeDaysField.handleKeyDown}
+                disabled={maxAgeDaysField.isCommitting}
                 containerClassName="w-full sm:w-32"
               />
             }

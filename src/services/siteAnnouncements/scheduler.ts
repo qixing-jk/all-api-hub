@@ -1,5 +1,6 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
@@ -16,6 +17,7 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
+  clampNotificationMaxAgeDays,
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   normalizeSiteAnnouncementPreferences,
   SITE_ANNOUNCEMENT_STATUS,
@@ -58,19 +60,24 @@ function clampIntervalMinutes(value: unknown): number {
 }
 
 /**
- * Creates the provider request context for a specific account.
+ * Creates the provider request context for a specific account. Automatic
+ * polling runs in the limiter's background lane so it cannot compete with the
+ * user's own requests on the same site; user-initiated work stays foreground.
  */
 function createProviderRequest(
   account: SiteAccount,
   provider: SiteAnnouncementProvider,
+  priority: RequestScheduling["priority"] = "background",
 ): SiteAnnouncementProviderRequest {
+  const { request } = createAccountApiRequestFromStoredAccount(account)
+
   return {
     accountId: account.id,
     siteName: account.site_name,
     siteType: account.site_type,
     baseUrl: account.site_url,
     providerId: provider.id,
-    apiRequest: createAccountApiRequestFromStoredAccount(account).request,
+    apiRequest: { ...request, requestScheduling: { priority } },
   }
 }
 
@@ -109,6 +116,45 @@ function createRecordInput(params: {
     readAt: params.announcement.readAt,
     fingerprint,
   }
+}
+
+/**
+ * Splits freshly stored records into news and history.
+ *
+ * A site's first successful scan only establishes a baseline: everything it
+ * returns predates the user's decision to track that site, so none of it is
+ * news. On later scans, announcements published before the notification age
+ * window are history too. Records without an upstream timestamp cannot be aged
+ * and stay news, because their provider only ever reports the current notice.
+ */
+export function partitionAnnouncementRecords(params: {
+  records: SiteAnnouncementRecord[]
+  isFirstScan: boolean
+  maxAgeDays: number
+  now: number
+}): {
+  news: SiteAnnouncementRecord[]
+  history: SiteAnnouncementRecord[]
+} {
+  if (params.isFirstScan) {
+    return { news: [], history: [...params.records] }
+  }
+
+  const oldestNewsAt = params.now - params.maxAgeDays * 24 * 60 * 60 * 1000
+  const news: SiteAnnouncementRecord[] = []
+  const history: SiteAnnouncementRecord[] = []
+
+  for (const record of params.records) {
+    const isOutdated =
+      typeof record.createdAt === "number" && record.createdAt < oldestNewsAt
+    if (isOutdated) {
+      history.push(record)
+    } else {
+      news.push(record)
+    }
+  }
+
+  return { news, history }
 }
 
 /**
@@ -351,6 +397,9 @@ class SiteAnnouncementScheduler {
       intervalMinutes: clampIntervalMinutes(
         updates.intervalMinutes ?? current.intervalMinutes,
       ),
+      notificationMaxAgeDays: clampNotificationMaxAgeDays(
+        updates.notificationMaxAgeDays ?? current.notificationMaxAgeDays,
+      ),
     }
 
     await userPreferences.savePreferences({
@@ -383,27 +432,20 @@ class SiteAnnouncementScheduler {
     }
 
     try {
-      const automaticPollingPreferences =
-        params.trigger === "alarm"
-          ? normalizeSiteAnnouncementPreferences(
-              (await userPreferences.getPreferences())
-                .siteAnnouncementNotifications,
-            )
-          : undefined
+      const pollingPreferences = normalizeSiteAnnouncementPreferences(
+        (await userPreferences.getPreferences()).siteAnnouncementNotifications,
+      )
 
-      if (params.trigger === "alarm" && !automaticPollingPreferences?.enabled) {
+      if (params.trigger === "alarm" && !pollingPreferences.enabled) {
         return result
       }
 
-      const siteStatesByKey =
-        params.trigger === "alarm"
-          ? new Map(
-              (await siteAnnouncementStorage.getStatus()).map((site) => [
-                site.siteKey,
-                site,
-              ]),
-            )
-          : undefined
+      const siteStatesByKey = new Map(
+        (await siteAnnouncementStorage.getStatus()).map((site) => [
+          site.siteKey,
+          site,
+        ]),
+      )
 
       const accounts = params.accountIds?.length
         ? await Promise.all(
@@ -418,28 +460,34 @@ class SiteAnnouncementScheduler {
 
       for (const account of dedupeAnnouncementSources(accounts)) {
         const provider = getSiteAnnouncementProvider(account.site_type)
-        const request = createProviderRequest(account, provider)
+        const request = createProviderRequest(
+          account,
+          provider,
+          params.trigger === "manual" ? "foreground" : "background",
+        )
         const siteKey = provider.createSiteKey({
           accountId: account.id,
           siteType: account.site_type,
           baseUrl: account.site_url,
         })
         const now = Date.now()
-        const existingSiteState = siteStatesByKey?.get(siteKey)
+        const existingSiteState = siteStatesByKey.get(siteKey)
+        // The first successful scan of a site only records what already exists
+        // there; nothing it finds can be news the user has not seen.
+        const isFirstScan = existingSiteState?.lastSuccessAt === undefined
 
         if (
           params.trigger === "alarm" &&
-          automaticPollingPreferences &&
           existingSiteState &&
           isWithinAnnouncementCooldown({
             siteState: existingSiteState,
             now,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
           })
         ) {
           const cooldownExpiresAt = getAnnouncementCooldownExpiresAt({
             siteState: existingSiteState,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
           })
           if (cooldownExpiresAt != null) {
             nextCooldownExpiresAt = Math.min(
@@ -450,7 +498,7 @@ class SiteAnnouncementScheduler {
 
           logger.debug("Skipping site announcement check within cooldown", {
             siteKey,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
             lastCheckedAt: existingSiteState.lastCheckedAt ?? null,
           })
           continue
@@ -493,21 +541,38 @@ class SiteAnnouncementScheduler {
           result.records.push(...createdRecords)
 
           if (createdRecords.length > 0) {
-            const notification = await notifySiteAnnouncements(createdRecords)
-            await siteAnnouncementStorage.updateNotificationState(
-              siteKey,
-              createdRecords.map((record) => record.id),
-              {
-                notifiedAt: notification.success ? Date.now() : undefined,
-                notificationError: notification.error,
-              },
-            )
+            const { news, history } = partitionAnnouncementRecords({
+              records: createdRecords,
+              isFirstScan,
+              maxAgeDays: pollingPreferences.notificationMaxAgeDays,
+              now,
+            })
 
-            if (notification.success) {
-              result.notified += createdRecords.length
-              // Ack every item in checkResult.announcements, not just createdRecords,
-              // so provider.markRead can stop returning already-seen unread payloads.
-              await provider.markRead?.(request, checkResult.announcements)
+            if (history.length > 0) {
+              await siteAnnouncementStorage.markRecordsRead(
+                history.map((record) => record.id),
+              )
+            }
+
+            // A manual check means the user is already looking at the page it
+            // refreshes, so it never notifies.
+            if (news.length > 0 && params.trigger !== "manual") {
+              const notification = await notifySiteAnnouncements(news)
+              await siteAnnouncementStorage.updateNotificationState(
+                siteKey,
+                news.map((record) => record.id),
+                {
+                  notifiedAt: notification.success ? Date.now() : undefined,
+                  notificationError: notification.error,
+                },
+              )
+
+              if (notification.success) {
+                result.notified += news.length
+                // Ack every item in checkResult.announcements, not just createdRecords,
+                // so provider.markRead can stop returning already-seen unread payloads.
+                await provider.markRead?.(request, checkResult.announcements)
+              }
             }
           }
         } catch (error) {
@@ -528,11 +593,11 @@ class SiteAnnouncementScheduler {
 
       if (
         params.trigger === "alarm" &&
-        automaticPollingPreferences?.enabled &&
+        pollingPreferences.enabled &&
         nextCooldownExpiresAt != null
       ) {
         const intervalMinutes = clampIntervalMinutes(
-          automaticPollingPreferences.intervalMinutes,
+          pollingPreferences.intervalMinutes,
         )
         const delayInMinutes = Math.max(
           1,
@@ -615,9 +680,10 @@ async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
     return
   }
 
-  await service.markRead(createProviderRequest(account, service), [
-    { id: record.upstreamId },
-  ])
+  await service.markRead(
+    createProviderRequest(account, service, "foreground"),
+    [{ id: record.upstreamId }],
+  )
 }
 
 /**

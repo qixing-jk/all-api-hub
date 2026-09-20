@@ -53,8 +53,9 @@ If you only disable **`Site announcement notifications`**, new announcements are
 | Default interval | Checks every 360 minutes by default. |
 | Interval range | Configured values are limited to 15 minutes through 24 hours. |
 | Deduplication | New announcements from the same site are deduplicated by content or upstream announcement ID. |
-| Local retention | Up to 10 announcement records are kept per site. |
-| Manual check | **`Check now`** on the **`Site Announcements`** page is not blocked by the background polling switch. |
+| Notification age limit | 7 days by default, configurable. Announcements published earlier than the limit are saved to the list as already read and never notify. Announcements returned by a site's first scan are all treated as history and do not notify either. |
+| Local retention | Up to 100 announcement records are kept per site. |
+| Manual check | **`Check now`** on the **`Site Announcements`** page is not blocked by the background polling switch, and manual checks never send notifications. |
 
 For accounts that share the same site-wide announcement endpoint, All API Hub checks the site once to avoid duplicate polling. Sub2API announcements are account-scoped unread announcements, so they are checked per account.
 
