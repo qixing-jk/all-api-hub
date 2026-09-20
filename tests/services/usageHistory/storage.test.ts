@@ -527,6 +527,22 @@ describe("usageHistoryStorage", () => {
     })
   })
 
+  it("does not update or overwrite usage history when the read fails", async () => {
+    const updater = vi.fn()
+    const set = vi.spyOn((usageHistoryStorage as any).storage, "set")
+    vi.spyOn((usageHistoryStorage as any).storage, "get").mockRejectedValueOnce(
+      new Error("read failed"),
+    )
+
+    await expect(usageHistoryStorage.updateStore(updater)).resolves.toEqual({
+      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
+      accounts: {},
+    })
+
+    expect(updater).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+  })
+
   it("returns false when persisting or pruning fails", async () => {
     vi.spyOn((usageHistoryStorage as any).storage, "set").mockRejectedValueOnce(
       new Error("write failed"),

@@ -58,23 +58,28 @@ async function migrateLegacyRecentItemIds() {
 }
 
 /**
+ * Loads recent item ids without converting a storage failure into an empty list.
+ */
+async function loadRecentSearchItemIdsOrThrow() {
+  const stored = await storage.get(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS)
+  if (stored !== undefined) {
+    return sanitizeRecentItemIds(stored)
+  }
+
+  const migratedIds = await migrateLegacyRecentItemIds()
+  if (migratedIds) {
+    return migratedIds
+  }
+
+  return []
+}
+
+/**
  * Loads the recent search item id list from extension storage.
  */
 export async function loadRecentSearchItemIds() {
   try {
-    const stored = await storage.get(
-      OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS,
-    )
-    if (stored !== undefined) {
-      return sanitizeRecentItemIds(stored)
-    }
-
-    const migratedIds = await migrateLegacyRecentItemIds()
-    if (migratedIds) {
-      return migratedIds
-    }
-
-    return []
+    return await loadRecentSearchItemIdsOrThrow()
   } catch {
     return []
   }
@@ -93,7 +98,7 @@ export async function saveRecentSearchItemSelection(
     return await withExtensionStorageWriteLock(
       STORAGE_LOCKS.OPTIONS_SEARCH_RECENT_ITEMS,
       async () => {
-        const currentIds = await loadRecentSearchItemIds()
+        const currentIds = await loadRecentSearchItemIdsOrThrow()
         const nextIds = sanitizeRecentItemIds([
           item.id,
           ...currentIds.filter((existingId) => existingId !== item.id),

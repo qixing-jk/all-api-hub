@@ -532,21 +532,28 @@ class UsageHistoryStorage {
     })
   }
 
-  async getStore(): Promise<UsageHistoryStore> {
+  private async readStore(): Promise<{
+    ok: boolean
+    store: UsageHistoryStore
+  }> {
     try {
       const stored = (await this.storage.get(
         USAGE_HISTORY_STORAGE_KEYS.STORE,
       )) as unknown
 
       if (stored && typeof stored === "object") {
-        return sanitizeStore(stored)
+        return { ok: true, store: sanitizeStore(stored) }
       }
 
-      return createEmptyStore()
+      return { ok: true, store: createEmptyStore() }
     } catch (error) {
       logger.error("Failed to load store", error)
-      return createEmptyStore()
+      return { ok: false, store: createEmptyStore() }
     }
+  }
+
+  async getStore(): Promise<UsageHistoryStore> {
+    return (await this.readStore()).store
   }
 
   async setStore(store: UsageHistoryStore): Promise<boolean> {
@@ -569,7 +576,12 @@ class UsageHistoryStorage {
     return withExtensionStorageWriteLock(
       STORAGE_LOCKS.USAGE_HISTORY,
       async () => {
-        const current = await this.getStore()
+        const read = await this.readStore()
+        if (!read.ok) {
+          return read.store
+        }
+
+        const current = read.store
         const updated = updater(current) ?? current
         await this.setStore(updated)
         return updated

@@ -105,6 +105,18 @@ describe("options search recent items", () => {
     await expect(saveWithFailingStorage({ id: "alpha" })).resolves.toEqual([])
   })
 
+  it("does not overwrite recent selections when the read fails", async () => {
+    const set = vi.fn().mockResolvedValue(undefined)
+    const { saveRecentSearchItemSelection: saveWithFailingRead } =
+      await importRecentItemsWithStorageMock({
+        get: vi.fn().mockRejectedValue(new Error("read failed")),
+        set,
+      })
+
+    await expect(saveWithFailingRead({ id: "alpha" })).resolves.toEqual([])
+    expect(set).not.toHaveBeenCalled()
+  })
+
   it("resolves only recent ids that still exist in the localized item list", () => {
     expect(
       resolveRecentSearchItems(

@@ -1137,6 +1137,21 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     expect(storedStatus.pendingRetry).toBe(false)
   })
 
+  it("does not create status when the disabled global switch has nothing to clear", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: false,
+      },
+    })
+    storedStatus = null
+
+    await autoCheckinScheduler.scheduleNextRun()
+
+    expect(storedStatus).toBeNull()
+    expect(statusWriteCount).toBe(0)
+  })
+
   it("schedules the daily alarm for the next day when it already ran today (random mode)", async () => {
     vi.useFakeTimers()
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
@@ -1385,6 +1400,45 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     expect(storedStatus.nextDailyScheduledAt).toBe(scheduledTime.toISOString())
     expect(storedStatus.dailyAlarmTargetDay).toBe(targetDay)
     expect(storedStatus.nextScheduledAt).toBe(scheduledTime.toISOString())
+  })
+
+  it("does not rewrite an already synchronized daily schedule", async () => {
+    const scheduledTime = new Date("2024-01-03T08:30:00.000Z")
+    const targetDay = (autoCheckinScheduler as any).getLocalDay(scheduledTime)
+    storedStatus = {
+      nextDailyScheduledAt: scheduledTime.toISOString(),
+      dailyAlarmTargetDay: targetDay,
+      nextScheduledAt: scheduledTime.toISOString(),
+    }
+
+    await (autoCheckinScheduler as any).syncDailyScheduleStatus(
+      scheduledTime,
+      targetDay,
+    )
+
+    expect(statusWriteCount).toBe(0)
+  })
+
+  it("clears stored daily metadata when the schedule configuration is invalid", async () => {
+    storedStatus = {
+      lastRunResult: "success",
+      nextDailyScheduledAt: "2024-01-03T08:30:00.000Z",
+      dailyAlarmTargetDay: "2024-01-03",
+      nextScheduledAt: "2024-01-03T08:30:00.000Z",
+    }
+
+    await (autoCheckinScheduler as any).scheduleDailyAlarm({
+      ...(DEFAULT_PREFERENCES as any).autoCheckin,
+      windowStart: "invalid",
+      windowEnd: "10:00",
+    })
+
+    expect(storedStatus).toEqual({
+      lastRunResult: "success",
+      nextDailyScheduledAt: undefined,
+      dailyAlarmTargetDay: undefined,
+      nextScheduledAt: undefined,
+    })
   })
 
   it("clears stored daily schedule metadata when daily alarm creation fails", async () => {
@@ -3329,6 +3383,17 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(statusWriteCount).toBe(0)
   })
 
+  it("clears daily schedule metadata without persisting when no status exists", async () => {
+    storedStatus = null
+
+    await expect(
+      (autoCheckinScheduler as any).clearDailyScheduleStatus(),
+    ).resolves.toBeUndefined()
+
+    expect(storedStatus).toBeNull()
+    expect(statusWriteCount).toBe(0)
+  })
+
   it("keeps persisted results when clearing the retry schedule", async () => {
     storedStatus = {
       lastRunAt: "2024-01-01T09:00:00.000Z",
@@ -3395,6 +3460,81 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(storedStatus.pendingRetry).toBe(true)
     expect(storedStatus.retryState.pendingAccountIds).toEqual(["a"])
     expect(storedStatus.retryState.attemptsByAccount).toEqual({ a: 1 })
+
+    vi.useRealTimers()
+  })
+
+  it.each([
+    {
+      name: "no retry queue exists",
+      status: { lastRunResult: "success" },
+      maxAttempts: 3,
+    },
+    {
+      name: "the retry queue is exhausted",
+      status: {
+        retryState: {
+          day: "2024-01-01",
+          pendingAccountIds: ["a"],
+          attemptsByAccount: { a: 3 },
+        },
+      },
+      maxAttempts: 3,
+    },
+    {
+      name: "the retry schedule is already synchronized",
+      status: {
+        nextRetryScheduledAt: "2024-01-01T09:45:00.000Z",
+        retryAlarmTargetDay: "2024-01-01",
+        pendingRetry: true,
+        retryState: {
+          day: "2024-01-01",
+          pendingAccountIds: ["a"],
+          attemptsByAccount: { a: 1 },
+        },
+      },
+      maxAttempts: 3,
+    },
+  ])("does not rewrite status when $name", async ({ status, maxAttempts }) => {
+    storedStatus = status
+
+    await (autoCheckinScheduler as any).syncRetryScheduleStatus({
+      scheduledIso: "2024-01-01T09:45:00.000Z",
+      day: "2024-01-01",
+      maxAttempts,
+    })
+
+    expect(statusWriteCount).toBe(0)
+  })
+
+  it("clears an empty retry queue without creating a new schedule", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: [],
+        attemptsByAccount: {},
+      },
+      pendingRetry: true,
+    }
+
+    await (autoCheckinScheduler as any).scheduleRetryAlarm({
+      ...(DEFAULT_PREFERENCES as any).autoCheckin,
+      retryStrategy: {
+        enabled: true,
+        intervalMinutes: 30,
+        maxAttemptsPerDay: 3,
+      },
+    })
+
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
+    expect(mockedBrowserApi.createAlarm).not.toHaveBeenCalledWith(
+      "autoCheckinRetry",
+      expect.anything(),
+    )
 
     vi.useRealTimers()
   })
@@ -5313,6 +5453,34 @@ describe("autoCheckinScheduler.retryAccount", () => {
     expect(result.result.status).toBe("skipped")
     expect(result.result.reasonCode).toBe("account_disabled")
     expect(statusWriteCount).toBeGreaterThan(0)
+  })
+
+  it("returns a fallback summary when retry status persistence fails", async () => {
+    mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([
+      {
+        id: "disabled-1",
+        disabled: true,
+        site_name: "Disabled",
+        account_info: { username: "user" },
+      },
+    ])
+    mockedAutoCheckinStorage.updateStatus.mockResolvedValueOnce({
+      ok: false,
+      result: null,
+    })
+    vi.spyOn(
+      autoCheckinScheduler as any,
+      "scheduleRetryAlarm",
+    ).mockResolvedValueOnce(undefined)
+
+    const result = await retryAccountForTest("disabled-1")
+
+    expect(result.summary).toMatchObject({
+      executed: 0,
+      failedCount: 0,
+      skippedCount: 1,
+    })
+    expect(result.pendingRetry).toBe(false)
   })
 
   it("removes a disabled queued account from today's retry queue", async () => {

@@ -854,12 +854,14 @@ class AutoCheckinScheduler {
   }
 
   private async clearDailyScheduleStatus() {
-    await autoCheckinStorage.updateStatus(() => ({
-      patch: {
-        nextDailyScheduledAt: undefined,
-        dailyAlarmTargetDay: undefined,
-        nextScheduledAt: undefined,
-      },
+    await autoCheckinStorage.updateStatus((current) => ({
+      patch: current
+        ? {
+            nextDailyScheduledAt: undefined,
+            dailyAlarmTargetDay: undefined,
+            nextScheduledAt: undefined,
+          }
+        : null,
     }))
   }
 
@@ -1457,16 +1459,18 @@ class AutoCheckinScheduler {
       await clearAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
       await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
       logger.info("Auto check-in disabled; alarms cleared")
-      await autoCheckinStorage.updateStatus(() => ({
-        patch: {
-          nextDailyScheduledAt: undefined,
-          dailyAlarmTargetDay: undefined,
-          nextRetryScheduledAt: undefined,
-          retryAlarmTargetDay: undefined,
-          retryState: undefined,
-          pendingRetry: false,
-          nextScheduledAt: undefined,
-        },
+      await autoCheckinStorage.updateStatus((current) => ({
+        patch: current
+          ? {
+              nextDailyScheduledAt: undefined,
+              dailyAlarmTargetDay: undefined,
+              nextRetryScheduledAt: undefined,
+              retryAlarmTargetDay: undefined,
+              retryState: undefined,
+              pendingRetry: false,
+              nextScheduledAt: undefined,
+            }
+          : null,
       }))
       return
     }
