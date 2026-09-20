@@ -21,6 +21,7 @@ import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   I18NEXT_LANGUAGE_STORAGE_KEY,
   STORAGE_KEYS,
+  STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
@@ -38,6 +39,7 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfile,
 } from "~/types/apiCredentialProfiles"
+import type { AutoCheckinStatus } from "~/types/autoCheckin"
 import {
   DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
   type DailyBalanceHistoryStore,
@@ -114,6 +116,8 @@ const E2E_SPONSOR_CATALOG_PAYLOAD = {
   schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
   items: [],
 }
+
+const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
 
 /**
  * Surface unexpected runtime errors immediately instead of letting the popup or
@@ -440,6 +444,28 @@ export async function seedUserPreferences(
     serviceWorker,
     STORAGE_KEYS.USER_PREFERENCES,
     createStoredUserPreferences(overrides),
+  )
+}
+
+/**
+ * Persist the auto check-in status through the service worker.
+ *
+ * The background scheduler rewrites the schedule fields on this key during
+ * startup and on alarm changes, using a locked read-modify-write. Seeding
+ * through {@link setPlasmoStorageValue} alone bypasses that lock, so a cycle
+ * that read the status just before the seed can write its snapshot back just
+ * after it and silently discard the seeded results. Taking the same lock keeps
+ * the seed ordered with those cycles.
+ */
+export async function seedAutoCheckinStatus(
+  serviceWorker: Worker,
+  status: AutoCheckinStatus,
+) {
+  await setPlasmoStorageValue(
+    serviceWorker,
+    AUTO_CHECKIN_STATUS_STORAGE_KEY,
+    status,
+    { lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS },
   )
 }
 

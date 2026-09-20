@@ -27,6 +27,7 @@ import {
   createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -35,7 +36,6 @@ import {
 import {
   expectPermissionOnboardingHidden,
   getServiceWorker,
-  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -334,7 +334,7 @@ test("overview attention list surfaces missing sign-in data as a todo", async ({
       pretriggerDailyOnUiOpen: false,
     },
   })
-  await setPlasmoStorageValue(serviceWorker, "autoCheckin_status", {
+  await seedAutoCheckinStatus(serviceWorker, {
     lastRunAt: new Date().toISOString(),
     lastRunResult: AUTO_CHECKIN_RUN_RESULT.PARTIAL,
     perAccount: {
