@@ -49,7 +49,14 @@ export function assignShards<T extends WeightedSpec>(
   for (const entry of heaviestFirst) {
     let target = 0
     for (let index = 1; index < shardCount; index += 1) {
-      if (loads[index] < loads[target]) target = index
+      // Equal loads fall back to the emptier shard: with every weight equal (a manifest
+      // that matched nothing, or files that all cost the same) load comparison alone would
+      // keep choosing shard 0 and leave the others without a file to run.
+      const lighter = loads[index] < loads[target]
+      const emptier =
+        loads[index] === loads[target] &&
+        shards[index].length < shards[target].length
+      if (lighter || emptier) target = index
     }
     shards[target].push(entry)
     loads[target] += entry.weight
@@ -96,11 +103,17 @@ export class DurationBalancedSequencer extends BaseSequencer {
       spec,
       key: this.relativePath(spec),
     }))
-    const fallback = fallbackWeight(
-      located
-        .map(({ key }) => durations[key])
-        .filter((weight): weight is number => typeof weight === "number"),
-    )
+    const known = located
+      .map(({ key }) => durations[key])
+      .filter((weight): weight is number => typeof weight === "number")
+
+    // A manifest that describes none of this run's files — a renamed tree, a manifest from
+    // another checkout — says nothing about them, so keep Vitest's own slices rather than
+    // weighting every file at the median of an empty set.
+    if (known.length === 0) {
+      return super.shard(files)
+    }
+    const fallback = fallbackWeight(known)
 
     const assigned = assignShards(
       located.map(({ spec, key }) => ({

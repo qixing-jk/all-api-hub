@@ -114,6 +114,18 @@ describe("assignShards", () => {
       assignShards([...entries].reverse(), 2),
     )
   })
+
+  it("spreads files evenly when every weight is equal", () => {
+    const shards = assignShards(
+      Array.from({ length: 6 }, (_, index) => ({
+        key: `file-${index}`,
+        weight: 10,
+      })),
+      3,
+    )
+
+    expect(shards.map((shard) => shard.length)).toEqual([2, 2, 2])
+  })
 })
 
 describe("fallbackWeight", () => {
@@ -204,6 +216,23 @@ describe("DurationBalancedSequencer", () => {
     const root = createRoot()
     delete process.env.UNIT_TEST_SHARD_DURATIONS
     process.env.UNIT_TEST_SHARD_DURATIONS = path.join(root, "absent.json")
+    const files = Array.from({ length: 9 }, (_, index) =>
+      createSpec(root, `tests/file-${index}.test.ts`),
+    )
+
+    const fallback = await new DurationBalancedSequencer(
+      createContext(root, { index: 2, count: 3 }),
+    ).shard(files)
+    const defaultShard = await new BaseSequencer(
+      createContext(root, { index: 2, count: 3 }),
+    ).shard(files)
+
+    expect(fallback).toEqual(defaultShard)
+  })
+
+  it("falls back to the default slices when the manifest describes none of the files", async () => {
+    const root = createRoot()
+    writeManifest(root, { "tests/renamed-away.test.ts": 100 })
     const files = Array.from({ length: 9 }, (_, index) =>
       createSpec(root, `tests/file-${index}.test.ts`),
     )
