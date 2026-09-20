@@ -95,11 +95,6 @@ for (const width of [390, 320]) {
       await textSize.screenshot({
         path: testInfo.outputPath(`${language}-text-size-${width}.png`),
       })
-      await page
-        .getByRole("region", { name: settings.appearance.preview, exact: true })
-        .screenshot({
-          path: testInfo.outputPath(`${language}-preview-${width}.png`),
-        })
       await closeExtensionViews(context, page)
     })
   }

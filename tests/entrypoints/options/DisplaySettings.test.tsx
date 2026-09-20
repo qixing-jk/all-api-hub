@@ -49,6 +49,17 @@ describe("DisplaySettings", () => {
     ).toBeDisabled()
   })
 
+  it("offers the interface language beside the display preferences", () => {
+    renderSubject()
+
+    expect(
+      screen.getByText("settings:appearanceLanguage.language"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:appearanceLanguage.languageDesc"),
+    ).toBeInTheDocument()
+  })
+
   it("shows result-aware feedback after changing the currency", async () => {
     const writeResult = { ok: true as const }
     const updateCurrencyType = vi.fn().mockResolvedValue(writeResult)

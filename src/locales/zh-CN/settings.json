@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "默认主题"
     },
-    "preview": "效果预览",
-    "previewAccount": "示例账号",
-    "previewDetails": "今日用量 $8.20 · 刚刚更新",
-    "previewInput": "账号备注",
-    "previewNote": "日常使用的账号",
-    "primaryAction": "主要操作",
     "radii": {
       "default": "默认",
       "large": "大",
@@ -77,7 +71,6 @@
     "resetFont": "重置字体",
     "resetTextSize": "重置文字大小",
     "saveFailed": "保存失败，请重试。",
-    "secondaryAction": "次要操作",
     "textSize": "文字大小",
     "textSizeDescription": "调整字号和行高，控件会随内容适应，不改变界面密度设置。",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "货币单位",
     "defaultTab": "默认标签页",
     "defaultTabDesc": "设置插件启动时显示的默认标签页",
-    "description": "自定义插件的外观和显示偏好",
+    "description": "自定义插件的界面语言和显示偏好",
     "title": "显示设置",
     "todayCashflow": "今日收支",
     "todayCashflowEnabled": "显示今日收支",

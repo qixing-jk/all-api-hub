@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Tema padrão"
     },
-    "preview": "Prévia",
-    "previewAccount": "Conta de exemplo",
-    "previewDetails": "Uso de hoje: $8.20 · Atualizado agora",
-    "previewInput": "Nota da conta",
-    "previewNote": "Conta de uso diário",
-    "primaryAction": "Ação principal",
     "radii": {
       "default": "Padrão",
       "large": "Grande",
@@ -77,7 +71,6 @@
     "resetFont": "Redefinir fonte",
     "resetTextSize": "Redefinir tamanho do texto",
     "saveFailed": "Não foi possível salvar. Tente novamente.",
-    "secondaryAction": "Ação secundária",
     "textSize": "Tamanho do texto",
     "textSizeDescription": "Ajuste o tamanho do texto e a altura das linhas. Os controles se adaptam ao conteúdo sem alterar a densidade escolhida.",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "Unidade monetária",
     "defaultTab": "Guia Padrão",
     "defaultTabDesc": "Definir a guia padrão exibida quando a extensão é iniciada",
-    "description": "Personalize a aparência e as preferências de exibição da extensão",
+    "description": "Personalize o idioma da interface e as preferências de exibição da extensão",
     "title": "Configurações de exibição",
     "todayCashflow": "Fluxo de caixa de hoje",
     "todayCashflowEnabled": "Mostrar o fluxo de caixa de hoje",

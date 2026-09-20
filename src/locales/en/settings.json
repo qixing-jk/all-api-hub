@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Default theme"
     },
-    "preview": "Preview",
-    "previewAccount": "Example account",
-    "previewDetails": "Today's usage $8.20 · Updated just now",
-    "previewInput": "Account note",
-    "previewNote": "Daily account",
-    "primaryAction": "Primary action",
     "radii": {
       "default": "Default",
       "large": "Large",
@@ -77,7 +71,6 @@
     "resetFont": "Reset font",
     "resetTextSize": "Reset text size",
     "saveFailed": "Could not save. Please try again.",
-    "secondaryAction": "Secondary action",
     "textSize": "Text size",
     "textSizeDescription": "Adjust text size and line height. Controls grow to fit content without changing your density setting.",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "Currency Unit",
     "defaultTab": "Default Tab",
     "defaultTabDesc": "Set the default tab displayed when the plugin starts",
-    "description": "Customize the appearance and display preferences of the plugin",
+    "description": "Customize the interface language and display preferences of the plugin",
     "title": "Display Settings",
     "todayCashflow": "Today's Cashflow",
     "todayCashflowEnabled": "Show Today's Cashflow",

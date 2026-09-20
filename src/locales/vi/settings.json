@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Chủ đề mặc định"
     },
-    "preview": "Xem trước",
-    "previewAccount": "Tài khoản mẫu",
-    "previewDetails": "Sử dụng hôm nay: $8.20 · Vừa cập nhật",
-    "previewInput": "Ghi chú tài khoản",
-    "previewNote": "Tài khoản dùng hằng ngày",
-    "primaryAction": "Thao tác chính",
     "radii": {
       "default": "Mặc định",
       "large": "Lớn",
@@ -77,7 +71,6 @@
     "resetFont": "Đặt lại phông chữ",
     "resetTextSize": "Đặt lại cỡ chữ",
     "saveFailed": "Không thể lưu. Vui lòng thử lại.",
-    "secondaryAction": "Thao tác phụ",
     "textSize": "Cỡ chữ",
     "textSizeDescription": "Điều chỉnh cỡ chữ và chiều cao dòng. Các thành phần điều khiển giãn theo nội dung mà không đổi thiết lập mật độ.",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "Đơn vị tiền tệ",
     "defaultTab": "Tab mặc định",
     "defaultTabDesc": "Đặt tab hiển thị mặc định khi khởi động tiện ích",
-    "description": "Tùy chỉnh giao diện và tùy chọn hiển thị của tiện ích",
+    "description": "Tùy chỉnh ngôn ngữ giao diện và tùy chọn hiển thị của tiện ích",
     "title": "Cài đặt hiển thị",
     "todayCashflow": "Thu chi hôm nay",
     "todayCashflowEnabled": "Hiển thị thu chi hôm nay",

@@ -350,7 +350,7 @@ describe("appearance controls", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
-  it("keeps the drawer focused on choices without a separate preview region", () => {
+  it("keeps the drawer focused on its choices", () => {
     render(<AppearanceDrawer open onOpenChange={() => {}} />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
@@ -360,33 +360,6 @@ describe("appearance controls", () => {
       within(drawer).getByRole("group", {
         name: "settings:appearance.textSize",
       }),
-    ).toBeVisible()
-    expect(
-      within(drawer).queryByRole("region", {
-        name: "settings:appearance.preview",
-      }),
-    ).not.toBeInTheDocument()
-  })
-
-  it("previews an account, balance, supporting text and shared controls", () => {
-    renderControls()
-    const preview = screen.getByRole("region", {
-      name: "settings:appearance.preview",
-    })
-    expect(
-      within(preview).getByText("settings:appearance.previewAccount"),
-    ).toBeVisible()
-    expect(within(preview).getByText("$128.50")).toBeVisible()
-    expect(
-      within(preview).getByText("settings:appearance.previewDetails"),
-    ).toBeVisible()
-    expect(
-      within(preview).getByRole("textbox", {
-        name: "settings:appearance.previewInput",
-      }),
-    ).toHaveValue("settings:appearance.previewNote")
-    expect(
-      within(preview).getByText("settings:appearance.primaryAction"),
     ).toBeVisible()
   })
 

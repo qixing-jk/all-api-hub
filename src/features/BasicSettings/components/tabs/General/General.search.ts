@@ -274,7 +274,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.general",
-        "settings:theme.appearance",
+        "settings:display.title",
       ],
       keywords: ["language", "locale", "i18n"],
     },

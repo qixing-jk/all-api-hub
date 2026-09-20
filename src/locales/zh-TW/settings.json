@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "預設主題"
     },
-    "preview": "效果預覽",
-    "previewAccount": "範例帳號",
-    "previewDetails": "今日用量 $8.20 · 剛剛更新",
-    "previewInput": "帳號備註",
-    "previewNote": "日常使用的帳號",
-    "primaryAction": "主要操作",
     "radii": {
       "default": "預設",
       "large": "大",
@@ -77,7 +71,6 @@
     "resetFont": "重設字體",
     "resetTextSize": "重設文字大小",
     "saveFailed": "儲存失敗，請重試。",
-    "secondaryAction": "次要操作",
     "textSize": "文字大小",
     "textSizeDescription": "調整字號和行高，控制項會隨內容調整，不變更介面密度設定。",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "貨幣單位",
     "defaultTab": "預設標籤頁",
     "defaultTabDesc": "設定外掛啟動時顯示的預設標籤頁",
-    "description": "自定義外掛的外觀和顯示偏好",
+    "description": "自定義外掛的介面語言和顯示偏好",
     "title": "顯示設定",
     "todayCashflow": "今日收支",
     "todayCashflowEnabled": "顯示今日收支",

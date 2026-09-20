@@ -52,8 +52,16 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
   const originalBackground = await page
     .locator("body")
     .evaluate((el) => getComputedStyle(el).backgroundColor)
-  const primaryAction = page.getByText("Primary action", { exact: true })
-  const originalAccent = await primaryAction.evaluate(
+  // Accent sample: the checked radius option's badge paints `--primary`, which
+  // each preset redefines. This option stays mounted and checked across the
+  // preset switches below, unlike the color options a preset replaces. The
+  // drawer marks the page behind it inert, so this stays a CSS locator rather
+  // than a role query, which is what the original preview-based sample relied
+  // on being outside the drawer's inert subtree.
+  const accentSample = page.locator(
+    `#${SETTINGS_ANCHORS.APPEARANCE_RADIUS} label:has(input[value="${THEME_RADIUS.LARGE}"]) span.bg-primary`,
+  )
+  const originalAccent = await accentSample.evaluate(
     (el) => getComputedStyle(el).backgroundColor,
   )
   const popup = await context.newPage()
@@ -110,9 +118,8 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       dark ? "rgb(32, 31, 28)" : "rgb(250, 249, 245)",
     )
     // Readability is checked against actual browser-resolved foreground/background pairs.
-    // The complete preview lives on the settings page; the drawer has option previews.
     for (const sample of [
-      primaryAction,
+      accentSample,
       drawer.getByRole("heading", { name: "Appearance settings", exact: true }),
     ]) {
       const contrast = await readColorContrast(sample)
@@ -155,7 +162,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
     "background-color",
     originalBackground,
   )
-  await expect(primaryAction).toHaveCSS("background-color", originalAccent)
+  await expect(accentSample).toHaveCSS("background-color", originalAccent)
   await expect(
     drawer.getByRole("radio", { name: "Violet", exact: true }),
   ).toBeChecked()

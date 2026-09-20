@@ -267,15 +267,25 @@ for (const width of [1280, 390, 320]) {
     await page.bringToFront()
     const density = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_DENSITY}`)
     const textSize = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE}`)
-    const preview = page.getByRole("region", { name: "Preview", exact: true })
-    const accountName = preview.getByText("Example account", { exact: true })
-    const supportingText = preview.getByText(
-      "Today's usage $8.20 · Updated just now",
-    )
-    await expect(accountName).toHaveCSS("font-size", "16px")
-    await expect(accountName).toHaveCSS("line-height", "24px")
+    // The removed appearance preview used to supply these samples. The
+    // appearance section title (`text-xl`), a choice label (`text-xs`), the
+    // section card (`--density-*` padding) and a real control carry the same
+    // tokens, so the preference stays checkable on rendered UI.
+    const primaryText = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE} h3`)
+    const supportingText = page
+      .locator(
+        `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="default"]) span.text-xs`,
+      )
+      .first()
+    const densitySample = page
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
+      .locator("xpath=ancestor::*[@data-slot='card'][1]")
+    const controlSample = page
+      .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}`)
+      .getByRole("spinbutton")
+    await expect(primaryText).toHaveCSS("font-size", "20px")
+    await expect(primaryText).toHaveCSS("line-height", "28px")
     await expect(supportingText).toHaveCSS("font-size", "12px")
-    await expect(preview.getByRole("textbox")).toHaveCSS("height", "36px")
     const rootFont = await page
       .locator("html")
       .evaluate((element) => getComputedStyle(element).fontSize)
@@ -287,12 +297,12 @@ for (const width of [1280, 390, 320]) {
       THEME_ATTRIBUTES.DENSITY,
       "compact",
     )
-    const previewPadding = await preview.evaluate(
+    const samplePadding = await densitySample.evaluate(
       (element) => getComputedStyle(element).paddingTop,
     )
     for (const [label, value, font, line, supportingFont] of [
-      ["Large", "large", "18px", "28px", "14px"],
-      ["Extra large", "extra-large", "20px", "32px", "16px"],
+      ["Large", "large", "22px", "32px", "14px"],
+      ["Extra large", "extra-large", "24px", "36px", "16px"],
     ]) {
       await textSize
         .getByRole("radio", { name: label, exact: true })
@@ -313,19 +323,17 @@ for (const width of [1280, 390, 320]) {
         )
         await expect(view.locator("html")).toHaveCSS("font-size", rootFont)
       }
-      await expect(accountName).toHaveCSS("font-size", font)
-      await expect(accountName).toHaveCSS("line-height", line)
+      await expect(primaryText).toHaveCSS("font-size", font)
+      await expect(primaryText).toHaveCSS("line-height", line)
       await expect(supportingText).toHaveCSS("font-size", supportingFont)
-      await expect(preview).toHaveCSS("padding-top", previewPadding)
+      await expect(densitySample).toHaveCSS("padding-top", samplePadding)
       await expectPageToFit(page)
     }
     await expect
-      .poll(
-        async () => (await preview.getByRole("textbox").boundingBox())!.height,
-      )
+      .poll(async () => (await controlSample.boundingBox())!.height)
       .toBeGreaterThan(32)
-    await preview.screenshot({
-      path: testInfo.outputPath(`compact-extra-large-preview-${width}.png`),
+    await page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_PRESET}`).screenshot({
+      path: testInfo.outputPath(`compact-extra-large-choices-${width}.png`),
     })
     await textSize.screenshot({
       path: testInfo.outputPath(`text-size-reset-${width}.png`),
@@ -481,10 +489,13 @@ for (const width of [1280, 390, 320]) {
         "compact",
       )
     }
-    await expect(accountName).toHaveCSS("font-size", "16px")
-    await expect(preview.getByRole("textbox")).toHaveCSS("height", "32px")
+    // Resetting text size alone restores the default type scale.
+    await expect(primaryText).toHaveCSS("font-size", "20px")
+    await expect(primaryText).toHaveCSS("line-height", "28px")
+    // The appearance section resets from its header like every other section.
     await page
-      .getByRole("button", { name: "Reset appearance", exact: true })
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE}`)
+      .getByRole("button", { name: "Reset", exact: true })
       .click()
     await expect(page.locator("html")).toHaveAttribute(
       THEME_ATTRIBUTES.DENSITY,

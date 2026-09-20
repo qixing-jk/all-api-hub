@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "標準テーマ"
     },
-    "preview": "プレビュー",
-    "previewAccount": "サンプルアカウント",
-    "previewDetails": "本日の使用量 $8.20 · たった今更新",
-    "previewInput": "アカウントのメモ",
-    "previewNote": "普段使いのアカウント",
-    "primaryAction": "メイン操作",
     "radii": {
       "default": "標準",
       "large": "大",
@@ -77,7 +71,6 @@
     "resetFont": "フォントをリセット",
     "resetTextSize": "文字サイズをリセット",
     "saveFailed": "保存できませんでした。もう一度お試しください。",
-    "secondaryAction": "サブ操作",
     "textSize": "文字サイズ",
     "textSizeDescription": "文字サイズと行の高さを調整します。表示密度の設定を変えずに、内容に合わせて操作部品の高さが変わります。",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "通貨単位",
     "defaultTab": "既定タブ",
     "defaultTabDesc": "拡張機能起動時に表示するタブを設定します",
-    "description": "拡張機能の見た目と表示設定をカスタマイズします",
+    "description": "拡張機能の表示言語と表示設定をカスタマイズします",
     "title": "表示設定",
     "todayCashflow": "本日のキャッシュフロー",
     "todayCashflowEnabled": "本日のキャッシュフローを表示",

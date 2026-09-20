@@ -90,9 +90,12 @@ test("card edge rows and notification surfaces use the actual shared radius", as
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
   )
-  const firstRow = page.locator("#display-currency-unit")
+  // Edge rows come from the card so adding or reordering settings rows cannot
+  // silently point these assertions at a row that is no longer an edge.
+  const rows = page.locator("#general-display [data-slot='card-item']")
+  const firstRow = rows.first()
   const middleRow = page.locator("#display-today-cashflow-enabled")
-  const lastRow = page.locator("#display-default-tab")
+  const lastRow = rows.last()
   await expect(firstRow).toBeVisible()
   for (const dark of [false, true]) {
     await page

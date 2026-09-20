@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Standarddesign"
     },
-    "preview": "Vorschau",
-    "previewAccount": "Beispielkonto",
-    "previewDetails": "Heutige Nutzung: $8.20 · Gerade aktualisiert",
-    "previewInput": "Kontonotiz",
-    "previewNote": "Konto für den Alltag",
-    "primaryAction": "Hauptaktion",
     "radii": {
       "default": "Standard",
       "large": "Groß",
@@ -77,7 +71,6 @@
     "resetFont": "Schriftart zurücksetzen",
     "resetTextSize": "Textgröße zurücksetzen",
     "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
-    "secondaryAction": "Nebenaktion",
     "textSize": "Textgröße",
     "textSizeDescription": "Schriftgröße und Zeilenhöhe anpassen. Bedienelemente passen sich dem Inhalt an, ohne die eingestellte Dichte zu ändern.",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "Währungseinheit",
     "defaultTab": "Standardregisterkarte",
     "defaultTabDesc": "Legen Sie die Standardregisterkarte fest, die beim Start des Plugins angezeigt wird",
-    "description": "Passen Sie das Erscheinungsbild und die Anzeigeeinstellungen des Plugins an",
+    "description": "Passen Sie Sprache und Anzeigeeinstellungen des Plugins an",
     "title": "Anzeigeeinstellungen",
     "todayCashflow": "Heutiger Cashflow",
     "todayCashflowEnabled": "Heutigen Cashflow anzeigen",

@@ -17,6 +17,7 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   DEFAULT_APPEARANCE,
+  isDefaultAppearance,
   normalizeAppearance,
   THEME_COLORS,
   THEME_DENSITIES,
@@ -38,19 +39,23 @@ import {
   ThemeModePreview,
   TypographyPreview,
 } from "./AppearanceOptionPreviews"
-import { AppearancePreview } from "./AppearancePreview"
 import { getThemeModeOptions } from "./themeModeOptions"
 import { useAppearanceSave } from "./useAppearanceSave"
 
-/** Shared, automatically saved controls for the settings page and appearance drawer. */
+/**
+ * Shared, automatically saved controls for the settings page and appearance
+ * drawer. The settings page renders its reset in the section header like every
+ * other section, so it passes `showReset={false}`; the drawer has no header and
+ * keeps the reset with the controls.
+ */
 export function AppearanceControls({
   anchors = false,
   showMode = false,
-  showPreview = true,
+  showReset = true,
 }: {
   anchors?: boolean
   showMode?: boolean
-  showPreview?: boolean
+  showReset?: boolean
 }) {
   const { t } = useTranslation("settings")
   const { preferences, themeMode } = useUserPreferencesContext()
@@ -327,28 +332,20 @@ export function AppearanceControls({
           ))}
         </div>
       </AppearanceFieldset>
-      {showPreview && (
-        <AppearancePreview presetLabel={presetLabels[appearance.preset]} />
-      )}
       {failed && (
         <p role="alert" className="text-destructive-text text-sm">
           {t("appearance.saveFailed")}
         </p>
       )}
-      <SettingsResetButton
-        label={t("appearance.reset")}
-        disabled={
-          saving ||
-          (themeMode === DEFAULT_THEME_MODE &&
-            Object.entries(DEFAULT_APPEARANCE).every(
-              ([key, value]) =>
-                appearance[key as keyof AppearancePreferences] === value,
-            ))
-        }
-        onClick={() =>
-          void save({ ...DEFAULT_APPEARANCE, themeMode: DEFAULT_THEME_MODE })
-        }
-      />
+      {showReset && (
+        <SettingsResetButton
+          label={t("appearance.reset")}
+          disabled={saving || isDefaultAppearance(appearance, themeMode)}
+          onClick={() =>
+            void save({ ...DEFAULT_APPEARANCE, themeMode: DEFAULT_THEME_MODE })
+          }
+        />
+      )}
     </div>
   )
 }

@@ -59,12 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Tema predeterminado"
     },
-    "preview": "Vista previa",
-    "previewAccount": "Cuenta de ejemplo",
-    "previewDetails": "Uso de hoy: $8.20 · Actualizado ahora",
-    "previewInput": "Nota de la cuenta",
-    "previewNote": "Cuenta de uso diario",
-    "primaryAction": "Acción principal",
     "radii": {
       "default": "Predeterminado",
       "large": "Grande",
@@ -77,7 +71,6 @@
     "resetFont": "Restablecer fuente",
     "resetTextSize": "Restablecer tamaño del texto",
     "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
-    "secondaryAction": "Acción secundaria",
     "textSize": "Tamaño del texto",
     "textSizeDescription": "Ajusta el tamaño del texto y la altura de las líneas. Los controles se adaptan al contenido sin cambiar la densidad elegida.",
     "textSizes": {
@@ -262,7 +255,7 @@
     "currencyUnit": "Unidad de moneda",
     "defaultTab": "Pestaña predeterminada",
     "defaultTabDesc": "Define la pestaña predeterminada que se muestra al iniciar el plugin",
-    "description": "Personaliza la apariencia y las preferencias de visualización de la extensión",
+    "description": "Personaliza el idioma de la interfaz y las preferencias de visualización de la extensión",
     "title": "Ajustes de visualización",
     "todayCashflow": "Flujo de efectivo de hoy",
     "todayCashflowEnabled": "Mostrar flujo de efectivo de hoy",

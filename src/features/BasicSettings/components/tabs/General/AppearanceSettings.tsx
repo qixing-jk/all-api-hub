@@ -1,47 +1,51 @@
-import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { LanguageSwitcher } from "~/components/LanguageSwitcher"
-import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
+import { Card, CardList } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { DEFAULT_THEME_MODE } from "~/constants/theme"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { AppearanceControls } from "~/features/Appearance/AppearanceControls"
 import ThemeModeSettings from "~/features/Appearance/ThemeModeSettings"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import {
+  DEFAULT_APPEARANCE,
+  isDefaultAppearance,
+  normalizeAppearance,
+} from "~/types/theme"
 
 /**
- * Settings section for theme and interface language preferences.
+ * Settings section for theme and typography preferences. Interface language is
+ * an interface preference rather than a theme one, so it lives in Display
+ * Settings.
  */
 export default function AppearanceSettings() {
   const { t } = useTranslation("settings")
+  const { preferences, themeMode, updateAppearance } =
+    useUserPreferencesContext()
+  const appearance = normalizeAppearance(preferences?.appearance)
 
   return (
-    <section
+    <SettingSection
       id={SETTINGS_ANCHORS.APPEARANCE}
-      data-slot="setting-section"
-      className="space-y-density-6"
+      title={t("theme.appearance")}
+      description={t("appearance.description")}
+      onReset={() =>
+        updateAppearance({
+          ...DEFAULT_APPEARANCE,
+          themeMode: DEFAULT_THEME_MODE,
+        })
+      }
+      resetRequiresConfirmation={false}
+      resetDisabled={isDefaultAppearance(appearance, themeMode)}
     >
-      <div data-slot="setting-section-header" className="space-y-density-1-5">
-        <Heading3>{t("theme.appearance")}</Heading3>
-        <BodySmall>{t("display.description")}</BodySmall>
-      </div>
-      <fieldset className="space-y-density-6 min-w-0">
-        <Card padding="none">
-          <CardList>
-            <ThemeModeSettings />
-            <CardItem
-              id={SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}
-              icon={
-                <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
-              }
-              title={t("appearanceLanguage.language")}
-              description={t("appearanceLanguage.languageDesc")}
-              rightContent={<LanguageSwitcher variant="select" />}
-            />
-          </CardList>
-        </Card>
-        <Card padding="md">
-          <AppearanceControls anchors />
-        </Card>
-      </fieldset>
-    </section>
+      <Card padding="none">
+        <CardList>
+          <ThemeModeSettings />
+          <div className="sm:py-density-4 py-density-3 px-4 sm:px-6">
+            <AppearanceControls anchors showReset={false} />
+          </div>
+        </CardList>
+      </Card>
+    </SettingSection>
   )
 }

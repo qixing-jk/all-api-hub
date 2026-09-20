@@ -1,9 +1,11 @@
-import { CalendarDays, Eye, Globe2 } from "lucide-react"
+import { CalendarDays, Eye, Globe2, Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { SegmentedControl } from "~/components/SegmentedControl"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
@@ -11,7 +13,8 @@ import type { CurrencyType, DashboardTabType } from "~/types"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
- * Settings section for display preferences (currency, default dashboard tab).
+ * Settings section for interface and display preferences: currency, today's
+ * cashflow, the default tab, and the interface language.
  */
 export default function DisplaySettings() {
   const { t } = useTranslation("settings")
@@ -124,6 +127,16 @@ export default function DisplaySettings() {
                 ]}
               />
             }
+          />
+
+          <CardItem
+            id={SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}
+            icon={
+              <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
+            title={t("appearanceLanguage.language")}
+            description={t("appearanceLanguage.languageDesc")}
+            rightContent={<LanguageSwitcher variant="select" />}
           />
         </CardList>
       </Card>

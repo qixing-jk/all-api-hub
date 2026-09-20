@@ -50,12 +50,6 @@ for (const { width, language, copy } of [
       .locator("[data-color-scope]")
     await expect(light).toHaveCSS("background-color", "rgb(255, 255, 255)")
     await expect(dark).not.toHaveCSS("background-color", "rgb(255, 255, 255)")
-    await expect(
-      drawer.getByRole("region", {
-        name: copy.appearance.preview,
-        exact: true,
-      }),
-    ).toHaveCount(0)
     await mode
       .getByRole("radio", { name: copy.theme.dark, exact: true })
       .focus()

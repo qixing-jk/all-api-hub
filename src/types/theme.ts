@@ -84,6 +84,20 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   textSize: THEME_TEXT_SIZE.DEFAULT,
 }
 
+/** Whether a stored appearance and theme mode are both still at their defaults. */
+export function isDefaultAppearance(
+  appearance: AppearancePreferences,
+  themeMode: ThemeMode,
+): boolean {
+  return (
+    themeMode === THEME_MODE.SYSTEM &&
+    Object.entries(DEFAULT_APPEARANCE).every(
+      ([key, value]) =>
+        appearance[key as keyof AppearancePreferences] === value,
+    )
+  )
+}
+
 /** Old backups and unknown imported values retain supported appearance defaults. */
 export function normalizeAppearance(value: unknown): AppearancePreferences {
   const input =

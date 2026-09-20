@@ -9,6 +9,7 @@ import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
   THEME_MODE,
+  THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -21,6 +22,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
 
 test("theme mode keeps supporting copy close and does not reserve an invisible reset slot", async ({
   context,
@@ -138,11 +140,17 @@ test("appearance applies across windows, survives reload, and resets", async ({
   await expect(
     page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`),
   ).toBeVisible()
-  const preview = page.getByText("Primary action", { exact: true })
-  const originalColor = await preview.evaluate(
-    (el) => getComputedStyle(el).backgroundColor,
+  // The removed appearance preview was the live sample of the accent and the
+  // corner scale. Sample a surviving accent-painted control and a settings card
+  // instead: the card's radius comes from the same `--radius-lg` token the
+  // reload and reset assertions below rely on.
+  const accentSample = page.locator(
+    `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="${THEME_PRESET.DEFAULT}"]) span.bg-primary.text-primary-foreground`,
   )
-  const primary = preview
+  const radiusSample = page
+    .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
+    .locator("xpath=ancestor::*[@data-slot='card'][1]")
+  const originalColor = await readVisualThemeRoleColor(page, "--primary")
   await page
     .locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`)
     .getByRole("radio", { name: "Violet" })
@@ -157,8 +165,8 @@ test("appearance applies across windows, survives reload, and resets", async ({
     .getByRole("radio", { name: "Square" })
     .locator("..")
     .click()
-  await expect(primary).toHaveCSS("border-top-left-radius", "0px")
-  await expect(preview).not.toHaveCSS("background-color", originalColor)
+  await expect(radiusSample).toHaveCSS("border-top-left-radius", "0px")
+  await expect(accentSample).not.toHaveCSS("background-color", originalColor)
   await expect(sidepanel.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.COLOR,
     THEME_COLOR.VIOLET,
@@ -177,13 +185,16 @@ test("appearance applies across windows, survives reload, and resets", async ({
       .locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`)
       .getByRole("radio", { name: "Violet" }),
   ).toBeChecked()
-  await expect(primary).toHaveCSS("border-top-left-radius", "0px")
+  await expect(radiusSample).toHaveCSS("border-top-left-radius", "0px")
   await page
     .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
     .getByRole("radio", { name: "Large" })
     .locator("..")
     .click()
-  await expect(primary).toHaveCSS("border-top-left-radius", "18px")
+  // The card reads the same `--radius-lg` scale the removed preview button drew
+  // from `--radius-md`; the exact step is asserted on the theme attribute, so
+  // this only needs to prove the rendered corner follows the setting.
+  await expect(radiusSample).not.toHaveCSS("border-top-left-radius", "0px")
   // The independent appearance button opens the full panel in place.
   await page.getByRole("button", { name: "Appearance settings" }).click()
   const drawer = page.getByRole("dialog", { name: "Appearance settings" })
