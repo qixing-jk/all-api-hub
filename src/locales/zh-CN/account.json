@@ -181,6 +181,7 @@
     },
     "dragHandle": "拖动排序",
     "header": {
+      "account": "账号",
       "balance": "余额",
       "checkInRequirement": "签到需求",
       "createdAt": "创建时间",

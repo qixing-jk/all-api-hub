@@ -225,6 +225,7 @@
     },
     "dragHandle": "Arrastra para reordenar",
     "header": {
+      "account": "Cuenta",
       "balance": "Saldo",
       "checkInRequirement": "Requisito de check-in",
       "createdAt": "Creada el",

@@ -181,6 +181,7 @@
     },
     "dragHandle": "Kéo để sắp xếp",
     "header": {
+      "account": "Tài khoản",
       "balance": "Số dư",
       "checkInRequirement": "Nhu cầu điểm danh",
       "createdAt": "Thời gian tạo",

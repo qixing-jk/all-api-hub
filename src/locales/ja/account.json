@@ -181,6 +181,7 @@
     },
     "dragHandle": "ドラッグして並び替え",
     "header": {
+      "account": "アカウント",
       "balance": "残高",
       "checkInRequirement": "チェックイン要件",
       "createdAt": "作成日時",

@@ -203,6 +203,7 @@
     },
     "dragHandle": "Zum Neuanordnen ziehen",
     "header": {
+      "account": "Konto",
       "balance": "Kontostand",
       "checkInRequirement": "Check-in-Anforderung",
       "createdAt": "Erstellt am",

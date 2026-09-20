@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowDown,
+  ArrowDownAZ,
   ArrowUp,
   ArrowUpDown,
   CalendarCheck,
@@ -93,6 +94,11 @@ export function AccountListHeader({
     label: string
     icon: LucideIcon
   }> = [
+    {
+      field: "name",
+      icon: ArrowDownAZ,
+      label: t("account:list.header.account"),
+    },
     {
       field: DATA_TYPE_BALANCE,
       icon: Wallet,

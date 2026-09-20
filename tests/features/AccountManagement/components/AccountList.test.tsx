@@ -909,7 +909,7 @@ describe("AccountList", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("replaces account-name sorting with check-in and health sorting", async () => {
+  it("offers account-name sorting alongside check-in and health sorting", async () => {
     const user = userEvent.setup()
     render(<AccountList />)
 
@@ -921,8 +921,8 @@ describe("AccountList", () => {
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
     )
     expect(
-      screen.queryByTestId(getAccountManagementSortButtonTestId("name")),
-    ).not.toBeInTheDocument()
+      screen.getByTestId(getAccountManagementSortButtonTestId("name")),
+    ).toBeInTheDocument()
     expect(
       screen.getByTestId(
         getAccountManagementSortButtonTestId(DATA_TYPE_CHECK_IN_REQUIREMENT),
@@ -933,6 +933,27 @@ describe("AccountList", () => {
         getAccountManagementSortButtonTestId(DATA_TYPE_HEALTH_STATUS),
       ),
     ).toBeInTheDocument()
+  })
+
+  it("selects name from the user sort menu", async () => {
+    const user = userEvent.setup()
+    const handleSort = vi.fn()
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        handleSort,
+        sortField: DATA_TYPE_BALANCE,
+      }),
+    )
+    render(<AccountList />)
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
+    )
+    await user.click(
+      screen.getByRole("menuitemradio", {
+        name: "account:list.header.account",
+      }),
+    )
+    expect(handleSort).toHaveBeenCalledWith("name")
   })
 
   it.each([

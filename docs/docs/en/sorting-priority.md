@@ -28,6 +28,7 @@ For example, an unpinned account with a related page open can appear before an u
 
 Choose a field from **Sort by**, then use the adjacent direction button to switch between ascending and descending order:
 
+- Account name.
 - Balance, today's consumption, and today's income. Consumption and income options are hidden when today's cashflow display is off.
 - Check-in requirement and health status.
 - Custom check-in and redeem links, sorted by whether a link is configured.

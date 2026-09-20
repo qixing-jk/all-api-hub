@@ -181,6 +181,7 @@
     },
     "dragHandle": "拖動排序",
     "header": {
+      "account": "帳號",
       "balance": "餘額",
       "checkInRequirement": "簽到需求",
       "createdAt": "建立時間",

@@ -203,6 +203,7 @@
     },
     "dragHandle": "Drag to reorder",
     "header": {
+      "account": "Account",
       "balance": "Balance",
       "checkInRequirement": "Check-in Requirement",
       "createdAt": "Created At",
