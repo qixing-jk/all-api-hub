@@ -288,6 +288,23 @@ class ModelSyncScheduler {
                 getManagedSiteContext(prefs).siteType,
               )
 
+              // A scheduled run without a configured managed-site target can
+              // never do useful work; treat it as not-applicable instead of
+              // executing a doomed sync and reporting a failure.
+              if (!resolveCurrentManagedSiteRuntimeConfig(prefs)) {
+                logger.info(
+                  "Skipping scheduled model sync; managed site not configured",
+                )
+                tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+                  durationMs: Date.now() - startedAt,
+                  insights: {
+                    sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+                    ...(managedSiteType ? { managedSiteType } : {}),
+                  },
+                })
+                return
+              }
+
               // Await to keep the MV3 service worker alive while the sync runs.
               const result = await this.executeSync(
                 undefined,

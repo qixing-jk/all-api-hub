@@ -592,6 +592,45 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     )
   })
 
+  it("records Skipped without executing or notifying when no managed site is configured", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mocks.onAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+
+    vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+    const executeSpy = vi.spyOn(modelSyncScheduler, "executeSync")
+    // NEW_API requires baseUrl + adminToken + a valid userId; empty config
+    // resolves to no managed-site target.
+    mocks.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: { baseUrl: "", adminToken: "", userId: "" },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+      },
+      modelRedirect: {
+        enabled: true,
+        standardModels: ["gpt-4o"],
+        pruneMissingTargetsOnModelSync: false,
+      },
+    })
+
+    await modelSyncScheduler.initialize()
+    await alarmHandler?.({ name: "managedSiteModelSync" })
+
+    expect(executeSpy).not.toHaveBeenCalled()
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        }),
+      }),
+    )
+    expect(mocks.notifyTaskResult).not.toHaveBeenCalled()
+  })
+
   it("lists only Octopus channel selection facts and validates config", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.OCTOPUS,
