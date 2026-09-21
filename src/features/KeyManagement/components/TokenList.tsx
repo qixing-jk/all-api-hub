@@ -2,7 +2,11 @@ import { ChevronDown, ChevronUp, Library, SendToBack } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import {
+  DeeplinkExportDialog,
+  type DeeplinkExportRequest,
+  type DeeplinkExportTarget,
+} from "~/components/DeeplinkExportDialog"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Button, Card, Checkbox } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -223,7 +227,8 @@ export function TokenList(props: TokenListProps) {
   const { managedSiteType } = useUserPreferencesContext()
   const guidedManagedSiteImportAccountId = guidedManagedSiteImport?.accountId
   const guidedManagedSiteImportTokenId = guidedManagedSiteImport?.tokenId
-  const [ccSwitchContext, setCCSwitchContext] = useState<{
+  const [deeplinkExportContext, setDeeplinkExportContext] = useState<{
+    target: DeeplinkExportTarget
     runtimeKey: AccountRuntimeKey
     account: DisplaySiteData
   } | null>(null)
@@ -284,28 +289,29 @@ export function TokenList(props: TokenListProps) {
     ],
     [filteredEntries, nativeRows, nativeEntriesByRowKey],
   )
-  const currentCCSwitchTarget = useMemo(() => {
-    if (!ccSwitchContext) return null
-    const account = accountById.get(ccSwitchContext.account.id)
+  const currentDeeplinkExportRequest = useMemo(() => {
+    if (!deeplinkExportContext) return null
+    const account = accountById.get(deeplinkExportContext.account.id)
     const entry = actionEntries.find(
-      (candidate) => candidate.runtimeKey.id === ccSwitchContext.runtimeKey.id,
+      (candidate) =>
+        candidate.runtimeKey.id === deeplinkExportContext.runtimeKey.id,
     )
     return account && entry && isBatchSelectableEntry(entry)
-      ? {
-          exportSource: createAccountRuntimeKeyExportSource(
+      ? ({
+          target: deeplinkExportContext.target,
+          source: createAccountRuntimeKeyExportSource(
             account,
             entry.runtimeKey,
             { preferCurrentSecret: true },
           ),
-          runtimeKey: entry.runtimeKey,
-        }
+        } satisfies DeeplinkExportRequest)
       : null
-  }, [accountById, actionEntries, ccSwitchContext])
-  const isCurrentCCSwitchContextExportable = currentCCSwitchTarget !== null
+  }, [accountById, actionEntries, deeplinkExportContext])
+  const isCurrentDeeplinkExportAvailable = currentDeeplinkExportRequest !== null
   useEffect(() => {
-    if (ccSwitchContext && !isCurrentCCSwitchContextExportable)
-      setCCSwitchContext(null)
-  }, [ccSwitchContext, isCurrentCCSwitchContextExportable])
+    if (deeplinkExportContext && !isCurrentDeeplinkExportAvailable)
+      setDeeplinkExportContext(null)
+  }, [deeplinkExportContext, isCurrentDeeplinkExportAvailable])
 
   const displayRows = useMemo<readonly KeyManagementDisplayRow[]>(
     () => [
@@ -730,8 +736,8 @@ export function TokenList(props: TokenListProps) {
     }
   }
 
-  const handleCloseCCSwitchDialog = () => {
-    setCCSwitchContext(null)
+  const handleCloseDeeplinkExport = () => {
+    setDeeplinkExportContext(null)
   }
 
   if ((isLoading || nativeLoading) && displayRows.length === 0) {
@@ -807,8 +813,12 @@ export function TokenList(props: TokenListProps) {
         if (!entry || !account) return {}
         return {
           ...getSelectionProps(entry.id),
-          onOpenCCSwitchDialog: () =>
-            setCCSwitchContext({ runtimeKey: entry.runtimeKey, account }),
+          onOpenDeeplinkExport: (target) =>
+            setDeeplinkExportContext({
+              target,
+              runtimeKey: entry.runtimeKey,
+              account,
+            }),
           managedSiteStatus:
             managedSiteTokenStatuses?.[entry.runtimeKey.id]?.result,
           isManagedSiteStatusChecking:
@@ -1067,11 +1077,10 @@ export function TokenList(props: TokenListProps) {
         </div>
       )}
 
-      {currentCCSwitchTarget && isCurrentCCSwitchContextExportable && (
-        <CCSwitchExportDialog
-          isOpen={true}
-          onClose={handleCloseCCSwitchDialog}
-          source={currentCCSwitchTarget.exportSource}
+      {currentDeeplinkExportRequest && (
+        <DeeplinkExportDialog
+          request={currentDeeplinkExportRequest}
+          onClose={handleCloseDeeplinkExport}
         />
       )}
 

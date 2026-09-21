@@ -486,9 +486,9 @@ describe("RuntimeKeyHeader analytics", () => {
     ).toBeInTheDocument()
   })
 
-  it("omits CC Switch when its export opener is unavailable", async () => {
+  it("omits the deeplink exports when their opener is unavailable", async () => {
     const user = userEvent.setup()
-    renderRuntimeKeyHeader({ withCCSwitchExport: false })
+    renderRuntimeKeyHeader({ withDeeplinkExport: false })
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.export" }),
@@ -497,6 +497,11 @@ describe("RuntimeKeyHeader analytics", () => {
     expect(
       screen.queryByRole("menuitem", {
         name: "keyManagement:actions.exportToCCSwitch",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "keyManagement:actions.exportToAiToolbox",
       }),
     ).not.toBeInTheDocument()
   })

@@ -20,6 +20,7 @@
     "detailsFor": "Ver detalles de {{name}}",
     "editKey": "Editar clave",
     "expandAll": "Expandir todo",
+    "exportToAiToolbox": "Exportar a AI Toolbox",
     "exportToCCSwitch": "Exportar a CC Switch",
     "exportToCursorPlus": "Exportar configuración de proveedor de Cursor++",
     "exportToKiloCode": "Exportar configuración de Kilo Code",

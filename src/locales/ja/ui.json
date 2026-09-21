@@ -8,6 +8,58 @@
     "tokenBased": "トークン課金"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "エクスポート"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "このプロバイダー設定をディープリンク経由で AI Toolbox に直接送信します",
+      "descriptions": {
+        "apiFormat": "AI Toolbox は対象アプリ向けにプロバイダーを再構築します。このプロバイダーがアプリの既定プロトコルを使用しない場合のみ指定してください。",
+        "model": "利用可能な場合、/v1/models からモデルを読み込んで選択できます。カスタムモデル ID を直接入力することも可能です。",
+        "modelDiscoveryFailed": "上流のモデル一覧を取得できませんでした。モデル ID を手動で入力するか、再試行してください。"
+      },
+      "fields": {
+        "apiFormat": "API プロトコル",
+        "app": "対象アプリ",
+        "baseUrl": "API ベース URL",
+        "homepage": "ホームページ URL",
+        "model": "既定モデル（任意）",
+        "name": "プロバイダー名",
+        "notes": "メモ（任意）"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "自動（アプリの既定）",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "既定モデルなし"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "例: claude-3-opus",
+        "name": "例: Acme Relay",
+        "notes": "インポートメモを追加"
+      },
+      "title": "AI Toolbox にエクスポート"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "ブックマークを選んで一括インポートを開始",

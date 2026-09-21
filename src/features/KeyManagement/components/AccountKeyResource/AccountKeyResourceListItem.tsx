@@ -2,6 +2,7 @@ import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { IconButton } from "~/components/ui"
 import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/components/KeyResourceCard"
@@ -48,7 +49,7 @@ export function AccountKeyResourceListItem({
   isNavigationTarget,
   isSelected,
   onSelectionChange,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
   managedSiteStatus,
   isManagedSiteStatusChecking,
   onManagedSiteImportSuccess,
@@ -73,7 +74,7 @@ export function AccountKeyResourceListItem({
   isNavigationTarget?: boolean
   isSelected?: boolean
   onSelectionChange?: (selected: boolean) => void
-  onOpenCCSwitchDialog?: () => void
+  onOpenDeeplinkExport?: (target: DeeplinkExportTarget) => void
   managedSiteStatus?: ManagedSiteTokenChannelStatus
   isManagedSiteStatusChecking?: boolean
   onManagedSiteImportSuccess?: () => void | Promise<void>
@@ -256,7 +257,7 @@ export function AccountKeyResourceListItem({
                 copyKey={disclosure.copy}
                 handleEditKey={() => onEdit(row.facts.ref)}
                 handleDeleteKey={() => onDelete(row.facts.ref)}
-                onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+                onOpenDeeplinkExport={onOpenDeeplinkExport}
                 managedSiteStatus={managedSiteStatus}
                 isManagedSiteStatusChecking={isManagedSiteStatusChecking}
                 onManagedSiteImportSuccess={onManagedSiteImportSuccess}

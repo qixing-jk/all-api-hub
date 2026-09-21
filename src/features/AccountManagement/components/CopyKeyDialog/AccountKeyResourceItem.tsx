@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import {
@@ -19,13 +20,16 @@ export function AccountKeyResourceItem({
   account,
   copiedRuntimeKeyId,
   onCopyKey,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
 }: {
   row: NativeKeyManagementRow
   account: DisplaySiteData
   copiedRuntimeKeyId: string | null
   onCopyKey: (key: AccountRuntimeKey) => void
-  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
+  onOpenDeeplinkExport?: (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => void
 }) {
   const { t } = useTranslation(["keyManagement", "common"])
   const [isExpanded, setIsExpanded] = useState(false)
@@ -55,7 +59,7 @@ export function AccountKeyResourceItem({
             copiedRuntimeKeyId={copiedRuntimeKeyId}
             onCopyKey={onCopyKey}
             account={account}
-            onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+            onOpenDeeplinkExport={onOpenDeeplinkExport}
           />
         ) : undefined
       }

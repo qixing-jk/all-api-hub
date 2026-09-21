@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { IconButton } from "~/components/ui"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 
+import { AiToolboxIcon } from "./icons/AiToolboxIcon"
 import { CCSwitchIcon } from "./icons/CCSwitchIcon"
 import { CherryIcon } from "./icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "./icons/ClaudeCodeRouterIcon"
@@ -26,6 +27,7 @@ export const EXPORT_ACTION_TARGETS = {
   CherryStudio: "cherryStudio",
   Kelivo: "kelivo",
   CCSwitch: "ccSwitch",
+  AiToolbox: "aiToolbox",
   KiloCode: "kiloCode",
   CursorPlus: "cursorPlus",
 
@@ -35,7 +37,7 @@ export const EXPORT_ACTION_TARGETS = {
 type ExportActionTarget =
   (typeof EXPORT_ACTION_TARGETS)[keyof typeof EXPORT_ACTION_TARGETS]
 
-interface ExportMenuAction {
+export interface ExportMenuAction {
   onSelect: () => void | Promise<void>
   testId?: string
 }
@@ -56,6 +58,7 @@ const CHAT_CLIENT_TARGETS = [
 
 const CODING_AGENT_TARGETS = [
   EXPORT_ACTION_TARGETS.CCSwitch,
+  EXPORT_ACTION_TARGETS.AiToolbox,
   EXPORT_ACTION_TARGETS.KiloCode,
   EXPORT_ACTION_TARGETS.CursorPlus,
 ] as const
@@ -84,6 +87,8 @@ export function ExportActionsMenu({
         return t("keyManagement:actions.copyKelivoImportCode")
       case EXPORT_ACTION_TARGETS.CCSwitch:
         return t("keyManagement:actions.exportToCCSwitch")
+      case EXPORT_ACTION_TARGETS.AiToolbox:
+        return t("keyManagement:actions.exportToAiToolbox")
       case EXPORT_ACTION_TARGETS.CursorPlus:
         return t("keyManagement:actions.exportToCursorPlus")
       case EXPORT_ACTION_TARGETS.KiloCode:
@@ -102,6 +107,8 @@ export function ExportActionsMenu({
         return <KelivoIcon />
       case EXPORT_ACTION_TARGETS.CCSwitch:
         return <CCSwitchIcon size="sm" />
+      case EXPORT_ACTION_TARGETS.AiToolbox:
+        return <AiToolboxIcon size="sm" />
       case EXPORT_ACTION_TARGETS.CursorPlus:
         return <CursorPlusIcon />
       case EXPORT_ACTION_TARGETS.KiloCode:

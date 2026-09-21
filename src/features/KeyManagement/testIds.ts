@@ -8,12 +8,15 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   linkedProfileExportMenuButton:
     "key-management-linked-profile-export-menu-button",
   exportToCCSwitchButton: "key-management-export-to-cc-switch-button",
+  exportToAiToolboxButton: "key-management-export-to-ai-toolbox-button",
   serviceCredentialExportMenuButton:
     "key-management-service-credential-export-menu-button",
   serviceCredentialImportToManagedSiteButton:
     "key-management-service-credential-import-to-managed-site-button",
   serviceCredentialExportToCCSwitchButton:
     "key-management-service-credential-export-to-cc-switch-button",
+  serviceCredentialExportToAiToolboxButton:
+    "key-management-service-credential-export-to-ai-toolbox-button",
   verifyTokenApiButton: "key-management-verify-token-api-button",
   verifyTokenCliSupportButton: "key-management-verify-token-cli-support-button",
   batchSaveToApiProfilesButton:

@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, UsersRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import { getCopyKeyDialogRuntimeKeyItemTestId } from "~/features/AccountManagement/testIds"
 import {
@@ -19,7 +20,10 @@ interface RuntimeKeyItemProps {
   onToggle: () => void
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
+  onOpenDeeplinkExport?: (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => void
 }
 
 /**
@@ -32,7 +36,7 @@ export function RuntimeKeyItem({
   onToggle,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
 }: RuntimeKeyItemProps) {
   const { t } = useTranslation("ui")
 
@@ -90,7 +94,7 @@ export function RuntimeKeyItem({
           copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}
           account={account}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+          onOpenDeeplinkExport={onOpenDeeplinkExport}
         />
       )}
     </Card>

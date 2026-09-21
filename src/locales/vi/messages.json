@@ -17,6 +17,14 @@
     "oneTimeKeyPromptCancelled": "Tài khoản đã được lưu. Bạn có thể tạo thủ công AIHubMix API Key trong phần quản lý khóa sau.",
     "oneTimeKeyUnavailableAfterCreate": "Tài khoản đã được lưu, nhưng không thể lấy toàn bộ AIHubMix API Key. Khóa AIHubMix chỉ hiển thị một lần khi tạo, vui lòng tạo lại trong phần quản lý khóa và lưu lại toàn bộ khóa ngay lập tức."
   },
+  "aiToolbox": {
+    "attemptingRedirect": "Đang thử chuyển hướng đến AI Toolbox",
+    "invalidApp": "Ứng dụng mục tiêu AI Toolbox không được hỗ trợ",
+    "invalidBaseUrl": "URL cơ sở API không hợp lệ hoặc chưa được điền",
+    "invalidHomepage": "Địa chỉ trang chủ không hợp lệ hoặc chưa được điền",
+    "missingCredentials": "Thiếu thông tin tài khoản hoặc khóa cần thiết",
+    "unableToOpen": "Không thể mở AI Toolbox, vui lòng đảm bảo đã cài đặt"
+  },
   "autodetect": {
     "currentTabNeedsReload": "Trang hiện tại có thể đã được mở trước khi cài đặt hoặc cập nhật tiện ích, plugin tạm thời không thể đọc thông tin của thẻ này. Vui lòng làm mới trang hiện tại rồi thử lại tính năng nhận dạng tự động.",
     "failed": "Nhận dạng tự động thất bại: {{error}}",

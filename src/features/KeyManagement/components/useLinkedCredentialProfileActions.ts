@@ -26,6 +26,7 @@ import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 type ActiveDialog =
   | "cc-switch"
+  | "ai-toolbox"
   | "cursor-plus"
   | "kilo-code"
   | "kelivo"

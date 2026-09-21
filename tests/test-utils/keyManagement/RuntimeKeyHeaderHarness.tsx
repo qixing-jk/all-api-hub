@@ -38,7 +38,7 @@ type RuntimeKeyHeaderHarnessProps = Partial<Omit<HeaderProps, "runtimeKey">> &
     handleEditToken?: () => void
     handleDeleteToken?: () => void
     translate?: TFunction
-    withCCSwitchExport?: boolean
+    withDeeplinkExport?: boolean
   }
 
 export function RuntimeKeyHeaderHarness({
@@ -53,8 +53,8 @@ export function RuntimeKeyHeaderHarness({
   copyKey = vi.fn(),
   handleEditToken = vi.fn(),
   handleDeleteToken = vi.fn(),
-  onOpenCCSwitchDialog = vi.fn(),
-  withCCSwitchExport = true,
+  onOpenDeeplinkExport = vi.fn(),
+  withDeeplinkExport = true,
   ...restProps
 }: RuntimeKeyHeaderHarnessProps) {
   const account =
@@ -98,8 +98,8 @@ export function RuntimeKeyHeaderHarness({
       handleEditKey={handleEditKey ?? handleEditToken}
       handleDeleteKey={handleDeleteKey ?? handleDeleteToken}
       account={account}
-      onOpenCCSwitchDialog={
-        withCCSwitchExport ? onOpenCCSwitchDialog : undefined
+      onOpenDeeplinkExport={
+        withDeeplinkExport ? onOpenDeeplinkExport : undefined
       }
       headerProps={
         headerPropsOverride ?? {

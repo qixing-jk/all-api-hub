@@ -73,13 +73,13 @@ vi.mock(
       isSelected,
       onSelectionChange,
       selectionDisabledReason,
-      onOpenCCSwitchDialog,
+      onOpenDeeplinkExport,
     }: {
       row: { facts: { displayName: string } }
       isSelected?: boolean
       onSelectionChange?: (checked: boolean) => void
       selectionDisabledReason?: string
-      onOpenCCSwitchDialog?: () => void
+      onOpenDeeplinkExport?: (target: string) => void
     }) => (
       <div>
         {onSelectionChange || selectionDisabledReason ? (
@@ -97,7 +97,10 @@ vi.mock(
         ) : (
           <span>{row.facts.displayName}</span>
         )}
-        <button type="button" onClick={onOpenCCSwitchDialog}>
+        <button
+          type="button"
+          onClick={() => onOpenDeeplinkExport?.("ccSwitch")}
+        >
           Open CC Switch for {row.facts.displayName}
         </button>
       </div>
@@ -105,25 +108,29 @@ vi.mock(
   }),
 )
 
-vi.mock("~/components/CCSwitchExportDialog", () => ({
-  CCSwitchExportDialog: ({
-    isOpen,
-    source,
-    onClose,
-  }: {
-    isOpen: boolean
-    source: { providerName: string }
-    onClose: () => void
-  }) =>
-    isOpen ? (
-      <div data-testid="cc-switch-export-dialog">
-        <span>CC Switch export for {source.providerName}</span>
+vi.mock("~/components/DeeplinkExportDialog", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/components/DeeplinkExportDialog")>()
+  return {
+    ...actual,
+    DeeplinkExportDialog: ({
+      request,
+      onClose,
+    }: {
+      request: { target: string; source: { providerName: string } }
+      onClose: () => void
+    }) => (
+      <div data-testid="deeplink-export-dialog">
+        <span>
+          {request.target} export for {request.source.providerName}
+        </span>
         <button type="button" onClick={onClose}>
-          Close CC Switch export
+          Close deeplink export
         </button>
       </div>
-    ) : null,
-}))
+    ),
+  }
+})
 
 vi.mock("~/services/managedSites/tokenBatchExport", () => ({
   executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
@@ -670,14 +677,14 @@ describe("TokenList batch export selection", () => {
     await user.click(
       screen.getByRole("button", { name: "Open CC Switch for Token 1" }),
     )
-    expect(screen.getByTestId("cc-switch-export-dialog")).toHaveTextContent(
-      "CC Switch export for Account 1",
+    expect(screen.getByTestId("deeplink-export-dialog")).toHaveTextContent(
+      "ccSwitch export for Account 1",
     )
 
     await user.click(
-      screen.getByRole("button", { name: "Close CC Switch export" }),
+      screen.getByRole("button", { name: "Close deeplink export" }),
     )
-    expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
+    expect(screen.queryByTestId("deeplink-export-dialog")).toBeNull()
   })
 
   it("toggles all visible tokens in an account group from the group header", async () => {
@@ -737,8 +744,8 @@ describe("TokenList batch export selection", () => {
       }),
     )
 
-    expect(screen.getByTestId("cc-switch-export-dialog")).toHaveTextContent(
-      "CC Switch export for Account 1",
+    expect(screen.getByTestId("deeplink-export-dialog")).toHaveTextContent(
+      "ccSwitch export for Account 1",
     )
   })
 
@@ -751,7 +758,7 @@ describe("TokenList batch export selection", () => {
         name: "Open CC Switch for Token 1",
       }),
     )
-    expect(screen.getByTestId("cc-switch-export-dialog")).toBeInTheDocument()
+    expect(screen.getByTestId("deeplink-export-dialog")).toBeInTheDocument()
 
     const createResponseOnlyAccount = createAccount({
       id: account.id,
@@ -772,7 +779,7 @@ describe("TokenList batch export selection", () => {
     )
 
     await waitFor(() => {
-      expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
+      expect(screen.queryByTestId("deeplink-export-dialog")).toBeNull()
     })
   })
 

@@ -8,6 +8,58 @@
     "tokenBased": "按量計費"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "匯出"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "透過深連結一鍵匯入當前站點配置到 AI Toolbox",
+      "descriptions": {
+        "apiFormat": "AI Toolbox 會依目標應用重建供應商配置，因此僅當此供應商不使用應用預設協定時才需要指定。",
+        "model": "若可用，會自動從 /v1/models 獲取模型列表供選擇；也可以直接輸入自定義模型名稱。",
+        "modelDiscoveryFailed": "無法取得上游模型列表，可手動輸入模型名稱或重試。"
+      },
+      "fields": {
+        "apiFormat": "介面協定",
+        "app": "目標應用",
+        "baseUrl": "介面地址",
+        "homepage": "主頁地址",
+        "model": "預設模型（可選）",
+        "name": "供應商名稱",
+        "notes": "備註（可選）"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "自動（跟隨應用預設）",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "不設定預設模型"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "例如 claude-3-opus",
+        "name": "例如 Acme 中轉",
+        "notes": "新增匯入說明"
+      },
+      "title": "匯出到 AI Toolbox"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "選擇書籤並開始批量匯入",

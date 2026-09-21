@@ -17,6 +17,14 @@
     "oneTimeKeyPromptCancelled": "账号已保存。你之后可以在密钥管理中手动创建 AIHubMix API 密钥。",
     "oneTimeKeyUnavailableAfterCreate": "账号已保存，但未能获取完整 AIHubMix API 密钥。AIHubMix 密钥只在创建时显示一次，请在密钥管理中重新创建并立即保存完整密钥。"
   },
+  "aiToolbox": {
+    "attemptingRedirect": "正在尝试跳转到 AI Toolbox",
+    "invalidApp": "不支持的 AI Toolbox 目标应用",
+    "invalidBaseUrl": "接口地址无效或未填写",
+    "invalidHomepage": "主页地址无效或未填写",
+    "missingCredentials": "缺少必要的账户或密钥信息",
+    "unableToOpen": "无法打开 AI Toolbox，请确认已安装"
+  },
   "autodetect": {
     "currentTabNeedsReload": "当前页面可能是在安装或更新扩展前打开的，插件暂时无法读取该标签页的信息。请刷新当前页面后再重试自动识别。",
     "failed": "自动识别失败：{{error}}",

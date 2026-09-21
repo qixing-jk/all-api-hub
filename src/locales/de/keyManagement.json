@@ -18,6 +18,7 @@
     "detailsFor": "Details für {{name}}",
     "editKey": "Schlüssel bearbeiten",
     "expandAll": "Alles erweitern",
+    "exportToAiToolbox": "In AI Toolbox exportieren",
     "exportToCCSwitch": "In CC Switch exportieren",
     "exportToCursorPlus": "Cursor++-Anbieterkonfiguration exportieren",
     "exportToKiloCode": "Kilo Code Konfiguration exportieren",

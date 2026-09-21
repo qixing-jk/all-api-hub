@@ -16,6 +16,7 @@ const domOnlyTsTests = [
   "entrypoints/options/pages/ModelList/useFilteredModels.test.ts",
   "services/ldohSiteLookup.background.test.ts",
   "services/shareSnapshotExport.test.ts",
+  "utils/aiToolbox.test.ts",
   "utils/browserApi.test.ts",
   "utils/ccSwitch.test.ts",
   "utils/cherryStudio.test.ts",

@@ -1,9 +1,12 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
+import {
+  createProfileDeeplinkExportRequest,
+  DeeplinkExportDialog,
+} from "~/components/DeeplinkExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { ConfirmDialog } from "~/components/ui"
@@ -44,13 +47,15 @@ export function ApiCredentialProfilesDialogs({
     "aiApiVerification",
     "common",
   ])
-  const ccSwitchSource = useMemo(
-    () =>
-      controller.ccSwitchProfile
-        ? createProfileCredentialExportSource(controller.ccSwitchProfile)
-        : null,
-    [controller.ccSwitchProfile],
-  )
+  const deeplinkExportRequest = useMemo(() => {
+    const selection = controller.deeplinkExportProfile
+    if (!selection) return null
+    return createProfileDeeplinkExportRequest({
+      target: selection.target,
+      source: createProfileCredentialExportSource(selection.profile),
+      baseContext: apiCredentialProfileThirdPartyExportContext,
+    })
+  }, [controller.deeplinkExportProfile])
   const cursorPlusSource = useMemo(
     () =>
       controller.cursorPlusProfile
@@ -97,16 +102,10 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      {ccSwitchSource ? (
-        <CCSwitchExportDialog
-          isOpen={true}
-          onClose={() => controller.setCCSwitchProfile(null)}
-          source={ccSwitchSource}
-          analyticsContext={{
-            ...apiCredentialProfileThirdPartyExportContext,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
-          }}
+      {deeplinkExportRequest ? (
+        <DeeplinkExportDialog
+          request={deeplinkExportRequest}
+          onClose={() => controller.setDeeplinkExportProfile(null)}
         />
       ) : null}
 

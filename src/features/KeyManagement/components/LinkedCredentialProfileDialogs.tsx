@@ -1,6 +1,10 @@
-import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
+import {
+  createProfileDeeplinkExportRequest,
+  DEEPLINK_EXPORT_TARGETS,
+  DeeplinkExportDialog,
+} from "~/components/DeeplinkExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
@@ -35,15 +39,24 @@ export function LinkedCredentialProfileDialogs({
   switch (activeDialog) {
     case "cc-switch":
       return (
-        <CCSwitchExportDialog
-          isOpen
+        <DeeplinkExportDialog
+          request={createProfileDeeplinkExportRequest({
+            target: DEEPLINK_EXPORT_TARGETS.CCSwitch,
+            source: exportSource,
+            baseContext: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+          })}
           onClose={closeDialog}
-          source={exportSource}
-          analyticsContext={{
-            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
-          }}
+        />
+      )
+    case "ai-toolbox":
+      return (
+        <DeeplinkExportDialog
+          request={createProfileDeeplinkExportRequest({
+            target: DEEPLINK_EXPORT_TARGETS.AiToolbox,
+            source: exportSource,
+            baseContext: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+          })}
+          onClose={closeDialog}
         />
       )
     case "cursor-plus":

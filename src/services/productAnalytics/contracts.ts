@@ -618,9 +618,12 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   EnterAccountBulkMode: "enter_account_bulk_mode",
   ExportAccountData: "export_account_data",
   ExportAccountTokenToCCSwitch: "export_account_token_to_cc_switch",
+  ExportAccountTokenToAiToolbox: "export_account_token_to_ai_toolbox",
   ExportAccountTokenToCherryStudio: "export_account_token_to_cherry_studio",
   ExportApiCredentialProfileToCCSwitch:
     "export_api_credential_profile_to_cc_switch",
+  ExportApiCredentialProfileToAiToolbox:
+    "export_api_credential_profile_to_ai_toolbox",
   ExportApiCredentialProfileToCherryStudio:
     "export_api_credential_profile_to_cherry_studio",
   ExportApiCredentialSettingsFile: "export_api_credential_settings_file",

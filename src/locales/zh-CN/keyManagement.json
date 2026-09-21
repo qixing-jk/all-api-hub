@@ -16,6 +16,7 @@
     "detailsFor": "查看 {{name}} 的详情",
     "editKey": "编辑密钥",
     "expandAll": "全部展开",
+    "exportToAiToolbox": "导出到 AI Toolbox",
     "exportToCCSwitch": "导出到 CC Switch",
     "exportToCursorPlus": "导出 Cursor++ 提供商配置",
     "exportToKiloCode": "导出 Kilo Code 配置",

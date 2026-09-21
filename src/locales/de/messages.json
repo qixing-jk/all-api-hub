@@ -19,6 +19,14 @@
     "oneTimeKeyPromptCancelled": "Konto gespeichert. Sie können einen AIHubMix API-Schlüssel später manuell in der Schlüsselverwaltung erstellen.",
     "oneTimeKeyUnavailableAfterCreate": "Konto gespeichert, aber der vollständige AIHubMix-API-Schlüssel konnte nicht abgerufen werden. AIHubMix-Schlüssel werden nach der Erstellung nur einmal angezeigt; erstellen Sie in der Schlüsselverwaltung einen neuen Schlüssel und speichern Sie ihn sofort vollständig."
   },
+  "aiToolbox": {
+    "attemptingRedirect": "Versuch einer Weiterleitung zu AI Toolbox",
+    "invalidApp": "Nicht unterstützte AI-Toolbox-Ziel-App",
+    "invalidBaseUrl": "Ungültige oder fehlende API-Basis-URL",
+    "invalidHomepage": "Ungültige oder fehlende Homepage-URL",
+    "missingCredentials": "Erforderliche Konto- oder Schlüsselinformationen fehlen",
+    "unableToOpen": "AI Toolbox kann nicht geöffnet werden. Bitte stellen Sie sicher, dass es installiert ist"
+  },
   "autodetect": {
     "currentTabNeedsReload": "Diese Seite wurde möglicherweise geöffnet, bevor die Erweiterung installiert oder aktualisiert wurde, sodass die Erweiterung noch keine Daten von dieser Registerkarte lesen kann. Laden Sie die aktuelle Seite neu und versuchen Sie es dann erneut mit der automatischen Erkennung.",
     "failed": "Automatische Erkennung fehlgeschlagen: {{error}}",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
@@ -557,8 +558,10 @@ export function useApiCredentialProfilesController() {
   const [refreshingTelemetryProfileIds, setRefreshingTelemetryProfileIds] =
     useState<string[]>([])
 
-  const [ccSwitchProfile, setCCSwitchProfile] =
-    useState<ApiCredentialProfile | null>(null)
+  const [deeplinkExportProfile, setDeeplinkExportProfile] = useState<{
+    target: DeeplinkExportTarget
+    profile: ApiCredentialProfile
+  } | null>(null)
   const [cursorPlusProfile, setCursorPlusProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [kiloCodeProfile, setKiloCodeProfile] =
@@ -600,8 +603,13 @@ export function useApiCredentialProfilesController() {
         return
       }
 
-      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch) {
-        setCCSwitchProfile(profile)
+      // Deeplink exports share their action values with DEEPLINK_EXPORT_TARGETS,
+      // so the narrowed action is itself the dialog's destination.
+      if (
+        action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch ||
+        action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.AiToolbox
+      ) {
+        setDeeplinkExportProfile({ target: action, profile })
         return
       }
 
@@ -838,8 +846,8 @@ export function useApiCredentialProfilesController() {
     refreshingTelemetryProfileIds,
     handleRefreshTelemetry,
 
-    ccSwitchProfile,
-    setCCSwitchProfile,
+    deeplinkExportProfile,
+    setDeeplinkExportProfile,
     cursorPlusProfile,
     setCursorPlusProfile,
     kiloCodeProfile,

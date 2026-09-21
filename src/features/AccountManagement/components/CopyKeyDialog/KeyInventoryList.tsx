@@ -1,6 +1,7 @@
 import { KeyRound, Plus, SquarePen } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { Alert, EmptyState } from "~/components/ui"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
@@ -18,7 +19,10 @@ interface KeyInventoryListProps {
   onToggleRuntimeKey: (id: string) => void
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
+  onOpenDeeplinkExport?: (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => void
   canCreateDefaultKey?: boolean
   isCreating?: boolean
   createError?: string | null
@@ -38,7 +42,7 @@ export function KeyInventoryList({
   onToggleRuntimeKey,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
   canCreateDefaultKey = false,
   isCreating = false,
   createError,
@@ -109,7 +113,7 @@ export function KeyInventoryList({
           onToggle={() => onToggleRuntimeKey(runtimeKey.id)}
           onCopyKey={onCopyKey}
           account={account}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+          onOpenDeeplinkExport={onOpenDeeplinkExport}
         />
       ))}
       {nativeKeyRows.map((row) => (
@@ -119,7 +123,7 @@ export function KeyInventoryList({
           account={account}
           copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+          onOpenDeeplinkExport={onOpenDeeplinkExport}
         />
       ))}
     </div>

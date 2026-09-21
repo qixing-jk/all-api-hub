@@ -17,6 +17,14 @@
     "oneTimeKeyPromptCancelled": "アカウントは保存されました。あとでキー管理から AIHubMix API キーを手動作成できます。",
     "oneTimeKeyUnavailableAfterCreate": "アカウントは保存されましたが、完全な AIHubMix API キーを取得できませんでした。AIHubMix キーは作成直後に一度だけ表示されます。キー管理で新しいキーを作成し、完全なキーをすぐに保存してください。"
   },
+  "aiToolbox": {
+    "attemptingRedirect": "AI Toolbox へリダイレクトを試行中",
+    "invalidApp": "未対応の AI Toolbox 対象アプリです",
+    "invalidBaseUrl": "API ベース URL が無効、または不足しています",
+    "invalidHomepage": "ホームページ URL が無効、または不足しています",
+    "missingCredentials": "必要なアカウント情報またはキー情報が不足しています",
+    "unableToOpen": "AI Toolbox を開けません。インストールされているか確認してください"
+  },
   "autodetect": {
     "currentTabNeedsReload": "このページは拡張機能のインストールまたは更新前から開かれている可能性があり、現時点ではこのタブの情報を読み取れません。現在のページを再読み込みしてから、もう一度自動検出を試してください。",
     "failed": "自動検出に失敗しました: {{error}}",

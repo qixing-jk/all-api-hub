@@ -1,3 +1,4 @@
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
@@ -24,7 +25,10 @@ interface RuntimeKeyDetailsProps {
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
+  onOpenDeeplinkExport?: (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => void
 }
 
 /** Renders already-resolved non-token runtime keys without legacy token lookup. */
@@ -33,7 +37,7 @@ export function RuntimeKeyDetails({
   copiedRuntimeKeyId,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
 }: RuntimeKeyDetailsProps) {
   return (
     <div className="dark:border-border dark:bg-background border-border-subtle bg-surface-subtle/30 py-density-3 rounded-b-[var(--corner-inner-radius)] border-t px-3">
@@ -45,7 +49,7 @@ export function RuntimeKeyDetails({
           copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}
           account={account}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+          onOpenDeeplinkExport={onOpenDeeplinkExport}
         />
       </div>
     </div>

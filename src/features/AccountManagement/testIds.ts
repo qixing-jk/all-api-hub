@@ -61,6 +61,8 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
     "account-management-copy-key-dialog-import-to-managed-site-button",
   copyKeyDialogExportToCCSwitchButton:
     "account-management-copy-key-dialog-export-to-cc-switch-button",
+  copyKeyDialogExportToAiToolboxButton:
+    "account-management-copy-key-dialog-export-to-ai-toolbox-button",
   copyKeyDialogExportToCursorPlusButton:
     "account-management-copy-key-dialog-export-to-cursor-plus-button",
   rowEditButton: "account-management-row-edit-button",

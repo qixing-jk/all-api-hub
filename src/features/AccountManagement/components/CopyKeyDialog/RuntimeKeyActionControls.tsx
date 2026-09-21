@@ -11,6 +11,11 @@ import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
+import {
+  createDeeplinkExportMenuActions,
+  DEEPLINK_EXPORT_TARGETS,
+  type DeeplinkExportTarget,
+} from "~/components/DeeplinkExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import {
   EXPORT_ACTION_TARGETS,
@@ -68,7 +73,10 @@ interface RuntimeKeyActionControlsProps {
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
+  onOpenDeeplinkExport?: (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => void
 }
 
 // Kilo Code export dialogs and the Cherry Studio integration are only needed
@@ -116,7 +124,7 @@ export function RuntimeKeyActionControls({
   copiedRuntimeKeyId,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
 }: RuntimeKeyActionControlsProps) {
   const { t } = useTranslation(["ui", "keyManagement", "settings"])
   const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
@@ -247,8 +255,8 @@ export function RuntimeKeyActionControls({
     }
   }
 
-  const handleExportToCCSwitch = () => {
-    onOpenCCSwitchDialog?.(exportSource)
+  const handleOpenDeeplinkExport = (target: DeeplinkExportTarget) => {
+    onOpenDeeplinkExport?.(target, exportSource)
   }
 
   const markGatewayGuidanceComplete = () => {
@@ -423,14 +431,16 @@ export function RuntimeKeyActionControls({
                 [EXPORT_ACTION_TARGETS.Kelivo]: {
                   onSelect: handleOpenKelivoExportDialog,
                 },
-                ...(onOpenCCSwitchDialog
-                  ? {
-                      [EXPORT_ACTION_TARGETS.CCSwitch]: {
-                        testId:
+                ...(onOpenDeeplinkExport
+                  ? createDeeplinkExportMenuActions({
+                      testIds: {
+                        [DEEPLINK_EXPORT_TARGETS.CCSwitch]:
                           ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCCSwitchButton,
-                        onSelect: handleExportToCCSwitch,
+                        [DEEPLINK_EXPORT_TARGETS.AiToolbox]:
+                          ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToAiToolboxButton,
                       },
-                    }
+                      onSelect: handleOpenDeeplinkExport,
+                    })
                   : {}),
                 [EXPORT_ACTION_TARGETS.CursorPlus]: {
                   testId:

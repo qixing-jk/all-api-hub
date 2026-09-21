@@ -4,6 +4,11 @@ import { useTranslation } from "react-i18next"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import {
+  createDeeplinkExportMenuActions,
+  DEEPLINK_EXPORT_TARGETS,
+  type DeeplinkExportTarget,
+} from "~/components/DeeplinkExportDialog"
+import {
   EXPORT_ACTION_TARGETS,
   ExportActionsMenu,
 } from "~/components/ExportActionsMenu"
@@ -39,7 +44,7 @@ interface RuntimeKeyIntegrationActionGroupProps {
   actionPolicy: KeyResourceActionPolicy
   association?: KeyResourceCredentialAssociation
   controller: RuntimeKeyIntegrationActionsController
-  onOpenCCSwitchDialog?: () => void
+  onOpenDeeplinkExport?: (target: DeeplinkExportTarget) => void
   runtimeKey: AccountRuntimeKey
 }
 
@@ -115,7 +120,7 @@ export function RuntimeKeyIntegrationActionGroup({
   actionPolicy,
   association,
   controller,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
   runtimeKey,
 }: RuntimeKeyIntegrationActionGroupProps) {
   const { t } = useTranslation("keyManagement")
@@ -150,13 +155,16 @@ export function RuntimeKeyIntegrationActionGroup({
               [EXPORT_ACTION_TARGETS.Kelivo]: {
                 onSelect: exportActions.openKelivo,
               },
-              ...(onOpenCCSwitchDialog
-                ? {
-                    [EXPORT_ACTION_TARGETS.CCSwitch]: {
-                      testId: KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton,
-                      onSelect: onOpenCCSwitchDialog,
+              ...(onOpenDeeplinkExport
+                ? createDeeplinkExportMenuActions({
+                    testIds: {
+                      [DEEPLINK_EXPORT_TARGETS.CCSwitch]:
+                        KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton,
+                      [DEEPLINK_EXPORT_TARGETS.AiToolbox]:
+                        KEY_MANAGEMENT_TEST_IDS.exportToAiToolboxButton,
                     },
-                  }
+                    onSelect: onOpenDeeplinkExport,
+                  })
                 : {}),
               [EXPORT_ACTION_TARGETS.CursorPlus]: {
                 onSelect: exportActions.openCursorPlus,

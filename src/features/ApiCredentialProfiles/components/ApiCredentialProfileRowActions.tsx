@@ -2,6 +2,10 @@ import { Copy, Cpu, Pencil, Terminal, Trash2, Wrench } from "lucide-react"
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  createDeeplinkExportMenuActions,
+  DEEPLINK_EXPORT_TARGETS,
+} from "~/components/DeeplinkExportDialog"
 import { ExportActionsMenu } from "~/components/ExportActionsMenu"
 import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import { IconButton } from "~/components/ui"
@@ -120,14 +124,15 @@ export function ApiCredentialProfileRowActions({
               onSelect: () =>
                 onExport(profile, API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.Kelivo),
             },
-            [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch]: {
-              testId: API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem,
-              onSelect: () =>
-                onExport(
-                  profile,
-                  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch,
-                ),
-            },
+            ...createDeeplinkExportMenuActions({
+              testIds: {
+                [DEEPLINK_EXPORT_TARGETS.CCSwitch]:
+                  API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem,
+                [DEEPLINK_EXPORT_TARGETS.AiToolbox]:
+                  API_CREDENTIAL_PROFILES_TEST_IDS.exportToAiToolboxMenuItem,
+              },
+              onSelect: (target) => onExport(profile, target),
+            }),
             [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CursorPlus]: {
               testId:
                 API_CREDENTIAL_PROFILES_TEST_IDS.exportToCursorPlusMenuItem,

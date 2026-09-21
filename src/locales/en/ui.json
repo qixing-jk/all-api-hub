@@ -8,6 +8,58 @@
     "tokenBased": "Token-based billing"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "Export"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "Send this provider configuration directly to AI Toolbox via deep link",
+      "descriptions": {
+        "apiFormat": "AI Toolbox rebuilds the provider for the target app. Choose a protocol only when this provider does not use the app's default.",
+        "model": "When available, models are loaded from /v1/models for selection. You can also type a custom model id.",
+        "modelDiscoveryFailed": "Could not load the upstream model list. Enter a model id manually or retry."
+      },
+      "fields": {
+        "apiFormat": "API protocol",
+        "app": "Target app",
+        "baseUrl": "API base URL",
+        "homepage": "Homepage URL",
+        "model": "Default model (optional)",
+        "name": "Provider name",
+        "notes": "Notes (optional)"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "Automatic (app default)",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "No default model"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "e.g. claude-3-opus",
+        "name": "e.g. Acme Relay",
+        "notes": "Add import notes"
+      },
+      "title": "Export to AI Toolbox"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "Choose bookmarks and start batch import",

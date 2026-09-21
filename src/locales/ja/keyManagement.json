@@ -16,6 +16,7 @@
     "detailsFor": "{{name}} の詳細を見る",
     "editKey": "キーを編集",
     "expandAll": "すべて展開",
+    "exportToAiToolbox": "AI Toolbox にエクスポート",
     "exportToCCSwitch": "CC Switch にエクスポート",
     "exportToCursorPlus": "Cursor++ プロバイダー設定をエクスポート",
     "exportToKiloCode": "Kilo Code 設定をエクスポート",

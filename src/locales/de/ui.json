@@ -8,6 +8,58 @@
     "tokenBased": "Tokenbasierte Abrechnung"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "Exportieren"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "Senden Sie diese Anbieterkonfiguration per Deep Link direkt an AI Toolbox",
+      "descriptions": {
+        "apiFormat": "AI Toolbox baut den Anbieter für die Ziel-App neu auf. Wählen Sie ein Protokoll nur, wenn dieser Anbieter nicht den Standard der App verwendet.",
+        "model": "Wenn verfügbar, werden Modelle zur Auswahl aus /v1/models geladen. Sie können auch eine benutzerdefinierte Modell-ID eingeben.",
+        "modelDiscoveryFailed": "Die Modellliste der Gegenstelle konnte nicht geladen werden. Geben Sie eine Modell-ID manuell ein oder versuchen Sie es erneut."
+      },
+      "fields": {
+        "apiFormat": "API-Protokoll",
+        "app": "Ziel-App",
+        "baseUrl": "API-Basis-URL",
+        "homepage": "Homepage-URL",
+        "model": "Standardmodell (optional)",
+        "name": "Anbietername",
+        "notes": "Notizen (optional)"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "Automatisch (App-Standard)",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "Kein Standardmodell"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "z. B. claude-3-opus",
+        "name": "z. B. Acme-Relais",
+        "notes": "Importnotizen hinzufügen"
+      },
+      "title": "In AI Toolbox exportieren"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "Lesezeichen auswählen und Batch-Import starten",

@@ -85,6 +85,7 @@ describe("ExportActionsMenu", () => {
       "keyManagement:actions.useInCherry",
       "keyManagement:actions.copyKelivoImportCode",
       "keyManagement:actions.exportToCCSwitch",
+      "keyManagement:actions.exportToAiToolbox",
       "keyManagement:actions.exportToKiloCode",
       "keyManagement:actions.exportToCursorPlus",
       "keyManagement:actions.importToClaudeCodeRouter",

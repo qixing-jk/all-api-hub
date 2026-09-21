@@ -195,7 +195,7 @@ export const getManagedSiteSettingsActionLabel = (
  * @param props.handleEditKey Edit action callback.
  * @param props.handleDeleteKey Delete action callback.
  * @param props.account Account context for cross-app operations.
- * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ * @param props.onOpenDeeplinkExport Optional deeplink export opener for a target destination.
  * @param props.managedSiteStatus Current managed-site status for the runtimeKey.
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
@@ -211,7 +211,7 @@ export function RuntimeKeyHeader({
   handleEditKey,
   handleDeleteKey,
   account,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
   managedSiteStatus,
   isManagedSiteStatusChecking = false,
   onManagedSiteImportSuccess,
@@ -460,7 +460,7 @@ export function RuntimeKeyHeader({
             handleDeleteKey={handleDeleteKey}
             account={account}
             managedSiteStatus={managedSiteStatus}
-            onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+            onOpenDeeplinkExport={onOpenDeeplinkExport}
             onManagedSiteImportSuccess={onManagedSiteImportSuccess}
             guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
           />

@@ -8,6 +8,58 @@
     "tokenBased": "Tính phí theo lượng"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "Xuất"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "Nhập cấu hình trang web hiện tại vào AI Toolbox bằng một cú nhấp chuột thông qua liên kết sâu",
+      "descriptions": {
+        "apiFormat": "AI Toolbox sẽ tái tạo nhà cung cấp cho ứng dụng đích. Chỉ chọn giao thức khi nhà cung cấp này không dùng giao thức mặc định của ứng dụng.",
+        "model": "Nếu khả dụng, danh sách mô hình sẽ tự động được lấy từ /v1/models để lựa chọn; bạn cũng có thể nhập trực tiếp tên mô hình tùy chỉnh.",
+        "modelDiscoveryFailed": "Không thể tải danh sách mô hình từ nhà cung cấp. Hãy nhập mã mô hình thủ công hoặc thử lại."
+      },
+      "fields": {
+        "apiFormat": "Giao thức API",
+        "app": "Ứng dụng đích",
+        "baseUrl": "Địa chỉ cơ sở API",
+        "homepage": "Địa chỉ trang chủ",
+        "model": "Mô hình mặc định (tùy chọn)",
+        "name": "Tên nhà cung cấp",
+        "notes": "Ghi chú (tùy chọn)"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "Tự động (mặc định của ứng dụng)",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "Không đặt mô hình mặc định"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "Ví dụ claude-3-opus",
+        "name": "Ví dụ Acme Relay",
+        "notes": "Thêm hướng dẫn nhập"
+      },
+      "title": "Xuất sang AI Toolbox"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "Chọn dấu trang và bắt đầu nhập hàng loạt",

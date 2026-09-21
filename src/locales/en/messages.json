@@ -19,6 +19,14 @@
     "oneTimeKeyPromptCancelled": "Account saved. You can create an AIHubMix API key manually in Key Management later.",
     "oneTimeKeyUnavailableAfterCreate": "Account saved, but the full AIHubMix API key could not be retrieved. AIHubMix keys are shown only once after creation; create a new key in Key Management and save the full key immediately."
   },
+  "aiToolbox": {
+    "attemptingRedirect": "Attempting to redirect to AI Toolbox",
+    "invalidApp": "Unsupported AI Toolbox target app",
+    "invalidBaseUrl": "Invalid or missing API base URL",
+    "invalidHomepage": "Invalid or missing homepage URL",
+    "missingCredentials": "Missing required account or key information",
+    "unableToOpen": "Unable to open AI Toolbox, please ensure it is installed"
+  },
   "autodetect": {
     "currentTabNeedsReload": "This page may have been opened before the extension was installed or updated, so the extension cannot read data from this tab yet. Reload the current page, then try auto-detect again.",
     "failed": "Auto-detection failed: {{error}}",

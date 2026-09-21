@@ -64,7 +64,7 @@ export function AccountKeyResourceList({
     | "isSelected"
     | "selectionDisabledReason"
     | "onSelectionChange"
-    | "onOpenCCSwitchDialog"
+    | "onOpenDeeplinkExport"
     | "managedSiteStatus"
     | "isManagedSiteStatusChecking"
     | "onManagedSiteImportSuccess"

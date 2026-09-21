@@ -22,6 +22,8 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
     "api-credential-profile-copy-kelivo-import-code-menu-item",
   exportToCCSwitchMenuItem:
     "api-credential-profile-export-to-cc-switch-menu-item",
+  exportToAiToolboxMenuItem:
+    "api-credential-profile-export-to-ai-toolbox-menu-item",
   exportToCursorPlusMenuItem:
     "api-credential-profile-export-to-cursor-plus-menu-item",
   importToManagedSiteButton:

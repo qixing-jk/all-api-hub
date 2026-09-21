@@ -8,6 +8,58 @@
     "tokenBased": "Faturamento baseado em token"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "Exportar"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "Envie esta configuração de provedor diretamente para o AI Toolbox via deep link",
+      "descriptions": {
+        "apiFormat": "O AI Toolbox reconstrói o provedor para o aplicativo de destino. Escolha um protocolo apenas quando este provedor não usar o padrão do aplicativo.",
+        "model": "Quando disponíveis, os modelos são carregados em /v1/models para seleção. Você também pode digitar um ID de modelo personalizado.",
+        "modelDiscoveryFailed": "Não foi possível carregar a lista de modelos de origem. Digite um ID de modelo manualmente ou tente novamente."
+      },
+      "fields": {
+        "apiFormat": "Protocolo da API",
+        "app": "Aplicativo de destino",
+        "baseUrl": "URL base da API",
+        "homepage": "URL da página inicial",
+        "model": "Modelo padrão (opcional)",
+        "name": "Nome do provedor",
+        "notes": "Notas (opcional)"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "Automático (padrão do aplicativo)",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "Nenhum modelo padrão"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "por exemplo claude-3-opus",
+        "name": "por exemplo Relé Acme",
+        "notes": "Adicionar notas de importação"
+      },
+      "title": "Exportar para o AI Toolbox"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "Escolher favoritos e iniciar importação em lote",

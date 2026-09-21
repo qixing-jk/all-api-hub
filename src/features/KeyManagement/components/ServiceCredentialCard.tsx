@@ -2,9 +2,15 @@ import { Copy, KeyRound, RefreshCw, Terminal, Wrench } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
+import {
+  createDeeplinkExportMenuActions,
+  createProfileDeeplinkExportRequest,
+  DEEPLINK_EXPORT_TARGETS,
+  DeeplinkExportDialog,
+  type DeeplinkExportRequest,
+} from "~/components/DeeplinkExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
@@ -127,8 +133,8 @@ export function ServiceCredentialCard({
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
-  const [ccSwitchProfile, setCCSwitchProfile] =
-    useState<ApiCredentialProfile | null>(null)
+  const [deeplinkExportRequest, setDeeplinkExportRequest] =
+    useState<DeeplinkExportRequest | null>(null)
   const [kiloCodeProfile, setKiloCodeProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [kelivoProfile, setKelivoProfile] =
@@ -190,12 +196,9 @@ export function ServiceCredentialCard({
     () => createAccountRuntimeKeyExportSource(account, runtimeKey),
     [account, runtimeKey],
   )
-  const ccSwitchSource = useMemo(
-    () =>
-      ccSwitchProfile
-        ? createProfileCredentialExportSource(ccSwitchProfile)
-        : null,
-    [ccSwitchProfile],
+  const transientExportSource = useMemo(
+    () => createProfileCredentialExportSource(transientProfile),
+    [transientProfile],
   )
   const claudeCodeRouterSource = useMemo(
     () =>
@@ -338,16 +341,10 @@ export function ServiceCredentialCard({
 
   return (
     <>
-      {ccSwitchSource ? (
-        <CCSwitchExportDialog
-          isOpen={true}
-          onClose={() => setCCSwitchProfile(null)}
-          source={ccSwitchSource}
-          analyticsContext={{
-            ...apiCredentialProfileExportContext,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
-          }}
+      {deeplinkExportRequest ? (
+        <DeeplinkExportDialog
+          request={deeplinkExportRequest}
+          onClose={() => setDeeplinkExportRequest(null)}
         />
       ) : null}
       {kiloCodeProfile ? (
@@ -519,11 +516,22 @@ export function ServiceCredentialCard({
                       [EXPORT_ACTION_TARGETS.Kelivo]: {
                         onSelect: () => setKelivoProfile(transientProfile),
                       },
-                      [EXPORT_ACTION_TARGETS.CCSwitch]: {
-                        testId:
-                          KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
-                        onSelect: () => setCCSwitchProfile(transientProfile),
-                      },
+                      ...createDeeplinkExportMenuActions({
+                        testIds: {
+                          [DEEPLINK_EXPORT_TARGETS.CCSwitch]:
+                            KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
+                          [DEEPLINK_EXPORT_TARGETS.AiToolbox]:
+                            KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToAiToolboxButton,
+                        },
+                        onSelect: (target) =>
+                          setDeeplinkExportRequest(
+                            createProfileDeeplinkExportRequest({
+                              target,
+                              source: transientExportSource,
+                              baseContext: apiCredentialProfileExportContext,
+                            }),
+                          ),
+                      }),
                       [EXPORT_ACTION_TARGETS.CursorPlus]: {
                         onSelect: () => setIsCursorPlusDialogOpen(true),
                       },

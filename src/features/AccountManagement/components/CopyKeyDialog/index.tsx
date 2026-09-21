@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import {
+  DeeplinkExportDialog,
+  type DeeplinkExportRequest,
+  type DeeplinkExportTarget,
+} from "~/components/DeeplinkExportDialog"
 import { Alert, Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -39,8 +43,8 @@ export default function CopyKeyDialog({
 }: CopyKeyDialogProps) {
   const keyManagementT = useTranslation("keyManagement").t
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
-  const [ccSwitchSource, setCCSwitchSource] =
-    useState<CredentialExportSource | null>(null)
+  const [deeplinkExportRequest, setDeeplinkExportRequest] =
+    useState<DeeplinkExportRequest | null>(null)
   const {
     runtimeKeys,
     nativeKeyRows,
@@ -101,11 +105,14 @@ export default function CopyKeyDialog({
     }
   }, [account, isOpen])
 
-  const handleOpenCCSwitchDialog = (source: CredentialExportSource) => {
-    setCCSwitchSource(source)
+  const handleOpenDeeplinkExport = (
+    target: DeeplinkExportTarget,
+    source: CredentialExportSource,
+  ) => {
+    setDeeplinkExportRequest({ target, source })
   }
 
-  const handleCloseCCSwitchDialog = () => setCCSwitchSource(null)
+  const handleCloseDeeplinkExport = () => setDeeplinkExportRequest(null)
 
   const handleOpenKeyManagement = () => {
     if (!account) return
@@ -132,7 +139,7 @@ export default function CopyKeyDialog({
         onToggleRuntimeKey={toggleRuntimeKeyExpansion}
         onCopyKey={copyKey}
         account={account}
-        onOpenCCSwitchDialog={handleOpenCCSwitchDialog}
+        onOpenDeeplinkExport={handleOpenDeeplinkExport}
         canCreateDefaultKey={canCreateDefaultKey}
         isCreating={isDefaultTokenQuickCreateBusy}
         createError={
@@ -177,11 +184,10 @@ export default function CopyKeyDialog({
           {renderContent()}
         </div>
       </Modal>
-      {ccSwitchSource && (
-        <CCSwitchExportDialog
-          isOpen={true}
-          onClose={handleCloseCCSwitchDialog}
-          source={ccSwitchSource}
+      {deeplinkExportRequest && (
+        <DeeplinkExportDialog
+          request={deeplinkExportRequest}
+          onClose={handleCloseDeeplinkExport}
         />
       )}
       {account ? (

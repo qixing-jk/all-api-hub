@@ -8,6 +8,58 @@
     "tokenBased": "Facturación por tokens"
   },
   "dialog": {
+    "aiToolbox": {
+      "actions": {
+        "export": "Exportar"
+      },
+      "appOptions": {
+        "claude": "Claude Code",
+        "claudedesktop": "Claude Desktop",
+        "codex": "Codex",
+        "dsh": "DeepSeek Harness",
+        "gemini": "Gemini CLI",
+        "grok": "Grok CLI",
+        "hermes": "Hermes",
+        "kimi": "Kimi Code",
+        "omp": "Oh My Pi",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode",
+        "pi": "Pi"
+      },
+      "description": "Enviar esta configuración de proveedor directamente a AI Toolbox mediante deep link",
+      "descriptions": {
+        "apiFormat": "AI Toolbox reconstruye el proveedor para la app destino. Elige un protocolo solo cuando este proveedor no use el predeterminado de la app.",
+        "model": "Cuando están disponibles, los modelos se cargan desde /v1/models para seleccionarlos. También puedes escribir un id de modelo personalizado.",
+        "modelDiscoveryFailed": "No se pudo cargar la lista de modelos del proveedor. Ingresa un id de modelo manualmente o reintenta."
+      },
+      "fields": {
+        "apiFormat": "Protocolo de API",
+        "app": "App destino",
+        "baseUrl": "URL base de API",
+        "homepage": "URL de inicio",
+        "model": "Modelo predeterminado (opcional)",
+        "name": "Nombre del proveedor",
+        "notes": "Notas (opcional)"
+      },
+      "formatOptions": {
+        "anthropicMessages": "Anthropic Messages",
+        "automatic": "Automático (predeterminado de la app)",
+        "geminiNative": "Gemini Native",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "modelOptions": {
+        "none": "Sin modelo predeterminado"
+      },
+      "placeholders": {
+        "baseUrl": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "p. ej. claude-3-opus",
+        "name": "p. ej. Acme Relay",
+        "notes": "Agregar notas de importación"
+      },
+      "title": "Exportar a AI Toolbox"
+    },
     "bookmarkAccountImport": {
       "actions": {
         "allowAndScan": "Elegir marcadores e iniciar importación por lotes",

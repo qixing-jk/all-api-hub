@@ -1,6 +1,7 @@
 import { Copy, Pencil, Terminal, Trash2, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { IconButton } from "~/components/ui"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -34,7 +35,7 @@ export interface RuntimeKeyActionButtonsProps {
   handleEditKey: (runtimeKey: AccountRuntimeKey) => void
   handleDeleteKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: () => void
+  onOpenDeeplinkExport?: (target: DeeplinkExportTarget) => void
   managedSiteStatus?: ManagedSiteTokenChannelStatus
   onManagedSiteImportSuccess?: (
     runtimeKey: AccountRuntimeKey,
@@ -53,7 +54,7 @@ export interface RuntimeKeyActionButtonsProps {
  * @param props.handleDeleteKey Delete action callback.
  * @param props.account Account context for integrations.
  * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
- * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ * @param props.onOpenDeeplinkExport Optional deeplink export opener for a target destination.
  * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
  * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
@@ -65,7 +66,7 @@ export function RuntimeKeyActionButtons({
   handleDeleteKey,
   account,
   managedSiteStatus,
-  onOpenCCSwitchDialog,
+  onOpenDeeplinkExport,
   onManagedSiteImportSuccess,
   guidedManagedSiteImportRequest,
   association,
@@ -149,7 +150,7 @@ export function RuntimeKeyActionButtons({
           actionPolicy={actionPolicy}
           association={association}
           controller={integrationActions}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+          onOpenDeeplinkExport={onOpenDeeplinkExport}
           runtimeKey={runtimeKey}
         />
         {actionPolicy.verifySecret ? (

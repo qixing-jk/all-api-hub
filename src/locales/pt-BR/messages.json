@@ -21,6 +21,14 @@
     "oneTimeKeyPromptCancelled": "Conta salva. Você pode criar manualmente uma chave de API do AIHubMix mais tarde no Gerenciamento de Chaves.",
     "oneTimeKeyUnavailableAfterCreate": "A conta foi salva, mas não foi possível recuperar a chave de API completa do AIHubMix. As chaves do AIHubMix são exibidas apenas uma vez após a criação; crie uma nova chave no Gerenciamento de Chaves e salve a chave completa imediatamente."
   },
+  "aiToolbox": {
+    "attemptingRedirect": "Tentando redirecionar para o AI Toolbox",
+    "invalidApp": "Aplicativo de destino do AI Toolbox não suportado",
+    "invalidBaseUrl": "URL base da API inválida ou ausente",
+    "invalidHomepage": "URL da página inicial inválida ou ausente",
+    "missingCredentials": "Informações obrigatórias de conta ou chave ausentes",
+    "unableToOpen": "Não foi possível abrir o AI Toolbox. Certifique-se de que ele esteja instalado"
+  },
   "autodetect": {
     "currentTabNeedsReload": "Esta página pode ter sido aberta antes da extensão ser instalada ou atualizada, por isso a extensão ainda não consegue ler dados desta aba. Recarregue a página atual e tente a detecção automática novamente.",
     "failed": "Detecção automática falhou: {{error}}",

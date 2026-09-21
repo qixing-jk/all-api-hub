@@ -18,6 +18,7 @@
     "detailsFor": "View details for {{name}}",
     "editKey": "Edit Key",
     "expandAll": "Expand all",
+    "exportToAiToolbox": "Export to AI Toolbox",
     "exportToCCSwitch": "Export to CC Switch",
     "exportToCursorPlus": "Export Cursor++ provider configuration",
     "exportToKiloCode": "Export Kilo Code configuration",

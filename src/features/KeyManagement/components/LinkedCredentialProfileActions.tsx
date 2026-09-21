@@ -68,6 +68,9 @@ export function LinkedCredentialProfileActions({
               [EXPORT_ACTION_TARGETS.CCSwitch]: {
                 onSelect: () => controller.openDialog("cc-switch"),
               },
+              [EXPORT_ACTION_TARGETS.AiToolbox]: {
+                onSelect: () => controller.openDialog("ai-toolbox"),
+              },
               [EXPORT_ACTION_TARGETS.CursorPlus]: {
                 onSelect: () => controller.openDialog("cursor-plus"),
               },
