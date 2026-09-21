@@ -5,6 +5,7 @@ import {
   AUTO_DETECT_STRATEGIES,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import type { OpenRouterBootstrapAttemptOutcome } from "~/constants/openRouterBootstrap"
 import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
@@ -1289,6 +1290,7 @@ export type ProductAnalyticsEventPayloadMap = {
     failure_stage?: ProductAnalyticsFailureStage
     failure_reason?: ProductAnalyticsFailureReason
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
+    account_auto_detect_attempt_outcome?: OpenRouterBootstrapAttemptOutcome
     auto_detect_strategy?: ProductAnalyticsAccountAutoDetectStrategy
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     site_type?: ProductAnalyticsSiteType
