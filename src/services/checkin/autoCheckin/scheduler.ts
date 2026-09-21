@@ -565,7 +565,10 @@ class AutoCheckinScheduler {
       accountsById: new Map(
         params.accounts.map((account) => [
           account.id,
-          { authType: account.authType },
+          {
+            authType: account.authType,
+            checkInSelectionMode: account.checkIn?.selection?.mode,
+          },
         ]),
       ),
       retryEnabled: params.retryEnabled,

@@ -26,6 +26,7 @@ import {
   type PRODUCT_ANALYTICS_ENTRYPOINTS,
   type ProductAnalyticsAutoCheckinMethodCategory,
   type ProductAnalyticsAutoCheckinRunKind,
+  type ProductAnalyticsCheckInSelectionMode,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsEventPayload,
@@ -54,7 +55,12 @@ type AutoCheckinAccountGroupAnalyticsParams = {
   runKind: ProductAnalyticsAutoCheckinRunKind
   entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
   snapshots: AutoCheckinAccountSnapshot[]
-  accountsById: Map<string, Pick<SiteAccount, "authType">>
+  accountsById: Map<
+    string,
+    Pick<SiteAccount, "authType"> & {
+      checkInSelectionMode?: ProductAnalyticsCheckInSelectionMode
+    }
+  >
 }
 
 type AutoCheckinDiagnosticsParams = {
@@ -107,9 +113,17 @@ function isRunnableSnapshot(snapshot: AutoCheckinAccountSnapshot) {
 /** Resolves the account auth mode used for group analytics. */
 function getSnapshotAuthMode(
   snapshot: AutoCheckinAccountSnapshot,
-  accountsById: Map<string, Pick<SiteAccount, "authType">>,
+  accountsById: AutoCheckinAccountGroupAnalyticsParams["accountsById"],
 ) {
   return accountsById.get(snapshot.accountId)?.authType ?? AuthTypeEnum.None
+}
+
+/** Resolves the account's stored check-in selection mode for group analytics. */
+function getSnapshotSelectionMode(
+  snapshot: AutoCheckinAccountSnapshot,
+  accountsById: AutoCheckinAccountGroupAnalyticsParams["accountsById"],
+): ProductAnalyticsCheckInSelectionMode | undefined {
+  return accountsById.get(snapshot.accountId)?.checkInSelectionMode
 }
 
 /** Builds the stable grouping key for site/auth/skip dimensions. */
@@ -117,12 +131,14 @@ function buildGroupKey(
   snapshot: AutoCheckinAccountSnapshot,
   authMode: AuthTypeEnum,
   methodCategory: ProductAnalyticsAutoCheckinMethodCategory | undefined,
+  selectionMode: ProductAnalyticsCheckInSelectionMode | undefined,
 ) {
   return [
     snapshot.siteType,
     authMode,
     snapshot.skipReason ?? "",
     methodCategory ?? "",
+    selectionMode ?? "",
   ].join("\u001f")
 }
 
@@ -267,7 +283,11 @@ export function buildAutoCheckinAccountGroupProperties(
   for (const snapshot of params.snapshots) {
     const authMode = getSnapshotAuthMode(snapshot, params.accountsById)
     const methodCategory = getSnapshotMethodCategory(snapshot)
-    const key = buildGroupKey(snapshot, authMode, methodCategory)
+    const selectionMode = getSnapshotSelectionMode(
+      snapshot,
+      params.accountsById,
+    )
+    const key = buildGroupKey(snapshot, authMode, methodCategory, selectionMode)
     const existing = groups.get(key)
     const group =
       existing ??
@@ -278,6 +298,7 @@ export function buildAutoCheckinAccountGroupProperties(
         requested_auth_mode: authMode,
         ...(snapshot.skipReason ? { skip_reason: snapshot.skipReason } : {}),
         ...(methodCategory ? { method_category: methodCategory } : {}),
+        ...(selectionMode ? { check_in_selection_mode: selectionMode } : {}),
         total_accounts: 0,
         runnable_accounts: 0,
         success_count: 0,

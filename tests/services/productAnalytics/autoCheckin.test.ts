@@ -302,6 +302,79 @@ describe("auto-checkin product analytics", () => {
     expect(JSON.stringify(properties)).not.toContain("One")
   })
 
+  it("separates automatic-selection accounts from manual-selection accounts", () => {
+    const groups = buildAutoCheckinAccountGroupProperties({
+      runKind: "daily",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      accountsById: new Map([
+        [
+          "auto",
+          {
+            authType: AuthTypeEnum.AccessToken,
+            checkInSelectionMode: "automatic",
+          },
+        ],
+        [
+          "manual",
+          {
+            authType: AuthTypeEnum.AccessToken,
+            checkInSelectionMode: "manual",
+          },
+        ],
+      ]),
+      snapshots: [
+        {
+          accountId: "auto",
+          accountName: "Auto",
+          siteType: "new-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+          skipReason: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+          lastResult: {
+            accountId: "auto",
+            accountName: "Auto",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+            timestamp: 1,
+          },
+        },
+        {
+          accountId: "manual",
+          accountName: "Manual",
+          siteType: "new-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+          skipReason: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+          lastResult: {
+            accountId: "manual",
+            accountName: "Manual",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+            timestamp: 1,
+          },
+        },
+      ],
+    })
+
+    expect(groups).toHaveLength(2)
+    expect(groups).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          skip_reason: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+          check_in_selection_mode: "automatic",
+          skipped_count: 1,
+        }),
+        expect.objectContaining({
+          skip_reason: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+          check_in_selection_mode: "manual",
+          skipped_count: 1,
+        }),
+      ]),
+    )
+  })
+
   it("builds grouped Auto Check-in analytics by site type, auth mode, and skip reason", () => {
     const groups = buildAutoCheckinAccountGroupProperties({
       runKind: "retry",

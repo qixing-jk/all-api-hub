@@ -565,6 +565,18 @@ export const PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCES = [
 export type ProductAnalyticsCheckInSelectionSource =
   (typeof PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCES)[number]
 
+/**
+ * Persisted check-in selection modes for grouping skip reasons. Distinct from
+ * PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCES ("none" applies to the account
+ * dialog inspection where no selection exists, not to a stored account).
+ */
+export const PRODUCT_ANALYTICS_CHECK_IN_SELECTION_MODES = [
+  "automatic",
+  "manual",
+] as const
+export type ProductAnalyticsCheckInSelectionMode =
+  (typeof PRODUCT_ANALYTICS_CHECK_IN_SELECTION_MODES)[number]
+
 export const PRODUCT_ANALYTICS_CHECK_IN_RECOVERY_ACTIONS = [
   "manual_override",
   "restore_automatic",
@@ -1419,6 +1431,7 @@ export type ProductAnalyticsEventPayloadMap = {
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     skip_reason?: ProductAnalyticsAutoCheckinSkipReason
     method_category?: ProductAnalyticsAutoCheckinMethodCategory
+    check_in_selection_mode?: ProductAnalyticsCheckInSelectionMode
     total_accounts: number
     runnable_accounts: number
     success_count: number
