@@ -14,6 +14,7 @@ import {
   Palette,
   RefreshCcw,
   Settings,
+  Star,
   UserRound,
   type LucideIcon,
 } from "lucide-react"
@@ -50,6 +51,7 @@ export const OPTIONS_MENU_ITEM_ICONS = {
 export const DEV_OPTIONS_MENU_ITEM_ICONS = {
   [DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB]: Palette,
   [DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW]: Compass,
+  [DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW]: Star,
 } satisfies Record<DevOptionsMenuItemId, LucideIcon>
 
 export const OPTIONS_CAPABILITY_ICONS = {
