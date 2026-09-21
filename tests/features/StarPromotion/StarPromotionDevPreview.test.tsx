@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { STAR_PROMOTION_CARD_TEST_IDS } from "~/features/StarPromotion/StarPromotionCardView"
@@ -8,16 +9,19 @@ import {
 } from "~/features/StarPromotion/StarPromotionDevPreview"
 import { render } from "~~/tests/test-utils/render"
 
-const { getStateMock, isThresholdPromptDueMock } = vi.hoisted(() => ({
-  getStateMock: vi.fn(),
-  isThresholdPromptDueMock: vi.fn(),
-}))
+const { getStateMock, isThresholdPromptDueMock, resetMock } = vi.hoisted(
+  () => ({
+    getStateMock: vi.fn(),
+    isThresholdPromptDueMock: vi.fn(),
+    resetMock: vi.fn(),
+  }),
+)
 
 vi.mock("~/services/starPromotion/state", () => ({
   starPromotionState: {
     getState: getStateMock,
     isThresholdPromptDue: isThresholdPromptDueMock,
-    reset: vi.fn(),
+    reset: resetMock,
   },
 }))
 
@@ -81,7 +85,10 @@ describe("star promotion dev preview", () => {
     expect(getScenarioVerdict("fresh-install")).toBe("card hidden")
     expect(getScenarioVerdict("checkin-threshold")).toBe("card visible")
     expect(getScenarioVerdict("account-threshold")).toBe("card visible")
-    expect(getScenarioVerdict("existing-user-backlog")).toBe("card visible")
+    expect(getScenarioVerdict("existing-user-baseline")).toBe("card hidden")
+    expect(getScenarioVerdict("existing-user-new-accounts")).toBe(
+      "card visible",
+    )
     expect(getScenarioVerdict("completed")).toBe("card hidden")
   })
 
@@ -131,6 +138,32 @@ describe("star promotion dev preview", () => {
     expect(
       within(scenario).getByTestId(STAR_PROMOTION_CARD_TEST_IDS.close),
     ).toBeInTheDocument()
+  })
+
+  it("records fixture actions without mutating stored state", async () => {
+    const user = userEvent.setup()
+    await renderPreview()
+
+    const scenario = getScenario("account-threshold")
+    await user.click(
+      within(scenario).getByTestId(STAR_PROMOTION_CARD_TEST_IDS.star),
+    )
+
+    expect(screen.getByText(/account-threshold:star/)).toBeVisible()
+    expect(resetMock).not.toHaveBeenCalled()
+  })
+
+  it("resets the stored state from the current-device card", async () => {
+    const user = userEvent.setup()
+    await renderPreview()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Reset stored star promotion state",
+      }),
+    )
+
+    expect(resetMock).toHaveBeenCalledTimes(1)
   })
 
   it("reads the live promotion state into the current-state card", async () => {

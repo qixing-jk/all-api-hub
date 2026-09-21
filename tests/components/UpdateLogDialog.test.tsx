@@ -1,9 +1,11 @@
+import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { UpdateLogDialog } from "~/components/dialogs/UpdateLogDialog"
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { starPromotionState } from "~/services/starPromotion/state"
 import * as browserApi from "~/utils/browser/browserApi"
 import * as docsLinks from "~/utils/navigation/docsLinks"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
@@ -15,9 +17,12 @@ import {
   waitFor,
 } from "~~/tests/test-utils/render"
 
-const { toastErrorMock } = vi.hoisted(() => ({
-  toastErrorMock: vi.fn(),
-}))
+const { promptImpressionMock, toastErrorMock, trackStarPromotionActionMock } =
+  vi.hoisted(() => ({
+    promptImpressionMock: vi.fn(),
+    toastErrorMock: vi.fn(),
+    trackStarPromotionActionMock: vi.fn(),
+  }))
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -32,6 +37,15 @@ vi.mock("~/lib/notify", () => ({
     error: toastErrorMock,
     success: vi.fn(),
   },
+}))
+
+vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
+  useStarPromotionActive: () => true,
+  useStarPromotionPromptImpression: promptImpressionMock,
+}))
+
+vi.mock("~/services/productAnalytics/starPromotion", () => ({
+  trackStarPromotionAction: trackStarPromotionActionMock,
 }))
 
 describe("UpdateLogDialog", () => {
@@ -190,6 +204,37 @@ describe("UpdateLogDialog", () => {
         true,
       )
     })
+  })
+
+  it("records and completes the promotion from the star prompt", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
+      buildUserPreferences({ openChangelogOnUpdate: true }),
+    )
+    const markCompletedSpy = vi
+      .spyOn(starPromotionState, "markCompleted")
+      .mockResolvedValue(undefined)
+    const createTabSpy = vi
+      .spyOn(browserApi, "createTab")
+      .mockResolvedValue(undefined as any)
+
+    render(<UpdateLogDialog isOpen onClose={() => {}} version="2.39.0" />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.updateLog.starPrompt",
+      }),
+    )
+
+    expect(promptImpressionMock).toHaveBeenCalledWith(true, expect.any(Object))
+    expect(trackStarPromotionActionMock).toHaveBeenCalledTimes(1)
+    expect(markCompletedSpy).toHaveBeenCalledTimes(1)
+    expect(createTabSpy).toHaveBeenCalledTimes(1)
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.updateLog.starPrompt",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("uses a responsive footer layout so action buttons do not overflow", async () => {

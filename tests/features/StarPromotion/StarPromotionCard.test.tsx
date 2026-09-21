@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { StarPromotionCard } from "~/features/StarPromotion/StarPromotionCard"
@@ -10,11 +11,15 @@ const {
   deferThresholdPromptMock,
   isThresholdPromptDueMock,
   markCompletedMock,
+  unwatchMock,
+  watchStateMock,
 } = vi.hoisted(() => ({
   createTabMock: vi.fn(),
   deferThresholdPromptMock: vi.fn(),
   isThresholdPromptDueMock: vi.fn(),
   markCompletedMock: vi.fn(),
+  unwatchMock: vi.fn(),
+  watchStateMock: vi.fn(),
 }))
 
 vi.mock("~/services/starPromotion/state", () => ({
@@ -22,6 +27,7 @@ vi.mock("~/services/starPromotion/state", () => ({
     deferThresholdPrompt: deferThresholdPromptMock,
     isThresholdPromptDue: isThresholdPromptDueMock,
     markCompleted: markCompletedMock,
+    watchState: watchStateMock,
   },
 }))
 
@@ -48,6 +54,7 @@ describe("star promotion card", () => {
     markCompletedMock.mockResolvedValue(undefined)
     deferThresholdPromptMock.mockResolvedValue(undefined)
     createTabMock.mockResolvedValue(undefined)
+    watchStateMock.mockReturnValue(unwatchMock)
   })
 
   it("renders nothing while the threshold is unmet", async () => {
@@ -125,5 +132,33 @@ describe("star promotion card", () => {
       expect(deferThresholdPromptMock).toHaveBeenCalledTimes(1)
     })
     expect(screen.queryByTestId(STAR_PROMOTION_CARD_TEST_IDS.card)).toBeNull()
+  })
+
+  it("completes the promotion without opening a tab when already starred", async () => {
+    const user = userEvent.setup()
+    render(<StarPromotionCard />, RENDER_OPTIONS)
+
+    await user.click(
+      await screen.findByTestId(STAR_PROMOTION_CARD_TEST_IDS.alreadyStarred),
+    )
+
+    expect(markCompletedMock).toHaveBeenCalledTimes(1)
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(screen.queryByTestId(STAR_PROMOTION_CARD_TEST_IDS.card)).toBeNull()
+  })
+
+  it("hides when another mounted surface completes the promotion", async () => {
+    render(<StarPromotionCard />, RENDER_OPTIONS)
+    expect(
+      await screen.findByTestId(STAR_PROMOTION_CARD_TEST_IDS.card),
+    ).toBeInTheDocument()
+
+    act(() => {
+      watchStateMock.mock.calls[0][0]({ status: "completed" })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(STAR_PROMOTION_CARD_TEST_IDS.card)).toBeNull()
+    })
   })
 })

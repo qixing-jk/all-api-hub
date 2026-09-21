@@ -92,12 +92,26 @@ const previewScenarios: StarPromotionPreviewScenario[] = [
     now: SCENARIO_NOW,
   },
   {
-    id: "existing-user-backlog",
-    label: "Existing user with an account backlog",
+    id: "existing-user-baseline",
+    label: "Existing user at the captured account baseline",
     reason:
-      "A long-time user installing the feature with 30 accounts qualifies immediately: the account baseline defaults to 0.",
-    state: baseState,
+      "A long-time user's existing accounts are captured as the baseline when promotion state is first initialized, so the backlog does not trigger the card.",
+    state: {
+      ...baseState,
+      baselineAccountCount: 30,
+    },
     accountCount: 30,
+    now: SCENARIO_NOW,
+  },
+  {
+    id: "existing-user-new-accounts",
+    label: "Existing user adds accounts after the baseline",
+    reason: `After the initial 30-account baseline, ${STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD} newly added accounts qualify the user.`,
+    state: {
+      ...baseState,
+      baselineAccountCount: 30,
+    },
+    accountCount: 30 + STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD,
     now: SCENARIO_NOW,
   },
   {

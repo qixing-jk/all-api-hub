@@ -70,6 +70,9 @@ describe("getMenuItemLabel", () => {
         DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW,
       ),
     ).toBe("ui:navigation.unifiedApiGuidancePreview")
+    expect(
+      getMenuItemLabel(t as any, DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW),
+    ).toBe("ui:navigation.starPromotionPreview")
   })
 
   it("throws for unexpected menu ids so new routes must be wired explicitly", () => {

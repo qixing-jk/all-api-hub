@@ -43,15 +43,22 @@ export function setupStarPromotionContent(): () => void {
   let lastReportedState: "starred" | "not_starred" | null = null
 
   const reportState = (state: "starred" | "not_starred") => {
-    lastReportedState = state
-    void sendRuntimeActionMessage({
+    void sendRuntimeActionMessage<{ success: boolean }>({
       action: RuntimeActionIds.ContentStarPromotionReport,
       starred: state === "starred",
-    }).catch((error) => {
-      logger.debug("Star state report failed", {
-        error: error instanceof Error ? error.message : String(error),
-      })
     })
+      .then((response) => {
+        if (response?.success === true) {
+          lastReportedState = state
+          return
+        }
+        logger.debug("Star state report was not acknowledged")
+      })
+      .catch((error) => {
+        logger.debug("Star state report failed", {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
   }
 
   const evaluate = () => {
@@ -78,7 +85,6 @@ export function setupStarPromotionContent(): () => void {
   const pollTimer = window.setInterval(evaluate, POLL_INTERVAL_MS)
   const timeoutTimer = window.setTimeout(() => {
     if (disposed) return
-    observer.disconnect()
     window.clearInterval(pollTimer)
   }, OBSERVATION_TIMEOUT_MS)
 

@@ -67,6 +67,8 @@ const mocks = vi.hoisted(() => ({
   executeProtectionBypassTask: vi.fn(),
   handleOwnedSessionRequest: vi.fn(),
   cancelTempCheckinFeedbackScan: vi.fn(),
+  markStarPromotionCompleted: vi.fn(),
+  trackStarPromotionAction: vi.fn(),
 }))
 
 vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
@@ -214,6 +216,16 @@ vi.mock("~/services/productAnalytics/runtime", () => ({
     mocks.setupProductAnalyticsMessagingListeners,
 }))
 
+vi.mock("~/services/starPromotion/state", () => ({
+  starPromotionState: {
+    markCompleted: mocks.markStarPromotionCompleted,
+  },
+}))
+
+vi.mock("~/services/productAnalytics/starPromotion", () => ({
+  trackStarPromotionAction: mocks.trackStarPromotionAction,
+}))
+
 vi.mock("~/entrypoints/background/protectionBypassCoordinator", () => ({
   protectionBypassCoordinator: {
     execute: mocks.executeProtectionBypassTask,
@@ -238,6 +250,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     mocks.setupContextMenus.mockResolvedValue(undefined)
     mocks.trackCookieInterceptorUrl.mockResolvedValue(undefined)
     mocks.containsPermissions.mockResolvedValue(true)
+    mocks.markStarPromotionCompleted.mockResolvedValue(undefined)
     ;(globalThis as any).browser = {}
   })
 
@@ -385,6 +398,73 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       hasPermission: false,
       error: "permission boom",
     })
+  })
+
+  it("records a trusted repository-star detection before acknowledging it", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    expect(
+      listener(
+        {
+          action: RuntimeActionIds.ContentStarPromotionReport,
+          starred: true,
+        },
+        { url: "https://github.com/qixing-jk/all-api-hub" },
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(mocks.markStarPromotionCompleted).toHaveBeenCalledTimes(1)
+      expect(mocks.trackStarPromotionAction).toHaveBeenCalledWith(
+        "suppress_star_promotion_detected",
+        {
+          surfaceId: "content_repository_star_detection",
+          entrypoint: "content",
+        },
+      )
+      expect(sendResponse).toHaveBeenCalledWith({ success: true })
+    })
+  })
+
+  it("rejects repository-star detection when persistence fails", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    mocks.markStarPromotionCompleted.mockRejectedValue(
+      new Error("write failed"),
+    )
+
+    listener(
+      {
+        action: RuntimeActionIds.ContentStarPromotionReport,
+        starred: true,
+      },
+      { url: "https://github.com/qixing-jk/all-api-hub/issues" },
+      sendResponse,
+    )
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({ success: false })
+    })
+    expect(mocks.trackStarPromotionAction).not.toHaveBeenCalled()
+  })
+
+  it("rejects untrusted repository-star reports without mutating state", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      {
+        action: RuntimeActionIds.ContentStarPromotionReport,
+        starred: true,
+      },
+      { url: "https://example.com/qixing-jk/all-api-hub" },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({ success: false })
+    expect(mocks.markStarPromotionCompleted).not.toHaveBeenCalled()
   })
 
   it("tracks cookie interceptor URLs and surfaces tracker failures", async () => {

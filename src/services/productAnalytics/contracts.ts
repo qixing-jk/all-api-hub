@@ -964,6 +964,7 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   UpdateLogDialogStarPrompt: "update_log_dialog_star_prompt",
   FeedbackMenuStarItem: "feedback_menu_star_item",
   PermissionOnboardingStarCta: "permission_onboarding_star_cta",
+  ContentRepositoryStarDetection: "content_repository_star_detection",
 } as const
 
 export type ProductAnalyticsSurfaceId =

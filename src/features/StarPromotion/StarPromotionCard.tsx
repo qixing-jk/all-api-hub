@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { REPO_URL } from "~/constants/about"
 import { Z_INDEX } from "~/constants/designTokens"
@@ -12,6 +12,7 @@ import {
   trackStarPromotionAction,
   trackStarPromotionPromptShown,
 } from "~/services/productAnalytics/starPromotion"
+import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { createTab } from "~/utils/browser/browserApi"
 
@@ -30,24 +31,42 @@ import {
 export function StarPromotionCard() {
   const labels = useStarPromotionCardLabels()
   const [promptVisible, setPromptVisible] = useState(false)
+  const promptVisibleRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
+    let evaluationRevision = 0
 
-    void starPromotionState.isThresholdPromptDue().then((isDue) => {
-      if (cancelled || !isDue) {
+    const evaluate = async () => {
+      const revision = ++evaluationRevision
+      const isDue = await starPromotionState.isThresholdPromptDue()
+      if (cancelled || revision !== evaluationRevision) return
+
+      setPromptVisible(isDue)
+      if (isDue && !promptVisibleRef.current) {
+        trackStarPromotionPromptShown({
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsStarPromotionCard,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        })
+      }
+      promptVisibleRef.current = isDue
+    }
+
+    const unwatch = starPromotionState.watchState((state) => {
+      if (state.status === STAR_PROMOTION_STATUSES.Completed) {
+        evaluationRevision += 1
+        promptVisibleRef.current = false
+        setPromptVisible(false)
         return
       }
-
-      setPromptVisible(true)
-      trackStarPromotionPromptShown({
-        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsStarPromotionCard,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      })
+      void evaluate()
     })
+
+    void evaluate()
 
     return () => {
       cancelled = true
+      unwatch()
     }
   }, [])
 
@@ -57,6 +76,7 @@ export function StarPromotionCard() {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     void starPromotionState.markCompleted()
+    promptVisibleRef.current = false
     setPromptVisible(false)
     void createTab(REPO_URL, true)
   }, [])
@@ -70,6 +90,7 @@ export function StarPromotionCard() {
       },
     )
     void starPromotionState.markCompleted()
+    promptVisibleRef.current = false
     setPromptVisible(false)
   }, [])
 
@@ -79,6 +100,7 @@ export function StarPromotionCard() {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     void starPromotionState.deferThresholdPrompt()
+    promptVisibleRef.current = false
     setPromptVisible(false)
   }, [])
 

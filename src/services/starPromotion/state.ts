@@ -36,12 +36,60 @@ class StarPromotionStateService {
   async getState(): Promise<StarPromotionState> {
     try {
       const raw = await this.storage.get(STORAGE_KEYS.STAR_PROMOTION_STATE)
-      return normalizeStarPromotionState(raw)
+      if (this.hasStoredAccountBaseline(raw)) {
+        return normalizeStarPromotionState(raw)
+      }
+
+      return await withExtensionStorageWriteLock(
+        STORAGE_LOCKS.STAR_PROMOTION,
+        async () => {
+          const currentRaw = await this.storage.get(
+            STORAGE_KEYS.STAR_PROMOTION_STATE,
+          )
+          if (this.hasStoredAccountBaseline(currentRaw)) {
+            return normalizeStarPromotionState(currentRaw)
+          }
+
+          const initialized =
+            await this.normalizeStateAtStorageBoundary(currentRaw)
+          await this.storage.set(STORAGE_KEYS.STAR_PROMOTION_STATE, initialized)
+          return initialized
+        },
+      )
     } catch (error) {
       logger.warn("Failed to read star promotion state", {
         error: error instanceof Error ? error.message : String(error),
       })
       return createDefaultStarPromotionState()
+    }
+  }
+
+  private hasStoredAccountBaseline(raw: unknown): boolean {
+    if (typeof raw !== "object" || raw === null) {
+      return false
+    }
+
+    const baseline = (raw as Partial<StarPromotionState>).baselineAccountCount
+    return (
+      typeof baseline === "number" && Number.isFinite(baseline) && baseline >= 0
+    )
+  }
+
+  private async normalizeStateAtStorageBoundary(
+    raw: unknown,
+  ): Promise<StarPromotionState> {
+    if (this.hasStoredAccountBaseline(raw)) {
+      return normalizeStarPromotionState(raw)
+    }
+
+    const accountCount = await this.readAccountCount()
+    if (typeof accountCount !== "number") {
+      throw new Error("Account count unavailable for star promotion baseline")
+    }
+
+    return {
+      ...normalizeStarPromotionState(raw),
+      baselineAccountCount: accountCount,
     }
   }
 
@@ -96,6 +144,18 @@ class StarPromotionStateService {
     await this.mutateState(completeStarPromotionOnState)
   }
 
+  /** Subscribes to normalized promotion-state changes across extension contexts. */
+  watchState(listener: (state: StarPromotionState) => void): () => void {
+    const callbacks = {
+      [STORAGE_KEYS.STAR_PROMOTION_STATE]: (change) => {
+        listener(normalizeStarPromotionState(change.newValue))
+      },
+    } satisfies Parameters<typeof this.storage.watch>[0]
+
+    if (!this.storage.watch(callbacks)) return () => {}
+    return () => this.storage.unwatch(callbacks)
+  }
+
   /** Restores the default promotion state. Dev tooling only. */
   async reset(): Promise<void> {
     try {
@@ -131,7 +191,7 @@ class StarPromotionStateService {
       await withExtensionStorageWriteLock(
         STORAGE_LOCKS.STAR_PROMOTION,
         async () => {
-          const current = normalizeStarPromotionState(
+          const current = await this.normalizeStateAtStorageBoundary(
             await this.storage.get(STORAGE_KEYS.STAR_PROMOTION_STATE),
           )
           await this.storage.set(
@@ -144,6 +204,7 @@ class StarPromotionStateService {
       logger.warn("Failed to update star promotion state", {
         error: error instanceof Error ? error.message : String(error),
       })
+      throw error
     }
   }
 }

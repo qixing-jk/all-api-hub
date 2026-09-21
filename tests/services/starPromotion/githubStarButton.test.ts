@@ -30,6 +30,7 @@ describe("resolveGitHubRepoStarState", () => {
   it("falls back to star form actions", () => {
     const starred = parse(`
       <html><body>
+        <form action="/search"><button>Search</button></form>
         <form action="/qixing-jk/all-api-hub/unstar"><button>Starred</button></form>
       </body></html>
     `)

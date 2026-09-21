@@ -34,7 +34,10 @@ export function classifyAllApiHubRepoPageUrl(
       return null
     }
 
-    if (parsed.pathname === REPO_PAGE_PATH) {
+    if (
+      parsed.pathname === REPO_PAGE_PATH ||
+      parsed.pathname === `${REPO_PAGE_PATH}/`
+    ) {
       return ALL_API_HUB_REPO_PAGE_KINDS.Root
     }
 

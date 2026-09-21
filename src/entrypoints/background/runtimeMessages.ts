@@ -21,7 +21,13 @@ import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOw
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
+import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
 import { setupProductAnnouncementMessagingListeners } from "~/services/productAnnouncements/service"
 import {
   isProtectionBypassExecution,
@@ -169,7 +175,17 @@ export function setupRuntimeMessageListeners() {
 
         void starPromotionState
           .markCompleted()
-          .then(() => sendResponse({ success: true }))
+          .then(() => {
+            trackStarPromotionAction(
+              PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
+              {
+                surfaceId:
+                  PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
+                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+              },
+            )
+            sendResponse({ success: true })
+          })
           .catch(() => sendResponse({ success: false }))
         return true
       }

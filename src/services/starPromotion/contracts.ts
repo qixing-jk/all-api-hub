@@ -88,6 +88,11 @@ export function normalizeStarPromotionState(raw: unknown): StarPromotionState {
       ? value
       : fallback
   }
+  const toPositiveFiniteNumber = (value: unknown, fallback: number) => {
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+      ? value
+      : fallback
+  }
 
   return {
     status:
@@ -102,12 +107,15 @@ export function normalizeStarPromotionState(raw: unknown): StarPromotionState {
       source.baselineCheckinSuccesses,
       defaults.baselineCheckinSuccesses,
     ),
-    nextThreshold: toFiniteNumber(source.nextThreshold, defaults.nextThreshold),
+    nextThreshold: toPositiveFiniteNumber(
+      source.nextThreshold,
+      defaults.nextThreshold,
+    ),
     baselineAccountCount: toFiniteNumber(
       source.baselineAccountCount,
       defaults.baselineAccountCount,
     ),
-    nextAccountThreshold: toFiniteNumber(
+    nextAccountThreshold: toPositiveFiniteNumber(
       source.nextAccountThreshold,
       defaults.nextAccountThreshold,
     ),

@@ -10,6 +10,9 @@ describe("classifyAllApiHubRepoPageUrl", () => {
     expect(
       classifyAllApiHubRepoPageUrl("https://github.com/qixing-jk/all-api-hub"),
     ).toBe(ALL_API_HUB_REPO_PAGE_KINDS.Root)
+    expect(
+      classifyAllApiHubRepoPageUrl("https://github.com/qixing-jk/all-api-hub/"),
+    ).toBe(ALL_API_HUB_REPO_PAGE_KINDS.Root)
   })
 
   it("classifies repository subpages separately from the root", () => {

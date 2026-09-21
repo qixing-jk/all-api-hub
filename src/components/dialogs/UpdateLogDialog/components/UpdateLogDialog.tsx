@@ -5,7 +5,10 @@ import { useTranslation } from "react-i18next"
 import { Button, Modal } from "~/components/ui"
 import { REPO_URL } from "~/constants/about"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import {
+  useStarPromotionActive,
+  useStarPromotionPromptImpression,
+} from "~/features/StarPromotion/useStarPromotionActive"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -54,6 +57,10 @@ export function UpdateLogDialog({
   // The update flow doubles as a star moment: the user is staring at evidence
   // of active development. Only show the ask while promotion is still active.
   const showStarPrompt = useStarPromotionActive(isOpen) && !starPromptDismissed
+  useStarPromotionPromptImpression(showStarPrompt, {
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.UpdateLogDialogStarPrompt,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
 
   const handleStarFromUpdateLog = useCallback(async () => {
     setStarPromptDismissed(true)

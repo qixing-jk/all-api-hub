@@ -22,7 +22,10 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { REPO_URL } from "~/constants/about"
-import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import {
+  useStarPromotionActive,
+  useStarPromotionPromptImpression,
+} from "~/features/StarPromotion/useStarPromotionActive"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -120,16 +123,22 @@ export function FeedbackDropdownMenu({
   // self-reports, or the content-side detection suppresses the promotion.
   const starPromotionActive = useStarPromotionActive()
   const [starItemDismissed, setStarItemDismissed] = useState(false)
+  const starItemVisible = starPromotionActive && !starItemDismissed
+  const starPromotionEntrypoint = isExtensionSidePanel()
+    ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
+    : isExtensionPopup()
+      ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
+      : PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+  useStarPromotionPromptImpression(starItemVisible, {
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.FeedbackMenuStarItem,
+    entrypoint: starPromotionEntrypoint,
+  })
 
   const handleStarClick = () => {
     setStarItemDismissed(true)
     trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.FeedbackMenuStarItem,
-      entrypoint: isExtensionSidePanel()
-        ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
-        : isExtensionPopup()
-          ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
-          : PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      entrypoint: starPromotionEntrypoint,
     })
     void starPromotionState.markCompleted()
     void createTab(REPO_URL, true)
@@ -150,7 +159,7 @@ export function FeedbackDropdownMenu({
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align={align} className="w-52">
-        {starPromotionActive && !starItemDismissed ? (
+        {starItemVisible ? (
           <>
             <DropdownMenuItem onClick={handleStarClick}>
               <Star className="text-warning-indicator h-4 w-4" />

@@ -12,7 +12,10 @@ import { REPO_URL } from "~/constants/about"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
-import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import {
+  useStarPromotionActive,
+  useStarPromotionPromptImpression,
+} from "~/features/StarPromotion/useStarPromotionActive"
 import {
   ensurePermissionsDetailed,
   OPTIONAL_PERMISSIONS,
@@ -61,6 +64,10 @@ export function PermissionOnboardingDialog({
   // Suppressed once the promotion is completed (star click, self-report, or
   // repository page detection) so onboarding stops re-asking.
   const starCtaVisible = useStarPromotionActive(open)
+  useStarPromotionPromptImpression(starCtaVisible, {
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PermissionOnboardingStarCta,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
   const getStartedUrl = getDocsGetStartedUrl(i18n.language)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0

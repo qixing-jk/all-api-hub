@@ -97,20 +97,15 @@ describe("star promotion state transitions", () => {
     expect(addCheckinSuccessesOnState(state, -1)).toBe(state)
   })
 
-  it("qualifies an existing account backlog on a fresh install", () => {
-    // The account baseline defaults to 0, so a long-time user who installs this
-    // feature with accounts already configured qualifies immediately. The
-    // baseline must never be initialized from the live count, or existing users
-    // would be silently excluded.
-    const freshState = createDefaultStarPromotionState()
+  it("does not qualify accounts that existed when storage was initialized", () => {
+    const initializedState = buildState({ baselineAccountCount: 30 })
 
-    expect(freshState.baselineAccountCount).toBe(0)
     expect(
-      shouldShowThresholdPromptOnState(freshState, {
+      shouldShowThresholdPromptOnState(initializedState, {
         now: 1_000,
         accountCount: 30,
       }),
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it("prompts when the managed account count alone reaches its threshold", () => {
@@ -276,11 +271,15 @@ describe("star promotion state transitions", () => {
   it("falls back to defaults for out-of-range numeric fields", () => {
     const restored = normalizeStarPromotionState({
       lifetimeCheckinSuccesses: -5,
-      nextThreshold: Number.NaN,
+      nextThreshold: 0,
+      nextAccountThreshold: -1,
     })
 
     expect(restored.lifetimeCheckinSuccesses).toBe(0)
     expect(restored.nextThreshold).toBe(STAR_PROMOTION_INITIAL_THRESHOLD)
+    expect(restored.nextAccountThreshold).toBe(
+      STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD,
+    )
     expect(restored.status).toBe(STAR_PROMOTION_STATUSES.Active)
   })
 })

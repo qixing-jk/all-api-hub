@@ -996,8 +996,16 @@ class AutoCheckinScheduler {
    * Reports successful check-ins to the star promotion value signal. Non-positive
    * counts are no-ops in the state service, so callers can pass a raw tally.
    */
-  private recordStarPromotionCheckinSuccesses(count: number): void {
-    void starPromotionState.addCheckinSuccesses(count)
+  private async recordStarPromotionCheckinSuccesses(
+    count: number,
+  ): Promise<void> {
+    try {
+      await starPromotionState.addCheckinSuccesses(count)
+    } catch (error) {
+      logger.warn("Failed to record star promotion check-in progress", {
+        error: getErrorMessage(error),
+      })
+    }
   }
 
   /**
@@ -2532,7 +2540,7 @@ class AutoCheckinScheduler {
         .filter((outcome) => isSuccessfulCheckinStatus(outcome.result.status))
         .map((outcome) => outcome.result.accountId)
 
-      this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
+      await this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
 
       const accountIdsToRefresh = checkinOutcomes
         .filter(
@@ -2918,7 +2926,7 @@ class AutoCheckinScheduler {
       },
     )
 
-    this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
+    await this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
     const summary =
       retryOutcome?.summary ?? this.recalculateSummaryFromResults(updates)
     const accountsSnapshot = retryOutcome?.accountsSnapshot
@@ -3137,7 +3145,7 @@ class AutoCheckinScheduler {
     )
 
     if (isSuccessfulCheckinStatus(result.status)) {
-      this.recordStarPromotionCheckinSuccesses(1)
+      await this.recordStarPromotionCheckinSuccesses(1)
     }
     const summary: AutoCheckinRunSummary =
       retryOutcome?.summary ??
