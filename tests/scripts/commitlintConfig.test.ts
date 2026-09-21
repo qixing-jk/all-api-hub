@@ -20,6 +20,24 @@ function header(length: number) {
   return prefix + "a".repeat(length - prefix.length)
 }
 
+function pathFiltersFor(workflow: string, trigger: string) {
+  const lines = workflow.replace(/\r\n/g, "\n").split("\n")
+  const triggerStart = lines.indexOf(`  ${trigger}:`)
+  if (triggerStart === -1) throw new Error(`missing ${trigger} trigger`)
+
+  const pathsStart = lines.findIndex(
+    (line, index) => index > triggerStart && line === "    paths:",
+  )
+  if (pathsStart === -1) throw new Error(`missing ${trigger} paths filter`)
+
+  const filters: string[] = []
+  for (const line of lines.slice(pathsStart + 1)) {
+    if (!line.startsWith("      - ")) break
+    filters.push(line.slice("      - ".length).replace(/^"|"$/g, ""))
+  }
+  return filters
+}
+
 describe("commitlint policy", () => {
   it.each([
     translationSubject,
@@ -75,5 +93,23 @@ describe("commitlint policy", () => {
     expect(check).toContain("github.event.pull_request.head.sha")
     expect(check).toContain("edited")
     expect(check).toContain("commitlint")
+  })
+
+  it("runs the policy tests whenever their workflow inputs change", () => {
+    const workflow = readFileSync(".github/workflows/test.yml", "utf8")
+    const triggerFiles = [
+      "commitlint.config.mjs",
+      ".husky/commit-msg",
+      ".github/workflows/commitlint.yml",
+      ".github/workflows/translate-docs.yml",
+    ]
+
+    for (const trigger of ["push", "pull_request"]) {
+      const filters = pathFiltersFor(workflow, trigger)
+      // Guard the parser against a trivially matching list.
+      expect(filters).toContain("tests/**")
+      expect(filters).toContain(".github/workflows/test.yml")
+      expect(filters).toEqual(expect.arrayContaining(triggerFiles))
+    }
   })
 })
