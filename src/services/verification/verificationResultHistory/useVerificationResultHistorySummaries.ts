@@ -14,6 +14,15 @@ import { serializeVerificationHistoryTarget } from "./utils"
 
 const logger = createLogger("VerificationResultHistoryHook")
 
+/**
+ * Quiet period before a storage change triggers a reload.
+ *
+ * A batch verification writes once per flushed batch, and every write notifies
+ * every context. Collapsing a burst into one reload keeps the model list from
+ * re-reading and re-rendering once per write.
+ */
+const STORAGE_CHANGE_RELOAD_DEBOUNCE_MS = 200
+
 const loadTargetSummaries = (targets: ApiVerificationHistoryTarget[]) =>
   verificationResultHistoryStorage.getLatestSummaries(targets)
 
@@ -67,9 +76,21 @@ function useStoredVerificationSummaries<T>(
   }, [reload])
 
   useEffect(() => {
-    return subscribeToVerificationResultHistoryChanges(() => {
-      void reload()
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const unsubscribe = subscribeToVerificationResultHistoryChanges(() => {
+      if (timer !== undefined) clearTimeout(timer)
+      timer = setTimeout(() => {
+        timer = undefined
+        void reload()
+      }, STORAGE_CHANGE_RELOAD_DEBOUNCE_MS)
     })
+
+    return () => {
+      unsubscribe()
+      // Drop a pending reload so an unmounted hook cannot commit state.
+      if (timer !== undefined) clearTimeout(timer)
+    }
   }, [reload])
 
   return {

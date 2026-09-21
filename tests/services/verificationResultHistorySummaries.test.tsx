@@ -240,6 +240,68 @@ describe("useVerificationResultHistorySummaries", () => {
     expect(unsubscribeMock).toHaveBeenCalledTimes(1)
   })
 
+  it("coalesces a burst of storage changes into one reload", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-burst"),
+    )
+
+    getLatestSummariesMock.mockResolvedValue({})
+
+    renderHook(() => useVerificationResultHistorySummaries([target]))
+
+    await waitFor(() => {
+      expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
+    })
+
+    const callback = subscribeMock.mock.calls[0]?.[0] as
+      | (() => void)
+      | undefined
+    if (!callback) throw new Error("Expected storage listener callback")
+
+    act(() => {
+      // A batch verification writes once per flushed batch; each write notifies.
+      for (let index = 0; index < 20; index += 1) callback()
+    })
+
+    expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
+
+    await waitFor(() => {
+      expect(getLatestSummariesMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it("cancels a pending reload when the hook unmounts", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-unmount"),
+    )
+
+    getLatestSummariesMock.mockResolvedValue({})
+
+    const { unmount } = renderHook(() =>
+      useVerificationResultHistorySummaries([target]),
+    )
+
+    await waitFor(() => {
+      expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
+    })
+
+    const callback = subscribeMock.mock.calls[0]?.[0] as
+      | (() => void)
+      | undefined
+    if (!callback) throw new Error("Expected storage listener callback")
+
+    act(() => {
+      callback()
+    })
+    unmount()
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+
+    expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
+  })
+
   it("ignores stale reload failures after a newer reload succeeds", async () => {
     const target = requireHistoryTarget(
       createProfileVerificationHistoryTarget("profile-4"),

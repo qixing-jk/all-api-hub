@@ -18,6 +18,17 @@ import {
 import { getModelItemKey, type CalculatedModelItem } from "./modelListItems"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
+
+/**
+ * Models verified between two persistence flushes.
+ *
+ * Each flush costs one read-modify-write of the whole verification store, so
+ * writing once per model would rewrite the store once per model. The buffer is
+ * also flushed when the run ends or is cancelled, so completed results are never
+ * lost to an abort.
+ */
+export const MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE = 25
+
 export const MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES = {
   AUTO: "auto",
 } as const
