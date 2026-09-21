@@ -25,13 +25,20 @@ function pathFiltersFor(workflow: string, trigger: string) {
   const triggerStart = lines.indexOf(`  ${trigger}:`)
   if (triggerStart === -1) throw new Error(`missing ${trigger} trigger`)
 
+  // The next two-space-indented key ends this trigger block.
+  const nextTrigger = lines.findIndex(
+    (line, index) => index > triggerStart && /^ {2}\S/.test(line),
+  )
+  const triggerEnd = nextTrigger === -1 ? lines.length : nextTrigger
+
   const pathsStart = lines.findIndex(
-    (line, index) => index > triggerStart && line === "    paths:",
+    (line, index) =>
+      index > triggerStart && index < triggerEnd && line === "    paths:",
   )
   if (pathsStart === -1) throw new Error(`missing ${trigger} paths filter`)
 
   const filters: string[] = []
-  for (const line of lines.slice(pathsStart + 1)) {
+  for (const line of lines.slice(pathsStart + 1, triggerEnd)) {
     if (!line.startsWith("      - ")) break
     filters.push(line.slice("      - ".length).replace(/^"|"$/g, ""))
   }
@@ -111,5 +118,24 @@ describe("commitlint policy", () => {
       expect(filters).toContain(".github/workflows/test.yml")
       expect(filters).toEqual(expect.arrayContaining(triggerFiles))
     }
+  })
+
+  it("does not read a path filter from another trigger block", () => {
+    const workflow = [
+      "on:",
+      "  push:",
+      "    branches:",
+      "      - main",
+      "  pull_request:",
+      "    paths:",
+      '      - "src/**"',
+      "  workflow_dispatch: {}",
+      "",
+    ].join("\n")
+
+    expect(() => pathFiltersFor(workflow, "push")).toThrow(
+      "missing push paths filter",
+    )
+    expect(pathFiltersFor(workflow, "pull_request")).toEqual(["src/**"])
   })
 })
