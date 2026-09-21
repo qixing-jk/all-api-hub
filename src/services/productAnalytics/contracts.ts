@@ -1315,6 +1315,7 @@ export type ProductAnalyticsEventPayloadMap = {
     failure_reason?: ProductAnalyticsFailureReason
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
     account_auto_detect_attempt_outcome?: OpenRouterBootstrapAttemptOutcome
+    account_auto_detect_identity_detected?: boolean
     auto_detect_strategy?: ProductAnalyticsAccountAutoDetectStrategy
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     site_type?: ProductAnalyticsSiteType

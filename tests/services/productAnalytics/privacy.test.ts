@@ -104,6 +104,29 @@ describe("product analytics privacy filtering", () => {
     },
   )
 
+  it.each([true, false])(
+    "keeps auto-detect identity detected %s after the account-name privacy gate",
+    (identityDetected) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          account_auto_detect_identity_detected: identityDetected,
+          accountName: "Secret Account",
+        },
+      )
+
+      expect(sanitized).toEqual({
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        account_auto_detect_identity_detected: identityDetected,
+      })
+    },
+  )
+
   it("keeps whitelisted PageViewed properties and strips unknown keys", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.PageViewed,

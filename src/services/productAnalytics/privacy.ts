@@ -633,6 +633,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count",
   "account_auto_detect_failure_reason",
   "account_auto_detect_attempt_outcome",
+  "account_auto_detect_identity_detected",
   "account_auto_refresh_enabled",
   "account_auto_refresh_interval_minutes",
   "account_auto_refresh_min_interval_seconds",
