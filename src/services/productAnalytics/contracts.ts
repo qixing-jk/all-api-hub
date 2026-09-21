@@ -684,7 +684,10 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "open_auto_checkin_account_external_check_in",
   OpenAutoCheckinManualSignIn: "open_auto_checkin_manual_sign_in",
   OpenBookmark: "open_bookmark",
+  OpenBookmarkImportDialog: "open_bookmark_import_dialog",
   OpenBatchModelVerifyDialog: "open_batch_model_verify_dialog",
+  OpenCreateBookmarkDialog: "open_create_bookmark_dialog",
+  OpenEditBookmarkDialog: "open_edit_bookmark_dialog",
   OpenCreateApiCredentialProfileDialog:
     "open_create_api_credential_profile_dialog",
   OpenAccountKeyManagementFromModel: "open_account_key_management_from_model",

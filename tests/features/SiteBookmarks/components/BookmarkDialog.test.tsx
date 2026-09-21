@@ -110,6 +110,28 @@ const expectBookmarkActionTracked = (
   })
 }
 
+const expectBookmarkActionStarted = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
+/**
+ * A submit button must not carry the same action id as the span its handler
+ * opens, otherwise a single attempt emits `feature_action_started` twice.
+ */
+const expectNoDeclarativeStart = (actionId: string) => {
+  expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+    expect.objectContaining({ actionId }),
+  )
+}
+
 const expectBookmarkActionCompleted = (
   actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
   result: (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS],
@@ -117,7 +139,7 @@ const expectBookmarkActionCompleted = (
     errorCategory?: (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
   } = {},
 ) => {
-  expectBookmarkActionTracked(
+  expectBookmarkActionStarted(
     actionId,
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
   )
@@ -231,10 +253,11 @@ describe("BookmarkDialog", () => {
     fireEvent.click(creatingButton)
     expect(addBookmarkMock).toHaveBeenCalledTimes(1)
 
-    expectBookmarkActionTracked(
+    expectBookmarkActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
     )
+    expectNoDeclarativeStart(PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark)
     await waitFor(() => {
       expect(addBookmarkMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -495,10 +518,11 @@ describe("BookmarkDialog", () => {
     fireEvent.click(savingButton)
     expect(updateBookmarkMock).toHaveBeenCalledTimes(1)
 
-    expectBookmarkActionTracked(
+    expectBookmarkActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
     )
+    expectNoDeclarativeStart(PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark)
     await waitFor(() => {
       expect(updateBookmarkMock).toHaveBeenCalledWith(
         "b1",

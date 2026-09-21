@@ -229,7 +229,7 @@ describe("BookmarksList", () => {
     )
 
     expectBookmarkActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementEmptyState,
     )
     expect(openAddBookmarkMock).toHaveBeenCalledTimes(1)
@@ -375,7 +375,7 @@ describe("BookmarksList", () => {
       await screen.findByRole("button", { name: "common:actions.edit" }),
     )
     expectBookmarkActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenEditBookmarkDialog,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
     )
     expect(openEditBookmarkMock).toHaveBeenCalledWith(

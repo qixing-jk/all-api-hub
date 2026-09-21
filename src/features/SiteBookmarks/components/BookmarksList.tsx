@@ -394,7 +394,8 @@ export default function BookmarksList({
               variant: "default",
               icon: <Plus className="h-4 w-4" />,
               testId: SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton,
-              analyticsAction: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+              analyticsAction:
+                PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
             }}
           />
         </ProductAnalyticsScope>

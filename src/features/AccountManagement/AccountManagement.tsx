@@ -446,7 +446,7 @@ function AccountManagementContent({
                 title={t("account:actions.importFromBookmarksHint")}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportButton}
                 analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountsFromBookmarks
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmarkImportDialog
                 }
               >
                 {t("account:actions.importFromBookmarks")}

@@ -164,7 +164,9 @@ export default function BookmarkListItem({
                 aria-label={t("common:actions.edit")}
                 title={t("common:actions.edit")}
                 data-testid={SITE_BOOKMARKS_TEST_IDS.rowEditButton}
-                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenEditBookmarkDialog
+                }
               >
                 <Pencil className="h-4 w-4" />
               </IconButton>
