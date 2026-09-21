@@ -122,6 +122,52 @@ describe("product analytics action helpers", () => {
     },
   )
 
+  it.each([true, false])(
+    "maps auto-detect identity detected %s into the completion payload",
+    async (identityDetected) => {
+      const { trackProductAnalyticsActionCompleted } = await import(
+        "~/services/productAnalytics/actions"
+      )
+
+      await trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        insights: {
+          accountAutoDetectIdentityDetected: identityDetected,
+        },
+      })
+
+      expect(trackMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        expect.objectContaining({
+          account_auto_detect_identity_detected: identityDetected,
+        }),
+      )
+    },
+  )
+
+  it("omits auto-detect identity when the insight was not recorded", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      insights: {
+        accountAutoDetectFailureReason:
+          PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+      },
+    })
+
+    const [, payload] = trackMock.mock.lastCall!
+    expect(payload).not.toHaveProperty("account_auto_detect_identity_detected")
+  })
+
   it("does not expose an OpenRouter cleanup analytics action", () => {
     expect(PRODUCT_ANALYTICS_ACTION_IDS).not.toHaveProperty(
       "OpenRouterBootstrapCleanup",
