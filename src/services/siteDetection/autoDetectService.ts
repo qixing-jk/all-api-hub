@@ -41,6 +41,7 @@ import {
   getBrowserApiCapabilities,
   isMessageReceiverUnavailableError,
 } from "~/utils/browser/browserApi"
+import { hasCookiesForUrl } from "~/utils/browser/cookieHelper"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
@@ -343,6 +344,23 @@ async function autoDetectDirect(
   try {
     // 检测站点类型，避免在未知站点上下文中使用默认 API
     const siteType = await getAccountSiteType(url, protectionBypassExecution)
+
+    // 直接方式走 Cookie 认证：目标站点没有任何 Cookie 时不存在可复用的会话，
+    // 请求必然失败。提前跳过，避免空发一条注定失败的请求（手机上它常是最后的
+    // 兜底，不能因为它在桌面端多半失败就直接去掉）。
+    if (!(await hasCookiesForUrl(url))) {
+      logger.info("目标站点无 Cookie，跳过直接方式", { url })
+      return withAutoDetectContext(
+        {
+          success: false,
+          error: t("messages:operations.detection.getUserIdFailed"),
+        },
+        createAutoDetectContext({
+          strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+          siteType,
+        }),
+      )
+    }
 
     // 通过 API 获取用户数据
     const userData = await getUserDataViaAPI(

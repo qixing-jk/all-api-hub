@@ -28,6 +28,7 @@ const {
   mockIsExtensionBackground,
   mockReadAccountBrowserSessionFromTab,
   mockSendRuntimeMessage,
+  mockHasCookiesForUrl,
 } = vi.hoisted(() => ({
   mockExecuteProtectionBypassTask: vi.fn(),
   mockFetchUserInfo: vi.fn(),
@@ -40,6 +41,7 @@ const {
   mockIsExtensionBackground: vi.fn(),
   mockReadAccountBrowserSessionFromTab: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
+  mockHasCookiesForUrl: vi.fn(),
 }))
 
 vi.mock("~/utils/browser", async (importOriginal) => {
@@ -84,6 +86,15 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
 }))
+
+vi.mock("~/utils/browser/cookieHelper", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/cookieHelper")>()
+  return {
+    ...actual,
+    hasCookiesForUrl: mockHasCookiesForUrl,
+  }
+})
 
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
   executeProtectionBypassTask: async (request: unknown) => {
@@ -144,6 +155,7 @@ describe("autoDetectSmart", () => {
 
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
     mockIsExtensionBackground.mockReturnValue(false)
+    mockHasCookiesForUrl.mockResolvedValue(true)
     mockGetCurrentTempWindowRequestSource.mockReturnValue(
       TEMP_WINDOW_REQUEST_SOURCES.Background,
     )
@@ -1718,6 +1730,35 @@ describe("autoDetectSmart", () => {
       error: "detect failed",
       errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
     })
+  })
+
+  it("skips the direct API fallback when the target site has no cookies", async () => {
+    // With no tabs and no background messaging, the ladder falls straight to the
+    // direct API fallback. Isolate it so a cookie fetch is the only thing left.
+    browserAny.tabs = null
+    browserAny.runtime = null
+    mockHasCookiesForUrl.mockResolvedValue(false)
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    // Would succeed if it ran; proves the direct request never went out.
+    mockFetchUserInfo.mockResolvedValue({ id: 1, username: "tester" })
+
+    const result = await autoDetectSmart("https://example.com")
+
+    expect(result).toMatchObject({ success: false })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("runs the direct API fallback when the target site has cookies", async () => {
+    browserAny.tabs = null
+    browserAny.runtime = null
+    mockHasCookiesForUrl.mockResolvedValue(true)
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    mockFetchUserInfo.mockResolvedValue({ id: 1, username: "tester" })
+
+    const result = await autoDetectSmart("https://example.com")
+
+    expect(result).toMatchObject({ success: true })
+    expect(mockFetchUserInfo).toHaveBeenCalled()
   })
 
   it("keeps an invalid input URL on the direct detection path", async () => {

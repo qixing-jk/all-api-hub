@@ -112,6 +112,42 @@ export async function hasCookieReadPermissionForUrl(
   })
 }
 
+/**
+ * Checks whether any non-expired cookie exists for the target URL.
+ *
+ * This is a cheap "has a usable session" proxy: a cookie-authenticated direct
+ * API request cannot succeed when the browser holds no cookie for the site, so
+ * callers can skip that doomed request without materializing a Cookie header.
+ * Missing permission or a read failure is treated as "no cookies" because the
+ * request could not have carried cookies in that case either.
+ */
+export async function hasCookiesForUrl(
+  url: string,
+  options: { storeId?: string } = {},
+): Promise<boolean> {
+  if (!(await hasCookieReadPermissionForUrl(url))) {
+    return false
+  }
+
+  try {
+    const cookies = await browser.cookies.getAll({
+      url,
+      partitionKey: {},
+      ...(options.storeId ? { storeId: options.storeId } : {}),
+    })
+    const now = Date.now() / 1000
+    return cookies.some(
+      (cookie) => !(cookie.expirationDate && cookie.expirationDate < now),
+    )
+  } catch (error) {
+    logger.warn("检查站点 Cookie 失败", {
+      url,
+      error: getErrorMessage(error),
+    })
+    return false
+  }
+}
+
 // 拦截器注册状态
 let isInterceptorRegistered = false
 

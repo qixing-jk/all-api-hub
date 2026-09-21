@@ -5,6 +5,7 @@ import {
   getCookieHeaderForUrl,
   getCookieHeaderForUrlResult,
   hasCookieReadPermissionForUrl,
+  hasCookiesForUrl,
 } from "~/utils/browser/cookieHelper"
 
 describe("cookieHelper", () => {
@@ -89,6 +90,42 @@ describe("cookieHelper", () => {
       partitionKey: {},
       storeId: "1-incognito",
     })
+  })
+
+  it("reports cookies present when a non-expired cookie exists", async () => {
+    ;(globalThis as any).browser.cookies.getAll = vi
+      .fn()
+      .mockResolvedValue([{ name: "a", value: "1" } as any])
+
+    await expect(hasCookiesForUrl("https://example.com")).resolves.toBe(true)
+  })
+
+  it("reports no cookies when only expired cookies exist", async () => {
+    ;(globalThis as any).browser.cookies.getAll = vi.fn().mockResolvedValue([
+      {
+        name: "a",
+        value: "1",
+        expirationDate: Date.now() / 1000 - 10,
+      } as any,
+    ])
+
+    await expect(hasCookiesForUrl("https://example.com")).resolves.toBe(false)
+  })
+
+  it("reports no cookies when cookie read permission is missing", async () => {
+    ;(globalThis as any).browser.permissions.contains = vi
+      .fn()
+      .mockResolvedValue(false)
+
+    await expect(hasCookiesForUrl("https://example.com")).resolves.toBe(false)
+  })
+
+  it("reports no cookies when cookies.getAll fails", async () => {
+    ;(globalThis as any).browser.cookies.getAll = vi
+      .fn()
+      .mockRejectedValue(new Error("boom"))
+
+    await expect(hasCookiesForUrl("https://example.com")).resolves.toBe(false)
   })
 
   it("returns an empty string when cookies.getAll fails", async () => {
