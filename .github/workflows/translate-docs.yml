@@ -258,12 +258,12 @@ jobs:
             docs/docs/en/**
             docs/docs/ja/**
           commit-message: |
-            🌐 Auto-translate documentation
+            chore(docs): auto-translate documentation
 
             Source documents: ${{ steps.changed-files.outputs.source_change_count }}
           branch: auto-translate-${{ github.run_id }}
           delete-branch: true
-          title: "🌐 Auto-translate documentation"
+          title: "chore(docs): auto-translate documentation"
           body: |
             ## 📝 自动翻译
 

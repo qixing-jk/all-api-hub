@@ -23,6 +23,7 @@
     "zip:safari": "wxt zip -b safari",
     "zip:all": "pnpm run zip && pnpm run zip:firefox && pnpm run zip:safari",
     "compile": "tsc --noEmit",
+    "commitlint": "commitlint",
     "postinstall": "wxt prepare",
     "lint": "eslint . && pnpm lint:colors && pnpm lint:typography",
     "lint:typography": "node scripts/check-typography.mjs",
@@ -139,6 +140,8 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^9.38.0",
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
     "@playwright/test": "1.58.2",

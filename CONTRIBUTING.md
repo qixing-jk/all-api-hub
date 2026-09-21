@@ -261,6 +261,7 @@ pnpm compile
 This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:
 
 - **pre-commit**: `validate:staged` formats and lints applicable staged files, runs staged Vitest test files, then runs extraction and completeness checks when staged inputs affect i18n. Staged test execution does not find related tests or replace affected-behavior validation.
+- **commit-msg**: `commitlint` checks the message against the Conventional Commits rules in `commitlint.config.mjs`. Pull request titles use the same rules in CI, because a squash merge can land the title instead of an individual commit.
 - **pre-push**: `validate:push:changed` examines every ref update supplied by Git. Known documentation-only ranges and ref deletions skip the extension gate; other changes and unknown ranges run `validate:push` (`compile` + `knip`). New remote refs conservatively run the full gate. Checks execute in the current checkout, so keep the checkout aligned with the code being delivered.
 
 The hooks are automatically set up when you run `pnpm install` (via the `prepare` script).

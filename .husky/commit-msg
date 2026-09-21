@@ -1,0 +1,8 @@
+echo "📝 Checking commit message..."
+
+pnpm exec commitlint --edit "$1" || {
+  echo "❌ Commit message check failed"
+  exit 1
+}
+
+echo "✅ Commit message looks good!"
