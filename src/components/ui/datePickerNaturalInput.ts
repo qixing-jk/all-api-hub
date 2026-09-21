@@ -55,7 +55,9 @@ function parsePortugueseFallbackDate(
   const days = Number(match[1])
   if (!Number.isSafeInteger(days) || days <= 0) return null
 
-  const unit = match[2].toLocaleLowerCase("pt-BR")
+  const unitMatch = match[2]
+  if (unitMatch === undefined) return null
+  const unit = unitMatch.toLocaleLowerCase("pt-BR")
   if (unit !== (days === 1 ? "dia" : "dias")) return null
 
   const parsedDate = dayjs(referenceDate).add(days, "day")
@@ -80,7 +82,9 @@ function parseGermanFallbackDate(
   const days = Number(match[1])
   if (!Number.isSafeInteger(days) || days <= 0) return null
 
-  const unit = match[2].toLocaleLowerCase("de-DE")
+  const unitMatch = match[2]
+  if (unitMatch === undefined) return null
+  const unit = unitMatch.toLocaleLowerCase("de-DE")
   if (unit !== (days === 1 ? "tag" : "tagen")) return null
 
   const parsedDate = dayjs(referenceDate).add(days, "day")

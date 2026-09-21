@@ -26,7 +26,7 @@ const resolveOptionLabel = (
   t: TFunction,
 ) =>
   (Object.prototype.hasOwnProperty.call(labels, value)
-    ? labels[value]
+    ? labels[value] ?? fallback
     : fallback)(t)
 
 const MANAGED_RESOURCE_STATUS_LABEL_RESOLVERS = {

@@ -267,7 +267,8 @@ function findLinuxDoAuthorizationControl(): HTMLElement | null {
       label,
     )
   })
-  return candidates.length === 1 ? candidates[0] : null
+  const [candidate] = candidates
+  return candidates.length === 1 && candidate !== undefined ? candidate : null
 }
 
 /** Waits a bounded time for SPA-rendered authorization controls. */

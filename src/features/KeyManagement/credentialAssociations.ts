@@ -78,7 +78,11 @@ export const compareCredentialSecret = (
   }
 
   const lastFragment = maskedFragments[maskedFragments.length - 1]
-  if (target.endsWith(lastFragment) && !candidate.endsWith(lastFragment)) {
+  if (
+    lastFragment !== undefined &&
+    target.endsWith(lastFragment) &&
+    !candidate.endsWith(lastFragment)
+  ) {
     return KEY_CREDENTIAL_SECRET_MATCHES.Mismatch
   }
 
@@ -96,16 +100,18 @@ export const getCredentialAssociationForLocator = (
   if (matching.length === 0) {
     return { status: KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked }
   }
+  const [match] = matching
   if (
     matching.length !== 1 ||
-    matching[0].state !== API_CREDENTIAL_PROFILE_LINK_STATES.Active
+    match === undefined ||
+    match.state !== API_CREDENTIAL_PROFILE_LINK_STATES.Active
   ) {
     return { status: KEY_CREDENTIAL_ASSOCIATION_STATES.NeedsConfirmation }
   }
 
   return {
     status: KEY_CREDENTIAL_ASSOCIATION_STATES.Linked,
-    associationId: matching[0].id,
-    profileId: matching[0].profileId,
+    associationId: match.id,
+    profileId: match.profileId,
   }
 }

@@ -367,9 +367,9 @@ const getTypeText = (
     },
   }
   const catalog = catalogs[siteType]
-  return catalog && hasOwn(catalog, type)
-    ? catalog[type]
-    : resolveUnsupportedChannelTypeLabel(t)
+  const catalogLabel =
+    catalog && hasOwn(catalog, type) ? catalog[type] : undefined
+  return catalogLabel ?? resolveUnsupportedChannelTypeLabel(t)
 }
 
 const getStatusText = (

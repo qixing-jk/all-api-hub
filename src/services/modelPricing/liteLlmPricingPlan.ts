@@ -245,6 +245,7 @@ function buildStandardPlan(
     })
     .sort((a, b) => a.threshold - b.threshold)
   for (const [index, { threshold, suffix }] of thresholds.entries()) {
+    const nextThreshold = thresholds[index + 1]
     plan.rules.push({
       id: suffix.slice(1),
       conditions: [
@@ -252,10 +253,10 @@ function buildStandardPlan(
           kind: PRICING_CONDITION_KINDS.RANGE,
           axis: PRICING_RANGE_AXES.INPUT_TOKENS,
           min: threshold + (entry.litellm_provider === "xai" ? 0 : 1),
-          ...(thresholds[index + 1]
+          ...(nextThreshold
             ? {
                 maxExclusive:
-                  thresholds[index + 1].threshold +
+                  nextThreshold.threshold +
                   (entry.litellm_provider === "xai" ? 0 : 1),
               }
             : {}),

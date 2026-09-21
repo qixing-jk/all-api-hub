@@ -336,7 +336,9 @@ async function mapWithConcurrency<T, R>(
         throwIfCatalogLoadAborted(abortSignal)
         const currentIndex = nextIndex
         nextIndex += 1
-        results[currentIndex] = await mapper(items[currentIndex])
+        const item = items[currentIndex]
+        if (item === undefined) return
+        results[currentIndex] = await mapper(item)
       }
     }),
   )

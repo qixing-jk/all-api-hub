@@ -578,7 +578,9 @@ export function useManagedSiteTokenBatchExportDialog({
       for (let index = startIndex; index < targets.length; index += 1) {
         if (!isActive()) return
 
-        const { item, candidate } = targets[index]
+        const target = targets[index]
+        if (!target) return
+        const { item, candidate } = target
         const resourceRef = candidate.ref
         let resolvedChannelKey = ""
         let shouldContinueAfterDeferredLoad = false

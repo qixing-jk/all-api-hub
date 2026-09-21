@@ -41,7 +41,7 @@ export function parseMediaPriceExpression(body: string) {
       consume("resolution")
       consume("==")
       const literal = input[position++]
-      if (!/^"[^"\\]+"$/.test(literal ?? ""))
+      if (literal === undefined || !/^"[^"\\]+"$/.test(literal))
         throw new Error("Resolution literal required")
       const value = literal.slice(1, -1)
       resolutions.add(value)

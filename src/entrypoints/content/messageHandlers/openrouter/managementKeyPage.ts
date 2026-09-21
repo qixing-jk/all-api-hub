@@ -437,8 +437,9 @@ export async function performOpenRouterManagementKeyPageAction(
         )
           return []
         const codes = Array.from(dialog.querySelectorAll("code"))
-        if (codes.length !== 1 || !isVisible(codes[0])) return []
-        const secret = normalizeOpenRouterManagementKeySecret(text(codes[0]))
+        const [code] = codes
+        if (codes.length !== 1 || !code || !isVisible(code)) return []
+        const secret = normalizeOpenRouterManagementKeySecret(text(code))
         return secret ? [{ dialog, secret }] : []
       })
     const secretReady = await waitUntil(

@@ -424,8 +424,15 @@ export default function AccountActionButtons({
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(site)
       addRuntimeKeyRedactionSecrets(secretsToRedact, runtimeKeys)
 
-      if (runtimeKeys.length === 1) {
-        const runtimeKey = runtimeKeys[0]
+      const [runtimeKey] = runtimeKeys
+      if (runtimeKeys.length !== 1 || !runtimeKey) {
+        onCopyKey(site)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            itemCount: runtimeKeys.length,
+          },
+        })
+      } else {
         const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           site,
           runtimeKey,
@@ -434,13 +441,6 @@ export default function AccountActionButtons({
         await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
         toast.success(t("actions.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            itemCount: runtimeKeys.length,
-          },
-        })
-      } else {
-        onCopyKey(site)
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             itemCount: runtimeKeys.length,
           },
@@ -544,7 +544,8 @@ export default function AccountActionButtons({
         await fetchDisplayAccountRuntimeKeys(tokenLookupAccount)
       addRuntimeKeyRedactionSecrets(secretsToRedact, runtimeKeys)
 
-      if (runtimeKeys.length === 0) {
+      const [runtimeKey] = runtimeKeys
+      if (!runtimeKey) {
         return handleChannelLocateFallback(
           t("actions.channelLocateNoKeyFallback"),
         )
@@ -556,7 +557,6 @@ export default function AccountActionButtons({
         )
       }
 
-      const runtimeKey = runtimeKeys[0]
       const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         tokenLookupAccount,
         runtimeKey,

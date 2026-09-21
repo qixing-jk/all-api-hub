@@ -190,11 +190,11 @@ export const collectManagedResourceSecrets = (
     const propertyCount = Math.min(keys.length, remainingPropertyBudget)
     if (propertyCount < keys.length) complete = false
     scheduledProperties += propertyCount
-    for (let index = propertyCount - 1; index >= 0; index -= 1) {
+    for (const key of keys.slice(0, propertyCount).reverse()) {
       stack.push({
         kind: "property",
         owner: frame.value,
-        key: keys[index],
+        key,
         insideSecretField: frame.insideSecretField,
         insideOverrideOperations: frame.insideOverrideOperations,
         depth: frame.depth + 1,

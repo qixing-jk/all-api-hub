@@ -80,10 +80,15 @@ const deriveDiscoveryDecision = (
       methodIds: matchedMethodIds,
     }
   }
-  if (matchedMethodIds.length === 1 && unknownMethodIds.length === 0) {
+  const [matchedMethodId] = matchedMethodIds
+  if (
+    matchedMethodId !== undefined &&
+    matchedMethodIds.length === 1 &&
+    unknownMethodIds.length === 0
+  ) {
     return {
       outcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved,
-      methodId: matchedMethodIds[0],
+      methodId: matchedMethodId,
     }
   }
   if (unknownMethodIds.length > 0) {

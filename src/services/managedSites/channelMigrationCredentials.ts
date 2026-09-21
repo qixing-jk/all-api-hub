@@ -124,21 +124,23 @@ export function resolveMigrationCredentials(
     !metadata ||
     !credentials ||
     metadata.length !== credentials.length ||
-    metadata.some((key, index) => key.enabled !== credentials[index].enabled)
+    metadata.some((key, index) => key.enabled !== credentials[index]?.enabled)
   ) {
     return { status: "blocked", reasonCode: blockers.SOURCE_KEYS_CHANGED }
   }
+  const [firstCredential] = credentials
   if (
-    !credentials.length ||
+    !firstCredential ||
     credentials.some((key) => !hasUsableManagedSiteChannelKey(key.value))
   ) {
     return { status: "blocked", reasonCode: blockers.SOURCE_KEY_MISSING }
   }
   const index = item.selection.credentialIndex
   if (index !== undefined) {
-    if (!Number.isSafeInteger(index) || index < 0 || !credentials[index])
+    const indexedCredential = credentials[index]
+    if (!Number.isSafeInteger(index) || index < 0 || !indexedCredential)
       return { status: "blocked", reasonCode: blockers.SOURCE_KEYS_CHANGED }
-    return { status: "ready", credential: credentials[index].value }
+    return { status: "ready", credential: indexedCredential.value }
   }
-  return { status: "ready", credential: credentials[0].value, credentials }
+  return { status: "ready", credential: firstCredential.value, credentials }
 }

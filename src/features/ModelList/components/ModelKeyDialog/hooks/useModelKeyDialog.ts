@@ -257,8 +257,12 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         return prev
       }
 
-      if (compatibleRuntimeKeys.length === 1) {
-        return compatibleRuntimeKeys[0].id
+      const [onlyCompatibleKey] = compatibleRuntimeKeys
+      if (
+        onlyCompatibleKey !== undefined &&
+        compatibleRuntimeKeys.length === 1
+      ) {
+        return onlyCompatibleKey.id
       }
 
       return null
@@ -379,12 +383,13 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         if (sourceRef.current !== sourceKey) return "skipped" as const
         setRuntimeKeys(refreshedRuntimeKeys)
 
-        if (refreshedCompatible.length === 0) {
+        const [firstCompatibleKey] = refreshedCompatible
+        if (!firstCompatibleKey) {
           setCreateError({ kind: "no-compatible-key", modelId })
           return "failure" as const
         }
 
-        setSelectedRuntimeKeyId(refreshedCompatible[0].id)
+        setSelectedRuntimeKeyId(firstCompatibleKey.id)
         toast.success(t("modelList:keyDialog.createSuccess"))
         return "success" as const
       } catch (error) {

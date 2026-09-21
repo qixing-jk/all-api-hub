@@ -25,9 +25,12 @@ class AccountPresentation {
     input: SiteAccount | SiteAccount[],
     displayNameAccountsContext?: readonly SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
-    const normalizedAccounts = Array.isArray(input)
+    const normalizedInput = Array.isArray(input)
       ? input.map(normalizeSiteAccount)
-      : [normalizeSiteAccount(input)]
+      : normalizeSiteAccount(input)
+    const normalizedAccounts = Array.isArray(normalizedInput)
+      ? normalizedInput
+      : [normalizedInput]
     const normalizedContext = displayNameAccountsContext
       ? displayNameAccountsContext.map(normalizeSiteAccount)
       : normalizedAccounts
@@ -81,9 +84,9 @@ class AccountPresentation {
       cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
     })
 
-    return Array.isArray(input)
+    return Array.isArray(normalizedInput)
       ? normalizedAccounts.map(transform)
-      : transform(normalizedAccounts[0])
+      : transform(normalizedInput)
   }
 
   resolveDisplayData(

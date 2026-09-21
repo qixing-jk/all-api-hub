@@ -488,13 +488,10 @@ export async function resolveManagedSiteChannelMatch(
 
     for (const recoverableCandidate of recoverableCandidates) {
       params.signal?.throwIfAborted()
-      attemptedSecretReads.add(
-        getManagedResourceRefKey(recoverableCandidate.ref),
-      )
+      const resourceKey = getManagedResourceRefKey(recoverableCandidate.ref)
+      attemptedSecretReads.add(resourceKey)
       try {
-        mergedResolvedChannelKeysByResourceKey[
-          getManagedResourceRefKey(recoverableCandidate.ref)
-        ] = await fetchRecoverableCandidateSecretKey({
+        const resolvedChannelKey = await fetchRecoverableCandidateSecretKey({
           managedSite,
           managedConfig,
           resourceRef: recoverableCandidate.ref,
@@ -503,13 +500,10 @@ export async function resolveManagedSiteChannelMatch(
           signal: params.signal,
           requestScheduling: params.requestScheduling,
         })
+        mergedResolvedChannelKeysByResourceKey[resourceKey] = resolvedChannelKey
         if (requestCache) {
-          requestCache.resolvedChannelKeysByResourceKey[
-            getManagedResourceRefKey(recoverableCandidate.ref)
-          ] =
-            mergedResolvedChannelKeysByResourceKey[
-              getManagedResourceRefKey(recoverableCandidate.ref)
-            ]
+          requestCache.resolvedChannelKeysByResourceKey[resourceKey] =
+            resolvedChannelKey
         }
       } catch (error) {
         params.signal?.throwIfAborted()
@@ -617,16 +611,13 @@ export async function resolveManagedSiteChannelMatch(
 
         for (const channel of hydratedCandidates) {
           if (hasUsableManagedSiteChannelKey(channel.key)) {
-            mergedResolvedChannelKeysByResourceKey[
-              getManagedResourceRefKey(channel.ref)
-            ] = channel.key!.trim()
+            const resourceKey = getManagedResourceRefKey(channel.ref)
+            const resolvedChannelKey = channel.key!.trim()
+            mergedResolvedChannelKeysByResourceKey[resourceKey] =
+              resolvedChannelKey
             if (requestCache) {
-              requestCache.resolvedChannelKeysByResourceKey[
-                getManagedResourceRefKey(channel.ref)
-              ] =
-                mergedResolvedChannelKeysByResourceKey[
-                  getManagedResourceRefKey(channel.ref)
-                ]
+              requestCache.resolvedChannelKeysByResourceKey[resourceKey] =
+                resolvedChannelKey
             }
           }
         }

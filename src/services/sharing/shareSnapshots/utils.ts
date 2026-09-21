@@ -66,7 +66,8 @@ export const formatAsOfTimestamp = (
  */
 export const createShareSnapshotSeed = (): number => {
   if (globalThis.crypto?.getRandomValues) {
-    return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] >>> 0
+    const [value] = globalThis.crypto.getRandomValues(new Uint32Array(1))
+    if (value !== undefined) return value >>> 0
   }
 
   const UINT32_RANGE = 2 ** 32

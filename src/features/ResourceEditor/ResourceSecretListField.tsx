@@ -26,7 +26,10 @@ type Props = {
   label: string
   descriptor: ResourceSecretListDescriptor
   presentation: ResourceFieldPresentation
-  value: ResourceFieldValue
+  /**
+   * Absent or non-`secret-list` values render as an empty list.
+   */
+  value?: ResourceFieldValue
   disabled?: boolean
   hasErrors?: boolean
   onChange: (value: ResourceSecretListValue) => void

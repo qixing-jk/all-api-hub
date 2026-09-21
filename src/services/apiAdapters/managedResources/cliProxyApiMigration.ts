@@ -153,15 +153,20 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
           keys.some((key) => !hasUsableManagedSiteChannelKey(key))
         )
           return { status: "blocked", reasonCode: blockers.SOURCE_KEY_MISSING }
+        const [credential] = keys
+        if (credential === undefined)
+          return { status: "blocked", reasonCode: blockers.SOURCE_KEY_MISSING }
         const states = credentialStates(resource)
         return {
           status: "ready",
-          credential: keys[0],
+          credential,
           ...(keys.length > 1 || states.some((key) => !key.enabled)
             ? {
                 credentials: keys.map((value, index) => ({
                   value,
-                  ...states[index],
+                  // `credentialStates` maps the same keys, so this default only
+                  // covers a key without a state, which reads as enabled.
+                  enabled: states[index]?.enabled ?? true,
                 })),
               }
             : {}),

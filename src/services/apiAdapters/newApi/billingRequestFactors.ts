@@ -17,13 +17,14 @@ type Conditions = PricingPlan["rules"][number]["conditions"]
 function conditionsFor(text: string): Conditions[] | undefined {
   return parseBooleanConditions<Conditions[number]>(text, (unwrapped) => {
     const tier = /^param\("service_tier"\)\s*==\s*"([a-z]+)"$/.exec(unwrapped)
-    if (tier && SERVICE_TIERS.some((value) => value === tier[1]))
+    const tierValue = tier?.[1]
+    if (tierValue && SERVICE_TIERS.some((value) => value === tierValue))
       return [
         [
           {
             kind: PRICING_CONDITION_KINDS.SELECTION,
             axis: PRICING_SELECTION_AXES.SERVICE_TIER,
-            value: tier[1],
+            value: tierValue,
           },
         ],
       ]
@@ -60,15 +61,19 @@ export function splitBillingRequestFactors(expression: string):
   if (parts.length > BILLING_EXPRESSION_LIMITS.REQUEST_FACTOR_PARTS)
     return undefined
   const factors: { alternatives: Conditions[]; multiplier: number }[] = []
-  for (const part of parts.slice(1)) {
+  const [base, ...factorParts] = parts
+  if (base === undefined) return undefined
+  for (const part of factorParts) {
     const match =
       /^(.*)\?\s*([0-9]+(?:\.[0-9]+)?(?:e[+-]?\d+)?)\s*:\s*1$/i.exec(
         unwrap(part),
       )
     if (!match || !Number.isFinite(Number(match[2]))) return undefined
-    const alternatives = conditionsFor(match[1])
+    const conditionText = match[1]
+    if (conditionText === undefined) return undefined
+    const alternatives = conditionsFor(conditionText)
     if (!alternatives) return undefined
     factors.push({ alternatives, multiplier: Number(match[2]) })
   }
-  return { base: unwrap(parts[0]), factors }
+  return { base: unwrap(base), factors }
 }

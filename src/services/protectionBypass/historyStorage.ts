@@ -229,8 +229,8 @@ class ProtectionBypassHistoryStorage {
         const index = entries.findIndex(
           (entry) => entry.id === id && entry.status === "started",
         )
-        if (index < 0) return
         const entry = entries[index]
+        if (!entry) return
         entries[index] = historyEntrySchema.parse({
           ...entry,
           status: getCompletionStatus(completion),

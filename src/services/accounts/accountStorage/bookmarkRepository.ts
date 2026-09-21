@@ -69,14 +69,14 @@ class BookmarkRepository {
         const index = config.bookmarks.findIndex(
           (bookmark) => bookmark.id === id,
         )
-        if (index === -1) {
+        const current = index === -1 ? undefined : config.bookmarks[index]
+        if (!current) {
           throw new Error(
             t("messages:errors.operation.failed", {
               error: "Bookmark not found",
             }),
           )
         }
-        const current = config.bookmarks[index]
         const normalized = normalizeBookmarkInput({
           name: updates.name ?? current.name,
           url: updates.url ?? current.url,

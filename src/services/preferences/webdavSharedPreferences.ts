@@ -35,7 +35,10 @@ function getFinitePreferenceTimestamp(value: unknown): number | undefined {
  * import/export continues to operate on the full preferences object.
  */
 function isWebdavLocalPreferencePath(path: string[]): boolean {
-  return path.length > 0 && WEBDAV_LOCAL_ONLY_PREFERENCE_ROOT_KEYS.has(path[0])
+  const [rootKey] = path
+  return (
+    rootKey !== undefined && WEBDAV_LOCAL_ONLY_PREFERENCE_ROOT_KEYS.has(rootKey)
+  )
 }
 
 /**

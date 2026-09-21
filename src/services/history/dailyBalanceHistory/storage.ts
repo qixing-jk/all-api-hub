@@ -136,8 +136,9 @@ function pruneStoreInPlace(
   store: DailyBalanceHistoryStore,
   cutoffDayKey: string,
 ) {
-  for (const accountId of Object.keys(store.snapshotsByAccountId)) {
-    const perDay = store.snapshotsByAccountId[accountId]
+  for (const [accountId, perDay] of Object.entries(
+    store.snapshotsByAccountId,
+  )) {
     for (const dayKey of Object.keys(perDay)) {
       if (dayKey < cutoffDayKey) {
         delete perDay[dayKey]

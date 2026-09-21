@@ -64,7 +64,7 @@ export function createNewApiKeyEditor(
 ): AccountKeyResourceEditorDefinition<NewApiKeyEditCommand> {
   const initialGroup =
     intent?.preferredGroup ??
-    (intent?.allowedGroups?.length === 1 ? intent.allowedGroups[0] : "")
+    (intent?.allowedGroups?.length === 1 ? intent.allowedGroups[0] ?? "" : "")
   const baseline: NewApiTokenWrite = token
     ? toNewApiTokenWrite(token)
     : {

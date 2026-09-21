@@ -351,12 +351,14 @@ export function useRepairCreatedKeyManagedSiteImport({
 
   const openManagedSiteConfiguration = useCallback(async () => {
     try {
-      await openSettingsTabInNewTab(
-        BASIC_SETTINGS_ANCHOR_TO_TAB[SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR],
-        {
-          anchor: SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR,
-        },
-      )
+      const tabId =
+        BASIC_SETTINGS_ANCHOR_TO_TAB[SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR]
+      if (!tabId) {
+        throw new Error("Managed site settings tab is unavailable")
+      }
+      await openSettingsTabInNewTab(tabId, {
+        anchor: SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR,
+      })
     } catch {
       setImportFeedback({
         reason: "configuration-open-failed",

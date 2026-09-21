@@ -29,6 +29,7 @@ export function moveAccountId(
 ) {
   const nextIds = ids.slice()
   const [movedId] = nextIds.splice(fromIndex, 1)
+  if (movedId === undefined) return nextIds
   nextIds.splice(toIndex, 0, movedId)
   return nextIds
 }
@@ -57,9 +58,11 @@ export function replaceVisibleAccountOrder(
   const visibleIdSet = new Set(nextVisibleIds)
   let visibleIndex = 0
 
-  return allIds.map((id) =>
-    visibleIdSet.has(id) ? nextVisibleIds[visibleIndex++] : id,
-  )
+  return allIds.map((id) => {
+    if (!visibleIdSet.has(id)) return id
+    const nextId = nextVisibleIds[visibleIndex++]
+    return nextId ?? id
+  })
 }
 
 /** Groups rows by display priority while retaining input order within each tier. */

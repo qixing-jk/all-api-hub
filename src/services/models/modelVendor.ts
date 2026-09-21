@@ -587,7 +587,7 @@ function toWellFormedUnicode(value: string): string {
     if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
       const nextCodeUnit = value.charCodeAt(index + 1)
       if (nextCodeUnit >= 0xdc00 && nextCodeUnit <= 0xdfff) {
-        result += value[index] + value[index + 1]
+        result += value.charAt(index) + value.charAt(index + 1)
         index += 1
       } else {
         result += "�"
@@ -595,7 +595,7 @@ function toWellFormedUnicode(value: string): string {
     } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
       result += "�"
     } else {
-      result += value[index]
+      result += value.charAt(index)
     }
   }
 
@@ -726,9 +726,9 @@ function getWeakAliasPrefixVendor(
   identity: ReturnType<typeof getCuratedModelIdentity>,
 ): KnownVendor | undefined {
   const segments = identity.qualified.split("/")
-  if (segments.length !== 2) return undefined
-
   const [prefix, model] = segments
+  if (!prefix || !model || segments.length !== 2) return undefined
+
   const normalizedPrefix = normalizeKnownVendorAlias(prefix)
   if (!normalizedPrefix || !model.trim() || model.includes("�")) {
     return undefined
@@ -882,10 +882,10 @@ function resolveCuratedModelVendorResolution(
     adjustedMatchIds.has(vendor.id),
   )
 
-  if (adjustedMatches.length === 0) return { state: "no-match" }
+  const [vendor] = adjustedMatches
+  if (!vendor) return { state: "no-match" }
   if (adjustedMatches.length > 1) return { state: "ambiguous" }
 
-  const vendor = adjustedMatches[0]
   return {
     state: "candidate",
     candidate: createKnownCandidate(vendor, { source: "curated-rule" }),
@@ -986,10 +986,12 @@ export function aggregateModelVendors(
 
   const catalogByKey = new Map<string, ModelVendorCatalogEntry>()
   for (const [key, grouped] of candidatesByKey) {
-    const label = grouped
-      .map((candidate) => candidate.labelCandidate)
-      .sort(compareCodePoints)[0]
-    const first = grouped[0]
+    const [first] = grouped
+    if (!first) continue
+    const label =
+      grouped
+        .map((candidate) => candidate.labelCandidate)
+        .sort(compareCodePoints)[0] ?? first.labelCandidate
     catalogByKey.set(
       key,
       first.kind === "known"

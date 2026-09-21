@@ -41,7 +41,10 @@ export function discoverAssets(
       for (const attr of tag[0].matchAll(
         /\b([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g,
       )) {
-        attrs.set(attr[1].toLowerCase(), attr[2] ?? attr[3] ?? attr[4])
+        const [, rawName, doubleQuoted, singleQuoted, bare] = attr
+        const value = doubleQuoted ?? singleQuoted ?? bare
+        if (!rawName || value === undefined) continue
+        attrs.set(rawName.toLowerCase(), value)
       }
       if (/^<script/i.test(tag[0])) {
         if (attrs.has("src")) references.push(attrs.get("src")!)
@@ -55,7 +58,9 @@ export function discoverAssets(
     for (const script of source.matchAll(
       /<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi,
     )) {
-      references.push(...discoverAssets(script[1], base, false))
+      const scriptBody = script[1]
+      if (scriptBody === undefined) continue
+      references.push(...discoverAssets(scriptBody, base, false))
     }
   } else {
     for (const match of source.matchAll(
@@ -64,6 +69,7 @@ export function discoverAssets(
       // Vite dependency tables use document-relative assets/ paths, whereas
       // module specifiers starting with ./ or ../ resolve against the importer.
       const reference = match[1]
+      if (reference === undefined) continue
       references.push(
         reference.startsWith("assets/") ? `/${reference}` : reference,
       )
@@ -104,7 +110,9 @@ export function extractCheckInRoutes(source: string): string[] {
   for (const match of decodeSource(source).matchAll(
     /["'`]([^"'`\r\n]{1,1000})["'`]/g,
   )) {
-    const literal = match[1].replaceAll("\\/", "/")
+    const rawLiteral = match[1]
+    if (rawLiteral === undefined) continue
+    const literal = rawLiteral.replaceAll("\\/", "/")
     if (!ROUTE_KEYWORDS.test(literal) || !/^(?:\/|https?:\/\/)/i.test(literal))
       continue
     try {

@@ -87,8 +87,9 @@ export function migrateSiteAccountCheckInToV7(
 
   if (legacyCheckIn.enableDetection === true) {
     const legacyMethodIds = registry.getLegacyMethodIds(account.site_type)
-    if (legacyMethodIds.length === 1) {
-      selectedMethodId = legacyMethodIds[0]
+    const [legacyMethodId] = legacyMethodIds
+    if (legacyMethodId && legacyMethodIds.length === 1) {
+      selectedMethodId = legacyMethodId
       const status = migrateLegacyStatus(legacyCheckIn.siteStatus)
       methods[selectedMethodId] = {
         detection: {

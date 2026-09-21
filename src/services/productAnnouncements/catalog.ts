@@ -300,8 +300,7 @@ export function selectProductAnnouncementView(
       notice.severity === PRODUCT_ANNOUNCEMENT_SEVERITIES.Critical ||
       notice.severity === PRODUCT_ANNOUNCEMENT_SEVERITIES.Warning,
   )
-  const primaryRiskNotice =
-    activeRiskNotices.length > 0 ? activeRiskNotices[0] : null
+  const primaryRiskNotice = activeRiskNotices[0] ?? null
 
   return {
     notices,

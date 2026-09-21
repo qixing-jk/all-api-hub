@@ -56,8 +56,10 @@ const mapWithConcurrency = async <TItem, TResult>(
     Array.from({ length: Math.min(concurrency, items.length) }, async () => {
       while (!stopped && nextIndex < items.length) {
         const index = nextIndex++
+        const item = items[index]
+        if (item === undefined) continue
         try {
-          results[index] = await mapper(items[index])
+          results[index] = await mapper(item)
         } catch (error) {
           stopped = true
           throw error
@@ -237,6 +239,9 @@ export async function executeManagedSiteMigrationCore(
   for (let index = 0; index < params.preview.items.length; index += 1) {
     throwIfExecutionCancelled(index)
     const item = params.preview.items[index]
+    if (!item) {
+      continue
+    }
     if (item.status === "blocked") {
       append(item, {
         status: "skipped",

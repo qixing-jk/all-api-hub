@@ -286,6 +286,17 @@ const AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT = {
 type PostCheckinRefreshOutcome = "refreshed" | "unchanged" | "failed"
 
 /**
+ * Splits an `HH:MM` window bound into numeric hour and minute parts.
+ *
+ * A missing or non-numeric part becomes `NaN`, which `Number.isNaN` rejects and
+ * `Date.setHours` turns into an invalid date.
+ */
+function splitTimeParts(time: string): [number, number] {
+  const [hour, minute] = time.split(":").map(Number)
+  return [hour ?? Number.NaN, minute ?? Number.NaN]
+}
+
+/**
  * Scheduler service for Auto Check-in
  *
  * Scheduling model:
@@ -659,8 +670,8 @@ class AutoCheckinScheduler {
   ): Date {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-    const [startHour, startMinute] = windowStart.split(":").map(Number)
-    const [endHour, endMinute] = windowEnd.split(":").map(Number)
+    const [startHour, startMinute] = splitTimeParts(windowStart)
+    const [endHour, endMinute] = splitTimeParts(windowEnd)
 
     const windowStartTime = new Date(today)
     windowStartTime.setHours(startHour, startMinute, 0, 0)
@@ -702,8 +713,8 @@ class AutoCheckinScheduler {
     windowEnd: string,
     day: Date,
   ): Date | null {
-    const [startHour, startMinute] = windowStart.split(":").map(Number)
-    const [endHour, endMinute] = windowEnd.split(":").map(Number)
+    const [startHour, startMinute] = splitTimeParts(windowStart)
+    const [endHour, endMinute] = splitTimeParts(windowEnd)
 
     if (
       [startHour, startMinute, endHour, endMinute].some((value) =>

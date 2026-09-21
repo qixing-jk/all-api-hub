@@ -251,11 +251,13 @@ export default function FilterBar({
   const isReasonFilterActive = isAutoCheckinReasonFilterActive(filter)
   const selectedReasonFilterCount =
     filter.reason.categories.length + filter.reason.reasons.length
+  const [singleReasonCategory] = filter.reason.categories
   const reasonSummary = !isReasonFilterActive
     ? t("execution.filters.reasonAll")
     : filter.reason.reasons.length === 0 &&
+        singleReasonCategory !== undefined &&
         filter.reason.categories.length === 1
-      ? t(REASON_CATEGORY_LABEL_KEYS[filter.reason.categories[0]])
+      ? t(REASON_CATEGORY_LABEL_KEYS[singleReasonCategory])
       : t("execution.filters.selectedReasons", {
           count: selectedReasonFilterCount,
         })

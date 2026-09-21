@@ -293,9 +293,8 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             "Claude Code Hub does not support this migration channel type",
           )
         }
-        const groups = [
-          source.groups[0]?.trim() || DEFAULT_CHANNEL_FIELDS.groups[0],
-        ]
+        const defaultGroup = DEFAULT_CHANNEL_FIELDS.groups[0] ?? ""
+        const groups = [source.groups[0]?.trim() || defaultGroup]
         return {
           projection: {
             name: "",

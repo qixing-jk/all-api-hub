@@ -39,7 +39,8 @@ class Sub2ApiAuthPersistence {
       return await accountConfigStore.mutate<Sub2ApiAuthPersistenceResult>(
         (config) => {
           const index = config.accounts.findIndex((item) => item.id === id)
-          if (index === -1) {
+          const account = index === -1 ? undefined : config.accounts[index]
+          if (!account) {
             return {
               result: {
                 status: SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING,
@@ -47,7 +48,6 @@ class Sub2ApiAuthPersistence {
               changed: false,
             }
           }
-          const account = config.accounts[index]
 
           const actualOrigin = normalizeAccountSiteProfileUrlForOriginKey({
             siteType: account.site_type,

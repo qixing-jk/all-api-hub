@@ -96,7 +96,9 @@ export function parseNewApiMediaPricing(
   const parsed = presentationSchema.safeParse(presentation)
   if (!parsed.success) return plan
   const { kind, items } = parsed.data
-  const unit = items[0].unit
+  const [firstItem] = items
+  if (!firstItem) return plan
+  const unit = firstItem.unit
   if (
     items.some((item) => item.unit !== unit) ||
     (kind === MEDIA_KINDS.IMAGE) !== (unit === MEDIA_UNITS.IMAGE)
@@ -200,12 +202,14 @@ export function parseNewApiMediaPricing(
     row.billing_expr.trim(),
   )
   if (!outer) return plan
+  const outerBody = outer[1]
+  if (outerBody === undefined) return plan
   const body =
     unit === MEDIA_UNITS.MILLION_OUTPUT_TOKENS
-      ? /^c\s*\*\s*([\s\S]+)$/.exec(outer[1])?.[1]
+      ? /^c\s*\*\s*([\s\S]+)$/.exec(outerBody)?.[1]
       : new RegExp(
           `^unit\\(\\s*${unit === MEDIA_UNITS.IMAGE ? "outputs" : "seconds"}\\s*,\\s*([\\s\\S]+)\\)\\s*$`,
-        ).exec(outer[1])?.[1]
+        ).exec(outerBody)?.[1]
   const expression = body && parseMediaPriceExpression(body)
   if (!expression) return plan
   const resolutions = new Set(items.map((item) => item.resolution))

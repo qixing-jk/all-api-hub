@@ -27,7 +27,12 @@ export function formatDiagnosticSection(label: string, value: string): string {
       continue
     }
     flushLiteralLines()
-    const [, key, fieldValue] = match
+    const key = match[1]
+    if (key === undefined) {
+      literalLines.push(line)
+      continue
+    }
+    const fieldValue = match[2]
     const name = /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)
       ? key
           .replace(/([a-z])([A-Z])/g, "$1 $2")

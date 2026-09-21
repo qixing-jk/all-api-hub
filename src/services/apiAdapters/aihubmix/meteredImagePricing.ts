@@ -101,8 +101,8 @@ export function buildAIHubMixMeteredImagePlan(
   )
   if (areaRules.length && areaRules.length !== generation.price_rules.length)
     return unsupported
-  for (let index = 0; index < areaRules.length; index++) {
-    const current = areaRules[index].match
+  for (const [index, areaRule] of areaRules.entries()) {
+    const current = areaRule.match
     if (!("megapixels" in current)) continue
     if (
       current.megapixels.gt !== undefined &&
@@ -195,7 +195,8 @@ export function buildAIHubMixMeteredImagePlan(
         },
       })
     }
-  if (!rules.length) return unsupported
+  const [firstRule] = rules
+  if (!firstRule) return unsupported
   const hasInputCharges =
     parsed.data.enabled_billing_items.includes("image_input")
   const input = parsed.data.metered_price_config.image_input
@@ -218,7 +219,7 @@ export function buildAIHubMixMeteredImagePlan(
     // A dimension that cannot change the price is not a required quote input.
     // Compare every native rule, including nonstandard sizes, and the fallback.
     rules: hasUniformPrice
-      ? [{ id: "flat", conditions: [], rates: rules[0].rates }]
+      ? [{ id: "flat", conditions: [], rates: firstRule.rates }]
       : rules,
     groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
     requiresRuleMatch: true,

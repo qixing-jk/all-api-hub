@@ -155,7 +155,14 @@ export function startAbortableTask<T>(
     ? options.timeoutMs
     : undefined
 
-  if (sourceSignals.length === 0 && timeoutMs === undefined) {
+  const controller =
+    timeoutMs !== undefined || sourceSignals.length > 1
+      ? new AbortController()
+      : undefined
+  const sourceSignal = sourceSignals[0]
+
+  if (!controller && !sourceSignal) {
+    // No timeout and no source signal: nothing can cancel this task.
     let result: Promise<T>
     try {
       result = Promise.resolve(task(undefined))
@@ -171,11 +178,11 @@ export function startAbortableTask<T>(
     }
   }
 
-  const controller =
-    timeoutMs !== undefined || sourceSignals.length > 1
-      ? new AbortController()
-      : undefined
-  const effectiveSignal = controller?.signal ?? sourceSignals[0]
+  const effectiveSignal = controller ? controller.signal : sourceSignal
+  if (!effectiveSignal) {
+    // Unreachable: the branch above returns when neither source exists.
+    throw new Error("Abortable task requires a timeout or a source signal")
+  }
   const disposeRelays = controller
     ? relayAbortsInto(controller, sourceSignals)
     : () => {}

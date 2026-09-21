@@ -92,7 +92,9 @@ export const cliProxyApiCapabilities = {
       )
       const keys = cliProxyApiKeys(resource)
       if (keys.length !== 1) throw new Error("Multiple provider credentials")
-      return keys[0]
+      const [key] = keys
+      if (key === undefined) throw new Error("Provider credential is missing")
+      return key
     },
   },
   channelDrafts: {

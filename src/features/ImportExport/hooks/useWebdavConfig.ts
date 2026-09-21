@@ -211,7 +211,7 @@ export function useWebdavConfig({
           ? `syncData.${Object.keys(patch.syncData)[0]}`
           : patch.githubGist
             ? `githubGist.${Object.keys(patch.githubGist)[0]}`
-            : Object.keys(patch)[0],
+            : Object.keys(patch)[0] ?? "",
       )
         .then(() => tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success))
         .catch((error) => {

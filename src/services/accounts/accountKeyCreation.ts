@@ -137,9 +137,10 @@ export async function prepareDefaultAccountKeyCreation(
     })()
     return result
   }
-  if (requirements.length === 1) {
-    return requirements[0].provisioning.kind === "automatic"
-      ? { kind: "ready", create: () => create(requirements[0].requirementKey) }
+  const [requirement] = requirements
+  if (requirement && requirements.length === 1) {
+    return requirement.provisioning.kind === "automatic"
+      ? { kind: "ready", create: () => create(requirement.requirementKey) }
       : { kind: "input-required" }
   }
   return { kind: "selection-required", requirements, create }

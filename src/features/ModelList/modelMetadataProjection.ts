@@ -50,10 +50,10 @@ export function projectModelListMetadata(
   const { resolved } = aggregateModelVendors(
     candidateItems.map((item) => item.vendorCandidate),
   )
-  return candidateItems.map(
-    ({ vendorCandidate: _candidate, ...item }, index) => ({
-      ...item,
-      resolvedVendor: resolved[index],
-    }),
+  return candidateItems.flatMap(
+    ({ vendorCandidate: _candidate, ...item }, index) => {
+      const resolvedVendor = resolved[index]
+      return resolvedVendor === undefined ? [] : [{ ...item, resolvedVendor }]
+    },
   )
 }

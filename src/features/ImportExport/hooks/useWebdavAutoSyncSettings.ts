@@ -163,17 +163,20 @@ export function useWebdavAutoSyncSettings({
     })
     setLocalConfig((previous) => ({ ...previous, ...patch }))
     void immediateSave
-      .enqueue(async () => {
-        const response = await updateWebdavAutoSyncSettings(patch)
-        if (!response.success)
-          throw new Error(
-            response.error ||
-              t("settings:messages.updateFailed", {
-                name: t("webdav.autoSync.title"),
-              }),
-          )
-        await loadStatus()
-      }, Object.keys(patch)[0])
+      .enqueue(
+        async () => {
+          const response = await updateWebdavAutoSyncSettings(patch)
+          if (!response.success)
+            throw new Error(
+              response.error ||
+                t("settings:messages.updateFailed", {
+                  name: t("webdav.autoSync.title"),
+                }),
+            )
+          await loadStatus()
+        },
+        Object.keys(patch)[0] ?? "",
+      )
       .then(() => tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success))
       .catch((error) => {
         toast.error(
@@ -201,16 +204,14 @@ export function useWebdavAutoSyncSettings({
   }
 
   const retrySave = () =>
-    immediateSave
-      .retry()
-      .catch((error) =>
-        toast.error(
-          error?.message ||
-            t("settings:messages.updateFailed", {
-              name: t("webdav.autoSync.title"),
-            }),
-        ),
-      )
+    immediateSave.retry().catch((error) =>
+      toast.error(
+        error?.message ||
+          t("settings:messages.updateFailed", {
+            name: t("webdav.autoSync.title"),
+          }),
+      ),
+    )
 
   const handleSyncNow = async () => {
     const tracker = startProductAnalyticsAction({

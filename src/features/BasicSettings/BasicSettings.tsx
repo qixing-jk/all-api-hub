@@ -584,9 +584,9 @@ export default function BasicSettings() {
   )
 
   const handleTabChange = useCallback((index: number) => {
-    if (index < 0 || index >= TAB_CONFIGS.length) return
-    setSelectedTabIndex(index)
     const tab = TAB_CONFIGS[index]
+    if (!tab) return
+    setSelectedTabIndex(index)
     setMountedTabIds((previous) =>
       previous.includes(tab.id) ? previous : [...previous, tab.id],
     )

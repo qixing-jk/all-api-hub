@@ -252,6 +252,7 @@ const inspectProvisioning = async (
       const unknownGroupKeys = groupKeys.filter(
         (groupKey) => !requirementKeys.has(groupKey),
       )
+      const [singleUnknownGroupKey] = unknownGroupKeys
       const placement = !validGroupIdentity
         ? { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown }
         : unknownGroupKeys.length === 0
@@ -263,16 +264,20 @@ const inspectProvisioning = async (
             ? {
                 kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Orphaned,
                 placementKey:
+                  singleUnknownGroupKey !== undefined &&
                   unknownGroupKeys.length === 1
-                    ? unknownGroupKeys[0]
+                    ? singleUnknownGroupKey
                     : JSON.stringify(unknownGroupKeys),
                 displayName: unknownGroupKeys.join(", "),
               }
             : { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown }
       const currentName = key.name?.trim() || ""
+      const [singleKnownGroupKey] = knownGroupKeys
       const singleKnownGroup =
-        knownGroupKeys.length === 1 && unknownGroupKeys.length === 0
-          ? groupByRequirementKey.get(knownGroupKeys[0])
+        singleKnownGroupKey !== undefined &&
+        knownGroupKeys.length === 1 &&
+        unknownGroupKeys.length === 0
+          ? groupByRequirementKey.get(singleKnownGroupKey)
           : undefined
       const targetDisplayName = singleKnownGroup
         ? getDefaultAccountKeyName(singleKnownGroup.displayName)
@@ -495,8 +500,9 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
         (key) =>
           !before.has(key.id) && matchesVoApiKeyWrite(key, command.values),
       )
-      if (created.length === 1)
-        return { certainty: "applied" as const, value: { detail: created[0] } }
+      const [createdKey] = created
+      if (created.length === 1 && createdKey)
+        return { certainty: "applied" as const, value: { detail: createdKey } }
     } catch (error) {
       return {
         certainty: "possibly-applied" as const,

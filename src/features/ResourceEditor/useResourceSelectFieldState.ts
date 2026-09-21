@@ -175,6 +175,7 @@ export function useResourceSelectFieldState<TSection extends string>({
         continue
       }
       const nextValue = optionValues[0]
+      if (nextValue === undefined) continue
       const pending = pendingAutoSelections.current.get(descriptor.fieldId)
       if (
         pending?.currentValue === currentValue &&

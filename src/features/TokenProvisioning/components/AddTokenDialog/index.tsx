@@ -76,7 +76,7 @@ function AccountKeyCreateSession({
     accounts.some((account) => account.id === preSelectedAccountId)
       ? preSelectedAccountId!
       : accounts.length === 1
-        ? accounts[0].id
+        ? accounts[0]?.id ?? ""
         : "",
   )
   const [route, setRoute] = useState<{

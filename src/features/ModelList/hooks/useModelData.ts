@@ -538,8 +538,9 @@ function useSingleAccountModelData(params: {
           return currentRuntimeKeyId
         }
 
-        if (runtimeKeys.length === 1) {
-          return runtimeKeys[0].id
+        const [onlyRuntimeKey] = runtimeKeys
+        if (onlyRuntimeKey !== undefined && runtimeKeys.length === 1) {
+          return onlyRuntimeKey.id
         }
 
         return null

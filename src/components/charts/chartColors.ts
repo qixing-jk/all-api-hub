@@ -42,7 +42,7 @@ export function readChartColors(element: HTMLElement): Record<string, string> {
       context.fillStyle = cssColor
       context.fillRect(0, 0, 1, 1)
       const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data
-      return [reference, `rgba(${r}, ${g}, ${b}, ${a / 255})`]
+      return [reference, `rgba(${r}, ${g}, ${b}, ${(a ?? 255) / 255})`]
     }),
   )
 }

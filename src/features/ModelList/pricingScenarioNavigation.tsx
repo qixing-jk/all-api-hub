@@ -27,8 +27,9 @@ import {
 export function getPricingConditionTarget(
   quote: QuoteResult,
 ): PricingConditionTarget | undefined {
-  if (quote.conditionDetails?.length === 1)
-    return quote.conditionDetails[0].axis
+  const [conditionDetail] = quote.conditionDetails ?? []
+  if (quote.conditionDetails?.length === 1 && conditionDetail !== undefined)
+    return conditionDetail.axis
   const missingMeters = quote.issues
     .filter((issue) => issue.code === PRICING_ISSUE_CODES.CONDITION_MISSING)
     .map((issue) => issue.meter)

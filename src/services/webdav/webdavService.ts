@@ -188,7 +188,8 @@ function getBackupDirUrl(targetUrl: string) {
  * Extracts the final path segment from a backup target URL.
  */
 function getBackupFileName(targetUrl: string) {
-  const cleanUrl = targetUrl.split(/[?#]/, 1)[0]
+  const queryIndex = targetUrl.search(/[?#]/)
+  const cleanUrl = queryIndex < 0 ? targetUrl : targetUrl.slice(0, queryIndex)
   const cut = cleanUrl.lastIndexOf("/")
   return cut >= 0 ? cleanUrl.slice(cut + 1) : cleanUrl
 }
@@ -548,10 +549,10 @@ async function deleteWebdavContentBestEffort(params: {
 /**
  * Extracts href values from a WebDAV multistatus response.
  */
-function parseWebdavHrefValues(xml: string) {
-  return Array.from(xml.matchAll(/<[^>]*href[^>]*>([^<]+)<\/[^>]*href>/gi)).map(
-    (match) => match[1],
-  )
+function parseWebdavHrefValues(xml: string): string[] {
+  return Array.from(xml.matchAll(/<[^>]*href[^>]*>([^<]+)<\/[^>]*href>/gi))
+    .map((match) => match[1])
+    .filter((href): href is string => href !== undefined)
 }
 
 /**
@@ -570,6 +571,9 @@ function parseTempTimestampFromFileName(input: {
   }
 
   const raw = match[1]
+  if (!raw) {
+    return null
+  }
   const year = Number(raw.slice(0, 4))
   const month = Number(raw.slice(4, 6))
   const day = Number(raw.slice(6, 8))

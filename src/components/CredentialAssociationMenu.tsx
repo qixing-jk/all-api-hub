@@ -111,11 +111,13 @@ export function CredentialAssociationMenu({
       )}
     />
   )
+  const [renderableItem] = renderableItems
   const directAssociateItem =
     status === "unlinked" &&
     renderableItems.length === 1 &&
-    !renderableItems[0].onSaveAndAssociate
-      ? renderableItems[0]
+    renderableItem !== undefined &&
+    !renderableItem.onSaveAndAssociate
+      ? renderableItem
       : undefined
 
   if (directAssociateItem?.onAssociate && labels.associate) {

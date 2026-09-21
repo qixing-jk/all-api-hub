@@ -359,9 +359,12 @@ const encodeUpdate = (
   )
     throw new Error("Channel credentials changed; reopen the editor")
   const renames = new Map(
-    input.keys?.flatMap((key, index) =>
-      key.originalName ? [[key.originalName, keys[index].name] as const] : [],
-    ) ?? [],
+    input.keys?.flatMap((key, index) => {
+      const renamed = keys[index]?.name
+      return key.originalName && renamed !== undefined
+        ? [[key.originalName, renamed] as const]
+        : []
+    }) ?? [],
   )
   const retainedNames = new Set(
     input.keys?.flatMap((key) => (key.originalName ? [key.originalName] : [])),

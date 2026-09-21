@@ -412,6 +412,8 @@ function parseTimeToMinutes(time: string): number | null {
 
   const [hour, minute] = time.split(":").map(Number)
   if (
+    hour === undefined ||
+    minute === undefined ||
     !Number.isInteger(hour) ||
     !Number.isInteger(minute) ||
     hour < 0 ||

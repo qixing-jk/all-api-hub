@@ -110,11 +110,12 @@ class AccountConfigStore {
   ): Promise<T> {
     return this.mutate((config) => {
       const index = config.accounts.findIndex((account) => account.id === id)
-      if (index === -1) {
+      const account = index === -1 ? undefined : config.accounts[index]
+      if (!account) {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
 
-      const { nextAccount, result, changed } = mutation(config.accounts[index])
+      const { nextAccount, result, changed } = mutation(account)
       options.guard?.(config, nextAccount)
       config.accounts[index] = nextAccount
       return { result, changed }

@@ -47,6 +47,16 @@ const AUTO_CHECKIN_SETTINGS_ANALYTICS_CONTEXT = {
 } as const
 
 /**
+ * Splits an `HH:MM` string into numeric parts, or `null` when a part is missing.
+ *
+ * Malformed parts stay `NaN` so callers keep their existing validation semantics.
+ */
+function splitTimeParts(time: string): [number, number] | null {
+  const [hour, minute] = time.split(":").map(Number)
+  return hour === undefined || minute === undefined ? null : [hour, minute]
+}
+
+/**
  * Applies partial preference updates before reporting the resulting strategy.
  */
 /**
@@ -108,8 +118,13 @@ export default function AutoCheckinSettings() {
   }
 
   const validateTimeWindow = (start: string, end: string): boolean => {
-    const [startH, startM] = start.split(":").map(Number)
-    const [endH, endM] = end.split(":").map(Number)
+    const startParts = splitTimeParts(start)
+    const endParts = splitTimeParts(end)
+    if (!startParts || !endParts) {
+      return false
+    }
+    const [startH, startM] = startParts
+    const [endH, endM] = endParts
 
     if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) {
       return false
@@ -124,7 +139,11 @@ export default function AutoCheckinSettings() {
   }
 
   const validateTimeFormat = (time: string): boolean => {
-    const [hour, minute] = time.split(":").map(Number)
+    const parts = splitTimeParts(time)
+    if (!parts) {
+      return false
+    }
+    const [hour, minute] = parts
     return (
       Number.isInteger(hour) &&
       Number.isInteger(minute) &&
@@ -140,9 +159,15 @@ export default function AutoCheckinSettings() {
     start: string,
     end: string,
   ): boolean => {
-    const [timeH, timeM] = time.split(":").map(Number)
-    const [startH, startM] = start.split(":").map(Number)
-    const [endH, endM] = end.split(":").map(Number)
+    const timeParts = splitTimeParts(time)
+    const startParts = splitTimeParts(start)
+    const endParts = splitTimeParts(end)
+    if (!timeParts || !startParts || !endParts) {
+      return false
+    }
+    const [timeH, timeM] = timeParts
+    const [startH, startM] = startParts
+    const [endH, endM] = endParts
 
     const toMinutes = (h: number, m: number) => h * 60 + m
     const timeMinutes = toMinutes(timeH, timeM)

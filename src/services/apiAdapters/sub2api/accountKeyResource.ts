@@ -294,14 +294,16 @@ const provisionRequirement = async (
   try {
     const after = await fetchSub2ApiKeys(request)
     const newTokens = after.filter((token) => !beforeIds.has(token.id))
+    const [newToken] = newTokens
     if (
+      newToken &&
       newTokens.length === 1 &&
-      newTokens[0].group_id === groupId &&
-      Boolean(newTokens[0].group_name?.trim())
+      newToken.group_id === groupId &&
+      Boolean(newToken.group_name?.trim())
     ) {
       return {
         certainty: "applied",
-        value: { ref: createRef(config, newTokens[0].id) },
+        value: { ref: createRef(config, newToken.id) },
       }
     }
   } catch (error) {
@@ -474,8 +476,9 @@ async function createNativeKey(
     return { certainty: "applied" as const, value: { detail: result.value } }
   try {
     const candidates = (await fetchSub2ApiKeys(request)).filter(matches)
-    if (candidates.length === 1)
-      return { certainty: "applied" as const, value: { detail: candidates[0] } }
+    const [candidate] = candidates
+    if (candidates.length === 1 && candidate)
+      return { certainty: "applied" as const, value: { detail: candidate } }
   } catch (error) {
     return {
       certainty: "possibly-applied" as const,

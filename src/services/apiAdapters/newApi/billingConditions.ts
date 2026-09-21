@@ -32,6 +32,7 @@ export function parseBillingConditions(
     if (!match && !calendar) return undefined
     const variable = (match?.[1] ?? calendar![1]) as BillingRange["variable"]
     const operator = match?.[2] ?? calendar![3]
+    if (operator === undefined) return undefined
     const value = Number(match?.[3] ?? calendar![4])
     const boundary =
       operator === ">" || operator === "<="

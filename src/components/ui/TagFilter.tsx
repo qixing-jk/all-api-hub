@@ -179,7 +179,9 @@ export function TagFilter(props: TagFilterProps) {
       let hasOverflow = false
 
       for (let i = 0; i < totalChips; i += 1) {
-        const top = chipNodes[i].offsetTop
+        const chipNode = chipNodes[i]
+        if (!chipNode) continue
+        const top = chipNode.offsetTop
         const existingIndex = lineTops.findIndex(
           (value) => Math.abs(value - top) < 1,
         )

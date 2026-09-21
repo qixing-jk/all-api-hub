@@ -184,7 +184,9 @@ export function resolveApiVerificationTypeForChannelType(
       : ""
   const type = /^\d+$/.test(rawType) ? String(Number(rawType)) : rawType
   const protocols = CHANNEL_VERIFICATION_PROTOCOLS[siteType]
-  return protocols && Object.hasOwn(protocols, type) ? protocols[type] : null
+  return protocols && Object.hasOwn(protocols, type)
+    ? protocols[type] ?? null
+    : null
 }
 
 /**

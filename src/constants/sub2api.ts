@@ -18,8 +18,9 @@ export const SUB2API_API_KEY_ACCOUNT_PLATFORMS: readonly Sub2ApiApiKeyAccountPla
     ) as Sub2ApiApiKeyAccountPlatform[],
   )
 
+/** First canonical platform, spelled out so the default is never `undefined`. */
 export const SUB2API_DEFAULT_ACCOUNT_PLATFORM: Sub2ApiApiKeyAccountPlatform =
-  SUB2API_API_KEY_ACCOUNT_PLATFORMS[0]
+  SUB2API_API_KEY_ACCOUNT_PLATFORMS[0] ?? "openai"
 
 export const SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS: Readonly<
   Record<Sub2ApiApiKeyAccountPlatform, string>

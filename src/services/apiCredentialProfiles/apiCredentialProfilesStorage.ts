@@ -959,7 +959,8 @@ class ApiCredentialProfilesStorageService {
     locator: AccountRuntimeKeyLocator,
   ): Promise<ApiCredentialProfileLinkResolution> {
     const links = await this.findLinksForLocator(locator)
-    if (links.length === 0) {
+    const [link] = links
+    if (!link) {
       return {
         status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.NotFound,
       }
@@ -971,7 +972,6 @@ class ApiCredentialProfilesStorageService {
       }
     }
 
-    const [link] = links
     if (link.state !== API_CREDENTIAL_PROFILE_LINK_STATES.Active) {
       return {
         status:
@@ -1163,12 +1163,11 @@ class ApiCredentialProfilesStorageService {
       await this.withStorageWriteLock(async () => {
         const config = cloneConfig(await this.readConfig())
         const profiles = Array.isArray(config.profiles) ? config.profiles : []
-        const index = profiles.findIndex((p) => p.id === id)
-        if (index === -1) {
+        const current = profiles.find((p) => p.id === id)
+        if (!current) {
           throw new Error("Profile not found.")
         }
 
-        const current = profiles[index]
         const nextName =
           typeof updates.name === "string" ? updates.name.trim() : current.name
         if (!nextName) {
@@ -1322,8 +1321,8 @@ class ApiCredentialProfilesStorageService {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await this.readConfig())
       const profiles = Array.isArray(config.profiles) ? config.profiles : []
-      const index = profiles.findIndex((profile) => profile.id === id)
-      if (index === -1) {
+      const current = profiles.find((profile) => profile.id === id)
+      if (!current) {
         throw new Error("Profile not found.")
       }
 
@@ -1333,7 +1332,7 @@ class ApiCredentialProfilesStorageService {
       }
 
       const nextProfile: ApiCredentialProfile = {
-        ...profiles[index],
+        ...current,
         telemetrySnapshot,
       }
 

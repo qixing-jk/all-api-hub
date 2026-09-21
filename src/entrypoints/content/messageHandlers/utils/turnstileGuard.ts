@@ -410,7 +410,7 @@ function findClickableByText(params: {
 
   // Prefer the shortest matching label (usually the primary button).
   matches.sort((a, b) => a.text.length - b.text.length)
-  return matches[0].el
+  return matches[0]?.el ?? null
 }
 
 /**

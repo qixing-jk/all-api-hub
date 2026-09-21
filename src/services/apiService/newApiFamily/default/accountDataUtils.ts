@@ -219,7 +219,9 @@ export function extractAmount(
   if (!match) return null
 
   const currencySymbol = match[1]
-  let amount = parseFloat(match[2].replace(/,/g, ""))
+  const rawAmount = match[2]
+  if (currencySymbol === undefined || rawAmount === undefined) return null
+  let amount = parseFloat(rawAmount.replace(/,/g, ""))
 
   if (currencySymbol === "¥") {
     amount = amount / exchangeRate

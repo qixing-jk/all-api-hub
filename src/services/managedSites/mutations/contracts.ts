@@ -138,9 +138,9 @@ const hasOwn = (value: object, key: string) =>
   Object.prototype.hasOwnProperty.call(value, key)
 
 const isDataPropertyDescriptor = (
-  descriptor: PropertyDescriptor,
+  descriptor: PropertyDescriptor | undefined,
 ): descriptor is PropertyDescriptor & { value: unknown } =>
-  "value" in descriptor
+  descriptor !== undefined && "value" in descriptor
 
 const readContractRecord = (
   value: unknown,

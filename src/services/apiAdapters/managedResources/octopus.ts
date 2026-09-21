@@ -49,10 +49,10 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import {
   OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
-  type OctopusOutboundType,
   type OctopusChannel,
   type OctopusCreateChannelInput,
   type OctopusFetchModelInput,
+  type OctopusOutboundType,
   type OctopusUpdateChannelInput,
 } from "~/types/octopus"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
@@ -383,7 +383,7 @@ export async function openOctopusNativeResourceOperations(
   ) => {
     const detail = await get(id, operationOptions)
     const key = detail.keys[0]?.channel_key
-    if (!hasUsableManagedSiteChannelKey(key))
+    if (!key || !hasUsableManagedSiteChannelKey(key))
       throw new ManagedResourceError({ code: failures.Unavailable })
     return key
   }
@@ -552,7 +552,11 @@ const editor = <T>(
           ? await operations.loadSecret(detail.id, options)
           : ""
     const baseUrl = readOctopusString(values, fields.BaseUrl)
-    if (!isOctopusHttpUrl(baseUrl) || !hasUsableManagedSiteChannelKey(key))
+    if (
+      !baseUrl ||
+      !isOctopusHttpUrl(baseUrl) ||
+      !hasUsableManagedSiteChannelKey(key)
+    )
       throw new ManagedResourceError({ code: failures.ValidationFailed })
     const models = await operations.fetchDraftModels(
       {
@@ -607,19 +611,22 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
         [fields.Key]: "credential",
         [fields.Models]: "models",
       },
-      project: (seed) => ({
-        ...octopusInitialValues(),
-        [fields.Type]: OctopusOutboundTypeOptions.some(
-          ({ value }) => String(value) === String(seed.channelType),
-        )
-          ? String(seed.channelType)
-          : octopusInitialValues()[fields.Type],
-        [fields.Name]: seed.name,
-        [fields.BaseUrl]: seed.baseUrl,
-        [fields.Key]: { kind: intents.Replace, value: seed.credential },
-        [fields.Models]: [...seed.models],
-        [fields.Status]: seed.enabled ? statuses.Enabled : statuses.Disabled,
-      }),
+      project: (seed) => {
+        const initialValues = octopusInitialValues()
+        return {
+          ...initialValues,
+          [fields.Type]: OctopusOutboundTypeOptions.some(
+            ({ value }) => String(value) === String(seed.channelType),
+          )
+            ? String(seed.channelType)
+            : initialValues[fields.Type] ?? "",
+          [fields.Name]: seed.name,
+          [fields.BaseUrl]: seed.baseUrl,
+          [fields.Key]: { kind: intents.Replace, value: seed.credential },
+          [fields.Models]: [...seed.models],
+          [fields.Status]: seed.enabled ? statuses.Enabled : statuses.Disabled,
+        }
+      },
     },
   ],
   createEditor: async (

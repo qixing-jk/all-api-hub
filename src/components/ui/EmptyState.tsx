@@ -63,6 +63,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
     ref,
   ) => {
     const resolvedActions = actions ?? (action ? [action] : [])
+    const [singleResolvedAction] = resolvedActions
     const isDestructive = variant === "destructive"
 
     return (
@@ -102,8 +103,8 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
             {description}
           </p>
         )}
-        {resolvedActions.length === 1 ? (
-          <EmptyStateActionButton action={resolvedActions[0]} />
+        {resolvedActions.length === 1 && singleResolvedAction ? (
+          <EmptyStateActionButton action={singleResolvedAction} />
         ) : resolvedActions.length > 1 ? (
           <div className="gap-y-density-2 flex flex-col items-center gap-x-2 sm:flex-row sm:justify-center">
             {resolvedActions.map((resolvedAction, index) => (

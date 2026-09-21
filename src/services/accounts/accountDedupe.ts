@@ -305,17 +305,20 @@ export function scanDuplicateAccounts(input: {
   const comparator = buildKeepComparator(input.strategy, pinnedIds)
   const groups = Array.from(groupsByKey.values())
     .filter((group) => group.accounts.length > 1)
-    .map((group) => {
+    .flatMap((group) => {
       const sorted = [...group.accounts].sort(comparator)
+      const [keepAccount] = sorted
+      if (!keepAccount) return []
       const accountIds = group.accounts.map((account) => account.id)
       const keyId = JSON.stringify([...accountIds].sort(compareStringAsc))
-      const keepAccountId = sorted[0].id
-      return {
-        key: { ...group.key, id: keyId },
-        accounts: group.accounts,
-        keepAccountId,
-        deleteAccountIds: accountIds.filter((id) => id !== keepAccountId),
-      }
+      return [
+        {
+          key: { ...group.key, id: keyId },
+          accounts: group.accounts,
+          keepAccountId: keepAccount.id,
+          deleteAccountIds: accountIds.filter((id) => id !== keepAccount.id),
+        },
+      ]
     })
     .sort((a, b) => {
       const originCompare = a.key.origin.localeCompare(b.key.origin)

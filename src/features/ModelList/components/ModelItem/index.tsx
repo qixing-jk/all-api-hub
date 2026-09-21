@@ -297,10 +297,12 @@ export default function ModelItem(props: ModelItemProps) {
   const usableGroupLabels = groupContext.usableGroups.map((group) =>
     formatGroupLabelFromRatios(group, groupRatios),
   )
+  const [primaryUsableGroupLabel] = usableGroupLabels
+  const [switchableGroup] = groupContext.usableGroups
   const groupSummary =
-    showGroupDetails && usableGroupLabels.length > 0
+    showGroupDetails && primaryUsableGroupLabel
       ? {
-          label: usableGroupLabels[0],
+          label: primaryUsableGroupLabel,
           ...(usableGroupLabels.length > 1
             ? { overflowCount: usableGroupLabels.length - 1 }
             : {}),
@@ -537,11 +539,11 @@ export default function ModelItem(props: ModelItemProps) {
                 {t("unavailable")}
               </Badge>
               <span>
-                {hasKnownNoUsableGroup
+                {hasKnownNoUsableGroup || !switchableGroup
                   ? t("noUsableGroupsForModel")
                   : t("clickSwitchGroup", {
                       group: formatGroupLabelFromRatios(
-                        groupContext.usableGroups[0],
+                        switchableGroup,
                         groupRatios,
                       ),
                     })}

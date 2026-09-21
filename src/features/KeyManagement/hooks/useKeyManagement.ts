@@ -299,7 +299,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               ? PRODUCT_ANALYTICS_RESULTS.Failure
               : PRODUCT_ANALYTICS_RESULTS.Success,
           {
-            ...(failures.length
+            ...(failures[0]
               ? { errorCategory: failures[0].errorCategory }
               : {}),
             insights: {
@@ -485,25 +485,27 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       ),
     [entries, searchTerm, isAllAccountsMode, allAccountsFilterAccountIds],
   )
-  const isLoading = serviceAccounts.some(
-    (account) =>
-      !serviceCredentials[account.id] ||
-      serviceCredentials[account.id].status ===
-        KEY_MANAGEMENT_LOAD_STATUSES.Loading,
-  )
-  const failedAccounts = serviceAccounts
-    .filter(
-      (account) =>
-        serviceCredentials[account.id]?.status ===
-        KEY_MANAGEMENT_LOAD_STATUSES.Error,
+  const isLoading = serviceAccounts.some((account) => {
+    const credential = serviceCredentials[account.id]
+    return (
+      !credential || credential.status === KEY_MANAGEMENT_LOAD_STATUSES.Loading
     )
-    .map((account) => ({
-      accountId: account.id,
-      accountName: account.name,
-      ...(serviceCredentials[account.id].errorMessage
-        ? { errorMessage: serviceCredentials[account.id].errorMessage }
-        : {}),
-    }))
+  })
+  const failedAccounts = serviceAccounts
+    .filter((account) => {
+      const credential = serviceCredentials[account.id]
+      return credential?.status === KEY_MANAGEMENT_LOAD_STATUSES.Error
+    })
+    .map((account) => {
+      const credential = serviceCredentials[account.id]
+      return {
+        accountId: account.id,
+        accountName: account.name,
+        ...(credential?.errorMessage
+          ? { errorMessage: credential.errorMessage }
+          : {}),
+      }
+    })
   const selectedCapabilities = accountById.has(selectedAccount)
     ? getSiteTypeCapabilities(accountById.get(selectedAccount)!.siteType)
         .account
@@ -534,12 +536,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
         ).length,
         error: failedAccounts.length,
-        loading: serviceAccounts.filter(
-          (account) =>
-            !serviceCredentials[account.id] ||
-            serviceCredentials[account.id].status ===
-              KEY_MANAGEMENT_LOAD_STATUSES.Loading,
-        ).length,
+        loading: serviceAccounts.filter((account) => {
+          const credential = serviceCredentials[account.id]
+          return (
+            !credential ||
+            credential.status === KEY_MANAGEMENT_LOAD_STATUSES.Loading
+          )
+        }).length,
       }
     : null
   const accountSummaryItems = useMemo(

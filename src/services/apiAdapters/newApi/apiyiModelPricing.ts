@@ -57,7 +57,7 @@ function findContextPricing(
 function normalizeContextTiers(
   value: unknown,
   cnyPerUsd: number,
-): ModelTokenPriceTier[] | undefined {
+): [ModelTokenPriceTier, ...ModelTokenPriceTier[]] | undefined {
   if (
     !isRecord(value) ||
     (value.Currency !== undefined &&
@@ -104,17 +104,16 @@ function normalizeContextTiers(
   tiers.sort(
     (left, right) => left.min_context_tokens - right.min_context_tokens,
   )
-  if (tiers[0].min_context_tokens !== 0) return undefined
-  for (let index = 1; index < tiers.length; index += 1) {
-    const previousMax = tiers[index - 1].max_context_tokens
-    if (
-      previousMax === undefined ||
-      tiers[index].min_context_tokens <= previousMax
-    ) {
+  const [firstTier, ...restTiers] = tiers
+  if (!firstTier || firstTier.min_context_tokens !== 0) return undefined
+  let previousMax = firstTier.max_context_tokens
+  for (const tier of restTiers) {
+    if (previousMax === undefined || tier.min_context_tokens <= previousMax) {
       return undefined
     }
+    previousMax = tier.max_context_tokens
   }
-  return tiers
+  return [firstTier, ...restTiers]
 }
 
 /** Retain family model/group behavior and enrich APIyi's structured token tiers. */

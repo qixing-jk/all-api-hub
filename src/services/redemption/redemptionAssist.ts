@@ -490,9 +490,9 @@ class RedemptionAssistService {
         return accountHost === hostname
       })
 
-    if (sameDomainCandidates.length === 1) {
+    const [account] = sameDomainCandidates
+    if (sameDomainCandidates.length === 1 && account) {
       // Single clear match – auto redeem
-      const account = sameDomainCandidates[0]
       const redeemResult = await redeemService.redeemCodeForAccount(
         account.id,
         code,

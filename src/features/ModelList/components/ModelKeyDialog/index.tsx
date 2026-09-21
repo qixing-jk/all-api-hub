@@ -134,12 +134,13 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     }
 
     setCreateGroup((prev) => {
+      const [onlyGroup] = createGroupOptions
       if (prev && createGroupOptions.includes(prev)) {
         return prev
       }
 
-      if (createGroupOptions.length === 1) {
-        return createGroupOptions[0]
+      if (onlyGroup !== undefined && createGroupOptions.length === 1) {
+        return onlyGroup
       }
 
       return ""
@@ -412,8 +413,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                   <ActionGroup className="items-stretch justify-start">
                     <Button
                       onClick={() => {
+                        const [defaultGroup] = createGroupOptions
                         void handleCreateCompatibleKey(
-                          createGroup || createGroupOptions[0],
+                          createGroup || defaultGroup || "",
                         )
                       }}
                       disabled={

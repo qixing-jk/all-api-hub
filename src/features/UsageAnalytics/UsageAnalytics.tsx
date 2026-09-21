@@ -387,11 +387,13 @@ export default function UsageAnalytics() {
       ).getUTCDay()
       const weekdayIndex = (weekday + 6) % 7
       const weekdayLabel = weekdayLabels[weekdayIndex] ?? weekdayLabels[0]
+      if (weekdayLabel === undefined) continue
+      const weekdayValues = valuesByModelAndDay[weekdayLabel]
+      if (weekdayValues === undefined) continue
 
       for (const [hourKey, aggregate] of Object.entries(hourly)) {
-        valuesByModelAndDay[weekdayLabel][hourKey] =
-          (valuesByModelAndDay[weekdayLabel][hourKey] ?? 0) +
-          (aggregate.totalTokens ?? 0)
+        weekdayValues[hourKey] =
+          (weekdayValues[hourKey] ?? 0) + (aggregate.totalTokens ?? 0)
       }
     }
 

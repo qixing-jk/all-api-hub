@@ -60,7 +60,7 @@ export const replaceIdListSubset = (input: {
     while (queueIndex < queue.length) {
       const next = queue[queueIndex]
       queueIndex += 1
-      if (seen.has(next)) continue
+      if (next === undefined || seen.has(next)) continue
       seen.add(next)
       return next
     }

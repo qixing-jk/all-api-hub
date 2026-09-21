@@ -352,7 +352,7 @@ export const AccountDataProvider = ({
       const tabUrl = typeof tab?.url === "string" ? tab.url : null
       const tabId = typeof tab?.id === "number" ? tab.id : null
 
-      if (!tabUrl || tabId === null) {
+      if (!tab || !tabUrl || tabId === null) {
         if (seq !== currentTabCheckSeqRef.current) return
         // No valid tab context: clear both site-level and user-level detections.
         currentTabUserCacheRef.current = null
@@ -394,17 +394,12 @@ export const AccountDataProvider = ({
           { url: tabUrl },
         )
       })
-      const siteTypeForUserRead =
-        resolveAccountSiteContentSessionHintForOrigin({
-          origin: parsedUrl.origin,
-          candidateAccounts: originAccounts,
-        }) ?? originAccounts[0]?.site_type
-
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)
 
+      const [firstOriginAccount] = originAccounts
       if (
-        originAccounts.length === 0 ||
+        firstOriginAccount === undefined ||
         options?.pageIsLoading ||
         tab.status === "loading"
       ) {
@@ -414,6 +409,12 @@ export const AccountDataProvider = ({
         setDetectedAccount(null)
         return
       }
+
+      const siteTypeForUserRead =
+        resolveAccountSiteContentSessionHintForOrigin({
+          origin: parsedUrl.origin,
+          candidateAccounts: originAccounts,
+        }) ?? firstOriginAccount.site_type
 
       const candidateUserIds = [
         ...new Set(
@@ -865,9 +866,10 @@ export const AccountDataProvider = ({
 
         // Each single-account query reads the complete storage envelope. Read
         // batches once to avoid repeating that work for every updated account.
+        const [singleId] = uniqueIds
         const storedAccounts =
-          uniqueIds.length === 1
-            ? [await accountQueries.getAccountById(uniqueIds[0])]
+          uniqueIds.length === 1 && singleId !== undefined
+            ? [await accountQueries.getAccountById(singleId)]
             : await accountQueries.getAllAccounts()
         const storedById = new Map(
           storedAccounts

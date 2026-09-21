@@ -63,7 +63,7 @@ function getDevIdentityColorComponents(colorIndex: number): HslComponents {
   return [
     HUE_START_DEGREES + HUE_STEP_DEGREES * slot,
     SATURATION_PERCENT,
-    LIGHTNESS_PERCENT[slot % LIGHTNESS_PERCENT.length],
+    LIGHTNESS_PERCENT[slot % LIGHTNESS_PERCENT.length] ?? LIGHTNESS_PERCENT[0],
   ]
 }
 
@@ -85,9 +85,10 @@ function hslToRgb([hue, saturation, lightness]: HslComponents): string {
   const hueSection = (hue % 360) / 60
   const secondComponent = chroma * (1 - Math.abs((hueSection % 2) - 1))
   const offset = l - chroma / 2
-  const channels = [chroma, secondComponent, 0]
+  const channels = [chroma, secondComponent, 0] as const
   const [red, green, blue] =
-    HUE_SECTOR_CHANNELS[Math.floor(hueSection) % HUE_SECTOR_CHANNELS.length]
+    HUE_SECTOR_CHANNELS[Math.floor(hueSection) % HUE_SECTOR_CHANNELS.length] ??
+    HUE_SECTOR_CHANNELS[0]
 
   return `rgb(${toColorChannel(channels[red], offset)}, ${toColorChannel(
     channels[green],

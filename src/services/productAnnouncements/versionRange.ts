@@ -28,7 +28,9 @@ function evaluateComparator(current: number[], token: string): boolean {
   if (!match) return false
 
   const operator = match[1] ?? "="
-  const target = normalizeVersion(match[2])
+  const rawTarget = match[2]
+  if (rawTarget === undefined) return false
+  const target = normalizeVersion(rawTarget)
   if (!target) return false
 
   const comparison = compareVersions(current, target)

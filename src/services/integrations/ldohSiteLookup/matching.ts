@@ -51,7 +51,7 @@ export function matchLdohSiteForAccount(
   if (origin) {
     const matches = index.byOrigin.get(origin) ?? []
     if (matches.length === 1) {
-      return matches[0]
+      return matches[0] ?? null
     }
     if (matches.length > 1) {
       return null
@@ -61,7 +61,7 @@ export function matchLdohSiteForAccount(
   if (hostname) {
     const matches = index.byHostname.get(hostname) ?? []
     if (matches.length === 1) {
-      return matches[0]
+      return matches[0] ?? null
     }
   }
 

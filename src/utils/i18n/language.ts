@@ -80,7 +80,7 @@ export function normalizeAppLanguage(
   const normalizedLanguage = normalizeLanguageTag(language)
   if (!normalizedLanguage) return undefined
 
-  const languageFamily = normalizedLanguage.split("-")[0]
+  const languageFamily = normalizedLanguage.split("-")[0] ?? normalizedLanguage
   if (languageFamily !== "zh") {
     return APP_LANGUAGE_BY_FAMILY[languageFamily]
   }

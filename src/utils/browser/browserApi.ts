@@ -67,7 +67,7 @@ export async function getActiveTabs(): Promise<browser.tabs.Tab[]> {
  */
 export async function getActiveTab(): Promise<browser.tabs.Tab | null> {
   const tabs = await getActiveTabs()
-  return tabs.length > 0 ? tabs[0] : null
+  return tabs[0] ?? null
 }
 
 /**

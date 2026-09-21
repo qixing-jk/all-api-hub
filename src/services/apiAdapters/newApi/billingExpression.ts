@@ -53,37 +53,36 @@ const numberPattern = "(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
  * Claude's total input length always loses cache when converted back to `p`.
  */
 export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
+  const unsupportedIssue: PricingPlan["issues"][number] = {
+    code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE,
+    reason: PRICING_ISSUE_REASONS.PRICE_EXPRESSION,
+  }
   const unsupported: PricingPlan = {
     rates: {},
     rules: [],
     groupMultiplier: PRICING_GROUP_MULTIPLIERS.PENDING,
     source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
-    issues: [
-      {
-        code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE,
-        reason: PRICING_ISSUE_REASONS.PRICE_EXPRESSION,
-      },
-    ],
+    issues: [unsupportedIssue],
   }
   if (
     typeof expression !== "string" ||
     expression.length > BILLING_EXPRESSION_LIMITS.CHARACTERS
   ) {
-    unsupported.issues[0].reason =
+    unsupportedIssue.reason =
       typeof expression !== "string"
         ? PRICING_ISSUE_REASONS.MISSING_EXPRESSION
         : PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
     return unsupported
   }
   if (/^v(?!1:)/.test(expression.trim())) {
-    unsupported.issues[0].reason = PRICING_ISSUE_REASONS.EXPRESSION_VERSION
+    unsupportedIssue.reason = PRICING_ISSUE_REASONS.EXPRESSION_VERSION
     return unsupported
   }
   const parsedExpression = splitBillingRequestFactors(
     expression.trim().replace(/^v1:\s*/, ""),
   )
   if (!parsedExpression) {
-    unsupported.issues[0].reason = PRICING_ISSUE_REASONS.REQUEST_CONDITION
+    unsupportedIssue.reason = PRICING_ISSUE_REASONS.REQUEST_CONDITION
     return unsupported
   }
   let rest = parsedExpression.base
@@ -109,7 +108,7 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
       if (separator < 0) return unsupported
       conditions = parseBillingConditions(rest.slice(0, separator))
       if (!conditions) {
-        unsupported.issues[0].reason = PRICING_ISSUE_REASONS.CONDITION_SYNTAX
+        unsupportedIssue.reason = PRICING_ISSUE_REASONS.CONDITION_SYNTAX
         return unsupported
       }
       rest = rest.slice(separator + 1).trimStart()
@@ -122,7 +121,9 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
     const termPattern = new RegExp(
       `^\\s*(?:(p|c|cr|cc|cc1h|img|img_o|ai|ao)\\s*\\*\\s*)?(${numberPattern})\\s*(?:\\+|$)`,
     )
-    let body = tier[2]
+    const tierBody = tier[2]
+    if (!tierBody) return unsupported
+    let body = tierBody
     const fixed = new RegExp(`^fixed\\(\\s*(${numberPattern})\\s*\\)$`).exec(
       body.trim(),
     )
@@ -165,7 +166,7 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
     rest = rest.slice(1).trimStart()
     const inverseConditions = negateBillingAlternatives(conditions)
     if (!inverseConditions) {
-      unsupported.issues[0].reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
+      unsupportedIssue.reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
       return unsupported
     }
     remaining = remaining.flatMap((path) =>
@@ -175,13 +176,13 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
       }),
     )
     if (remaining.length > BILLING_EXPRESSION_LIMITS.ALTERNATIVES) {
-      unsupported.issues[0].reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
+      unsupportedIssue.reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
       return unsupported
     }
   }
   if (rest || !branches.length || !finished) {
     if (branches.length === BILLING_EXPRESSION_LIMITS.BRANCHES)
-      unsupported.issues[0].reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
+      unsupportedIssue.reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
     return unsupported
   }
   // Mixed token/request leaves require a scenario-dependent comparison unit.
@@ -195,7 +196,7 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
     branches.reduce((count, branch) => count + branch.alternatives.length, 0) >
     BILLING_EXPRESSION_LIMITS.ALTERNATIVES
   ) {
-    unsupported.issues[0].reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
+    unsupportedIssue.reason = PRICING_ISSUE_REASONS.EXPRESSION_LIMIT
     return unsupported
   }
   const plan: PricingPlan = {
@@ -287,8 +288,9 @@ export function parseNewApiBillingExpression(expression: unknown): PricingPlan {
       })),
     ),
   }
-  if (branches.length === 1) {
-    plan.rates = { ...plan.rates, ...plan.rules[0].rates }
+  const [singleRule] = plan.rules
+  if (branches.length === 1 && singleRule) {
+    plan.rates = { ...plan.rates, ...singleRule.rates }
     plan.rules = []
     plan.requiresRuleMatch = false
   }

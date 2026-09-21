@@ -756,6 +756,8 @@ export function useManagedResourceMutationController({
               break
             }
 
+            const target = resolvedTargets[index]
+            if (!target) continue
             const { locallyConfirmed, status } = outcome.value
             if (
               status === MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success &&
@@ -764,7 +766,7 @@ export function useManagedResourceMutationController({
               locallyConfirmedSuccessIndexes.add(index)
             }
             results.push({
-              rowKey: resolvedTargets[index].rowKey,
+              rowKey: target.rowKey,
               status,
               resultKey: `delete_${status}`,
             })

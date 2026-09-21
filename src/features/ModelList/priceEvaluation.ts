@@ -382,10 +382,9 @@ function resolveBestCalculatedItem(
   let bestPriceMatchCount = 0
 
   for (const group of activeGroupContext.activePriceableGroups) {
-    const calculatedPrice = calculatePrice(
-      rawItem.model,
-      rawItem.groupRatios[group],
-    )
+    const groupRatio = rawItem.groupRatios[group]
+    if (groupRatio === undefined) continue
+    const calculatedPrice = calculatePrice(rawItem.model, groupRatio)
     const candidateItem = createCalculatedItem({
       calculatedPrice,
       effectiveGroup: group,
@@ -532,11 +531,12 @@ export function rankModelListPrices(params: {
 
       // The badge describes this comparison's complete quotes. Provenance
       // remains visible on each quote and does not determine comparability.
-      if (comparableItems.length < 2) {
+      const [firstComparableItem] = comparableItems
+      if (comparableItems.length < 2 || !firstComparableItem) {
         return
       }
 
-      let bestItem = comparableItems[0]
+      let bestItem = firstComparableItem
       let bestPriceKey = priceKeys.get(getModelItemKey(bestItem))
 
       comparableItems.slice(1).forEach((item) => {

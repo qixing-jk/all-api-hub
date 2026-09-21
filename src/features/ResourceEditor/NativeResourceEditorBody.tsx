@@ -612,17 +612,19 @@ export function NativeResourceEditorBody<TSection extends string>({
           sectionPolicy?.resolveLabel?.(t) ?? sectionLabelResolvers[section](t)
         const groups: (typeof sectionFields)[] = []
         for (const field of sectionFields) {
-          const previous = groups.at(-1)
+          const previousGroup = groups.at(-1)
           if (
             field.presentation.inlineGroup &&
-            previous?.[0].presentation.inlineGroup ===
+            previousGroup &&
+            previousGroup[0]?.presentation.inlineGroup ===
               field.presentation.inlineGroup
           )
-            previous.push(field)
+            previousGroup.push(field)
           else groups.push([field])
         }
         const content = groups.map((group) => {
-          const field = group[0]
+          const [field] = group
+          if (!field) return null
           if (field.presentation.inlineGroup) {
             return (
               <div

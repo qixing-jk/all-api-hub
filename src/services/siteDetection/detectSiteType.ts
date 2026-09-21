@@ -284,9 +284,11 @@ export const getAccountSiteType = async (
   }
 
   const title = await fetchSiteOriginalTitle(url, protectionBypassExecution)
-  for (const rule of getAccountSiteTitleRules()) {
-    if (rule.regex.test(title)) {
-      return rule.name
+  if (title !== undefined) {
+    for (const rule of getAccountSiteTitleRules()) {
+      if (rule.regex.test(title)) {
+        return rule.name
+      }
     }
   }
 

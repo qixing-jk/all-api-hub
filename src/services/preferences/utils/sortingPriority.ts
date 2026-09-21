@@ -80,7 +80,7 @@ export function createAccountContextBoostResolver(
       return "current-site"
     if (
       enabled.has(SortingCriteriaType.MATCHED_OPEN_TABS) &&
-      matchedAccountScores[accountId] > 0
+      (matchedAccountScores[accountId] ?? 0) > 0
     )
       return "open-tabs"
     return undefined

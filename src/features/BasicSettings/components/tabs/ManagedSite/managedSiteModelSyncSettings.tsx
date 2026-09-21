@@ -97,7 +97,11 @@ function moveFilterById(
   }
 
   const next = [...filters]
-  ;[next[index], next[targetIndex]] = [next[targetIndex], next[index]]
+  const current = next[index]
+  const target = next[targetIndex]
+  if (current === undefined || target === undefined) return filters
+  next[index] = target
+  next[targetIndex] = current
   return next
 }
 

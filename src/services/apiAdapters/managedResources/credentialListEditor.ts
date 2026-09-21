@@ -211,7 +211,7 @@ export async function withCredentialListEditor<T extends object>(
       const id = target.startsWith(`${fieldId}:`)
         ? target.slice(fieldId.length + 1)
         : target === fieldId && records.length === 1
-          ? records[0].id
+          ? records[0]?.id
           : undefined
       if (id === undefined || !loadRecords || options?.signal?.aborted)
         throw invalid()

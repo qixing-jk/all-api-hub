@@ -164,8 +164,9 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
               value: key.channel_key.trim(),
               enabled: key.enabled,
             }))
+            const [firstCredential] = credentials
             if (
-              !credentials.length ||
+              !firstCredential ||
               credentials.some(
                 (key) => !hasUsableManagedSiteChannelKey(key.value),
               )
@@ -176,7 +177,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
               }
             return {
               status: "ready",
-              credential: credentials[0].value,
+              credential: firstCredential.value,
               credentials,
             }
           }

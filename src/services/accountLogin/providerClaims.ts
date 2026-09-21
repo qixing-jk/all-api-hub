@@ -141,8 +141,11 @@ function pickProviderOwner(
     // Within an observed tier, the more recent observation is the better
     // evidence of which identity the browser currently holds.
     if (bestRank !== CLAIMANT_RANK.Untried) {
-      const bestAt = evidence[best.id].at
-      const candidateAt = evidence[candidate.id].at
+      const bestAt = evidence[best.id]?.at
+      const candidateAt = evidence[candidate.id]?.at
+      // A ranked claimant always has evidence; without a timestamp neither
+      // candidate is more recent, so the incumbent stays.
+      if (bestAt === undefined || candidateAt === undefined) return best
       if (candidateAt !== bestAt) return candidateAt > bestAt ? candidate : best
     }
     // Never tried, or equally recent: stay deterministic and storage-order

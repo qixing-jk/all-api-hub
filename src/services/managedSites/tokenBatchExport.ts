@@ -136,12 +136,13 @@ const mapWithConcurrency = async <TItem, TResult>(
         const index = nextIndex
         nextIndex += 1
 
-        if (index >= items.length) {
+        const item = items[index]
+        if (item === undefined) {
           return
         }
 
         try {
-          results[index] = await mapper(items[index], index)
+          results[index] = await mapper(item, index)
         } catch (error) {
           if (!hasFailure) {
             hasFailure = true

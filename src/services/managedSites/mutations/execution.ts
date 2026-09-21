@@ -500,10 +500,14 @@ const readClassifierRecord = (value: unknown): ClassifierRecord => {
     const descriptors = Object.getOwnPropertyDescriptors(value)
     const record = Object.create(null) as ClassifierRecord
     for (const key of Reflect.ownKeys(descriptors)) {
-      if (typeof key !== "string" || !("value" in descriptors[key])) {
+      if (typeof key !== "string") {
         return invalidExecutionEvidence()
       }
-      record[key] = descriptors[key].value
+      const descriptor = descriptors[key]
+      if (!descriptor || !("value" in descriptor)) {
+        return invalidExecutionEvidence()
+      }
+      record[key] = descriptor.value
     }
     return record
   } catch {

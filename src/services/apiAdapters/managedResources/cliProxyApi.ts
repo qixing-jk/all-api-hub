@@ -441,10 +441,13 @@ function editor(detail?: CliProxyApiResource) {
         const index = entry.savedEntries.findIndex(
           (item) => item.loadFieldId === fieldId,
         )
-        if (index >= 0) return value["api-key-entries"]![index]["api-key"]
+        const savedEntry = value["api-key-entries"]?.[index]
+        if (index >= 0 && savedEntry) return savedEntry["api-key"]
       }
       if (fieldId !== "key" || keys.length !== 1) throw invalid()
-      return keys[0]
+      const [key] = keys
+      if (key === undefined) throw invalid()
+      return key
     },
     buildCommand: (values: EditableResourceProjection) => {
       const kind = providerKind(text(values, "type"))
@@ -506,10 +509,16 @@ function editor(detail?: CliProxyApiResource) {
   }
 }
 
-const decodeId = (id: string) => {
+/** Validate a provider id and return its provider kind. */
+const decodeProviderKind = (id: string) => {
   const [kind, digest] = id.split(":")
-  providerKind(kind)
-  if (!/^[a-f0-9]{64}$/.test(digest ?? "")) throw invalid()
+  if (!kind || !digest || !/^[a-f0-9]{64}$/.test(digest)) throw invalid()
+  return providerKind(kind)
+}
+
+/** Validate a provider id without changing it. */
+const decodeId = (id: string) => {
+  decodeProviderKind(id)
   return id
 }
 
@@ -519,18 +528,15 @@ async function readCliProxyApiResource(
   id: string,
   options?: ResourceOperationOptions,
 ) {
-  decodeId(id)
-  const list = await listCliProxyApiProviders(
-    config,
-    providerKind(id.split(":")[0]),
-    options,
-  )
+  const kind = decodeProviderKind(id)
+  const list = await listCliProxyApiProviders(config, kind, options)
   const matches = list.filter((item) => item.id === id)
-  if (matches.length !== 1)
+  const [resource] = matches
+  if (!resource || matches.length !== 1)
     throw new ManagedResourceError({
       code: matches.length ? "validation_failed" : "not_found",
     })
-  return { resource: matches[0], list }
+  return { resource, list }
 }
 
 /** Read the current provider without retaining an inventory beyond this operation. */
@@ -622,10 +628,12 @@ async function mutateUnlocked(
     const matches = original
       ? list.filter((item) => item.id === original.id)
       : []
+    const [matched] = matches
     if (
       original &&
       (matches.length !== 1 ||
-        JSON.stringify(matches[0].value) !== JSON.stringify(original.value))
+        !matched ||
+        JSON.stringify(matched.value) !== JSON.stringify(original.value))
     )
       throw new ManagedResourceError({ code: "resource_changed" })
     const next = command
@@ -678,7 +686,12 @@ async function mutateUnlocked(
         : refreshed.some((item) => item.id === original!.id)
     )
       throw new CliProxyApiError()
-    if (next && !confirmsEditableConfiguration(next.value, result[0].value))
+    const confirmedMatch = result[0]
+    if (
+      next &&
+      (!confirmedMatch ||
+        !confirmsEditableConfiguration(next.value, confirmedMatch.value))
+    )
       throw new CliProxyApiError()
     return {
       outcome: "succeeded",

@@ -17,7 +17,7 @@ export function extractDomainPrefix(hostname: string): string {
   if (!hostname) return ""
 
   const domain = getRegistrableDomain(hostname)
-  const name = domain ? domain.split(".")[0] : hostname
+  const name = domain ? domain.split(".")[0] ?? domain : hostname
   return name.charAt(0).toUpperCase() + name.slice(1)
 }
 

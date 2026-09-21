@@ -374,6 +374,7 @@ const mergeEditorValuesForScopeChange = (
     )
       return
     const previousValue = previousValues[field.fieldId]
+    if (previousValue === undefined) return
     if ("options" in field) {
       const allowed = new Set(field.options.map((option) => option.value))
       const isValid = Array.isArray(previousValue)
@@ -1208,7 +1209,9 @@ export function useAccountKeyResourceController({
           if (current !== generation.current) return false
           settledGroups.forEach((groupResult, groupIndex) => {
             if (groupResult.status === "fulfilled") return
-            originGroups[groupIndex].forEach(({ account }) =>
+            const group = originGroups[groupIndex]
+            if (!group) return
+            group.forEach(({ account }) =>
               acceptAccountResult(account, {
                 status: "rejected",
                 reason: groupResult.reason,

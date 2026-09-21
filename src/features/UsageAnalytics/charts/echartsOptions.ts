@@ -775,9 +775,11 @@ export function buildHeatmapOption(params: {
   const data: Array<[number, number, number]> = []
   for (let y = 0; y < modelNames.length; y += 1) {
     const modelName = modelNames[y]
+    if (modelName === undefined) continue
     const modelDaily = valuesByModelAndDay[modelName] ?? {}
     for (let x = 0; x < dayKeys.length; x += 1) {
       const dayKey = dayKeys[x]
+      if (dayKey === undefined) continue
       data.push([x, y, modelDaily[dayKey] ?? 0])
     }
   }

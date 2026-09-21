@@ -235,8 +235,10 @@ export function createSiteRequestLeaseLimiter(
           REQUEST_SCHEDULING_PRIORITIES.Background,
       )
       const hasForegroundWork = foregroundIndex >= 0
-      if (foregroundIndex > 0) {
-        state.queue.unshift(state.queue.splice(foregroundIndex, 1)[0])
+      const foregroundItem = state.queue[foregroundIndex]
+      if (foregroundIndex > 0 && foregroundItem) {
+        state.queue.splice(foregroundIndex, 1)
+        state.queue.unshift(foregroundItem)
       }
 
       const backgroundIndex = state.queue.findIndex(
@@ -274,6 +276,11 @@ export function createSiteRequestLeaseLimiter(
       // Abort dispatch is synchronous: queued handlers remove their item before
       // this turn, and this turn detaches the handler before starting the task.
       const [item] = state.queue.splice(index, 1)
+      if (!item) {
+        // Unreachable: the loop guard keeps `state.queue` non-empty, so the
+        // spliced slot always yields an item.
+        break
+      }
       const isBackground =
         item.scheduling?.priority === REQUEST_SCHEDULING_PRIORITIES.Background
       state.foregroundStreak =

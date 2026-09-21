@@ -424,7 +424,7 @@ function normalizeLinks(
 
 /** Builds the exact, base-language, and configured fallback locale chain. */
 function getLocaleCandidates(locale: string): string[] {
-  const baseLanguage = locale.split("-")[0]
+  const baseLanguage = locale.split("-")[0] ?? locale
   const preferred = [locale, baseLanguage, ...SPONSOR_LOCALE_FALLBACKS]
   return Array.from(new Set(preferred))
 }

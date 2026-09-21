@@ -57,7 +57,7 @@ export function checkAIHubMixVideoPriceEvidence(
         (condition) =>
           condition.kind === PRICING_CONDITION_KINDS.SELECTION &&
           condition.axis === PRICING_SELECTION_AXES.VIDEO_QUALITY &&
-          condition.value.toLowerCase() === match[1].toLowerCase(),
+          condition.value.toLowerCase() === match[1]?.toLowerCase(),
       ),
     )
     if (
@@ -158,7 +158,9 @@ export function buildAIHubMixLegacyVideoPlan(
         segment.trim(),
       )
     if (!match) return undefined
-    entries.push([normalizeVideoQuality(match[1]), Number(match[2])])
+    const quality = match[1]
+    if (quality === undefined) return undefined
+    entries.push([normalizeVideoQuality(quality), Number(match[2])])
   }
   if (
     !entries.length ||
@@ -413,6 +415,7 @@ export function buildAIHubMixReferenceVideoPlan(
       note,
     )
   if (!parsed.success || !sections) return undefined
+  const sectionTexts = [sections[1], sections[2]]
   const plan: PricingPlan = {
     usageMode: PRICING_USAGE_MODES.METERED,
     comparison: { meter: PRICING_METERS.VIDEO_SECONDS },
@@ -428,16 +431,17 @@ export function buildAIHubMixReferenceVideoPlan(
     ["generate", "video_reference"] as const
   ).entries()) {
     const entries = new Map<string, number>()
-    for (const segment of sections[index + 1]
-      .trim()
-      .replace(/\.$/, "")
-      .split(/;\s*/)) {
+    const sectionText = sectionTexts[index]
+    if (sectionText === undefined) return undefined
+    for (const segment of sectionText.trim().replace(/\.$/, "").split(/;\s*/)) {
       const match =
         /^(\d+(?:p|k)):\s*\$(\d+(?:\.\d+)?)(?:\s*\/s|\s+per second)$/i.exec(
           segment.trim(),
         )
       if (!match) return undefined
-      const quality = normalizeVideoQuality(match[1])
+      const rawQuality = match[1]
+      if (rawQuality === undefined) return undefined
+      const quality = normalizeVideoQuality(rawQuality)
       if (entries.has(quality)) return undefined
       entries.set(quality, Number(match[2]))
     }
@@ -551,7 +555,7 @@ export function buildAIHubMixMeasuredOutputPlan(
   const match = /^\s*\$\s*(\d+(?:\.\d+)?)\s*\/\s*(page|MP)\s*$/i.exec(note)
   if (!match) return undefined
   const value = parsePriceTable(raw)
-  const isPage = match[2].toLowerCase() === "page"
+  const isPage = match[2]?.toLowerCase() === "page"
   const parsed = z
     .strictObject({
       generate: z.strictObject({

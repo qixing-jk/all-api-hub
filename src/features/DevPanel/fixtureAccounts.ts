@@ -168,6 +168,9 @@ const buildFixtureAccountData = (
 ): FixtureAccountData => {
   const serial = String(index + 1).padStart(2, "0")
   const variant = FIXTURE_VARIANTS[index % FIXTURE_VARIANTS.length]
+  if (!variant) {
+    throw new Error("FIXTURE_VARIANTS must define at least one variant")
+  }
 
   // Ages vary backwards from now so freshness and relative-time states are
   // realistic; a future timestamp would make every fixture look "just synced".

@@ -247,15 +247,24 @@ export function prepareKiloCodeV7Catalog(
     selections,
     getBaseProviderName,
   )
-  const providers = normalizedSelections.map((normalized, index) => ({
-    selectionId: normalized.tuple.selectionId,
-    providerId: providerIds[index],
-    providerName: providerNames[index].name,
-    baseURL: normalized.baseURL,
-    tokenKey: normalized.tuple.tokenKey,
-    protocol: normalized.protocol,
-    modelIds: normalized.modelIds,
-  }))
+  const providers: PreparedKiloCodeV7Provider[] = normalizedSelections.flatMap(
+    (normalized, index) => {
+      const providerId = providerIds[index]
+      const providerName = providerNames[index]?.name
+      if (providerId === undefined || providerName === undefined) return []
+      return [
+        {
+          selectionId: normalized.tuple.selectionId,
+          providerId,
+          providerName,
+          baseURL: normalized.baseURL,
+          tokenKey: normalized.tuple.tokenKey,
+          protocol: normalized.protocol,
+          modelIds: normalized.modelIds,
+        },
+      ]
+    },
+  )
 
   return {
     providers,

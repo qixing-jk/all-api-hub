@@ -23,11 +23,11 @@ export const UpdateTimeAndWarning = () => {
   const detectedAccountName = detectedAccount
     ? accountNameById.get(detectedAccount.id) ?? detectedAccount.site_name
     : null
-  const detectedSiteAccountName =
-    detectedSiteAccounts.length > 0
-      ? accountNameById.get(detectedSiteAccounts[0].id) ??
-        detectedSiteAccounts[0].site_name
-      : null
+  const [detectedSiteAccount] = detectedSiteAccounts
+  const detectedSiteAccountName = detectedSiteAccount
+    ? accountNameById.get(detectedSiteAccount.id) ??
+      detectedSiteAccount.site_name
+    : null
   const hasMultipleDetectedSiteAccounts =
     !detectedAccount && detectedSiteAccounts.length > 1
 

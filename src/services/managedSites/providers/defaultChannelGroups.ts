@@ -90,7 +90,8 @@ async function resolveDefaultChannelGroupsUncached({
       return [preferredDefaultGroup]
     }
 
-    return siteGroups.length > 0 ? [siteGroups[0]] : fallbackGroups
+    const [firstSiteGroup] = siteGroups
+    return firstSiteGroup !== undefined ? [firstSiteGroup] : fallbackGroups
   } catch (error) {
     onError?.(error)
     return fallbackGroups

@@ -69,7 +69,7 @@ export function resolveSub2ApiKeyGroupForPriceEstimation(params: {
   const byName = groups.filter(
     (group) => group.groupName === key.group_name.trim(),
   )
-  return byName.length === 1 ? byName[0] : null
+  return byName.length === 1 ? byName[0] ?? null : null
 }
 
 /** Dashboard DTOs stay within Sub2API; pricing consumers receive only the selected price group. */

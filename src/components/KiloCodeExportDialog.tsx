@@ -197,6 +197,7 @@ function haveMatchingSelectionSnapshots(
     previous.length === current.length &&
     previous.every((item, index) => {
       const next = current[index]
+      if (!next) return false
       return (
         item.selectionId === next.selectionId &&
         item.sourceSnapshots.every(
@@ -449,7 +450,8 @@ export function KiloCodeExportDialog({
             return { ...prev, [siteId]: remainingSelections }
           }
 
-          if (!tokens.length) {
+          const [firstToken] = tokens
+          if (!firstToken) {
             if (!prev[siteId]) return prev
             const { [siteId]: _unused, ...rest } = prev
             return rest
@@ -457,7 +459,7 @@ export function KiloCodeExportDialog({
 
           return {
             ...prev,
-            [siteId]: [getAccountRuntimeKeyExportId(tokens[0])],
+            [siteId]: [getAccountRuntimeKeyExportId(firstToken)],
           }
         })
         return !missingCreatedKey
@@ -719,8 +721,12 @@ export function KiloCodeExportDialog({
       setCurrentApiConfigName("")
       return
     }
-    if (!currentApiConfigName || !profileNames.includes(currentApiConfigName)) {
-      setCurrentApiConfigName(profileNames[0])
+    const [firstProfileName] = profileNames
+    if (
+      firstProfileName !== undefined &&
+      (!currentApiConfigName || !profileNames.includes(currentApiConfigName))
+    ) {
+      setCurrentApiConfigName(firstProfileName)
     }
   }, [currentApiConfigName, profileNames])
 

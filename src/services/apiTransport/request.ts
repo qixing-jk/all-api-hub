@@ -146,7 +146,7 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
   const trimmed = endpoint.trim()
   if (!trimmed) return false
 
-  const [rawPath] = trimmed.split("?")
+  const [rawPath = ""] = trimmed.split("?")
   const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`
   if (normalizedPath === "/api/log" || normalizedPath.startsWith("/api/log/")) {
     return true

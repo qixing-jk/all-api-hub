@@ -341,15 +341,14 @@ const verifyAdvancedSave = async (
     code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
     message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
   }
-  if (!result.confirmedEffects.length)
+  const [firstConfirmedEffect, ...restConfirmedEffects] =
+    result.confirmedEffects
+  if (!firstConfirmedEffect)
     return { outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain, diagnostic }
   return {
     outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
     completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
-    confirmedEffects: [
-      result.confirmedEffects[0],
-      ...result.confirmedEffects.slice(1),
-    ],
+    confirmedEffects: [firstConfirmedEffect, ...restConfirmedEffects],
     diagnostic,
   }
 }
@@ -383,13 +382,18 @@ const updateChannel = async (
       (entry) => !metadata.some((record) => record.id === entry.id),
     )
     if (
-      retained.some(
-        (record, index) =>
-          index > 0 && Number(record.id) <= Number(retained[index - 1].id),
-      ) ||
-      [...retained, ...added].some(
-        (record, index) => record.id !== entries[index].id,
-      )
+      retained.some((record, index) => {
+        const previousRecord = retained[index - 1]
+        return (
+          index > 0 &&
+          previousRecord !== undefined &&
+          Number(record.id) <= Number(previousRecord.id)
+        )
+      }) ||
+      [...retained, ...added].some((record, index) => {
+        const entry = entries[index]
+        return entry === undefined || record.id !== entry.id
+      })
     )
       throw new ManagedResourceError({ code: "validation_failed" })
     const replacesAll = entries.every(

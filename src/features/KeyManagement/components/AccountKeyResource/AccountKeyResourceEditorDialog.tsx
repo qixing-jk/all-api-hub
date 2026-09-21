@@ -122,13 +122,13 @@ const toEditorValues = (
 ): EditableResourceProjection => {
   const result = { ...values }
   for (const descriptor of fields) {
+    const value = values[descriptor.fieldId]
     if (
       descriptor.type === RESOURCE_FIELD_TYPES.DateTime &&
+      value !== undefined &&
       Object.hasOwn(values, descriptor.fieldId)
     )
-      result[descriptor.fieldId] = toLocalDateTimeInputValue(
-        values[descriptor.fieldId],
-      )
+      result[descriptor.fieldId] = toLocalDateTimeInputValue(value)
   }
   return result
 }
@@ -539,13 +539,16 @@ function AccountKeyResourceEditorDialogSession({
       // datetime-local shows minutes. Preserve the original seconds when that
       // visible field was not edited instead of truncating an upstream expiry.
       for (const descriptor of editor.fields) {
+        const previousInitialValue =
+          initialValuesRef.current[descriptor.fieldId]
+        const nextInitialValue = editor.initialValues[descriptor.fieldId]
         if (
           descriptor.type === RESOURCE_FIELD_TYPES.DateTime &&
-          values[descriptor.fieldId] ===
-            initialValuesRef.current[descriptor.fieldId]
+          previousInitialValue !== undefined &&
+          nextInitialValue !== undefined &&
+          values[descriptor.fieldId] === previousInitialValue
         )
-          submitValues[descriptor.fieldId] =
-            editor.initialValues[descriptor.fieldId]
+          submitValues[descriptor.fieldId] = nextInitialValue
       }
       await onSubmit(editor.editorId, submitValues)
     } finally {

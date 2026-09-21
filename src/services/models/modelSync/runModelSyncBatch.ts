@@ -24,7 +24,9 @@ export async function runModelSyncBatch<T>(
   const worker = async () => {
     while (nextIndex < total) {
       const index = nextIndex++
-      const result = await execute(channels[index])
+      const channel = channels[index]
+      if (channel === undefined) break
+      const result = await execute(channel)
       results[index] = result
       completed++
       const progress = { completed, total, lastResult: result }

@@ -341,7 +341,8 @@ const provisionRequirement = async (
   }
 
   const created = after.filter((token) => !beforeIds.has(token.id))
-  if (created.length !== 1) {
+  const [createdToken] = created
+  if (created.length !== 1 || !createdToken) {
     return {
       certainty: "possibly-applied",
       failure: mapAccountKeyResourceUncertainFailure(
@@ -351,7 +352,6 @@ const provisionRequirement = async (
       ),
     }
   }
-  const createdToken = created[0]
   const placementMatches =
     config.account.siteType === SITE_TYPES.ONE_API
       ? requirementKey === ONE_API_SINGLETON_REQUIREMENT_KEY
@@ -681,10 +681,11 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
             !beforeIds.has(token.id) &&
             matchesNewApiTokenWrite(token, command.values),
         )
-        if (created.length === 1)
+        const [createdToken] = created
+        if (created.length === 1 && createdToken)
           return {
             certainty: "applied" as const,
-            value: { detail: created[0] },
+            value: { detail: createdToken },
           }
       } catch (error) {
         return {

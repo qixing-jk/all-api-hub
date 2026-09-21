@@ -179,12 +179,12 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
 
     const perDay = store?.snapshotsByAccountId[accountId]
     if (perDay) {
-      for (let index = 0; index < dayKeys.length; index += 1) {
-        const dayKey = dayKeys[index]
+      for (const [index, dayKey] of dayKeys.entries()) {
+        const coverage = coverageByDay[index]
         const snapshot = perDay[dayKey]
-        if (!snapshot) continue
+        if (!coverage || !snapshot) continue
 
-        coverageByDay[index].snapshotAccounts += 1
+        coverage.snapshotAccounts += 1
         balance[index] = (snapshot.quota / conversionFactor) * exchangeRate
 
         const reportedIncome = snapshot.today_income
@@ -193,15 +193,15 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
         const hasOutcome = isFiniteNumber(reportedOutcome)
 
         if (hasIncome) {
-          coverageByDay[index].incomeAccounts += 1
+          coverage.incomeAccounts += 1
           income[index] = (reportedIncome / conversionFactor) * exchangeRate
         }
         if (hasOutcome) {
-          coverageByDay[index].outcomeAccounts += 1
+          coverage.outcomeAccounts += 1
           outcome[index] = (reportedOutcome / conversionFactor) * exchangeRate
         }
         if (hasIncome && hasOutcome) {
-          coverageByDay[index].cashflowAccounts += 1
+          coverage.cashflowAccounts += 1
           net[index] =
             ((reportedIncome - reportedOutcome) / conversionFactor) *
             exchangeRate
@@ -210,12 +210,15 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
     }
 
     if (estimatedTodayIncomeEnabled) {
-      for (let index = 0; index < dayKeys.length; index += 1) {
+      for (const [index, dayKey] of dayKeys.entries()) {
+        const coverage = coverageByDay[index]
+        if (!coverage) continue
+
         const estimate = estimateTodayIncomeForAccount({
           enabled: true,
           store,
           account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
-          currentDayKey: dayKeys[index],
+          currentDayKey: dayKey,
         })
 
         if (
@@ -230,7 +233,7 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
           conversionFactor,
           exchangeRate,
         })
-        coverageByDay[index].estimatedIncomeAccounts += 1
+        coverage.estimatedIncomeAccounts += 1
       }
     }
 

@@ -603,7 +603,11 @@ class ChannelConfigStorage {
           continue
         }
 
-        const resourceRef = resources[0]
+        const [resourceRef] = resources
+        if (!resourceRef) {
+          result.unmatched += 1
+          continue
+        }
         const resourceKey = getManagedUpstreamResourceRefKey(resourceRef)
         const existing = resourceConfigs[resourceKey]
         if (!existing || legacyConfig.updatedAt > existing.updatedAt) {

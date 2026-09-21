@@ -73,8 +73,9 @@ export async function attributeCreatedNativeResource<T>(input: {
         const created = after.filter(
           (item) => !existingIds.has(input.identity(item)),
         )
-        return created.length === 1
-          ? { ...result, data: created[0] }
+        const [createdItem] = created
+        return created.length === 1 && createdItem !== undefined
+          ? { ...result, data: createdItem }
           : unresolvedCreatedIdentity<T>(result)
       } catch {
         return unresolvedCreatedIdentity<T>(result)

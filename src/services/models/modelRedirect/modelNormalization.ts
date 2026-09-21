@@ -26,12 +26,15 @@ export const renameModel = (
     // 只有一个/且不含:（常见的后缀之一）
     if (slashCount === 1 && !trimmedModelName.includes(":")) {
       const parts = trimmedModelName.split("/")
+      const [prefix, suffix] = parts
 
       if (
         parts.length === 2 &&
-        parts[0].trim() !== "" &&
-        parts[1].trim() !== "" &&
-        parts[0] !== "BigModel" &&
+        prefix !== undefined &&
+        suffix !== undefined &&
+        prefix.trim() !== "" &&
+        suffix.trim() !== "" &&
+        prefix !== "BigModel" &&
         !trimmedModelName.startsWith("Pro/")
       ) {
         return trimmedModelName

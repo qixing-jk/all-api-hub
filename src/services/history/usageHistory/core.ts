@@ -233,16 +233,12 @@ function getModelNameForLogItem(item: LogItem): string {
  * Resolve a bucket index for a latency value in seconds.
  */
 function getLatencyBucketIndex(seconds: number): number {
-  for (
-    let index = 0;
-    index < USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.length;
-    index += 1
-  ) {
-    if (seconds < USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS[index]) {
-      return index
-    }
-  }
-  return USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.length
+  const index = USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.findIndex(
+    (upperBoundSeconds) => seconds < upperBoundSeconds,
+  )
+  return index === -1
+    ? USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.length
+    : index
 }
 
 /**
@@ -378,128 +374,70 @@ function ingestConsumeItemToAccountStore(
 }
 
 /**
+ * Delete every bucket in a day-keyed map that is strictly older than `cutoffDayKey`.
+ */
+function pruneDayBuckets<T>(
+  bucketsByDay: Record<string, T>,
+  cutoffDayKey: string,
+): void {
+  for (const dayKey of Object.keys(bucketsByDay)) {
+    if (dayKey < cutoffDayKey) {
+      delete bucketsByDay[dayKey]
+    }
+  }
+}
+
+/**
+ * Prune a grouped `store[key][dayKey]` map, dropping keys whose buckets are all gone.
+ */
+function pruneGroupedDayBuckets<V>(
+  store: Record<string, Record<string, V>>,
+  cutoffDayKey: string,
+): void {
+  for (const [key, bucketsByDay] of Object.entries(store)) {
+    pruneDayBuckets(bucketsByDay, cutoffDayKey)
+    if (Object.keys(bucketsByDay).length === 0) {
+      delete store[key]
+    }
+  }
+}
+
+/**
+ * Prune a `store[key][name][dayKey]` map, dropping emptied buckets at both grouping levels.
+ */
+function pruneGroupedDayBucketsByName<V>(
+  store: Record<string, Record<string, Record<string, V>>>,
+  cutoffDayKey: string,
+): void {
+  for (const [key, groupedByDay] of Object.entries(store)) {
+    pruneGroupedDayBuckets(groupedByDay, cutoffDayKey)
+    if (Object.keys(groupedByDay).length === 0) {
+      delete store[key]
+    }
+  }
+}
+
+/**
  * Prune stored aggregates for one account, removing buckets strictly older than `cutoffDayKey`.
  */
 export function pruneUsageHistoryAccountStore(
   accountStore: UsageHistoryAccountStore,
   cutoffDayKey: string,
 ) {
-  for (const dayKey of Object.keys(accountStore.daily)) {
-    if (dayKey < cutoffDayKey) {
-      delete accountStore.daily[dayKey]
-    }
-  }
+  pruneDayBuckets(accountStore.daily, cutoffDayKey)
+  pruneDayBuckets(accountStore.hourly, cutoffDayKey)
+  pruneGroupedDayBuckets(accountStore.dailyByModel, cutoffDayKey)
+  pruneGroupedDayBuckets(accountStore.dailyByToken, cutoffDayKey)
+  pruneGroupedDayBuckets(accountStore.hourlyByToken, cutoffDayKey)
+  pruneGroupedDayBucketsByName(accountStore.dailyByTokenByModel, cutoffDayKey)
 
-  for (const dayKey of Object.keys(accountStore.hourly)) {
-    if (dayKey < cutoffDayKey) {
-      delete accountStore.hourly[dayKey]
-    }
-  }
-
-  for (const modelName of Object.keys(accountStore.dailyByModel)) {
-    const perModel = accountStore.dailyByModel[modelName]
-    for (const dayKey of Object.keys(perModel)) {
-      if (dayKey < cutoffDayKey) {
-        delete perModel[dayKey]
-      }
-    }
-
-    if (Object.keys(perModel).length === 0) {
-      delete accountStore.dailyByModel[modelName]
-    }
-  }
-
-  for (const tokenId of Object.keys(accountStore.dailyByToken)) {
-    const perToken = accountStore.dailyByToken[tokenId]
-    for (const dayKey of Object.keys(perToken)) {
-      if (dayKey < cutoffDayKey) {
-        delete perToken[dayKey]
-      }
-    }
-
-    if (Object.keys(perToken).length === 0) {
-      delete accountStore.dailyByToken[tokenId]
-    }
-  }
-
-  for (const tokenId of Object.keys(accountStore.hourlyByToken)) {
-    const perToken = accountStore.hourlyByToken[tokenId]
-    for (const dayKey of Object.keys(perToken)) {
-      if (dayKey < cutoffDayKey) {
-        delete perToken[dayKey]
-      }
-    }
-
-    if (Object.keys(perToken).length === 0) {
-      delete accountStore.hourlyByToken[tokenId]
-    }
-  }
-
-  for (const tokenId of Object.keys(accountStore.dailyByTokenByModel)) {
-    const perToken = accountStore.dailyByTokenByModel[tokenId]
-    for (const modelName of Object.keys(perToken)) {
-      const perModel = perToken[modelName]
-      for (const dayKey of Object.keys(perModel)) {
-        if (dayKey < cutoffDayKey) {
-          delete perModel[dayKey]
-        }
-      }
-      if (Object.keys(perModel).length === 0) {
-        delete perToken[modelName]
-      }
-    }
-    if (Object.keys(perToken).length === 0) {
-      delete accountStore.dailyByTokenByModel[tokenId]
-    }
-  }
-
-  for (const dayKey of Object.keys(accountStore.latencyDaily)) {
-    if (dayKey < cutoffDayKey) {
-      delete accountStore.latencyDaily[dayKey]
-    }
-  }
-
-  for (const modelName of Object.keys(accountStore.latencyDailyByModel)) {
-    const perModel = accountStore.latencyDailyByModel[modelName]
-    for (const dayKey of Object.keys(perModel)) {
-      if (dayKey < cutoffDayKey) {
-        delete perModel[dayKey]
-      }
-    }
-    if (Object.keys(perModel).length === 0) {
-      delete accountStore.latencyDailyByModel[modelName]
-    }
-  }
-
-  for (const tokenId of Object.keys(accountStore.latencyDailyByToken)) {
-    const perToken = accountStore.latencyDailyByToken[tokenId]
-    for (const dayKey of Object.keys(perToken)) {
-      if (dayKey < cutoffDayKey) {
-        delete perToken[dayKey]
-      }
-    }
-    if (Object.keys(perToken).length === 0) {
-      delete accountStore.latencyDailyByToken[tokenId]
-    }
-  }
-
-  for (const tokenId of Object.keys(accountStore.latencyDailyByTokenByModel)) {
-    const perToken = accountStore.latencyDailyByTokenByModel[tokenId]
-    for (const modelName of Object.keys(perToken)) {
-      const perModel = perToken[modelName]
-      for (const dayKey of Object.keys(perModel)) {
-        if (dayKey < cutoffDayKey) {
-          delete perModel[dayKey]
-        }
-      }
-      if (Object.keys(perModel).length === 0) {
-        delete perToken[modelName]
-      }
-    }
-    if (Object.keys(perToken).length === 0) {
-      delete accountStore.latencyDailyByTokenByModel[tokenId]
-    }
-  }
+  pruneDayBuckets(accountStore.latencyDaily, cutoffDayKey)
+  pruneGroupedDayBuckets(accountStore.latencyDailyByModel, cutoffDayKey)
+  pruneGroupedDayBuckets(accountStore.latencyDailyByToken, cutoffDayKey)
+  pruneGroupedDayBucketsByName(
+    accountStore.latencyDailyByTokenByModel,
+    cutoffDayKey,
+  )
 
   // Drop token labels that no longer have any retained aggregates.
   const retainedTokenIds = new Set([

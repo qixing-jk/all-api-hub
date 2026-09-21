@@ -144,8 +144,7 @@ export function transformUserGroup(
   const result: Record<string, UserGroupInfo> = {}
 
   // 转换已有的分组
-  for (const key in input) {
-    const group = input[key]
+  for (const [key, group] of Object.entries(input)) {
     result[key] = {
       desc: group.name,
       ratio: group.ratio,

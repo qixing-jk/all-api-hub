@@ -68,7 +68,7 @@ function normalizeBaseUrlByStrippingPathSegment(
     let lastMatchIndex = -1
 
     for (let index = segments.length - 1; index >= 0; index -= 1) {
-      if (segments[index].toLowerCase() === normalizedSegmentToStrip) {
+      if (segments[index]?.toLowerCase() === normalizedSegmentToStrip) {
         lastMatchIndex = index
         break
       }
