@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.1.0](https://github.com/qixing-jk/all-api-hub/compare/v4.0.0...v4.1.0) (2026-09-21)
+
+
+### Features
+
+* **dev:** bake an instance identity into local builds ([#1508](https://github.com/qixing-jk/all-api-hub/issues/1508)) ([c33dabc](https://github.com/qixing-jk/all-api-hub/commit/c33dabc5bd31c175e90e04a7b63d246e40190553))
+* **site-announcements:** reduce notification noise and enable polling by default for new profiles ([#1511](https://github.com/qixing-jk/all-api-hub/issues/1511)) ([663c281](https://github.com/qixing-jk/all-api-hub/commit/663c281c089c51934c24ddb2f031989ed83f1443))
+* **star-promotion:** add value-gated GitHub star prompts ([#1515](https://github.com/qixing-jk/all-api-hub/issues/1515)) ([918f864](https://github.com/qixing-jk/all-api-hub/commit/918f86409d0878ed3f127bd54ba9db83a55b4a2c))
+* **verification:** bound persisted test results by age and owner liveness ([#1513](https://github.com/qixing-jk/all-api-hub/issues/1513)) ([61e3135](https://github.com/qixing-jk/all-api-hub/commit/61e3135ce582220784e0a55bd5461cc94092a3aa))
+
+
+### Bug Fixes
+
+* **analytics:** de-conflate action ids and guard payload parity ([#1517](https://github.com/qixing-jk/all-api-hub/issues/1517)) ([dc3d6af](https://github.com/qixing-jk/all-api-hub/commit/dc3d6af78db01984ed7e1d2d250911782a789678))
+* **product-analytics:** reduce background event volume ([#1514](https://github.com/qixing-jk/all-api-hub/issues/1514)) ([1ae434c](https://github.com/qixing-jk/all-api-hub/commit/1ae434cee6b2cb59ff959ae96cc6d2b91d5bd9cb))
+* **test:** correct shard weights for each shard's measured load ([#1507](https://github.com/qixing-jk/all-api-hub/issues/1507)) ([a522b80](https://github.com/qixing-jk/all-api-hub/commit/a522b80c5c2825160da3ff6ab04acf13c4b72a3d))
+* **time:** unify day-key semantics on the local day boundary ([#1510](https://github.com/qixing-jk/all-api-hub/issues/1510)) ([cbf4e16](https://github.com/qixing-jk/all-api-hub/commit/cbf4e1628da7d9c5e4c82deae49c2abefb88fe45))
+
 ## [4.0.0](https://github.com/qixing-jk/all-api-hub/compare/v3.62.0...v4.0.0) (2026-09-20)
 
 
