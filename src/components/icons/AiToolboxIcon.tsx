@@ -1,5 +1,4 @@
-import { Wrench } from "lucide-react"
-
+import aiToolboxLogo from "~/assets/ai-toolbox-logo.png"
 import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
@@ -12,15 +11,17 @@ interface AiToolboxIconProps {
 }
 
 /**
- * Neutral tool mark standing in for the AI Toolbox desktop client.
- * The project does not ship a brand asset for it, so the shared sizing token
- * keeps it visually consistent with the other integration icons.
+ * AiToolboxIcon renders the AI Toolbox brand mark at a chosen size.
+ * Source: https://github.com/coulsontl/ai-toolbox (tauri/icons/128x128.png).
  */
 export function AiToolboxIcon({ size = "sm", className }: AiToolboxIconProps) {
   return (
-    <Wrench
-      aria-hidden="true"
+    <img
+      src={aiToolboxLogo}
+      alt="AI Toolbox logo"
       className={cn(ICON_SIZE_CLASSNAME[size], className)}
+      loading="lazy"
+      decoding="async"
     />
   )
 }
