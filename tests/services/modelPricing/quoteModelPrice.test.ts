@@ -18,6 +18,7 @@ import {
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const plan: PricingPlan = {
   rates: {
@@ -529,7 +530,7 @@ it("uses the weekday at the request instant for a midnight-wrapping UTC window",
       { groupMultiplier: 1 },
     ).amount,
   ).toBe(5)
-  timed.rules[0].conditions = [
+  atIndex(timed.rules, 0).conditions = [
     { kind: PRICING_CONDITION_KINDS.UTC_WINDOW, startMinute: 0, endMinute: 0 },
   ]
   expect(
@@ -620,7 +621,7 @@ it("distinguishes exhausted rule coverage from an unverified axis and never uses
       { groupMultiplier: 1 },
     ),
   ).toMatchObject({ status: "unavailable", amount: null })
-  tiered.rules[0].conditions = [
+  atIndex(tiered.rules, 0).conditions = [
     {
       kind: PRICING_CONDITION_KINDS.RANGE,
       axis: PRICING_RANGE_AXES.UNVERIFIED_CONTEXT_TOKENS,

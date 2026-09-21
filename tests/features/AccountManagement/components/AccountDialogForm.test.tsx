@@ -22,6 +22,7 @@ import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 const mediaQueryState = {
@@ -1389,9 +1390,10 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
 
-    props.draft.checkIn = vi.mocked(
-      props.onCheckInSelectionChange,
-    ).mock.calls[0][0]
+    props.draft.checkIn = atIndex(
+      vi.mocked(props.onCheckInSelectionChange).mock.calls,
+      0,
+    )[0]
     rerender(<AccountForm {...withSitePolicy(props)} />)
     await user.click(
       screen.getByRole("combobox", {

@@ -8,6 +8,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog InfoPanel", () => {
@@ -121,7 +122,7 @@ describe("AccountDialog InfoPanel", () => {
     )
 
     expect(createSpy).toHaveBeenCalledTimes(1)
-    const createdUrl = new URL(createSpy.mock.calls[0][0].url!)
+    const createdUrl = new URL(atIndex(createSpy.mock.calls, 0)[0].url!)
     expect(createdUrl.pathname).toContain("/add-account")
     expect(createdUrl.hash).toBe("#manual-new-api")
 

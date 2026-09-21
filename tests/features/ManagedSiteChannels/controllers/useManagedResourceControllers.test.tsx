@@ -30,6 +30,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   createManagedResourceEditor,
   createManagedResourceFacts,
@@ -814,7 +815,8 @@ describe("useManagedResourceListController", () => {
       refresh = result.current.refresh()
     })
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
-    const signal = (list as ReturnType<typeof vi.fn>).mock.calls[1][1]?.signal
+    const signal = atIndex((list as ReturnType<typeof vi.fn>).mock.calls, 1)[1]
+      ?.signal
     act(() => result.current.cancelCollection())
 
     expect(signal?.aborted).toBe(true)
@@ -980,8 +982,10 @@ describe("useManagedResourceListController", () => {
       { initialProps: { search: "old" } },
     )
     await waitFor(() => expect(list).toHaveBeenCalledOnce())
-    const oldSignal = (list as ReturnType<typeof vi.fn>).mock.calls[0][1]
-      ?.signal
+    const oldSignal = atIndex(
+      (list as ReturnType<typeof vi.fn>).mock.calls,
+      0,
+    )[1]?.signal
 
     rerender({ search: "new" })
     await waitFor(() =>
@@ -1004,7 +1008,8 @@ describe("useManagedResourceListController", () => {
       useManagedResourceListController({ registration: value }),
     )
     await waitFor(() => expect(list).toHaveBeenCalledOnce())
-    const signal = (list as ReturnType<typeof vi.fn>).mock.calls[0][1]?.signal
+    const signal = atIndex((list as ReturnType<typeof vi.fn>).mock.calls, 0)[1]
+      ?.signal
 
     unmount()
 
@@ -2573,8 +2578,10 @@ describe("useManagedResourceMutationController", () => {
     act(() => {
       submission = result.current.submit({ name: "changed" })
     })
-    const signal = (editor.submit as ReturnType<typeof vi.fn>).mock.calls[0][1]
-      ?.signal
+    const signal = atIndex(
+      (editor.submit as ReturnType<typeof vi.fn>).mock.calls,
+      0,
+    )[1]?.signal
     rerender({ workspace: newWorkspace })
     expect(signal?.aborted).toBe(true)
 
@@ -3024,8 +3031,10 @@ describe("useManagedResourceMutationController", () => {
     })
     expect(second).toBe(first)
     await waitFor(() => expect(workspace.delete).toHaveBeenCalledOnce())
-    const signal = (workspace.delete as ReturnType<typeof vi.fn>).mock
-      .calls[0][1]?.signal
+    const signal = atIndex(
+      (workspace.delete as ReturnType<typeof vi.fn>).mock.calls,
+      0,
+    )[1]?.signal
 
     unmount()
     expect(signal?.aborted).toBe(true)
@@ -3358,7 +3367,7 @@ describe("useManagedResourceMutationController", () => {
         const index = Number(ref.resourceId.split("-")[1])
         active += 1
         peak = Math.max(peak, active)
-        await gates[index].promise
+        await atIndex(gates, index).promise
         active -= 1
         if (index === 1)
           return {
@@ -3525,8 +3534,10 @@ describe("useManagedResourceMutationController", () => {
       execution = result.current.confirmDelete()
     })
     await waitFor(() => expect(oldWorkspace.delete).toHaveBeenCalledOnce())
-    const signal = (oldWorkspace.delete as ReturnType<typeof vi.fn>).mock
-      .calls[0][1]?.signal
+    const signal = atIndex(
+      (oldWorkspace.delete as ReturnType<typeof vi.fn>).mock.calls,
+      0,
+    )[1]?.signal
 
     rerender({ workspace: newWorkspace })
     expect(signal?.aborted).toBe(true)

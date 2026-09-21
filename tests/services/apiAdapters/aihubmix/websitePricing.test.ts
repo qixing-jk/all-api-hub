@@ -6,6 +6,7 @@ import {
   PRICING_PURPOSES,
 } from "~/services/modelPricing/pricingConstants"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import meteredBillingFixtures from "./meteredBillingFixtures.json"
 import websiteBillingFixtures from "./websiteBillingFixtures.json"
@@ -189,12 +190,18 @@ describe("AIHubMix website pricing", () => {
         usage: { image: 1 },
       }).status,
     ).toBe("unavailable")
-    config.metered_price_config!.image_generation!.price_rules[1].unit_price = 0.5
+    atIndex(
+      config.metered_price_config!.image_generation!.price_rules,
+      1,
+    ).unit_price = 0.5
     expect(
       buildAIHubMixWebsitePricingPlan("renamed", config).source
         .rulesUnavailable,
     ).toBe(true)
-    config.metered_price_config!.image_generation!.price_rules[1].unit_price = 0.01
+    atIndex(
+      config.metered_price_config!.image_generation!.price_rules,
+      1,
+    ).unit_price = 0.01
     expect(
       buildAIHubMixWebsitePricingPlan("renamed", {
         ...config,
@@ -238,7 +245,7 @@ describe("AIHubMix website pricing", () => {
     ).toMatchObject({ status: "complete", unit: "million-selected-tokens" })
   })
   it("coalesces equal cache-write aliases and rejects conflicting prices", () => {
-    const config = structuredClone(websiteBillingFixtures[0].billing)
+    const config = structuredClone(atIndex(websiteBillingFixtures, 0).billing)
     const plan = buildAIHubMixWebsitePricingPlan("renamed-model", config)
     const quote = quoteModelPrice(plan, {
       purpose: PRICING_PURPOSES.TOKEN_INDEX,
@@ -283,7 +290,7 @@ describe("AIHubMix website pricing", () => {
       (row) => row.model === "gpt-image-2.5-flare",
     )!.billing
     const plan = buildAIHubMixWebsitePricingPlan("renamed-model", config)
-    expect(plan.rules[0].rates).toMatchObject({
+    expect(atIndex(plan.rules, 0).rates).toMatchObject({
       input: { amount: 5 },
       output: { amount: 10 },
       imageInput: { amount: 8 },
@@ -432,7 +439,10 @@ describe("AIHubMix website pricing", () => {
 
   it("rejects overlapping tiers instead of letting rule order decide the price", () => {
     const config = structuredClone(billing)
-    config.token_based_tier_configs.tier2.tier_condition.min_tokens = 128000
+    atIndex(
+      config.token_based_tier_configs,
+      "tier2",
+    ).tier_condition.min_tokens = 128000
     const plan = buildAIHubMixWebsitePricingPlan(
       "qwen-flash",
       JSON.stringify(config),

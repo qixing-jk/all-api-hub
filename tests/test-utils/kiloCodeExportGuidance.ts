@@ -5,6 +5,7 @@ import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
 } from "~/services/integrations/kiloCodeExport"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { screen, within } from "./render"
 
@@ -47,8 +48,8 @@ export function expectKiloCodeUsageGuidance(target: KiloCodeExportTarget) {
   })
   for (let index = 1; index < renderedInstructions.length; index += 1) {
     expect(
-      renderedInstructions[index - 1].compareDocumentPosition(
-        renderedInstructions[index],
+      atIndex(renderedInstructions, index - 1).compareDocumentPosition(
+        atIndex(renderedInstructions, index),
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   }

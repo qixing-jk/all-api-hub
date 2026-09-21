@@ -5,6 +5,7 @@ import type {
   ChannelModelFilterRule,
   ChannelModelPatternFilterRule,
 } from "~/types/channelModelFilters"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { mockUserPreferences, storageMocks, defaultManagedSiteModelSync } =
   vi.hoisted(() => ({
@@ -288,7 +289,10 @@ describe("managedSiteModelSyncStorage preferences and error handling", () => {
 
     input.allowedModels.push("late-addition")
 
-    const savedArg = mockUserPreferences.savePreferences.mock.calls[0][0]
+    const savedArg = atIndex(
+      mockUserPreferences.savePreferences.mock.calls,
+      0,
+    )[0]
     expect(savedArg.managedSiteModelSync.allowedModels).toEqual([
       "claude-3",
       "gpt-4.1",

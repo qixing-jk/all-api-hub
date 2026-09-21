@@ -6,6 +6,7 @@ import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/acc
 import type { AIHubMixKey } from "~/services/apiService/aihubmix/keyTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -61,7 +62,7 @@ describe("AIHubMix native account keys", () => {
     mocks.list.mockResolvedValueOnce([key()])
     const session = await aihubmixAccountKeyResources.open(input)
     const page = await (await session.openCollection("account")).list()
-    expect(page.items[0].runtimeKey?.modelAccess).toEqual({
+    expect(atIndex(page.items, 0).runtimeKey?.modelAccess).toEqual({
       groups: null,
       allowedModelIds: ["model-a"],
       suggestedModelIds: ["model-a"],
@@ -269,7 +270,7 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
       await aihubmixAccountKeyResources.open(input)
     ).openCollection("account")
   ).list()
-  expect(page.items[0].fields).toContainEqual({
+  expect(atIndex(page.items, 0).fields).toContainEqual({
     fieldId: "accessed_time",
     kind: "number",
     value: 1750000000,
@@ -288,7 +289,7 @@ describe("AIHubMix native mutation recovery", () => {
     const collection = await (
       await aihubmixAccountKeyResources.open(input)
     ).openCollection("account")
-    expect((await collection.list()).items[0].status).toBe(expected)
+    expect(atIndex((await collection.list()).items, 0).status).toBe(expected)
   })
 
   it.each(["0", "01", "9007199254740992"])(

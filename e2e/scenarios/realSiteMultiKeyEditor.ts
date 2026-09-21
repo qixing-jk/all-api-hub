@@ -8,6 +8,7 @@ import { expect } from "~~/e2e/fixtures/extensionTest"
 import { runManagedMultiKeyEditorScenario } from "~~/e2e/scenarios/managedMultiKeyEditor"
 import { cleanupManagedSiteChannelsByPrefix } from "~~/e2e/scenarios/managedSiteChannels"
 import { runScenarioWithCleanup } from "~~/e2e/utils/scenarioErrors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /** Create only run-owned channels, exercise the editor, and verify cleanup even on failure. */
 export async function runRealSiteMultiKeyEditorScenario(params: {
@@ -60,7 +61,7 @@ export async function runRealSiteMultiKeyEditorScenario(params: {
           name: `API Key ${index + 1}`,
           exact: true,
         })
-        await row.locator("input[type=password]").fill(keys[index])
+        await row.locator("input[type=password]").fill(atIndex(keys, index))
         const keyName = row.getByRole("textbox", {
           name: "Channel Name",
           exact: true,

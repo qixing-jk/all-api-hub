@@ -11,6 +11,7 @@ import {
 } from "~/services/history/usageHistory/core"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /**
  * Create a fully populated Consume log item for usage-history unit tests.
@@ -70,7 +71,8 @@ describe("usageHistory core", () => {
 
     const overflowIndex =
       USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.length
-    expect(accountStore.latencyDaily[dayKey].buckets[overflowIndex]).toBe(1)
+    const buckets = atIndex(accountStore.latencyDaily, dayKey).buckets
+    expect(buckets[overflowIndex]).toBe(1)
   })
   it("keeps a valid cutoff for retention periods beyond the Date range", () => {
     expect(
@@ -326,6 +328,74 @@ describe("usageHistory core", () => {
     expect(accountStore.tokenNamesById["1"]).toBe("Retained token")
   })
 
+  it("prunes per-model latency buckets and drops grouping keys left empty", () => {
+    const accountStore = createEmptyUsageHistoryAccountStore()
+    const aggregate = {
+      requests: 1,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      quotaConsumed: 1,
+    }
+    const latencyAggregate = {
+      count: 1,
+      sum: 1,
+      max: 1,
+      slowCount: 0,
+      unknownCount: 0,
+      buckets: [1],
+    }
+
+    accountStore.latencyDailyByModel["gpt-4"] = {
+      "2026-01-01": { ...latencyAggregate },
+      "2026-01-02": { ...latencyAggregate },
+    }
+    // Fully expired model: the grouping key itself must be dropped.
+    accountStore.latencyDailyByModel["gpt-3"] = {
+      "2026-01-01": { ...latencyAggregate },
+    }
+
+    accountStore.dailyByTokenByModel["1"] = {
+      "gpt-4": {
+        "2026-01-01": { ...aggregate },
+        "2026-01-02": { ...aggregate },
+      },
+      // Fully expired model: only this model key goes, token "1" stays.
+      "gpt-3": {
+        "2026-01-01": { ...aggregate },
+      },
+    }
+    // Fully expired at every level: the token key itself must be dropped.
+    accountStore.dailyByTokenByModel["2"] = {
+      "gpt-3": {
+        "2026-01-01": { ...aggregate },
+      },
+    }
+
+    pruneUsageHistoryAccountStore(accountStore, "2026-01-02")
+
+    expect(
+      accountStore.latencyDailyByModel["gpt-4"]["2026-01-01"],
+    ).toBeUndefined()
+    expect(
+      accountStore.latencyDailyByModel["gpt-4"]["2026-01-02"],
+    ).toBeDefined()
+    expect(accountStore.latencyDailyByModel["gpt-3"]).toBeUndefined()
+
+    expect(
+      atIndex(atIndex(accountStore.dailyByTokenByModel, "1"), "gpt-4")[
+        "2026-01-01"
+      ],
+    ).toBeUndefined()
+    expect(
+      atIndex(atIndex(accountStore.dailyByTokenByModel, "1"), "gpt-4")[
+        "2026-01-02"
+      ],
+    ).toBeDefined()
+    expect(accountStore.dailyByTokenByModel["1"]["gpt-3"]).toBeUndefined()
+    expect(accountStore.dailyByTokenByModel["2"]).toBeUndefined()
+  })
+
   it("ingests token-scoped aggregates and latency histograms", () => {
     const accountStore = createEmptyUsageHistoryAccountStore()
 
@@ -376,7 +446,7 @@ describe("usageHistory core", () => {
       totalTokens: 17,
       quotaConsumed: 3,
     })
-    expect(accountStore.hourly[dayKey]["12"]).toMatchObject({
+    expect(atIndex(accountStore.hourly, dayKey)["12"]).toMatchObject({
       requests: 2,
       totalTokens: 17,
       quotaConsumed: 3,
@@ -385,21 +455,23 @@ describe("usageHistory core", () => {
     expect(accountStore.tokenNamesById["1"]).toBe("Token A")
     expect(accountStore.tokenNamesById["2"]).toBe("Token B")
 
-    expect(accountStore.dailyByToken["1"][dayKey]).toMatchObject({
+    expect(atIndex(accountStore.dailyByToken, "1")[dayKey]).toMatchObject({
       requests: 1,
       totalTokens: 15,
     })
-    expect(accountStore.hourlyByToken["1"][dayKey]["12"]).toMatchObject({
+    expect(
+      atIndex(atIndex(accountStore.hourlyByToken, "1"), dayKey)["12"],
+    ).toMatchObject({
       requests: 1,
       totalTokens: 15,
     })
-    expect(accountStore.dailyByToken["2"][dayKey]).toMatchObject({
+    expect(atIndex(accountStore.dailyByToken, "2")[dayKey]).toMatchObject({
       requests: 1,
       totalTokens: 2,
     })
 
     expect(
-      accountStore.dailyByTokenByModel["1"]["gpt-4"][dayKey],
+      atIndex(atIndex(accountStore.dailyByTokenByModel, "1"), "gpt-4")[dayKey],
     ).toMatchObject({
       requests: 1,
       totalTokens: 15,
@@ -414,15 +486,15 @@ describe("usageHistory core", () => {
     const bucketIndex = (seconds: number) => {
       const bounds = USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS
       for (let index = 0; index < bounds.length; index += 1) {
-        if (seconds < bounds[index]) return index
+        if (seconds < atIndex(bounds, index)) return index
       }
       return bounds.length
     }
 
-    const buckets = accountStore.latencyDaily[dayKey].buckets
+    const buckets = atIndex(accountStore.latencyDaily, dayKey).buckets
     expect(buckets[bucketIndex(0.4)]).toBe(1)
     expect(buckets[bucketIndex(6)]).toBe(1)
-    expect(accountStore.latencyDaily[dayKey].slowCount).toBe(
+    expect(atIndex(accountStore.latencyDaily, dayKey).slowCount).toBe(
       6 >= USAGE_HISTORY_SLOW_THRESHOLD_SECONDS ? 1 : 0,
     )
   })
@@ -467,27 +539,38 @@ describe("usageHistory core", () => {
     })
 
     expect(accountStore.daily[dayKey]).toMatchObject({ requests: 2 })
-    expect(accountStore.dailyByModel["unknown"][dayKey]).toMatchObject({
-      requests: 2,
-    })
+    expect(atIndex(accountStore.dailyByModel, "unknown")[dayKey]).toMatchObject(
+      {
+        requests: 2,
+      },
+    )
 
     expect(accountStore.tokenNamesById["unknown"]).toBe("Token Unknown")
-    expect(accountStore.dailyByToken["unknown"][dayKey]).toMatchObject({
-      requests: 2,
-    })
+    expect(atIndex(accountStore.dailyByToken, "unknown")[dayKey]).toMatchObject(
+      {
+        requests: 2,
+      },
+    )
 
     expect(accountStore.latencyDaily[dayKey]).toMatchObject({
       count: 0,
       unknownCount: 2,
     })
-    expect(accountStore.latencyDailyByModel["unknown"][dayKey]).toMatchObject({
-      unknownCount: 2,
-    })
-    expect(accountStore.latencyDailyByToken["unknown"][dayKey]).toMatchObject({
+    expect(
+      atIndex(accountStore.latencyDailyByModel, "unknown")[dayKey],
+    ).toMatchObject({
       unknownCount: 2,
     })
     expect(
-      accountStore.latencyDailyByTokenByModel["unknown"]["unknown"][dayKey],
+      atIndex(accountStore.latencyDailyByToken, "unknown")[dayKey],
+    ).toMatchObject({
+      unknownCount: 2,
+    })
+    expect(
+      atIndex(
+        atIndex(accountStore.latencyDailyByTokenByModel, "unknown"),
+        "unknown",
+      )[dayKey],
     ).toMatchObject({ unknownCount: 2 })
   })
 

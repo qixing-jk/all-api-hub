@@ -106,8 +106,8 @@ for (const language of ["en", "zh-CN"] as const) {
     page,
   }, testInfo) => {
     const copy = language === "en" ? enCheckin : zhCheckin
-    const filters: Record<string, string> = copy.execution.filters
-    const skipReasons: Record<string, string> = copy.skipReasons
+    const filters = copy.execution.filters
+    const skipReasons = copy.skipReasons
     const serviceWorker = await getServiceWorker(context)
     await stubLlmMetadataIndex(context)
     // Keep the scheduled run off so the seeded status stays authoritative.
@@ -319,7 +319,9 @@ for (const language of ["en", "zh-CN"] as const) {
     await page.keyboard.press("Escape")
     await expect(reasonTrigger()).toHaveAccessibleName(
       `${filters.reasonLabel}: ${fillCopy(
-        filters.selectedReasons_one ?? filters.selectedReasons,
+        "selectedReasons_one" in filters
+          ? filters.selectedReasons_one
+          : filters.selectedReasons,
         { count: 1 },
       )}`,
     )
@@ -437,7 +439,9 @@ for (const language of ["en", "zh-CN"] as const) {
     await page.keyboard.press("Escape")
     await expect(reasonTrigger()).toHaveAccessibleName(
       `${filters.reasonLabel}: ${fillCopy(
-        filters.selectedReasons_one ?? filters.selectedReasons,
+        "selectedReasons_one" in filters
+          ? filters.selectedReasons_one
+          : filters.selectedReasons,
         { count: 1 },
       )}`,
     )

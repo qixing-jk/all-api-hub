@@ -38,6 +38,7 @@ import type { ManagedSiteTargetOption } from "~/services/managedSites/channelMig
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   createManagedResourceEditor,
   createManagedResourceFacts,
@@ -1880,7 +1881,7 @@ describe("ManagedSiteChannelsRoute", () => {
         onReplaceRouteQuery={onReplaceRouteQuery}
       />,
     )
-    const firstOptions = useListController.mock.calls[0][0]
+    const firstOptions = atIndex(useListController.mock.calls, 0)[0]
 
     rerender(
       <ManagedSiteChannelsRoute

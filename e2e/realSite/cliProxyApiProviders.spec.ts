@@ -29,6 +29,7 @@ import {
   resolveCliProxyApiConfig,
 } from "~~/e2e/utils/realSite/managedSiteConfig"
 import { runScenarioWithCleanup } from "~~/e2e/utils/scenarioErrors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const resolved = resolveCliProxyApiConfig()
 // Collection PUTs have no compare-and-swap support, so use one writer per deployment.
@@ -292,28 +293,28 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
           await expect(channelRowByName(page, displayName)).toHaveCount(1)
           const matches = (await read()).filter(owns)
           expect(matches.length).toBe(1)
-          const saved = matches[0]
+          const saved = atIndex(matches, 0)
           // Compare booleans for credentials so assertion reports cannot expose server keys.
           const savedKey =
             kind === "openai-compatibility"
-              ? saved["api-key-entries"]?.[0]?.["api-key"]
-              : saved["api-key"]
+              ? atIndex(saved, "api-key-entries")?.[0]?.["api-key"]
+              : atIndex(saved, "api-key")
           expect(
             savedKey === `${key}-rotated`,
             "Rotated credential persisted",
           ).toBe(true)
           if (kind === "openai-compatibility") {
-            const entries = saved["api-key-entries"] ?? []
+            const entries = atIndex(saved, "api-key-entries") ?? []
             expect(
               entries.length,
               "Only the intended three credentials remain",
             ).toBe(3)
             expect(
-              entries[1]["api-key"] === `${key}-third`,
+              atIndex(atIndex(entries, 1), "api-key") === `${key}-third`,
               "Untouched credential preserved",
             ).toBe(true)
             expect(
-              entries[2]["api-key"] === `${key}-added`,
+              atIndex(atIndex(entries, 2), "api-key") === `${key}-added`,
               "Added credential persisted",
             ).toBe(true)
             expect(
@@ -333,8 +334,8 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
           expect(saved.headers).toEqual({ "X-AAH-E2E": "preserve" })
           const proxy =
             kind === "openai-compatibility"
-              ? saved["api-key-entries"]?.[0]?.["proxy-url"]
-              : saved["proxy-url"]
+              ? atIndex(saved, "api-key-entries")?.[0]?.["proxy-url"]
+              : atIndex(saved, "proxy-url")
           expect(proxy).toBe("socks5://127.0.0.1:9")
           if (kind === "openai-compatibility") {
             const staleAction = await openManagedSiteChannelRowActions(
@@ -356,7 +357,7 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
               data: {
                 index: currentIndex,
                 value: {
-                  "api-key-entries": current[currentIndex][
+                  "api-key-entries": atIndex(current, currentIndex)[
                     "api-key-entries"
                   ]!.map((entry, index) =>
                     index === 1 ? { ...entry, weight: 9 } : entry,

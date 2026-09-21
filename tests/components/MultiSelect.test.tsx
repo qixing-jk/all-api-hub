@@ -4,6 +4,7 @@ import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { MultiSelect } from "~/components/ui/MultiSelect"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 const toastMocks = vi.hoisted(() => ({
@@ -310,7 +311,7 @@ describe("MultiSelect", () => {
       "Alphabet",
     ])
 
-    await user.click(options[0])
+    await user.click(atIndex(options, 0))
     expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
       "alpha",
     )
@@ -358,7 +359,7 @@ describe("MultiSelect", () => {
     const removeButtons = await screen.findAllByRole("button", {
       name: "ui:multiSelect.removeValue",
     })
-    await user.click(removeButtons[0])
+    await user.click(atIndex(removeButtons, 0))
     expect(screen.getByTestId(TEST_IDS.selectedValues)).toHaveTextContent(
       "b,c,d,e,f",
     )

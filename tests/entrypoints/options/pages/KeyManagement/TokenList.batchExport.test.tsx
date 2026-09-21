@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { TokenListHarness as TokenList } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
@@ -700,7 +701,7 @@ describe("TokenList batch export selection", () => {
       name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
     })
 
-    await user.click(groupSelections[0])
+    await user.click(atIndex(groupSelections, 0))
     await user.click(
       await screen.findByRole("button", {
         name: "keyManagement:actions.expandAll",
@@ -711,7 +712,7 @@ describe("TokenList batch export selection", () => {
     expect(screen.getByRole("checkbox", { name: "Token 2" })).toBeChecked()
     expect(screen.getByRole("checkbox", { name: "Token B" })).not.toBeChecked()
 
-    await user.click(groupSelections[0])
+    await user.click(atIndex(groupSelections, 0))
 
     expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
     expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()

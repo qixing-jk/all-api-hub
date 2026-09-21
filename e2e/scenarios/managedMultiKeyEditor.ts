@@ -9,6 +9,7 @@ import {
   assertManagedChannelPreserved,
   captureManagedChannelSnapshot,
 } from "~~/e2e/utils/realSite/managedChannelPreservation"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /** Exercise the same UI and native readback on intercepted and live deployments. */
 export async function runManagedMultiKeyEditorScenario(params: {
@@ -142,23 +143,23 @@ export async function runManagedMultiKeyEditorScenario(params: {
       remark?: string
     }>
     expect([
-      keys[firstIndex].enabled,
-      keys[rotatedIndex].enabled,
-      keys[addedIndex].enabled,
+      atIndex(keys, firstIndex).enabled,
+      atIndex(keys, rotatedIndex).enabled,
+      atIndex(keys, addedIndex).enabled,
     ]).toEqual([true, true, false])
     if (named) {
-      expect([keys[rotatedIndex].name, keys[addedIndex].name]).toEqual([
-        "third-renamed",
-        "fourth",
-      ])
+      expect([
+        atIndex(keys, rotatedIndex).name,
+        atIndex(keys, addedIndex).name,
+      ]).toEqual(["third-renamed", "fourth"])
       const oldKeys = before.keys as Array<{ name: string }>
       const oldGrants = before.grants as Array<{ key_name: string }>
       const surviving = oldGrants
-        .filter((grant) => grant.key_name !== oldKeys[1].name)
+        .filter((grant) => grant.key_name !== atIndex(oldKeys, 1).name)
         .map((grant) => ({
           ...grant,
           key_name:
-            grant.key_name === oldKeys[2].name
+            grant.key_name === atIndex(oldKeys, 2).name
               ? "third-renamed"
               : grant.key_name,
         }))
@@ -174,7 +175,7 @@ export async function runManagedMultiKeyEditorScenario(params: {
         "Surviving model grants preserved",
       ).toBe(true)
       expect(grants.some((grant) => grant.key_name === "fourth")).toBe(true)
-    } else expect(keys[addedIndex].remark).toBe("added-note")
+    } else expect(atIndex(keys, addedIndex).remark).toBe("added-note")
   }
   await row(rotatedIndex + 1)
     .getByRole("button", { name: new RegExp(`Key ${rotatedIndex + 1}`) })

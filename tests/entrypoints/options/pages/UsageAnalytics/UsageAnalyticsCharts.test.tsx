@@ -10,6 +10,7 @@ import {
 } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { useUserPreferencesContextMock } = vi.hoisted(() => ({
@@ -204,9 +205,12 @@ describe("UsageAnalytics charts", () => {
 
     const user = userEvent.setup()
     await user.click(
-      screen.getAllByRole("button", {
-        name: "usageAnalytics:charts.common.chartType.histogram",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "usageAnalytics:charts.common.chartType.histogram",
+        }),
+        0,
+      ),
     )
 
     const lastOption =
@@ -441,9 +445,12 @@ describe("UsageAnalytics charts", () => {
 
     const user = userEvent.setup()
     await user.click(
-      screen.getAllByRole("button", {
-        name: "usageAnalytics:charts.common.chartType.pie",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "usageAnalytics:charts.common.chartType.pie",
+        }),
+        0,
+      ),
     )
 
     expect(modelDistributionInstance.setOption.mock.calls).toHaveLength(

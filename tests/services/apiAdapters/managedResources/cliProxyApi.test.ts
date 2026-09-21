@@ -8,6 +8,7 @@ import {
   type CliProxyApiProvider,
   type CliProxyApiProviderKind,
 } from "~/services/apiService/cliProxyApi"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -69,7 +70,7 @@ beforeEach(() => {
       if (method === "PUT") inventory[kind] = body
       if (method === "PATCH")
         inventory[kind][body.index] = {
-          ...inventory[kind][body.index],
+          ...atIndex(inventory, kind)[body.index],
           ...body.value,
         }
       if (method === "DELETE")
@@ -84,7 +85,7 @@ const workspace = () => cliProxyApiManagedResourceRegistration.open()
 describe("CLIProxyAPI native managed resources", () => {
   it("reports an unconfirmed delete without removing the provider locally", async () => {
     const api = await workspace()
-    const ref = (await api.list()).items[0].ref
+    const ref = atIndex((await api.list()).items, 0).ref
     const fetch = fetchMock.getMockImplementation()!
     fetchMock.mockImplementation(async (url: URL, init: RequestInit) =>
       init.method === "DELETE"
@@ -96,18 +97,18 @@ describe("CLIProxyAPI native managed resources", () => {
     expect(inventory["openai-compatibility"]).toHaveLength(1)
   })
   it("removes selected credentials while preserving retained native metadata", async () => {
-    const entry = inventory["openai-compatibility"][0]
-    entry["api-key-entries"]!.push({
+    const entry = atIndex(atIndex(inventory, "openai-compatibility"), 0)
+    atIndex(entry, "api-key-entries")!.push({
       "api-key": "retained-secret",
       "proxy-url": "http://retained.example",
       weight: 7,
     })
     const api = await workspace()
-    const target = (await api.list()).items[0].ref
+    const target = atIndex((await api.list()).items, 0).ref
     const cleanup = await api.openKeyCleanup!(target)
     expect(cleanup.keys).toEqual(["upstream-secret", "retained-secret"])
     await cleanup.remove([0])
-    expect(inventory["openai-compatibility"][0]).toEqual({
+    expect(atIndex(atIndex(inventory, "openai-compatibility"), 0)).toEqual({
       ...entry,
       "api-key-entries": [
         {
@@ -189,9 +190,9 @@ describe("CLIProxyAPI native managed resources", () => {
 
   it("rejects secret access after a provider disappears or becomes ambiguous", async () => {
     const view = await workspace()
-    const ref = (await view.list()).items[0].ref
+    const ref = atIndex((await view.list()).items, 0).ref
     inventory["openai-compatibility"].push(
-      structuredClone(inventory["openai-compatibility"][0]),
+      structuredClone(atIndex(atIndex(inventory, "openai-compatibility"), 0)),
     )
     await expect(view.openEditEditor(ref)).rejects.toMatchObject({
       failure: { code: "validation_failed" },
@@ -205,14 +206,16 @@ describe("CLIProxyAPI native managed resources", () => {
 
   it("rejects a provider changed between the editor read and the final pre-write inventory", async () => {
     const view = await workspace()
-    const editor = await view.openEditEditor((await view.list()).items[0].ref)
+    const editor = await view.openEditEditor(
+      atIndex((await view.list()).items, 0).ref,
+    )
     const original = fetchMock.getMockImplementation()!
     let reads = 0
     fetchMock.mockImplementation((input, init) => {
       if (init.method === undefined || init.method === "GET") {
         reads++
         if (reads === 2)
-          inventory["openai-compatibility"][0].headers = {
+          atIndex(atIndex(inventory, "openai-compatibility"), 0).headers = {
             "X-Remote": "changed",
           }
       }
@@ -249,7 +252,9 @@ describe("CLIProxyAPI native managed resources", () => {
     "distinguishes a rejected write from an uncertain HTTP %s outcome",
     async (status) => {
       const view = await workspace()
-      const editor = await view.openEditEditor((await view.list()).items[0].ref)
+      const editor = await view.openEditEditor(
+        atIndex((await view.list()).items, 0).ref,
+      )
       const original = fetchMock.getMockImplementation()!
       fetchMock.mockImplementation((input, init) =>
         init.method === "PATCH"
@@ -279,10 +284,9 @@ describe("CLIProxyAPI native managed resources", () => {
     expect(
       await editor.submit({ ...editor.initialValues, status: false }),
     ).toMatchObject({ outcome: "succeeded" })
-    expect(inventory["codex-api-key"][0]["excluded-models"]).toEqual([
-      "excluded",
-      "*",
-    ])
+    expect(
+      atIndex(atIndex(inventory, "codex-api-key"), 0)["excluded-models"],
+    ).toEqual(["excluded", "*"])
   })
   it("accepts deployment roots and released management URLs with reverse-proxy prefixes", () => {
     expect(cliProxyApiManagementUrl("http://localhost:8317").href).toBe(
@@ -302,15 +306,17 @@ describe("CLIProxyAPI native managed resources", () => {
     const page = await view.list()
     expect(page.items).toHaveLength(1)
     expect(JSON.stringify(page)).not.toContain("upstream-secret")
-    expect(page.items[0].status).toBe("disabled")
-    const editor = await view.openEditEditor(page.items[0].ref)
+    expect(atIndex(page.items, 0).status).toBe("disabled")
+    const editor = await view.openEditEditor(atIndex(page.items, 0).ref)
     expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
     const result = await editor.submit({
       ...editor.initialValues,
       name: "Renamed",
     })
     expect(result.outcome).toBe("succeeded")
-    expect(inventory["openai-compatibility"][0]).toMatchObject({
+    expect(
+      atIndex(atIndex(inventory, "openai-compatibility"), 0),
+    ).toMatchObject({
       name: "Renamed",
       disabled: true,
       priority: 9,
@@ -327,8 +333,10 @@ describe("CLIProxyAPI native managed resources", () => {
 
   it("rejects stale editors before any mutation", async () => {
     const view = await workspace()
-    const editor = await view.openEditEditor((await view.list()).items[0].ref)
-    inventory["openai-compatibility"][0].priority = 10
+    const editor = await view.openEditEditor(
+      atIndex((await view.list()).items, 0).ref,
+    )
+    atIndex(atIndex(inventory, "openai-compatibility"), 0).priority = 10
     const result = await editor.submit({
       ...editor.initialValues,
       name: "Changed",
@@ -339,7 +347,7 @@ describe("CLIProxyAPI native managed resources", () => {
 
   it("finds the same resource after an unrelated list reorder", async () => {
     const view = await workspace()
-    const ref = (await view.list()).items[0].ref
+    const ref = atIndex((await view.list()).items, 0).ref
     inventory["openai-compatibility"].unshift({
       name: "Other",
       "base-url": "https://other.example",
@@ -374,9 +382,9 @@ describe("CLIProxyAPI native managed resources", () => {
         })
       ).outcome,
     ).toBe("succeeded")
-    expect(writes[0].method).toBe("PUT")
+    expect(atIndex(writes, 0).method).toBe("PUT")
     expect(inventory["gemini-api-key"]).toHaveLength(2)
-    expect(inventory["gemini-api-key"][0].models).toEqual([
+    expect(atIndex(atIndex(inventory, "gemini-api-key"), 0).models).toEqual([
       { name: "new", alias: "alias" },
     ])
   })
@@ -398,12 +406,16 @@ describe("CLIProxyAPI native managed resources", () => {
     expect((await editor.submit(editor.initialValues)).outcome).toBe(
       "succeeded",
     )
-    expect(inventory["codex-api-key"][0]["api-key"]).toBe("new-secret")
+    expect(atIndex(atIndex(inventory, "codex-api-key"), 0)["api-key"]).toBe(
+      "new-secret",
+    )
   })
 
   it("reports an uncertain write when the reply is lost", async () => {
     const view = await workspace()
-    const editor = await view.openEditEditor((await view.list()).items[0].ref)
+    const editor = await view.openEditEditor(
+      atIndex((await view.list()).items, 0).ref,
+    )
     const normal = fetchMock.getMockImplementation()!
     fetchMock.mockImplementation(async (url, init) => {
       if (init.method !== "GET") throw new TypeError("network error")
@@ -447,7 +459,9 @@ describe("CLIProxyAPI native managed resources", () => {
 
   it("does not report success when a backend ignores an edit", async () => {
     const view = await workspace()
-    const editor = await view.openEditEditor((await view.list()).items[0].ref)
+    const editor = await view.openEditEditor(
+      atIndex((await view.list()).items, 0).ref,
+    )
     const normal = fetchMock.getMockImplementation()!
     fetchMock.mockImplementation(async (url, init) =>
       init.method === "PATCH"
@@ -467,22 +481,23 @@ describe("CLIProxyAPI native managed resources", () => {
 
 describe("CLIProxyAPI multiple credentials", () => {
   const open = async () => {
-    inventory["openai-compatibility"][0]["api-key-entries"] = [
-      {
-        "api-key": "first-secret",
-        "proxy-url": "socks5://localhost:1080",
-        weight: 4,
-        extension: { preserve: true },
-      },
-      {
-        "api-key": "second-secret",
-        "proxy-url": "http://localhost:1081",
-        weight: -1,
-      },
-      { "api-key": "third-secret", weight: 2 },
-    ]
+    atIndex(atIndex(inventory, "openai-compatibility"), 0)["api-key-entries"] =
+      [
+        {
+          "api-key": "first-secret",
+          "proxy-url": "socks5://localhost:1080",
+          weight: 4,
+          extension: { preserve: true },
+        },
+        {
+          "api-key": "second-secret",
+          "proxy-url": "http://localhost:1081",
+          weight: -1,
+        },
+        { "api-key": "third-secret", weight: 2 },
+      ]
     const view = await workspace()
-    return view.openEditEditor((await view.list()).items[0].ref)
+    return view.openEditEditor(atIndex((await view.list()).items, 0).ref)
   }
 
   it("keeps saved keys out of projections and reveals only the requested row", async () => {
@@ -510,9 +525,9 @@ describe("CLIProxyAPI multiple credentials", () => {
       credentials: {
         kind: "secret-list",
         entries: [
-          value.entries[1],
+          atIndex(value.entries, 1),
           {
-            ...value.entries[0],
+            ...atIndex(value.entries, 0),
             secret: { kind: "replace", value: "rotated" },
             fields: { proxy_url: "http://localhost:8080", weight: "" },
           },
@@ -525,7 +540,9 @@ describe("CLIProxyAPI multiple credentials", () => {
       },
     })
     expect(result.outcome).toBe("succeeded")
-    expect(inventory["openai-compatibility"][0]["api-key-entries"]).toEqual([
+    expect(
+      atIndex(atIndex(inventory, "openai-compatibility"), 0)["api-key-entries"],
+    ).toEqual([
       {
         "api-key": "second-secret",
         "proxy-url": "http://localhost:1081",
@@ -543,21 +560,21 @@ describe("CLIProxyAPI multiple credentials", () => {
       },
     ])
     expect(writes).toHaveLength(1)
-    expect(writes[0].method).toBe("PATCH")
+    expect(atIndex(writes, 0).method).toBe("PATCH")
   })
 
   it("preserves all per-key fields during an unrelated edit", async () => {
     const editor = await open()
     const original = structuredClone(
-      inventory["openai-compatibility"][0]["api-key-entries"],
+      atIndex(atIndex(inventory, "openai-compatibility"), 0)["api-key-entries"],
     )
     expect(
       (await editor.submit({ ...editor.initialValues, name: "Renamed" }))
         .outcome,
     ).toBe("succeeded")
-    expect(inventory["openai-compatibility"][0]["api-key-entries"]).toEqual(
-      original,
-    )
+    expect(
+      atIndex(atIndex(inventory, "openai-compatibility"), 0)["api-key-entries"],
+    ).toEqual(original)
   })
 
   it.each([
@@ -576,7 +593,10 @@ describe("CLIProxyAPI multiple credentials", () => {
     const value = structuredClone(
       editor.initialValues.credentials,
     ) as ResourceSecretListValue
-    const row = { ...value.entries[0], fields: { ...value.entries[0].fields } }
+    const row = {
+      ...atIndex(value.entries, 0),
+      fields: { ...atIndex(value.entries, 0).fields },
+    }
     let entries = [row]
     if (invalidCase === "duplicate-id") entries = [row, row]
     if (invalidCase === "unknown-saved") row.id = "unknown"
@@ -604,7 +624,9 @@ describe("CLIProxyAPI multiple credentials", () => {
 
   it("rejects stale row edits when another client changes the credential collection", async () => {
     const editor = await open()
-    inventory["openai-compatibility"][0]["api-key-entries"]!.reverse()
+    atIndex(atIndex(inventory, "openai-compatibility"), 0)[
+      "api-key-entries"
+    ]!.reverse()
     expect(
       (await editor.submit({ ...editor.initialValues, name: "Changed" }))
         .outcome,
@@ -622,7 +644,9 @@ describe("CLIProxyAPI multiple credentials", () => {
         })
       ).outcome,
     ).toBe("succeeded")
-    expect(inventory["openai-compatibility"][0]["api-key-entries"]).toEqual([])
+    expect(
+      atIndex(atIndex(inventory, "openai-compatibility"), 0)["api-key-entries"],
+    ).toEqual([])
   })
 
   it("creates multiple credentials through the native create editor", async () => {
@@ -659,19 +683,27 @@ describe("CLIProxyAPI multiple credentials", () => {
 
 describe("CLIProxyAPI native management round trips", () => {
   it("reads an upstream provider whose optional models are null", async () => {
-    inventory["openai-compatibility"][0].models =
+    atIndex(atIndex(inventory, "openai-compatibility"), 0).models =
       null as unknown as CliProxyApiProvider["models"]
     const view = await workspace()
     const page = await view.list()
     expect(page.items).toHaveLength(1)
-    const editor = await view.openEditEditor(page.items[0].ref)
+    const editor = await view.openEditEditor(atIndex(page.items, 0).ref)
     expect(editor.initialValues.supportedModels).toBe("")
   })
 
   it("reports a stale edit as a controlled rejection code before any write", async () => {
     const view = await workspace()
-    const editor = await view.openEditEditor((await view.list()).items[0].ref)
-    inventory["openai-compatibility"][0]["api-key-entries"]![0].weight = 9
+    const editor = await view.openEditEditor(
+      atIndex((await view.list()).items, 0).ref,
+    )
+    atIndex(
+      atIndex(
+        atIndex(atIndex(inventory, "openai-compatibility"), 0),
+        "api-key-entries",
+      )!,
+      0,
+    ).weight = 9
     const result = await editor.submit({
       ...editor.initialValues,
       name: "Changed",
@@ -685,13 +717,21 @@ describe("CLIProxyAPI native management round trips", () => {
 
 it("rejects a stale draft and reloads native configuration with empty optional fields", async () => {
   const view = await workspace()
-  const editor = await view.openEditEditor((await view.list()).items[0].ref)
-  Object.assign(inventory["openai-compatibility"][0], {
+  const editor = await view.openEditEditor(
+    atIndex((await view.list()).items, 0).ref,
+  )
+  Object.assign(atIndex(atIndex(inventory, "openai-compatibility"), 0), {
     models: null,
     headers: null,
     "excluded-models": null,
   })
-  inventory["openai-compatibility"][0]["api-key-entries"]![0].weight = 9
+  atIndex(
+    atIndex(
+      atIndex(atIndex(inventory, "openai-compatibility"), 0),
+      "api-key-entries",
+    )!,
+    0,
+  ).weight = 9
   const result = await editor.submit({
     ...editor.initialValues,
     name: "Must not overwrite",
@@ -701,11 +741,13 @@ it("rejects a stale draft and reloads native configuration with empty optional f
   const refreshed = await workspace()
   const page = await refreshed.list()
   expect(page.items).toHaveLength(1)
-  const latest = await refreshed.openEditEditor(page.items[0].ref)
+  const latest = await refreshed.openEditEditor(atIndex(page.items, 0).ref)
   expect(latest.initialValues.name).toBe("Primary")
   expect(latest.initialValues.supportedModels).toBe("")
   expect(
-    (latest.initialValues.credentials as ResourceSecretListValue).entries[0]
-      .fields.weight,
+    atIndex(
+      (latest.initialValues.credentials as ResourceSecretListValue).entries,
+      0,
+    ).fields.weight,
   ).toBe("9")
 })

@@ -2,6 +2,8 @@ import { ESLint, Linter } from "eslint"
 import tseslint from "typescript-eslint"
 import { describe, expect, it } from "vitest"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 const eslint = new ESLint()
 const page = "src/features/KeyManagement/KeyManagement.tsx"
 
@@ -35,7 +37,9 @@ describe("site type import whitelist", () => {
   ])("rejects direct imports and re-exports: %s", async (code) => {
     const messages = await check(code)
     expect(messages).toHaveLength(1)
-    expect(messages[0].ruleId).toBe("@typescript-eslint/no-restricted-imports")
+    expect(atIndex(messages, 0).ruleId).toBe(
+      "@typescript-eslint/no-restricted-imports",
+    )
   })
 
   it.each([

@@ -26,6 +26,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
 
@@ -179,11 +180,11 @@ for (const width of [1280, 390, 320]) {
         }
         if (density === "default") defaultTargets[route] = targets
         else {
-          expect(targets).toHaveLength(defaultTargets[route].length)
+          expect(targets).toHaveLength(atIndex(defaultTargets, route).length)
           for (const [index, target] of targets.entries()) {
             // Shared actions retain at least 24px. Existing inline text actions
             // keep their default hit area; density must not make them smaller.
-            const baseline = defaultTargets[route][index]
+            const baseline = atIndex(atIndex(defaultTargets, route), index)
             expect(target.height).toBeGreaterThanOrEqual(
               Math.min(24, baseline.height),
             )
@@ -229,17 +230,23 @@ for (const width of [1280, 390, 320]) {
       "models?accountId=density-0",
       "keys?accountId=density-0",
     ]) {
-      expect(metrics.compact[route].height).toBeLessThan(
-        metrics.default[route].height,
+      expect(atIndex(atIndex(metrics, "compact"), route).height).toBeLessThan(
+        atIndex(atIndex(metrics, "default"), route).height,
       )
-      expect(metrics.comfortable[route].height).toBeGreaterThan(
-        metrics.default[route].height,
+      expect(
+        atIndex(atIndex(metrics, "comfortable"), route).height,
+      ).toBeGreaterThan(atIndex(atIndex(metrics, "default"), route).height)
+      expect(atIndex(atIndex(metrics, "compact"), route).font).toBe(
+        atIndex(atIndex(metrics, "default"), route).font,
       )
-      expect(metrics.compact[route].font).toBe(metrics.default[route].font)
-      expect(metrics.comfortable[route].font).toBe(metrics.default[route].font)
-      expect(metrics.compact[route].width).toBe(metrics.default[route].width)
-      expect(metrics.comfortable[route].width).toBe(
-        metrics.default[route].width,
+      expect(atIndex(atIndex(metrics, "comfortable"), route).font).toBe(
+        atIndex(atIndex(metrics, "default"), route).font,
+      )
+      expect(atIndex(atIndex(metrics, "compact"), route).width).toBe(
+        atIndex(atIndex(metrics, "default"), route).width,
+      )
+      expect(atIndex(atIndex(metrics, "comfortable"), route).width).toBe(
+        atIndex(atIndex(metrics, "default"), route).width,
       )
     }
     await testInfo.attach("density-measurements", {

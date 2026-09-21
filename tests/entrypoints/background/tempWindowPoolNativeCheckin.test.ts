@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const originalBrowser = (globalThis as any).browser
 
@@ -16,7 +17,7 @@ function findLastCallIndex<T>(
   predicate: (call: T) => boolean,
 ): number {
   for (let index = calls.length - 1; index >= 0; index -= 1) {
-    if (predicate(calls[index])) return index
+    if (predicate(atIndex(calls, index))) return index
   }
 
   return -1

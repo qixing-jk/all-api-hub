@@ -9,6 +9,7 @@ import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnb
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   accountAutoDetectionMocks,
@@ -241,7 +242,9 @@ describe("accountAutoDetection", () => {
     })
     expect(JSON.stringify(result)).not.toContain(reflectedMessage)
     expect(loggerMock.error).toHaveBeenCalledTimes(1)
-    const [logMessage, logError] = loggerMock.error.mock.calls[0]
+    const logged = atIndex(loggerMock.error.mock.calls, 0)
+    const logMessage = atIndex(logged, 0)
+    const logError = atIndex(logged, 1)
     expect(String(logMessage)).not.toContain(dashboardToken)
     expect(String(logMessage)).not.toContain(reflectedMessage)
     expect(logError).toMatchObject({

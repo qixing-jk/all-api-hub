@@ -17,6 +17,7 @@ import { resolveProductAnalyticsActionContext } from "~/services/productAnalytic
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   createPersistedPreferencesFixture,
   setupMockPreferencePersistence,
@@ -334,7 +335,7 @@ async function openManualDecryptDialog() {
 
   expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-  fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+  fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
     target: { value: "" },
   })
   await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)

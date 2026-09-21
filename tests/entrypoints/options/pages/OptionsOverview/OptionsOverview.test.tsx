@@ -35,6 +35,7 @@ import {
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, within } from "~~/tests/test-utils/render"
 
 const {
@@ -807,7 +808,7 @@ describe("OptionsOverview", () => {
         expect.stringMatching(/1\.5K.*todayMetricAvailability\.coverage/),
       ]),
     )
-    act(() => partialValues[0].focus())
+    act(() => atIndex(partialValues, 0).focus())
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "optionsOverview:todayMetricAvailability.coverage",
     )

@@ -25,6 +25,7 @@ import { getManagedResourceRegistration } from "~/services/apiAdapters/managedRe
 import { ClaudeCodeHubApiError } from "~/services/apiService/claudeCodeHub"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import type { ClaudeCodeHubProviderDisplay } from "~/types/claudeCodeHub"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -146,7 +147,7 @@ describe("Claude Code Hub native managed resource", () => {
         },
       }),
     )
-    expect(page.items[0].fields).toEqual(
+    expect(atIndex(page.items, 0).fields).toEqual(
       expect.arrayContaining([
         { fieldId: fields.Type, kind: "text", value: "claude" },
         {
@@ -199,7 +200,11 @@ describe("Claude Code Hub native managed resource", () => {
     const page = await (
       await claudeCodeHubManagedResourceRegistration.open()
     ).list({ search: "   " })
-    const [customFacts, emptySecretFacts] = page.items
+    const destructuredSource0 = page.items
+    const [customFacts, emptySecretFacts] = [
+      atIndex(destructuredSource0, 0),
+      atIndex(destructuredSource0, 1),
+    ]
     const field = (fieldId: string) =>
       customFacts.fields.find((fact) => fact.fieldId === fieldId)
 
@@ -512,7 +517,7 @@ describe("Claude Code Hub native managed resource", () => {
 
   it("loads the secret and updates only strict editable fields", async () => {
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expect(editor.loadSecret?.(fields.Key)).resolves.toBe(
@@ -537,7 +542,7 @@ describe("Claude Code Hub native managed resource", () => {
       },
       expect.any(Object),
     )
-    const sentPayload = mocks.updateProviderV1.mock.calls[0][2]
+    const sentPayload = atIndex(mocks.updateProviderV1.mock.calls, 0)[2]
     expect(sentPayload).not.toHaveProperty("id")
     expect(sentPayload).not.toHaveProperty("maskedKey")
     expect(sentPayload).not.toHaveProperty("providerType")
@@ -549,7 +554,7 @@ describe("Claude Code Hub native managed resource", () => {
     mocks.listProviders.mockResolvedValueOnce([disabledProvider])
     mocks.getProvider.mockResolvedValue(disabledProvider)
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     expect(editor.initialValues[fields.Status]).toBe(
@@ -565,7 +570,7 @@ describe("Claude Code Hub native managed resource", () => {
     mocks.listProviders.mockResolvedValueOnce([customProvider])
     mocks.getProvider.mockResolvedValue(customProvider)
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     const typeField = editor.fields.find(
@@ -618,7 +623,7 @@ describe("Claude Code Hub native managed resource", () => {
 
   it("sends every changed editable field in one strict PATCH", async () => {
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -667,7 +672,7 @@ describe("Claude Code Hub native managed resource", () => {
     mocks.listProviders.mockResolvedValue([nullableProvider])
     mocks.getProvider.mockResolvedValue(nullableProvider)
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -691,7 +696,7 @@ describe("Claude Code Hub native managed resource", () => {
     mocks.listProviders.mockResolvedValue([unrestrictedProvider])
     mocks.getProvider.mockResolvedValue(unrestrictedProvider)
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -757,7 +762,7 @@ describe("Claude Code Hub native managed resource", () => {
   it("refetches provider detail when a successful PATCH omits its body", async () => {
     mocks.updateProviderV1.mockResolvedValueOnce(undefined)
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     const result = await editor.submit({
@@ -778,7 +783,7 @@ describe("Claude Code Hub native managed resource", () => {
       .mockResolvedValueOnce(provider)
       .mockRejectedValueOnce(new Error("refetch unavailable"))
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expect(
@@ -817,7 +822,7 @@ describe("Claude Code Hub native managed resource", () => {
       }) satisfies Partial<ClaudeCodeHubNativeError>,
     )
 
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     await expectFailureCode(
       workspace.openEditEditor({ ...ref, resourceId: "not-a-provider-id" }),
       MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
@@ -827,7 +832,7 @@ describe("Claude Code Hub native managed resource", () => {
 
   it("deletes through the native v1 resource operation", async () => {
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
 
     await expect(workspace.delete(ref)).resolves.toMatchObject({
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,

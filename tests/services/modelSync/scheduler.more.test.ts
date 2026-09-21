@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
@@ -311,7 +312,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
     await modelSyncScheduler.executeSync([modelResourceRef(1)])
     expect(mocks.setChannelConfigs).toHaveBeenCalledWith(migratedConfigs)
     expect(mocks.setChannelConfigs.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.runBatch.mock.invocationCallOrder[0],
+      atIndex(mocks.runBatch.mock.invocationCallOrder, 0),
     )
   })
 
@@ -455,7 +456,10 @@ describe("modelSyncScheduler additional scheduler flows", () => {
         surface: "background",
       },
     )
-    const [, , , , sanitizedFilters] = mocks.modelSyncServiceCtor.mock.calls[0]
+    const sanitizedFilters = atIndex(
+      atIndex(mocks.modelSyncServiceCtor.mock.calls, 0),
+      4,
+    )
     expect(sanitizedFilters[0]).not.toHaveProperty("apiKey")
   })
 })

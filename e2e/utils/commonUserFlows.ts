@@ -52,6 +52,7 @@ import {
 } from "~/types/usageHistory"
 import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { setPlasmoStorageValue } from "./extensionState"
 
@@ -171,7 +172,7 @@ function installExtensionPageGuardsWithOptions(
 export async function forceExtensionLanguage(page: Page, language = "en") {
   await page.addInitScript(
     ([languageStorageKey, nextLanguage]) => {
-      window.localStorage.setItem(languageStorageKey, nextLanguage)
+      window.localStorage.setItem(languageStorageKey!, nextLanguage!)
     },
     [I18NEXT_LANGUAGE_STORAGE_KEY, language],
   )
@@ -1089,7 +1090,7 @@ export async function stubNewApiSiteRoutes(
         return
       }
 
-      const current = tokens[tokenIndex]
+      const current = atIndex(tokens, tokenIndex)
       tokens[tokenIndex] = {
         ...current,
         name: payload.name?.trim() || current.name,

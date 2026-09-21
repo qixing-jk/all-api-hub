@@ -15,6 +15,7 @@ import {
   TOKENS_PER_MILLION,
 } from "~/services/modelPricing/pricingConstants"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mode = vi.hoisted(() => ({ development: true }))
 vi.mock("~/utils/core/environment", async (importOriginal) => ({
@@ -106,20 +107,20 @@ it("opens a scoped issue report, locates a model and copies an allowlisted snaps
   await user.click(screen.getByRole("button", { name: "diagnostics.locate" }))
   expect(locate).toHaveBeenCalledWith("missing")
   await user.click(screen.getByRole("button", { name: "diagnostics.copy" }))
-  const report = JSON.parse(copy.mock.calls[0][0])
+  const report = JSON.parse(atIndex(copy.mock.calls, 0)[0])
   expect(report.rows).toHaveLength(2)
-  expect(copy.mock.calls[0][0]).not.toContain("DO_NOT_EXPORT")
+  expect(atIndex(copy.mock.calls, 0)[0]).not.toContain("DO_NOT_EXPORT")
   expect(screen.getByRole("status")).toHaveTextContent("diagnostics.copied")
 })
 
 it("shows an actionable selection explanation next to the diagnostic code", async () => {
   const user = userEvent.setup()
   const model = {
-    ...models[1],
+    ...atIndex(models, 1),
     calculatedPrice: {
-      ...models[1].calculatedPrice,
+      ...atIndex(models, 1).calculatedPrice,
       quote: {
-        ...models[1].calculatedPrice.quote,
+        ...atIndex(models, 1).calculatedPrice.quote,
         issues: [{ code: PRICING_ISSUE_CODES.PRICE_RANGE_UNAVAILABLE }],
         conditionDetails: [
           {
@@ -147,8 +148,8 @@ it("limits rendered entries and reports clipboard failures", async () => {
     new Error("Denied"),
   )
   const manyModels = Array.from({ length: 55 }, (_, index) => ({
-    ...models[1],
-    model: { ...models[1].model, model_name: `model-${index}` },
+    ...atIndex(models, 1),
+    model: { ...atIndex(models, 1).model, model_name: `model-${index}` },
   }))
   render(<PricingDiagnostics models={manyModels} onLocate={vi.fn()} />)
   await user.click(screen.getByRole("button", { name: /diagnostics.title/ }))
@@ -165,11 +166,14 @@ it("searches a full URL and error code, exports all matches and excludes pasted 
     .spyOn(navigator.clipboard, "writeText")
     .mockResolvedValue(undefined)
   const records = Array.from({ length: 55 }, (_, index) => ({
-    ...models[1],
-    model: { ...models[1].model, model_name: `model-${index}` },
+    ...atIndex(models, 1),
+    model: { ...atIndex(models, 1).model, model_name: `model-${index}` },
   }))
   render(
-    <PricingDiagnostics models={[models[0], ...records]} onLocate={vi.fn()} />,
+    <PricingDiagnostics
+      models={[atIndex(models, 0), ...records]}
+      onLocate={vi.fn()}
+    />,
   )
   await user.click(screen.getByRole("button", { name: /diagnostics.title/ }))
   await user.type(
@@ -180,7 +184,7 @@ it("searches a full URL and error code, exports all matches and excludes pasted 
   await user.click(
     screen.getByRole("button", { name: "diagnostics.copyFiltered" }),
   )
-  const exported = JSON.parse(copy.mock.calls[0][0])
+  const exported = JSON.parse(atIndex(copy.mock.calls, 0)[0])
   expect(exported.scope).toBe("filtered-diagnostics")
   expect(exported.rows).toHaveLength(55)
   expect(exported.summary).toMatchObject({
@@ -189,7 +193,9 @@ it("searches a full URL and error code, exports all matches and excludes pasted 
     complete: 0,
   })
   expect(exported.issueCounts).toEqual([{ code: "price-missing", count: 55 }])
-  expect(copy.mock.calls[0][0]).not.toMatch(/SECRET|PRIVATE|DO_NOT_EXPORT/)
+  expect(atIndex(copy.mock.calls, 0)[0]).not.toMatch(
+    /SECRET|PRIVATE|DO_NOT_EXPORT/,
+  )
 })
 
 it("keeps every origin visible before pagination and supports billing-group and flat views", async () => {
@@ -206,19 +212,19 @@ it("keeps every origin visible before pagination and supports billing-group and 
     updatedAt: 0,
   })
   const many = Array.from({ length: 55 }, (_, index) => ({
-    ...models[1],
+    ...atIndex(models, 1),
     effectiveGroup: "default",
-    model: { ...models[1].model, model_name: `example-${index}` },
+    model: { ...atIndex(models, 1).model, model_name: `example-${index}` },
   }))
   render(
     <PricingDiagnostics
       models={[
         ...many,
         {
-          ...models[1],
+          ...atIndex(models, 1),
           source: otherSource,
           effectiveGroup: "premium",
-          model: { ...models[1].model, model_name: "other-model" },
+          model: { ...atIndex(models, 1).model, model_name: "other-model" },
         },
       ]}
       onLocate={vi.fn()}

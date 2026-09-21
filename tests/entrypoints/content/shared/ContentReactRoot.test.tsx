@@ -19,6 +19,7 @@ import {
   DEV_IDENTITY_FIXTURE_PATH,
   DEV_IDENTITY_FIXTURE_PATH_TAIL,
 } from "~~/tests/test-utils/devIdentityFixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createMatchMediaController } from "~~/tests/test-utils/matchMedia"
 
 const {
@@ -144,7 +145,7 @@ describe("ContentReactRoot", () => {
       },
     })
     act(() => {
-      watchMock.mock.calls[0][0][
+      atIndex(watchMock.mock.calls, 0)[0][
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES
       ]()
     })
@@ -175,7 +176,9 @@ describe("ContentReactRoot", () => {
       originalHostTheme,
     )
     unmount()
-    expect(unwatchMock).toHaveBeenCalledWith(watchMock.mock.calls[0][0])
+    expect(unwatchMock).toHaveBeenCalledWith(
+      atIndex(watchMock.mock.calls, 0)[0],
+    )
   })
 
   it("discards a stale initial read after a storage update has loaded", async () => {
@@ -195,7 +198,7 @@ describe("ContentReactRoot", () => {
     const { container } = render(<ContentReactRoot />)
 
     act(() => {
-      watchMock.mock.calls[0][0][
+      atIndex(watchMock.mock.calls, 0)[0][
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES
       ]()
     })
@@ -248,7 +251,9 @@ describe("ContentReactRoot", () => {
       await pending.promise
     })
 
-    expect(unwatchMock).toHaveBeenCalledWith(watchMock.mock.calls[0][0])
+    expect(unwatchMock).toHaveBeenCalledWith(
+      atIndex(watchMock.mock.calls, 0)[0],
+    )
     expect(media.queryList.addEventListener).not.toHaveBeenCalled()
   })
 

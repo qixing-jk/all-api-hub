@@ -6,10 +6,11 @@ import {
   managedSiteSub2ApiSearchControls,
   managedSiteSub2ApiSearchSections,
 } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteSub2Api.search"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("Sub2API managed-site settings search definitions", () => {
   it("maps every rendered setting to its shared target ID", () => {
-    expect(managedSiteSub2ApiSearchSections[0].targetId).toBe(
+    expect(atIndex(managedSiteSub2ApiSearchSections, 0).targetId).toBe(
       SETTINGS_ANCHORS.SUB2API,
     )
     expect(
@@ -24,7 +25,7 @@ describe("Sub2API managed-site settings search definitions", () => {
   })
 
   it("shows the entries only for the Sub2API managed-site selection", () => {
-    const visibility = managedSiteSub2ApiSearchControls[0].isVisible!
+    const visibility = atIndex(managedSiteSub2ApiSearchControls, 0).isVisible!
     expect(visibility({ managedSiteType: SITE_TYPES.SUB2API } as any)).toBe(
       true,
     )

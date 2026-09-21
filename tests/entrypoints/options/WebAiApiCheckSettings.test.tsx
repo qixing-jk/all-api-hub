@@ -8,6 +8,7 @@ import {
   type PreferenceWriteResult,
 } from "~/services/preferences/userPreferences"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -302,7 +303,7 @@ describe("WebAiApiCheckSettings", () => {
       expect(screen.getByText(pattern)).toBeInTheDocument()
     }
 
-    expect(screen.queryByText(invalidPatterns[10])).toBeNull()
+    expect(screen.queryByText(atIndex(invalidPatterns, 10))).toBeNull()
     expect(
       screen.getByText(
         "webAiApiCheck:settings.autoDetect.whitelist.invalidMore",

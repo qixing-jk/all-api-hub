@@ -19,6 +19,7 @@ import {
   AuthTypeEnum,
 } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -139,11 +140,14 @@ describe("newApiFamily accountData", () => {
       )
       for (const item of items) {
         result.coverage.rows.validCount += 1
-        for (const [field, total, coverage] of [
+        for (const indexedEntry of [
           ["quota", "today_quota_consumption", "consumption"],
           ["prompt_tokens", "today_prompt_tokens", "promptTokens"],
           ["completion_tokens", "today_completion_tokens", "completionTokens"],
         ]) {
+          const field = atIndex(indexedEntry, 0)
+          const total = atIndex(indexedEntry, 1)
+          const coverage = atIndex(indexedEntry, 2)
           const value = item[field]
           if (typeof value === "number" && Number.isFinite(value)) {
             result[total] += value

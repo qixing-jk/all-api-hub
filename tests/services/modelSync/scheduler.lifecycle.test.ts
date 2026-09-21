@@ -24,6 +24,7 @@ import type {
 } from "~/types/managedSiteModelSync"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
@@ -273,7 +274,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         newApi: { ...preferences.newApi, userId: "2" },
         octopus: { ...preferences.octopus, password: "second-password" },
       }
-      await batches[0].options.onProgress?.({
+      await atIndex(batches, 0).options.onProgress?.({
         completed: 1,
         total: 1,
         lastResult,
@@ -292,12 +293,12 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       await vi.waitFor(() => expect(batches).toHaveLength(2))
       const messagesBeforeStaleProgress =
         mocks.sendRuntimeMessage.mock.calls.length
-      await batches[0].options.onProgress?.({
+      await atIndex(batches, 0).options.onProgress?.({
         completed: 1,
         total: 1,
         lastResult,
       })
-      batches[0].completion.resolve(result)
+      atIndex(batches, 0).completion.resolve(result)
       await firstRun
 
       expect(modelSyncScheduler.getProgress()).toMatchObject({
@@ -308,12 +309,12 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       expect(mocks.sendRuntimeMessage).toHaveBeenCalledTimes(
         messagesBeforeStaleProgress,
       )
-      await batches[1].options.onProgress?.({
+      await atIndex(batches, 1).options.onProgress?.({
         completed: 1,
         total: 1,
         lastResult,
       })
-      batches[1].completion.resolve(result)
+      atIndex(batches, 1).completion.resolve(result)
       await secondRun
 
       expect(modelSyncScheduler.getProgress()).toBeNull()

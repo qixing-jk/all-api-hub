@@ -19,6 +19,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -540,7 +541,7 @@ describe("ClaudeCodeRouterImportDialog", () => {
       expect(mockShowResultToast).toHaveBeenCalled()
     })
 
-    const toastArg = mockShowResultToast.mock.calls[0][0]
+    const toastArg = atIndex(mockShowResultToast.mock.calls, 0)[0]
     expect(toastArg.success).toBe(false)
     expect(String(toastArg.message)).toBe("messages:errors.operation.failed")
     expect(onClose).not.toHaveBeenCalled()

@@ -10,6 +10,7 @@ import {
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /** Fixture for the normalized policy published by the AIHubMix pricing adapter. */
 export function buildAIHubMixModelListSource(
@@ -85,7 +86,7 @@ export function buildModelListItemFixture(
     },
   })
   return {
-    ...prepared.items[0],
+    ...atIndex(prepared.items, 0),
     comparableModelIdentity: { key: "exact:model", displayName: "model" },
     resolvedVendor: { state: "unknown" },
   }

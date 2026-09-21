@@ -11,6 +11,7 @@ import {
 } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import { encodeUnpaddedBase64 } from "~~/tests/test-utils/encoding"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
 const ANTHROPIC_KEY_PREFIX = ["s", "k", "-", "ant", "-"].join("")
@@ -148,9 +149,13 @@ describe("webAiApiCheck extractCredentials", () => {
       "https://proxy.example.com/api/v1/models",
     ])
     expect(result.apiKeyCandidates).toEqual([apiKey])
-    expect(result.candidates.baseUrls[0].reasons).toContain("pathNormalized")
-    expect(result.candidates.apiKeys[0].reasons).toContain("labeled")
-    expect(result.candidates.apiKeys[0].reasons).toContain("knownPrefix")
+    expect(atIndex(result.candidates.baseUrls, 0).reasons).toContain(
+      "pathNormalized",
+    )
+    expect(atIndex(result.candidates.apiKeys, 0).reasons).toContain("labeled")
+    expect(atIndex(result.candidates.apiKeys, 0).reasons).toContain(
+      "knownPrefix",
+    )
   })
 
   it("preserves first extracted key when same-priority candidates have different lengths", () => {
@@ -549,7 +554,9 @@ describe("webAiApiCheck extractCredentials", () => {
         reasons: expect.arrayContaining(["unknownShortPrefix"]),
       }),
     )
-    expect(result.candidates.apiKeys[0].reasons).not.toContain("knownPrefix")
+    expect(atIndex(result.candidates.apiKeys, 0).reasons).not.toContain(
+      "knownPrefix",
+    )
   })
 
   it("cleans illegal ASCII punctuation inside suspected key windows", () => {
@@ -809,10 +816,10 @@ describe("webAiApiCheck extractCredentials", () => {
     const encodedLayers = [apiKey]
     for (let depth = 0; depth < 5; depth += 1) {
       encodedLayers.push(
-        encodeUnpaddedBase64(encodedLayers[encodedLayers.length - 1]),
+        encodeUnpaddedBase64(atIndex(encodedLayers, encodedLayers.length - 1)),
       )
     }
-    const deepestEncodedApiKey = encodedLayers[5]
+    const deepestEncodedApiKey = atIndex(encodedLayers, 5)
 
     const result = extractApiCheckCredentialsFromText(deepestEncodedApiKey)
 

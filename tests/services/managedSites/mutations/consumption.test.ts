@@ -9,6 +9,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const effect: ManagedSiteMutationConfirmedEffect = {
   kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ModelsUpdated,
@@ -91,7 +92,9 @@ describe("consumeManagedSiteMutationResult", () => {
       ).rejects.toBe(factoryError)
 
       expect(createError).toHaveBeenCalledOnce()
-      const [message, retryDecision] = createError.mock.calls[0]
+      const indexedItems = createError.mock.calls[0]
+      const message = atIndex(indexedItems, 0)
+      const retryDecision = atIndex(indexedItems, 1)
       expect(message).toContain("Provider rejected")
       expect(message).not.toContain(secret)
       expect(retryDecision).toBe(expectedDecision)

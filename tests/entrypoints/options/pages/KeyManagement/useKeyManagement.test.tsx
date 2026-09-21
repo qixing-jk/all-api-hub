@@ -10,6 +10,7 @@ import toast from "~/lib/notify"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 const { complete, fetchCredential, rotateCredential } = vi.hoisted(() => ({
@@ -109,7 +110,7 @@ describe("useKeyManagement singleton credentials and selection", () => {
   it("loads a singleton credential with automatic protection context", async () => {
     const { result } = renderSelected()
     await waitFor(() => expect(result.current.entries).toHaveLength(1))
-    expect(result.current.entries[0].runtimeKey).toMatchObject({
+    expect(atIndex(result.current.entries, 0).runtimeKey).toMatchObject({
       source: "service_credential",
       accountId: account.id,
       secret: "private-service-secret",
@@ -297,13 +298,14 @@ describe("useKeyManagement singleton credentials and selection", () => {
     fetchCredential.mockReturnValueOnce(pending.promise)
     const { result, rerender } = renderSelected()
     await waitFor(() => expect(fetchCredential).toHaveBeenCalledTimes(1))
-    const signal = fetchCredential.mock.calls[0][0].abortSignal as AbortSignal
+    const signal = atIndex(fetchCredential.mock.calls, 0)[0]
+      .abortSignal as AbortSignal
     setAccounts([{ ...account, token: "new-access-token" }])
     rerender()
     await waitFor(() => expect(result.current.entries).toHaveLength(1))
     await act(async () => pending.resolve(credential("stale-secret")))
     expect(signal.aborted).toBe(true)
-    expect(result.current.entries[0].runtimeKey.secret).toBe(
+    expect(atIndex(result.current.entries, 0).runtimeKey.secret).toBe(
       "private-service-secret",
     )
     await act(async () => result.current.copyServiceCredential(account))
@@ -370,7 +372,9 @@ describe("useKeyManagement singleton credentials and selection", () => {
       await result.current.rotateServiceCredential(account)
     })
     expect(rotateCredential).toHaveBeenCalledTimes(1)
-    expect(result.current.entries[0].runtimeKey.secret).toBe("rotated-secret")
+    expect(atIndex(result.current.entries, 0).runtimeKey.secret).toBe(
+      "rotated-secret",
+    )
   })
 
   it("keeps rotation failures explicit and never retries the mutation on refresh", async () => {
@@ -383,9 +387,9 @@ describe("useKeyManagement singleton credentials and selection", () => {
     expect(result.current.currentAccountLoadError).toBe(
       "keyManagement:messages.serviceCredentialRotateFailed",
     )
-    expect(result.current.serviceCredentials[account.id].credential?.key).toBe(
-      "private-service-secret",
-    )
+    expect(
+      atIndex(result.current.serviceCredentials, account.id).credential?.key,
+    ).toBe("private-service-secret")
     await act(async () => {
       await result.current.refreshServiceCredentials()
     })

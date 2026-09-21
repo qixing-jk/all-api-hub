@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { BaseSequencer } from "vitest/node"
 import type { TestSpecification, Vitest } from "vitest/node"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   assignShards,
   DurationBalancedSequencer,
@@ -190,7 +191,9 @@ describe("DurationBalancedSequencer", () => {
     ).shard(files)
 
     expect(shard).toHaveLength(1)
-    expect(shard[0].moduleId).toBe(path.join(root, "tests/heavy.test.ts"))
+    expect(atIndex(shard, 0).moduleId).toBe(
+      path.join(root, "tests/heavy.test.ts"),
+    )
   })
 
   it("weights files the manifest predates at the median, not as free", async () => {

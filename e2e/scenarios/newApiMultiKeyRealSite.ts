@@ -10,6 +10,7 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
 import { runScenarioWithCleanup } from "~~/e2e/utils/scenarioErrors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /** Verify UI edits against a live server using only a run-owned, nonfunctional channel. */
 export async function runNewApiMultiKeyRealSiteScenario(params: {
@@ -116,7 +117,7 @@ export async function runNewApiMultiKeyRealSiteScenario(params: {
       })
       const owned = await findOwned()
       expect(owned.length).toBe(1)
-      const id = owned[0].id
+      const id = atIndex(owned, 0).id
       await request("/api/channel/multi_key/manage", "POST", {
         channel_id: id,
         action: "disable_key",
@@ -142,7 +143,9 @@ export async function runNewApiMultiKeyRealSiteScenario(params: {
         await dialog
           .getByRole("button", { name: "Add key", exact: true })
           .click()
-        await row(3).getByLabel("API Key 3", { exact: true }).fill(keys[3])
+        await row(3)
+          .getByLabel("API Key 3", { exact: true })
+          .fill(atIndex(keys, 3))
         await row(3)
           .getByRole("switch", { name: "Enable this key", exact: true })
           .uncheck()

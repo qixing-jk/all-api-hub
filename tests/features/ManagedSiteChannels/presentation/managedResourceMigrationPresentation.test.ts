@@ -31,6 +31,7 @@ import {
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 import { OctopusOutboundType } from "~/types/octopus"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const translations: Record<string, string> = {
   "channelDialog:fields.baseUrl.label": "Base URL",
@@ -90,7 +91,7 @@ const translations: Record<string, string> = {
 }
 
 const t = ((key: string | string[], options?: Record<string, unknown>) => {
-  const normalizedKey = Array.isArray(key) ? key[0] : key
+  const normalizedKey = Array.isArray(key) ? atIndex(key, 0) : key
   const summaryMetric = normalizedKey.match(
     /^managedSiteChannels:migration\.results\.summaryMetrics\.(created|failed|skipped|uncertain|total)$/,
   )?.[1]
@@ -186,7 +187,7 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 
 describe("managedResourceMigrationPresentation", () => {
   it("explains split keys, unknown counts, and key-change blockers", () => {
-    const ready = preview.items[0]
+    const ready = atIndex(preview.items, 0)
     if (ready.status !== "ready") throw new Error("fixture")
     const localT = ((key: string) => key) as TFunction
     const mapped = mapManagedResourceMigrationPreview(
@@ -219,11 +220,12 @@ describe("managedResourceMigrationPresentation", () => {
       }),
       { t: localT, getSiteLabel: String },
     )
-    expect(mapped.rows[0].warningText).toContain(
+    expect(atIndex(mapped.rows, 0).warningText).toContain(
       "managedSiteChannels:migration.itemWarnings.splitsKeys",
     )
     expect(
-      mapped.rows[0].comparisons.find(({ id }) => id === "keyCount")?.source,
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "keyCount")
+        ?.source,
     ).toBe("common:labels.unknown")
     expect(JSON.stringify(mapped.rows[1])).toContain(
       "managedSiteChannels:migration.blockedReasons.sourceKeysChanged",
@@ -323,7 +325,8 @@ describe("managedResourceMigrationPresentation", () => {
       { t, getSiteLabel: String },
     )
     expect(
-      mapped.rows[0].comparisons.find(({ id }) => id === "type")?.target,
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+        ?.target,
     ).toBe(expected)
   })
   it("uses DoneHub's provider-owned vocabulary for numeric string targets", () => {
@@ -354,9 +357,9 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
-      expect.objectContaining({ target: "GitHub Models" }),
-    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(expect.objectContaining({ target: "GitHub Models" }))
   })
 
   it("uses DoneHub's provider-owned vocabulary for numeric target types", () => {
@@ -387,9 +390,9 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
-      expect.objectContaining({ target: "GitHub Models" }),
-    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(expect.objectContaining({ target: "GitHub Models" }))
   })
 
   it("shows Veloera's native source and target vocabulary for colliding numeric types", () => {
@@ -425,7 +428,9 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(
       expect.objectContaining({
         source: "GitHub Models",
         target: "GitHub Models",
@@ -472,7 +477,8 @@ describe("managedResourceMigrationPresentation", () => {
       )
 
       expect(
-        mapped.rows[0].comparisons.find(({ id }) => id === "type")?.source,
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+          ?.source,
       ).toBe(expected)
     },
   )
@@ -504,12 +510,14 @@ describe("managedResourceMigrationPresentation", () => {
       { t, getSiteLabel: String },
     )
     expect(
-      mapped.rows[0].comparisons.find(({ id }) => id === "type")?.target,
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+        ?.target,
     ).toBe("Anthropic")
     expect(
-      mapped.rows[0].comparisons.find(({ id }) => id === "groups")?.target,
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+        ?.target,
     ).toBe("Platform default group (if available)")
-    expect(mapped.rows[0].warningText).toEqual([
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
       "Source groups are not copied. Check the target platform's default group after migration.",
     ])
   })
@@ -534,7 +542,7 @@ describe("managedResourceMigrationPresentation", () => {
       },
       { t },
     )
-    expect(mapped.items[0].message).toBe(
+    expect(atIndex(mapped.items, 0).message).toBe(
       "Retrieve the key from the source dashboard and migrate this channel manually.",
     )
   })
@@ -553,16 +561,14 @@ describe("managedResourceMigrationPresentation", () => {
       "opaque:row/beta",
       "opaque:row/alpha",
     ])
-    expect(mapped.rows[0].comparisons.map((field) => field.id)).toEqual([
-      "keyCount",
-      "baseUrl",
-      "type",
-      "models",
-      "groups",
-      "status",
-    ])
     expect(
-      mapped.rows[0].comparisons.map(({ source, target }) => [source, target]),
+      atIndex(mapped.rows, 0).comparisons.map((field) => field.id),
+    ).toEqual(["keyCount", "baseUrl", "type", "models", "groups", "status"])
+    expect(
+      atIndex(mapped.rows, 0).comparisons.map(({ source, target }) => [
+        source,
+        target,
+      ]),
     ).toEqual([
       ["1", "1"],
       [
@@ -597,7 +603,7 @@ describe("managedResourceMigrationPresentation", () => {
       "No rollback",
       "Create only",
     ])
-    expect(mapped.rows[0].warningText).toEqual([
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
       "Drops advanced settings",
       "Target remaps type",
     ])
@@ -606,9 +612,9 @@ describe("managedResourceMigrationPresentation", () => {
       blockedReason: "Source type unsupported",
       blockedMessage: undefined,
     })
-    expect(mapped.rows[1].comparisons).toHaveLength(6)
+    expect(atIndex(mapped.rows, 1).comparisons).toHaveLength(6)
     expect(
-      mapped.rows[1].comparisons.every(
+      atIndex(mapped.rows, 1).comparisons.every(
         ({ source, target, status }) =>
           source === "" && target === "" && status === "unsupported",
       ),
@@ -633,7 +639,7 @@ describe("managedResourceMigrationPresentation", () => {
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
       malformedWarning,
     ]
-    const readyItem = preview.items[0]
+    const readyItem = atIndex(preview.items, 0)
     const matrix = {
       ...preview,
       generalWarningCodes: [
@@ -660,14 +666,14 @@ describe("managedResourceMigrationPresentation", () => {
           warningCodes: [],
         },
         {
-          ...preview.items[1],
+          ...atIndex(preview.items, 1),
           blockingReasonCode:
             MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
         },
         {
-          ...preview.items[1],
+          ...atIndex(preview.items, 1),
           selection: {
-            ...preview.items[1].selection,
+            ...atIndex(preview.items, 1).selection,
             selectionId: "opaque:source-resolution",
             displayName: "Source resolution",
           },
@@ -690,7 +696,7 @@ describe("managedResourceMigrationPresentation", () => {
       "No rollback",
       "Create only",
     ])
-    expect(mapped.rows[0].warningText).toEqual([
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
       "Drops model mapping",
       "Drops status mapping",
       "Drops advanced settings",
@@ -726,7 +732,7 @@ describe("managedResourceMigrationPresentation", () => {
       ...preview,
       items: [
         {
-          ...preview.items[1],
+          ...atIndex(preview.items, 1),
           blockingReasonCode: "backend-stack-secret",
         },
       ],
@@ -740,7 +746,7 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.rows[0].blockedReason).toBe(
+    expect(atIndex(mapped.rows, 0).blockedReason).toBe(
       "Source access could not be verified",
     )
     expect(JSON.stringify(mapped)).not.toContain("backend-stack-secret")
@@ -807,8 +813,8 @@ describe("managedResourceMigrationPresentation", () => {
       "Skipped",
       "Uncertain",
     ])
-    expect(mapped.items[2].message).toBe("Source type unsupported")
-    expect(mapped.items[3].message).toBe(
+    expect(atIndex(mapped.items, 2).message).toBe("Source type unsupported")
+    expect(atIndex(mapped.items, 3).message).toBe(
       "Verify the target and refresh before continuing.",
     )
     expect(mapped.refreshRequired).toBe(true)

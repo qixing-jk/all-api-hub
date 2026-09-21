@@ -12,6 +12,7 @@ import {
   removePermissionDetailed,
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   containsPermissionsMock,
@@ -340,12 +341,12 @@ describe("permissionManager", () => {
     expect(permissionsAddedCallbacks).toHaveLength(1)
     expect(permissionsRemovedCallbacks).toHaveLength(1)
 
-    permissionsAddedCallbacks[0]({ permissions: ["tabs"] })
-    permissionsRemovedCallbacks[0]({ permissions: [] })
+    atIndex(permissionsAddedCallbacks, 0)({ permissions: ["tabs"] })
+    atIndex(permissionsRemovedCallbacks, 0)({ permissions: [] })
     expect(callback).not.toHaveBeenCalled()
 
-    permissionsAddedCallbacks[0]({ permissions: ["clipboardRead"] })
-    permissionsRemovedCallbacks[0]({ permissions: ["cookies"] })
+    atIndex(permissionsAddedCallbacks, 0)({ permissions: ["clipboardRead"] })
+    atIndex(permissionsRemovedCallbacks, 0)({ permissions: ["cookies"] })
     expect(callback).toHaveBeenCalledTimes(2)
 
     unsubscribe()

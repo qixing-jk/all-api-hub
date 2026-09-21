@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { NativeResourceEditorBody } from "~/features/ResourceEditor/NativeResourceEditorBody"
 import type { ResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
 import type { ResourceFieldIssue } from "~/services/apiAdapters/contracts/resourceNative"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 const policy: ResourceEditorFieldPolicy<"models"> = {
@@ -81,7 +82,10 @@ describe("structured resource text entries", () => {
       "model-a  =  alias-a\nmodel-b\nmodel-c",
     )
     await user.click(
-      screen.getAllByRole("button", { name: "ui:textEntries.remove" })[1],
+      atIndex(
+        screen.getAllByRole("button", { name: "ui:textEntries.remove" }),
+        1,
+      ),
     )
     expect(onChange).toHaveBeenLastCalledWith("model-a  =  alias-a\nmodel-c")
   })
@@ -125,7 +129,7 @@ describe("structured resource text entries", () => {
           ...policy,
           fields: [
             {
-              ...policy.fields[0],
+              ...atIndex(policy.fields, 0),
               textEntries: {
                 separator: ":",
                 resolveKeyLabel: () => "Header",

@@ -9,6 +9,7 @@ import {
   SNAPSHOT_STATUS_FILTER,
 } from "~/features/AutoCheckin/utils/snapshotFilters"
 import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const snapshot = (
   overrides: Partial<AutoCheckinAccountSnapshot> = {},
@@ -121,7 +122,7 @@ describe("auto-checkin snapshot readiness categories", () => {
 
     expect(
       filterAutoCheckinSnapshots(
-        [matchingRows[0], nonMatchingRow, matchingRows[1]],
+        [atIndex(matchingRows, 0), nonMatchingRow, atIndex(matchingRows, 1)],
         SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE,
         SNAPSHOT_STATUS_FILTER.SKIPPED,
         "",

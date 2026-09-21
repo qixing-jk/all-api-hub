@@ -7,6 +7,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { server } from "~~/tests/msw/server"
 import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const baseUrl = "https://verification-modes.example.invalid"
 
@@ -286,7 +287,7 @@ describe("verification mode boundaries", () => {
   })
 
   it("applies the selected mode to suite generation without labeling the models request", async () => {
-    const fixture = fixtures[1]
+    const fixture = atIndex(fixtures, 1)
     const requests = mockGeneration(fixture)
     server.use(
       http.get(baseUrl + "/v1/models", () =>

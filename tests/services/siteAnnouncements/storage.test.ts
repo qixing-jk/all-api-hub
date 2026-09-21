@@ -10,6 +10,7 @@ import {
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import type { SiteAnnouncementStoreState } from "~/types/siteAnnouncements"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function getSiteAnnouncementStorageBackend() {
   return (siteAnnouncementStorage as unknown as { storage: Storage }).storage
@@ -125,7 +126,7 @@ describe("siteAnnouncementStorage", () => {
     expect(repeated).toHaveLength(0)
     const records = await siteAnnouncementStorage.listRecords()
     expect(records).toHaveLength(1)
-    expect(records[0].lastSeenAt).toBe(2000)
+    expect(atIndex(records, 0).lastSeenAt).toBe(2000)
   })
 
   it.each([
@@ -1488,7 +1489,7 @@ describe("siteAnnouncementStorage", () => {
     expect(
       stored.some((record) => record.fingerprint === "announcement-0"),
     ).toBe(false)
-    await siteAnnouncementStorage.markRead(stored[0].id)
+    await siteAnnouncementStorage.markRead(atIndex(stored, 0).id)
     expect(await siteAnnouncementStorage.listRecords()).toHaveLength(100)
     expect(
       await siteAnnouncementStorage.upsertDiscoveredRecords({
@@ -1499,7 +1500,7 @@ describe("siteAnnouncementStorage", () => {
     ).toEqual([])
     expect(
       (await siteAnnouncementStorage.listRecords()).find(
-        (record) => record.id === stored[0].id,
+        (record) => record.id === atIndex(stored, 0).id,
       )?.read,
     ).toBe(true)
   })
@@ -1532,7 +1533,9 @@ describe("siteAnnouncementStorage", () => {
       firstPersistedStore!.identityLedger["site-0"]?.["0".repeat(64)],
     ).toBeUndefined()
     expect(
-      firstPersistedStore!.identityLedger["site-10"]["2710".padStart(64, "0")],
+      atIndex(firstPersistedStore!.identityLedger, "site-10")[
+        "2710".padStart(64, "0")
+      ],
     ).toBeUndefined()
 
     setSpy.mockClear()

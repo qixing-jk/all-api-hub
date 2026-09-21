@@ -21,6 +21,7 @@ import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const storageData = new Map<string, any>()
 
@@ -1158,18 +1159,20 @@ describe("channelConfigStorage", () => {
       configs[getManagedUpstreamResourceRefKey(valid.resourceRef)],
     ).toEqual(valid)
     expect(
-      configs[
+      atIndex(
+        configs,
         getManagedUpstreamResourceRefKey(
           createRef("https://invalid-rules.example.invalid"),
-        )
-      ].modelFilterSettings.rules,
+        ),
+      ).modelFilterSettings.rules,
     ).toEqual([])
     expect(
-      configs[
+      atIndex(
+        configs,
         getManagedUpstreamResourceRefKey(
           createRef("https://reversed-time.example.invalid"),
-        )
-      ].modelFilterSettings.rules[0],
+        ),
+      ).modelFilterSettings.rules[0],
     ).toMatchObject({ createdAt: 200, updatedAt: 200 })
   })
 

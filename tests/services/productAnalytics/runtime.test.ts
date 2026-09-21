@@ -14,6 +14,7 @@ import {
   setupProductAnalyticsMessagingListeners,
   setupProductAnalyticsPreferencesChangeListener,
 } from "~/services/productAnalytics/runtime"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   captureMock,
@@ -518,7 +519,7 @@ describe("product analytics runtime", () => {
     )
 
     const cleanup = setupProductAnalyticsAccountChangeListener()
-    const handler = addListener.mock.calls[0][0]
+    const handler = atIndex(addListener.mock.calls, 0)[0]
 
     handler({ site_accounts: {} }, "sync")
     handler({ other_key: {} }, "local")
@@ -549,7 +550,7 @@ describe("product analytics runtime", () => {
     )
 
     const cleanup = setupProductAnalyticsPreferencesChangeListener()
-    const handler = addListener.mock.calls[0][0]
+    const handler = atIndex(addListener.mock.calls, 0)[0]
 
     handler({ user_preferences: {} }, "sync")
     handler({ other_key: {} }, "local")
@@ -581,7 +582,7 @@ describe("product analytics runtime", () => {
 
     const firstCleanup = setupProductAnalyticsPreferencesChangeListener()
     const secondCleanup = setupProductAnalyticsPreferencesChangeListener()
-    const handler = addListener.mock.calls[0][0]
+    const handler = atIndex(addListener.mock.calls, 0)[0]
 
     expect(addListener).toHaveBeenCalledTimes(1)
 
@@ -610,7 +611,7 @@ describe("product analytics runtime", () => {
 
     const firstCleanup = setupProductAnalyticsAccountChangeListener()
     const secondCleanup = setupProductAnalyticsAccountChangeListener()
-    const handler = addListener.mock.calls[0][0]
+    const handler = atIndex(addListener.mock.calls, 0)[0]
 
     expect(addListener).toHaveBeenCalledTimes(1)
 

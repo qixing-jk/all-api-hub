@@ -15,7 +15,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "noUncheckedIndexedAccess": false,
+    // Indexed reads are checked for src, tests, and e2e.
+    "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noEmit": true,
     "jsx": "react-jsx",

@@ -48,6 +48,8 @@ import {
 } from "~~/tests/test-utils/accountTodayStats"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 
 const storageData = new Map<string, any>()
 
@@ -558,13 +560,13 @@ describe("accountStorage core behaviors", () => {
 
     const accounts = await accountStorage.getAllAccounts()
     expect(accounts).toHaveLength(1)
-    expect(accounts[0].tagIds).toHaveLength(1)
+    expect(atIndex(accounts, 0).tagIds).toHaveLength(1)
     expect((accounts[0] as any).tags).toBeUndefined()
 
     const persistedConfig = storageData.get(
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
-    expect(persistedConfig.accounts[0].tagIds).toHaveLength(1)
+    expect(atIndex(persistedConfig.accounts, 0).tagIds).toHaveLength(1)
     expect((persistedConfig.accounts[0] as any).tags).toBeUndefined()
 
     const persistedTagStore = storageData.get("global_tag_store") as any
@@ -691,8 +693,14 @@ describe("accountStorage core behaviors", () => {
     delete generic.account_info.todayStatsAvailability
     delete aihubmix.account_info.todayStatsAvailability
 
-    const [genericDisplay, aihubmixDisplay] =
-      accountStorage.convertToDisplayData([generic, aihubmix])
+    const destructuredSource0 = accountStorage.convertToDisplayData([
+      generic,
+      aihubmix,
+    ])
+    const [genericDisplay, aihubmixDisplay] = [
+      atIndex(destructuredSource0, 0),
+      atIndex(destructuredSource0, 1),
+    ]
 
     expect(genericDisplay.todayStatsAvailability).toEqual({
       consumption: {
@@ -1260,7 +1268,7 @@ describe("accountStorage core behaviors", () => {
     const persisted = storageData.get(
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
-    expect(persisted.accounts[0].site_name).toBe("Before")
+    expect(atIndex(persisted.accounts, 0).site_name).toBe("Before")
   })
 
   it("addAccount preserves its rejection when the storage write fails", async () => {
@@ -5257,8 +5265,8 @@ describe("accountStorage bookmarks", () => {
       const persisted = storageData.get(
         ACCOUNT_STORAGE_KEYS.ACCOUNTS,
       ) as AccountStorageConfig
-      expect(persisted.accounts[0].disabled).toBe(false)
-      expect(persisted.accounts[0].excludeFromTotalBalance).toBe(false)
+      expect(atIndex(persisted.accounts, 0).disabled).toBe(false)
+      expect(atIndex(persisted.accounts, 0).excludeFromTotalBalance).toBe(false)
     })
 
     it("getAccountById migrates legacy accounts without changing user update time", async () => {
@@ -5289,8 +5297,8 @@ describe("accountStorage bookmarks", () => {
         const persisted = storageData.get(
           ACCOUNT_STORAGE_KEYS.ACCOUNTS,
         ) as AccountStorageConfig
-        expect(persisted.accounts[0].updated_at).toBe(100)
-        expect(persisted.accounts[0].user_updated_at).toBe(100)
+        expect(atIndex(persisted.accounts, 0).updated_at).toBe(100)
+        expect(atIndex(persisted.accounts, 0).user_updated_at).toBe(100)
       } finally {
         vi.useRealTimers()
       }
@@ -5339,8 +5347,8 @@ describe("accountStorage bookmarks", () => {
         const persisted = storageData.get(
           ACCOUNT_STORAGE_KEYS.ACCOUNTS,
         ) as AccountStorageConfig
-        expect(persisted.accounts[0].updated_at).toBe(200)
-        expect(persisted.accounts[0].user_updated_at).toBe(200)
+        expect(atIndex(persisted.accounts, 0).updated_at).toBe(200)
+        expect(atIndex(persisted.accounts, 0).user_updated_at).toBe(200)
       } finally {
         vi.useRealTimers()
       }
@@ -5474,7 +5482,7 @@ describe("accountStorage bookmarks", () => {
         ACCOUNT_STORAGE_KEYS.ACCOUNTS,
       ) as AccountStorageConfig
       expect(restored.accounts).toHaveLength(1)
-      expect(restored.accounts[0].id).toBe("backup-1")
+      expect(atIndex(restored.accounts, 0).id).toBe("backup-1")
       expect(restored.bookmarks).toEqual([backupBookmark])
       expect(restored.pinnedAccountIds).toEqual(["backup-1", "bookmark-1"])
       expect(restored.orderedAccountIds).toEqual(["bookmark-1", "backup-1"])

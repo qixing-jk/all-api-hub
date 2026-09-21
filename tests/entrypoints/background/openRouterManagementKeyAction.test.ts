@@ -9,6 +9,7 @@ import {
 } from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const originalBrowser = (globalThis as any).browser
 const EXPECTED_TRACKED_OPENROUTER_ACTION_IDS = 128
@@ -1238,7 +1239,7 @@ describe("OpenRouter Management Key background action", () => {
       },
     ])
     expect(JSON.stringify(summaries)).not.toContain("private")
-    expect(Object.keys(summaries[0])).toEqual([
+    expect(Object.keys(atIndex(summaries, 0))).toEqual([
       "requestId",
       "certainty",
       "cancellationAccepted",

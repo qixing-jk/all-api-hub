@@ -17,6 +17,7 @@ import { AuthTypeEnum } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -123,7 +124,7 @@ describe("CursorPlusExportDialog", () => {
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
-    const payload = JSON.parse(writeText.mock.calls[0][0])
+    const payload = JSON.parse(atIndex(writeText.mock.calls, 0)[0])
     expect(payload).toMatchObject({
       name: "Example Account - Example key",
       type: "openai-chat",
@@ -177,7 +178,7 @@ describe("CursorPlusExportDialog", () => {
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
-    expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({
+    expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0])).toMatchObject({
       id: "profile-provider-profile-provider-1aaa1c25",
       name: "Profile Provider - Profile Provider",
       baseUrl: "https://profile.example.invalid/v1",
@@ -216,7 +217,7 @@ describe("CursorPlusExportDialog", () => {
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
-    expect(JSON.parse(writeText.mock.calls[0][0]).models).toEqual([
+    expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0]).models).toEqual([
       { id: "manual/one", apiModel: "manual/one", defaultOn: true },
       { id: "manual/two", apiModel: "manual/two", defaultOn: true },
     ])
@@ -316,7 +317,7 @@ describe("CursorPlusExportDialog", () => {
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
-    expect(JSON.parse(writeText.mock.calls[0][0]).models).toEqual([
+    expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0]).models).toEqual([
       { id: "model-b", apiModel: "model-b", defaultOn: true },
     ])
     expect(startActionMock).toHaveBeenCalledWith(analyticsContext)
@@ -361,7 +362,7 @@ describe("CursorPlusExportDialog", () => {
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
-    expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({
+    expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0])).toMatchObject({
       type: "gemini",
       baseUrl: "https://api.example.invalid/gemini/v1beta",
     })
@@ -458,7 +459,7 @@ describe("CursorPlusExportDialog", () => {
 
     await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
-    expect(JSON.parse(writeText.mock.calls[0][0]).auth).toEqual({
+    expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0]).auth).toEqual({
       kind: "apiKey",
       value: "rotated-key",
     })

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type RuntimeMessageListener = (
   message: unknown,
@@ -45,7 +46,7 @@ function createRuntimeMock() {
     sendMessage,
     tabsSendMessage,
     getListener: () => {
-      const listener = Array.from(listeners)[0]
+      const listener = atIndex(Array.from(listeners), 0)
       expect(listener).toBeTypeOf("function")
       return listener
     },

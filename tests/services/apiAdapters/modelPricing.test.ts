@@ -6,6 +6,7 @@ import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPri
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockAihubmixFetchModelPricing,
@@ -107,7 +108,7 @@ describe("apiAdapter modelPricing", () => {
       ...pricingResponse,
       data: [
         {
-          ...pricingResponse.data[0],
+          ...atIndex(pricingResponse.data, 0),
           vendorEvidence: {
             kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
             name: "Example Publisher",

@@ -8,6 +8,7 @@ import {
   useIsSmallScreen,
   useMediaQuery,
 } from "~/hooks/useMediaQuery"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("useMediaQuery", () => {
   let matchMediaMock: any
@@ -77,7 +78,7 @@ describe("useMediaQuery", () => {
     const { result } = renderHook(() => useMediaQuery("(max-width: 1px)"))
     expect(result.current).toBe(false)
 
-    const changeHandler = addEventListenerMock.mock.calls[0][1]
+    const changeHandler = atIndex(addEventListenerMock.mock.calls, 0)[1]
 
     // Wrap the state update in act to ensure React processes it
     await act(async () => {
@@ -104,7 +105,7 @@ describe("useMediaQuery", () => {
 
     expect(addListenerMock).toHaveBeenCalledWith(expect.any(Function))
 
-    const changeHandler = addListenerMock.mock.calls[0][0]
+    const changeHandler = atIndex(addListenerMock.mock.calls, 0)[0]
 
     await act(async () => {
       changeHandler({ matches: true } as MediaQueryListEvent)

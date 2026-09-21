@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 import UsageHistorySyncSettingsSection from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncSettingsSection"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const noop = vi.fn()
@@ -59,7 +60,7 @@ describe("UsageHistorySyncSettingsSection", () => {
         withUserPreferencesProvider: false,
         withThemeProvider: false,
       })
-      const interval = screen.getAllByRole("spinbutton")[1]
+      const interval = atIndex(screen.getAllByRole("spinbutton"), 1)
       await user.clear(interval)
       await user.type(interval, "2")
       await user.click(
@@ -114,7 +115,7 @@ describe("UsageHistorySyncSettingsSection", () => {
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
-    const interval = screen.getAllByRole("spinbutton")[1]
+    const interval = atIndex(screen.getAllByRole("spinbutton"), 1)
     await user.clear(interval)
     const reset = screen.getByRole("button", { name: "common:actions.reset" })
     expect(reset).toBeEnabled()
@@ -151,7 +152,7 @@ describe("UsageHistorySyncSettingsSection", () => {
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
-    await user.click(screen.getAllByRole("spinbutton")[1])
+    await user.click(atIndex(screen.getAllByRole("spinbutton"), 1))
     await user.click(screen.getByText("usageAnalytics:syncTab.settingsTitle"))
     expect(commit).not.toHaveBeenCalled()
   })
@@ -184,8 +185,8 @@ describe("UsageHistorySyncSettingsSection", () => {
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
-    await user.clear(screen.getAllByRole("spinbutton")[1])
-    await user.type(screen.getAllByRole("spinbutton")[1], "2")
+    await user.clear(atIndex(screen.getAllByRole("spinbutton"), 1))
+    await user.type(atIndex(screen.getAllByRole("spinbutton"), 1), "2")
     await user.tab()
     await user.click(screen.getByText("usageAnalytics:syncTab.settingsTitle"))
     expect(commit).toHaveBeenCalledExactlyOnceWith(120)
@@ -225,7 +226,7 @@ describe("UsageHistorySyncSettingsSection", () => {
       "#usage-history-sync-interval-hours",
     )
 
-    fireEvent.change(screen.getAllByRole("spinbutton")[1], {
+    fireEvent.change(atIndex(screen.getAllByRole("spinbutton"), 1), {
       target: { value: "2" },
     })
     expect(change).toHaveBeenCalledExactlyOnceWith(120)

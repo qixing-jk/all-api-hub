@@ -22,6 +22,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const TEST_PAGE_URL = "https://api-console.example.test/console"
 const TEST_PAGE_ORIGIN = "https://api-console.example.test"
@@ -300,7 +301,7 @@ test("turns selected web API credentials into a verified profile and model catal
     }),
   ])
 
-  const profileId = profileConfig.profiles[0].id
+  const profileId = atIndex(profileConfig.profiles, 0).id
   expect(profileId).toBeTruthy()
 
   const popupPage = await context.newPage()

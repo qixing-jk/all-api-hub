@@ -42,6 +42,7 @@ import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   toastSuccessMock: vi.fn(),
@@ -969,7 +970,7 @@ describe("useModelData all-accounts loading", () => {
           useModelData({
             selectedSource:
               scope === "single"
-                ? createAccountSource(accounts[0])
+                ? createAccountSource(atIndex(accounts, 0))
                 : createAllAccountsSource(),
             accounts,
           }),
@@ -2507,7 +2508,7 @@ describe("useModelData all-accounts loading", () => {
         runtimeKey: expect.objectContaining({
           id: "account_key_resource:sub2api-active-only:sub2api:account:21",
           label: "Active runtime key",
-          legacyTokenId: tokens[0].id,
+          legacyTokenId: atIndex(tokens, 0).id,
         }),
         abortSignal: expect.anything(),
       }),
@@ -4312,11 +4313,11 @@ describe("useModelData all-accounts loading", () => {
       expect(result.current.accountFallback?.runtimeKeys).toEqual([
         expect.objectContaining({
           id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:17",
-          legacyTokenId: fallbackTokens[0].id,
+          legacyTokenId: atIndex(fallbackTokens, 0).id,
         }),
         expect.objectContaining({
           id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
-          legacyTokenId: fallbackTokens[1].id,
+          legacyTokenId: atIndex(fallbackTokens, 1).id,
         }),
       ])
     })
@@ -4349,7 +4350,7 @@ describe("useModelData all-accounts loading", () => {
           account,
           runtimeKey: expect.objectContaining({
             id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
-            legacyTokenId: fallbackTokens[1].id,
+            legacyTokenId: atIndex(fallbackTokens, 1).id,
           }),
           abortSignal: expect.anything(),
         }),
@@ -5127,7 +5128,7 @@ describe("useModelData all-accounts loading", () => {
           account,
           runtimeKey: expect.objectContaining({
             id: "account_key_resource:fallback-account:unknown:account:2",
-            legacyTokenId: fallbackTokens[1].id,
+            legacyTokenId: atIndex(fallbackTokens, 1).id,
           }),
           abortSignal: expect.anything(),
         }),

@@ -32,6 +32,7 @@ import {
   setVisualDarkMode,
   setVisualThemeAttribute,
 } from "~~/e2e/utils/visualTheme"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const BALANCE_HISTORY_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BALANCE_HISTORY}`
@@ -218,9 +219,9 @@ test("filters balance history by tag/account and persists the selected currency"
           if (
             target.every(
               (channel, offset) =>
-                Math.abs(pixels[index + offset] - channel) < 4,
+                Math.abs(atIndex(pixels, index + offset) - channel) < 4,
             ) &&
-            pixels[index + 3] > 200
+            atIndex(pixels, index + 3) > 200
           )
             count++
         }

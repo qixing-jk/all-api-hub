@@ -16,6 +16,7 @@ import {
   OctopusOutboundType,
   type OctopusChannel,
 } from "~/types/octopus"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -65,7 +66,7 @@ describe("Octopus native resource", () => {
     }
     mocks.getChannel.mockResolvedValue(detail)
     const api = await octopusManagedResourceRegistration.open()
-    const item = (await api.list()).items[0]
+    const item = atIndex((await api.list()).items, 0)
     expect(item.keyCleanupBaseUrls).toEqual(
       channel.base_urls.map((entry) => entry.url),
     )
@@ -101,7 +102,7 @@ describe("Octopus native resource", () => {
     await expect(
       (await openOctopusNativeResourceOperations()).update(latest, { keys }),
     ).resolves.toMatchObject({ outcome: "succeeded" })
-    expect(mocks.updateChannel.mock.calls[1][1].keys).toEqual(
+    expect(atIndex(mocks.updateChannel.mock.calls, 1)[1].keys).toEqual(
       keys.map((key) => ({ ...key, originalName: key.name })),
     )
   })
@@ -128,7 +129,7 @@ describe("Octopus native resource", () => {
     const stored: OctopusChannel = {
       ...channel,
       keyManagement: "named",
-      keys: [{ ...requested[0], enabled: true }],
+      keys: [{ ...atIndex(requested, 0), enabled: true }],
     }
     const fixed = { ...stored, keys: requested }
     mocks.updateChannel
@@ -159,7 +160,7 @@ describe("Octopus native resource", () => {
       ["drift", "already-disabled", "read-failed"].includes(outcome) ? 1 : 2,
     )
     if (!["drift", "already-disabled", "read-failed"].includes(outcome))
-      expect(mocks.updateChannel.mock.calls[1][1]).toMatchObject({
+      expect(atIndex(mocks.updateChannel.mock.calls, 1)[1]).toMatchObject({
         id: channel.id,
         keys: [{ name: "added", originalName: "added", enabled: false }],
       })
@@ -172,7 +173,7 @@ describe("Octopus native resource", () => {
     const stored: OctopusChannel = {
       ...channel,
       keyManagement: "named",
-      keys: [{ ...requested[0], enabled: true }],
+      keys: [{ ...atIndex(requested, 0), enabled: true }],
     }
     const fixed = { ...stored, keys: requested }
     mocks.createChannel.mockResolvedValue({ success: true, data: stored })
@@ -272,7 +273,7 @@ describe("Octopus native resource", () => {
     for (const search of ["Primary outbound", "  PRIMARY  "]) {
       const page = await workspace.list({ search })
       expect(page.total).toBe(1)
-      expect(page.items[0].ref.resourceId).toBe("7")
+      expect(atIndex(page.items, 0).ref.resourceId).toBe("7")
     }
     expect((await workspace.list({ search: "   " })).total).toBe(2)
     expect(
@@ -324,7 +325,7 @@ describe("Octopus native resource", () => {
         }),
       )
       const workspace = await octopusManagedResourceRegistration.open()
-      const ref = (await workspace.list()).items[0].ref
+      const ref = atIndex((await workspace.list()).items, 0).ref
       const result = await workspace.delete(ref)
       expect(result).toMatchObject({
         outcome: "rejected",
@@ -339,7 +340,7 @@ describe("Octopus native resource", () => {
   it("deletes a channel with a confirmed effect and no response data", async () => {
     mocks.deleteChannel.mockResolvedValue({ success: true, data: null })
     const workspace = await octopusManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     expect(await workspace.delete(ref)).toMatchObject({
       outcome: "succeeded",
       data: undefined,
@@ -364,7 +365,7 @@ describe("Octopus native resource", () => {
   it("rejects unsupported secret and model loader fields", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(editor.loadSecret!(fields.Name)).rejects.toMatchObject({
       failure: { code: "validation_failed" },
@@ -381,12 +382,12 @@ describe("Octopus native resource", () => {
     mocks.fetchRemoteModels.mockResolvedValue(["model-b"])
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(
       await editor.loadOptions!(fields.Models, editor.initialValues),
     ).toEqual([{ value: "model-b" }])
-    expect(mocks.fetchRemoteModels.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.fetchRemoteModels.mock.calls, 0)[1]).toMatchObject({
       key: "primary-placeholder",
       proxy: true,
     })
@@ -470,7 +471,7 @@ describe("Octopus native resource", () => {
   it("normalizes models and submits changed type and enabled state", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await editor.submit({
       ...editor.initialValues,
@@ -478,7 +479,7 @@ describe("Octopus native resource", () => {
       [fields.Status]: "disabled",
       [fields.Models]: [" model-b ", "model-b", "model-c"],
     })
-    expect(mocks.updateChannel.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.updateChannel.mock.calls, 0)[1]).toMatchObject({
       type: 0,
       enabled: false,
       model: "model-b,model-c",
@@ -489,14 +490,16 @@ describe("Octopus native resource", () => {
     async (models) => {
       const workspace = await octopusManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       const result = await editor.submit({
         ...editor.initialValues,
         [fields.Models]: models,
       })
       expect(result.outcome).toBe("succeeded")
-      expect(mocks.updateChannel.mock.calls[0][1]).toMatchObject({ model: "" })
+      expect(atIndex(mocks.updateChannel.mock.calls, 0)[1]).toMatchObject({
+        model: "",
+      })
     },
   )
   it("shows a missing primary credential as unavailable rather than masked", async () => {
@@ -508,7 +511,7 @@ describe("Octopus native resource", () => {
     })
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(
       editor.fields.find((field) => field.fieldId === fields.Key),
@@ -542,7 +545,7 @@ describe("Octopus native resource", () => {
       outcome: "succeeded",
       data: { displayName: "Example", status: "disabled" },
     })
-    expect(mocks.createChannel.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.createChannel.mock.calls, 0)[1]).toMatchObject({
       type: 0,
       enabled: false,
       key: "secret-placeholder",
@@ -567,9 +570,9 @@ describe("Octopus native resource", () => {
         [fields.Key]: { kind: "replace", value: "draft-placeholder" },
       }),
     ).toEqual([{ value: "model-a" }])
-    expect(mocks.fetchRemoteModels.mock.calls[0][1]).not.toHaveProperty(
-      "source",
-    )
+    expect(
+      atIndex(mocks.fetchRemoteModels.mock.calls, 0)[1],
+    ).not.toHaveProperty("source")
   })
   it("keeps useful private read diagnostics while redacting known credentials", async () => {
     mocks.listChannels.mockRejectedValue(
@@ -666,7 +669,7 @@ describe("Octopus native resource", () => {
     mocks.getChannel.mockResolvedValue(detail)
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(editor.loadSecret!("key:10")).resolves.toBe("second-secret")
     await editor.submit({
@@ -715,7 +718,7 @@ describe("Octopus native resource", () => {
       mocks.getChannel.mockResolvedValue(detail)
       const workspace = await octopusManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       if (scenario === "single")
         mocks.getChannel.mockResolvedValue({
@@ -748,7 +751,7 @@ describe("Octopus native resource", () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const create = await workspace.openCreateEditor()
     const edit = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     for (const editor of [create, edit])
       expect(
@@ -759,7 +762,7 @@ describe("Octopus native resource", () => {
   it("exposes native type and never exposes keys in facts", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const page = await workspace.list()
-    expect(page.items[0].fields).toContainEqual({
+    expect(atIndex(page.items, 0).fields).toContainEqual({
       fieldId: fields.Type,
       kind: "text",
       value: "2",
@@ -769,10 +772,10 @@ describe("Octopus native resource", () => {
   })
   it("updates only changed fields using the fresh native source", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
     await editor.submit({ ...editor.initialValues, [fields.Name]: "Renamed" })
-    expect(mocks.updateChannel.mock.calls[0][1]).toEqual({
+    expect(atIndex(mocks.updateChannel.mock.calls, 0)[1]).toEqual({
       id: 7,
       name: "Renamed",
       source: channel,
@@ -782,7 +785,7 @@ describe("Octopus native resource", () => {
     mocks.getChannel.mockResolvedValue({ ...channel, type: 90 })
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(editor.initialValues[fields.Type]).toBe("90")
     expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
@@ -804,7 +807,7 @@ describe("Octopus native resource", () => {
   })
   it("rejects scope mismatches before reading or mutating", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     await expect(
       workspace.get({ ...ref, scopeKey: "https://other.example.invalid" }),
     ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
@@ -821,7 +824,7 @@ describe("Octopus native resource", () => {
       },
     ])
     const workspace = await octopusManagedResourceRegistration.open()
-    const row = (await workspace.list()).items[0]
+    const row = atIndex((await workspace.list()).items, 0)
     expect(row.fields.some((field) => field.fieldId === fields.Type)).toBe(
       false,
     )
@@ -840,7 +843,7 @@ describe("Octopus native resource", () => {
   it("loads a usable secret on demand and rejects masked credentials", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(editor.loadSecret!(fields.Key)).rejects.toMatchObject({
       failure: { code: "unavailable" },
@@ -857,7 +860,7 @@ describe("Octopus native resource", () => {
     mocks.fetchRemoteModels.mockResolvedValue(["model-b"])
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(
       editor.fields.find((field) => field.fieldId === fields.Models),
@@ -878,17 +881,17 @@ describe("Octopus native resource", () => {
         options,
       ),
     ).toEqual([{ value: "model-b" }])
-    expect(mocks.fetchRemoteModels.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.fetchRemoteModels.mock.calls, 0)[1]).toMatchObject({
       type: 2,
       key: "secret-placeholder",
       source: channel,
     })
-    expect(mocks.fetchRemoteModels.mock.calls[0][2]).toBe(options)
+    expect(atIndex(mocks.fetchRemoteModels.mock.calls, 0)[2]).toBe(options)
   })
   it("preserves new secondary endpoints and credentials from the submit-time detail", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const latest = {
       ...channel,
@@ -900,7 +903,7 @@ describe("Octopus native resource", () => {
       [fields.BaseUrl]: "https://new.example.invalid",
       [fields.Key]: { kind: "replace", value: "replacement-placeholder" },
     })
-    expect(mocks.updateChannel.mock.calls[0][1]).toEqual({
+    expect(atIndex(mocks.updateChannel.mock.calls, 0)[1]).toEqual({
       id: 7,
       baseUrl: "https://new.example.invalid",
       key: "replacement-placeholder",
@@ -922,7 +925,7 @@ describe("Octopus native resource", () => {
     )
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const result = await editor.submit({
       ...editor.initialValues,
@@ -952,7 +955,7 @@ describe("Octopus native resource", () => {
   it("rejects aborted submission before dispatch", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const controller = new AbortController()
     controller.abort()

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 const mocks = vi.hoisted(() => ({
   generateText: vi.fn(),
   createModel: vi.fn(),
@@ -750,8 +752,8 @@ describe("AI API verification probes", () => {
         modelId: "gpt-4.1",
       })
 
-      const toolDefinition =
-        mocks.generateText.mock.calls[0][0].tools.verify_tool
+      const toolDefinition = atIndex(mocks.generateText.mock.calls, 0)[0].tools
+        .verify_tool
       await expect(toolDefinition.execute()).resolves.toEqual({
         now: expect.any(String),
       })

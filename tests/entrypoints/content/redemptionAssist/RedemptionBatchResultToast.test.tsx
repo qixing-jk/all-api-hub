@@ -11,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { trackStartedMock, startActionMock, completeActionMock } = vi.hoisted(
   () => ({
@@ -76,9 +77,12 @@ describe("RedemptionBatchResultToast", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.close" }),
     )
-    const [firstRetryButton] = screen.getAllByRole("button", {
-      name: "common:actions.retry",
-    })
+    const firstRetryButton = atIndex(
+      screen.getAllByRole("button", {
+        name: "common:actions.retry",
+      }),
+      0,
+    )
     await user.click(firstRetryButton)
 
     const retryingButton = screen.getByRole("button", {

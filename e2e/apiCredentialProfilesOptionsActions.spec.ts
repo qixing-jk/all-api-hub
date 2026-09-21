@@ -41,6 +41,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const CLIPBOARD_WRITES_KEY = "__aah_e2e_profile_clipboard_writes__"
 
@@ -577,7 +578,9 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   expect(v7Settings._meta?.version).toBe(1)
   const providerEntries = Object.entries(v7Settings.provider ?? {})
   expect(providerEntries).toHaveLength(1)
-  const [providerId, provider] = providerEntries[0]
+  const indexedItems = providerEntries[0]
+  const providerId = atIndex(indexedItems, 0)
+  const provider = atIndex(indexedItems, 1)
   expect(provider.name).toBe(profileName)
   expect(providerId).not.toBe(profileName)
   expect(provider).toMatchObject({

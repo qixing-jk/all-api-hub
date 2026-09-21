@@ -42,6 +42,7 @@ import type { CheckInConfig } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function markSelectedCheckInExecuted(input: {
   config: CheckInConfig
@@ -879,7 +880,7 @@ describe("check-in methods compatibility activation", () => {
     expect(getStatus).toHaveBeenCalledOnce()
     expect(checkInRequest).toHaveBeenCalledOnce()
     expect(getStatus.mock.invocationCallOrder[0]).toBeLessThan(
-      checkInRequest.mock.invocationCallOrder[0],
+      atIndex(checkInRequest.mock.invocationCallOrder, 0),
     )
   })
 

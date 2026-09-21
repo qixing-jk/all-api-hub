@@ -44,6 +44,7 @@ import { openSettingsTab } from "~/utils/navigation"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
   render,
@@ -888,9 +889,11 @@ describe("AccountList", () => {
       "Unsynced Delta",
       "Disabled Beta",
     ])
-    expect(rows[0].closest(".relative")).toHaveClass("bg-surface-subtle")
-    expect(rows[1].closest(".relative")).toHaveClass("border-t-4")
-    expect(rows[3].closest(".relative")).toHaveClass("opacity-40")
+    expect(atIndex(rows, 0).closest(".relative")).toHaveClass(
+      "bg-surface-subtle",
+    )
+    expect(atIndex(rows, 1).closest(".relative")).toHaveClass("border-t-4")
+    expect(atIndex(rows, 3).closest(".relative")).toHaveClass("opacity-40")
     expect(document.querySelector(".space-y-0")).toBeInTheDocument()
   })
 
@@ -1416,7 +1419,10 @@ describe("AccountList", () => {
       pinnedAccountIds: ["enabled-alpha", "enabled-gamma"],
       sortField: null,
     })
-    const [alpha, beta, gamma, delta] = contextValue.sortedData
+    const alpha = atIndex(contextValue.sortedData, 0)
+    const beta = atIndex(contextValue.sortedData, 1)
+    const gamma = atIndex(contextValue.sortedData, 2)
+    const delta = atIndex(contextValue.sortedData, 3)
     contextValue.sortedData = [alpha, gamma, beta, delta]
     mockUseAccountDataContext.mockReturnValue(contextValue)
 
@@ -1453,7 +1459,10 @@ describe("AccountList", () => {
       pinnedAccountIds: ["enabled-alpha", "enabled-gamma"],
       sortField: null,
     })
-    const [alpha, beta, gamma, delta] = contextValue.sortedData
+    const alpha = atIndex(contextValue.sortedData, 0)
+    const beta = atIndex(contextValue.sortedData, 1)
+    const gamma = atIndex(contextValue.sortedData, 2)
+    const delta = atIndex(contextValue.sortedData, 3)
     contextValue.sortedData = [delta, alpha, beta, gamma]
     mockUseAccountDataContext.mockReturnValue(contextValue)
 
@@ -1640,8 +1649,10 @@ describe("AccountList", () => {
         },
       })
     })
-    const completionPayload =
-      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    const completionPayload = atIndex(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+      0,
+    )[0]
     expect(completionPayload).not.toHaveProperty("accountIds")
     expect(completionPayload).not.toHaveProperty("fromAccountId")
     expect(completionPayload).not.toHaveProperty("toAccountId")
@@ -1751,9 +1762,12 @@ describe("AccountList", () => {
     expect(screen.getByTestId(TEST_IDS.sortableContext)).toBeInTheDocument()
     expect(useSortableMock).toHaveBeenCalled()
 
-    const sortableHandle = screen.getAllByRole("button", {
-      name: "account:list.dragHandle",
-    })[0]
+    const sortableHandle = atIndex(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      }),
+      0,
+    )
     const sortableWrapper = sortableHandle.closest("div[style]")
 
     expect(sortableWrapper).toHaveClass("relative", "z-10")
@@ -1895,7 +1909,7 @@ describe("AccountList", () => {
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getAllByRole("button", { name: "account:bulk.exit" })[0],
+      atIndex(screen.getAllByRole("button", { name: "account:bulk.exit" }), 0),
     )
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
@@ -2299,9 +2313,9 @@ describe("AccountList", () => {
     trackProductAnalyticsActionStartedMock.mockClear()
     trackProductAnalyticsActionCompletedMock.mockClear()
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(
-      screen.getAllByRole("button", { name: "account:bulk.exit" })[0],
+      atIndex(screen.getAllByRole("button", { name: "account:bulk.exit" }), 0),
     )
 
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
@@ -2327,7 +2341,7 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     await user.clear(screen.getByPlaceholderText("account:search.placeholder"))
     await user.type(
@@ -2336,7 +2350,7 @@ describe("AccountList", () => {
     )
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(
       screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
@@ -2363,7 +2377,7 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2372,7 +2386,7 @@ describe("AccountList", () => {
     await user.type(searchInput, "Gamma")
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(await getBulkAction(user, "clearVisible"))
     await user.click(
       screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
@@ -2410,7 +2424,7 @@ describe("AccountList", () => {
     })
     expect(within(review).getByText("Enabled Alpha")).toBeVisible()
     expect(within(review).getByText("account:bulk.hiddenAccount")).toBeVisible()
-    await user.click(within(review).getAllByRole("checkbox")[0])
+    await user.click(atIndex(within(review).getAllByRole("checkbox"), 0))
     expect(within(review).queryByText("Enabled Alpha")).not.toBeInTheDocument()
     expect(search).toHaveValue("Gamma")
     await user.keyboard("{Escape}")
@@ -2479,7 +2493,7 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2488,7 +2502,7 @@ describe("AccountList", () => {
     await user.type(searchInput, "Gamma")
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(
       screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
@@ -2524,7 +2538,7 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2533,7 +2547,7 @@ describe("AccountList", () => {
     await user.type(searchInput, "Gamma")
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(await getBulkAction(user, "deleteSelected"))
 
     expect(
@@ -2573,7 +2587,7 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
 
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2582,7 +2596,7 @@ describe("AccountList", () => {
     await user.type(searchInput, "Gamma")
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
     await user.click(await getBulkAction(user, "deleteSelected"))
     await user.click(
       screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
@@ -2616,7 +2630,7 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2649,8 +2663,10 @@ describe("AccountList", () => {
         failureCount: 1,
       },
     })
-    const completionPayload =
-      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    const completionPayload = atIndex(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+      0,
+    )[0]
     expect(completionPayload).not.toHaveProperty("durationMs")
     expect(completionPayload).not.toHaveProperty("error")
     expect(completionPayload).not.toHaveProperty("message")
@@ -2669,7 +2685,7 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const searchInput = screen.getByPlaceholderText(
       "account:search.placeholder",
@@ -2701,8 +2717,10 @@ describe("AccountList", () => {
         failureCount: 1,
       },
     })
-    const completionPayload =
-      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    const completionPayload = atIndex(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+      0,
+    )[0]
     expect(completionPayload).not.toHaveProperty("durationMs")
     expect(completionPayload).not.toHaveProperty("error")
     expect(completionPayload).not.toHaveProperty("message")
@@ -2717,7 +2735,7 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
 
     const copyAction = await getBulkAction(user, "copyInviteLinks")
     expect(copyAction).toBeEnabled()
@@ -2810,7 +2828,9 @@ describe("AccountList", () => {
           batchTimeoutMs: 20_000,
         }),
       )
-      expect(workflowSpy.mock.calls[0][0]).not.toHaveProperty("maxConcurrency")
+      expect(atIndex(workflowSpy.mock.calls, 0)[0]).not.toHaveProperty(
+        "maxConcurrency",
+      )
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "account:bulk.copyInviteLinksSuccess",
       )

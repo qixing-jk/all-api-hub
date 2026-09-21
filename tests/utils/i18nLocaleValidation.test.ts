@@ -7,6 +7,7 @@ import {
   SUPPORTED_UI_LANGUAGES,
   type SupportedUiLanguage,
 } from "~/constants/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const REPO_ROOT = process.cwd()
 const LOCALES_DIR = path.join(REPO_ROOT, "src", "locales")
@@ -398,9 +399,9 @@ describe("i18n locale validation", () => {
 
       for (const namespace of baseNamespaces) {
         expect(
-          normalizeLocaleKeySet(localeMap[namespace]),
+          normalizeLocaleKeySet(atIndex(localeMap, namespace)),
           `${language}:${namespace} keys`,
-        ).toEqual(normalizeLocaleKeySet(baseLocaleMap[namespace]))
+        ).toEqual(normalizeLocaleKeySet(atIndex(baseLocaleMap, namespace)))
       }
     }
   })
@@ -472,7 +473,8 @@ describe("i18n locale validation", () => {
         const match = key.match(/^([^:]+):(.+)$/)
         if (!match) return
 
-        const [, namespace, localeKey] = match
+        const namespace = atIndex(match, 1)
+        const localeKey = atIndex(match, 2)
 
         if (options?.usesPlural) {
           for (const language of SUPPORTED_UI_LANGUAGES) {
@@ -684,7 +686,8 @@ describe("i18n locale validation", () => {
       ),
     ).toBe(true)
     expect(
-      brazilianPortugueseManifest.manifest_description.message.length,
+      atIndex(brazilianPortugueseManifest, "manifest_description").message
+        .length,
     ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
   })
 
@@ -711,7 +714,8 @@ describe("i18n locale validation", () => {
       ),
     ).toBe(true)
     expect(
-      portugalPortugueseManifest.manifest_description.message.length,
+      atIndex(portugalPortugueseManifest, "manifest_description").message
+        .length,
     ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
     expect(portugalPortugueseManifest).not.toEqual(brazilianPortugueseManifest)
   })
@@ -739,7 +743,7 @@ describe("i18n locale validation", () => {
       ),
     ).toBe(true)
     expect(
-      germanManifest.manifest_description.message.length,
+      atIndex(germanManifest, "manifest_description").message.length,
     ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
   })
 })

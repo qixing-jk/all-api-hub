@@ -10,6 +10,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   clearWebdavSyncDataSelection,
@@ -45,7 +46,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
@@ -261,7 +262,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
@@ -354,7 +355,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
@@ -411,7 +412,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
@@ -481,7 +482,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
@@ -540,7 +541,7 @@ describe("WebDAVSettings Import", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)

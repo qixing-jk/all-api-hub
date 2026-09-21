@@ -33,6 +33,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
   "__aah_account_quick_checkin_e2e_state__"
@@ -230,7 +231,7 @@ test("keeps account management controls reachable across constrained widths", as
   page,
 }) => {
   const viewportSizes = [DESKTOP_VIEWPORT_SIZE, MOBILE_VIEWPORT_SIZE]
-  await page.setViewportSize(viewportSizes[0])
+  await page.setViewportSize(atIndex(viewportSizes, 0))
 
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [

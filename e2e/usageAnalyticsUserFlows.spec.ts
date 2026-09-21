@@ -27,6 +27,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const USAGE_ANALYTICS_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.USAGE_ANALYTICS}`
@@ -294,7 +295,7 @@ test("exports the selected usage analytics account range as JSON", async ({
     endDay: todayKey,
   })
   expect(Object.keys(exported.accounts)).toEqual(["usage-account-a"])
-  expect(exported.accounts["usage-account-a"].daily).toMatchObject({
+  expect(atIndex(exported.accounts, "usage-account-a").daily).toMatchObject({
     [yesterdayKey]: {
       requests: 3,
       promptTokens: 1_000,
@@ -310,7 +311,7 @@ test("exports the selected usage analytics account range as JSON", async ({
       quotaConsumed: 600_000,
     },
   })
-  expect(exported.accounts["usage-account-a"].tokenNamesById).toEqual({
+  expect(atIndex(exported.accounts, "usage-account-a").tokenNamesById).toEqual({
     "101": "Production key",
     "102": "Batch key",
   })

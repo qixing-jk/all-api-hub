@@ -10,6 +10,7 @@ import {
   stubLlmMetadataIndex,
   stubSponsorRemoteCatalog,
 } from "~~/e2e/utils/commonUserFlows"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("installExtensionPageGuards", () => {
   it("throws on extension console errors, including resource-load failures", () => {
@@ -23,7 +24,10 @@ describe("installExtensionPageGuards", () => {
     installExtensionPageGuards(page)
 
     expect(() =>
-      handlers.console({
+      atIndex(
+        handlers,
+        "console",
+      )({
         type: () => "error",
         text: () => "Failed to load resource: net::ERR_FILE_NOT_FOUND",
       }),
@@ -41,7 +45,10 @@ describe("installExtensionPageGuards", () => {
     installExtensionPageGuards(page)
 
     expect(() =>
-      handlers.console({
+      atIndex(
+        handlers,
+        "console",
+      )({
         type: () => "warning",
         text: () => "non-blocking warning",
       }),
@@ -61,7 +68,10 @@ describe("installExtensionPageGuards", () => {
     })
 
     expect(() =>
-      handlers.console({
+      atIndex(
+        handlers,
+        "console",
+      )({
         type: () => "error",
         text: () => "ResizeObserver loop limit exceeded",
       }),

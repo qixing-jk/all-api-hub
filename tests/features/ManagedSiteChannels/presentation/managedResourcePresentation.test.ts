@@ -9,6 +9,7 @@ import zhCnCommon from "~/locales/zh-CN/common.json"
 import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import type { ResourceDisplayFacts } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createManagedResourceFacts } from "~~/tests/test-utils/managedResourceWorkspace"
 
 const TEST_FIELD_IDS = [
@@ -80,7 +81,7 @@ describe("managedResourcePresentation", () => {
         },
       ],
     } as ResourceDisplayFacts
-    const data = mapper.accept([facts])[0]
+    const data = atIndex(mapper.accept([facts]), 0)
     const snapshot = JSON.stringify(data)
     const semantics = {
       fieldValuePresentations: {

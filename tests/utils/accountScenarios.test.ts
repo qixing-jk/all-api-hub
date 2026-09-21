@@ -27,6 +27,7 @@ import {
   saveTokenToApiCredentialProfilesFromKeyManagementPage,
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   saveAutoDetectedAccountFromApp: vi.fn(),
@@ -642,8 +643,11 @@ describe("account E2E scenarios", () => {
       vi.mocked(deleteTokensMatchingNameFromKeyManagementPage).mock
         .invocationCallOrder[0],
     ).toBeLessThan(
-      vi.mocked(submitTokenCreationFromKeyManagementPage).mock
-        .invocationCallOrder[0],
+      atIndex(
+        vi.mocked(submitTokenCreationFromKeyManagementPage).mock
+          .invocationCallOrder,
+        0,
+      ),
     )
     expect(submitTokenCreationFromKeyManagementPage).toHaveBeenCalledWith({
       page: keyPage,

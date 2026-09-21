@@ -26,6 +26,7 @@ import {
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   buildManagedResourceMatchCandidate,
   matchingResourceRef,
@@ -279,9 +280,9 @@ describe("native managed-resource matching", () => {
     }
     vi.mocked(getAxonHubChannelSecretKey).mockResolvedValue("first\nsecond")
     const candidates = [
-      { ...list!.items[0], key: "********" },
+      { ...atIndex(list!.items, 0), key: "********" },
       {
-        ...list!.items[0],
+        ...atIndex(list!.items, 0),
         ref: matchingResourceRef("usable", { siteType: SITE_TYPES.AXON_HUB }),
         key: "existing-key",
       },
@@ -289,8 +290,8 @@ describe("native managed-resource matching", () => {
     await expect(
       matching.hydrateComparableKeys!(axonConfig, candidates, options),
     ).resolves.toEqual([
-      { ...candidates[0], key: "first\nsecond" },
-      candidates[1],
+      { ...atIndex(candidates, 0), key: "first\nsecond" },
+      atIndex(candidates, 1),
     ])
     expect(getAxonHubChannelSecretKey).toHaveBeenCalledOnce()
     expect(getAxonHubChannelSecretKey).toHaveBeenCalledWith(
@@ -301,7 +302,11 @@ describe("native managed-resource matching", () => {
     const aborted = new DOMException("Aborted", "AbortError")
     vi.mocked(getAxonHubChannelSecretKey).mockRejectedValue(aborted)
     await expect(
-      matching.fetchSecretKey!(axonConfig, list!.items[0].ref, options),
+      matching.fetchSecretKey!(
+        axonConfig,
+        atIndex(list!.items, 0).ref,
+        options,
+      ),
     ).rejects.toBe(aborted)
   })
 
@@ -348,7 +353,7 @@ describe("native managed-resource matching", () => {
       requireCompleteInventory: true,
     })
     expect(result?.items[0]).not.toHaveProperty("balance")
-    expect(result?.items[0].ref).toEqual(
+    expect(atIndex(result?.items, 0).ref).toEqual(
       matchingResourceRef(5, { siteType: SITE_TYPES.VELOERA }),
     )
   })

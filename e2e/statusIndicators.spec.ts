@@ -23,6 +23,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 test("account dots and check-in icons share readable colors across themes and widths", async ({
   page,
@@ -136,7 +137,7 @@ test("account dots and check-in icons share readable colors across themes and wi
       expect(errorDot.ratio).toBeGreaterThanOrEqual(3)
       if (dark) {
         expect(
-          errorDot.foreground[0] - errorDot.foreground[1],
+          atIndex(errorDot.foreground, 0) - atIndex(errorDot.foreground, 1),
         ).toBeGreaterThanOrEqual(150)
       }
       const completedCustomCheckIn = row(SiteHealthStatus.Healthy)
@@ -437,8 +438,8 @@ test("a theme can change each status base and update every presentation in its o
       )
     }
     const indicator = after.at(-1)!
-    expect(indicator[2]).toBeGreaterThan(indicator[0])
-    expect(indicator[0]).toBeGreaterThan(indicator[1])
+    expect(indicator[2]).toBeGreaterThan(atIndex(indicator, 0))
+    expect(indicator[0]).toBeGreaterThan(atIndex(indicator, 1))
     expect(siblingAfter).toEqual(siblingBefore)
   }
 })

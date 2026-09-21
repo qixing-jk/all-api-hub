@@ -21,6 +21,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 // Verifies account action flows through the public context API, including
 // refresh, enable/disable, copy URL, custom check-in state, and external
@@ -573,7 +574,7 @@ describe("AccountActionsContext", () => {
       )
     })
 
-    await expect(mockToast.promise.mock.calls[0][0]).resolves.toBe(
+    await expect(atIndex(mockToast.promise.mock.calls, 0)[0]).resolves.toBe(
       "messages:toast.success.refreshAccount",
     )
     expect(mockLoadAccountData).toHaveBeenCalledTimes(1)

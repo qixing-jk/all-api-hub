@@ -4,6 +4,7 @@ import { expect } from "@playwright/test"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { getExtensionServiceWorker } from "~~/e2e/utils/extension"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /**
  * Detect whether a page URL is an options page carrying the permissions
@@ -119,7 +120,7 @@ export async function getPlasmoStorageRawValue<T>(
           reject(new Error(error.message))
           return
         }
-        resolve(stored[storageKey])
+        resolve(atIndex(stored, storageKey))
       })
     })
   }, key)

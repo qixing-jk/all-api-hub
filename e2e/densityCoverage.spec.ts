@@ -13,6 +13,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const width of [1280, 320]) {
   test(`secondary surfaces and calendar follow density at ${width}px`, async ({
@@ -228,23 +229,27 @@ for (const width of [1280, 320]) {
       await expect(calendar).toBeHidden()
       await page.keyboard.press("Escape")
     }
-    expect(Number.parseFloat(measurements.compact.sidebarPadding)).toBeLessThan(
-      Number.parseFloat(measurements.default.sidebarPadding),
+    expect(
+      Number.parseFloat(atIndex(measurements, "compact").sidebarPadding),
+    ).toBeLessThan(
+      Number.parseFloat(atIndex(measurements, "default").sidebarPadding),
     )
     expect(
-      Number.parseFloat(measurements.comfortable.sidebarPadding),
-    ).toBeGreaterThan(Number.parseFloat(measurements.default.sidebarPadding))
-    expect(measurements.compact.calendarHeight).toBeLessThan(
-      measurements.default.calendarHeight,
+      Number.parseFloat(atIndex(measurements, "comfortable").sidebarPadding),
+    ).toBeGreaterThan(
+      Number.parseFloat(atIndex(measurements, "default").sidebarPadding),
     )
-    expect(measurements.comfortable.calendarHeight).toBeGreaterThan(
-      measurements.default.calendarHeight,
+    expect(atIndex(measurements, "compact").calendarHeight).toBeLessThan(
+      atIndex(measurements, "default").calendarHeight,
     )
-    expect(measurements.compact.calendarWidth).toBe(
-      measurements.default.calendarWidth,
+    expect(atIndex(measurements, "comfortable").calendarHeight).toBeGreaterThan(
+      atIndex(measurements, "default").calendarHeight,
     )
-    expect(measurements.comfortable.calendarWidth).toBe(
-      measurements.default.calendarWidth,
+    expect(atIndex(measurements, "compact").calendarWidth).toBe(
+      atIndex(measurements, "default").calendarWidth,
+    )
+    expect(atIndex(measurements, "comfortable").calendarWidth).toBe(
+      atIndex(measurements, "default").calendarWidth,
     )
     await testInfo.attach("secondary-density-measurements", {
       body: JSON.stringify(measurements),

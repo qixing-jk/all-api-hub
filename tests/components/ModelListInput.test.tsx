@@ -2,6 +2,7 @@ import React from "react"
 import { describe, expect, it } from "vitest"
 
 import { ModelListInput } from "~/components/ui"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("ModelListInput", () => {
@@ -51,7 +52,7 @@ describe("ModelListInput", () => {
     const removeButtons = await screen.findAllByRole("button", {
       name: "ui:modelListInput.actions.remove",
     })
-    fireEvent.click(removeButtons[0])
+    fireEvent.click(atIndex(removeButtons, 0))
 
     const remainingNameInputs = await screen.findAllByPlaceholderText(
       "ui:modelListInput.placeholders.name",

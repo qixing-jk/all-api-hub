@@ -14,6 +14,7 @@ import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presenta
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import { openSettingsTab } from "~/utils/navigation"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/utils/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/navigation")>()),
@@ -154,7 +155,7 @@ const columns = [
   },
   ...(["type", "models", "group", "priority", "weight"] as const).map((id) => ({
     id,
-    label: id[0].toUpperCase() + id.slice(1),
+    label: atIndex(id, 0).toUpperCase() + id.slice(1),
     renderer: "value" as const,
     accessor: { kind: "cell" as const, key: id },
     canHide: true,
@@ -293,8 +294,8 @@ describe("ManagedSiteChannelsView", () => {
   it("renders the legacy filter slot but omits the filter action for a native fixture", async () => {
     const user = userEvent.setup()
     const legacyRow = {
-      ...rows[0],
-      capabilities: { ...rows[0].capabilities, canFilter: true },
+      ...atIndex(rows, 0),
+      capabilities: { ...atIndex(rows, 0).capabilities, canFilter: true },
     }
     const { rerender } = render(
       <ManagedSiteChannelsView
@@ -446,7 +447,7 @@ describe("ManagedSiteChannelsView", () => {
     const user = userEvent.setup()
     const onSyncSelected = vi.fn()
     const state = createState({
-      rows: [{ ...rows[0], isSyncing: true }],
+      rows: [{ ...atIndex(rows, 0), isSyncing: true }],
       selectedRowKeys: { "opaque:first": true },
     })
     const view = render(
@@ -571,20 +572,20 @@ describe("ManagedSiteChannelsView", () => {
     const onMigrateFiltered = vi.fn()
     const nativeRows = [
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:native-12",
         name: "Channel twelve",
         cells: {
-          ...rows[0].cells,
+          ...atIndex(rows, 0).cells,
           "newApi.id": { kind: "text" as const, value: "12", sortValue: 12 },
         },
       },
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:native-112",
         name: "Channel one hundred twelve",
         cells: {
-          ...rows[0].cells,
+          ...atIndex(rows, 0).cells,
           "newApi.id": {
             kind: "text" as const,
             value: "112",
@@ -647,13 +648,13 @@ describe("ManagedSiteChannelsView", () => {
     const onSelectedRowKeysChange = vi.fn()
     const duplicateRows = [
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:duplicate-a",
         testToken: "safe-token-a",
         name: "Duplicate name",
       },
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:duplicate-b",
         testToken: "safe-token-b",
         name: "Duplicate name",
@@ -675,7 +676,7 @@ describe("ManagedSiteChannelsView", () => {
       .getAllByRole("row")
       .filter((row) => row.textContent?.includes("Duplicate name"))
     await user.click(
-      within(duplicateBodyRows[0]).getByRole("checkbox", {
+      within(atIndex(duplicateBodyRows, 0)).getByRole("checkbox", {
         name: "Select row",
       }),
     )
@@ -688,8 +689,8 @@ describe("ManagedSiteChannelsView", () => {
         {...commonProps}
         state={createState({
           rows: [
-            { ...duplicateRows[0], name: "Renamed duplicate" },
-            duplicateRows[1],
+            { ...atIndex(duplicateRows, 0), name: "Renamed duplicate" },
+            atIndex(duplicateRows, 1),
           ],
           total: duplicateRows.length,
           selectedRowKeys: { "opaque:duplicate-a": true },
@@ -719,8 +720,8 @@ describe("ManagedSiteChannelsView", () => {
     const onSelectedRowKeysChange = vi.fn()
     const onPaginationChange = vi.fn()
     const pagedRows = [
-      { ...rows[0], rowKey: "opaque:page-one", name: "Page one" },
-      { ...rows[0], rowKey: "opaque:page-two", name: "Page two" },
+      { ...atIndex(rows, 0), rowKey: "opaque:page-one", name: "Page one" },
+      { ...atIndex(rows, 0), rowKey: "opaque:page-two", name: "Page two" },
     ]
     const callbacks = createCallbacks({
       onPaginationChange,
@@ -1023,19 +1024,19 @@ describe("ManagedSiteChannelsView", () => {
     }
     const extensionRows = [
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:missing",
         testToken: "Missing latency",
         name: "Missing latency",
-        cells: { ...rows[0].cells },
+        cells: { ...atIndex(rows, 0).cells },
       },
       {
-        ...rows[0],
+        ...atIndex(rows, 0),
         rowKey: "opaque:fast",
         testToken: "Fast channel",
         name: "Fast channel",
         cells: {
-          ...rows[0].cells,
+          ...atIndex(rows, 0).cells,
           latency: { kind: "text" as const, value: "12 ms", sortValue: 12 },
         },
       },
@@ -1087,12 +1088,12 @@ describe("ManagedSiteChannelsView", () => {
       "future-status",
       "auto-disabled",
     ].map((status, index) => ({
-      ...rows[0],
+      ...atIndex(rows, 0),
       rowKey: `opaque:status-${status}`,
       testToken: `Status ${index}`,
       name: `Status ${index}`,
       cells: {
-        ...rows[0].cells,
+        ...atIndex(rows, 0).cells,
         status: {
           kind: "status" as const,
           value: status,

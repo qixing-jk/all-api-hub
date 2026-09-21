@@ -8,6 +8,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const { width, language, copy } of [
   { width: 1280, language: "en", copy: en },
@@ -77,17 +78,19 @@ for (const { width, language, copy } of [
         await sample.evaluate((el) => parseFloat(getComputedStyle(el).rowGap)),
       )
     }
-    expect(gaps[0]).toBeLessThan(gaps[1])
-    expect(gaps[1]).toBeLessThan(gaps[2])
+    expect(gaps[0]).toBeLessThan(atIndex(gaps, 1))
+    expect(gaps[1]).toBeLessThan(atIndex(gaps, 2))
     const sizes = drawer.getByRole("group", {
       name: copy.appearance.textSize,
       exact: true,
     })
-    for (const [name, size] of [
+    for (const indexedEntry of [
       [copy.appearance.textSizes.default, "16px"],
       [copy.appearance.textSizes.large, "18px"],
       [copy.appearance.textSizes.extraLarge, "20px"],
     ]) {
+      const name = atIndex(indexedEntry, 0)
+      const size = atIndex(indexedEntry, 1)
       await expect(
         sizes
           .getByRole("radio", { name, exact: true })

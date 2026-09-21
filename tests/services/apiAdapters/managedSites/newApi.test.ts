@@ -10,6 +10,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const channelManagement = vi.hoisted(() => ({
@@ -470,7 +471,7 @@ describe("newApi managed-site channel capability", () => {
       completion: "uncertain",
     })
     expect(channelManagement.manageChannelKey).toHaveBeenCalledTimes(1)
-    expect(channelManagement.manageChannelKey.mock.calls[0][2]).toBe(
+    expect(atIndex(channelManagement.manageChannelKey.mock.calls, 0)[2]).toBe(
       "disable_key",
     )
   })

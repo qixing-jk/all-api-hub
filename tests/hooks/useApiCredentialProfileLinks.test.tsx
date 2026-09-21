@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { listLinks, subscribeToChanges } = vi.hoisted(() => ({
   listLinks: vi.fn(),
@@ -58,7 +59,7 @@ describe("useApiCredentialProfileLinks", () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.links).toEqual([])
 
-    const onStorageChange = subscribeToChanges.mock.calls[0][0]
+    const onStorageChange = atIndex(subscribeToChanges.mock.calls, 0)[0]
     await act(async () => onStorageChange())
 
     await waitFor(() => expect(result.current.links).toEqual([link]))

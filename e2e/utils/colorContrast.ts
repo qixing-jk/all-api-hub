@@ -1,5 +1,7 @@
 import type { Locator } from "@playwright/test"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 /** WCAG AA thresholds for normal text and non-text controls respectively. */
 export const MIN_CONTRAST_RATIO = {
   TEXT: 4.5,
@@ -27,7 +29,11 @@ export async function readColorContrast(
           ? value / 12.92
           : ((value + 0.055) / 1.055) ** 2.4
       })
-      return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
+      return (
+        atIndex(linear, 0) * 0.2126 +
+        atIndex(linear, 1) * 0.7152 +
+        atIndex(linear, 2) * 0.0722
+      )
     }
     const ancestors: Element[] = []
     const surface =
@@ -43,9 +49,14 @@ export async function readColorContrast(
       foregroundSource === "background" ? style.backgroundColor : style.color,
     )
     const foreground = pixel()
-    const [low, high] = [luminance(background), luminance(foreground)].sort(
-      (a, b) => a - b,
-    )
+    const destructuredSource0 = [
+      luminance(background),
+      luminance(foreground),
+    ].sort((a, b) => a - b)
+    const [low, high] = [
+      atIndex(destructuredSource0, 0),
+      atIndex(destructuredSource0, 1),
+    ]
     return { background, foreground, ratio: (high + 0.05) / (low + 0.05) }
   }, foreground)
 }

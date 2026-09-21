@@ -30,6 +30,7 @@ import { createTab } from "~/utils/browser/browserApi"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
@@ -304,7 +305,7 @@ describe("check-in feedback workflow", () => {
       )
       const row = screen.getByRole("row")
       const cells = within(row).getAllByRole("cell")
-      const message = cells[2].textContent!
+      const message = atIndex(cells, 2).textContent!
       render(
         wrap(
           <CheckInFeedbackDialog
@@ -318,7 +319,9 @@ describe("check-in feedback workflow", () => {
         await within(dialog).findByText(message, { selector: "p" }),
       ).toBeVisible()
       expect(
-        within(dialog).getByText(cells[1].textContent!, { selector: "span" }),
+        within(dialog).getByText(atIndex(cells, 1).textContent!, {
+          selector: "span",
+        }),
       ).toBeVisible()
       await user.click(within(dialog).getByText("Review and edit submission"))
       expect(
@@ -568,7 +571,9 @@ describe("check-in feedback workflow", () => {
         screen.getByRole("button", { name: "Continue to GitHub" }),
       )
       expect(
-        new URL(vi.mocked(createTab).mock.calls[0][0]).searchParams.get("body"),
+        new URL(
+          atIndex(vi.mocked(createTab).mock.calls, 0)[0],
+        ).searchParams.get("body"),
       ).toBe(preview.value)
       expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
         "Website works",
@@ -616,7 +621,9 @@ describe("check-in feedback workflow", () => {
     )
     expect(write).toHaveBeenCalledTimes(1)
     expect(
-      new URL(vi.mocked(createTab).mock.calls[0][0]).searchParams.has("body"),
+      new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0]).searchParams.has(
+        "body",
+      ),
     ).toBe(false)
     write.mockRestore()
   })
@@ -690,7 +697,10 @@ describe("check-in feedback workflow", () => {
       wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
     )
     await screen.findByLabelText("What happened? (optional)")
-    const signal = vi.mocked(collectFeedbackCluesInBrowser).mock.calls[0][1]
+    const signal = atIndex(
+      vi.mocked(collectFeedbackCluesInBrowser).mock.calls,
+      0,
+    )[1]
     unmount()
     expect(signal.aborted).toBe(true)
   })

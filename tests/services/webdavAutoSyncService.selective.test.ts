@@ -13,6 +13,7 @@ import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   mockAccountStorageExportData,
@@ -171,7 +172,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       prepareForWrite: true,
     })
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(
       uploaded.accounts.accounts.map((account: any) => account.id),
     ).toEqual(["a1"])
@@ -296,15 +297,17 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     await service.syncWithWebdav()
 
-    const importedAccounts = mockAccountStorageImportData.mock.calls[0][0]
-      .accounts as Array<{ id: string }>
+    const importedAccounts = atIndex(
+      mockAccountStorageImportData.mock.calls,
+      0,
+    )[0].accounts as Array<{ id: string }>
     expect(importedAccounts.map((account) => account.id).sort()).toEqual([
       "base",
       "local-only",
       "remote-only",
     ])
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(
       uploaded.accounts.accounts
         .map((account: { id: string }) => account.id)
@@ -345,11 +348,11 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     await service.syncWithWebdav()
 
-    const importArgs = mockAccountStorageImportData.mock.calls[0][0]
+    const importArgs = atIndex(mockAccountStorageImportData.mock.calls, 0)[0]
     expect(importArgs.accounts.map((a: any) => a.id)).toEqual(["a1"])
     expect(importArgs.bookmarks.map((b: any) => b.id)).toEqual(["b1"])
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.accounts.accounts.map((a: any) => a.id)).toEqual(["a1"])
     expect(uploaded.accounts.bookmarks).toBeUndefined()
   })
@@ -402,7 +405,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       schemaVersion: 1,
       configs: {},
     })
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.channelConfigs).toEqual(localChannelConfigs)
   })
 
@@ -454,7 +457,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
       expect(await storage.exportConfigs()).toEqual(latestSnapshot)
       expect(
-        JSON.parse(mockUploadBackup.mock.calls[0][0]).channelConfigs,
+        JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0]).channelConfigs,
       ).toEqual(latestSnapshot)
     },
   )
@@ -534,11 +537,11 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     await service.syncWithWebdav()
 
-    const importArgs = mockAccountStorageImportData.mock.calls[0][0]
+    const importArgs = atIndex(mockAccountStorageImportData.mock.calls, 0)[0]
     expect(importArgs.accounts.map((a: any) => a.id)).toEqual(["a1"])
     expect(importArgs.bookmarks.map((b: any) => b.id)).toEqual(["b-remote"])
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.accounts.accounts).toBeUndefined()
     expect(uploaded.accounts.bookmarks.map((b: any) => b.id)).toEqual([
       "b-remote",
@@ -597,7 +600,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     expect(mockAccountStorageImportData).not.toHaveBeenCalled()
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(
       uploaded.accounts.accounts.map((account: any) => account.id),
     ).toEqual(["remote-account"])
@@ -696,7 +699,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       },
     )
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.preferences).toMatchObject({
       lastUpdated: 300,
       sharedPreferencesLastUpdated: 300,
@@ -787,7 +790,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
       await service.syncWithWebdav()
 
-      const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+      const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
       expect(uploaded.preferences.preferencesVersion).toBe(
         CURRENT_PREFERENCES_VERSION,
       )
@@ -844,7 +847,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     expect(mockAccountStorageImportData).not.toHaveBeenCalled()
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(
       uploaded.accounts.accounts.map((account: any) => account.id),
     ).toEqual(["local-account"])
@@ -926,7 +929,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     expect(mockAccountStorageImportData).not.toHaveBeenCalled()
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(
       uploaded.accounts.accounts.map((account: any) => account.id),
     ).toEqual(["remote-account"])

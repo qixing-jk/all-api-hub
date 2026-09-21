@@ -17,6 +17,7 @@ import {
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /**
  * Create a fully populated Consume log item for usage-history sync tests.
@@ -349,21 +350,23 @@ describe("usageHistory sync (MSW)", () => {
     expect(first.pagesFetched).toBeGreaterThanOrEqual(1)
 
     const storeAfterFirst = await usageHistoryStorage.getStore()
-    const accountStoreAfterFirst = storeAfterFirst.accounts[accountId]
+    const accountStoreAfterFirst = atIndex(storeAfterFirst.accounts, accountId)
     expect(accountStoreAfterFirst).toBeDefined()
     expect(accountStoreAfterFirst.cursor.lastSeenCreatedAt).toBe(
       newestCreatedAt,
     )
 
     const dayKey = getDayKeyFromUnixSeconds(newestCreatedAt, "UTC")
-    expect(accountStoreAfterFirst.daily[dayKey]).toBeDefined()
-    expect(accountStoreAfterFirst.dailyByToken["1"][dayKey]).toBeDefined()
-    expect(accountStoreAfterFirst.latencyDaily[dayKey]).toBeDefined()
+    expect(atIndex(accountStoreAfterFirst.daily, dayKey)).toBeDefined()
     expect(
-      accountStoreAfterFirst.latencyDailyByToken["1"][dayKey],
+      atIndex(accountStoreAfterFirst.dailyByToken, "1")[dayKey],
     ).toBeDefined()
-    expect(accountStoreAfterFirst.latencyDaily[dayKey].count).toBe(
-      accountStoreAfterFirst.daily[dayKey].requests,
+    expect(atIndex(accountStoreAfterFirst.latencyDaily, dayKey)).toBeDefined()
+    expect(
+      atIndex(accountStoreAfterFirst.latencyDailyByToken, "1")[dayKey],
+    ).toBeDefined()
+    expect(atIndex(accountStoreAfterFirst.latencyDaily, dayKey).count).toBe(
+      atIndex(accountStoreAfterFirst.daily, dayKey).requests,
     )
 
     const snapshotDaily = JSON.stringify(accountStoreAfterFirst.daily)
@@ -385,14 +388,18 @@ describe("usageHistory sync (MSW)", () => {
 
     expect(second.status).toBe("success")
     const storeAfterSecond = await usageHistoryStorage.getStore()
-    expect(JSON.stringify(storeAfterSecond.accounts[accountId].daily)).toBe(
-      snapshotDaily,
-    )
     expect(
-      JSON.stringify(storeAfterSecond.accounts[accountId].dailyByToken),
+      JSON.stringify(atIndex(storeAfterSecond.accounts, accountId).daily),
+    ).toBe(snapshotDaily)
+    expect(
+      JSON.stringify(
+        atIndex(storeAfterSecond.accounts, accountId).dailyByToken,
+      ),
     ).toBe(snapshotDailyByToken)
     expect(
-      JSON.stringify(storeAfterSecond.accounts[accountId].latencyDaily),
+      JSON.stringify(
+        atIndex(storeAfterSecond.accounts, accountId).latencyDaily,
+      ),
     ).toBe(snapshotLatencyDaily)
   })
 
@@ -480,7 +487,7 @@ describe("usageHistory sync (MSW)", () => {
     const before = await usageHistoryStorage.getStore()
     const dayKey = getDayKeyFromUnixSeconds(cursorCreatedAt, "UTC")
     const beforeRequests =
-      before.accounts[accountId].daily[dayKey]?.requests ?? 0
+      atIndex(before.accounts, accountId).daily[dayKey]?.requests ?? 0
 
     await syncUsageHistoryForAccount({
       accountId,
@@ -491,11 +498,12 @@ describe("usageHistory sync (MSW)", () => {
     })
 
     const after = await usageHistoryStorage.getStore()
-    const afterRequests = after.accounts[accountId].daily[dayKey]?.requests ?? 0
+    const afterRequests =
+      atIndex(after.accounts, accountId).daily[dayKey]?.requests ?? 0
     expect(afterRequests).toBe(beforeRequests + 1)
-    expect(after.accounts[accountId].latencyDaily[dayKey]?.count ?? 0).toBe(
-      afterRequests,
-    )
+    expect(
+      atIndex(after.accounts, accountId).latencyDaily[dayKey]?.count ?? 0,
+    ).toBe(afterRequests)
   })
 
   it("marks unsupported endpoints and then respects the cooldown window", async () => {

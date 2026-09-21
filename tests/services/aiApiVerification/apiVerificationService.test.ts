@@ -6,6 +6,7 @@ import {
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import { runApiVerificationTestSuite } from "~~/tests/test-utils/apiVerificationSuite"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockFetchAnthropicModelIds = vi.fn()
@@ -132,7 +133,7 @@ describe("apiVerificationService", () => {
 
     expect(report.modelId).toBe("override-model")
     expect(mockGenerateText).toHaveBeenCalledTimes(3)
-    expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe(
+    expect(atIndex(mockGenerateText.mock.calls, 0)[0].model.modelId).toBe(
       "override-model",
     )
   })
@@ -180,7 +181,9 @@ describe("apiVerificationService", () => {
         fallbackModelId,
       })
       expect(report.modelId).toBe(expected)
-      expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe(expected)
+      expect(atIndex(mockGenerateText.mock.calls, 0)[0].model.modelId).toBe(
+        expected,
+      )
     },
   )
 
@@ -196,7 +199,9 @@ describe("apiVerificationService", () => {
       fallbackModelId: " fallback ",
     })
     expect(result.status).toBe("pass")
-    expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe("fallback")
+    expect(atIndex(mockGenerateText.mock.calls, 0)[0].model.modelId).toBe(
+      "fallback",
+    )
   })
 
   it("redacts apiKey from error summaries", async () => {
@@ -295,7 +300,7 @@ describe("apiVerificationService", () => {
     })
 
     expect(report.modelId).toBe("gemini-1.5-pro")
-    expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe(
+    expect(atIndex(mockGenerateText.mock.calls, 0)[0].model.modelId).toBe(
       "gemini-1.5-pro",
     )
   })

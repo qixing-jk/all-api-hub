@@ -10,6 +10,7 @@ import {
 import { getDisplayMoneyValue } from "~/utils/core/money"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
@@ -255,7 +256,7 @@ describe("BalanceDisplay", () => {
     expect(unavailableValues[1]).toHaveTextContent("—")
     expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
 
-    await user.click(unavailableValues[0])
+    await user.click(atIndex(unavailableValues, 0))
     expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
   })
 
@@ -500,7 +501,7 @@ describe("BalanceDisplay", () => {
     expect(disabledValues[1]).toHaveClass("text-faint-foreground")
     expect(disabledValues[2]).toHaveClass("text-faint-foreground")
 
-    await user.click(disabledValues[0])
+    await user.click(atIndex(disabledValues, 0))
 
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
@@ -542,7 +543,7 @@ describe("BalanceDisplay", () => {
       expect(value).toHaveAttribute("title", "account:list.site.disabled")
     })
 
-    await user.click(partialValues[0])
+    await user.click(atIndex(partialValues, 0))
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 
@@ -582,7 +583,7 @@ describe("BalanceDisplay", () => {
     })
     expect(screen.queryByText(/999|888/)).not.toBeInTheDocument()
 
-    await user.click(unavailableValues[0])
+    await user.click(atIndex(unavailableValues, 0))
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 
@@ -745,7 +746,7 @@ describe("BalanceDisplay", () => {
       }
 
       await user.click(initiator)
-      await user.click(siblings[0])
+      await user.click(atIndex(siblings, 0))
       expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
 
       deferredRefresh.reject(new Error("refresh failed"))

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { listChannels } from "~/services/apiService/octopus"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { mockTempWindowOctopusApiFetch } = vi.hoisted(() => ({
   mockTempWindowOctopusApiFetch: vi.fn(),
@@ -58,7 +59,10 @@ describe("Octopus cookie authentication", () => {
     ])
 
     expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledOnce()
-    const channelRequest = mockTempWindowOctopusApiFetch.mock.calls[0][0]
+    const channelRequest = atIndex(
+      mockTempWindowOctopusApiFetch.mock.calls,
+      0,
+    )[0]
     const headers = new Headers(channelRequest.fetchOptions.headers)
     expect(channelRequest.fetchOptions.credentials).toBe("include")
     expect(headers.get("Authorization")).toBeNull()

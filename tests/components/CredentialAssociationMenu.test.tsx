@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { CredentialAssociationMenu } from "~/components/CredentialAssociationMenu"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const labels = {
   saveAndAssociate: "Save and associate",
@@ -91,7 +92,7 @@ describe("CredentialAssociationMenu", () => {
       user.click(screen.getByRole("button", { name: "Review two links" }))
     const choose = async (name: string) => {
       await openMenu()
-      await user.click(screen.getAllByRole("menuitem", { name })[0])
+      await user.click(atIndex(screen.getAllByRole("menuitem", { name }), 0))
     }
 
     await choose(labels.saveAndAssociate)

@@ -5,6 +5,7 @@ import { fetchModelPricing } from "~/services/apiAdapters/aihubmix/catalog"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const requestFor = (account: string) => ({
   baseUrl: "https://console.aihubmix.com",
@@ -116,9 +117,13 @@ describe("AIHubMix shared public catalogs", () => {
       }),
     )
     const first = await fetchModelPricing(requestFor("a"))
-    expect(first.data[0].pricingPlan?.source.rulesUnavailable).toBe(true)
+    expect(atIndex(first.data, 0).pricingPlan?.source.rulesUnavailable).toBe(
+      true,
+    )
     const second = await fetchModelPricing(requestFor("b"))
-    expect(second.data[0].pricingPlan?.source.rulesUnavailable).toBeUndefined()
+    expect(
+      atIndex(second.data, 0).pricingPlan?.source.rulesUnavailable,
+    ).toBeUndefined()
     expect(counts).toEqual({ catalog: 1, website: 2, account: 2 })
   })
 
@@ -145,8 +150,8 @@ describe("AIHubMix shared public catalogs", () => {
       http.get("https://aihubmix.com/api/v1/models", async () => {
         const index = counts.catalog++
         if (index < 2) {
-          started[index].resolve()
-          await release[index].promise
+          atIndex(started, index).resolve()
+          await atIndex(release, index).promise
         }
         return HttpResponse.json({
           success: true,
@@ -158,21 +163,23 @@ describe("AIHubMix shared public catalogs", () => {
       }),
     )
     const old = fetchModelPricing(requestFor("a"))
-    await started[0].promise
+    await atIndex(started, 0).promise
     aihubmixModelPricing.invalidateCache?.()
     const replacement = fetchModelPricing(requestFor("b"))
-    await started[1].promise
-    release[0].resolve()
+    await atIndex(started, 1).promise
+    atIndex(release, 0).resolve()
     await old
     const follower = fetchModelPricing(requestFor("c"))
-    release[1].resolve()
+    atIndex(release, 1).resolve()
     const results = await Promise.all([replacement, follower])
     expect(counts.catalog).toBe(2)
     expect(
-      results.map((result) => result.data[0].pricingPlan?.rates.input?.amount),
+      results.map(
+        (result) => atIndex(result.data, 0).pricingPlan?.rates.input?.amount,
+      ),
     ).toEqual([2, 2])
     const cached = await fetchModelPricing(requestFor("a"))
-    expect(cached.data[0].pricingPlan?.rates.input?.amount).toBe(2)
+    expect(atIndex(cached.data, 0).pricingPlan?.rates.input?.amount).toBe(2)
     expect(counts.catalog).toBe(2)
   })
 })

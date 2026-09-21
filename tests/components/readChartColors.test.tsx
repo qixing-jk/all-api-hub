@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { CHART_COLORS, readChartColors } from "~/components/charts/chartColors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("browser chart colors", () => {
   afterEach(() => {
@@ -28,7 +29,7 @@ describe("browser chart colors", () => {
       getImageData: vi.fn<() => Pick<ImageData, "data">>(),
     }
     context.getImageData.mockImplementation(() => ({
-      data: new Uint8ClampedArray(pixels[context.fillStyle]),
+      data: new Uint8ClampedArray(atIndex(pixels, context.fillStyle)),
     }))
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
       context as unknown as CanvasRenderingContext2D,

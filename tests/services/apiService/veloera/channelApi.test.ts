@@ -19,6 +19,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -172,9 +173,9 @@ describe("apiService veloera channel APIs", () => {
       payload as any,
     )
 
-    expect(JSON.parse(mockFetchApi.mock.calls[0][1].options.body)).toEqual(
-      payload,
-    )
+    expect(
+      JSON.parse(atIndex(mockFetchApi.mock.calls, 0)[1].options.body),
+    ).toEqual(payload)
   })
 
   it("listAllChannels should paginate from p=0 and return the provider inventory", async () => {
@@ -203,9 +204,9 @@ describe("apiService veloera channel APIs", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
 
-    const firstCallEndpoint = mockFetchApiData.mock.calls[0][1]
+    const firstCallEndpoint = atIndex(mockFetchApiData.mock.calls, 0)[1]
       .endpoint as string
-    const secondCallEndpoint = mockFetchApiData.mock.calls[1][1]
+    const secondCallEndpoint = atIndex(mockFetchApiData.mock.calls, 1)[1]
       .endpoint as string
 
     expect(firstCallEndpoint).toContain("/api/channel/?")
@@ -543,8 +544,8 @@ describe("apiService veloera channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const callRequest = mockFetchApi.mock.calls[0][0]
-    const callOptions = mockFetchApi.mock.calls[0][1]
+    const callRequest = atIndex(mockFetchApi.mock.calls, 0)[0]
+    const callOptions = atIndex(mockFetchApi.mock.calls, 0)[1]
     expect(callRequest.baseUrl).toBe(baseUrl)
     expect(callOptions.endpoint).toBe("/api/channel")
     expect(callRequest.auth.accessToken).toBe(token)
@@ -592,8 +593,8 @@ describe("apiService veloera channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const callRequest = mockFetchApi.mock.calls[0][0]
-    const callOptions = mockFetchApi.mock.calls[0][1]
+    const callRequest = atIndex(mockFetchApi.mock.calls, 0)[0]
+    const callOptions = atIndex(mockFetchApi.mock.calls, 0)[1]
     expect(callRequest.baseUrl).toBe(baseUrl)
     expect(callOptions.endpoint).toBe("/api/channel")
     expect(callRequest.auth.accessToken).toBe(token)

@@ -14,6 +14,7 @@ import {
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
 
@@ -59,7 +60,7 @@ for (const version of ["jwt", "v0.12", "v0.13"] as const) {
         })
         expect(result.skipped).toBe(false)
         expect(fixture.createPayloads).toHaveLength(1)
-        const created = fixture.createPayloads[0]
+        const created = atIndex(fixture.createPayloads, 0)
         if (version === "v0.13") {
           expect(created).toMatchObject({
             base_url: "https://example.com",

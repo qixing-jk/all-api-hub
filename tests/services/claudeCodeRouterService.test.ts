@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 describe("claudeCodeRouterService", () => {
   const baseOptions = {
     providerApiKey: "provider-key",
@@ -105,15 +107,17 @@ describe("claudeCodeRouterService", () => {
     })
 
     const saveCall = fetchMock.mock.calls[1]
-    expect(String(saveCall[0])).toBe("https://router.example.com/api/config")
-    expect(saveCall[1]).toMatchObject({
+    expect(String(atIndex(saveCall, 0))).toBe(
+      "https://router.example.com/api/config",
+    )
+    expect(atIndex(saveCall, 1)).toMatchObject({
       method: "POST",
       headers: expect.objectContaining({
         Authorization: "Bearer router-secret",
         "Content-Type": "application/json",
       }),
     })
-    expect(JSON.parse(saveCall[1].body)).toMatchObject({
+    expect(JSON.parse(atIndex(saveCall, 1).body)).toMatchObject({
       Providers: [
         {
           name: "Example Provider",
@@ -125,7 +129,7 @@ describe("claudeCodeRouterService", () => {
       ],
     })
 
-    expect(String(fetchMock.mock.calls[2][0])).toBe(
+    expect(String(atIndex(fetchMock.mock.calls, 2)[0])).toBe(
       "https://router.example.com/api/restart",
     )
   })
@@ -161,7 +165,7 @@ describe("claudeCodeRouterService", () => {
       ),
     })
 
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+    expect(JSON.parse(atIndex(fetchMock.mock.calls, 1)[1].body)).toMatchObject({
       Providers: [
         {
           name: "Example Provider",
@@ -213,22 +217,22 @@ describe("claudeCodeRouterService", () => {
       ),
     })
 
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(fetchMock.mock.calls, 0)[1]).toMatchObject({
       method: "GET",
       headers: expect.not.objectContaining({
         Authorization: expect.any(String),
       }),
     })
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    expect(atIndex(fetchMock.mock.calls, 1)[1]).toMatchObject({
       method: "POST",
       headers: expect.objectContaining({
         "Content-Type": "application/json",
       }),
     })
-    expect(fetchMock.mock.calls[1][1].headers).not.toHaveProperty(
+    expect(atIndex(fetchMock.mock.calls, 1)[1].headers).not.toHaveProperty(
       "Authorization",
     )
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+    expect(JSON.parse(atIndex(fetchMock.mock.calls, 1)[1].body)).toMatchObject({
       theme: "dark",
       Providers: [
         expect.objectContaining({
@@ -281,7 +285,7 @@ describe("claudeCodeRouterService", () => {
       ),
     })
 
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+    expect(JSON.parse(atIndex(fetchMock.mock.calls, 1)[1].body)).toMatchObject({
       Providers: [
         expect.objectContaining({
           api_key: "older-key",

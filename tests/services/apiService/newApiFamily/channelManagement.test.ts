@@ -15,6 +15,7 @@ import {
 } from "~/services/apiService/newApiFamily/channelManagement"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { mockFetchApi, mockFetchApiData, mockLoggerError } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
@@ -232,7 +233,7 @@ describe("newApiFamily channel management APIs", () => {
       groups: ["default", "vip"],
     } as any)
 
-    const body = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    const body = JSON.parse(atIndex(mockFetchApi.mock.calls, 0)[1].options.body)
     expect(body).toMatchObject({
       id: 1,
       name: "Updated",
@@ -252,7 +253,7 @@ describe("newApiFamily channel management APIs", () => {
       groups: ["default"],
     } as any)
 
-    const body = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+    const body = JSON.parse(atIndex(mockFetchApi.mock.calls, 0)[1].options.body)
     expect(body).toMatchObject({
       id: 1,
       name: "Updated",
@@ -295,7 +296,9 @@ describe("newApiFamily channel management APIs", () => {
         status,
       })
 
-      const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+      const updateBody = JSON.parse(
+        atIndex(mockFetchApi.mock.calls, 0)[1].options.body,
+      )
       expect(updateBody).toMatchObject({ id: 1, name: "Updated" })
       expect(updateBody.status).toBeUndefined()
       expect(mockFetchApi).toHaveBeenCalledTimes(1)
@@ -357,8 +360,10 @@ describe("newApiFamily channel management APIs", () => {
       }),
     )
 
-    const firstEndpoint = mockFetchApi.mock.calls[0][1].endpoint as string
-    const secondEndpoint = mockFetchApi.mock.calls[1][1].endpoint as string
+    const firstEndpoint = atIndex(mockFetchApi.mock.calls, 0)[1]
+      .endpoint as string
+    const secondEndpoint = atIndex(mockFetchApi.mock.calls, 1)[1]
+      .endpoint as string
     expect(firstEndpoint).toContain("p=1")
     expect(firstEndpoint).toContain("page_size=2")
     expect(secondEndpoint).toContain("p=2")

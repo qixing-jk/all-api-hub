@@ -9,6 +9,7 @@ import {
   compareColorTokenBaseline,
   findColorTokenViolations,
 } from "~~/scripts/utils/color-tokens.mjs"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const guardPath = fileURLToPath(
   new URL("../../scripts/check-color-tokens.mjs", import.meta.url),
@@ -189,10 +190,12 @@ describe("color token guard", () => {
     "color(display-p3 1 0 0)",
     "color(srgb-linear 0.1 0.2 0.3)",
   ])("finds modern color literal %s in JSX and CSS", (color) => {
-    for (const [file, source] of [
+    for (const indexedEntry of [
       ["src/example.tsx", `<div style={{ color: "${color}" }} />`],
       ["src/example.css", `.label { color: ${color}; }`],
     ]) {
+      const file = atIndex(indexedEntry, 0)
+      const source = atIndex(indexedEntry, 1)
       expect(
         findColorTokenViolations(file, source).map((item) => item.token),
       ).toEqual([color])

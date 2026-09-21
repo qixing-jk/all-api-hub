@@ -11,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   completeProductAnalyticsActionMock,
@@ -110,9 +111,12 @@ describe("ExportSection analytics", () => {
       )
 
       fireEvent.click(
-        screen.getAllByRole("button", {
-          name: "common:actions.export",
-        })[buttonIndex],
+        atIndex(
+          screen.getAllByRole("button", {
+            name: "common:actions.export",
+          }),
+          buttonIndex,
+        ),
       )
 
       await vi.waitFor(() => {

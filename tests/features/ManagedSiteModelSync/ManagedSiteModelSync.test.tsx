@@ -36,6 +36,7 @@ import { formatFullTime } from "~/utils/core/formatters"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
@@ -412,7 +413,7 @@ describe("ManagedSiteModelSync page", () => {
       expect(screen.queryByText("Beta#102")).not.toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getAllByRole("checkbox")[1])
+    fireEvent.click(atIndex(screen.getAllByRole("checkbox"), 1))
     fireEvent.click(
       screen.getByRole("button", {
         name: "managedSiteModelSync:execution.actions.runSelected (1)",
@@ -477,7 +478,7 @@ describe("ManagedSiteModelSync page", () => {
       expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
 
       if (selectRow) {
-        fireEvent.click(screen.getAllByRole("checkbox")[1])
+        fireEvent.click(atIndex(screen.getAllByRole("checkbox"), 1))
       }
 
       fireEvent.click(screen.getByRole("button", { name: startName }))
@@ -537,7 +538,7 @@ describe("ManagedSiteModelSync page", () => {
     })
     act(() => {
       runAllButton.click()
-      rowSyncButtons[0].click()
+      atIndex(rowSyncButtons, 0).click()
     })
 
     const pendingRunAll = screen.getByRole("button", {
@@ -1597,7 +1598,7 @@ describe("ManagedSiteModelSync page", () => {
       mockSendRuntimeMessage.getMockImplementation()!
     let history = createExecution("Alpha", 101)
     const failedExecution = createExecution("Beta", 102)
-    failedExecution.items[0].ok = false
+    atIndex(failedExecution.items, 0).ok = false
     failedExecution.statistics.successCount = 0
     failedExecution.statistics.failureCount = 1
     mockSendRuntimeMessage.mockImplementation(
@@ -1621,7 +1622,7 @@ describe("ManagedSiteModelSync page", () => {
       }),
     )
     await waitFor(() => expect(mockWarningToast).toHaveBeenCalledOnce())
-    const retry = mockWarningToast.mock.calls[0][1].action.onClick
+    const retry = atIndex(mockWarningToast.mock.calls, 0)[1].action.onClick
 
     history = createExecution("Gamma", 103)
     await user.click(
@@ -2652,7 +2653,7 @@ describe("ManagedSiteModelSync page", () => {
       }),
     )
 
-    const [selectAllCheckbox] = screen.getAllByRole("checkbox")
+    const selectAllCheckbox = atIndex(screen.getAllByRole("checkbox"), 0)
     fireEvent.click(selectAllCheckbox)
 
     expect(
@@ -2953,7 +2954,7 @@ describe("ManagedSiteModelSync page", () => {
       ).toBeGreaterThan(listChannelCallsBeforeRefresh)
     })
 
-    const [selectAllCheckbox] = screen.getAllByRole("checkbox")
+    const selectAllCheckbox = atIndex(screen.getAllByRole("checkbox"), 0)
     fireEvent.click(selectAllCheckbox)
 
     const runSelectedButton = screen.getByRole("button", {

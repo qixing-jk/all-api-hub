@@ -42,6 +42,7 @@ import {
 } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function buildCheckInStatus(isCheckedInToday: boolean): CheckInConfig {
   return mergeCompatibilityCheckInStatus({
@@ -475,7 +476,7 @@ describe("AccountDataContext initial statistics", () => {
       await getContext().reloadAccountsById(["a"])
     })
     expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
-    expect(getContext().displayData[0].estimatedTodayIncome).toBeNull()
+    expect(atIndex(getContext().displayData, 0).estimatedTodayIncome).toBeNull()
   })
   it("starts with unavailable empty statistics coverage", async () => {
     mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
@@ -2126,7 +2127,7 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(mockWithProtectionBypassUserCommand).not.toHaveBeenCalled()
     })
 
-    const [, toastOptions] = mockToastPromise.mock.calls[0]
+    const toastOptions = atIndex(atIndex(mockToastPromise.mock.calls, 0), 1)
     const t = testI18n.getFixedT(null, "account")
     expect(
       toastOptions.success({ success: 2, failed: 0, refreshedCount: 1 }),
@@ -2199,7 +2200,7 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(mockToastPromise).toHaveBeenCalledTimes(1)
     })
 
-    const [, toastOptions] = mockToastPromise.mock.calls[0]
+    const toastOptions = atIndex(atIndex(mockToastPromise.mock.calls, 0), 1)
     const t = testI18n.getFixedT(null, "account")
 
     expect(

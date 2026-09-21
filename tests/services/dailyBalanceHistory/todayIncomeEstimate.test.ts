@@ -9,6 +9,7 @@ import {
 } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const createStore = (
   snapshotsByAccountId: DailyBalanceHistoryStore["snapshotsByAccountId"],
@@ -117,7 +118,7 @@ describe("today income estimate", () => {
       account: {
         ...store.snapshotsByAccountId.account,
         "2026-05-23": {
-          ...store.snapshotsByAccountId.account["2026-05-23"],
+          ...atIndex(store.snapshotsByAccountId.account, "2026-05-23"),
           today_quota_consumption: null,
         },
       },
@@ -136,7 +137,7 @@ describe("today income estimate", () => {
       account: {
         ...store.snapshotsByAccountId.account,
         "2026-05-23": {
-          ...store.snapshotsByAccountId.account["2026-05-23"],
+          ...atIndex(store.snapshotsByAccountId.account, "2026-05-23"),
           today_income: null,
         },
       },

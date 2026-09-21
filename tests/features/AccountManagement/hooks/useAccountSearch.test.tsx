@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockCompareAccountDisplayNames,
@@ -178,7 +179,8 @@ describe("useAccountSearch", () => {
       await vi.advanceTimersByTimeAsync(150)
     })
 
-    const [searchResult] = result.current.searchResults
+    const destructuredSource0 = result.current.searchResults
+    const [searchResult] = [atIndex(destructuredSource0, 0)]
     expect(searchResult.highlights.name).toEqual([
       { text: "Alpha", highlighted: true },
       { text: " Account", highlighted: false },

@@ -38,6 +38,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -2175,9 +2176,12 @@ describe("KeyManagement native page integration", () => {
     expect(legacyRetryFailedAccountsSpy).toHaveBeenCalledTimes(1)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:actions.detailsFor",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "keyManagement:actions.detailsFor",
+        }),
+        0,
+      ),
     )
     expect(screen.getByText("keyManagement:details.empty")).toBeVisible()
     expect(successful.collection.get).not.toHaveBeenCalled()

@@ -50,6 +50,7 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const AUTO_CHECKIN_LEGACY_ALARM_NAME = "autoCheckin"
 const AUTO_CHECKIN_DAILY_ALARM_NAME = "autoCheckinDaily"
@@ -784,8 +785,8 @@ test("reconciles every enabled background scheduler into production MV3 alarms w
             name,
             expect.objectContaining({
               name,
-              scheduledTime: beforeReconcile[name].scheduledTime,
-              periodInMinutes: beforeReconcile[name].periodInMinutes,
+              scheduledTime: atIndex(beforeReconcile, name).scheduledTime,
+              periodInMinutes: atIndex(beforeReconcile, name).periodInMinutes,
             }),
           ]),
         ),

@@ -18,6 +18,7 @@ import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   getSiteTypeCapabilitiesMock,
@@ -120,8 +121,9 @@ describe("auto-detect completion", () => {
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
     expect(accountCompletionMock.complete).toHaveBeenCalledTimes(1)
 
-    const [adapterRequest, helpers] =
-      accountCompletionMock.complete.mock.calls[0]
+    const completedCall = atIndex(accountCompletionMock.complete.mock.calls, 0)
+    const adapterRequest = atIndex(completedCall, 0)
+    const helpers = atIndex(completedCall, 1)
     expect(adapterRequest).toEqual({
       url: "https://status.example.com",
       requestedAuthType: AuthTypeEnum.AccessToken,
@@ -254,8 +256,9 @@ describe("auto-detect completion", () => {
       },
     })
 
-    const [adapterRequest, helpers] =
-      accountCompletionMock.complete.mock.calls[0]
+    const completedCall = atIndex(accountCompletionMock.complete.mock.calls, 0)
+    const adapterRequest = atIndex(completedCall, 0)
+    const helpers = atIndex(completedCall, 1)
     expect(adapterRequest.context).toEqual({
       cookieAuthSessionCookie: "session=example",
     })
@@ -298,8 +301,9 @@ describe("auto-detect completion", () => {
       },
     })
 
-    const [adapterRequest, helpers] =
-      accountCompletionMock.complete.mock.calls[0]
+    const completedCall = atIndex(accountCompletionMock.complete.mock.calls, 0)
+    const adapterRequest = atIndex(completedCall, 0)
+    const helpers = atIndex(completedCall, 1)
     expect(adapterRequest.context).toEqual({})
     expect(
       helpers.createServiceRequest({

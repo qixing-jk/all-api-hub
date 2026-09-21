@@ -22,6 +22,7 @@ import {
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const MANAGE_API_KEYS_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
@@ -404,7 +405,7 @@ describe("newApiSession", () => {
       accessExpiresAt: expect.any(Number),
     })
     expect(cleanupOwnedSessionMock.mock.invocationCallOrder[0]).toBeLessThan(
-      captureOwnedSessionMock.mock.invocationCallOrder[0],
+      atIndex(captureOwnedSessionMock.mock.invocationCallOrder, 0),
     )
     expect(refreshOwnedSessionMock).not.toHaveBeenCalled()
   })

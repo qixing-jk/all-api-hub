@@ -20,6 +20,7 @@ import {
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
   executeTempCheckinFeedbackScan: vi.fn(),
@@ -2764,7 +2765,7 @@ describe("tempWindowPool window fallback", () => {
       error: "messages:background.incognitoAccessRequired",
     })
     expect(reportOutcome.mock.invocationCallOrder[0]).toBeLessThan(
-      sendResponse.mock.invocationCallOrder[0],
+      atIndex(sendResponse.mock.invocationCallOrder, 0),
     )
   })
 
@@ -3895,7 +3896,7 @@ describe("tempWindowPool window fallback", () => {
               },
             }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
-            return fetchDeferreds[fetchAttempts++].promise
+            return atIndex(fetchDeferreds, fetchAttempts++).promise
           default:
             throw new Error(`Unexpected action: ${message.action}`)
         }
@@ -3933,7 +3934,7 @@ describe("tempWindowPool window fallback", () => {
     expect(fetchAttempts).toBe(1)
     expect(secondResponse).not.toHaveBeenCalled()
 
-    fetchDeferreds[0].resolve({
+    atIndex(fetchDeferreds, 0).resolve({
       success: true,
       data: {
         success: true,
@@ -3946,7 +3947,7 @@ describe("tempWindowPool window fallback", () => {
 
     expect(fetchAttempts).toBe(2)
 
-    fetchDeferreds[1].resolve({
+    atIndex(fetchDeferreds, 1).resolve({
       success: true,
       data: {
         success: true,
@@ -4239,7 +4240,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
-            return fetchDeferreds[fetchAttempts++].promise
+            return atIndex(fetchDeferreds, fetchAttempts++).promise
           default:
             throw new Error(`Unexpected action: ${message.action}`)
         }
@@ -4276,7 +4277,7 @@ describe("tempWindowPool window fallback", () => {
 
     expect(fetchAttempts).toBe(1)
 
-    fetchDeferreds[0].reject(new Error("natural temp fetch failed"))
+    atIndex(fetchDeferreds, 0).reject(new Error("natural temp fetch failed"))
     await firstRequest
     await vi.advanceTimersByTimeAsync(500)
 
@@ -4297,7 +4298,7 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabMock).not.toHaveBeenCalledWith(661)
     expect(secondResponse).not.toHaveBeenCalled()
 
-    fetchDeferreds[1].resolve({
+    atIndex(fetchDeferreds, 1).resolve({
       success: true,
       data: {
         success: true,
@@ -4348,7 +4349,7 @@ describe("tempWindowPool window fallback", () => {
           case RuntimeActionIds.ContentCheckCloudflareGuard:
             return { success: true, passed: true }
           case RuntimeActionIds.ContentPerformTempWindowFetch:
-            return fetchDeferreds[fetchAttempts++].promise
+            return atIndex(fetchDeferreds, fetchAttempts++).promise
           default:
             throw new Error(`Unexpected action: ${message.action}`)
         }
@@ -4375,7 +4376,7 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(1000)
     expect(fetchAttempts).toBe(3)
 
-    fetchDeferreds[0].resolve({
+    atIndex(fetchDeferreds, 0).resolve({
       success: true,
       data: { success: true, message: "", data: "result-1" },
     })

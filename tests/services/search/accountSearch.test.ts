@@ -10,6 +10,7 @@ import {
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mockAccounts: DisplaySiteData[] = [
   {
@@ -76,40 +77,40 @@ describe("accountSearch", () => {
     it("finds exact name match", () => {
       const results = searchAccounts(mockAccounts, "OpenAI")
       expect(results).toHaveLength(1)
-      expect(results[0].account.name).toBe("OpenAI")
-      expect(results[0].matchedFields).toContain("name")
+      expect(atIndex(results, 0).account.name).toBe("OpenAI")
+      expect(atIndex(results, 0).matchedFields).toContain("name")
     })
 
     it("finds case-insensitive match", () => {
       const results = searchAccounts(mockAccounts, "openai")
       expect(results).toHaveLength(1)
-      expect(results[0].account.name).toBe("OpenAI")
+      expect(atIndex(results, 0).account.name).toBe("OpenAI")
     })
 
     it("finds partial name match", () => {
       const results = searchAccounts(mockAccounts, "Claude")
       expect(results).toHaveLength(1)
-      expect(results[0].account.name).toBe("Claude API")
+      expect(atIndex(results, 0).account.name).toBe("Claude API")
     })
 
     it("finds URL domain match", () => {
       const results = searchAccounts(mockAccounts, "openai.com")
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toContain("baseUrl")
+      expect(atIndex(results, 0).matchedFields).toContain("baseUrl")
     })
 
     it("finds username match", () => {
       const results = searchAccounts(mockAccounts, "user1")
       expect(results).toHaveLength(1)
-      expect(results[0].account.username).toBe("user1")
-      expect(results[0].matchedFields).toContain("username")
+      expect(atIndex(results, 0).account.username).toBe("user1")
+      expect(atIndex(results, 0).matchedFields).toContain("username")
     })
 
     it("treats username punctuation literally instead of URL-normalizing it", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "3",
             username: "alice#1",
           },
@@ -118,27 +119,27 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].account.username).toBe("alice#1")
-      expect(results[0].matchedFields).toContain("username")
+      expect(atIndex(results, 0).account.username).toBe("alice#1")
+      expect(atIndex(results, 0).matchedFields).toContain("username")
     })
 
     it("finds customCheckInUrl match", () => {
       const results = searchAccounts(mockAccounts, "checkin.openai.com")
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toContain("customCheckInUrl")
+      expect(atIndex(results, 0).matchedFields).toContain("customCheckInUrl")
     })
 
     it("finds customRedeemUrl match", () => {
       const results = searchAccounts(mockAccounts, "redeem.openai.com")
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toContain("customRedeemUrl")
+      expect(atIndex(results, 0).matchedFields).toContain("customRedeemUrl")
     })
 
     it("matches url path segments in base urls", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "path-account",
             baseUrl: "https://example.com/provider/openai/v1",
           },
@@ -147,13 +148,13 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toContain("baseUrl")
+      expect(atIndex(results, 0).matchedFields).toContain("baseUrl")
     })
 
     it("handles multiple keywords", () => {
       const results = searchAccounts(mockAccounts, "OpenAI user1")
       expect(results).toHaveLength(1)
-      expect(results[0].account.name).toBe("OpenAI")
+      expect(atIndex(results, 0).account.name).toBe("OpenAI")
     })
 
     it("matches both base name and username for a disambiguated label", () => {
@@ -161,7 +162,7 @@ describe("accountSearch", () => {
         [
           ...mockAccounts,
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "3",
             name: "My Site · alice",
             username: "alice",
@@ -171,8 +172,8 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].account.id).toBe("3")
-      expect(results[0].matchedFields).toEqual(
+      expect(atIndex(results, 0).account.id).toBe("3")
+      expect(atIndex(results, 0).matchedFields).toEqual(
         expect.arrayContaining(["name", "username"]),
       )
     })
@@ -196,7 +197,7 @@ describe("accountSearch", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "tab-match",
             baseUrl: "https://foo.example.com",
           },
@@ -205,8 +206,8 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].account.id).toBe("tab-match")
-      expect(results[0].matchedFields).toContain("baseUrl")
+      expect(atIndex(results, 0).account.id).toBe("tab-match")
+      expect(atIndex(results, 0).matchedFields).toContain("baseUrl")
     })
 
     it("does not match every account when the query contains only a path", () => {
@@ -219,7 +220,7 @@ describe("accountSearch", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "short-path-segment",
             name: "Hidden",
             username: "nobody",
@@ -264,7 +265,7 @@ describe("accountSearch", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "tagged",
             tags: ["VIP access", "   "],
           },
@@ -273,14 +274,14 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toContain("tags")
+      expect(atIndex(results, 0).matchedFields).toContain("tags")
     })
 
     it("can match by internal account id when no visible field matches", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "account-12345",
             name: "Hidden",
             username: "nobody",
@@ -294,15 +295,15 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toEqual([])
-      expect(results[0].score).toBe(1)
+      expect(atIndex(results, 0).matchedFields).toEqual([])
+      expect(atIndex(results, 0).score).toBe(1)
     })
 
     it("can match by token without surfacing token in matched fields", () => {
       const results = searchAccounts(
         [
           {
-            ...mockAccounts[0],
+            ...atIndex(mockAccounts, 0),
             id: "token-only",
             name: "Hidden",
             username: "nobody",
@@ -316,8 +317,8 @@ describe("accountSearch", () => {
       )
 
       expect(results).toHaveLength(1)
-      expect(results[0].matchedFields).toEqual([])
-      expect(results[0].score).toBe(1)
+      expect(atIndex(results, 0).matchedFields).toEqual([])
+      expect(atIndex(results, 0).score).toBe(1)
     })
   })
 })

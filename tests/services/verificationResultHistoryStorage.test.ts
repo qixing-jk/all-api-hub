@@ -21,6 +21,7 @@ import {
   VERIFICATION_SUMMARY_MAX_AGE_MS,
 } from "~/services/verification/verificationResultHistory/retention"
 import { API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION } from "~/services/verification/verificationResultHistory/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("verificationResultHistoryStorage", () => {
   let readAccountsSpy: MockInstance
@@ -93,10 +94,10 @@ describe("verificationResultHistoryStorage", () => {
 
     const stored = await verificationResultHistoryStorage.listSummaries()
     expect(stored).toHaveLength(501)
-    expect(stored[0]).toEqual(added)
+    expect(atIndex(stored, 0)).toEqual(added)
     // The oldest target must survive: the store no longer evicts by count.
     expect(
-      stored.some((item) => item.targetKey === summaries[0].targetKey),
+      stored.some((item) => item.targetKey === atIndex(summaries, 0).targetKey),
     ).toBe(true)
   })
 

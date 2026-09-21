@@ -6,6 +6,7 @@ import {
   scanDuplicateAccounts,
 } from "~/services/accounts/accountDedupe"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("scanDuplicateAccounts", () => {
   it("groups exact OpenRouter credentials and returns the original records", () => {
@@ -52,10 +53,10 @@ describe("scanDuplicateAccounts", () => {
       },
       accounts: [accountA, accountB],
     })
-    expect(result.groups[0].accounts[0]).toBe(accountA)
-    expect(result.groups[0].accounts[1]).toBe(accountB)
-    expect(result.groups[0].key.id).toBe('["or-a","or-b"]')
-    expect(JSON.stringify(result.groups[0].key)).not.toContain(
+    expect(atIndex(result.groups, 0).accounts[0]).toBe(accountA)
+    expect(atIndex(result.groups, 0).accounts[1]).toBe(accountB)
+    expect(atIndex(result.groups, 0).key.id).toBe('["or-a","or-b"]')
+    expect(JSON.stringify(atIndex(result.groups, 0).key)).not.toContain(
       "same-management-key",
     )
   })
@@ -86,7 +87,7 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].accounts).toEqual([accountA, accountB])
+    expect(atIndex(result.groups, 0).accounts).toEqual([accountA, accountB])
     expect(result.unscannable).toEqual([])
   })
 
@@ -116,8 +117,8 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].accounts).toEqual([accountA, accountB])
-    expect(JSON.stringify(result.groups[0].key)).not.toContain(
+    expect(atIndex(result.groups, 0).accounts).toEqual([accountA, accountB])
+    expect(JSON.stringify(atIndex(result.groups, 0).key)).not.toContain(
       "same-management-key",
     )
   })
@@ -169,9 +170,11 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(2)
-    expect(result.groups[0].key.id).toBeTruthy()
-    expect(result.groups[1].key.id).toBeTruthy()
-    expect(result.groups[0].key.id).not.toBe(result.groups[1].key.id)
+    expect(atIndex(result.groups, 0).key.id).toBeTruthy()
+    expect(atIndex(result.groups, 1).key.id).toBeTruthy()
+    expect(atIndex(result.groups, 0).key.id).not.toBe(
+      atIndex(result.groups, 1).key.id,
+    )
     expect(
       JSON.stringify(result.groups.map((group) => group.key)),
     ).not.toContain("management-key")
@@ -239,13 +242,13 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].key).toEqual({
+    expect(atIndex(result.groups, 0).key).toEqual({
       id: '["acc-1","acc-2"]',
       origin: "https://api.example.com",
       reason: "same_origin_user",
       userId: "1",
     })
-    expect(result.groups[0].accounts).toEqual([a1, a2])
+    expect(atIndex(result.groups, 0).accounts).toEqual([a1, a2])
   })
 
   it("groups ordinary historical records by origin and user id across site types", () => {
@@ -272,15 +275,20 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].key).toEqual({
+    expect(atIndex(result.groups, 0).key).toEqual({
       id: '["acc-detected","acc-historical"]',
       origin: "https://api.example.com",
       reason: "same_origin_user",
       userId: "same-user",
     })
-    expect(reversedResult.groups[0].key).toEqual(result.groups[0].key)
-    expect(result.groups[0].accounts).toEqual([historical, detected])
-    expect(reversedResult.groups[0].accounts).toEqual([detected, historical])
+    expect(atIndex(reversedResult.groups, 0).key).toEqual(
+      atIndex(result.groups, 0).key,
+    )
+    expect(atIndex(result.groups, 0).accounts).toEqual([historical, detected])
+    expect(atIndex(reversedResult.groups, 0).accounts).toEqual([
+      detected,
+      historical,
+    ])
   })
 
   it("excludes the current record when finding an exact credential duplicate", () => {
@@ -391,7 +399,7 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].key).toEqual({
+    expect(atIndex(result.groups, 0).key).toEqual({
       id: '["acc-1","acc-2"]',
       origin: "https://api.example.com",
       reason: "same_origin_user",
@@ -420,7 +428,7 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].key).toEqual({
+    expect(atIndex(result.groups, 0).key).toEqual({
       id: '["acc-1","acc-2"]',
       origin: "https://console.aihubmix.com",
       reason: "same_origin_user",
@@ -450,8 +458,8 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepPinned",
     })
 
-    expect(result.groups[0].keepAccountId).toBe("acc-2")
-    expect(result.groups[0].deleteAccountIds).toEqual(["acc-1"])
+    expect(atIndex(result.groups, 0).keepAccountId).toBe("acc-2")
+    expect(atIndex(result.groups, 0).deleteAccountIds).toEqual(["acc-1"])
   })
 
   it("picks an enabled account when strategy is keepEnabled (even if a disabled one is pinned)", () => {
@@ -478,7 +486,7 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepEnabled",
     })
 
-    expect(result.groups[0].keepAccountId).toBe("acc-1")
+    expect(atIndex(result.groups, 0).keepAccountId).toBe("acc-1")
   })
 
   it("picks the most recently updated account when strategy is keepMostRecentlyUpdated", () => {
@@ -503,7 +511,7 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepMostRecentlyUpdated",
     })
 
-    expect(result.groups[0].keepAccountId).toBe("acc-2")
+    expect(atIndex(result.groups, 0).keepAccountId).toBe("acc-2")
   })
 
   it("uses created_at then id as deterministic tie-breakers", () => {
@@ -528,7 +536,7 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepMostRecentlyUpdated",
     })
 
-    expect(createdAtResult.groups[0].keepAccountId).toBe("acc-2")
+    expect(atIndex(createdAtResult.groups, 0).keepAccountId).toBe("acc-2")
 
     const idTieA = buildSiteAccount({
       id: "acc-1",
@@ -551,7 +559,7 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepMostRecentlyUpdated",
     })
 
-    expect(idResult.groups[0].keepAccountId).toBe("acc-1")
+    expect(atIndex(idResult.groups, 0).keepAccountId).toBe("acc-1")
   })
 
   it("treats large numeric-looking strings as ordinary upstream user ids", () => {
@@ -578,13 +586,13 @@ describe("scanDuplicateAccounts", () => {
     })
 
     expect(result.groups).toHaveLength(1)
-    expect(result.groups[0].key).toEqual({
+    expect(atIndex(result.groups, 0).key).toEqual({
       id: '["acc-1","acc-3"]',
       origin: "https://api.example.com",
       reason: "same_origin_user",
       userId: "9007199254740992",
     })
-    expect(result.groups[0].accounts).toEqual([accountA, duplicateA])
+    expect(atIndex(result.groups, 0).accounts).toEqual([accountA, duplicateA])
     expect(result.unscannable).toEqual([])
   })
 

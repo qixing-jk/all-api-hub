@@ -49,17 +49,31 @@ export function assignShards<T extends WeightedSpec>(
   for (const entry of heaviestFirst) {
     let target = 0
     for (let index = 1; index < shardCount; index += 1) {
+      const candidateLoad = loads[index]
+      const targetLoad = loads[target]
+      const candidateShard = shards[index]
+      const targetShard = shards[target]
+      if (
+        candidateLoad === undefined ||
+        targetLoad === undefined ||
+        !candidateShard ||
+        !targetShard
+      ) {
+        continue
+      }
       // Equal loads fall back to the emptier shard: with every weight equal (a manifest
       // that matched nothing, or files that all cost the same) load comparison alone would
       // keep choosing shard 0 and leave the others without a file to run.
-      const lighter = loads[index] < loads[target]
+      const lighter = candidateLoad < targetLoad
       const emptier =
-        loads[index] === loads[target] &&
-        shards[index].length < shards[target].length
+        candidateLoad === targetLoad &&
+        candidateShard.length < targetShard.length
       if (lighter || emptier) target = index
     }
-    shards[target].push(entry)
-    loads[target] += entry.weight
+    const targetShard = shards[target]
+    if (!targetShard) continue
+    targetShard.push(entry)
+    loads[target] = (loads[target] ?? 0) + entry.weight
   }
 
   return shards
@@ -76,9 +90,11 @@ export function fallbackWeight(weights: number[]): number {
   if (weights.length === 0) return 0
   const sorted = [...weights].sort((a, b) => a - b)
   const middle = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0
-    ? (sorted[middle - 1] + sorted[middle]) / 2
-    : sorted[middle]
+  const upper = sorted[middle]
+  if (upper === undefined) return 0
+  if (sorted.length % 2 === 1) return upper
+  const lower = sorted[middle - 1]
+  return lower === undefined ? upper : (lower + upper) / 2
 }
 
 export class DurationBalancedSequencer extends BaseSequencer {

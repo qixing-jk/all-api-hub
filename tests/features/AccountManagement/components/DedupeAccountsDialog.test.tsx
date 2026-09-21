@@ -18,6 +18,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const accounts = [
@@ -146,8 +147,8 @@ describe("DedupeAccountsDialog", () => {
     const user = userEvent.setup()
     const onReviewAccount = vi.fn()
     const onDeleteAccount = vi.fn()
-    const originalUrl = accounts[1].site_url
-    accounts[1].site_url = "https://migrated.example.net"
+    const originalUrl = atIndex(accounts, 1).site_url
+    atIndex(accounts, 1).site_url = "https://migrated.example.net"
     try {
       render(
         <DedupeAccountsDialog
@@ -163,7 +164,9 @@ describe("DedupeAccountsDialog", () => {
       expect(
         within(candidates).getByText("https://migrated.example.net"),
       ).toBeVisible()
-      expect(within(candidates).getByText(accounts[0].site_url)).toBeVisible()
+      expect(
+        within(candidates).getByText(atIndex(accounts, 0).site_url),
+      ).toBeVisible()
       expect(
         within(candidates).getByText(
           "ui:dialog.dedupeAccounts.suspected.sameName",
@@ -180,29 +183,35 @@ describe("DedupeAccountsDialog", () => {
         screen.queryByText("ui:dialog.dedupeAccounts.empty"),
       ).not.toBeInTheDocument()
       await user.click(
-        within(candidates).getAllByRole("button", {
-          name: "ui:dialog.dedupeAccounts.suspected.reviewAccount",
-        })[0],
+        atIndex(
+          within(candidates).getAllByRole("button", {
+            name: "ui:dialog.dedupeAccounts.suspected.reviewAccount",
+          }),
+          0,
+        ),
       )
       expect(onCloseMock).not.toHaveBeenCalled()
       expect(onReviewAccount).toHaveBeenCalledWith("acc-keep")
       await user.click(
-        within(candidates).getAllByRole("button", {
-          name: "ui:dialog.dedupeAccounts.suspected.deleteAccount",
-        })[1],
+        atIndex(
+          within(candidates).getAllByRole("button", {
+            name: "ui:dialog.dedupeAccounts.suspected.deleteAccount",
+          }),
+          1,
+        ),
       )
       expect(onDeleteAccount).toHaveBeenCalledWith("acc-del")
       expect(onCloseMock).not.toHaveBeenCalled()
       expect(deleteAccountsMock).not.toHaveBeenCalled()
     } finally {
-      accounts[1].site_url = originalUrl
+      atIndex(accounts, 1).site_url = originalUrl
     }
   })
 
   it("keeps suspected matches out of exact-duplicate cleanup", async () => {
     const user = userEvent.setup()
     accounts.push({
-      ...accounts[0],
+      ...atIndex(accounts, 0),
       id: "suspected",
       site_url: "https://migrated.example.net",
     })
@@ -287,9 +296,9 @@ describe("DedupeAccountsDialog", () => {
         accounts: openRouterAccounts,
       },
     ])
-    expect(result.groups[0].accounts[0]).toBe(openRouterAccounts[0])
-    expect(result.groups[0].accounts[1]).toBe(openRouterAccounts[1])
-    expect(JSON.stringify(result.groups[0].key)).not.toContain(
+    expect(atIndex(result.groups, 0).accounts[0]).toBe(openRouterAccounts[0])
+    expect(atIndex(result.groups, 0).accounts[1]).toBe(openRouterAccounts[1])
+    expect(JSON.stringify(atIndex(result.groups, 0).key)).not.toContain(
       "management-key-placeholder",
     )
   })
@@ -320,8 +329,8 @@ describe("DedupeAccountsDialog", () => {
 
   it("updates the deletion recommendation when the keep strategy changes", async () => {
     const user = userEvent.setup()
-    const originalDisabled = accounts[0].disabled
-    accounts[0].disabled = true
+    const originalDisabled = atIndex(accounts, 0).disabled
+    atIndex(accounts, 0).disabled = true
     try {
       render(<DedupeAccountsDialog isOpen onClose={onCloseMock} />)
       await user.click(await screen.findByRole("combobox"))
@@ -344,7 +353,7 @@ describe("DedupeAccountsDialog", () => {
         expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-keep"]),
       )
     } finally {
-      accounts[0].disabled = originalDisabled
+      atIndex(accounts, 0).disabled = originalDisabled
     }
   })
 
@@ -492,7 +501,7 @@ describe("DedupeAccountsDialog", () => {
     const showButtons = await screen.findAllByRole("button", {
       name: "ui:dialog.dedupeAccounts.detailsToggle.show",
     })
-    await user.click(showButtons[0])
+    await user.click(atIndex(showButtons, 0))
 
     expect(keepRadio).toBeChecked()
 

@@ -32,6 +32,7 @@ import {
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -205,7 +206,7 @@ describe("New API native managed resource", () => {
     "classifies channel cleanup reads as $expected for $errorCode: $message",
     async ({ message, errorCode, expected }) => {
       const workspace = await newApiManagedResourceRegistration.open()
-      const ref = (await workspace.list()).items[0].ref
+      const ref = atIndex((await workspace.list()).items, 0).ref
       mocks.get.mockRejectedValueOnce(
         new ApiError(message, undefined, "/api/channel/17", errorCode),
       )
@@ -223,7 +224,9 @@ describe("New API native managed resource", () => {
     mocks.fetchSecretKey.mockResolvedValue("keep-me\nremove-me\nalso-keep")
     mocks.deleteKey.mockResolvedValue(success())
     const api = await newApiManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     expect(cleanup.keys).toEqual(["keep-me", "remove-me", "also-keep"])
     await cleanup.remove([1])
     expect(mocks.deleteKey).toHaveBeenCalledWith(
@@ -242,7 +245,9 @@ describe("New API native managed resource", () => {
     })
     mocks.fetchSecretKey.mockResolvedValue("  single-key  ")
     const api = await newApiManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     expect(cleanup.keys).toEqual(["single-key"])
     expect(mocks.deleteKey).not.toHaveBeenCalled()
   })
@@ -256,7 +261,9 @@ describe("New API native managed resource", () => {
       .mockResolvedValueOnce("first\nsecond")
       .mockResolvedValueOnce("new\nfirst\nsecond")
     const api = await newApiManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     await expect(cleanup.remove([1])).rejects.toMatchObject({
       failure: { code: "resource_changed" },
     })
@@ -271,7 +278,9 @@ describe("New API native managed resource", () => {
     mocks.fetchSecretKey.mockResolvedValue("first\nsecond\nthird")
     mocks.deleteKey.mockResolvedValue({ outcome: "uncertain" })
     const api = await newApiManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     await expect(cleanup.remove([0, 1])).resolves.toMatchObject({
       outcome: "uncertain",
     })
@@ -350,7 +359,7 @@ describe("New API native managed resource", () => {
     mocks.get.mockResolvedValue(detail)
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
     expect(
@@ -403,7 +412,7 @@ describe("New API native managed resource", () => {
       })
       const workspace = await newApiManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       if (disclosed)
         await expect(
@@ -482,7 +491,7 @@ describe("New API native managed resource", () => {
     })
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(
       editor.submit({
@@ -551,7 +560,7 @@ describe("New API native managed resource", () => {
     })
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(JSON.stringify(editor.initialValues)).not.toContain("first-secret")
     await expect(
@@ -625,7 +634,7 @@ describe("New API native managed resource", () => {
     })
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(
       editor.submit({
@@ -673,7 +682,7 @@ describe("New API native managed resource", () => {
 
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     mocks.get.mockResolvedValue({
       ...detail,
@@ -706,7 +715,7 @@ describe("New API native managed resource", () => {
       mocks.get.mockResolvedValue(detail)
       const workspace = await newApiManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       if (scenario === "single")
         mocks.get.mockResolvedValue({
@@ -778,7 +787,7 @@ describe("New API native managed resource", () => {
     }
     mocks.get.mockResolvedValue(initial)
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
     const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
     expect(editor.initialValues[F.ModelMapping]).toEqual(["alias", "model-a"])
@@ -811,7 +820,7 @@ describe("New API native managed resource", () => {
       }
     })
     expect((await editor.submit(values)).outcome).toBe("succeeded")
-    const payload = mocks.update.mock.calls[0][1]
+    const payload = atIndex(mocks.update.mock.calls, 0)[1]
     expect(payload).toMatchObject({
       test_model: "",
       auto_ban: 0,
@@ -837,7 +846,7 @@ describe("New API native managed resource", () => {
   it("does not report success when an older server ignores advanced settings", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const result = await editor.submit({
       ...editor.initialValues,
@@ -871,7 +880,7 @@ describe("New API native managed resource", () => {
       [F.AutoBan]: false,
     }
     expect((await editor.submit(values)).outcome).toBe("succeeded")
-    expect(mocks.create.mock.calls[0][1].channel).toMatchObject({
+    expect(atIndex(mocks.create.mock.calls, 0)[1].channel).toMatchObject({
       remark: "creation note",
       auto_ban: 0,
     })
@@ -880,7 +889,7 @@ describe("New API native managed resource", () => {
   it("keeps a successful write uncertain if its confirmation read fails", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     mocks.update.mockImplementation(async () => {
       mocks.get.mockRejectedValue(new Error("read unavailable"))
@@ -945,7 +954,7 @@ describe("New API native managed resource", () => {
     })
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     mocks.update.mockImplementation(async (_config, payload) => {
       mocks.get.mockResolvedValue({
@@ -983,7 +992,7 @@ describe("New API native managed resource", () => {
   it("keeps an unconfirmed advanced write uncertain without inventing effects", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     mocks.update.mockResolvedValue({
       outcome: "succeeded",
@@ -1001,7 +1010,7 @@ describe("New API native managed resource", () => {
   it("rejects secret reads for unrelated fields without fetching a credential", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await expect(
       editor.loadSecret!(NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name),
@@ -1012,7 +1021,7 @@ describe("New API native managed resource", () => {
   it("validates mappings, proxy URLs, notes and model detection dependencies", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
     for (const [id, value] of [
@@ -1060,7 +1069,7 @@ describe("New API native managed resource", () => {
   it("accepts SOCKS proxies when the browser cannot parse non-special URL hosts", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const NativeURL = URL
     class LegacyURL extends NativeURL {
@@ -1096,7 +1105,7 @@ describe("New API native managed resource", () => {
     })
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
     expect(
@@ -1112,7 +1121,7 @@ describe("New API native managed resource", () => {
       (await editor.submit({ ...editor.initialValues, [F.Name]: "rename" }))
         .outcome,
     ).toBe("succeeded")
-    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).toMatchObject({
       setting: "broken-json",
       settings: "[]",
       model_mapping: '{"alias":5}',
@@ -1157,7 +1166,7 @@ describe("New API native managed resource", () => {
         },
       }),
     )
-    expect(page.items[0].fields).toEqual(
+    expect(atIndex(page.items, 0).fields).toEqual(
       expect.arrayContaining([
         {
           fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.ModelCount,
@@ -1336,7 +1345,7 @@ describe("New API native managed resource", () => {
       const page = await workspace.list({ search })
       expect(page.total).toBe(1)
       expect(page.items).toHaveLength(1)
-      expect(page.items[0].ref.resourceId).toBe("17")
+      expect(atIndex(page.items, 0).ref.resourceId).toBe("17")
     }
     await expect(
       workspace.list({ search: "private-credential" }),
@@ -1579,7 +1588,7 @@ describe("New API native managed resource", () => {
   it("loads an edit secret only through the protected native editor", async () => {
     const signal = new AbortController().signal
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expect(
@@ -1595,7 +1604,7 @@ describe("New API native managed resource", () => {
     const controller = new AbortController()
     controller.abort(new DOMException("Cancelled secret read", "AbortError"))
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expectFailureCode(
@@ -1616,7 +1625,7 @@ describe("New API native managed resource", () => {
       return "late-secret"
     })
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expectFailureCode(
@@ -1640,7 +1649,7 @@ describe("New API native managed resource", () => {
       ),
     )
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     const error = await editor
@@ -1667,7 +1676,7 @@ describe("New API native managed resource", () => {
       ),
     )
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     const error = await editor
@@ -1738,7 +1747,7 @@ describe("New API native managed resource", () => {
   it("forwards public native operation signals to every channel mutation", async () => {
     const signal = new AbortController().signal
     const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
 
     await workspace.list({ search: "Primary" }, { signal })
 
@@ -2260,7 +2269,7 @@ describe("New API native managed resource", () => {
 
   it("projects canonical migration data without treating empty JSON defaults as loss", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
-    const item = (await workspace.list()).items[0]
+    const item = atIndex((await workspace.list()).items, 0)
     const selection = {
       selectionId: "selection-17",
       displayName: item.displayName,
@@ -2306,7 +2315,7 @@ describe("New API native managed resource", () => {
     })
     mocks.get.mockResolvedValue(channelWithProviderMappings)
     const workspace = await newApiManagedResourceRegistration.open()
-    const item = (await workspace.list()).items[0]
+    const item = atIndex((await workspace.list()).items, 0)
 
     await expect(
       newApiManagedSiteMigrationCapability.source!.prepare({
@@ -2331,7 +2340,7 @@ describe("New API native managed resource", () => {
     const abortError = new DOMException("Cancelled", "AbortError")
     mocks.fetchSecretKey.mockRejectedValue(abortError)
     const workspace = await newApiManagedResourceRegistration.open()
-    const item = (await workspace.list()).items[0]
+    const item = atIndex((await workspace.list()).items, 0)
 
     await expect(
       newApiManagedSiteMigrationCapability.source!.resolveCredential({

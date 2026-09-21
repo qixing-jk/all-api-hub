@@ -10,6 +10,7 @@ import {
   type KiloCodeDefaultModelSelection,
 } from "~/services/integrations/kiloCodeExport"
 import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const preparedCatalog = prepareKiloCodeV7Catalog([
   {
@@ -431,10 +432,10 @@ describe("buildKiloCodeApiConfigs", () => {
       generateId: (name) => `id-${name}`,
     })
 
-    expect(apiConfigs["Example - Default"].openAiBaseUrl).toBe(
+    expect(atIndex(apiConfigs, "Example - Default").openAiBaseUrl).toBe(
       "https://x.test/v1",
     )
-    expect(apiConfigs["Example2 - Default"].openAiBaseUrl).toBe(
+    expect(atIndex(apiConfigs, "Example2 - Default").openAiBaseUrl).toBe(
       "https://y.test/v1",
     )
   })
@@ -553,6 +554,8 @@ describe("buildKiloCodeApiConfigs", () => {
       generateId: (name) => `id-${name}`,
     })
 
-    expect(apiConfigs["Example - Default"].openAiModelId).toBe("gpt-4o-mini")
+    expect(atIndex(apiConfigs, "Example - Default").openAiModelId).toBe(
+      "gpt-4o-mini",
+    )
   })
 })

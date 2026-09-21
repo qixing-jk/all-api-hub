@@ -35,6 +35,7 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
@@ -434,7 +435,9 @@ describe("apiTransport request helpers", () => {
       },
       { endpoint: "/api/user/self" },
     )
-    expect(mockWithSiteApiRequestLease.mock.calls[0][3]).toBe(requestScheduling)
+    expect(atIndex(mockWithSiteApiRequestLease.mock.calls, 0)[3]).toBe(
+      requestScheduling,
+    )
   })
 
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
@@ -903,10 +906,10 @@ describe("apiTransport request helpers", () => {
     )
 
     expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(2)
-    expect(mockWithSiteApiRequestLease.mock.calls[0][0]).toBe(
+    expect(atIndex(mockWithSiteApiRequestLease.mock.calls, 0)[0]).toBe(
       "https://example.com",
     )
-    expect(mockWithSiteApiRequestLease.mock.calls[1][0]).toBe(
+    expect(atIndex(mockWithSiteApiRequestLease.mock.calls, 1)[0]).toBe(
       "https://example.com",
     )
   })
@@ -1001,7 +1004,9 @@ describe("apiTransport request helpers", () => {
         responseType: "json",
       }),
     )
-    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+    expect(
+      atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
+    ).toEqual(
       expect.objectContaining({
         method: "GET",
         credentials: "include",
@@ -1726,7 +1731,9 @@ describe("apiTransport request helpers", () => {
     ).resolves.toEqual({ ok: true })
 
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
-    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+    expect(
+      atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
+    ).toEqual(
       expect.not.objectContaining({
         signal: expect.anything(),
       }),
@@ -1766,7 +1773,9 @@ describe("apiTransport request helpers", () => {
       ),
     ).resolves.toEqual({ ok: true })
 
-    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+    expect(
+      atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
+    ).toEqual(
       expect.objectContaining({
         headers: expect.objectContaining({
           Cookie: "session=abc123",
@@ -1807,7 +1816,9 @@ describe("apiTransport request helpers", () => {
       ),
     ).resolves.toEqual({ ok: true })
 
-    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+    expect(
+      atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
+    ).toEqual(
       expect.objectContaining({
         headers: expect.objectContaining({
           Cookie: "session=abc123",
@@ -1857,7 +1868,9 @@ describe("apiTransport request helpers", () => {
         responseType: "json",
       }),
     )
-    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+    expect(
+      atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
+    ).toEqual(
       expect.objectContaining({
         method: "POST",
         credentials: "include",

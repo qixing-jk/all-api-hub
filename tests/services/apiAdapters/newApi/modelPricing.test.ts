@@ -14,6 +14,7 @@ import {
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { fetchModelPricingMock } = vi.hoisted(() => ({
   fetchModelPricingMock: vi.fn(),
@@ -88,7 +89,7 @@ describe("New API model pricing adapter", () => {
     const catalog = await createNewApiModelPricing(
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
-    expect(catalog.data[0].enable_groups).toEqual(expected)
+    expect(atIndex(catalog.data, 0).enable_groups).toEqual(expected)
   })
   it("retains per-model missing access evidence in a partially priced compatibility catalog", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
@@ -113,8 +114,10 @@ describe("New API model pricing adapter", () => {
       kind: "compatible-priced-fallback",
       candidateGroups: ["default"],
     })
-    expect(catalog.data[0].groupAccess).toBeUndefined()
-    expect(catalog.data[1].groupAccess).toEqual({ kind: "unavailable" })
+    expect(atIndex(catalog.data, 0).groupAccess).toBeUndefined()
+    expect(atIndex(catalog.data, 1).groupAccess).toEqual({
+      kind: "unavailable",
+    })
   })
   it("publishes normalized access evidence and preserves a zero multiplier", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
@@ -162,7 +165,7 @@ describe("New API model pricing adapter", () => {
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
       const quote = quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           at: at as string | undefined,
@@ -199,9 +202,9 @@ describe("New API model pricing adapter", () => {
           resolution: PRICING_IMAGE_SIZES.K4,
         },
       ]
-      if (problem === "wrong-price") items[0].amount = 0.11
+      if (problem === "wrong-price") atIndex(items, 0).amount = 0.11
       if (problem === "duplicate-size")
-        items[1].resolution = PRICING_IMAGE_SIZES.K1
+        atIndex(items, 1).resolution = PRICING_IMAGE_SIZES.K1
       fetchModelPricingMock.mockResolvedValueOnce(
         pricingResponse({
           data: [
@@ -225,7 +228,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          response.data[0],
+          atIndex(response.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             imageSize: PRICING_IMAGE_SIZES.K1,
@@ -283,7 +286,7 @@ describe("New API model pricing adapter", () => {
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
       const quote = quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           imageSize,
@@ -319,7 +322,7 @@ describe("New API model pricing adapter", () => {
     ).fetchPricing(request)
     expect(
       quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           at,
@@ -345,7 +348,7 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
     const quote = quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         purpose: PRICING_PURPOSES.REQUEST,
         responseFormat: PRICING_RESPONSE_FORMATS.OPENAI,
@@ -384,9 +387,9 @@ describe("New API model pricing adapter", () => {
       const response = await createNewApiModelPricing(
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
-      expect(response.data[0].quota_type).toBe(1)
+      expect(atIndex(response.data, 0).quota_type).toBe(1)
       const quote = quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           usage: { input: 1, output: 1 },
@@ -421,7 +424,7 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
     const quote = quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1, output: 1 } },
       { groupMultiplier: 1 },
     )
@@ -464,12 +467,12 @@ describe("New API model pricing adapter", () => {
       const response = await createNewApiModelPricing(
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
-      expect(response.data[0].pricingPlan?.issues).toEqual([
+      expect(atIndex(response.data, 0).pricingPlan?.issues).toEqual([
         { code: "unsupported-rule", reason },
       ])
       expect(
         quoteCanonicalModelPrice(
-          response.data[0],
+          atIndex(response.data, 0),
           { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { output: 1 } },
           { groupMultiplier: 1 },
         ).status,
@@ -499,7 +502,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          response.data[0],
+          atIndex(response.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             outputTokens,
@@ -536,7 +539,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          response.data[0],
+          atIndex(response.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             inputTokens: Number(inputTokens),
@@ -572,7 +575,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          response.data[0],
+          atIndex(response.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             inputTokens,
@@ -607,7 +610,7 @@ describe("New API model pricing adapter", () => {
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
       const quote = quoteCanonicalModelPrice(
-        result.data[0],
+        atIndex(result.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           inputTokens: 600000,
@@ -646,7 +649,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          result.data[0],
+          atIndex(result.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             inputTokens,
@@ -698,7 +701,7 @@ describe("New API model pricing adapter", () => {
       ).fetchPricing(request)
       expect(
         quoteCanonicalModelPrice(
-          result.data[0],
+          atIndex(result.data, 0),
           {
             purpose: PRICING_PURPOSES.TOKEN_INDEX,
             videoInput: PRICING_VIDEO_INPUTS.WITH_VIDEO,
@@ -752,7 +755,7 @@ describe("New API model pricing adapter", () => {
         SITE_TYPES.NEW_API,
       ).fetchPricing(request)
       const quote = quoteCanonicalModelPrice(
-        result.data[0],
+        atIndex(result.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           videoInput: videoInput
@@ -957,7 +960,7 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
 
-    expect(result.data[0].vendorEvidence).toEqual({
+    expect(atIndex(result.data, 0).vendorEvidence).toEqual({
       kind: MODEL_VENDOR_EVIDENCE_KINDS.DeploymentCategory,
       name: "Deployment Category",
       externalId: "1",
@@ -1174,7 +1177,9 @@ it("quotes flat token billing without applying the effective group rate twice, a
     usage: { input: 1000, output: 1000, request: 1 },
   }
   expect(
-    quoteCanonicalModelPrice(flat.data[0], scenario, { groupMultiplier: 0.5 }),
+    quoteCanonicalModelPrice(atIndex(flat.data, 0), scenario, {
+      groupMultiplier: 0.5,
+    }),
   ).toMatchObject({ status: "complete", amount: 0.002 })
   fetchModelPricingMock.mockResolvedValue(
     pricingResponse({
@@ -1189,7 +1194,7 @@ it("quotes flat token billing without applying the effective group rate twice, a
   )
   const expression = await adapter.fetchPricing(request)
   expect(
-    quoteCanonicalModelPrice(expression.data[0], scenario, {
+    quoteCanonicalModelPrice(atIndex(expression.data, 0), scenario, {
       groupMultiplier: 1,
     }).status,
   ).toBe("unavailable")
@@ -1213,7 +1218,7 @@ it("quotes the official versioned context expression without legacy ratio conver
   ).fetchPricing(request)
   const quote = (inputTokens: number) =>
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         purpose: PRICING_PURPOSES.REQUEST,
         inputTokens,
@@ -1256,7 +1261,7 @@ it.each([
     ).fetchPricing(request)
     expect(
       quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           inputTokens: 300000,
@@ -1285,7 +1290,7 @@ it("accepts Unicode tier labels and prices a flat expression without a context l
   ).fetchPricing(request)
   expect(
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1, output: 1 } },
       { groupMultiplier: 1 },
     ),
@@ -1305,9 +1310,11 @@ it("prices media tokens separately and resolves omitted cache pricing from the s
       ],
     }),
   )
-  const model = (
-    await createNewApiModelPricing(SITE_TYPES.NEW_API).fetchPricing(request)
-  ).data[0]
+  const model = atIndex(
+    (await createNewApiModelPricing(SITE_TYPES.NEW_API).fetchPricing(request))
+      .data,
+    0,
+  )
   expect(
     quoteCanonicalModelPrice(
       model,
@@ -1353,9 +1360,11 @@ it("applies request service-tier and local-hour factors after context selection"
       ],
     }),
   )
-  const model = (
-    await createNewApiModelPricing(SITE_TYPES.NEW_API).fetchPricing(request)
-  ).data[0]
+  const model = atIndex(
+    (await createNewApiModelPricing(SITE_TYPES.NEW_API).fetchPricing(request))
+      .data,
+    0,
+  )
   const quote = (at: string) =>
     quoteCanonicalModelPrice(
       model,

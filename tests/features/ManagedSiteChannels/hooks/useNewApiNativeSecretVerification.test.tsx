@@ -6,6 +6,7 @@ import {
   MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({
@@ -85,7 +86,10 @@ describe("useNewApiNativeSecretVerification", () => {
       await waitFor(() =>
         expect(mocks.openNewApiManagedVerification).toHaveBeenCalledOnce(),
       )
-      const request = mocks.openNewApiManagedVerification.mock.calls[0][0]
+      const request = atIndex(
+        mocks.openNewApiManagedVerification.mock.calls,
+        0,
+      )[0]
 
       await act(async () => {
         await request.onVerified()
@@ -242,7 +246,10 @@ describe("useNewApiNativeSecretVerification", () => {
     await waitFor(() =>
       expect(mocks.openNewApiManagedVerification).toHaveBeenCalledOnce(),
     )
-    const request = mocks.openNewApiManagedVerification.mock.calls[0][0]
+    const request = atIndex(
+      mocks.openNewApiManagedVerification.mock.calls,
+      0,
+    )[0]
     const pendingRejection = expect(pending).rejects.toBe(retryFailure)
 
     await expect(request.onVerified()).rejects.toBe(retryFailure)

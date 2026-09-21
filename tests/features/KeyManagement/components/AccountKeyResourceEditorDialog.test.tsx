@@ -26,6 +26,7 @@ import {
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
@@ -186,7 +187,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
     )
     expect(submit).toHaveBeenCalledWith(1, definition.initialValues)
-    expect(submit.mock.calls[0][1]).not.toHaveProperty("expires_at")
+    expect(atIndex(submit.mock.calls, 0)[1]).not.toHaveProperty("expires_at")
   })
 
   it.each(["create", "edit"] as const)(

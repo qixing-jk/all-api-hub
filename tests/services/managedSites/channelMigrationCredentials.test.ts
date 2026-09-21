@@ -8,6 +8,7 @@ import type {
   ManagedSiteMigrationCanonicalPreview,
   ManagedSiteMigrationExecutionCommand,
 } from "~/types/managedSiteMigrationCapability"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const source = {
   sourceSiteType: SITE_TYPES.OCTOPUS,
@@ -73,7 +74,7 @@ const credentials = [
 ]
 const resolveCredential = async () => ({
   status: "ready" as const,
-  credential: credentials[0].value,
+  credential: atIndex(credentials, 0).value,
   credentials,
 })
 const execute = (
@@ -94,7 +95,7 @@ const execute = (
 describe("multi-key migration planning and execution", () => {
   it("preserves a single disabled key without a split warning", async () => {
     const input = preview()
-    const item = input.items[0]
+    const item = atIndex(input.items, 0)
     if (item.status !== "ready") throw new Error("fixture")
     item.source.credentialMetadata = [{ enabled: false }]
     const planned = planMigrationCredentials(input, () => false)
@@ -120,7 +121,7 @@ describe("multi-key migration planning and execution", () => {
     "blocks invalid selected key index %s before mutation",
     async (credentialIndex) => {
       const planned = planMigrationCredentials(preview(), () => true)
-      planned.items[0].selection.credentialIndex = credentialIndex
+      atIndex(planned.items, 0).selection.credentialIndex = credentialIndex
       const create = vi.fn()
       expect(await execute(planned, { create })).toMatchObject({
         skippedCount: 1,
@@ -142,7 +143,7 @@ describe("multi-key migration planning and execution", () => {
       items: [{ target: { projection: { keyCount: 2 } } }],
     })
     const result = await execute(planned, { create })
-    expect(create.mock.calls[0][0].credentials).toEqual(credentials)
+    expect(atIndex(create.mock.calls, 0)[0].credentials).toEqual(credentials)
     expect(result.createdCount).toBe(1)
     for (const key of credentials) {
       expect(JSON.stringify(planned)).not.toContain(key.value)
@@ -218,9 +219,9 @@ describe("multi-key migration planning and execution", () => {
           create,
           resolveCredential: async () => ({
             status: "ready",
-            credential: credentials[0].value,
+            credential: atIndex(credentials, 0).value,
             credentials: [
-              credentials[0],
+              atIndex(credentials, 0),
               { value: "sk-********", enabled: false },
             ],
           }),
@@ -241,7 +242,10 @@ describe("multi-key migration planning and execution", () => {
       .mockResolvedValueOnce({
         status: "ready",
         credential: "new-key",
-        credentials: [{ ...credentials[0], value: "new-key" }, credentials[1]],
+        credentials: [
+          { ...atIndex(credentials, 0), value: "new-key" },
+          atIndex(credentials, 1),
+        ],
       })
     expect(
       await execute(
@@ -274,7 +278,7 @@ describe("multi-key migration planning and execution", () => {
 
   it("blocks multi-key sources that cannot describe all their slots", () => {
     const input = preview()
-    const item = input.items[0]
+    const item = atIndex(input.items, 0)
     if (item.status !== "ready") throw new Error("fixture")
     delete item.source.credentialMetadata
     item.source.lossSignals.hasMultiKeyState = true

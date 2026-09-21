@@ -23,6 +23,7 @@ import {
 import { CHANNEL_STATUS } from "~/types/newApi"
 import { OctopusOutboundType } from "~/types/octopus"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   openOperations: vi.fn(),
@@ -203,7 +204,7 @@ describe("New API managed-site migration capability", () => {
           { value: "second-placeholder", enabled: false },
         ],
       })
-      expect(mocks.create.mock.calls[0][0]).toMatchObject({
+      expect(atIndex(mocks.create.mock.calls, 0)[0]).toMatchObject({
         status: 2,
         credentialPatch: {
           entries: [
@@ -212,7 +213,7 @@ describe("New API managed-site migration capability", () => {
           ],
         },
       })
-      expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      expect(atIndex(mocks.update.mock.calls, 0)[1]).toMatchObject({
         status: 1,
         key: "",
         credentialPatch: {

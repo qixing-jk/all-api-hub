@@ -26,6 +26,7 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import mediaPricingRows from "~~/tests/fixtures/newApi/mediaPricing.json" with { type: "json" }
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const MODEL_LIST_BASE_URL = "https://models.example.com"
 const PRICE_COMPARISON_BASE_URL_A = "https://comparison-a.example.com"
@@ -522,7 +523,7 @@ test("keeps mixed pricing settings compact and opens the missing condition group
 }, testInfo) => {
   const pricingModels = [
     {
-      ...PRICING_MODELS[0],
+      ...atIndex(PRICING_MODELS, 0),
       model_name: "tiered-chat",
       enable_groups: ["default"],
       billing_mode: "tiered_expr",
@@ -530,7 +531,7 @@ test("keeps mixed pricing settings compact and opens the missing condition group
         'len <= 100000 ? tier("short", p * 1 + c * 2) : tier("long", p * 3 + c * 4)',
     },
     {
-      ...PRICING_MODELS[0],
+      ...atIndex(PRICING_MODELS, 0),
       model_name: "timed-chat",
       enable_groups: ["default"],
       billing_mode: "tiered_expr",
@@ -540,7 +541,7 @@ test("keeps mixed pricing settings compact and opens the missing condition group
     ...mediaPricingRows
       .filter((row) => ["gpt-image-2", "wan2.7-t2v"].includes(row.model_name))
       .map((row) => ({
-        ...PRICING_MODELS[0],
+        ...atIndex(PRICING_MODELS, 0),
         ...row,
         enable_groups: ["default"],
       })),

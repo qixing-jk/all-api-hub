@@ -10,6 +10,7 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   createDeferred,
@@ -194,7 +195,10 @@ describe("web API verification modes", () => {
       ).toBeDisabled()
       expect(modeSelect).toBeDisabled()
       expect(
-        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe)[0][1],
+        atIndex(
+          getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+          0,
+        )[1],
       ).toMatchObject({ mode: "non-streaming" })
 
       await act(async () => {

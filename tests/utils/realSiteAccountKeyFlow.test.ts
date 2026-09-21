@@ -15,6 +15,7 @@ import {
 import { verifyAccountModelCatalog } from "~~/e2e/scenarios/modelListCatalog"
 import { installExtensionPageGuards } from "~~/e2e/utils/commonUserFlows"
 import { runRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/accountSaveFlow"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   installExtensionPageGuards: vi.fn(),
@@ -94,8 +95,10 @@ describe("runRealSiteAccountSaveFlow", () => {
     expect(runAccountAutoDetectScenario).toHaveBeenCalledOnce()
     expect(runAccountKeyLifecycleScenario).not.toHaveBeenCalled()
 
-    const autoDetectEnv = vi.mocked(runAccountAutoDetectScenario).mock
-      .calls[0][0]
+    const autoDetectEnv = atIndex(
+      vi.mocked(runAccountAutoDetectScenario).mock.calls,
+      0,
+    )[0]
     expect(autoDetectEnv).toMatchObject({
       extensionId: "extension-id",
       extensionPage: page,
@@ -196,8 +199,10 @@ describe("verifyAccountKeyLifecycleUsage", () => {
     expect(runAccountAutoDetectScenario).not.toHaveBeenCalled()
     expect(runAccountKeyLifecycleScenario).toHaveBeenCalledOnce()
 
-    const keyLifecycleEnv = vi.mocked(runAccountKeyLifecycleScenario).mock
-      .calls[0][0]
+    const keyLifecycleEnv = atIndex(
+      vi.mocked(runAccountKeyLifecycleScenario).mock.calls,
+      0,
+    )[0]
     expect(keyLifecycleEnv).toMatchObject({
       extensionId: "extension-id",
       extensionPage: page,
@@ -234,8 +239,10 @@ describe("verifyAccountKeyLifecycleUsage", () => {
       buildTokenName: () => "AAH E2E Sub2API direct-key",
     })
 
-    const keyLifecycleEnv = vi.mocked(runAccountKeyLifecycleScenario).mock
-      .calls[0][0]
+    const keyLifecycleEnv = atIndex(
+      vi.mocked(runAccountKeyLifecycleScenario).mock.calls,
+      0,
+    )[0]
     expect(keyLifecycleEnv).toMatchObject({
       openFromAccountRow: false,
       cleanupAccountFixture: false,
@@ -278,8 +285,10 @@ describe("verifyAccountKeyLifecycleUsage", () => {
     })
 
     expect(runAccountKeyToApiProfileScenario).toHaveBeenCalledOnce()
-    const scenarioEnv = vi.mocked(runAccountKeyToApiProfileScenario).mock
-      .calls[0][0]
+    const scenarioEnv = atIndex(
+      vi.mocked(runAccountKeyToApiProfileScenario).mock.calls,
+      0,
+    )[0]
     expect(scenarioEnv).toMatchObject({
       extensionId: "extension-id",
       extensionPage: page,

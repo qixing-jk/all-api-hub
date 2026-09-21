@@ -19,6 +19,7 @@ import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
   vi.hoisted(() => ({
@@ -540,7 +541,10 @@ describe("ModelList", () => {
     render(<ModelList />)
 
     await user.click(
-      screen.getAllByRole("button", { name: "open-api-verification" })[0],
+      atIndex(
+        screen.getAllByRole("button", { name: "open-api-verification" }),
+        0,
+      ),
     )
     expect(screen.getByTestId("verify-api-dialog")).toHaveTextContent(
       "gpt-test",

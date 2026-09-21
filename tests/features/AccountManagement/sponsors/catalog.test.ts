@@ -7,6 +7,7 @@ import {
   SPONSOR_SUPPORT_STATUS,
 } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const now = Date.parse("2026-06-11T00:00:00.000Z")
 
@@ -213,7 +214,7 @@ describe("sponsor catalog v5 normalization", () => {
         },
       },
     })
-    expect(result.items[0].actions).not.toHaveProperty(
+    expect(atIndex(result.items, 0).actions).not.toHaveProperty(
       "apiCredentialProfileFallback",
     )
   })
@@ -348,7 +349,7 @@ describe("sponsor catalog v5 normalization", () => {
 
     expect(result.errors).toEqual([])
     expect(result.ok).toBe(true)
-    expect(result.items[0].actions).toEqual({
+    expect(atIndex(result.items, 0).actions).toEqual({
       addAccount: {
         siteType: SITE_TYPES.NEW_API,
         siteUrl: "https://api.example.invalid",
@@ -402,7 +403,7 @@ describe("sponsor catalog v5 normalization", () => {
 
     expect(result.errors).toEqual([])
     expect(result.ok).toBe(true)
-    expect(result.items[0].actions).toMatchObject({
+    expect(atIndex(result.items, 0).actions).toMatchObject({
       apiCredentialProfileFallback: {
         baseUrl: "https://api-base.example.invalid",
         apiKeyCreateUrl: "https://console.example.invalid/api-keys",

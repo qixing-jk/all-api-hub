@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { setupContentMessageHandlers } from "~/entrypoints/content/messageHandlers"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({ register: vi.fn(), scan: vi.fn() }))
 vi.mock("~/utils/browser/browserApi", () => ({
@@ -20,7 +21,7 @@ describe("feedback content routing", () => {
   ])("keeps the reply port open for %s", async (action) => {
     mocks.scan.mockImplementation((_request, reply) => reply({ success: true }))
     setupContentMessageHandlers()
-    const listener = mocks.register.mock.calls[0][0]
+    const listener = atIndex(mocks.register.mock.calls, 0)[0]
     const request = { action, requestId: "scan" }
     const reply = vi.fn()
     expect(listener(request, {}, reply)).toBe(true)
@@ -36,7 +37,7 @@ describe("feedback content routing", () => {
     })
     setupContentMessageHandlers()
     const reply = vi.fn()
-    mocks.register.mock.calls[0][0](
+    atIndex(mocks.register.mock.calls, 0)[0](
       { action: RuntimeActionIds.ContentCheckinFeedbackScan },
       {},
       reply,

@@ -12,6 +12,7 @@ import {
   QUOTE_STATUSES,
   QUOTE_UNITS,
 } from "~/services/modelPricing/pricingConstants"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const row: PricingDiagnosticRow = {
   model: "Qwen/qwen3.5",
@@ -75,8 +76,10 @@ describe("diagnostic search and grouping", () => {
       groupPricingDiagnosticRows(rows, PRICING_DIAGNOSTIC_GROUPINGS.GROUP),
     ).toHaveLength(3)
     expect(
-      groupPricingDiagnosticRows(rows, PRICING_DIAGNOSTIC_GROUPINGS.NONE)[0]
-        .rows,
+      atIndex(
+        groupPricingDiagnosticRows(rows, PRICING_DIAGNOSTIC_GROUPINGS.NONE),
+        0,
+      ).rows,
     ).toHaveLength(62)
   })
 })

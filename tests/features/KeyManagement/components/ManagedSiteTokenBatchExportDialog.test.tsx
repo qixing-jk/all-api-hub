@@ -47,6 +47,7 @@ import {
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -465,7 +466,7 @@ const buildSingleRecoverablePreview =
     skippedCount: 0,
     blockedCount: 0,
     items: [
-      buildRecoverablePreviewItem(preview.items[0], {
+      buildRecoverablePreviewItem(atIndex(preview.items, 0), {
         ref: matchingResourceRef(7),
         name: "Potential channel",
       }),
@@ -481,9 +482,9 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
   skippedCount: 1,
   blockedCount: 1,
   items: [
-    preview.items[0],
+    atIndex(preview.items, 0),
     {
-      ...preview.items[1],
+      ...atIndex(preview.items, 1),
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
       warningCodes: [
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MODEL_PREFILL_FAILED,
@@ -715,7 +716,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     await waitFor(() => expect(mockExecuteBatchExport).toHaveBeenCalledOnce())
     expect(
-      mockExecuteBatchExport.mock.calls[0][0].preview.items[0].draft,
+      atIndex(mockExecuteBatchExport.mock.calls, 0)[0].preview.items[0].draft,
     ).toMatchObject({
       models: ["gpt-4o-mini", "custom-model"],
     })
@@ -775,15 +776,15 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
     })
-    expect(mockExecuteBatchExport.mock.calls[0][0]).toMatchObject({
+    expect(atIndex(mockExecuteBatchExport.mock.calls, 0)[0]).toMatchObject({
       selectedItemIds: [
         "account_token:account-1:1",
         "account_token:account-1:2",
       ],
     })
-    expect(mockExecuteBatchExport.mock.calls[0][0].preview.intent).toEqual(
-      trustedRepairIntent,
-    )
+    expect(
+      atIndex(mockExecuteBatchExport.mock.calls, 0)[0].preview.intent,
+    ).toEqual(trustedRepairIntent)
   })
 
   it("renders uncertain execution outcomes as warnings", async () => {
@@ -804,7 +805,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       items: [
         {
-          id: preview.items[0].id,
+          id: atIndex(preview.items, 0).id,
           accountName: "Account 1",
           runtimeKeyName: "Token 1",
           result: "uncertain",
@@ -881,7 +882,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     expect(mockPreparePreview).toHaveBeenCalledOnce()
-    expect(mockPreparePreview.mock.calls[0][0].intent).toEqual(
+    expect(atIndex(mockPreparePreview.mock.calls, 0)[0].intent).toEqual(
       trustedRepairIntent,
     )
 
@@ -999,7 +1000,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     renderDialog({ intent: trustedRepairIntent })
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
-    await user.click(screen.getAllByText("Set editable models")[0])
+    await user.click(atIndex(screen.getAllByText("Set editable models"), 0))
     await user.click(
       screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
     )
@@ -1012,7 +1013,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
-    expect(mockPreparePreview.mock.calls[1][0].intent).toEqual(completeIntent)
+    expect(atIndex(mockPreparePreview.mock.calls, 1)[0].intent).toEqual(
+      completeIntent,
+    )
     expect(
       screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
     ).toHaveAttribute("aria-checked", "true")
@@ -1203,9 +1206,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockPreparePreview).toHaveBeenLastCalledWith(
       expect.objectContaining({
         resolvedChannelKeysByItemId: {
-          [recoverablePreview.items[0].id]: {
+          [atIndex(recoverablePreview.items, 0).id]: {
             [getManagedResourceRefKey(
-              recoverablePreview.items[0].verificationCandidate!.ref,
+              atIndex(recoverablePreview.items, 0).verificationCandidate!.ref,
             )]: "test-key",
           },
         },
@@ -1894,7 +1897,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       "#managedSiteChannels",
     )
     expect(onClose.mock.invocationCallOrder[0]).toBeLessThan(
-      mockPushWithinOptionsPage.mock.invocationCallOrder[0],
+      atIndex(mockPushWithinOptionsPage.mock.invocationCallOrder, 0),
     )
   })
 
@@ -2050,11 +2053,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
-        buildRecoverablePreviewItem(preview.items[1], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 1), {
           ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
@@ -2066,9 +2069,12 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+        0,
+      ),
     )
 
     await waitFor(() => {
@@ -2116,11 +2122,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
-        buildRecoverablePreviewItem(preview.items[1], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 1), {
           ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
@@ -2397,10 +2403,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         return true
       },
     )
-    const recoverableItem = buildRecoverablePreviewItem(preview.items[0], {
-      ref: matchingResourceRef(7),
-      name: "Potential channel",
-    })
+    const recoverableItem = buildRecoverablePreviewItem(
+      atIndex(preview.items, 0),
+      {
+        ref: matchingResourceRef(7),
+        name: "Potential channel",
+      },
+    )
     const staleVerificationTarget = {
       ...recoverableItem,
       assessment: undefined,
@@ -2412,7 +2421,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       warningCount: 1,
       skippedCount: 0,
       blockedCount: 0,
-      items: [recoverableItem, preview.items[1]],
+      items: [recoverableItem, atIndex(preview.items, 1)],
     }
     mockGetPreviewVerificationTargets.mockReturnValue([
       {
@@ -2517,11 +2526,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
-        buildRecoverablePreviewItem(preview.items[1], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 1), {
           ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
@@ -2533,9 +2542,12 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+        0,
+      ),
     )
 
     await waitFor(() => {
@@ -2604,7 +2616,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
@@ -2641,7 +2653,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
@@ -2687,7 +2699,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
@@ -2723,7 +2735,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [
-        buildRecoverablePreviewItem(preview.items[0], {
+        buildRecoverablePreviewItem(atIndex(preview.items, 0), {
           ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
@@ -2736,7 +2748,8 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         [
           {
             item: recoverablePreview.items[0],
-            candidate: recoverablePreview.items[0].verificationCandidate,
+            candidate: atIndex(recoverablePreview.items, 0)
+              .verificationCandidate,
           },
         ],
         {
@@ -3060,7 +3073,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     renderDialog()
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
-    await user.click(screen.getAllByText("Set editable models")[0])
+    await user.click(atIndex(screen.getAllByText("Set editable models"), 0))
     await user.click(
       screen.getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
@@ -3071,7 +3084,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
     })
-    const call = mockExecuteBatchExport.mock.calls[0][0]
+    const call = atIndex(mockExecuteBatchExport.mock.calls, 0)[0]
     expect(call.preview.items[0].draft.models).toEqual([
       "gpt-4o-mini",
       "custom-model",
@@ -3122,7 +3135,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
     })
-    const call = mockExecuteBatchExport.mock.calls[0][0]
+    const call = atIndex(mockExecuteBatchExport.mock.calls, 0)[0]
     expect(call.preview.items[0]).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
       blockingReasonCode: undefined,
@@ -3379,9 +3392,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(2)
     })
-    expect(mockExecuteBatchExport.mock.calls[1][0].selectedItemIds).toEqual([
-      "account_token:account-1:2",
-    ])
+    expect(
+      atIndex(mockExecuteBatchExport.mock.calls, 1)[0].selectedItemIds,
+    ).toEqual(["account_token:account-1:2"])
     expect(
       screen.getAllByText(
         "keyManagement:batchManagedSiteExport.results.status.success",
@@ -3510,7 +3523,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         skippedCount: 0,
         items: [
           {
-            id: recoverablePreview.items[0].id,
+            id: atIndex(recoverablePreview.items, 0).id,
             accountName: "Account 1",
             runtimeKeyName: "Token 1",
             result: "failed",
@@ -3597,7 +3610,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       skippedCount: 0,
       items: [
         {
-          id: preview.items[0].id,
+          id: atIndex(preview.items, 0).id,
           accountName: "Account 1",
           runtimeKeyName: "Token 1",
           result: "created",
@@ -3605,7 +3618,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
           skipped: false,
         },
         {
-          id: preview.items[1].id,
+          id: atIndex(preview.items, 1).id,
           accountName: "Account 1",
           runtimeKeyName: "Token 2",
           result: "failed",
@@ -3695,9 +3708,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "keyManagement:batchManagedSiteExport.results.status.notSelected",
       ),
     ).toBeInTheDocument()
-    expect(mockExecuteBatchExport.mock.calls[0][0].selectedItemIds).toEqual([
-      "account_token:account-1:1",
-    ])
+    expect(
+      atIndex(mockExecuteBatchExport.mock.calls, 0)[0].selectedItemIds,
+    ).toEqual(["account_token:account-1:1"])
   })
 
   it("shows execution errors without replacing the preview error state", async () => {
@@ -3990,7 +4003,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
 
     expect(mockPreparePreview).toHaveBeenCalledTimes(1)
-    expect(mockPreparePreview.mock.calls[0][0].intent).toEqual(
+    expect(atIndex(mockPreparePreview.mock.calls, 0)[0].intent).toEqual(
       trustedRepairIntent,
     )
   })

@@ -17,6 +17,7 @@ import { createAccountRuntimeKeyModelListSourceIdentity } from "~/services/model
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
 
@@ -72,7 +73,7 @@ describe("model list source preparation", () => {
     })
     const before = structuredClone(response)
     const prepared = prepareModelListSource({ source, pricing: response })
-    expect(prepared.items[0].groupContext).toEqual({
+    expect(atIndex(prepared.items, 0).groupContext).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
       supportedGroups: ["vip", "default"],
       usableGroups: ["vip", "default"],
@@ -164,30 +165,38 @@ describe("model list source preparation", () => {
       source: profile,
       pricing: pricing({ model_list_source: fallback }),
     })
-    expect(prepared.items[0].groupContext.accessState).toBe(
+    expect(atIndex(prepared.items, 0).groupContext.accessState).toBe(
       MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
     )
-    expect(prepared.items[0].exchangeRate).toBe(1)
+    expect(atIndex(prepared.items, 0).exchangeRate).toBe(1)
     expect(prepared.source.capabilities).toEqual(profile.capabilities)
     expect(prepared.canRepairGroupSelection).toBe(true)
   })
 
   it("uses the same account facts for single and aggregate inputs while enabling aggregate summaries", () => {
     const response = pricing()
-    const single = prepareModelListSources({
-      selectedSource: source,
-      pricingData: response,
-      pricingContexts: [],
-    })[0]
-    const aggregate = prepareModelListSources({
-      selectedSource: createAllAccountsSource(),
-      pricingData: null,
-      pricingContexts: [{ account, pricing: response }],
-    })[0]
-    expect(aggregate.items[0].groupContext).toEqual(
-      single.items[0].groupContext,
+    const single = atIndex(
+      prepareModelListSources({
+        selectedSource: source,
+        pricingData: response,
+        pricingContexts: [],
+      }),
+      0,
     )
-    expect(aggregate.items[0].exchangeRate).toBe(single.items[0].exchangeRate)
+    const aggregate = atIndex(
+      prepareModelListSources({
+        selectedSource: createAllAccountsSource(),
+        pricingData: null,
+        pricingContexts: [{ account, pricing: response }],
+      }),
+      0,
+    )
+    expect(atIndex(aggregate.items, 0).groupContext).toEqual(
+      atIndex(single.items, 0).groupContext,
+    )
+    expect(atIndex(aggregate.items, 0).exchangeRate).toBe(
+      atIndex(single.items, 0).exchangeRate,
+    )
     expect(aggregate.canRepairGroupSelection).toBe(
       single.canRepairGroupSelection,
     )
@@ -202,8 +211,8 @@ describe("model list source preparation", () => {
       pricingContexts: [{ account, pricing: null }],
     })
     expect(prepared).toHaveLength(1)
-    expect(prepared[0].items).toEqual([])
-    expect(prepared[0].canRepairGroupSelection).toBe(false)
+    expect(atIndex(prepared, 0).items).toEqual([])
+    expect(atIndex(prepared, 0).canRepairGroupSelection).toBe(false)
   })
 
   it("keeps token and runtime-key identities and access isolated for the same account", () => {
@@ -233,14 +242,13 @@ describe("model list source preparation", () => {
         },
       ],
     })
-    expect(prepared.map((p) => p.items[0].sourceIdentity)).toEqual([
+    expect(prepared.map((p) => atIndex(p.items, 0).sourceIdentity)).toEqual([
       token,
       runtimeKey,
     ])
-    expect(prepared.map((p) => p.items[0].groupContext.usableGroups)).toEqual([
-      ["default"],
-      ["vip"],
-    ])
+    expect(
+      prepared.map((p) => atIndex(p.items, 0).groupContext.usableGroups),
+    ).toEqual([["default"], ["vip"]])
   })
   it.each([null, pricing({ data: [] })])(
     "retains runtime-key identity even without model rows",
@@ -267,7 +275,9 @@ describe("model list source preparation", () => {
         { account, pricing: pricing({ model_list_source: fallback }) },
       ],
     })
-    expect(prepared[0].source.capabilities.supportsAccountSummary).toBe(false)
+    expect(
+      atIndex(prepared, 0).source.capabilities.supportsAccountSummary,
+    ).toBe(false)
   })
 
   it.each([null, createAllAccountsSource()])(

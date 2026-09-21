@@ -12,31 +12,35 @@ import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonical
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("OneHub data transformers", () => {
   describe("transformModelPricing", () => {
     it.each(["unknown_input", "reasoning_tokens", "unknown_output"])(
       "keeps unknown DoneHub multiplier %s out of affected-meter quotes",
       (meter) => {
-        const [model] = transformModelPricing(
-          {
-            example: {
-              groups: [],
-              owned_by: "",
-              price: {
-                model: "example",
-                type: "tokens",
-                input: 5,
-                output: 25,
-                channel_type: 0,
-                locked: false,
-                extra_ratios: { [meter]: 2 },
+        const model = atIndex(
+          transformModelPricing(
+            {
+              example: {
+                groups: [],
+                owned_by: "",
+                price: {
+                  model: "example",
+                  type: "tokens",
+                  input: 5,
+                  output: 25,
+                  channel_type: 0,
+                  locked: false,
+                  extra_ratios: { [meter]: 2 },
+                },
               },
             },
-          },
-          {},
-          true,
-        ).data
+            {},
+            true,
+          ).data,
+          0,
+        )
         expect(
           quoteCanonicalModelPrice(
             model,
@@ -51,30 +55,37 @@ describe("OneHub data transformers", () => {
     )
 
     it("keeps format-specific cache-write prices through valid long-context tiers", () => {
-      const [model] = transformModelPricing(
-        {
-          example: {
-            groups: [],
-            owned_by: "",
-            price: {
-              model: "example",
-              type: "tokens",
-              input: 5,
-              output: 25,
-              channel_type: 0,
-              locked: false,
-              extra_ratios: {
-                openai_cache_write_tokens: 2,
-                cached_write_tokens: 1.25,
-                ignored_factor: 1,
+      const model = atIndex(
+        transformModelPricing(
+          {
+            example: {
+              groups: [],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "tokens",
+                input: 5,
+                output: 25,
+                channel_type: 0,
+                locked: false,
+                extra_ratios: {
+                  openai_cache_write_tokens: 2,
+                  cached_write_tokens: 1.25,
+                  ignored_factor: 1,
+                },
+                long_context: {
+                  threshold: 100,
+                  input_ratio: 2,
+                  output_ratio: 2,
+                },
               },
-              long_context: { threshold: 100, input_ratio: 2, output_ratio: 2 },
             },
           },
-        },
-        {},
-        true,
-      ).data
+          {},
+          true,
+        ).data,
+        0,
+      )
       const quote = (responseFormat: "openai" | "anthropic") =>
         quoteCanonicalModelPrice(
           model,
@@ -90,35 +101,8 @@ describe("OneHub data transformers", () => {
       expect(quote("anthropic").amount).toBe(25)
     })
     it("does not browse legacy ratios when a DoneHub plan cannot preserve its rates", () => {
-      const [model] = transformModelPricing(
-        {
-          example: {
-            groups: [],
-            owned_by: "",
-            price: {
-              model: "example",
-              type: "tokens",
-              input: 5,
-              output: 25,
-              channel_type: 0,
-              locked: false,
-              extra_ratios: { cached_read_tokens: NaN },
-            },
-          },
-        },
-        {},
-        true,
-      ).data
-      expect(model.pricingPlan?.rates).toEqual({})
-      expect(calculateModelPrice(model, 1)).toMatchObject({
-        kind: "unavailable",
-      })
-    })
-
-    it.each([Number.MAX_SAFE_INTEGER, 10.5, Infinity])(
-      "preserves base cache rates while rejecting invalid long-context threshold %s",
-      (threshold) => {
-        const [model] = transformModelPricing(
+      const model = atIndex(
+        transformModelPricing(
           {
             example: {
               groups: [],
@@ -130,13 +114,46 @@ describe("OneHub data transformers", () => {
                 output: 25,
                 channel_type: 0,
                 locked: false,
-                long_context: { threshold, input_ratio: 2, output_ratio: 2 },
+                extra_ratios: { cached_read_tokens: NaN },
               },
             },
           },
           {},
           true,
-        ).data
+        ).data,
+        0,
+      )
+      expect(model.pricingPlan?.rates).toEqual({})
+      expect(calculateModelPrice(model, 1)).toMatchObject({
+        kind: "unavailable",
+      })
+    })
+
+    it.each([Number.MAX_SAFE_INTEGER, 10.5, Infinity])(
+      "preserves base cache rates while rejecting invalid long-context threshold %s",
+      (threshold) => {
+        const model = atIndex(
+          transformModelPricing(
+            {
+              example: {
+                groups: [],
+                owned_by: "",
+                price: {
+                  model: "example",
+                  type: "tokens",
+                  input: 5,
+                  output: 25,
+                  channel_type: 0,
+                  locked: false,
+                  long_context: { threshold, input_ratio: 2, output_ratio: 2 },
+                },
+              },
+            },
+            {},
+            true,
+          ).data,
+          0,
+        )
         expect(model.pricingPlan?.rules.map((rule) => rule.id)).toEqual([
           "openai-cache",
           "anthropic-cache",
@@ -165,14 +182,20 @@ describe("OneHub data transformers", () => {
         locked: false,
         long_context: { threshold: 10, input_ratio: 0, output_ratio: -1 },
       }
-      const [done] = transformModelPricing(
-        { example: { groups: [], owned_by: "", price } },
-        {},
-        true,
-      ).data
-      const [one] = transformModelPricing({
-        example: { groups: [], owned_by: "", price },
-      }).data
+      const done = atIndex(
+        transformModelPricing(
+          { example: { groups: [], owned_by: "", price } },
+          {},
+          true,
+        ).data,
+        0,
+      )
+      const one = atIndex(
+        transformModelPricing({
+          example: { groups: [], owned_by: "", price },
+        }).data,
+        0,
+      )
       expect(one.pricingPlan).toBeUndefined()
       expect(
         quoteCanonicalModelPrice(
@@ -188,25 +211,28 @@ describe("OneHub data transformers", () => {
     })
 
     it("does not invent a common cache price when OpenAI and Anthropic cache meters disagree", () => {
-      const [model] = transformModelPricing(
-        {
-          example: {
-            groups: [],
-            owned_by: "",
-            price: {
-              model: "example",
-              type: "tokens",
-              input: 5,
-              output: 25,
-              channel_type: 0,
-              locked: false,
-              extra_ratios: { cached_tokens: 0.5, cached_read_tokens: 0.1 },
+      const model = atIndex(
+        transformModelPricing(
+          {
+            example: {
+              groups: [],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "tokens",
+                input: 5,
+                output: 25,
+                channel_type: 0,
+                locked: false,
+                extra_ratios: { cached_tokens: 0.5, cached_read_tokens: 0.1 },
+              },
             },
           },
-        },
-        {},
-        true,
-      ).data
+          {},
+          true,
+        ).data,
+        0,
+      )
       const quote = quoteCanonicalModelPrice(
         model,
         { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { cacheRead: 1 } },
@@ -239,25 +265,28 @@ describe("OneHub data transformers", () => {
     })
 
     it("keeps DoneHub per-request charges independent of text lengths", () => {
-      const [model] = transformModelPricing(
-        {
-          example: {
-            groups: [],
-            owned_by: "",
-            price: {
-              model: "example",
-              type: "times",
-              input: 20,
-              output: 20,
-              channel_type: 0,
-              locked: false,
-              long_context: { threshold: 1, input_ratio: 2, output_ratio: 2 },
+      const model = atIndex(
+        transformModelPricing(
+          {
+            example: {
+              groups: [],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "times",
+                input: 20,
+                output: 20,
+                channel_type: 0,
+                locked: false,
+                long_context: { threshold: 1, input_ratio: 2, output_ratio: 2 },
+              },
             },
           },
-        },
-        {},
-        true,
-      ).data
+          {},
+          true,
+        ).data,
+        0,
+      )
       expect(
         quoteCanonicalModelPrice(
           model,
@@ -273,35 +302,38 @@ describe("OneHub data transformers", () => {
     })
 
     it("quotes DoneHub whole-request tiers using raw input including cache and one group multiplier", () => {
-      const [model] = transformModelPricing(
-        {
-          example: {
-            groups: ["vip"],
-            owned_by: "",
-            price: {
-              model: "example",
-              type: "tokens",
-              channel_type: 0,
-              locked: false,
-              input: 5,
-              output: 25,
-              extra_ratios: {
-                cached_tokens: 0.1,
-                cached_read_tokens: 0.1,
-                cached_write_tokens: 1.25,
-                cached_write_1h_tokens: 2,
-              },
-              long_context: {
-                threshold: 272000,
-                input_ratio: 2,
-                output_ratio: 1.5,
+      const model = atIndex(
+        transformModelPricing(
+          {
+            example: {
+              groups: ["vip"],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "tokens",
+                channel_type: 0,
+                locked: false,
+                input: 5,
+                output: 25,
+                extra_ratios: {
+                  cached_tokens: 0.1,
+                  cached_read_tokens: 0.1,
+                  cached_write_tokens: 1.25,
+                  cached_write_1h_tokens: 2,
+                },
+                long_context: {
+                  threshold: 272000,
+                  input_ratio: 2,
+                  output_ratio: 1.5,
+                },
               },
             },
           },
-        },
-        {},
-        true,
-      ).data
+          {},
+          true,
+        ).data,
+        0,
+      )
       expect(model.pricingPlan).toBeDefined()
       const quote = (inputTokens: number) =>
         quoteModelPrice(
@@ -346,7 +378,7 @@ describe("OneHub data transformers", () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toHaveLength(1)
-      const item = result.data[0]
+      const item = atIndex(result.data, 0)
       expect(item.model_name).toBe("gpt-4")
       expect(item.quota_type).toBe(0)
       expect(item.model_ratio).toBe(10)
@@ -384,7 +416,7 @@ describe("OneHub data transformers", () => {
 
       const result = transformModelPricing(input as any, {})
 
-      const item = result.data[0]
+      const item = atIndex(result.data, 0)
       expect(item.enable_groups).toEqual(["vip", "pro"])
       expect(item.quota_type).toBe(1)
       expect(item.owner_by).toBe("")
@@ -407,7 +439,7 @@ describe("OneHub data transformers", () => {
         },
       }
 
-      const [item] = transformModelPricing(input as any).data
+      const item = atIndex(transformModelPricing(input as any).data, 0)
 
       expect(item.owner_by).toBe(" Example Router ")
       expect(item.vendorEvidence).toEqual({
@@ -417,26 +449,29 @@ describe("OneHub data transformers", () => {
     })
 
     it("maps verified cache ratios and uses OneHub input as the model ratio", () => {
-      const [item] = transformModelPricing({
-        "example-model": {
-          groups: ["default"],
-          owned_by: "Example Router",
-          price: {
-            model: "example-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 3,
-            output: 12,
-            locked: false,
-            extra_ratios: {
-              cached_tokens: 0.5,
-              cached_read_tokens: 0.25,
-              cached_write_tokens: 1.25,
-              cached_write_1h_tokens: 2,
+      const item = atIndex(
+        transformModelPricing({
+          "example-model": {
+            groups: ["default"],
+            owned_by: "Example Router",
+            price: {
+              model: "example-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 3,
+              output: 12,
+              locked: false,
+              extra_ratios: {
+                cached_tokens: 0.5,
+                cached_read_tokens: 0.25,
+                cached_write_tokens: 1.25,
+                cached_write_1h_tokens: 2,
+              },
             },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item.model_ratio).toBe(3)
       expect(item.completion_ratio).toBe(4)
@@ -447,90 +482,102 @@ describe("OneHub data transformers", () => {
     })
 
     it("uses the generic cached-token ratio as the cache-read fallback", () => {
-      const [item] = transformModelPricing({
-        "example-model": {
-          groups: [],
-          owned_by: "Example Router",
-          price: {
-            model: "example-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 2,
-            output: 4,
-            locked: false,
-            extra_ratios: { cached_tokens: 0.5 },
+      const item = atIndex(
+        transformModelPricing({
+          "example-model": {
+            groups: [],
+            owned_by: "Example Router",
+            price: {
+              model: "example-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 2,
+              output: 4,
+              locked: false,
+              extra_ratios: { cached_tokens: 0.5 },
+            },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item.token_price_ratios_to_input).toEqual({ cache_read: 0.5 })
     })
 
     it("preserves an explicit zero cache-read ratio over the generic fallback", () => {
-      const [item] = transformModelPricing({
-        "example-model": {
-          groups: [],
-          owned_by: "Example Router",
-          price: {
-            model: "example-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 2,
-            output: 4,
-            locked: false,
-            extra_ratios: {
-              cached_tokens: 0.5,
-              cached_read_tokens: 0,
+      const item = atIndex(
+        transformModelPricing({
+          "example-model": {
+            groups: [],
+            owned_by: "Example Router",
+            price: {
+              model: "example-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 2,
+              output: 4,
+              locked: false,
+              extra_ratios: {
+                cached_tokens: 0.5,
+                cached_read_tokens: 0,
+              },
             },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item.token_price_ratios_to_input).toEqual({ cache_read: 0 })
     })
 
     it("omits invalid optional cache ratios", () => {
-      const [item] = transformModelPricing({
-        "example-model": {
-          groups: [],
-          owned_by: "Example Router",
-          price: {
-            model: "example-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 2,
-            output: 4,
-            locked: false,
-            extra_ratios: {
-              cached_tokens: -1,
-              cached_write_tokens: Number.POSITIVE_INFINITY,
+      const item = atIndex(
+        transformModelPricing({
+          "example-model": {
+            groups: [],
+            owned_by: "Example Router",
+            price: {
+              model: "example-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 2,
+              output: 4,
+              locked: false,
+              extra_ratios: {
+                cached_tokens: -1,
+                cached_write_tokens: Number.POSITIVE_INFINITY,
+              },
             },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item).not.toHaveProperty("token_price_ratios_to_input")
     })
 
     it("preserves valid cache meters when another optional ratio is invalid", () => {
-      const [item] = transformModelPricing({
-        "example-model": {
-          groups: [],
-          owned_by: "Example Router",
-          price: {
-            model: "example-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 2,
-            output: 4,
-            locked: false,
-            extra_ratios: {
-              cached_read_tokens: -1,
-              cached_write_tokens: 1.25,
+      const item = atIndex(
+        transformModelPricing({
+          "example-model": {
+            groups: [],
+            owned_by: "Example Router",
+            price: {
+              model: "example-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 2,
+              output: 4,
+              locked: false,
+              extra_ratios: {
+                cached_read_tokens: -1,
+                cached_write_tokens: 1.25,
+              },
             },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item.token_price_ratios_to_input).toEqual({ cache_write: 1.25 })
     })
@@ -548,20 +595,23 @@ describe("OneHub data transformers", () => {
     ])(
       "marks invalid token ratios unavailable for input %s and output %s",
       (inputRatio, outputRatio) => {
-        const [item] = transformModelPricing({
-          "example-model": {
-            groups: [],
-            owned_by: "Example Router",
-            price: {
-              model: "example-model",
-              type: "tokens",
-              channel_type: 7,
-              input: inputRatio,
-              output: outputRatio,
-              locked: false,
+        const item = atIndex(
+          transformModelPricing({
+            "example-model": {
+              groups: [],
+              owned_by: "Example Router",
+              price: {
+                model: "example-model",
+                type: "tokens",
+                channel_type: 7,
+                input: inputRatio,
+                output: outputRatio,
+                locked: false,
+              },
             },
-          },
-        }).data
+          }).data,
+          0,
+        )
 
         expect(item.model_ratio).toBe(1)
         expect(item.completion_ratio).toBe(1)
@@ -573,20 +623,23 @@ describe("OneHub data transformers", () => {
     )
 
     it("preserves a free token model when both input and output ratios are zero", () => {
-      const [item] = transformModelPricing({
-        "free-model": {
-          groups: [],
-          owned_by: "Example Router",
-          price: {
-            model: "free-model",
-            type: "tokens",
-            channel_type: 7,
-            input: 0,
-            output: 0,
-            locked: false,
+      const item = atIndex(
+        transformModelPricing({
+          "free-model": {
+            groups: [],
+            owned_by: "Example Router",
+            price: {
+              model: "free-model",
+              type: "tokens",
+              channel_type: 7,
+              input: 0,
+              output: 0,
+              locked: false,
+            },
           },
-        },
-      }).data
+        }).data,
+        0,
+      )
 
       expect(item.model_ratio).toBe(0)
       expect(item.completion_ratio).toBe(1)

@@ -18,6 +18,7 @@ import {
   setSessionStorageValues,
 } from "~/utils/browser/browserApi"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   sessionValues,
@@ -140,7 +141,7 @@ describe("account dialog recovery handoff", () => {
 
     await expect(openAccountDialogRecovery(prepared)).resolves.toBe("tab")
 
-    const url = new URL(createTab.mock.calls[0][0])
+    const url = new URL(atIndex(createTab.mock.calls, 0)[0])
     expect(url.pathname).toBe("/options.html")
     expect(url.hash).toBe("#account")
     expect(url.searchParams.get("accountDialogRecovery")).toBe(prepared.id)

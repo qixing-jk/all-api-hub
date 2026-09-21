@@ -30,6 +30,7 @@ import {
   getDocsTaskNotificationsWecomUrl,
 } from "~/utils/navigation/docsLinks"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -682,9 +683,12 @@ describe("TaskNotificationSettings", () => {
     ).toHaveAttribute("href", getDocsTaskNotificationsDingtalkUrl("en"))
 
     fireEvent.click(
-      within(dingtalkChannel).getAllByRole("button", {
-        name: "keyManagement:actions.showKey",
-      })[0],
+      atIndex(
+        within(dingtalkChannel).getAllByRole("button", {
+          name: "keyManagement:actions.showKey",
+        }),
+        0,
+      ),
     )
     expect(dingtalkWebhookKeyInput).toHaveAttribute("type", "text")
 
@@ -1183,7 +1187,9 @@ describe("TaskNotificationSettings", () => {
 
     expect(
       updateTaskNotificationsMock.mock.invocationCallOrder[0],
-    ).toBeLessThan(sendTaskNotificationMessageMock.mock.invocationCallOrder[0])
+    ).toBeLessThan(
+      atIndex(sendTaskNotificationMessageMock.mock.invocationCallOrder, 0),
+    )
   })
 
   it("does not send a webhook test notification when saving the draft fails", async () => {

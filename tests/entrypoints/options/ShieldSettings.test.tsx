@@ -25,6 +25,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
   fireEvent,
@@ -1034,12 +1035,12 @@ describe("ShieldSettings", () => {
       expect(
         readBrowserFocusStateMock.mock.invocationCallOrder[0],
       ).toBeLessThan(
-        executeProtectionBypassTaskMock.mock.invocationCallOrder[0],
+        atIndex(executeProtectionBypassTaskMock.mock.invocationCallOrder, 0),
       )
       expect(
         createBrowserFocusObservationMock.mock.invocationCallOrder[0],
       ).toBeLessThan(
-        executeProtectionBypassTaskMock.mock.invocationCallOrder[0],
+        atIndex(executeProtectionBypassTaskMock.mock.invocationCallOrder, 0),
       )
       expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
         execution: {

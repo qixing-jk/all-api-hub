@@ -29,6 +29,7 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const plan: PricingPlan = {
@@ -282,7 +283,7 @@ it("focuses cache weights without changing the workload when the tier cache basi
     ...plan,
     rules: [
       {
-        ...plan.rules[0],
+        ...atIndex(plan.rules, 0),
         conditions: [
           {
             kind: PRICING_CONDITION_KINDS.RANGE,

@@ -7,6 +7,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockFetchSiteUserGroups,
@@ -127,7 +128,7 @@ describe("doneHubService additional flows", () => {
     )
 
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
-    expect(mockResolveDefaultChannelGroups.mock.calls[0][0]).toEqual({
+    expect(atIndex(mockResolveDefaultChannelGroups.mock.calls, 0)[0]).toEqual({
       getConfig: expect.any(Function),
       fetchSiteUserGroups: expect.any(Function),
       onError: expect.any(Function),

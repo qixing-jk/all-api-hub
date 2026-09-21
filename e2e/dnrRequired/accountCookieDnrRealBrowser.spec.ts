@@ -35,6 +35,7 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const BROWSER_CURRENT_SESSION_COOKIE = "session=browser-current"
 const ACCOUNT_A_SESSION_COOKIE = "session=user-a"
@@ -303,17 +304,19 @@ test("isolates same-site cookie and access-token accounts through account refres
       await openKeyManagementForAccount({
         page,
         extensionId,
-        accountId: savedAccounts[0].id,
+        accountId: atIndex(savedAccounts, 0).id,
       })
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_A_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toBeVisible()
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_B_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toHaveCount(0)
@@ -331,17 +334,19 @@ test("isolates same-site cookie and access-token accounts through account refres
       await openKeyManagementForAccount({
         page,
         extensionId,
-        accountId: savedAccounts[1].id,
+        accountId: atIndex(savedAccounts, 1).id,
       })
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_B_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toBeVisible()
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_A_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toHaveCount(0)
@@ -366,13 +371,15 @@ test("isolates same-site cookie and access-token accounts through account refres
       await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton).click()
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_A_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toBeVisible()
       await expect(
         page.getByRole("heading", {
-          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          name: atIndex(ACCOUNT_BY_SESSION_COOKIE, ACCOUNT_B_SESSION_COOKIE)
+            .tokenName,
           exact: true,
         }),
       ).toBeVisible()
@@ -880,8 +887,10 @@ function expectCookieDnrFallbackSequence(
     `${targetSessionCookie} primary browser-cookie 401 request`,
   ).toBeGreaterThanOrEqual(startIndex)
 
-  expect(requests[successIndex].cookieHeader).toContain(targetSessionCookie)
-  expect(requests[successIndex].cookieHeader).not.toContain(
+  expect(atIndex(requests, successIndex).cookieHeader).toContain(
+    targetSessionCookie,
+  )
+  expect(atIndex(requests, successIndex).cookieHeader).not.toContain(
     BROWSER_CURRENT_SESSION_COOKIE,
   )
 
@@ -895,7 +904,7 @@ function expectTokenDnrFallbackSequence(
   requests: CapturedTokenRequest[],
   targetSessionCookie: string,
 ) {
-  const account = ACCOUNT_BY_SESSION_COOKIE[targetSessionCookie]
+  const account = atIndex(ACCOUNT_BY_SESSION_COOKIE, targetSessionCookie)
   const success = requests.find(
     (request) =>
       request.responseStatus === 200 &&

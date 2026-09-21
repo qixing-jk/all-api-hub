@@ -11,6 +11,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const ACCOUNT = {
@@ -333,7 +334,7 @@ describe("StatusIndicator", () => {
       runtimeKeyLoadErrorMessage: null,
       catalogLoadErrorMessage: "Unable to load catalog",
       runtimeKeys,
-      selectedRuntimeKeyId: runtimeKeys[0].id,
+      selectedRuntimeKeyId: atIndex(runtimeKeys, 0).id,
       activeRuntimeKeyName: null,
       loadRuntimeKeys,
       setSelectedRuntimeKeyId: vi.fn(),

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
 import { MarkdownContent } from "~/components/MarkdownContent"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("MarkdownContent", () => {
   it("preserves separate disclosure states and focus when summaries repeat", async () => {
@@ -12,7 +13,7 @@ describe("MarkdownContent", () => {
     const { container, rerender } = render(
       <MarkdownContent content={content} />,
     )
-    await user.click(screen.getAllByText("Diagnostics")[1])
+    await user.click(atIndex(screen.getAllByText("Diagnostics"), 1))
     expect(container.querySelectorAll("details")[0]).not.toHaveAttribute("open")
     expect(container.querySelectorAll("details")[1]).toHaveAttribute("open")
     expect(screen.getAllByText("Diagnostics")[1]).toHaveFocus()

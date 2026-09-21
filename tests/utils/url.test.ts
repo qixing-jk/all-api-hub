@@ -12,6 +12,7 @@ import {
   stripTrailingOpenAIV1,
   updateUrlWithTab,
 } from "~/utils/core/url"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("joinUrl", () => {
   it("should join base and path with single slash", () => {
@@ -379,7 +380,7 @@ describe("updateUrlWithTab", () => {
     updateUrlWithTab("settings")
     expect(window.history.replaceState).toHaveBeenCalled()
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
-    const url = call[2] as string
+    const url = atIndex(call, 2) as string
     expect(url).toContain("tab=settings")
   })
 
@@ -398,7 +399,7 @@ describe("updateUrlWithTab", () => {
   it("should add hash with hashPage option", () => {
     updateUrlWithTab("settings", { hashPage: "config" })
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
-    const url = call[2] as string
+    const url = atIndex(call, 2) as string
     expect(url).toContain("#config")
     expect(url).toContain("?tab=settings")
   })
@@ -406,7 +407,7 @@ describe("updateUrlWithTab", () => {
   it("should preserve a pre-prefixed hashPage value", () => {
     updateUrlWithTab("settings", { hashPage: "#config" })
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
-    const url = call[2] as string
+    const url = atIndex(call, 2) as string
     expect(url).toContain("#config")
   })
 
@@ -416,7 +417,7 @@ describe("updateUrlWithTab", () => {
     ;(window.location as any).search = "?page=1"
     updateUrlWithTab("profile")
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
-    const url = call[2] as string
+    const url = atIndex(call, 2) as string
     expect(url).toContain("page=1")
     expect(url).toContain("tab=profile")
   })
@@ -519,7 +520,7 @@ describe("navigateToAnchor", () => {
 
     expect(window.history.replaceState).toHaveBeenCalled()
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
-    const url = call[2] as string
+    const url = atIndex(call, 2) as string
     expect(url).toContain("#config")
     expect(url).toContain("?tab=settings")
   })

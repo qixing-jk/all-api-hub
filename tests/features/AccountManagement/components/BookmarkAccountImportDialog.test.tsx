@@ -17,6 +17,7 @@ import {
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const {
@@ -484,7 +485,7 @@ describe("BookmarkAccountImportDialog", () => {
       expect(await screen.findByText("Primary folder")).toBeVisible()
       expect(screen.getAllByText("1 bookmark")[0]).toBeVisible()
       await user.click(
-        screen.getAllByRole("button", { name: "Expand folder" })[0],
+        atIndex(screen.getAllByRole("button", { name: "Expand folder" }), 0),
       )
       const bookmarkTitle = screen.getByText("Primary bookmark")
       const bookmarkSource = screen.getByText(
@@ -755,7 +756,7 @@ describe("BookmarkAccountImportDialog", () => {
       expect(screen.queryByText("Work relay")).not.toBeInTheDocument()
 
       await user.click(
-        screen.getAllByRole("button", { name: "Expand folder" })[0],
+        atIndex(screen.getAllByRole("button", { name: "Expand folder" }), 0),
       )
       expect(await screen.findByText("Work relay")).toBeVisible()
     } finally {
@@ -985,7 +986,7 @@ describe("BookmarkAccountImportDialog", () => {
       within(
         rows.find((row) =>
           row.textContent?.includes("https://existing.example.invalid"),
-        ) ?? rows[0],
+        ) ?? atIndex(rows, 0),
       ).getByText("ui:dialog.bookmarkAccountImport.status.duplicate"),
     ).toBeInTheDocument()
 
@@ -1004,7 +1005,9 @@ describe("BookmarkAccountImportDialog", () => {
       expect.any(String),
       expect.any(Function),
     )
-    expect(runBookmarkAccountImportMock.mock.calls[0][0].candidates).toEqual([
+    expect(
+      atIndex(runBookmarkAccountImportMock.mock.calls, 0)[0].candidates,
+    ).toEqual([
       expect.objectContaining({
         id: "bookmark-import:https://new.example.invalid",
         url: "https://new.example.invalid",
@@ -1012,7 +1015,8 @@ describe("BookmarkAccountImportDialog", () => {
       }),
     ])
     expect(
-      runBookmarkAccountImportMock.mock.calls[0][0].protectionBypassExecution,
+      atIndex(runBookmarkAccountImportMock.mock.calls, 0)[0]
+        .protectionBypassExecution,
     ).toEqual({
       version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: "user_command",
@@ -1070,7 +1074,7 @@ describe("BookmarkAccountImportDialog", () => {
       expect(runBookmarkAccountImportMock).toHaveBeenCalledTimes(1)
     })
     expect(
-      runBookmarkAccountImportMock.mock.calls[0][0].candidates.map(
+      atIndex(runBookmarkAccountImportMock.mock.calls, 0)[0].candidates.map(
         (candidate: { url: string }) => candidate.url,
       ),
     ).toEqual([

@@ -8,6 +8,7 @@ import {
   DEV_IDENTITY_FIXTURE_COLOR,
   DEV_IDENTITY_FIXTURE_PATH,
 } from "~~/tests/test-utils/devIdentityFixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 const {
@@ -196,7 +197,7 @@ describe("instance identity dev section", () => {
     )
 
     await waitFor(() => expect(writeText).toHaveBeenCalled())
-    const payload = JSON.parse(writeText.mock.calls[0][0] as string)
+    const payload = JSON.parse(atIndex(writeText.mock.calls, 0)[0] as string)
     expect(payload).toMatchObject({
       path: BUILD_IDENTITY.path,
       outputPath: BUILD_IDENTITY.outputPath,

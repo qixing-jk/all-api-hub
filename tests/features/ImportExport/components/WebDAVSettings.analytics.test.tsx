@@ -15,6 +15,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   clearWebdavSyncDataSelection,
@@ -432,7 +433,7 @@ describe("WebDAVSettings Analytics", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
@@ -544,7 +545,7 @@ describe("WebDAVSettings Analytics", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    fireEvent.change(atIndex(screen.getAllByDisplayValue("stored-secret"), 0), {
       target: { value: "" },
     })
     await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)

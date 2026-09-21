@@ -5,6 +5,7 @@ import {
   buildExtensionLaunchOptions,
   launchExtensionContextWithStartupRetry,
 } from "~~/e2e/utils/extensionLaunch"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("buildExtensionLaunchOptions", () => {
   it("forces modern headless when running an explicit Chrome binary for extension E2E", () => {
@@ -127,8 +128,8 @@ describe("launchExtensionContextWithStartupRetry", () => {
       launchExtensionContextWithStartupRetry({ launch, waitForReady }),
     ).rejects.toThrow("second startup timed out")
 
-    expect(contexts[0].close).toHaveBeenCalledOnce()
-    expect(contexts[1].close).toHaveBeenCalledOnce()
+    expect(atIndex(contexts, 0).close).toHaveBeenCalledOnce()
+    expect(atIndex(contexts, 1).close).toHaveBeenCalledOnce()
     expect(launch).toHaveBeenCalledTimes(2)
   })
 

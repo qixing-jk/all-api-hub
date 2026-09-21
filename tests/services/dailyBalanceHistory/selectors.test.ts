@@ -7,6 +7,7 @@ import {
 } from "~/services/history/dailyBalanceHistory/selectors"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const createStore = (
   snapshotsByAccountId: DailyBalanceHistoryStore["snapshotsByAccountId"],
@@ -52,12 +53,24 @@ describe("dailyBalanceHistory selectors", () => {
     })
 
     const fallbackRate = DEFAULT_USD_TO_CNY_RATE
-    expect(result.seriesByAccountId.a1.balance).toEqual([2 * fallbackRate])
-    expect(result.seriesByAccountId.a2.balance).toEqual([3 * fallbackRate])
-    expect(result.seriesByAccountId.a1.income).toEqual([fallbackRate])
-    expect(result.seriesByAccountId.a2.income).toEqual([2 * fallbackRate])
-    expect(result.seriesByAccountId.a1.outcome).toEqual([0.5 * fallbackRate])
-    expect(result.seriesByAccountId.a2.outcome).toEqual([fallbackRate])
+    expect(atIndex(result.seriesByAccountId, "a1").balance).toEqual([
+      2 * fallbackRate,
+    ])
+    expect(atIndex(result.seriesByAccountId, "a2").balance).toEqual([
+      3 * fallbackRate,
+    ])
+    expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([
+      fallbackRate,
+    ])
+    expect(atIndex(result.seriesByAccountId, "a2").income).toEqual([
+      2 * fallbackRate,
+    ])
+    expect(atIndex(result.seriesByAccountId, "a1").outcome).toEqual([
+      0.5 * fallbackRate,
+    ])
+    expect(atIndex(result.seriesByAccountId, "a2").outcome).toEqual([
+      fallbackRate,
+    ])
   })
 
   it("builds per-account daily series with per-account gaps (does not blank other accounts)", () => {
@@ -94,11 +107,11 @@ describe("dailyBalanceHistory selectors", () => {
         estimatedIncomeAccounts: 0,
       },
     ])
-    expect(result.seriesByAccountId.a1.balance).toEqual([10])
-    expect(result.seriesByAccountId.a2.balance).toEqual([null])
-    expect(result.seriesByAccountId.a1.income).toEqual([1])
-    expect(result.seriesByAccountId.a1.outcome).toEqual([2])
-    expect(result.seriesByAccountId.a1.net).toEqual([-1])
+    expect(atIndex(result.seriesByAccountId, "a1").balance).toEqual([10])
+    expect(atIndex(result.seriesByAccountId, "a2").balance).toEqual([null])
+    expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([1])
+    expect(atIndex(result.seriesByAccountId, "a1").outcome).toEqual([2])
+    expect(atIndex(result.seriesByAccountId, "a1").net).toEqual([-1])
   })
 
   it.each([
@@ -153,9 +166,13 @@ describe("dailyBalanceHistory selectors", () => {
         currencyType: "USD",
       })
 
-      expect(result.seriesByAccountId.a1.income).toEqual([expectedIncome])
-      expect(result.seriesByAccountId.a1.outcome).toEqual([expectedOutcome])
-      expect(result.seriesByAccountId.a1.net).toEqual([null])
+      expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([
+        expectedIncome,
+      ])
+      expect(atIndex(result.seriesByAccountId, "a1").outcome).toEqual([
+        expectedOutcome,
+      ])
+      expect(atIndex(result.seriesByAccountId, "a1").net).toEqual([null])
       expect(result.coverageByDay[0]).toMatchObject({
         cashflowAccounts: 0,
         incomeAccounts: expectedIncomeAccounts,
@@ -194,10 +211,10 @@ describe("dailyBalanceHistory selectors", () => {
       estimatedTodayIncomeEnabled: true,
     })
 
-    expect(result.seriesByAccountId.a1.income).toEqual([0.5])
-    expect(result.seriesByAccountId.a1.estimatedIncome).toEqual([3])
-    expect(result.seriesByAccountId.a1.outcome).toEqual([1])
-    expect(result.seriesByAccountId.a1.net).toEqual([-0.5])
+    expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([0.5])
+    expect(atIndex(result.seriesByAccountId, "a1").estimatedIncome).toEqual([3])
+    expect(atIndex(result.seriesByAccountId, "a1").outcome).toEqual([1])
+    expect(atIndex(result.seriesByAccountId, "a1").net).toEqual([-0.5])
     expect(result.coverageByDay[0]).toMatchObject({
       cashflowAccounts: 1,
       estimatedIncomeAccounts: 1,
@@ -234,8 +251,10 @@ describe("dailyBalanceHistory selectors", () => {
       estimatedTodayIncomeEnabled: false,
     })
 
-    expect(result.seriesByAccountId.a1.income).toEqual([0.5])
-    expect(result.seriesByAccountId.a1.estimatedIncome).toEqual([null])
+    expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([0.5])
+    expect(atIndex(result.seriesByAccountId, "a1").estimatedIncome).toEqual([
+      null,
+    ])
     expect(result.coverageByDay[0]).toMatchObject({
       cashflowAccounts: 1,
       estimatedIncomeAccounts: 0,
@@ -273,8 +292,10 @@ describe("dailyBalanceHistory selectors", () => {
       manualBalanceAccountIds: new Set(["a1"]),
     })
 
-    expect(result.seriesByAccountId.a1.income).toEqual([0.5])
-    expect(result.seriesByAccountId.a1.estimatedIncome).toEqual([null])
+    expect(atIndex(result.seriesByAccountId, "a1").income).toEqual([0.5])
+    expect(atIndex(result.seriesByAccountId, "a1").estimatedIncome).toEqual([
+      null,
+    ])
     expect(result.coverageByDay[0]).toMatchObject({
       cashflowAccounts: 1,
       estimatedIncomeAccounts: 0,
@@ -313,10 +334,10 @@ describe("dailyBalanceHistory selectors", () => {
       exchangeRateByAccountId: { a1: 7, a2: 8 },
     })
 
-    expect(result.seriesByAccountId.a1.balance).toEqual([7])
-    expect(result.seriesByAccountId.a2.balance).toEqual([16])
-    expect(result.seriesByAccountId.a1.net).toEqual([-7])
-    expect(result.seriesByAccountId.a2.net).toEqual([-8])
+    expect(atIndex(result.seriesByAccountId, "a1").balance).toEqual([7])
+    expect(atIndex(result.seriesByAccountId, "a2").balance).toEqual([16])
+    expect(atIndex(result.seriesByAccountId, "a1").net).toEqual([-7])
+    expect(atIndex(result.seriesByAccountId, "a2").net).toEqual([-8])
   })
 
   it("returns empty per-account series structures for empty selections", () => {
@@ -560,11 +581,11 @@ describe("dailyBalanceHistory selectors", () => {
       estimatedTodayIncomeEnabled: true,
     })
 
-    expect(result.summaries[0].incomeTotal).toBe(0.5)
-    expect(result.summaries[0].estimatedIncomeTotal).toBe(3)
-    expect(result.summaries[0].estimatedIncomeDays).toBe(1)
-    expect(result.summaries[0].outcomeTotal).toBe(1)
-    expect(result.summaries[0].netTotal).toBe(-0.5)
+    expect(atIndex(result.summaries, 0).incomeTotal).toBe(0.5)
+    expect(atIndex(result.summaries, 0).estimatedIncomeTotal).toBe(3)
+    expect(atIndex(result.summaries, 0).estimatedIncomeDays).toBe(1)
+    expect(atIndex(result.summaries, 0).outcomeTotal).toBe(1)
+    expect(atIndex(result.summaries, 0).netTotal).toBe(-0.5)
   })
 
   it("excludes disabled estimated income from range summaries", () => {
@@ -597,9 +618,9 @@ describe("dailyBalanceHistory selectors", () => {
       estimatedTodayIncomeEnabled: false,
     })
 
-    expect(result.summaries[0].incomeTotal).toBe(0.5)
-    expect(result.summaries[0].estimatedIncomeTotal).toBeNull()
-    expect(result.summaries[0].estimatedIncomeDays).toBe(0)
+    expect(atIndex(result.summaries, 0).incomeTotal).toBe(0.5)
+    expect(atIndex(result.summaries, 0).estimatedIncomeTotal).toBeNull()
+    expect(atIndex(result.summaries, 0).estimatedIncomeDays).toBe(0)
   })
 
   it("returns null summary totals when an account has no snapshots in the selected range", () => {

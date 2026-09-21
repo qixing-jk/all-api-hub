@@ -12,6 +12,7 @@ import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
   fireEvent,
@@ -455,7 +456,7 @@ describe("AutoCheckinSettings", () => {
       withThemeProvider: false,
     })
 
-    await user.click(screen.getAllByRole("switch")[0])
+    await user.click(atIndex(screen.getAllByRole("switch"), 0))
     const randomModeButton = screen.getByRole("button", {
       name: "autoCheckin:settings.scheduleModeRandom",
     })
@@ -477,7 +478,7 @@ describe("AutoCheckinSettings", () => {
       withThemeProvider: false,
     })
 
-    fireEvent.click(screen.getAllByRole("switch")[0])
+    fireEvent.click(atIndex(screen.getAllByRole("switch"), 0))
     await waitFor(() => {
       expect(updateAutoCheckin).toHaveBeenCalledWith({ globalEnabled: false })
     })
@@ -524,7 +525,7 @@ describe("AutoCheckinSettings", () => {
     fireEvent.change(retryMaxAttemptsInput, { target: { value: "-1" } })
     fireEvent.blur(retryMaxAttemptsInput)
     await waitFor(() => expect(retryMaxAttemptsInput).toHaveValue(3))
-    fireEvent.click(screen.getAllByRole("switch")[0])
+    fireEvent.click(atIndex(screen.getAllByRole("switch"), 0))
 
     expect(toastMocks.error).toHaveBeenNthCalledWith(
       1,

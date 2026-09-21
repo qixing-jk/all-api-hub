@@ -14,6 +14,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const { context } = vi.hoisted(() => ({ context: vi.fn() }))
@@ -198,7 +199,7 @@ describe("native AddTokenDialog", () => {
       expect(onSuccess).toHaveBeenCalledExactlyOnceWith(creation),
     )
     expect(submit).toHaveBeenCalledTimes(1)
-    expect(submit.mock.calls[0][0]).toEqual({
+    expect(atIndex(submit.mock.calls, 0)[0]).toEqual({
       ...initialValues,
       name: "Manual name",
     })

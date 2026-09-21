@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import type { CredentialExportData } from "~/services/integrations/credentialExport"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -24,7 +25,7 @@ describe("cherryStudio", () => {
       OpenInCherryStudio(mockCredential)
 
       expect(openSpy).toHaveBeenCalled()
-      const url = openSpy.mock.calls[0][0] as string
+      const url = atIndex(openSpy.mock.calls, 0)[0] as string
       expect(url).toContain("cherrystudio://providers/api-keys")
       expect(url).toContain("v=1")
       expect(url).toContain("data=")
@@ -42,8 +43,8 @@ describe("cherryStudio", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
       OpenInCherryStudio(mockCredential)
 
-      const url = openSpy.mock.calls[0][0] as string
-      const dataParam = url.split("data=")[1]
+      const url = atIndex(openSpy.mock.calls, 0)[0] as string
+      const dataParam = atIndex(url.split("data="), 1)
       expect(dataParam).toBeTruthy()
       expect(dataParam.length).toBeGreaterThan(0)
       expect(JSON.parse(atob(dataParam))).toEqual({

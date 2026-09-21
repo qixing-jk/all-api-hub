@@ -16,6 +16,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { pushWithinOptionsPage } from "~/utils/navigation"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -739,7 +740,14 @@ describe("ManagedSiteModelSyncSettings", () => {
       channelTimeoutInput,
       rpmInput,
       burstInput,
-    ] = inputs
+    ] = [
+      atIndex(inputs, 0),
+      atIndex(inputs, 1),
+      atIndex(inputs, 2),
+      atIndex(inputs, 3),
+      atIndex(inputs, 4),
+      atIndex(inputs, 5),
+    ]
 
     fireEvent.change(intervalInput, { target: { value: "0" } })
     fireEvent.blur(intervalInput)
@@ -776,14 +784,11 @@ describe("ManagedSiteModelSyncSettings", () => {
     vi.clearAllMocks()
 
     const inputs = screen.getAllByRole("spinbutton")
-    const [
-      ,
-      concurrencyInput,
-      retriesInput,
-      channelTimeoutInput,
-      rpmInput,
-      burstInput,
-    ] = inputs
+    const concurrencyInput = atIndex(inputs, 1)
+    const retriesInput = atIndex(inputs, 2)
+    const channelTimeoutInput = atIndex(inputs, 3)
+    const rpmInput = atIndex(inputs, 4)
+    const burstInput = atIndex(inputs, 5)
 
     fireEvent.change(concurrencyInput, { target: { value: "4" } })
     fireEvent.blur(concurrencyInput)
@@ -857,7 +862,7 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     vi.clearAllMocks()
 
-    const [, , , channelTimeoutInput] = screen.getAllByRole("spinbutton")
+    const channelTimeoutInput = atIndex(screen.getAllByRole("spinbutton"), 3)
     fireEvent.change(channelTimeoutInput, { target: { value: "0" } })
     fireEvent.blur(channelTimeoutInput)
 

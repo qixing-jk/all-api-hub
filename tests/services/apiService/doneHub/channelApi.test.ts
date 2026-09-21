@@ -17,6 +17,7 @@ import {
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -95,7 +96,7 @@ describe("apiService doneHub channel APIs", () => {
         models: "old-model",
         model_mapping: '{"old-model":"mapped"}',
       })
-      const options = mockFetchApiData.mock.calls[0][1]
+      const options = atIndex(mockFetchApiData.mock.calls, 0)[1]
       expect(JSON.parse(options.options.body)).toMatchObject({
         proxy: "socks5://proxy:1080",
         model_headers: '{"X-Project":"draft"}',
@@ -164,8 +165,10 @@ describe("apiService doneHub channel APIs", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
 
-    const firstEndpoint = mockFetchApiData.mock.calls[0][1].endpoint as string
-    const secondEndpoint = mockFetchApiData.mock.calls[1][1].endpoint as string
+    const firstEndpoint = atIndex(mockFetchApiData.mock.calls, 0)[1]
+      .endpoint as string
+    const secondEndpoint = atIndex(mockFetchApiData.mock.calls, 1)[1]
+      .endpoint as string
 
     expect(firstEndpoint).toContain("/api/channel/?")
     expect(firstEndpoint).toContain("page=1")
@@ -202,7 +205,8 @@ describe("apiService doneHub channel APIs", () => {
     const result = await searchChannel(request as any, "https://up.example.com")
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
-    const endpoint = mockFetchApiData.mock.calls[0][1].endpoint as string
+    const endpoint = atIndex(mockFetchApiData.mock.calls, 0)[1]
+      .endpoint as string
     expect(endpoint).toContain("/api/channel/?")
     expect(endpoint).toContain("base_url=")
     expect(endpoint).toContain("page=1")
@@ -233,7 +237,7 @@ describe("apiService doneHub channel APIs", () => {
     const result = await searchChannel(request as any, "https://up.example.com")
 
     expect(result).not.toBeNull()
-    expect(result!.items[0].type).toBe(0)
+    expect(atIndex(result!.items, 0).type).toBe(0)
     expect(result!.type_counts).toEqual({ "0": 1 })
   })
 
@@ -372,7 +376,9 @@ describe("apiService doneHub channel APIs", () => {
       payload as any,
     )
 
-    expect(JSON.parse(mockFetchApi.mock.calls[0][1].options.body)).toEqual({
+    expect(
+      JSON.parse(atIndex(mockFetchApi.mock.calls, 0)[1].options.body),
+    ).toEqual({
       ...payload,
       model_mapping: "{}",
     })
@@ -403,7 +409,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const callOptions = mockFetchApi.mock.calls[0][1]
+    const callOptions = atIndex(mockFetchApi.mock.calls, 0)[1]
     expect(callOptions.endpoint).toBe("/api/channel/")
     expect(callOptions.options?.method).toBe("POST")
 
@@ -448,7 +454,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     const body = JSON.parse(
-      mockFetchApi.mock.calls[0][1].options?.body as string,
+      atIndex(mockFetchApi.mock.calls, 0)[1].options?.body as string,
     )
     expect(body.group).toBe("")
     expect(body.model_mapping).toBe("{}")
@@ -480,7 +486,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     const body = JSON.parse(
-      mockFetchApi.mock.calls[0][1].options?.body as string,
+      atIndex(mockFetchApi.mock.calls, 0)[1].options?.body as string,
     )
     expect(body.group).toBe("manual")
     expect(body.model_mapping).toBe('{"gpt-4":"OpenAI/gpt-4"}')
@@ -533,7 +539,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const callOptions = mockFetchApi.mock.calls[0][1]
+    const callOptions = atIndex(mockFetchApi.mock.calls, 0)[1]
     expect(callOptions.endpoint).toBe("/api/channel/")
     expect(callOptions.options?.method).toBe("PUT")
 
@@ -561,7 +567,7 @@ describe("apiService doneHub channel APIs", () => {
     await updateChannel(request as any, { id: 1, name: "Updated Channel" })
 
     const body = JSON.parse(
-      mockFetchApi.mock.calls[0][1].options?.body as string,
+      atIndex(mockFetchApi.mock.calls, 0)[1].options?.body as string,
     )
     expect(body).toEqual({ id: 1, name: "Updated Channel" })
   })
@@ -586,7 +592,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     const body = JSON.parse(
-      mockFetchApi.mock.calls[0][1].options?.body as string,
+      atIndex(mockFetchApi.mock.calls, 0)[1].options?.body as string,
     )
     expect(body).toMatchObject({
       id: 1,
@@ -616,7 +622,7 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     const body = JSON.parse(
-      mockFetchApi.mock.calls[0][1].options?.body as string,
+      atIndex(mockFetchApi.mock.calls, 0)[1].options?.body as string,
     )
     expect(body.group).toBe("manual")
   })
@@ -790,17 +796,19 @@ describe("apiService doneHub channel APIs", () => {
 
       expect(mockFetchApiData).toHaveBeenCalledTimes(2)
 
-      const channelEndpoint = mockFetchApiData.mock.calls[0][1]
+      const channelEndpoint = atIndex(mockFetchApiData.mock.calls, 0)[1]
         .endpoint as string
       expect(channelEndpoint).toBe("/api/channel/123")
 
-      const providerEndpoint = mockFetchApiData.mock.calls[1][1]
+      const providerEndpoint = atIndex(mockFetchApiData.mock.calls, 1)[1]
         .endpoint as string
       expect(providerEndpoint).toBe("/api/channel/provider_models_list")
-      expect(mockFetchApiData.mock.calls[1][1].options?.method).toBe("POST")
+      expect(atIndex(mockFetchApiData.mock.calls, 1)[1].options?.method).toBe(
+        "POST",
+      )
 
       const body = JSON.parse(
-        mockFetchApiData.mock.calls[1][1].options?.body as string,
+        atIndex(mockFetchApiData.mock.calls, 1)[1].options?.body as string,
       )
       expect(body).toMatchObject({
         id: 123,
@@ -838,12 +846,14 @@ describe("apiService doneHub channel APIs", () => {
     ).resolves.toEqual(["model-a", "model-b"])
 
     expect(mockFetchApiData).toHaveBeenCalledOnce()
-    expect(mockFetchApiData.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mockFetchApiData.mock.calls, 0)[1]).toMatchObject({
       endpoint: "/api/channel/provider_models_list",
       options: { method: "POST" },
     })
     expect(
-      JSON.parse(mockFetchApiData.mock.calls[0][1].options.body as string),
+      JSON.parse(
+        atIndex(mockFetchApiData.mock.calls, 0)[1].options.body as string,
+      ),
     ).toMatchObject({
       type: 39,
       base_url: "https://upstream.example.invalid",

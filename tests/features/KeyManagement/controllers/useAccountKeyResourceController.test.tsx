@@ -26,6 +26,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -149,7 +150,9 @@ describe("useAccountKeyResourceController", () => {
       await waitFor(() => expect(result.current.isLoading).toBe(false))
       expect(result.current.rows).toEqual([])
       expect(result.current.failures[account.id]).toBeDefined()
-      expect(open.mock.calls[0][0].request.protectionBypassExecution).toEqual({
+      expect(
+        atIndex(open.mock.calls, 0)[0].request.protectionBypassExecution,
+      ).toEqual({
         version: 2,
         kind: "automatic",
         feature: "key_management",
@@ -2645,15 +2648,15 @@ describe("useAccountKeyResourceController", () => {
           baseUrl: "https://example.invalid",
           key: "source-key",
         })
-        const session = await openNativeResources.mock.results[0].value
+        const session = await atIndex(openNativeResources.mock.results, 0).value
         expect(session.runtimeKey.resolve).toHaveBeenCalledWith(facts.ref, {
           signal: expect.any(AbortSignal),
         })
         expect(cleanupMocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(
-          collection.delete.mock.invocationCallOrder[0],
+          atIndex(collection.delete.mock.invocationCallOrder, 0),
         )
         expect(cleanupMocks.finish.mock.invocationCallOrder[0]).toBeGreaterThan(
-          collection.delete.mock.invocationCallOrder[0],
+          atIndex(collection.delete.mock.invocationCallOrder, 0),
         )
       }
       expect(collection.delete).toHaveBeenCalledWith(
@@ -3127,8 +3130,8 @@ describe("useAccountKeyResourceController", () => {
         replaceRoute: (nextRoute, transition) => {
           queueMicrotask(() =>
             setRouteParams({
-              accountId: nextRoute.accountId,
-              workspace: nextRoute.workspace,
+              accountId: atIndex(nextRoute, "accountId"),
+              workspace: atIndex(nextRoute, "workspace"),
             }),
           )
           queueMicrotask(() => setRouteTransition(transition))
@@ -3330,8 +3333,8 @@ describe("useAccountKeyResourceController", () => {
         replaceRoute: (nextRoute) =>
           queueMicrotask(() =>
             setRouteParams({
-              accountId: nextRoute.accountId,
-              workspace: nextRoute.workspace,
+              accountId: atIndex(nextRoute, "accountId"),
+              workspace: atIndex(nextRoute, "workspace"),
             }),
           ),
       })
@@ -3542,7 +3545,7 @@ describe("useAccountKeyResourceController", () => {
         isDefault: false,
       },
     ]
-    const facts = createFacts(scopes[0].scopeKey, "key-created")
+    const facts = createFacts(atIndex(scopes, 0).scopeKey, "key-created")
     const createdSecret = {
       correlation: { kind: "account-key-resource" as const, ref: facts.ref },
       displayName: "Created key",
@@ -3554,7 +3557,7 @@ describe("useAccountKeyResourceController", () => {
       fields: [],
       initialValues: {},
       validate: vi.fn().mockReturnValue({ valid: true }),
-      resolveDestinationScopeKey: () => scopes[0].scopeKey,
+      resolveDestinationScopeKey: () => atIndex(scopes, 0).scopeKey,
       submit: vi.fn().mockResolvedValue({ facts, createdSecret }),
     }
     const collection = {
@@ -3592,7 +3595,7 @@ describe("useAccountKeyResourceController", () => {
     )
 
     expect(result.current.createdSecret).toBe(createdSecret)
-    expect(result.current.selectScope(scopes[1].scopeKey)).toBe(false)
+    expect(result.current.selectScope(atIndex(scopes, 1).scopeKey)).toBe(false)
     await act(async () => result.current.openCreate())
     await act(async () => result.current.openDetail(facts.ref))
     expect(result.current.openDelete(facts.ref)).toBe(false)

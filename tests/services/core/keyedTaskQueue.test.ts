@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("createKeyedTaskQueue", () => {
   it("runs same-key tasks one at a time in arrival order", async () => {
@@ -88,16 +89,16 @@ describe("createKeyedTaskQueue", () => {
     })
     expect(maxActive).toBe(2)
 
-    controls[1].resolve()
+    atIndex(controls, 1).resolve()
 
     await vi.waitFor(() => {
       expect(started).toEqual([1, 2, 3])
     })
     expect(maxActive).toBe(2)
 
-    controls[0].resolve()
-    controls[2].resolve()
-    controls[3].resolve()
+    atIndex(controls, 0).resolve()
+    atIndex(controls, 2).resolve()
+    atIndex(controls, 3).resolve()
     await expect(Promise.all(tasks)).resolves.toEqual([
       undefined,
       undefined,

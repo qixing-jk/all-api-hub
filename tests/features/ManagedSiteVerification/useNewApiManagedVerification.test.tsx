@@ -13,6 +13,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   ensureNewApiManagedSessionMock,
@@ -196,7 +197,7 @@ describe("useNewApiManagedVerification", () => {
     )
     expect(ensureNewApiManagedSessionMock).toHaveBeenCalledTimes(1)
     expect(cleanupOwnedSessionMock.mock.invocationCallOrder[0]).toBeLessThan(
-      ensureNewApiManagedSessionMock.mock.invocationCallOrder[0],
+      atIndex(ensureNewApiManagedSessionMock.mock.invocationCallOrder, 0),
     )
   })
 

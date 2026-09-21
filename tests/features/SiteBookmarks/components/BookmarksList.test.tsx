@@ -11,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteBookmark, Tag, TagStore } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   fireEvent,
   render,
@@ -263,8 +264,8 @@ describe("BookmarksList", () => {
     tagStoreMock = {
       version: 1,
       tagsById: {
-        t1: tagsMock[0],
-        t2: tagsMock[1],
+        t1: atIndex(tagsMock, 0),
+        t2: atIndex(tagsMock, 1),
       },
     }
 
@@ -304,8 +305,8 @@ describe("BookmarksList", () => {
     tagStoreMock = {
       version: 1,
       tagsById: {
-        t1: tagsMock[0],
-        t2: tagsMock[1],
+        t1: atIndex(tagsMock, 0),
+        t2: atIndex(tagsMock, 1),
       },
     }
 

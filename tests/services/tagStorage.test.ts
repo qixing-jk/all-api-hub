@@ -7,6 +7,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { AccountStorageConfig } from "~/types"
 import * as browserApi from "~/utils/browser/browserApi"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const storageData = new Map<string, any>()
 
@@ -160,10 +161,10 @@ describe("tagStorage", () => {
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
-    expect(savedAccounts.accounts[0].tagIds).toHaveLength(1)
+    expect(atIndex(savedAccounts.accounts, 0).tagIds).toHaveLength(1)
     expect((savedAccounts.accounts[0] as any).tags).toBeUndefined()
-    expect(savedAccounts.accounts[0].configVersion).toBe(7)
-    expect(savedAccounts.accounts[0].checkIn).not.toHaveProperty(
+    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(7)
+    expect(atIndex(savedAccounts.accounts, 0).checkIn).not.toHaveProperty(
       "enableDetection",
     )
 
@@ -313,10 +314,10 @@ describe("tagStorage", () => {
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
-    expect(savedAccounts.accounts[0].tagIds).toEqual([])
+    expect(atIndex(savedAccounts.accounts, 0).tagIds).toEqual([])
     expect(savedAccounts.bookmarks).toHaveLength(2)
-    expect(savedAccounts.bookmarks[0].tagIds).toEqual([])
-    expect(savedAccounts.bookmarks[1].tagIds).toEqual([])
+    expect(atIndex(savedAccounts.bookmarks, 0).tagIds).toEqual([])
+    expect(atIndex(savedAccounts.bookmarks, 1).tagIds).toEqual([])
     const savedStore = storageData.get("global_tag_store") as any
     expect(savedStore.tagsById.t1).toBeUndefined()
   })
@@ -451,17 +452,17 @@ describe("tagStorage", () => {
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
-    expect(savedAccounts.accounts[0].configVersion).toBe(7)
-    expect(savedAccounts.accounts[0].checkIn).not.toHaveProperty(
+    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(7)
+    expect(atIndex(savedAccounts.accounts, 0).checkIn).not.toHaveProperty(
       "enableDetection",
     )
-    expect(savedAccounts.accounts[0].tagIds).toEqual(["keep"])
-    expect(savedAccounts.accounts[1].tagIds).toEqual([])
-    expect(savedAccounts.accounts[2].tagIds).toEqual(["keep"])
-    expect(savedAccounts.accounts[3].tagIds).toEqual([])
-    expect(savedAccounts.bookmarks[0].tagIds).toEqual([])
-    expect(savedAccounts.bookmarks[1].tagIds).toEqual(["keep"])
-    expect(savedAccounts.bookmarks[2].tagIds).toEqual([])
+    expect(atIndex(savedAccounts.accounts, 0).tagIds).toEqual(["keep"])
+    expect(atIndex(savedAccounts.accounts, 1).tagIds).toEqual([])
+    expect(atIndex(savedAccounts.accounts, 2).tagIds).toEqual(["keep"])
+    expect(atIndex(savedAccounts.accounts, 3).tagIds).toEqual([])
+    expect(atIndex(savedAccounts.bookmarks, 0).tagIds).toEqual([])
+    expect(atIndex(savedAccounts.bookmarks, 1).tagIds).toEqual(["keep"])
+    expect(atIndex(savedAccounts.bookmarks, 2).tagIds).toEqual([])
 
     const savedStore = storageData.get("global_tag_store") as any
     expect(savedStore.version).toBeGreaterThan(0)

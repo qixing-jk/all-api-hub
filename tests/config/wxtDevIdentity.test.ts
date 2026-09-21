@@ -2,6 +2,7 @@ import path from "node:path"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import type { ConfigEnv } from "wxt"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import wxtConfig from "~~/wxt.config"
 
 /**
@@ -50,7 +51,7 @@ describe("development build identity baking", () => {
 
   it("bakes the project and output paths for dev builds", async () => {
     const define = await resolveViteDefine(SERVE_ENV)
-    const baked = JSON.parse(define.__AAH_DEV_IDENTITY__)
+    const baked = JSON.parse(atIndex(define, "__AAH_DEV_IDENTITY__"))
 
     expect(baked.projectPath).toBe(path.resolve(process.cwd()))
     expect(baked.outputPath).toBe(
@@ -72,7 +73,7 @@ describe("development build identity baking", () => {
     const define = await resolveViteDefine(BUILD_ENV)
     const manifest = await resolveManifest(BUILD_ENV)
 
-    expect(define.__AAH_DEV_IDENTITY__).toBe("null")
+    expect(atIndex(define, "__AAH_DEV_IDENTITY__")).toBe("null")
     expect(manifest.name).toBe("__MSG_manifest_name__")
     expect(manifest.description).toBe("__MSG_manifest_description__")
   })

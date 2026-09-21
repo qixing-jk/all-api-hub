@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { openInCCSwitch } from "~/services/integrations/ccSwitch"
 import type { CredentialExportData } from "~/services/integrations/credentialExport"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -30,7 +31,7 @@ describe("ccSwitch", () => {
         })
 
         expect(openSpy).toHaveBeenCalled()
-        const deeplink = openSpy.mock.calls[0][0] as string
+        const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
         const parsed = new URL(deeplink)
         expect(parsed.searchParams.get("app")).toBe(app)
 
@@ -48,7 +49,7 @@ describe("ccSwitch", () => {
       })
 
       expect(openSpy).toHaveBeenCalled()
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("endpoint")).toBe("https://x.test/v1")
 
@@ -63,7 +64,7 @@ describe("ccSwitch", () => {
         app: "codex",
       })
 
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("endpoint")).toBe("https://x.test")
 
@@ -79,7 +80,7 @@ describe("ccSwitch", () => {
         endpoint: "x.test/v1/",
       })
 
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("endpoint")).toBe("https://x.test/v1")
 
@@ -95,7 +96,7 @@ describe("ccSwitch", () => {
         name: "  Acme 中文_API Gateway__  ",
       })
 
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("name")).toBe("acme-api-gateway")
 
@@ -112,7 +113,7 @@ describe("ccSwitch", () => {
         endpoint: "https://api.example.invalid/v1",
       })
 
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("name")).toBe("api-example-invalid")
 
@@ -128,7 +129,7 @@ describe("ccSwitch", () => {
         name: "示例_Provider",
       })
 
-      const deeplink = openSpy.mock.calls[0][0] as string
+      const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
       const parsed = new URL(deeplink)
       expect(parsed.searchParams.get("name")).toBe("示例_Provider")
 

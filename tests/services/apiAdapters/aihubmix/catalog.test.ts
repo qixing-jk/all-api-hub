@@ -24,6 +24,7 @@ import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 import additionalMediaFixtures from "./additionalMediaFixtures.json"
@@ -134,7 +135,7 @@ describe("AIHubMix catalog adapter", () => {
       "valid",
       "invalid",
     ])
-    expect(catalog.data[0].token_price_usd_per_million).toMatchObject({
+    expect(atIndex(catalog.data, 0).token_price_usd_per_million).toMatchObject({
       input: 2.5,
       output: 5,
     })
@@ -458,11 +459,11 @@ describe("AIHubMix catalog adapter", () => {
     })
     expect(result.data.map((model) => model.model_name)).toEqual(["qwen-flash"])
     expect(websiteRequests).toBe(1)
-    expect(result.data[0].model_descriptions).toEqual({
+    expect(atIndex(result.data, 0).model_descriptions).toEqual({
       zh: "该模型采取阶梯计费。",
       en: "The model adopts tiered pricing.",
     })
-    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+    const quote = quoteModelPrice(atIndex(result.data, 0).pricingPlan!, {
       purpose: PRICING_PURPOSES.REQUEST,
       inputTokens: 128001,
       usage: {
@@ -528,7 +529,7 @@ describe("AIHubMix catalog adapter", () => {
     )
     const result = await fetchModelPricing(baseRequest)
     const quote = quoteCanonicalModelPrice(
-      result.data[0],
+      atIndex(result.data, 0),
       { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1, output: 1 } },
       {},
     )
@@ -540,7 +541,7 @@ describe("AIHubMix catalog adapter", () => {
       ),
     ).toBe(true)
     expect(quote.source.pricingDescription?.zh).toContain("10.85")
-    expect(result.data[0].token_price_usd_per_million).toBeUndefined()
+    expect(atIndex(result.data, 0).token_price_usd_per_million).toBeUndefined()
   })
 
   it("retains published rates but cannot certify them when website rules are unavailable", async () => {
@@ -562,7 +563,7 @@ describe("AIHubMix catalog adapter", () => {
       ),
     )
     const result = await fetchModelPricing(baseRequest)
-    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+    const quote = quoteModelPrice(atIndex(result.data, 0).pricingPlan!, {
       purpose: PRICING_PURPOSES.TOKEN_INDEX,
       usage: { input: 1, output: 1 },
     })
@@ -570,7 +571,9 @@ describe("AIHubMix catalog adapter", () => {
     expect(quote.source.rulesUnavailable).toBe(true)
     expect(quote.issues).toContainEqual({ code: "source-unavailable" })
     expect(quote.issues).not.toContainEqual({ code: "unsupported-rule" })
-    expect(quote.publishedSchedule?.[0].rates.input?.amount).toBe(0.02)
+    expect(atIndex(quote.publishedSchedule ?? [], 0).rates.input?.amount).toBe(
+      0.02,
+    )
     server.use(
       http.get("https://aihubmix.com/call/mdl_info", () =>
         HttpResponse.json({
@@ -582,7 +585,7 @@ describe("AIHubMix catalog adapter", () => {
     const recovered = await fetchModelPricing(baseRequest)
     expect(
       quoteCanonicalModelPrice(
-        recovered.data[0],
+        atIndex(recovered.data, 0),
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           usage: { input: 1, output: 1 },
@@ -687,7 +690,7 @@ describe("AIHubMix catalog adapter", () => {
       ),
     )
     const result = await fetchModelPricing(baseRequest)
-    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+    const quote = quoteModelPrice(atIndex(result.data, 0).pricingPlan!, {
       purpose: PRICING_PURPOSES.TOKEN_INDEX,
       usage: { input: 1 },
     })
@@ -823,7 +826,7 @@ describe("AIHubMix catalog adapter", () => {
     const response = await fetchModelPricing(baseRequest)
     const quote = (at: string) =>
       quoteCanonicalModelPrice(
-        response.data[0],
+        atIndex(response.data, 0),
         { purpose: PRICING_PURPOSES.TOKEN_INDEX, at, usage: { input: 1 } },
         { groupMultiplier: 1 },
       )
@@ -907,7 +910,7 @@ describe("AIHubMix catalog adapter", () => {
         },
       ],
     })
-    expect(calculateModelPrice(result.data[0], 1)).toMatchObject({
+    expect(calculateModelPrice(atIndex(result.data, 0), 1)).toMatchObject({
       kind: "token",
       usdPerMillionTokens: { input: 1.5, output: 9 },
     })
@@ -942,7 +945,7 @@ describe("AIHubMix catalog adapter", () => {
 
     const result = await fetchModelPricing(baseRequest)
 
-    expect(result.data[0].vendorEvidence).toEqual({
+    expect(atIndex(result.data, 0).vendorEvidence).toEqual({
       kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
       name: "Example Primary Publisher",
       externalId: "primary-publisher-id",
@@ -1177,7 +1180,8 @@ describe("AIHubMix catalog adapter", () => {
     )
 
     const result = await fetchModelPricing(baseRequest)
-    const [model] = result.data
+    const destructuredSource0 = result.data
+    const [model] = [atIndex(destructuredSource0, 0)]
 
     expect(result.model_list_source).toMatchObject({
       kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
@@ -1392,10 +1396,14 @@ describe("AIHubMix catalog adapter", () => {
         },
       ],
     })
-    expect(result.data[1].vendorEvidence).not.toHaveProperty("externalId")
+    expect(atIndex(result.data, 1).vendorEvidence).not.toHaveProperty(
+      "externalId",
+    )
     expect(result.data[2]).not.toHaveProperty("vendorEvidence")
     expect(result.data[3]).not.toHaveProperty("vendorEvidence")
-    expect(result.data[4].vendorEvidence).not.toHaveProperty("externalId")
+    expect(atIndex(result.data, 4).vendorEvidence).not.toHaveProperty(
+      "externalId",
+    )
   })
 
   it("normalizes nested catalog string model values", async () => {

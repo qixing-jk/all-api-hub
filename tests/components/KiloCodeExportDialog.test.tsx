@@ -38,6 +38,7 @@ import {
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   expectKiloCodeSettingsSizeGuidance,
   expectKiloCodeUsageGuidance,
@@ -1307,7 +1308,8 @@ describe("KiloCodeExportDialog", () => {
         }),
       )
       await waitFor(() => expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1))
-      const signal = mockEnsureAccountKey.mock.calls[0][1].signal as AbortSignal
+      const signal = atIndex(mockEnsureAccountKey.mock.calls, 0)[1]
+        .signal as AbortSignal
 
       mockUseAccountData.mockReturnValue({
         enabledAccounts: [createSiteAccount(current)],
@@ -1364,7 +1366,8 @@ describe("KiloCodeExportDialog", () => {
       }),
     )
     await waitFor(() => expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1))
-    const signal = mockEnsureAccountKey.mock.calls[0][1].signal as AbortSignal
+    const signal = atIndex(mockEnsureAccountKey.mock.calls, 0)[1]
+      .signal as AbortSignal
     const refreshed = { ...site, balance: { USD: 50, CNY: 350 } }
     mockUseAccountData.mockReturnValue({
       enabledAccounts: [createSiteAccount(refreshed)],

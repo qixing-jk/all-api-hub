@@ -10,6 +10,7 @@ import {
   performOpenRouterManagementKeyPageAction,
 } from "~/entrypoints/content/messageHandlers/openrouter/managementKeyPage"
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function pageEnvironment(pathname = OPENROUTER_MANAGEMENT_KEYS_PATH) {
   return {
@@ -282,7 +283,11 @@ describe("OpenRouter Management Key page automation", () => {
         <button type="button">New Key</button>
       </main>
     `
-    const [first, second] = Array.from(document.querySelectorAll("button"))
+    const destructuredSource0 = Array.from(document.querySelectorAll("button"))
+    const [first, second] = [
+      atIndex(destructuredSource0, 0),
+      atIndex(destructuredSource0, 1),
+    ]
     first.addEventListener("click", firstClick)
     second.addEventListener("click", secondClick)
 

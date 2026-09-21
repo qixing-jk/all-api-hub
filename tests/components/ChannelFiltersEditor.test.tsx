@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -386,8 +387,8 @@ describe("ChannelFiltersEditor", () => {
     expect(moveUpButtons[1]).not.toBeDisabled()
     expect(moveDownButtons[1]).toBeDisabled()
 
-    await user.click(moveDownButtons[0])
-    await user.click(moveUpButtons[1])
+    await user.click(atIndex(moveDownButtons, 0))
+    await user.click(atIndex(moveUpButtons, 1))
 
     expect(props.onMoveFilter).toHaveBeenNthCalledWith(1, "rule-1", "down")
     expect(props.onMoveFilter).toHaveBeenNthCalledWith(2, "rule-2", "up")
@@ -478,7 +479,7 @@ describe("ChannelFiltersEditor", () => {
     const clearButtons = screen.getAllByRole("button", {
       name: "common:actions.clear",
     })
-    await user.click(clearButtons[2])
+    await user.click(atIndex(clearButtons, 2))
 
     expect(props.onFieldChange).toHaveBeenCalledWith(
       "rule-1",

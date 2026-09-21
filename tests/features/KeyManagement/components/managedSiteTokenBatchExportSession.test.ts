@@ -16,6 +16,7 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const buildItem = (
   id: string,
@@ -101,8 +102,12 @@ describe("managed-site token batch export session", () => {
     })
 
     expect(reconciled.selectedIds).toEqual(new Set(["key-1", "key-3"]))
-    expect(reconciled.preview.items[0].draft?.models).toEqual(["custom-model"])
-    expect(reconciled.preview.items[1].draft?.models).toEqual(["refreshed-b"])
+    expect(atIndex(reconciled.preview.items, 0).draft?.models).toEqual([
+      "custom-model",
+    ])
+    expect(atIndex(reconciled.preview.items, 1).draft?.models).toEqual([
+      "refreshed-b",
+    ])
   })
 
   it("selects only definitely failed execution rows for retry", () => {

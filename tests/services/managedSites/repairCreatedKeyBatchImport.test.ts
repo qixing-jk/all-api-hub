@@ -40,6 +40,7 @@ import {
   type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const isBlockedManagedSiteTokenBatchExportItemInput = (
   input: ManagedSiteTokenBatchExportItemInput,
@@ -216,7 +217,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
           isResolvedManagedSiteTokenBatchExportItemInput,
         ) ?? []
       expect(resolvedItems).toHaveLength(1)
-      const runtimeKey = resolvedItems[0]
+      const runtimeKey = atIndex(resolvedItems, 0)
         .runtimeKey as AccountKeyResourceRuntimeKey
       expect(isAccountKeyResourceRuntimeKey(runtimeKey)).toBe(true)
       expect(runtimeKey).toMatchObject({
@@ -401,8 +402,8 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     const unavailableRef = createRef({ resourceId: "unavailable" })
     const blankRef = createRef({ resourceId: "blank" })
     const progress = createProgress(account, unavailableRef)
-    progress.results[0].requirementResults = [
-      progress.results[0].requirementResults[0],
+    atIndex(progress.results, 0).requirementResults = [
+      atIndex(atIndex(progress.results, 0).requirementResults, 0),
       {
         requirement: {
           requirementKey: "requirement-2",
@@ -415,7 +416,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
         created: { ref: blankRef },
       },
     ]
-    progress.results[0].createdRefs = [unavailableRef, blankRef]
+    atIndex(progress.results, 0).createdRefs = [unavailableRef, blankRef]
     const resolve = vi.fn(async (ref: AccountKeyResourceRef) =>
       ref.resourceId === "blank"
         ? {
@@ -467,9 +468,9 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     const firstRef = createRef()
     const otherScopeRef = createRef({ scopeKey: "scope-b" })
     const progress = createProgress(account, firstRef)
-    progress.results[0].outcome = ACCOUNT_KEY_REPAIR_OUTCOMES.Partial
-    progress.results[0].requirementResults = [
-      progress.results[0].requirementResults[0],
+    atIndex(progress.results, 0).outcome = ACCOUNT_KEY_REPAIR_OUTCOMES.Partial
+    atIndex(progress.results, 0).requirementResults = [
+      atIndex(atIndex(progress.results, 0).requirementResults, 0),
       {
         requirement: {
           requirementKey: "duplicate",
@@ -530,7 +531,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
         },
       },
     ]
-    progress.results[0].createdRefs = [firstRef, otherScopeRef]
+    atIndex(progress.results, 0).createdRefs = [firstRef, otherScopeRef]
     const resolve = vi.fn(async (ref: AccountKeyResourceRef) => ({
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
       secret: `secret-${ref.scopeKey}`,
@@ -577,18 +578,20 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       createRef({ resourceId: `resource-${index + 1}` }),
     )
     const progress = createProgress(account, refs[0]!)
-    progress.results[0].requirementResults = refs.map((ref, index) => ({
-      requirement: {
-        requirementKey: `requirement-${index + 1}`,
-        displayName: `Created key ${index + 1}`,
-        provisioning: {
-          kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+    atIndex(progress.results, 0).requirementResults = refs.map(
+      (ref, index) => ({
+        requirement: {
+          requirementKey: `requirement-${index + 1}`,
+          displayName: `Created key ${index + 1}`,
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
         },
-      },
-      outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
-      created: { ref },
-    }))
-    progress.results[0].createdRefs = refs
+        outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+        created: { ref },
+      }),
+    )
+    atIndex(progress.results, 0).createdRefs = refs
 
     let active = 0
     let maximumActive = 0
@@ -648,12 +651,18 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       createRef({ accountId: "missing" }),
     )
     progress.results.push(
-      createProgress(
-        createAccount({ id: "changed", siteType: SITE_TYPES.NEW_API }),
-        createRef({ accountId: "changed" }),
-      ).results[0],
-      createProgress(currentAccount, mismatchedRef).results[0],
-      createProgress(changedOriginProgressAccount, changedOriginRef).results[0],
+      atIndex(
+        createProgress(
+          createAccount({ id: "changed", siteType: SITE_TYPES.NEW_API }),
+          createRef({ accountId: "changed" }),
+        ).results,
+        0,
+      ),
+      atIndex(createProgress(currentAccount, mismatchedRef).results, 0),
+      atIndex(
+        createProgress(changedOriginProgressAccount, changedOriginRef).results,
+        0,
+      ),
     )
 
     const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
@@ -907,7 +916,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     ).toBe(REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS.NOT_READY)
 
     const withoutCreated = createProgress(account, ref)
-    withoutCreated.results[0].requirementResults = [
+    atIndex(withoutCreated.results, 0).requirementResults = [
       {
         requirement: {
           requirementKey: "uncertain-covered",
@@ -922,7 +931,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
         },
       },
     ]
-    withoutCreated.results[0].createdRefs = []
+    atIndex(withoutCreated.results, 0).createdRefs = []
     expect(
       getRepairCreatedKeyBatchImportAbsenceReason({
         progress: withoutCreated,

@@ -11,6 +11,7 @@ import type {
   ManagedSiteMigrationSelection,
   ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -191,7 +192,7 @@ describe("CLIProxyAPI native migration", () => {
         credential: "placeholder",
       }),
     ).toMatchObject({ status: "failed" })
-    expect(mocks.create.mock.calls[0][1].value).not.toHaveProperty(
+    expect(atIndex(mocks.create.mock.calls, 0)[1].value).not.toHaveProperty(
       "excluded-models",
     )
     expect(mocks.create).toHaveBeenCalledOnce()
@@ -348,7 +349,7 @@ describe("CLIProxyAPI native migration", () => {
         ],
       }),
     ).toEqual({ status: "created" })
-    expect(mocks.create.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.create.mock.calls, 0)[1]).toMatchObject({
       kind: "openai-compatibility",
       value: {
         disabled: true,
@@ -358,7 +359,7 @@ describe("CLIProxyAPI native migration", () => {
         ],
       },
     })
-    expect(mocks.create.mock.calls[0][1].value).not.toHaveProperty(
+    expect(atIndex(mocks.create.mock.calls, 0)[1].value).not.toHaveProperty(
       "excluded-models",
     )
   })
@@ -379,7 +380,7 @@ describe("CLIProxyAPI native migration", () => {
         projection: prepared.projection,
         credential: "placeholder",
       })
-      expect(mocks.create.mock.calls[0][1]).toMatchObject({
+      expect(atIndex(mocks.create.mock.calls, 0)[1]).toMatchObject({
         kind: expected,
         value: { "api-key": "placeholder", "excluded-models": ["*"] },
       })

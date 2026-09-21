@@ -18,6 +18,7 @@ import type {
   OptionsOverviewAutomationItem,
   OptionsOverviewAutomationOverview,
 } from "~/features/OptionsOverview/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const t = ((key: string) => key) as TFunction
@@ -414,14 +415,14 @@ describe("OverviewAutomationPanel", () => {
         name: "optionsOverview:autoCheckin.actions.open",
       }),
     )
-    expect(onNavigate).toHaveBeenCalledWith(panel.actions[0].target)
+    expect(onNavigate).toHaveBeenCalledWith(atIndex(panel.actions, 0).target)
 
     await user.click(
       screen.getByRole("button", {
         name: "optionsOverview:autoCheckin.actions.retryFailed",
       }),
     )
-    expect(onNavigate).toHaveBeenCalledWith(panel.actions[1].target)
+    expect(onNavigate).toHaveBeenCalledWith(atIndex(panel.actions, 1).target)
   })
 
   it("omits actions when the standalone auto check-in panel has none", () => {

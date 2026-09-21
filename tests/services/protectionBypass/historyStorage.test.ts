@@ -6,6 +6,7 @@ import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("protection bypass history", () => {
   afterEach(() => vi.restoreAllMocks())
@@ -57,7 +58,8 @@ describe("protection bypass history", () => {
       },
     }
     await protectionBypassHistoryStorage.start(request)
-    const [entry] = await protectionBypassHistoryStorage.list()
+    const destructuredSource0 = await protectionBypassHistoryStorage.list()
+    const [entry] = [atIndex(destructuredSource0, 0)]
     const storage = new Storage({ area: "local" })
     await storage.set(STORAGE_KEYS.PROTECTION_BYPASS_HISTORY, {
       version: 1,
@@ -77,7 +79,7 @@ describe("protection bypass history", () => {
     })
     const history = await protectionBypassHistoryStorage.list()
     expect(history).toHaveLength(100)
-    expect(history[0].id).toBe(newestId)
+    expect(atIndex(history, 0).id).toBe(newestId)
     expect(
       history.some((item) => item.id === "entry-99" || item.id === "entry-100"),
     ).toBe(false)
@@ -110,7 +112,8 @@ describe("protection bypass history", () => {
       },
     })
 
-    const [entry] = await protectionBypassHistoryStorage.list()
+    const destructuredSource1 = await protectionBypassHistoryStorage.list()
+    const [entry] = [atIndex(destructuredSource1, 0)]
     expect(entry.origin).toBeUndefined()
     expect(entry.fallbackDiagnostic).toBeUndefined()
     expect(JSON.stringify(entry)).not.toContain("secret")
@@ -259,10 +262,10 @@ describe("protection bypass history", () => {
       expect.arrayContaining(ids.slice(5)),
     )
     expect(retained.find((entry) => entry.id === ids[0])).toBeUndefined()
-    expect(retained[0].method).toBe("GET")
+    expect(atIndex(retained, 0).method).toBe("GET")
 
     await protectionBypassHistoryStorage.clear()
-    await protectionBypassHistoryStorage.finish(ids[104], {
+    await protectionBypassHistoryStorage.finish(atIndex(ids, 104), {
       response: { success: true },
     })
     expect(await protectionBypassHistoryStorage.list()).toEqual([])

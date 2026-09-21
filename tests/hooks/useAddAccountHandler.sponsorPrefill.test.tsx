@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { openAddAccountMock, showFirefoxWarningDialogMock } = vi.hoisted(() => ({
   openAddAccountMock: vi.fn(),
@@ -85,9 +86,14 @@ describe("useAddAccountHandler sponsor prefill", () => {
 
     expect(setPendingSponsorAddAccountPrefill).toHaveBeenCalledWith(prefill)
     expect(openSidePanelPageMock).toHaveBeenCalledTimes(1)
-    const persistCallOrder = vi.mocked(setPendingSponsorAddAccountPrefill).mock
-      .invocationCallOrder[0]
-    const navigateCallOrder = openSidePanelPageMock.mock.invocationCallOrder[0]
+    const persistCallOrder = atIndex(
+      vi.mocked(setPendingSponsorAddAccountPrefill).mock.invocationCallOrder,
+      0,
+    )
+    const navigateCallOrder = atIndex(
+      openSidePanelPageMock.mock.invocationCallOrder,
+      0,
+    )
     expect(persistCallOrder).toBeLessThan(navigateCallOrder)
   })
 

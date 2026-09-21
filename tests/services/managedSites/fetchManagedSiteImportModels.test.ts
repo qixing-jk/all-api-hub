@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { fetchOpenAICompatibleModelIdsMock } = vi.hoisted(() => ({
   fetchOpenAICompatibleModelIdsMock: vi.fn(),
@@ -67,7 +68,7 @@ describe("fetchManagedSiteImportModels", () => {
     const canceled = expect(automatic).rejects.toMatchObject({
       name: "AbortError",
     })
-    const request = fetchOpenAICompatibleModelIdsMock.mock.calls[0][0]
+    const request = atIndex(fetchOpenAICompatibleModelIdsMock.mock.calls, 0)[0]
     expect(request.requestScheduling.priority).toBe("background")
     const exported = fetchManagedSiteImportModels(source)
     expect(request.requestScheduling.priority).toBe("foreground")

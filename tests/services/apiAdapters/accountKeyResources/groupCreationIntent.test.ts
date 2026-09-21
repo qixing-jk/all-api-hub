@@ -4,6 +4,7 @@ import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const request = {
   baseUrl: "https://example.invalid",
@@ -59,7 +60,7 @@ describe.each([
   it("does not choose an arbitrary ID when names are ambiguous", () => {
     const editor = create({ preferredGroup: "Premium" }, [
       ...groups,
-      { ...groups[0], id: 11, requirementKey: "11" },
+      { ...atIndex(groups, 0), id: 11, requirementKey: "11" },
     ])
     expect(editor.initialValues[field]).toEqual(empty)
     expect(editor.initialValues.name).toBe("user group (auto)")

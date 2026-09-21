@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test"
 
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const OPENED_CC_SWITCH_URLS_KEY = "__aah_e2e_opened_cc_switch_urls__"
 
@@ -139,7 +140,7 @@ export async function verifyCcSwitchModelExportDeepLink(params: {
     })
     .toHaveLength(1)
 
-  const [url] = await readOpenedCcSwitchUrls(params.page)
+  const url = atIndex(await readOpenedCcSwitchUrls(params.page), 0)
   expectCcSwitchDeepLink(url, {
     model: params.modelName,
     ...params.expected,

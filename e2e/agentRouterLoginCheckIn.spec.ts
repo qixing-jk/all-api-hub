@@ -18,6 +18,7 @@ import {
   getPlasmoStorageJsonValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const matchingIdentity of [true, false]) {
   test(`login check-in ${matchingIdentity ? "succeeds" : "rejects another account"} without storing cookies`, async ({
@@ -148,10 +149,13 @@ for (const matchingIdentity of [true, false]) {
       calls.indexOf("/api/oauth/state"),
     )
     expect(calls).toContain("/api/user/self")
-    const stored = (await getPlasmoStorageJsonValue<AccountStorageConfig>(
-      worker,
-      STORAGE_KEYS.ACCOUNTS,
-    ))!.accounts[0]
+    const stored = atIndex(
+      (await getPlasmoStorageJsonValue<AccountStorageConfig>(
+        worker,
+        STORAGE_KEYS.ACCOUNTS,
+      ))!.accounts,
+      0,
+    )
     expect(stored.authType).toBe(AuthTypeEnum.AccessToken)
     expect(stored.account_info.access_token).toBe("unchanged-access-token")
     expect(stored.cookieAuth).toEqual(saved.cookieAuth)

@@ -7,6 +7,7 @@ import {
   getAccountSiteType,
 } from "~/services/siteDetection/detectSiteType"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
   const actual =
@@ -296,7 +297,7 @@ describe("detectSiteType", () => {
     describe("Title-based detection", () => {
       it("should detect site type from title when match found", async () => {
         // Find a real rule from ACCOUNT_SITE_TITLE_RULES
-        const firstRule = ACCOUNT_SITE_TITLE_RULES[0]
+        const firstRule = atIndex(ACCOUNT_SITE_TITLE_RULES, 0)
         const matchingTitle = firstRule.name // This should match the regex
 
         const mockHTML = `<html><title>${matchingTitle}</title></html>`

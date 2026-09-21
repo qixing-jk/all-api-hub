@@ -22,6 +22,7 @@ import {
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtimeKeyFallbackTestUtils"
 
@@ -617,7 +618,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(result.data.map((model) => model.model_name)).toEqual([
       "claude-sonnet-4",
     ])
-    expect(result.data[0].price_metadata?.precision).toBe(
+    expect(atIndex(result.data, 0).price_metadata?.precision).toBe(
       MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
     )
     expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
@@ -776,8 +777,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       token: { ...TOKEN, key: "sk-station" },
     })
     expect(fetchSub2ApiPricingCatalogsMock).toHaveBeenCalledTimes(1)
-    expect(result.data[0].pricingPlan?.rates.input?.amount).toBe(0.000003)
-    expect(result.data[0].pricingPlan?.rates.output?.amount).toBe(0.000015)
+    expect(atIndex(result.data, 0).pricingPlan?.rates.input?.amount).toBe(
+      0.000003,
+    )
+    expect(atIndex(result.data, 0).pricingPlan?.rates.output?.amount).toBe(
+      0.000015,
+    )
   })
 
   it("preserves Sub2API evidence when official-rate estimation succeeds", async () => {

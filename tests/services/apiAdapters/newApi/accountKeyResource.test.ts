@@ -15,6 +15,7 @@ import {
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockFetchAccountTokens,
@@ -425,7 +426,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "1" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[1].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 1).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
       },
@@ -433,7 +434,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "2" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[0].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
       },
@@ -441,7 +442,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "3" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[0].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable,
       },
@@ -449,7 +450,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "4" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[0].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown,
       },
@@ -457,7 +458,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "5" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[0].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable,
       },
@@ -465,7 +466,7 @@ describe("New API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "6" }),
         placement: {
           kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-          requirementKeys: [snapshot.requirements[0].requirementKey],
+          requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
         },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown,
       },
@@ -502,7 +503,7 @@ describe("New API account key resources", () => {
     expect(snapshot.items[0]).toMatchObject({
       placement: {
         kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-        requirementKeys: [snapshot.requirements[0].requirementKey],
+        requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
       },
     })
     expect(mockFetchCurrentUserGroup).toHaveBeenCalledOnce()
@@ -524,7 +525,7 @@ describe("New API account key resources", () => {
     expect(snapshot.items[0]).toMatchObject({
       placement: {
         kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-        requirementKeys: [snapshot.requirements[0].requirementKey],
+        requirementKeys: [atIndex(snapshot.requirements, 0).requirementKey],
       },
     })
     expect(mockFetchUserGroups).not.toHaveBeenCalled()
@@ -604,9 +605,9 @@ describe("New API account key resources", () => {
       request,
     })
     const snapshot = await session.provisioning!.inspect()
-    const ref = snapshot.items[0].ref
+    const ref = atIndex(snapshot.items, 0).ref
 
-    expect(snapshot.items[0].renameSuggestion).toEqual({
+    expect(atIndex(snapshot.items, 0).renameSuggestion).toEqual({
       targetDisplayName: "vip group (auto)",
     })
     await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
@@ -647,7 +648,7 @@ describe("New API account key resources", () => {
 
     const snapshot = await session.provisioning!.inspect()
     expect(snapshot.items).toHaveLength(1)
-    expect(snapshot.items[0].renameSuggestion).toBeUndefined()
+    expect(atIndex(snapshot.items, 0).renameSuggestion).toBeUndefined()
   })
 
   it("renames an inherited-group auto template without changing its empty group", async () => {
@@ -674,11 +675,11 @@ describe("New API account key resources", () => {
     })
     const snapshot = await session.provisioning!.inspect()
 
-    expect(snapshot.items[0].renameSuggestion).toEqual({
+    expect(atIndex(snapshot.items, 0).renameSuggestion).toEqual({
       targetDisplayName: "vip group (auto)",
     })
     await expect(
-      session.provisioning!.rename!(snapshot.items[0].ref),
+      session.provisioning!.rename!(atIndex(snapshot.items, 0).ref),
     ).resolves.toEqual({ certainty: "applied", value: undefined })
     expect(mockUpdateApiToken).toHaveBeenCalledWith(
       expect.objectContaining(request),
@@ -717,7 +718,7 @@ describe("New API account key resources", () => {
     const snapshot = await session.provisioning!.inspect()
 
     await expect(
-      session.provisioning!.rename!(snapshot.items[0].ref),
+      session.provisioning!.rename!(atIndex(snapshot.items, 0).ref),
     ).resolves.toEqual({
       certainty: "not-applied",
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
@@ -825,7 +826,7 @@ describe("New API account key resources", () => {
       request,
     })
     const inspected = await session.provisioning!.inspect()
-    const requirementKey = inspected.requirements[0].requirementKey
+    const requirementKey = atIndex(inspected.requirements, 0).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -871,8 +872,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -902,8 +905,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -936,8 +941,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -968,8 +975,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1287,8 +1296,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1336,8 +1347,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1618,8 +1631,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1648,8 +1663,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1680,8 +1697,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -1707,8 +1726,10 @@ describe("New API account key resources", () => {
       account: { id: "account-1", siteType: SITE_TYPES.ONE_API },
       request,
     })
-    const requirementKey = (await session.provisioning!.inspect())
-      .requirements[0].requirementKey
+    const requirementKey = atIndex(
+      (await session.provisioning!.inspect()).requirements,
+      0,
+    ).requirementKey
 
     await expect(
       session.provisioning!.provision(requirementKey),
@@ -2082,7 +2103,7 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
     request,
   })
   const page = await (await session.openCollection("account")).list()
-  expect(page.items[0].fields).toContainEqual({
+  expect(atIndex(page.items, 0).fields).toContainEqual({
     fieldId: "accessed_time",
     kind: "number",
     value: 1750000000,

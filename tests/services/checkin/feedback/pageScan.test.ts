@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { handlePageFeedbackScan } from "~/services/checkin/feedback/pageScan"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const origin = "https://example.com"
 afterEach(() => {
@@ -79,7 +80,9 @@ describe("rendered feedback scan", () => {
       expect.any(Object),
     )
     expect(
-      new Headers(fetch.mock.calls[0][1]?.headers).has("Authorization"),
+      new Headers(atIndex(fetch.mock.calls, 0)[1]?.headers).has(
+        "Authorization",
+      ),
     ).toBe(false)
   })
 

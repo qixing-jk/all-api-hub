@@ -33,6 +33,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildNewApiToken } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -709,7 +710,7 @@ describe("BatchVerifyModelsDialog", () => {
       expect.objectContaining({ probeId: "tool-calling" }),
     )
     expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
-    expect(mockUpsertLatestSummary.mock.calls[0][0].probes).toEqual([
+    expect(atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes).toEqual([
       expect.objectContaining({ id: "text-generation", status: "pass" }),
       expect.objectContaining({ id: "tool-calling", status: "pass" }),
     ])
@@ -1385,7 +1386,7 @@ describe("BatchVerifyModelsDialog", () => {
       )
     })
     expect(
-      mockUpsertLatestSummary.mock.calls[0][0].probes[0].mode,
+      atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes[0].mode,
     ).toBeUndefined()
     expect(
       await screen.findByTestId(
@@ -1989,7 +1990,7 @@ describe("BatchVerifyModelsDialog", () => {
       )
     })
     expect(
-      mockUpsertLatestSummary.mock.calls[0][0].probes[0].mode,
+      atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes[0].mode,
     ).toBeUndefined()
   })
 

@@ -3,6 +3,7 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   createRootMock,
@@ -93,7 +94,7 @@ describe("uiRoot", () => {
 
     expect(ensureContentI18nReadyMock).toHaveBeenCalledTimes(1)
     expect(ensureContentI18nReadyMock.mock.invocationCallOrder[0]).toBeLessThan(
-      createShadowRootUiMock.mock.invocationCallOrder[0],
+      atIndex(createShadowRootUiMock.mock.invocationCallOrder, 0),
     )
     expect(root.render).toHaveBeenCalledTimes(1)
   })

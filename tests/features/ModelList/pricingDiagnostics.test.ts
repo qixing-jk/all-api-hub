@@ -17,6 +17,7 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const plan: PricingPlan = {
   rates: {
@@ -164,7 +165,9 @@ describe("pricing diagnostics", () => {
         },
       ],
     }
-    expect(buildPricingDiagnostics([item]).rows[0].issues).toContainEqual({
+    expect(
+      atIndex(buildPricingDiagnostics([item]).rows, 0).issues,
+    ).toContainEqual({
       code: "unsupported:task-usage",
     })
   })
@@ -188,12 +191,14 @@ describe("pricing diagnostics", () => {
       })
       const report = buildPricingDiagnostics([item])
       expect(
-        report.rows[0].issues.some(
+        atIndex(report.rows, 0).issues.some(
           (issue) => issue.code === "unsupported:request-condition",
         ),
       ).toBe(useCache)
       expect(report.summary.attention).toBe(useCache ? 1 : 0)
-      expect(report.rows[0].plan?.issues).toEqual(item.model.pricingPlan.issues)
+      expect(atIndex(report.rows, 0).plan?.issues).toEqual(
+        item.model.pricingPlan.issues,
+      )
     },
   )
   it("flags a complete quote with an invalid amount without treating zero prices as missing", () => {
@@ -202,10 +207,10 @@ describe("pricing diagnostics", () => {
     const free = row("free", { input: 1 })
     free.calculatedPrice.quote.amount = 0
     const report = buildPricingDiagnostics([invalid, free])
-    expect(report.rows[0].issues).toEqual([
+    expect(atIndex(report.rows, 0).issues).toEqual([
       { code: "diagnostic:inconsistent-quote" },
     ])
-    expect(report.rows[1].issues).toEqual([])
+    expect(atIndex(report.rows, 1).issues).toEqual([])
   })
   it("keeps missing quotes and malformed canonical plans inspectable", () => {
     const invalid = row("invalid-plan", { input: 1 })
@@ -224,10 +229,12 @@ describe("pricing diagnostics", () => {
         calculatedPrice: { ...absent.calculatedPrice, quote: undefined },
       },
     ])
-    expect(report.rows[0].issues).toContainEqual({
+    expect(atIndex(report.rows, 0).issues).toContainEqual({
       code: "diagnostic:invalid-plan",
     })
-    expect(report.rows[1].issues).toEqual([{ code: "diagnostic:not-quoted" }])
+    expect(atIndex(report.rows, 1).issues).toEqual([
+      { code: "diagnostic:not-quoted" },
+    ])
     expect(report.summary.notQuoted).toBe(1)
     expect(JSON.stringify(report)).not.toContain("PRIVATE")
   })
@@ -248,7 +255,7 @@ describe("pricing diagnostics", () => {
       attention: 1,
     })
     expect(report.issueCounts).toEqual([{ code: "price-missing", count: 1 }])
-    expect(report.rows[1].issues).toEqual([
+    expect(atIndex(report.rows, 1).issues).toEqual([
       { code: "price-missing", meter: "output" },
     ])
     expect(report.units).toEqual([
@@ -258,11 +265,11 @@ describe("pricing diagnostics", () => {
 
   it("exports only diagnostic fields and removes URL credentials, paths and queries", () => {
     const report = buildPricingDiagnostics([row("example-model", { input: 1 })])
-    expect(report.rows[0].source).toEqual({
+    expect(atIndex(report.rows, 0).source).toEqual({
       name: "Example",
       origin: "https://api.example",
     })
-    expect(report.rows[0].plan?.rates.input?.amount).toBe(1)
+    expect(atIndex(report.rows, 0).plan?.rates.input?.amount).toBe(1)
     expect(JSON.stringify(report)).not.toContain("PRIVATE")
     expect(JSON.stringify(report)).not.toContain("apiKey")
   })
@@ -280,7 +287,7 @@ it("exports safe source availability flags without source URLs or descriptions",
     },
   }
   const report = buildPricingDiagnostics([item])
-  expect(report.rows[0].plan?.source).toEqual({
+  expect(atIndex(report.rows, 0).plan?.source).toEqual({
     kind: "catalog",
     rulesUnavailable: true,
     hasUnpricedCharges: true,

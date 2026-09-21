@@ -18,6 +18,7 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { withDoneHubAdvancedEditor } from "~/services/apiAdapters/managedResources/doneHubEditor"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 const i18n = await createResourceTestI18n({
@@ -237,7 +238,9 @@ describe("DoneHub advanced editor interactions", () => {
     expect(parameters).toBeVisible()
     await user.clear(parameters)
     await user.paste('{"temperature":0.5}')
-    await user.click(screen.getAllByRole("button", { name: "Format JSON" })[1])
+    await user.click(
+      atIndex(screen.getAllByRole("button", { name: "Format JSON" }), 1),
+    )
     expect(parameters).toHaveValue('{\n  "temperature": 0.5\n}')
     await user.click(
       screen.getByRole("switch", { name: "Forward extra body fields" }),

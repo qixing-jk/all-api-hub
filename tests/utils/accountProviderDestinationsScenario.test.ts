@@ -6,6 +6,7 @@ import {
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { runAccountProviderDestinationsScenario } from "~~/e2e/scenarios/accountProviderDestinations"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type PollCallback = () => Promise<boolean>
 
@@ -94,10 +95,10 @@ describe("account provider destinations E2E scenario", () => {
     expect(redeemMenuItem.click).toHaveBeenCalledOnce()
     expect(relatedPagesMenuItem.click).toHaveBeenCalledTimes(2)
     expect(relatedPagesMenuItem.click.mock.invocationCallOrder[0]).toBeLessThan(
-      usageMenuItem.click.mock.invocationCallOrder[0],
+      atIndex(usageMenuItem.click.mock.invocationCallOrder, 0),
     )
     expect(relatedPagesMenuItem.click.mock.invocationCallOrder[1]).toBeLessThan(
-      redeemMenuItem.click.mock.invocationCallOrder[0],
+      atIndex(redeemMenuItem.click.mock.invocationCallOrder, 0),
     )
     expect(page.bringToFront).toHaveBeenCalledTimes(3)
 
@@ -106,8 +107,8 @@ describe("account provider destinations E2E scenario", () => {
       .mock.calls.map(([callback]) => callback as PollCallback)
     expect(pollCallbacks).toHaveLength(2)
 
-    await pollCallbacks[0]()
-    await pollCallbacks[1]()
+    await atIndex(pollCallbacks, 0)()
+    await atIndex(pollCallbacks, 1)()
 
     expect(serviceWorker.evaluate).toHaveBeenNthCalledWith(
       1,
@@ -202,8 +203,8 @@ describe("account provider destinations E2E scenario", () => {
       .mock.calls.map(([callback]) => callback as PollCallback)
     expect(pollCallbacks).toHaveLength(2)
 
-    await pollCallbacks[0]()
-    await pollCallbacks[1]()
+    await atIndex(pollCallbacks, 0)()
+    await atIndex(pollCallbacks, 1)()
 
     expect(serviceWorker.evaluate).toHaveBeenNthCalledWith(
       1,

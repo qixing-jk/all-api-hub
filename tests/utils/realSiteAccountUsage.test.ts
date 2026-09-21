@@ -22,6 +22,7 @@ import {
   buildRealSiteTestTokenName,
 } from "~~/e2e/utils/realSite/keyManagement"
 import { maybeRunRealSiteModelToKeyScenario } from "~~/e2e/utils/realSite/modelToKey"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   verifyAccountKeyLifecycleUsage: vi.fn(),
@@ -93,7 +94,10 @@ describe("real-site account usage adapters", () => {
     })
 
     expect(verifyAccountKeyLifecycleUsage).toHaveBeenCalledOnce()
-    const call = vi.mocked(verifyAccountKeyLifecycleUsage).mock.calls[0][0]
+    const call = atIndex(
+      vi.mocked(verifyAccountKeyLifecycleUsage).mock.calls,
+      0,
+    )[0]
     expect(call).toMatchObject({
       page,
       extensionId: "extension-id",
@@ -125,7 +129,10 @@ describe("real-site account usage adapters", () => {
       },
     })
 
-    const call = vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls[0][0]
+    const call = atIndex(
+      vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls,
+      0,
+    )[0]
     expect(call).toMatchObject({
       cleanupAccountFixture: false,
       cleanupTokenNameMatcher: expect.any(Function),
@@ -170,7 +177,10 @@ describe("real-site account usage adapters", () => {
         },
       }),
     )
-    const call = vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls[0][0]
+    const call = atIndex(
+      vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls,
+      0,
+    )[0]
     expect(call.afterProfileSaved).toBeUndefined()
   })
 

@@ -10,6 +10,7 @@ import {
   PRICING_SERVICE_TIERS,
 } from "~/services/modelPricing/pricingConstants"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("loadModelPriceTable", () => {
   afterEach(() => {
@@ -37,7 +38,10 @@ describe("loadModelPriceTable", () => {
         }),
       }),
     )
-    const plan = (await loadModelPriceTable()).models.example.pricingPlan!
+    const plan = atIndex(
+      (await loadModelPriceTable()).models,
+      "example",
+    ).pricingPlan!
     const quote = quoteModelPrice(
       plan,
       {
@@ -69,7 +73,10 @@ describe("loadModelPriceTable", () => {
         }),
       }),
     )
-    const plan = (await loadModelPriceTable()).models.example.pricingPlan!
+    const plan = atIndex(
+      (await loadModelPriceTable()).models,
+      "example",
+    ).pricingPlan!
     const quote = (
       serviceTier: "standard" | "priority" | "flex",
       inputTokens = 200000,
@@ -115,7 +122,10 @@ describe("loadModelPriceTable", () => {
         }),
       }),
     )
-    const plan = (await loadModelPriceTable()).models.example.pricingPlan!
+    const plan = atIndex(
+      (await loadModelPriceTable()).models,
+      "example",
+    ).pricingPlan!
     const quote = (inputTokens: number) =>
       quoteModelPrice(
         plan,
@@ -153,7 +163,7 @@ describe("loadModelPriceTable", () => {
     const table = await loadModelPriceTable()
     const quote = (at: string) =>
       quoteModelPrice(
-        table.models.example.pricingPlan!,
+        atIndex(table.models, "example").pricingPlan!,
         {
           purpose: PRICING_PURPOSES.TOKEN_INDEX,
           inputTokens: 300000,
@@ -187,8 +197,8 @@ describe("loadModelPriceTable", () => {
       }),
     )
     const table = await loadModelPriceTable()
-    expect(table.models.example.pricingPlan).toBeDefined()
-    const plan = table.models.example.pricingPlan!
+    expect(atIndex(table.models, "example").pricingPlan).toBeDefined()
+    const plan = atIndex(table.models, "example").pricingPlan!
     const quote = (inputTokens: number) =>
       quoteModelPrice(
         plan,

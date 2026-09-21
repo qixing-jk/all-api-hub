@@ -15,6 +15,7 @@ import {
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { resolveDoneHubManagedSiteConfig } from "~~/e2e/utils/realSite/managedSiteConfig"
 import { runScenarioWithCleanup } from "~~/e2e/utils/scenarioErrors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const managedSite = resolveDoneHubManagedSiteConfig()
 
@@ -157,7 +158,7 @@ test("DoneHub advanced settings persist and clear on a real server", async ({
       })
       const channels = await findCreatedChannels()
       expect(channels).toHaveLength(1)
-      channelId = channels[0].id
+      channelId = atIndex(channels, 0).id
       const before = await read()
       expect(before.status, "Temporary channel must stay disabled").toBe(2)
       await forceExtensionLanguage(page, "en")

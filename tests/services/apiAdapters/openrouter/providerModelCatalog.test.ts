@@ -23,6 +23,7 @@ import {
   MODEL_DISPLAY_FACT_TYPES,
 } from "~/services/models/modelDisplayFacts"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function getSection(
   model: Awaited<
@@ -59,7 +60,10 @@ it("quotes published image and audio token rates in token units", async () => {
       }),
     ),
   )
-  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  const model = atIndex(
+    (await openRouterProviderModelCatalog.fetchPricing({})).data,
+    0,
+  )
   expect(model.pricingPlan?.source.url).toBe("https://openrouter.ai/test/media")
   expect(
     quoteCanonicalModelPrice(
@@ -97,7 +101,10 @@ it("enforces the published 8192 total and 4096 output limits independently", asy
       }),
     ),
   )
-  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  const model = atIndex(
+    (await openRouterProviderModelCatalog.fetchPricing({})).data,
+    0,
+  )
   const quote = (inputTokens: number, outputTokens: number) =>
     quoteCanonicalModelPrice(
       model,
@@ -158,7 +165,10 @@ it("keeps output-image counts and cached audio tokens as separate published mete
       }),
     ),
   )
-  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  const model = atIndex(
+    (await openRouterProviderModelCatalog.fetchPricing({})).data,
+    0,
+  )
   const quote = quoteCanonicalModelPrice(
     model,
     {
@@ -467,9 +477,9 @@ describe("OpenRouter provider model catalog Adapter", () => {
           MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
       },
     })
-    expect(models["example/missing-price"].token_price_usd_per_million).toBe(
-      undefined,
-    )
+    expect(
+      atIndex(models, "example/missing-price").token_price_usd_per_million,
+    ).toBe(undefined)
 
     for (const modelId of [
       "example/negative-price",
@@ -484,10 +494,12 @@ describe("OpenRouter provider model catalog Adapter", () => {
             MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID,
         },
       })
-      expect(models[modelId].token_price_usd_per_million).toBeUndefined()
+      expect(
+        atIndex(models, modelId).token_price_usd_per_million,
+      ).toBeUndefined()
     }
     expect(
-      models["example/negative-price"].presentation?.sections?.some(
+      atIndex(models, "example/negative-price").presentation?.sections?.some(
         (section) => section.id === "pricing",
       ),
     ).toBeFalsy()
@@ -911,7 +923,7 @@ it("quotes ordered conditional prices and fixed request fees through the provide
     usage: { input: 200001, output: 1000, request: 1 },
   }
   expect(
-    quoteCanonicalModelPrice(response.data[0], scenario, {
+    quoteCanonicalModelPrice(atIndex(response.data, 0), scenario, {
       groupMultiplier: 7,
     }),
   ).toMatchObject({
@@ -921,7 +933,7 @@ it("quotes ordered conditional prices and fixed request fees through the provide
   })
   expect(
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         ...scenario,
         purpose: PRICING_PURPOSES.TOKEN_INDEX,
@@ -972,18 +984,18 @@ it("does not reuse time-dependent top-level prices outside the supplied schedule
     at: "2026-09-07T17:00:00Z",
     usage: { input: 1 },
   }
-  expect(quoteCanonicalModelPrice(response.data[0], scenario, {}).amount).toBe(
-    1,
-  )
+  expect(
+    quoteCanonicalModelPrice(atIndex(response.data, 0), scenario, {}).amount,
+  ).toBe(1)
   expect(
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       { ...scenario, at: "2026-09-08T17:00:00Z" },
       {},
     ).status,
   ).toBe("unavailable")
   expect(
-    quoteCanonicalModelPrice(response.data[1], scenario, {}).status,
+    quoteCanonicalModelPrice(atIndex(response.data, 1), scenario, {}).status,
   ).not.toBe("complete")
 })
 

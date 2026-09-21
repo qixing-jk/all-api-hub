@@ -22,6 +22,7 @@ import {
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/accounts/accountKeyAutoProvisioning/messaging", () => ({
   AccountKeyRepairMessageTypes: {
@@ -228,7 +229,7 @@ describe("useInvalidKeyDeletion", () => {
         resources: [appliedResource, rejectedResource, uncertainResource],
       },
     )
-    expect(progress.results[0].invalidResources).toEqual([
+    expect(atIndex(progress.results, 0).invalidResources).toEqual([
       rejectedResource,
       uncertainResource,
     ])

@@ -25,6 +25,7 @@ import {
   createEmptyUsageHistoryLatencyAggregate,
 } from "~/services/history/usageHistory/core"
 import type { UsageHistoryStore } from "~/types/usageHistory"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("UsageAnalytics echartsOptions", () => {
   it("topNWithOther is stable and aggregates the remainder", () => {
@@ -259,8 +260,8 @@ describe("UsageAnalytics echartsOptions", () => {
     })
 
     const merged = resolveFusedHourlyForTokens(exportData, ["1", "2"])
-    expect(merged["2026-01-01"]["00"]).toMatchObject({ requests: 3 })
-    expect(merged["2026-01-01"]["01"]).toMatchObject({ requests: 3 })
+    expect(atIndex(merged, "2026-01-01")["00"]).toMatchObject({ requests: 3 })
+    expect(atIndex(merged, "2026-01-01")["01"]).toMatchObject({ requests: 3 })
   })
 
   it("resolveFusedDailyByModelForTokens merges per-token model daily aggregates", () => {
@@ -311,11 +312,11 @@ describe("UsageAnalytics echartsOptions", () => {
     })
 
     const merged = resolveFusedDailyByModelForTokens(exportData, ["1", "2"])
-    expect(merged["gpt-4"]["2026-01-01"]).toMatchObject({
+    expect(atIndex(merged, "gpt-4")["2026-01-01"]).toMatchObject({
       totalTokens: 15,
       quotaConsumed: 3,
     })
-    expect(merged["gpt-3.5-turbo"]["2026-01-01"]).toMatchObject({
+    expect(atIndex(merged, "gpt-3.5-turbo")["2026-01-01"]).toMatchObject({
       totalTokens: 1,
     })
   })
@@ -350,10 +351,13 @@ describe("UsageAnalytics echartsOptions", () => {
       selection: { accountIds: ["a1"], startDay: dayKey, endDay: dayKey },
     })
 
-    const merged = resolveLatencyDailyForTokens(exportData, ["1", "2"])[dayKey]
+    const merged = atIndex(
+      resolveLatencyDailyForTokens(exportData, ["1", "2"]),
+      dayKey,
+    )
     expect(merged).toMatchObject({ count: 2, sum: 3, max: 2, slowCount: 1 })
-    expect(merged.buckets[0]).toBe(1)
-    expect(merged.buckets[1]).toBe(1)
+    expect(atIndex(merged.buckets, 0)).toBe(1)
+    expect(atIndex(merged.buckets, 1)).toBe(1)
     expect(merged.buckets.slice(2).every((value) => value === 0)).toBe(true)
   })
 
@@ -404,7 +408,7 @@ describe("UsageAnalytics echartsOptions", () => {
       topN: 1,
       otherLabel: "Other",
     })
-    expect(rows[0].modelName).toBe("a-model")
+    expect(atIndex(rows, 0).modelName).toBe("a-model")
     expect(rows[1]).toMatchObject({
       modelName: "Other",
       totalTokens: 11,
@@ -464,7 +468,7 @@ describe("UsageAnalytics echartsOptions", () => {
       topN: 10,
       unknownLabel: "Unknown token",
     })
-    expect(slowTokensToken[0].label).toBe("Token A (#1)")
+    expect(atIndex(slowTokensToken, 0).label).toBe("Token A (#1)")
   })
 
   it("getAccountTotalsRows sums totals per account and sorts by totalTokens", () => {

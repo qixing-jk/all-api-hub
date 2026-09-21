@@ -5,6 +5,7 @@ import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /**
  * Follow the same manual-token recovery offered to a user after auto-detection.
@@ -95,7 +96,7 @@ export function createNewApiAccountRecovery(params: {
         const token = await copyNewApiAccessToken(securityPage, params.config)
         await params.page.bringToFront()
         for (const [index, field] of fields.entries()) {
-          await expect(field).toHaveValue(detectedValues[index])
+          await expect(field).toHaveValue(atIndex(detectedValues, index))
         }
         await fillSecret(dialog.accessTokenInput, token, "Access Token")
         await expect

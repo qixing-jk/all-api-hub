@@ -11,6 +11,7 @@ import {
   runLinkedChannelCleanup,
 } from "~/services/managedSites/linkedChannelCleanup"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   stored: new Map<string, unknown>(),
@@ -112,7 +113,7 @@ it("reconciles an already-deleted pending channel without repeating deletion", a
     ),
   )
   await finishLinkedChannelCleanup(task)
-  const [pending] = await getLinkedChannelCleanupTasks()
+  const pending = atIndex(await getLinkedChannelCleanupTasks(), 0)
   expect(pending).toBeDefined()
   deleted = true
   await runLinkedChannelCleanup(pending)

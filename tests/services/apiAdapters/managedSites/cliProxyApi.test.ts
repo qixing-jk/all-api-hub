@@ -5,6 +5,7 @@ import { cliProxyApiCapabilities } from "~/services/apiAdapters/managedSites/cli
 import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -92,7 +93,8 @@ describe("CLIProxyAPI configuration and credential matching", () => {
         signal: controller.signal,
       }),
     ])
-    const readSignal = mocks.list.mock.calls[0][1].signal as AbortSignal
+    const readSignal = atIndex(mocks.list.mock.calls, 0)[1]
+      .signal as AbortSignal
     controller.abort()
     expect(readSignal.aborted).toBe(true)
     expect(await firstOutcome).toEqual([
@@ -154,7 +156,7 @@ describe("CLIProxyAPI configuration and credential matching", () => {
       "other.example",
     )
     controller.abort()
-    const readOptions = mocks.list.mock.calls[0][1]
+    const readOptions = atIndex(mocks.list.mock.calls, 0)[1]
     expect(mocks.list).toHaveBeenCalledTimes(1)
     expect(readOptions.signal.aborted).toBe(false)
     expect(readOptions.requestScheduling.priority).toBe("foreground")

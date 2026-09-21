@@ -256,6 +256,8 @@ pnpm format:check
 pnpm compile
 ```
 
+`noUncheckedIndexedAccess` is enabled for `src/**`, `tests/**`, and `e2e/**`.
+
 ### Git Hooks
 
 This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:

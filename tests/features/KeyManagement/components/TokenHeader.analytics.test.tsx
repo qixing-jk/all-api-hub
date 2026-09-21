@@ -26,6 +26,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   RECOVERABLE_ACTION_POLICY,
   renderRuntimeKeyHeader,
@@ -309,7 +310,7 @@ describe("RuntimeKeyHeader analytics", () => {
     await user.click(
       screen.getByRole("button", { name: "keyManagement:actions.deleteKey" }),
     )
-    const runtimeKey = handleEditKey.mock.calls[0][0]
+    const runtimeKey = atIndex(handleEditKey.mock.calls, 0)[0]
     expect(runtimeKey).toMatchObject({
       label: "Selected key",
       accountId: account.id,

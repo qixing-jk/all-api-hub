@@ -13,6 +13,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const width of [1200, 390]) {
   test(`edits compact CLIProxyAPI credentials at ${width}px`, async ({
@@ -237,7 +238,9 @@ for (const width of [1200, 390]) {
     expect(provider.headers).toEqual({
       "X-Endpoint": "https://changed.invalid:9443/v1",
     })
-    expect(provider["api-key-entries"]?.[0]["api-key"]).toBe("fixture-first")
+    expect(atIndex(atIndex(provider, "api-key-entries")?.[0], "api-key")).toBe(
+      "fixture-first",
+    )
     const updatedAction = await openManagedSiteChannelRowActions(
       page,
       "UI credentials",

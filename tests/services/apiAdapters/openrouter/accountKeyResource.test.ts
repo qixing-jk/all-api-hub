@@ -8,6 +8,7 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import { ApiError } from "~/services/apiTransport/errors"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   fetchOpenRouterDefaultWorkspace,
@@ -195,7 +196,7 @@ describe("openRouterAccountKeyResources", () => {
       .mockResolvedValueOnce(
         workspacePage(
           [
-            firstPage[99],
+            atIndex(firstPage, 99),
             workspace({
               id: "workspace-extra",
               name: "Extra",
@@ -391,11 +392,11 @@ describe("openRouterAccountKeyResources", () => {
     )
     expect(first.nextCursor).toEqual(expect.any(String))
     expect(first.nextCursor).not.toContain("hash-0")
-    expect(first.items[0].searchValues).not.toContain("hash-0")
-    expect(first.items[0].searchValues).toContain("disabled")
-    expect(first.items[0].fields.map((field) => field.fieldId)).toContain(
-      OPENROUTER_KEY_FIELD_IDS.Usage,
-    )
+    expect(atIndex(first.items, 0).searchValues).not.toContain("hash-0")
+    expect(atIndex(first.items, 0).searchValues).toContain("disabled")
+    expect(
+      atIndex(first.items, 0).fields.map((field) => field.fieldId),
+    ).toContain(OPENROUTER_KEY_FIELD_IDS.Usage)
 
     fetchOpenRouterKeys.mockReset().mockResolvedValue([key(), key()])
     await expect(collection.list()).rejects.toMatchObject({
@@ -1285,7 +1286,8 @@ describe("openRouterAccountKeyResources", () => {
       ])
       .mockResolvedValueOnce([])
 
-    const [facts] = (await collection.list()).items
+    const destructuredSource0 = (await collection.list()).items
+    const [facts] = [atIndex(destructuredSource0, 0)]
     const fields = new Map(facts.fields.map((field) => [field.fieldId, field]))
     const safeFieldIds = Object.values(OPENROUTER_KEY_FIELD_IDS)
     expect([...fields.keys()]).toEqual(expect.arrayContaining(safeFieldIds))

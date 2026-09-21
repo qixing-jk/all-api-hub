@@ -187,10 +187,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-const mockedUserPreferences = userPreferences as unknown as Record<
-  string,
-  ReturnType<typeof vi.fn>
->
+const mockedUserPreferences = vi.mocked(userPreferences)
 const mockedSendRuntimeMessage = sendRuntimeMessageMock
 const {
   sendAutoCheckinMessageMock: mockedSendAutoCheckinMessage,

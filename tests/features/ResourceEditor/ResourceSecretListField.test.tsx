@@ -9,6 +9,7 @@ import type {
   ResourceOperationOptions,
   ResourceSecretListValue,
 } from "~/services/apiAdapters/contracts/resourceNative"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string, options?: { number?: number }) =>
   ({
@@ -156,7 +157,7 @@ describe("ResourceSecretListField", () => {
       initial.entries[0],
       {
         ...initial.entries[1],
-        fields: { ...initial.entries[1].fields, enabled: "false" },
+        fields: { ...atIndex(initial.entries, 1).fields, enabled: "false" },
       },
     ])
     expect(load).not.toHaveBeenCalled()
@@ -308,7 +309,7 @@ describe("ResourceSecretListField", () => {
       ...initial.entries[0],
       fields: { proxy: "http://changed.example" },
     })
-    expect(value.entries[1].secret).toEqual({
+    expect(atIndex(value.entries, 1).secret).toEqual({
       kind: "replace",
       value: "added-key",
     })

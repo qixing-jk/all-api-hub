@@ -23,6 +23,7 @@ import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
@@ -996,7 +997,7 @@ describe("AccountDialog", () => {
     const user = userEvent.setup()
     vi.stubGlobal("open", vi.fn())
     mockSponsorRecommendationItems[0] = {
-      ...mockSponsorRecommendationItems[0],
+      ...atIndex(mockSponsorRecommendationItems, 0),
       actions: {
         addAccount: {
           siteType: SITE_TYPES.ANYROUTER,
@@ -1035,7 +1036,7 @@ describe("AccountDialog", () => {
     const user = userEvent.setup()
     vi.stubGlobal("open", vi.fn())
     mockSponsorRecommendationItems[0] = {
-      ...mockSponsorRecommendationItems[0],
+      ...atIndex(mockSponsorRecommendationItems, 0),
       postClickNote: "充值时输入 APIHUB 可查看服务商活动。",
     }
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT

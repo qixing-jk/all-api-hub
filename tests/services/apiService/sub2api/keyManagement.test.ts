@@ -14,6 +14,7 @@ import { parseSub2ApiNativeKey } from "~/services/apiService/sub2api/parsing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   fetchApiMock,
@@ -639,7 +640,7 @@ describe("apiService sub2api key management service", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(tokens).toHaveLength(1)
-    expect(tokens[0].key).toBe("retried-key")
+    expect(atIndex(tokens, 0).key).toBe("retried-key")
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "new-jwt",
       refreshToken: "rotated-refresh",
@@ -783,14 +784,14 @@ describe("Sub2API native key transport", () => {
       key: "created-secret",
     })
     expect(fetchApiMock).toHaveBeenCalledTimes(1)
-    expect(fetchApiMock.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(fetchApiMock.mock.calls, 0)[1]).toMatchObject({
       endpoint: "/api/v1/keys",
       options: { method: "POST", body: JSON.stringify(payload) },
     })
     fetchApiMock.mockResolvedValueOnce({ code: 0, message: "ok" })
     const edit = { name: "renamed", quota: 4.25 }
     await updateSub2ApiKey(request, 12, edit)
-    expect(fetchApiMock.mock.calls[1][1]).toMatchObject({
+    expect(atIndex(fetchApiMock.mock.calls, 1)[1]).toMatchObject({
       endpoint: "/api/v1/keys/12",
       options: { method: "PUT", body: JSON.stringify(edit) },
     })

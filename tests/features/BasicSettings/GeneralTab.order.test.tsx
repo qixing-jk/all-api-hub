@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import GeneralTab from "~/features/BasicSettings/components/tabs/General/GeneralTab"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock(
   "~/features/BasicSettings/components/tabs/General/DisplaySettings",
@@ -62,8 +63,9 @@ describe("GeneralTab", () => {
 
     for (let index = 0; index < sections.length - 1; index += 1) {
       expect(
-        sections[index].compareDocumentPosition(sections[index + 1]) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
+        atIndex(sections, index).compareDocumentPosition(
+          atIndex(sections, index + 1),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
     }
   })

@@ -29,6 +29,7 @@ import {
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
   render,
@@ -1452,7 +1453,7 @@ describe("RepairMissingKeysDialog", () => {
           skippedCount: 0,
           items: [
             {
-              id: candidate.items[0].runtimeKey.id,
+              id: atIndex(candidate.items, 0).runtimeKey.id,
               accountName: account.name,
               runtimeKeyName: "Created key 11",
               result: "created",
@@ -1460,7 +1461,7 @@ describe("RepairMissingKeysDialog", () => {
               skipped: false,
             },
             {
-              id: candidate.items[1].runtimeKey.id,
+              id: atIndex(candidate.items, 1).runtimeKey.id,
               accountName: account.name,
               runtimeKeyName: "Created key 12",
               result: "failed",
@@ -1468,7 +1469,7 @@ describe("RepairMissingKeysDialog", () => {
               skipped: false,
             },
             {
-              id: candidate.items[2].runtimeKey.id,
+              id: atIndex(candidate.items, 2).runtimeKey.id,
               accountName: account.name,
               runtimeKeyName: "Created key 13",
               result: "uncertain",
@@ -1477,7 +1478,7 @@ describe("RepairMissingKeysDialog", () => {
             },
           ],
         },
-        { alreadyPresentItemIds: [candidate.items[3].runtimeKey.id] },
+        { alreadyPresentItemIds: [atIndex(candidate.items, 3).runtimeKey.id] },
       )
     })
 
@@ -1544,7 +1545,7 @@ describe("RepairMissingKeysDialog", () => {
         skippedCount: 0,
         items: [
           {
-            id: candidate.items[1].runtimeKey.id,
+            id: atIndex(candidate.items, 1).runtimeKey.id,
             accountName: account.name,
             runtimeKeyName: "Created key 12",
             result: "failed",

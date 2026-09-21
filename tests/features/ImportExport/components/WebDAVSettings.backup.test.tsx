@@ -7,6 +7,7 @@ import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import toast from "~/lib/notify"
 import { ImportExportError } from "~/services/importExport/importExportService"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   clearWebdavSyncDataSelection,
@@ -72,9 +73,12 @@ describe("WebDAVSettings Backup", () => {
     expect(screen.getByDisplayValue("pw")).toBeInTheDocument()
 
     fireEvent.click(
-      screen.getAllByRole("button", {
-        name: /importExport:webdav\.(show|hide)Password/,
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: /importExport:webdav\.(show|hide)Password/,
+        }),
+        0,
+      ),
     )
     expect(screen.getByDisplayValue("pw")).toHaveAttribute("type", "text")
 
@@ -637,9 +641,12 @@ describe("WebDAVSettings Backup", () => {
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: /importExport:webdav\.(show|hide)Password/,
-      })[2],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: /importExport:webdav\.(show|hide)Password/,
+        }),
+        2,
+      ),
     )
 
     expect(

@@ -26,6 +26,7 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
   storageData: new Map<string, unknown>(),
@@ -164,7 +165,7 @@ afterEach(() => {
 describe("automatic check-in preparation", () => {
   it("reserves the cooldown before bounded reads, saves a unique choice, and never checks in", async () => {
     const account = saveAccount()
-    detectors[0].mockImplementation(
+    atIndex(detectors, 0).mockImplementation(
       async (read: AutoCheckinProviderReadContext) => {
         const saved = await accountQueries.getAccountById(account.id)
         expect(
@@ -224,8 +225,8 @@ describe("automatic check-in preparation", () => {
       detection: detection("unsupported", NOW - 1_000),
     }
     saveAccount(account)
-    detectors[0].mockResolvedValue(detection("unsupported"))
-    detectors[1].mockResolvedValue(detection("matched"))
+    atIndex(detectors, 0).mockResolvedValue(detection("unsupported"))
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
 
     await prepare(account)
 
@@ -247,7 +248,7 @@ describe("automatic check-in preparation", () => {
     },
   ])("does not invent a unique choice with $name", async ({ second }) => {
     const account = saveAccount()
-    detectors[1].mockResolvedValue(second)
+    atIndex(detectors, 1).mockResolvedValue(second)
 
     await prepare(account)
 
@@ -333,7 +334,7 @@ describe("automatic check-in preparation", () => {
     const account = saveAccount()
     const started = createDeferred<void>()
     const response = createDeferred<CheckInMethodDetection>()
-    detectors[0].mockImplementation(() => {
+    atIndex(detectors, 0).mockImplementation(() => {
       started.resolve()
       return response.promise
     })
@@ -359,7 +360,7 @@ describe("automatic check-in preparation", () => {
     const account = saveAccount()
     const started = createDeferred<void>()
     const response = createDeferred<CheckInMethodDetection>()
-    detectors[0].mockImplementation(() => {
+    atIndex(detectors, 0).mockImplementation(() => {
       started.resolve()
       return response.promise
     })
@@ -435,7 +436,7 @@ describe("automatic check-in preparation", () => {
     const account = saveAccount()
     let enabled = true
     const isEnabled = vi.fn(async () => enabled)
-    detectors[0].mockImplementation(async () => {
+    atIndex(detectors, 0).mockImplementation(async () => {
       enabled = false
       return detection("matched")
     })
@@ -580,7 +581,7 @@ describe("automatic check-in preparation", () => {
       if (stage === "reservation") {
         storageSet.mockRejectedValueOnce(new Error("storage unavailable"))
       } else {
-        detectors[0].mockImplementation(async () => {
+        atIndex(detectors, 0).mockImplementation(async () => {
           storageSet.mockRejectedValueOnce(new Error("storage unavailable"))
           return detection("matched")
         })
@@ -598,7 +599,7 @@ describe("automatic check-in preparation", () => {
 
   it("persists cooldown after a timed-out read and still allows explicit rediscovery", async () => {
     const account = saveAccount()
-    detectors[0].mockImplementation(() => new Promise(() => {}))
+    atIndex(detectors, 0).mockImplementation(() => new Promise(() => {}))
     const pending = prepare(account)
     await vi.advanceTimersByTimeAsync(3_000)
     await pending
@@ -610,7 +611,7 @@ describe("automatic check-in preparation", () => {
     await prepare(saved)
     expect(detectors[0]).toHaveBeenCalledTimes(1)
 
-    detectors[0].mockResolvedValue(detection("matched"))
+    atIndex(detectors, 0).mockResolvedValue(detection("matched"))
     const manual = await discoverCheckInMethods({
       account: saved,
       config: saved.checkIn,

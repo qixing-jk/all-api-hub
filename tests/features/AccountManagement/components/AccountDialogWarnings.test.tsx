@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
   openLoginTabMock: vi.fn(),
@@ -279,7 +280,7 @@ describe("AccountDialog warnings", () => {
     ).toHaveAttribute("role", "alert")
     expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(1)
     expect(onPrepareAccessTokenInput.mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(browser.tabs.create).mock.invocationCallOrder[0],
+      atIndex(vi.mocked(browser.tabs.create).mock.invocationCallOrder, 0),
     )
     await user.click(openSecurity)
     expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(2)
@@ -459,7 +460,7 @@ describe("AccountDialog warnings", () => {
 
     expect(browser.tabs.create).toHaveBeenCalledTimes(1)
     const createdUrl = new URL(
-      vi.mocked(browser.tabs.create).mock.calls[0][0].url!,
+      atIndex(vi.mocked(browser.tabs.create).mock.calls, 0)[0].url!,
     )
     expect(createdUrl.pathname).toContain("/en/add-account")
     expect(createdUrl.hash).toBe("#manual-new-api")

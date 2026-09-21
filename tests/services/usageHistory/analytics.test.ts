@@ -7,6 +7,7 @@ import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("usageHistory analytics", () => {
   it("builds a versioned export and fuses aggregates across accounts", () => {
@@ -26,8 +27,8 @@ describe("usageHistory analytics", () => {
       quotaConsumed: 0,
     }
     a1.dailyByModel["gpt-4"] = {
-      "2026-01-01": { ...a1.daily["2026-01-01"] },
-      "2026-01-02": { ...a1.daily["2026-01-02"] },
+      "2026-01-01": { ...atIndex(a1.daily, "2026-01-01") },
+      "2026-01-02": { ...atIndex(a1.daily, "2026-01-02") },
     }
 
     const a2 = createEmptyUsageHistoryAccountStore()
@@ -39,7 +40,7 @@ describe("usageHistory analytics", () => {
       quotaConsumed: 7,
     }
     a2.dailyByModel["gpt-4"] = {
-      "2026-01-01": { ...a2.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(a2.daily, "2026-01-01") },
     }
 
     const store: UsageHistoryStore = {
@@ -76,8 +77,12 @@ describe("usageHistory analytics", () => {
       totalTokens: 32,
     })
 
-    expect(exportData.accounts.a1.daily["2026-01-02"]).toBeUndefined()
-    expect(exportData.accounts.a2.daily["2026-01-02"]).toBeUndefined()
+    expect(
+      atIndex(atIndex(exportData.accounts, "a1").daily, "2026-01-02"),
+    ).toBeUndefined()
+    expect(
+      atIndex(atIndex(exportData.accounts, "a2").daily, "2026-01-02"),
+    ).toBeUndefined()
   })
 
   it("throws when the export day range is invalid", () => {
@@ -173,7 +178,9 @@ describe("usageHistory analytics", () => {
       max: 2,
       slowCount: 1,
     })
-    expect(exportData.fused.latencyDaily[dayKey].buckets.length).toBe(13)
+    expect(atIndex(exportData.fused.latencyDaily, dayKey).buckets.length).toBe(
+      13,
+    )
   })
 
   it("ignores missing accounts during fusion but preserves the selection list", () => {
@@ -244,8 +251,10 @@ describe("usageHistory analytics", () => {
       },
     })
 
-    expect(exportData.accounts.a1.hourly["2026-01-02"]).toBeUndefined()
-    expect(exportData.fused.hourly["2026-01-01"]["00"]).toMatchObject({
+    expect(
+      atIndex(atIndex(exportData.accounts, "a1").hourly, "2026-01-02"),
+    ).toBeUndefined()
+    expect(atIndex(exportData.fused.hourly, "2026-01-01")["00"]).toMatchObject({
       requests: 1,
     })
     expect(exportData.fused.hourly["2026-01-02"]).toBeUndefined()

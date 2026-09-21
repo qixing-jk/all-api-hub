@@ -16,6 +16,7 @@ import { AppearanceDrawer } from "~/features/Appearance/AppearanceDrawer"
 import { generalSearchControls } from "~/features/BasicSettings/components/tabs/General/General.search"
 import { normalizeAppearance } from "~/types/theme"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 const { save, savedAppearance } = vi.hoisted(() => ({
@@ -182,7 +183,7 @@ describe("appearance controls", () => {
       "settings:appearance.textSize",
     ]) {
       const group = screen.getByRole("group", { name })
-      const firstChoice = within(group).getAllByRole("radio")[0]
+      const firstChoice = atIndex(within(group).getAllByRole("radio"), 0)
       expect(firstChoice.parentElement?.parentElement).toHaveClass(
         "grid-cols-3",
       )

@@ -13,6 +13,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const keys = ["migration-first-placeholder", "migration-second-placeholder"]
 
@@ -218,7 +219,9 @@ for (const target of ["grouped", "split"] as const) {
     if (target === "grouped") {
       expect(providers).toHaveLength(1)
       expect(
-        providers[0]["api-key-entries"]?.map((entry) => entry["api-key"]),
+        atIndex(providers, 0)["api-key-entries"]?.map(
+          (entry) => entry["api-key"],
+        ),
       ).toEqual(keys)
       await expect(dialog).toContainText("1 created")
     } else {

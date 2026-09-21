@@ -19,6 +19,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const entry of ["reminder", "health warning"] as const) {
   test(`opens history from the account ${entry} on a narrow screen`, async ({
@@ -336,7 +337,7 @@ test("fits all local summaries on a narrow screen and keeps the reading position
   })
   const filter = history.getByRole("combobox", { name: "Filter by outcome" })
   const actions = history.getByRole("button", { name: "History actions" })
-  const [searchBox, filterBox, actionsBox] = await Promise.all(
+  const destructuredSource0 = await Promise.all(
     [search, filter, actions].map((locator) =>
       locator.evaluate((element) => {
         const { top, right, bottom, left } = element.getBoundingClientRect()
@@ -344,6 +345,11 @@ test("fits all local summaries on a narrow screen and keeps the reading position
       }),
     ),
   )
+  const [searchBox, filterBox, actionsBox] = [
+    atIndex(destructuredSource0, 0),
+    atIndex(destructuredSource0, 1),
+    atIndex(destructuredSource0, 2),
+  ]
   expect(searchBox.bottom).toBeLessThanOrEqual(filterBox.top)
   expect(filterBox.right).toBeLessThanOrEqual(actionsBox.left)
   for (const box of [searchBox, filterBox, actionsBox]) {
@@ -369,7 +375,7 @@ test("fits all local summaries on a narrow screen and keeps the reading position
     (element) => element.getBoundingClientRect().top,
   )
   const newEntry: ProtectionBypassHistoryEntry = {
-    ...entries[0],
+    ...atIndex(entries, 0),
     id: "layout-new",
     startedAt: now + 1000,
     origin: "https://new-history.example.test",

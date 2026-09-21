@@ -6,6 +6,7 @@ import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/prese
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
@@ -197,7 +198,7 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.AIHUBMIX])(
     )
     expect(
       adapter.buildDetailFacts(
-        { ...facts, fields: [{ ...facts.fields[0], value: 0 }] },
+        { ...facts, fields: [{ ...atIndex(facts.fields, 0), value: 0 }] },
         t,
       ),
     ).not.toContainEqual(expect.objectContaining({ id: "accessed_time" }))

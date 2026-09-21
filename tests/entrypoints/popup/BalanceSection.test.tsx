@@ -19,6 +19,7 @@ import {
   buildCompleteTodayStatsAvailability,
 } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -230,9 +231,12 @@ describe("popup BalanceSection components", () => {
     ).toHaveTextContent("+$1.25")
 
     fireEvent.click(
-      screen.getAllByRole("button", {
-        name: /common:currency\.clickToSwitch/,
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: /common:currency\.clickToSwitch/,
+        }),
+        0,
+      ),
     )
 
     expect(updateCurrencyType).toHaveBeenCalledWith("CNY")

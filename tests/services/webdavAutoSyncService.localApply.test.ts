@@ -6,6 +6,7 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   mockAccountStorageExportData,
@@ -270,8 +271,10 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     await createService().syncWithWebdav()
 
-    const importedAccount = mockAccountStorageImportData.mock.calls[0][0]
-      .accounts[0] as any
+    const importedAccount = atIndex(
+      mockAccountStorageImportData.mock.calls,
+      0,
+    )[0].accounts[0] as any
     expect(importedAccount).toMatchObject({
       site_name: "remote-newer",
       configVersion: 7,
@@ -282,7 +285,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     })
     expect(importedAccount.checkIn).not.toHaveProperty("enableDetection")
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.version).toBe("4.0")
     expect(uploaded.accounts.accounts[0]).toMatchObject({
       site_name: "remote-newer",
@@ -365,12 +368,14 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     await createService().syncWithWebdav()
 
-    const importedAccount = mockAccountStorageImportData.mock.calls[0][0]
-      .accounts[0] as any
+    const importedAccount = atIndex(
+      mockAccountStorageImportData.mock.calls,
+      0,
+    )[0].accounts[0] as any
     expect(importedAccount.site_name).toBe("local-newer")
     expect(importedAccount.checkIn).toEqual(localCheckIn)
 
-    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    const uploaded = JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0])
     expect(uploaded.version).toBe("4.0")
     expect(uploaded.accounts.accounts[0].checkIn).toEqual(localCheckIn)
   })

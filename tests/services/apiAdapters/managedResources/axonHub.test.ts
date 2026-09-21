@@ -55,6 +55,7 @@ import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { resolveManagedResourceTestPolicy } from "~~/tests/test-utils/managedResourceFieldPolicy"
 
 const mocks = vi.hoisted(() => {
@@ -125,7 +126,8 @@ vi.mock("~/services/managedSites/mutations", async (importOriginal) => {
       return {
         ...sequence,
         beginStep() {
-          mocks.mutationSequenceStepCounts[sequenceIndex] += 1
+          mocks.mutationSequenceStepCounts[sequenceIndex] =
+            atIndex(mocks.mutationSequenceStepCounts, sequenceIndex) + 1
           return sequence.beginStep()
         },
       }
@@ -3170,7 +3172,9 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).resolves.toEqual({ status: "created" })
 
     expect(mocks.createChannel).toHaveBeenCalledOnce()
-    expect(mocks.createChannel.mock.calls[0][1]).not.toHaveProperty("baseURL")
+    expect(atIndex(mocks.createChannel.mock.calls, 0)[1]).not.toHaveProperty(
+      "baseURL",
+    )
   })
 
   it("maps missing target configuration to target unavailable before the common adapter", async () => {

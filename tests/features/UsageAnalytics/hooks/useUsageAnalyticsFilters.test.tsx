@@ -7,6 +7,7 @@ import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHis
 import type { SiteAccount } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 type HookProps = {
@@ -108,7 +109,7 @@ describe("useUsageAnalyticsFilters", () => {
       quotaConsumed: 1,
     }
     storeA.dailyByToken["1"] = {
-      "2026-01-01": { ...storeA.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(storeA.daily, "2026-01-01") },
     }
     storeA.tokenNamesById["1"] = "Token A"
 
@@ -121,7 +122,7 @@ describe("useUsageAnalyticsFilters", () => {
       quotaConsumed: 1,
     }
     storeB.dailyByToken["2"] = {
-      "2026-01-01": { ...storeB.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(storeB.daily, "2026-01-01") },
     }
     storeB.tokenNamesById["2"] = "Token B"
 
@@ -219,10 +220,10 @@ describe("useUsageAnalyticsFilters", () => {
       }
     }
     accountStore.dailyByToken["fresh-token"] = {
-      "2026-01-10": { ...accountStore.daily["2026-01-10"] },
+      "2026-01-10": { ...atIndex(accountStore.daily, "2026-01-10") },
     }
     accountStore.dailyByToken["stale-token"] = {
-      "2026-01-01": { ...accountStore.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(accountStore.daily, "2026-01-01") },
     }
 
     const { result } = renderHook(() =>
@@ -330,13 +331,13 @@ describe("useUsageAnalyticsFilters", () => {
       quotaConsumed: 2,
     }
     accountStore.dailyByToken.unknown = {
-      "2026-01-01": { ...accountStore.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(accountStore.daily, "2026-01-01") },
     }
     accountStore.dailyByToken["5"] = {
-      "2026-01-01": { ...accountStore.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(accountStore.daily, "2026-01-01") },
     }
     accountStore.dailyByToken["7"] = {
-      "2026-01-01": { ...accountStore.daily["2026-01-01"] },
+      "2026-01-01": { ...atIndex(accountStore.daily, "2026-01-01") },
     }
     accountStore.tokenNamesById["7"] = "Named Token"
 

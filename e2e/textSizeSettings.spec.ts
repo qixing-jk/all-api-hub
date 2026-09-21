@@ -26,6 +26,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 test.use({ actionTimeout: 10_000 })
 
@@ -149,10 +150,13 @@ for (const hostRootSize of [10, 16, 20]) {
       await options.goto(
         `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#basic`,
       )
-      for (const [label, textSize, font] of [
+      for (const indexedEntry of [
         ["Large", "large", "18px"],
         ["Extra large", "extra-large", "20px"],
       ]) {
+        const label = atIndex(indexedEntry, 0)
+        const textSize = atIndex(indexedEntry, 1)
+        const font = atIndex(indexedEntry, 2)
         await options
           .locator(`#${SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE}`)
           .getByRole("radio", { name: label, exact: true })
@@ -300,10 +304,15 @@ for (const width of [1280, 390, 320]) {
     const samplePadding = await densitySample.evaluate(
       (element) => getComputedStyle(element).paddingTop,
     )
-    for (const [label, value, font, line, supportingFont] of [
+    for (const indexedEntry of [
       ["Large", "large", "22px", "32px", "14px"],
       ["Extra large", "extra-large", "24px", "36px", "16px"],
     ]) {
+      const label = atIndex(indexedEntry, 0)
+      const value = atIndex(indexedEntry, 1)
+      const font = atIndex(indexedEntry, 2)
+      const line = atIndex(indexedEntry, 3)
+      const supportingFont = atIndex(indexedEntry, 4)
       await textSize
         .getByRole("radio", { name: label, exact: true })
         .locator("..")

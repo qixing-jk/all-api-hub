@@ -23,6 +23,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -119,7 +120,7 @@ describe("Veloera native managed resource", () => {
     "classifies channel cleanup reads as $expected for $errorCode: $message",
     async ({ message, errorCode, expected }) => {
       const workspace = await veloeraManagedResourceRegistration.open()
-      const ref = (await workspace.list()).items[0].ref
+      const ref = atIndex((await workspace.list()).items, 0).ref
       mocks.get.mockRejectedValueOnce(
         new ApiError(message, undefined, "/api/channel/17", errorCode),
       )
@@ -135,11 +136,13 @@ describe("Veloera native managed resource", () => {
       key: "keep-me\nremove-me\nalso-keep",
     })
     const api = await veloeraManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     expect(cleanup.keys).toEqual(["keep-me", "remove-me", "also-keep"])
     expect(mocks.get).toHaveBeenCalledTimes(1)
     await cleanup.remove([1])
-    expect(mocks.update.mock.calls[0][1]).toEqual({
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).toEqual({
       id: channel.id,
       key: "keep-me\nalso-keep",
     })
@@ -150,7 +153,9 @@ describe("Veloera native managed resource", () => {
       .mockResolvedValueOnce({ ...channel, key: "first\nremove" })
       .mockResolvedValue({ ...channel, key: "first\nremove\nnew" })
     const api = await veloeraManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     await expect(cleanup.remove([1])).rejects.toMatchObject({
       failure: { code: "resource_changed" },
     })
@@ -216,7 +221,7 @@ describe("Veloera native managed resource", () => {
         }),
       }),
     )
-    expect(page.items[0].fields).toEqual(
+    expect(atIndex(page.items, 0).fields).toEqual(
       expect.arrayContaining([
         {
           fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
@@ -242,7 +247,7 @@ describe("Veloera native managed resource", () => {
     const workspace = await veloeraManagedResourceRegistration.open()
     const page = await workspace.list()
 
-    expect(page.items[0].fields).toContainEqual({
+    expect(atIndex(page.items, 0).fields).toContainEqual({
       fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,
       kind: "secret",
       state: "masked",
@@ -266,12 +271,12 @@ describe("Veloera native managed resource", () => {
       "auto-disabled",
       "unknown",
     ])
-    expect(page.items[0].fields).toContainEqual({
+    expect(atIndex(page.items, 0).fields).toContainEqual({
       fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,
       kind: "secret",
       state: "available",
     })
-    expect(page.items[2].fields).toContainEqual({
+    expect(atIndex(page.items, 2).fields).toContainEqual({
       fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
       kind: "text",
       value: "999",
@@ -483,11 +488,13 @@ describe("Veloera native managed resource", () => {
       { ...channel, other: "us-central1", model_prefix: "keep-prefix" },
       { ...createDraft("Vertex channel"), type: VeloeraChannelType.VertexAi },
     )
-    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).toMatchObject({
       type: VeloeraChannelType.VertexAi,
       other: "us-central1",
     })
-    expect(mocks.update.mock.calls[0][1]).not.toHaveProperty("model_prefix")
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).not.toHaveProperty(
+      "model_prefix",
+    )
   })
 
   it("preserves explicit empty and zero-valued edits while rejecting a cleared group", async () => {
@@ -502,7 +509,7 @@ describe("Veloera native managed resource", () => {
         weight: 0,
       },
     )
-    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).toMatchObject({
       id: channel.id,
       base_url: "",
       priority: 0,
@@ -554,7 +561,7 @@ describe("Veloera native managed resource", () => {
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
       data: { name: "Renamed channel", key: channel.key },
     })
-    expect(mocks.update.mock.calls[0][1]).not.toHaveProperty("key")
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).not.toHaveProperty("key")
 
     mocks.update.mockResolvedValueOnce({
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
@@ -569,7 +576,7 @@ describe("Veloera native managed resource", () => {
     ).resolves.toMatchObject({
       data: { key: "replacement-credential" },
     })
-    expect(mocks.update.mock.calls[1][1]).toHaveProperty(
+    expect(atIndex(mocks.update.mock.calls, 1)[1]).toHaveProperty(
       "key",
       "replacement-credential",
     )
@@ -822,7 +829,7 @@ describe("Veloera native managed resource", () => {
 
   it("rejects invalid resource locators before provider reads", async () => {
     const workspace = await veloeraManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     mocks.get.mockClear()
 
     await expectFailureCode(
@@ -834,7 +841,7 @@ describe("Veloera native managed resource", () => {
 
   it("routes public create and delete commands through native operations", async () => {
     const workspace = await veloeraManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openCreateEditor({
       seed: {
         kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,

@@ -18,6 +18,7 @@ import { AuthTypeEnum } from "~/types"
 import { apiyiPricingSample } from "~~/tests/fixtures/apiyi/pricing.sample"
 import { server } from "~~/tests/msw/server"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => ({
@@ -155,22 +156,32 @@ describe("APIyi model groups and prices", () => {
       name: "modelList:scenario.input · modelList:contextTokenRange",
     })
     expect(tiers).toHaveLength(2)
-    expect(within(tiers[0]).getByText("USD: $5.0000")).toBeVisible()
-    expect(within(tiers[0]).getByText("USD: $25.0000")).toBeVisible()
-    expect(within(tiers[0]).getByText("USD: $0.5000")).toBeVisible()
-    expect(within(tiers[1]).getByText("USD: $10.0000")).toBeVisible()
-    expect(within(tiers[1]).getByText("USD: $37.5000")).toBeVisible()
-    expect(within(tiers[1]).getByText("USD: $1.0000")).toBeVisible()
+    expect(within(atIndex(tiers, 0)).getByText("USD: $5.0000")).toBeVisible()
+    expect(within(atIndex(tiers, 0)).getByText("USD: $25.0000")).toBeVisible()
+    expect(within(atIndex(tiers, 0)).getByText("USD: $0.5000")).toBeVisible()
+    expect(within(atIndex(tiers, 1)).getByText("USD: $10.0000")).toBeVisible()
+    expect(within(atIndex(tiers, 1)).getByText("USD: $37.5000")).toBeVisible()
+    expect(within(atIndex(tiers, 1)).getByText("USD: $1.0000")).toBeVisible()
 
     await user.click(screen.getByText("svip (1x)"))
 
     const fullPriceTiers = screen.getAllByRole("group", {
       name: "modelList:scenario.input · modelList:contextTokenRange",
     })
-    expect(within(fullPriceTiers[0]).getByText("USD: $10.0000")).toBeVisible()
-    expect(within(fullPriceTiers[0]).getByText("USD: $50.0000")).toBeVisible()
-    expect(within(fullPriceTiers[1]).getByText("USD: $20.0000")).toBeVisible()
-    expect(within(fullPriceTiers[1]).getByText("USD: $75.0000")).toBeVisible()
-    expect(within(fullPriceTiers[1]).getByText("USD: $2.0000")).toBeVisible()
+    expect(
+      within(atIndex(fullPriceTiers, 0)).getByText("USD: $10.0000"),
+    ).toBeVisible()
+    expect(
+      within(atIndex(fullPriceTiers, 0)).getByText("USD: $50.0000"),
+    ).toBeVisible()
+    expect(
+      within(atIndex(fullPriceTiers, 1)).getByText("USD: $20.0000"),
+    ).toBeVisible()
+    expect(
+      within(atIndex(fullPriceTiers, 1)).getByText("USD: $75.0000"),
+    ).toBeVisible()
+    expect(
+      within(atIndex(fullPriceTiers, 1)).getByText("USD: $2.0000"),
+    ).toBeVisible()
   })
 })

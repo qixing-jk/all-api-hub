@@ -13,6 +13,7 @@ import { voApiV2AccountKeyResources } from "~/services/apiAdapters/voapiV2/accou
 import type { VoApiV2Key } from "~/services/apiService/voapiV2/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockCreateVoApiV2Key,
@@ -217,8 +218,10 @@ describe("VoAPI v2 account key resources", () => {
     })
     const page = await (await session.openCollection("account")).list()
     expect(page.items.map((item) => item.ref.resourceId)).toEqual(["1", "2"])
-    expect(page.items[0].runtimeKey?.modelAccess.groups).toEqual(["default"])
-    expect(page.items[1].runtimeKey?.modelAccess.groups).toEqual(["9"])
+    expect(atIndex(page.items, 0).runtimeKey?.modelAccess.groups).toEqual([
+      "default",
+    ])
+    expect(atIndex(page.items, 1).runtimeKey?.modelAccess.groups).toEqual(["9"])
   })
 
   it("keeps duplicate group names distinct as finite-quota requirements", async () => {
@@ -336,11 +339,11 @@ describe("VoAPI v2 account key resources", () => {
     })
     const snapshot = await session.provisioning!.inspect()
 
-    expect(snapshot.items[0].renameSuggestion).toEqual({
+    expect(atIndex(snapshot.items, 0).renameSuggestion).toEqual({
       targetDisplayName: "Priority group (auto)",
     })
     await expect(
-      session.provisioning!.rename!(snapshot.items[0].ref),
+      session.provisioning!.rename!(atIndex(snapshot.items, 0).ref),
     ).resolves.toEqual({ certainty: "applied", value: undefined })
     expect(mockRenameVoApiV2Key).toHaveBeenCalledWith(
       expect.objectContaining(request),

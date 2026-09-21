@@ -10,6 +10,7 @@ import {
   type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockLoadSponsorRecommendations, mockRefreshSponsorRecommendations } =
@@ -157,7 +158,7 @@ describe("useSponsorRecommendations", () => {
       resolveRefresh?.({
         items: [
           {
-            ...recommendations[0],
+            ...atIndex(recommendations, 0),
             id: "remote-provider",
             name: "Remote Provider",
             source: SPONSOR_CATALOG_SOURCES.Remote,

@@ -10,23 +10,27 @@ import {
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import rows from "~~/tests/fixtures/newApi/mediaPricing.json"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /** Exercise the native adapter boundary without using a model-name dispatch. */
 function normalize(row: object) {
-  return normalizeNewApiModelPricingResponse({
-    data: [
-      {
-        model_ratio: 0,
-        completion_ratio: 0,
-        enable_groups: [],
-        supported_endpoint_types: [],
-        ...row,
-      },
-    ],
-    success: true,
-    group_ratio: {},
-    usable_group: {},
-  }).data[0]
+  return atIndex(
+    normalizeNewApiModelPricingResponse({
+      data: [
+        {
+          model_ratio: 0,
+          completion_ratio: 0,
+          enable_groups: [],
+          supported_endpoint_types: [],
+          ...row,
+        },
+      ],
+      success: true,
+      group_ratio: {},
+      usable_group: {},
+    }).data,
+    0,
+  )
 }
 
 describe("public media pricing contracts captured 2026-09-09", () => {

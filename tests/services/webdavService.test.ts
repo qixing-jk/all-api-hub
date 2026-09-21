@@ -19,6 +19,7 @@ import {
   WEBDAV_FILE_NOT_FOUND_ERROR_CODE,
   WebdavFileNotFoundError,
 } from "~/services/webdav/webdavService"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockDecryptWebdavBackupEnvelope,
@@ -247,7 +248,8 @@ describe("webdavService", () => {
 
       expect(ok).toBe(true)
       expect(globalAny.fetch).toHaveBeenCalledTimes(1)
-      const [url, init] = globalAny.fetch.mock.calls[0]
+      const url = atIndex(atIndex(globalAny.fetch.mock.calls, 0), 0)
+      const init = atIndex(atIndex(globalAny.fetch.mock.calls, 0), 1)
       expect(typeof url).toBe("string")
       expect((init as RequestInit).method).toBe("PROPFIND")
       expect((init as RequestInit).headers).toEqual(
@@ -979,9 +981,12 @@ describe("webdavService", () => {
       expect(result).toBe(true)
       expect(globalAny.fetch).toHaveBeenCalledTimes(5)
 
-      const [putUrl, putInit] = globalAny.fetch.mock.calls[2]
-      const [tempUrl, getInit] = globalAny.fetch.mock.calls[3]
-      const [moveUrl, moveInit] = globalAny.fetch.mock.calls[4]
+      const putUrl = atIndex(atIndex(globalAny.fetch.mock.calls, 2), 0)
+      const putInit = atIndex(atIndex(globalAny.fetch.mock.calls, 2), 1)
+      const tempUrl = atIndex(atIndex(globalAny.fetch.mock.calls, 3), 0)
+      const getInit = atIndex(atIndex(globalAny.fetch.mock.calls, 3), 1)
+      const moveUrl = atIndex(atIndex(globalAny.fetch.mock.calls, 4), 0)
+      const moveInit = atIndex(atIndex(globalAny.fetch.mock.calls, 4), 1)
 
       expect((putInit as RequestInit).method).toBe("PUT")
       expect((putInit as RequestInit).body).toBe('{"foo":"bar"}')

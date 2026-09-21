@@ -10,6 +10,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   loggerErrorMock,
@@ -133,8 +134,10 @@ describe("RedemptionPromptToast", () => {
       />,
     )
 
-    const [selectAllCheckbox, codeOneCheckbox, codeTwoCheckbox] =
-      screen.getAllByRole("checkbox")
+    const indexedItems = screen.getAllByRole("checkbox")
+    const selectAllCheckbox = atIndex(indexedItems, 0)
+    const codeOneCheckbox = atIndex(indexedItems, 1)
+    const codeTwoCheckbox = atIndex(indexedItems, 2)
     const autoRedeemButton = screen.getByRole("button", { name: "Auto redeem" })
 
     expect(selectAllCheckbox).toBeChecked()

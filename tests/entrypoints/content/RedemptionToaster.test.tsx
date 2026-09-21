@@ -2,6 +2,7 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RedemptionToaster } from "~/entrypoints/content/redemptionAssist/components/RedemptionToaster"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type ToastStackProps = {
   children: React.ReactNode
@@ -117,7 +118,13 @@ describe("RedemptionToaster", () => {
     expect(startPause).toHaveBeenCalledTimes(1)
     expect(endPause).toHaveBeenCalledTimes(1)
 
-    const [customToast, successToast, errorToast, neutralToast] = visibleToasts
+    const destructuredSource0 = visibleToasts
+    const [customToast, successToast, errorToast, neutralToast] = [
+      atIndex(destructuredSource0, 0),
+      atIndex(destructuredSource0, 1),
+      atIndex(destructuredSource0, 2),
+      atIndex(destructuredSource0, 3),
+    ]
 
     expect(customToast.props.className).toContain("sm:w-[360px]")
     expect(customToast.props.children).toBe("Custom custom")

@@ -5,6 +5,7 @@ import {
   resolveCredentialPatch,
   withCredentialListEditor,
 } from "~/services/apiAdapters/managedResources/credentialListEditor"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const records: Parameters<typeof withCredentialListEditor>[2] = [
   {
@@ -62,7 +63,7 @@ describe("credential list editor", () => {
     const editor = await withCredentialListEditor(
       base,
       "key",
-      [records[0]],
+      [atIndex(records, 0)],
       true,
       loader,
     )
@@ -130,7 +131,10 @@ describe("credential list editor", () => {
       key: {
         kind: "secret-list",
         entries: [
-          { ...list.entries[0], secret: { kind: "replace", value: "rotated" } },
+          {
+            ...atIndex(list.entries, 0),
+            secret: { kind: "replace", value: "rotated" },
+          },
           {
             id: "new",
             secret: { kind: "replace", value: "added" },
@@ -184,7 +188,7 @@ describe("credential list editor", () => {
           secret: { kind: "replace" as const, value: " " },
         },
       ],
-      [list.entries[0], list.entries[0]],
+      [atIndex(list.entries, 0), atIndex(list.entries, 0)],
     ]) {
       expect(
         editor.validate({ key: { kind: "secret-list", entries } }).valid,

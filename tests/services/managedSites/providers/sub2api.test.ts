@@ -31,6 +31,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
@@ -320,7 +321,9 @@ describe("Sub2API API-key account managed-site provider", () => {
       total: 1,
     })
 
-    const [url, request] = mockFetch.mock.calls[0]
+    const indexedItems = mockFetch.mock.calls[0]
+    const url = atIndex(indexedItems, 0)
+    const request = atIndex(indexedItems, 1)
     expect(String(url)).toBe(
       "https://sub2api.example.invalid/api/v1/admin/accounts?page=1&page_size=100&type=apikey&sort_by=name&sort_order=asc",
     )
@@ -368,14 +371,18 @@ describe("Sub2API API-key account managed-site provider", () => {
       total: 2,
     })
 
-    const url = new URL(String(mockFetch.mock.calls[0][0]))
+    const url = new URL(String(atIndex(mockFetch.mock.calls, 0)[0]))
     expect(url.searchParams.get("search")).toBe("Example & 渠道 + #1")
     expect(url.searchParams.get("type")).toBe("apikey")
     expect(
-      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
+      new URL(String(atIndex(mockFetch.mock.calls, 1)[0])).searchParams.get(
+        "page",
+      ),
     ).toBe("2")
     expect(
-      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("search"),
+      new URL(String(atIndex(mockFetch.mock.calls, 1)[0])).searchParams.get(
+        "search",
+      ),
     ).toBe("Example & 渠道 + #1")
   })
 
@@ -454,7 +461,9 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
     expect(mockFetch).toHaveBeenCalledTimes(2)
     expect(
-      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
+      new URL(String(atIndex(mockFetch.mock.calls, 1)[0])).searchParams.get(
+        "page",
+      ),
     ).toBe("2")
   })
 
@@ -516,7 +525,7 @@ describe("Sub2API API-key account managed-site provider", () => {
       },
     })
 
-    const inventoryUrl = new URL(String(mockFetch.mock.calls[0][0]))
+    const inventoryUrl = new URL(String(atIndex(mockFetch.mock.calls, 0)[0]))
     expect(inventoryUrl.searchParams.get("search")).toBeNull()
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
@@ -607,7 +616,7 @@ describe("Sub2API API-key account managed-site provider", () => {
     )
 
     await expect(revealSub2ApiApiKey(config, 17)).resolves.toBe("sk-exported")
-    expect(String(mockFetch.mock.calls[0][0])).toBe(
+    expect(String(atIndex(mockFetch.mock.calls, 0)[0])).toBe(
       "https://sub2api.example.invalid/api/v1/admin/accounts/data?ids=17&include_proxies=false",
     )
   })
@@ -649,7 +658,9 @@ describe("Sub2API API-key account managed-site provider", () => {
       notes: "Provider note",
     })
 
-    const [url, request] = mockFetch.mock.calls[0]
+    const indexedItems = mockFetch.mock.calls[0]
+    const url = atIndex(indexedItems, 0)
+    const request = atIndex(indexedItems, 1)
     expect(String(url)).toBe(
       "https://sub2api.example.invalid/api/v1/admin/accounts",
     )
@@ -776,7 +787,7 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
 
     expect(
-      JSON.parse(String(mockFetch.mock.calls[0][1]?.body)).credentials,
+      JSON.parse(String(atIndex(mockFetch.mock.calls, 0)[1]?.body)).credentials,
     ).not.toHaveProperty("model_mapping")
   })
 
@@ -792,12 +803,16 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
     await updateSub2ApiApiKeyAccount(config, 17, { apiKey: "sk-next" })
 
-    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+    expect(
+      JSON.parse(String(atIndex(mockFetch.mock.calls, 0)[1]?.body)),
+    ).toEqual({
       name: "Renamed",
       credentials: { base_url: "https://next.example.invalid/v1" },
       notes: "Updated note",
     })
-    expect(JSON.parse(String(mockFetch.mock.calls[1][1]?.body))).toEqual({
+    expect(
+      JSON.parse(String(atIndex(mockFetch.mock.calls, 1)[1]?.body)),
+    ).toEqual({
       credentials: { api_key: "sk-next" },
     })
   })
@@ -811,7 +826,9 @@ describe("Sub2API API-key account managed-site provider", () => {
       status: "inactive",
     })
 
-    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+    expect(
+      JSON.parse(String(atIndex(mockFetch.mock.calls, 0)[1]?.body)),
+    ).toEqual({
       concurrency: 0,
       priority: 0,
       status: "inactive",
@@ -823,7 +840,9 @@ describe("Sub2API API-key account managed-site provider", () => {
 
     await updateSub2ApiApiKeyAccount(config, 17, { modelMapping: {} })
 
-    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+    expect(
+      JSON.parse(String(atIndex(mockFetch.mock.calls, 0)[1]?.body)),
+    ).toEqual({
       credentials: { model_mapping: {} },
     })
   })

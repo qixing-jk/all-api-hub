@@ -12,6 +12,7 @@ import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEdit
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 // ============================================================================
 // MOCKS
@@ -468,7 +469,7 @@ describe("newApiService", () => {
 
       await createChannel(request as any, payload)
 
-      const callArgs = mockFetchApi.mock.calls[0][1]
+      const callArgs = atIndex(mockFetchApi.mock.calls, 0)[1]
       const bodyObj = JSON.parse(callArgs.options.body)
       expect(bodyObj.channel.group).toBe("group1,group2")
     })

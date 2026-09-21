@@ -38,6 +38,7 @@ import type {
 } from "~/types/managedSiteMigrationCapability"
 import { MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES } from "~/types/managedSiteMigrationCapability"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const resourceI18n = await createResourceTestI18n({
   en: {
@@ -198,7 +199,7 @@ describe("useManagedResourceMigrationController", () => {
         ],
         items: [
           {
-            selection: selections[0],
+            selection: atIndex(selections, 0),
             status: "ready",
             source,
             target,
@@ -207,7 +208,7 @@ describe("useManagedResourceMigrationController", () => {
             ],
           },
           {
-            selection: selections[1],
+            selection: atIndex(selections, 1),
             status: "blocked",
             warningCodes: [],
             blockingReasonCode:
@@ -244,14 +245,14 @@ describe("useManagedResourceMigrationController", () => {
     expect(result.current.preview?.generalWarnings).toEqual([
       chineseT("managedSiteChannels:migration.generalWarnings.createOnly"),
     ])
-    expect(result.current.preview?.rows[0].warningText).toEqual([
+    expect(atIndex(result.current.preview?.rows, 0).warningText).toEqual([
       chineseT("managedSiteChannels:migration.itemWarnings.dropsModelMapping"),
     ])
-    expect(result.current.preview?.rows[1].blockedReason).toBe(
+    expect(atIndex(result.current.preview?.rows, 1).blockedReason).toBe(
       chineseT("managedSiteChannels:migration.blockedReasons.sourceKeyMissing"),
     )
     expect(
-      result.current.preview?.rows[0].comparisons.find(
+      atIndex(result.current.preview?.rows, 0).comparisons.find(
         ({ id }) => id === "status",
       ),
     ).toMatchObject({
@@ -906,7 +907,9 @@ describe("useManagedResourceMigrationController", () => {
 
     rerender({ ...latest, scopeIdentity: "latest-semantic-scope" })
     await waitFor(() => expect(latestPrepare).toHaveBeenCalledOnce())
-    expect(latestPrepare.mock.calls[0]?.[0].selections[0]).toMatchObject({
+    expect(
+      atIndex(atIndex(atIndex(latestPrepare.mock.calls, 0), 0).selections, 0),
+    ).toMatchObject({
       displayName: "Latest display name",
       ref: createRef("latest-resource-secret"),
     })

@@ -21,6 +21,7 @@ import type {
 } from "~/types/managedSiteMigrationCapability"
 import type { Sub2ApiAdminApiKeyAccount } from "~/types/sub2apiManagedSite"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const config = {
   baseUrl: "https://sub2api.example.invalid",
@@ -343,9 +344,9 @@ describe("Sub2API channel migration", () => {
         selections: [selection],
       })
 
-      expect(preview.items[0].status).toBe("ready")
+      expect(atIndex(preview.items, 0).status).toBe("ready")
       expect(
-        preview.items[0].warningCodes.includes(
+        atIndex(preview.items, 0).warningCodes.includes(
           warnings.DROPS_ADVANCED_SETTINGS,
         ),
       ).toBe(hasLostSettings)

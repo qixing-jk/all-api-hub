@@ -3,6 +3,8 @@ import { readFileSync, rmSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 function runMatrix(...args: string[]) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -162,19 +164,21 @@ describe("GitHub real-site E2E matrix selection", () => {
 
   it("emits disjoint parallel and provider-serialized matrices", () => {
     const output = runMatrixWithOutput()
-    const fullMatrix = JSON.parse(output.matrix) as ReturnType<typeof runMatrix>
-    const parallelMatrix = JSON.parse(output.parallel_matrix) as ReturnType<
+    const fullMatrix = JSON.parse(atIndex(output, "matrix")) as ReturnType<
       typeof runMatrix
     >
-    const newApiMatrix = JSON.parse(output.new_api_matrix) as ReturnType<
-      typeof runMatrix
-    >
-    const sub2ApiMatrix = JSON.parse(output.sub2api_matrix) as ReturnType<
-      typeof runMatrix
-    >
+    const parallelMatrix = JSON.parse(
+      atIndex(output, "parallel_matrix"),
+    ) as ReturnType<typeof runMatrix>
+    const newApiMatrix = JSON.parse(
+      atIndex(output, "new_api_matrix"),
+    ) as ReturnType<typeof runMatrix>
+    const sub2ApiMatrix = JSON.parse(
+      atIndex(output, "sub2api_matrix"),
+    ) as ReturnType<typeof runMatrix>
 
-    expect(output.has_parallel).toBe("true")
-    expect(output.has_new_api).toBe("true")
+    expect(atIndex(output, "has_parallel")).toBe("true")
+    expect(atIndex(output, "has_new_api")).toBe("true")
     expect(output.has_sub2api).toBe("true")
     expect([
       ...selectedIds(parallelMatrix),
@@ -193,25 +197,33 @@ describe("GitHub real-site E2E matrix selection", () => {
   it("keeps a narrow New API target in its provider matrix only", () => {
     const output = runMatrixWithOutput("all", "new-api-account")
 
-    expect(output.has_parallel).toBe("false")
-    expect(output.has_new_api).toBe("true")
+    expect(atIndex(output, "has_parallel")).toBe("false")
+    expect(atIndex(output, "has_new_api")).toBe("true")
     expect(output.has_sub2api).toBe("false")
-    expect(JSON.parse(output.parallel_matrix)).toEqual({ include: [] })
-    expect(selectedIds(JSON.parse(output.new_api_matrix))).toEqual([
+    expect(JSON.parse(atIndex(output, "parallel_matrix"))).toEqual({
+      include: [],
+    })
+    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
       "new-api-account",
     ])
-    expect(JSON.parse(output.sub2api_matrix)).toEqual({ include: [] })
+    expect(JSON.parse(atIndex(output, "sub2api_matrix"))).toEqual({
+      include: [],
+    })
   })
 
   it("keeps a narrow Sub2API target in its provider matrix only", () => {
     const output = runMatrixWithOutput("all", "sub2api-managed-site")
 
-    expect(output.has_parallel).toBe("false")
-    expect(output.has_new_api).toBe("false")
+    expect(atIndex(output, "has_parallel")).toBe("false")
+    expect(atIndex(output, "has_new_api")).toBe("false")
     expect(output.has_sub2api).toBe("true")
-    expect(JSON.parse(output.parallel_matrix)).toEqual({ include: [] })
-    expect(JSON.parse(output.new_api_matrix)).toEqual({ include: [] })
-    expect(selectedIds(JSON.parse(output.sub2api_matrix))).toEqual([
+    expect(JSON.parse(atIndex(output, "parallel_matrix"))).toEqual({
+      include: [],
+    })
+    expect(JSON.parse(atIndex(output, "new_api_matrix"))).toEqual({
+      include: [],
+    })
+    expect(selectedIds(JSON.parse(atIndex(output, "sub2api_matrix")))).toEqual([
       "sub2api-managed-site",
     ])
   })
@@ -219,10 +231,10 @@ describe("GitHub real-site E2E matrix selection", () => {
   it("serializes the Octopus import target with its New API source account", () => {
     const output = runMatrixWithOutput("managed-site", "octopus-managed-site")
 
-    expect(output.has_parallel).toBe("false")
-    expect(output.has_new_api).toBe("true")
+    expect(atIndex(output, "has_parallel")).toBe("false")
+    expect(atIndex(output, "has_new_api")).toBe("true")
     expect(output.has_sub2api).toBe("false")
-    expect(selectedIds(JSON.parse(output.new_api_matrix))).toEqual([
+    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
       "octopus-managed-site",
     ])
   })
@@ -230,14 +242,18 @@ describe("GitHub real-site E2E matrix selection", () => {
   it("keeps a narrow independent target in the parallel matrix only", () => {
     const output = runMatrixWithOutput("all", "veloera-account")
 
-    expect(output.has_parallel).toBe("true")
-    expect(output.has_new_api).toBe("false")
+    expect(atIndex(output, "has_parallel")).toBe("true")
+    expect(atIndex(output, "has_new_api")).toBe("false")
     expect(output.has_sub2api).toBe("false")
-    expect(selectedIds(JSON.parse(output.parallel_matrix))).toEqual([
-      "veloera-account",
-    ])
-    expect(JSON.parse(output.new_api_matrix)).toEqual({ include: [] })
-    expect(JSON.parse(output.sub2api_matrix)).toEqual({ include: [] })
+    expect(selectedIds(JSON.parse(atIndex(output, "parallel_matrix")))).toEqual(
+      ["veloera-account"],
+    )
+    expect(JSON.parse(atIndex(output, "new_api_matrix"))).toEqual({
+      include: [],
+    })
+    expect(JSON.parse(atIndex(output, "sub2api_matrix"))).toEqual({
+      include: [],
+    })
   })
 
   it("keeps the default all-category matrix unchanged", () => {

@@ -21,6 +21,7 @@ import {
   OctopusOutboundType,
   type OctopusChannel,
 } from "~/types/octopus"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -110,7 +111,7 @@ describe("Octopus native migration", () => {
         ],
       }),
     ).toEqual({ status: "created" })
-    expect(mocks.create.mock.calls[0][0].keys).toEqual([
+    expect(atIndex(mocks.create.mock.calls, 0)[0].keys).toEqual([
       { name: "key-1", channel_key: "first-placeholder", enabled: true },
       { name: "key-2", channel_key: "second-placeholder", enabled: false },
     ])

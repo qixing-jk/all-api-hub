@@ -32,6 +32,7 @@ import {
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildNewApiToken } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   id,
@@ -335,7 +336,7 @@ describe("model list batch verification helpers", () => {
   })
 
   it("uses the row's usable action groups instead of raw supported groups", () => {
-    const [item] = createBatchVerifyModelItems([
+    const destructuredSource0 = createBatchVerifyModelItems([
       createCalculatedModelItem({
         model: {
           enable_groups: [DEFAULT_MODEL_GROUP, "vip"],
@@ -352,12 +353,13 @@ describe("model list batch verification helpers", () => {
         },
       }),
     ])
+    const [item] = [atIndex(destructuredSource0, 0)]
 
     expect(item.enableGroups).toEqual([DEFAULT_MODEL_GROUP])
   })
 
   it("preserves an empty action scope when group access is unknown", () => {
-    const [item] = createBatchVerifyModelItems([
+    const destructuredSource1 = createBatchVerifyModelItems([
       createCalculatedModelItem({
         groupContext: {
           accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
@@ -371,12 +373,13 @@ describe("model list batch verification helpers", () => {
         },
       }),
     ])
+    const [item] = [atIndex(destructuredSource1, 0)]
 
     expect(item.enableGroups).toEqual([])
   })
 
   it("keeps verification unrestricted when groups are not applicable", () => {
-    const [item] = createBatchVerifyModelItems([
+    const destructuredSource2 = createBatchVerifyModelItems([
       createCalculatedModelItem({
         groupContext: {
           accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
@@ -391,12 +394,13 @@ describe("model list batch verification helpers", () => {
         },
       }),
     ])
+    const [item] = [atIndex(destructuredSource2, 0)]
 
     expect(item.enableGroups).toBeNull()
   })
 
   it("narrows verification group metadata and token selection to the row's effective group", () => {
-    const [item] = createBatchVerifyModelItems([
+    const destructuredSource3 = createBatchVerifyModelItems([
       createCalculatedModelItem({
         model: {
           enable_groups: [DEFAULT_MODEL_GROUP, "vip"],
@@ -414,6 +418,7 @@ describe("model list batch verification helpers", () => {
         effectiveGroup: "vip",
       }),
     ])
+    const [item] = [atIndex(destructuredSource3, 0)]
 
     expect(item.enableGroups).toEqual(["vip"])
     expect(
@@ -676,8 +681,8 @@ describe("model list batch verification helpers", () => {
         enableGroups: [DEFAULT_MODEL_GROUP],
         sourceIdentity: {
           kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
-          id: `acc-1:runtime-key:${runtimeKeys[1].id}`,
-          runtimeKeyId: runtimeKeys[1].id,
+          id: `acc-1:runtime-key:${atIndex(runtimeKeys, 1).id}`,
+          runtimeKeyId: atIndex(runtimeKeys, 1).id,
           runtimeKeyName: "VIP key",
         },
       }),
@@ -689,8 +694,8 @@ describe("model list batch verification helpers", () => {
         enableGroups: ["vip"],
         sourceIdentity: {
           kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
-          id: `acc-1:runtime-key:${runtimeKeys[1].id}`,
-          runtimeKeyId: runtimeKeys[1].id,
+          id: `acc-1:runtime-key:${atIndex(runtimeKeys, 1).id}`,
+          runtimeKeyId: atIndex(runtimeKeys, 1).id,
           runtimeKeyName: "VIP key",
         },
       }),

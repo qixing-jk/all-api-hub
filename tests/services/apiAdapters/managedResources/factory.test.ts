@@ -26,6 +26,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type TestConfig = { scope: string }
 type TestLocator = { tenant: string; route: string }
@@ -852,7 +853,9 @@ describe("defineNativeResourceKind", () => {
       nextCursor,
     })
     expect(page).not.toHaveProperty("total")
-    expect(page.items[0].ref.resourceId).toContain("opaque%3Aid%2Falpha")
+    expect(atIndex(page.items, 0).ref.resourceId).toContain(
+      "opaque%3Aid%2Falpha",
+    )
   })
 
   it.each(["", "s".repeat(2049), 42])(
@@ -1091,7 +1094,7 @@ describe("defineNativeResourceKind", () => {
 
     const facts = await editor.submit({ name: "Renamed", visible: "updated" })
 
-    const sourceDetail = vi.mocked(definition.update).mock.calls[0][1]
+    const sourceDetail = atIndex(vi.mocked(definition.update).mock.calls, 0)[1]
     expect(sourceDetail.settings.hidden).toBe("preserve-me")
     expect(facts).toMatchObject({
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,

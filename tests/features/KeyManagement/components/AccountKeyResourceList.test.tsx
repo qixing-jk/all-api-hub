@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountKeyResourceList as NativeAccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
@@ -90,8 +91,8 @@ describe("AccountKeyResourceList", () => {
     act(() => staleCollapseA(false))
     expect(screen.getByTestId("row-b")).toHaveTextContent("expanded")
     expect(closeDetail).not.toHaveBeenCalled()
-    expect(openDetail).toHaveBeenNthCalledWith(1, rows[0].facts.ref)
-    expect(openDetail).toHaveBeenNthCalledWith(2, rows[1].facts.ref)
+    expect(openDetail).toHaveBeenNthCalledWith(1, atIndex(rows, 0).facts.ref)
+    expect(openDetail).toHaveBeenNthCalledWith(2, atIndex(rows, 1).facts.ref)
   })
 
   it("binds detail loading and failure state only to the active row", () => {
@@ -115,7 +116,7 @@ describe("AccountKeyResourceList", () => {
         onOpenDetail={vi.fn()}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
-        detail={{ ...rows[1].facts, displayName: "Loaded B" }}
+        detail={{ ...atIndex(rows, 1).facts, displayName: "Loaded B" }}
         isDetailLoading
         detailFailure={{ code: "unavailable" }}
       />,
@@ -141,7 +142,10 @@ describe("AccountKeyResourceList", () => {
         onOpenDetail={vi.fn()}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
-        detail={{ ...rows[0].facts, displayName: "Wrong account detail" }}
+        detail={{
+          ...atIndex(rows, 0).facts,
+          displayName: "Wrong account detail",
+        }}
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )

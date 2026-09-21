@@ -43,6 +43,7 @@ import {
 import type { ApiCheckRunProbeResponse } from "~/services/verification/webAiApiCheck/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   completeProductAnalyticsActionMock,
@@ -186,7 +187,7 @@ describe("ApiCheckModalHost", () => {
           runId: expect.any(String),
         }),
       ])
-      return runProbeMessages[0].runId as string
+      return atIndex(runProbeMessages, 0).runId as string
     })
 
     await user.click(
@@ -1493,7 +1494,11 @@ describe("ApiCheckModalHost", () => {
     await waitFor(() => {
       expect(upsertVerificationHistorySummaryMock).toHaveBeenCalled()
     })
-    const [[summary]] = upsertVerificationHistorySummaryMock.mock.calls
+    const indexedItem = atIndex(
+      upsertVerificationHistorySummaryMock.mock.calls,
+      0,
+    )
+    const summary = atIndex(indexedItem, 0)
     expect(summary.probes).toEqual([
       expect.objectContaining({
         id: "text-generation",

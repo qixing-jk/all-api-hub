@@ -61,6 +61,7 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
 
@@ -1037,7 +1038,7 @@ test("repairs missing account keys, deletes invalid resources, and records manag
     deleteRejected: 0,
     deleteUncertain: 0,
   })
-  expect(progressAfterDelete?.results[0].invalidResources).toEqual([])
+  expect(atIndex(progressAfterDelete?.results, 0).invalidResources).toEqual([])
 
   await page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton)
@@ -1578,8 +1579,10 @@ test("cleans linked channels and retries persisted multi-key cleanup after reloa
   await expect(
     page.getByRole("button", { name: "Retry cleanup", exact: true }),
   ).toHaveCount(0)
-  await expect.poll(() => providers[0]["api-key-entries"]).toEqual([retained])
-  expect(providers[0].models).toEqual([{ name: "model-a" }])
+  await expect
+    .poll(() => atIndex(providers, 0)["api-key-entries"])
+    .toEqual([retained])
+  expect(atIndex(providers, 0).models).toEqual([{ name: "model-a" }])
 })
 
 for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {

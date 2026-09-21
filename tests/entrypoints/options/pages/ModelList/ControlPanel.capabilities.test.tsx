@@ -25,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   fireEvent,
   render,
@@ -324,7 +325,7 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
-    const [sortSelect] = await screen.findAllByRole("combobox")
+    const sortSelect = atIndex(await screen.findAllByRole("combobox"), 0)
     fireEvent.click(sortSelect)
     expect(
       await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
@@ -381,7 +382,7 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
-    const [sortSelect] = await screen.findAllByRole("combobox")
+    const sortSelect = atIndex(await screen.findAllByRole("combobox"), 0)
     fireEvent.click(sortSelect)
     expect(
       await screen.findByText("modelList:sortOptions.verificationLatencyAsc"),
@@ -479,7 +480,9 @@ describe("ControlPanel profile capabilities", () => {
     expect(setSearchTerm).toHaveBeenCalledWith("claude")
 
     const comboboxes = await screen.findAllByRole("combobox")
-    const [sortSelect, billingModeSelect, groupSelect] = comboboxes
+    const sortSelect = atIndex(comboboxes, 0)
+    const billingModeSelect = atIndex(comboboxes, 1)
+    const groupSelect = atIndex(comboboxes, 2)
     expect(sortSelect).toHaveTextContent("modelList:sortOptions.default")
     fireEvent.click(sortSelect)
     fireEvent.click(await screen.findByText("modelList:sortOptions.priceAsc"))
@@ -712,7 +715,7 @@ describe("ControlPanel profile capabilities", () => {
       />,
     )
 
-    const [sortSelect] = await screen.findAllByRole("combobox")
+    const sortSelect = atIndex(await screen.findAllByRole("combobox"), 0)
     fireEvent.click(sortSelect)
     fireEvent.click(
       await screen.findByText("modelList:sortOptions.modelCheapestFirst"),
@@ -764,7 +767,8 @@ describe("ControlPanel profile capabilities", () => {
     )
 
     const comboboxes = await screen.findAllByRole("combobox")
-    const [, billingModeSelect, groupSelect] = comboboxes
+    const billingModeSelect = atIndex(comboboxes, 1)
+    const groupSelect = atIndex(comboboxes, 2)
 
     expect(billingModeSelect).toHaveTextContent("modelList:allBillingModes")
 
@@ -827,8 +831,9 @@ describe("ControlPanel profile capabilities", () => {
       />,
     )
 
-    const [, billingModeSelect, groupSelect] =
-      await screen.findAllByRole("combobox")
+    const indexedItems = await screen.findAllByRole("combobox")
+    const billingModeSelect = atIndex(indexedItems, 1)
+    const groupSelect = atIndex(indexedItems, 2)
     fireEvent.click(billingModeSelect)
     fireEvent.click(await screen.findByText("ui:billing.tokenBased"))
     fireEvent.click(groupSelect)
@@ -899,7 +904,7 @@ describe("ControlPanel profile capabilities", () => {
       />,
     )
 
-    const [, billingModeSelect] = await screen.findAllByRole("combobox")
+    const billingModeSelect = atIndex(await screen.findAllByRole("combobox"), 1)
     fireEvent.click(billingModeSelect)
     fireEvent.click(await screen.findByText("ui:billing.tokenBased"))
 

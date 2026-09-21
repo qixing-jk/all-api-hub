@@ -8,6 +8,7 @@ import {
   CHECKIN_RESULT_STATUS,
   type AutoCheckinAccountSnapshot,
 } from "~/types/autoCheckin"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/AccountLinkButton", () => ({
@@ -230,30 +231,40 @@ describe("AutoCheckin AccountSnapshotTable", () => {
 
     const rows = screen.getAllByRole("row")
 
-    expect(within(rows[1]).getByText("Alpha Snapshot")).toBeInTheDocument()
     expect(
-      within(rows[1]).getByText("autoCheckin:snapshot.badges.methodSelected"),
-    ).toBeVisible()
-    expect(
-      within(rows[1]).getByText("autoCheckin:snapshot.badges.disabled"),
+      within(atIndex(rows, 1)).getByText("Alpha Snapshot"),
     ).toBeInTheDocument()
     expect(
-      within(rows[1]).getByText(
+      within(atIndex(rows, 1)).getByText(
+        "autoCheckin:snapshot.badges.methodSelected",
+      ),
+    ).toBeVisible()
+    expect(
+      within(atIndex(rows, 1)).getByText(
+        "autoCheckin:snapshot.badges.disabled",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(atIndex(rows, 1)).getByText(
         "autoCheckin:skipReasons.auto_checkin_disabled",
       ),
     ).toBeInTheDocument()
-    expect(within(rows[2]).getByText("Beta Snapshot")).toBeInTheDocument()
     expect(
-      within(rows[2]).getByText(
+      within(atIndex(rows, 2)).getByText("Beta Snapshot"),
+    ).toBeInTheDocument()
+    expect(
+      within(atIndex(rows, 2)).getByText(
         "autoCheckin:snapshot.badges.methodNotSelected",
       ),
     ).toBeVisible()
     expect(
-      within(rows[2]).getByText("autoCheckin:execution.status.success"),
+      within(atIndex(rows, 2)).getByText(
+        "autoCheckin:execution.status.success",
+      ),
     ).toBeInTheDocument()
-    expect(within(rows[2]).getAllByRole("cell").at(-1)).not.toHaveTextContent(
-      "-",
-    )
+    expect(
+      within(atIndex(rows, 2)).getAllByRole("cell").at(-1),
+    ).not.toHaveTextContent("-")
   })
 
   it("filters snapshots by execution readiness", async () => {

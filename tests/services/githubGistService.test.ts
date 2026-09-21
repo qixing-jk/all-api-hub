@@ -12,6 +12,7 @@ import {
 } from "~/services/webdav/githubGistService"
 import { CLOUD_SYNC_ERROR_CODES } from "~/types/cloudSync"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockDecryptWebdavBackupEnvelope,
@@ -105,7 +106,7 @@ describe("githubGistService", () => {
       revision: "rev-1",
       rawContent: '{"version":4}',
     })
-    const [, init] = fetchMock.mock.calls[0]
+    const init = atIndex(atIndex(fetchMock.mock.calls, 0), 1)
     expect((init as RequestInit).headers).toEqual(
       expect.objectContaining({
         Authorization: "Bearer ghp-test-token",
@@ -417,7 +418,7 @@ describe("githubGistService", () => {
       content: '{"version":4}',
       password: "password",
     })
-    const [, init] = fetchMock.mock.calls[0]
+    const init = atIndex(atIndex(fetchMock.mock.calls, 0), 1)
     const body = JSON.parse(String((init as RequestInit).body))
     expect(body.public).toBe(false)
     expect(body.files[GITHUB_GIST_BACKUP_FILE_NAME].content).toBe(
@@ -490,7 +491,7 @@ describe("githubGistService", () => {
     })
 
     expect(remote.revision).toBe("rev-2")
-    const [, init] = fetchMock.mock.calls[1]
+    const init = atIndex(atIndex(fetchMock.mock.calls, 1), 1)
     expect((init as RequestInit).method).toBe("PATCH")
 
     const conflictFetch = vi
@@ -526,7 +527,7 @@ describe("githubGistService", () => {
     ).resolves.toMatchObject({ revision: "rev-2" })
 
     expect(fetchMock).toHaveBeenCalledTimes(3)
-    const [, init] = fetchMock.mock.calls[1]
+    const init = atIndex(atIndex(fetchMock.mock.calls, 1), 1)
     expect((init as RequestInit).method).toBe("PATCH")
   })
 

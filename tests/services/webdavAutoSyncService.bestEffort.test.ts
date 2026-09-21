@@ -5,6 +5,7 @@ import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {
   mockAccountStorageExportData,
@@ -375,7 +376,9 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     await service.uploadLocalSnapshotToWebdav()
 
     expect(mockUploadBackup).toHaveBeenCalledTimes(1)
-    expect(JSON.parse(mockUploadBackup.mock.calls[0][0])).toMatchObject({
+    expect(
+      JSON.parse(atIndex(mockUploadBackup.mock.calls, 0)[0]),
+    ).toMatchObject({
       version: BACKUP_VERSION,
       preferences: { themeMode: "light", lastUpdated: 50 },
       accounts: {

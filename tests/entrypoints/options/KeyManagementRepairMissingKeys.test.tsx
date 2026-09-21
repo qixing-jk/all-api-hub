@@ -20,6 +20,7 @@ import {
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
   fireEvent,
@@ -511,7 +512,7 @@ const multiInvalidKeysProgress: AccountKeyRepairProgress = {
   },
   results: [
     {
-      ...coverageProgress.results[0],
+      ...atIndex(coverageProgress.results, 0),
       invalidResources: Array.from({ length: 6 }, (_, index) => ({
         accountId: "account-enabled",
         accountName: "Enabled Site",
@@ -527,7 +528,7 @@ const multiInvalidKeysProgress: AccountKeyRepairProgress = {
         reason: "orphaned-placement",
       })),
       requirementResults: [
-        ...coverageProgress.results[0].requirementResults,
+        ...atIndex(coverageProgress.results, 0).requirementResults,
         buildRequirement(
           "group:legacy",
           "legacy",
@@ -971,7 +972,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       ...startProgress,
       results: [
         {
-          ...startProgress.results[0],
+          ...atIndex(startProgress.results, 0),
           accountId: "account-enabled",
           accountName: "Enabled Site",
         },

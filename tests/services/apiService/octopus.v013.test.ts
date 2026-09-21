@@ -6,6 +6,7 @@ import {
   OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
   OctopusOutboundType,
 } from "~/types/octopus"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const detailResponse = (overrides: Record<string, unknown> = {}) => ({
   id: 7,
@@ -363,7 +364,7 @@ describe("Octopus v0.13 contract", () => {
       expect(body.grants).toContainEqual(
         expect.objectContaining({ future_grant_policy: "keep" }),
       )
-      expect(original.keys[0].key).toBe("credential-placeholder")
+      expect(atIndex(original.keys, 0).key).toBe("credential-placeholder")
     },
   )
 
@@ -412,7 +413,10 @@ describe("Octopus v0.13 contract", () => {
     },
   )
   it("marks stats inventories as summaries so missing protocol data is not treated as a native type", () => {
-    const stats = octopusV013Contract.parseStatsList([statsResponse()])[0]
+    const stats = atIndex(
+      octopusV013Contract.parseStatsList([statsResponse()]),
+      0,
+    )
     expect(
       octopusV013Contract.normalizeStatsChannel(stats).detailAvailability,
     ).toBe(OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary)
@@ -447,7 +451,10 @@ describe("Octopus v0.13 contract", () => {
   })
 
   it("attaches matching stats and rejects mismatched channel identities", () => {
-    const stats = octopusV013Contract.parseStatsList([statsResponse()])[0]
+    const stats = atIndex(
+      octopusV013Contract.parseStatsList([statsResponse()]),
+      0,
+    )
 
     expect(
       octopusV013Contract.normalizeChannel(detailResponse(), stats).stats,

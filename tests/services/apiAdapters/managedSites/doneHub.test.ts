@@ -9,6 +9,7 @@ import {
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 import {
   buildManagedResourceMatchCandidate,
@@ -530,7 +531,7 @@ describe("DoneHub managed-site channel capability", () => {
         mode === "fetch"
           ? doneHubManagedSiteCapabilities.matching.fetchSecretKey!(
               config,
-              candidates[0].ref,
+              atIndex(candidates, 0).ref,
               options,
             )
           : doneHubManagedSiteCapabilities.matching.hydrateComparableKeys!(
@@ -591,7 +592,7 @@ describe("DoneHub managed-site channel capability", () => {
       },
       7,
     )
-    expect(candidates[1].key).toBe("sk-***")
+    expect(atIndex(candidates, 1).key).toBe("sk-***")
   })
 
   it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {

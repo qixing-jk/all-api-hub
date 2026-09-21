@@ -20,6 +20,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   fireEvent,
   render,
@@ -239,7 +240,7 @@ describe("ProviderTabs scroll arrows", () => {
     ]
     const longCatalog: CountedVendor[] = [
       {
-        ...shortCatalog[0],
+        ...atIndex(shortCatalog, 0),
         label: "Example Vendor With A Much Longer Dynamic Label",
       },
     ]

@@ -28,6 +28,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
   class LegacyChannelConfigMigrationDeferredError extends Error {
@@ -436,7 +437,7 @@ describe("importFromBackupObject", () => {
         },
       })
 
-      const imported = mockAccountStorageImportData.mock.calls[0][0]
+      const imported = atIndex(mockAccountStorageImportData.mock.calls, 0)[0]
         .accounts[0] as any
       expect(imported).toMatchObject({
         id: `legacy-${version}`,

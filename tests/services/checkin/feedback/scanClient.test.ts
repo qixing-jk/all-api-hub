@@ -8,6 +8,7 @@ import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
   executeProtectionBypassTask: vi.fn(),
@@ -61,7 +62,10 @@ describe("feedback browser scan", () => {
       },
       new AbortController().signal,
     )
-    const auth = vi.mocked(executeProtectionBypassTask).mock.calls[0][0].task
+    const auth = atIndex(
+      vi.mocked(executeProtectionBypassTask).mock.calls,
+      0,
+    )[0].task
     expect(auth).toMatchObject({
       params: { input: { auth: { accessToken: "selected" } } },
     })

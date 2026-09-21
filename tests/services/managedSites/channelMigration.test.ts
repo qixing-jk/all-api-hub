@@ -26,6 +26,7 @@ import {
   type ManagedSiteMigrationSource,
   type ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mockGetManagedSiteCapabilitiesForType = vi.fn()
 const mockDoneHubBuildChannelPayload = vi.fn()
@@ -1217,11 +1218,13 @@ describe("channelMigration", () => {
     expect(create).toHaveBeenCalledOnce()
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        source: preview.items[1].source,
-        projection:
-          preview.items[1].status === "ready"
-            ? preview.items[1].target.projection
-            : undefined,
+        source: atIndex(preview.items, 1).source,
+        projection: (() => {
+          const migrated = atIndex(preview.items, 1)
+          return migrated.status === "ready"
+            ? migrated.target.projection
+            : undefined
+        })(),
         credential: "execution-key",
       }),
     )

@@ -9,6 +9,7 @@ import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function config(
   criteria: SortingPriorityConfig["criteria"],
@@ -100,7 +101,7 @@ describe("sortingConfigMigration", () => {
       SortingCriteriaType.MATCHED_OPEN_TABS,
       SortingCriteriaType.CURRENT_SITE,
     ])
-    expect(migrated.criteria[0].enabled).toBe(false)
+    expect(atIndex(migrated.criteria, 0).enabled).toBe(false)
     expect(migrateSortingConfig(migrated)).toBe(migrated)
     expect(needsSortingConfigMigration(migrated)).toBe(false)
     expect(migrated.criteria.map(({ priority }) => priority)).toEqual([0, 1])
@@ -126,7 +127,7 @@ describe("sortingConfigMigration", () => {
       SortingCriteriaType.CURRENT_SITE,
       SortingCriteriaType.MATCHED_OPEN_TABS,
     ])
-    expect(migrated.criteria[0].enabled).toBe(true)
+    expect(atIndex(migrated.criteria, 0).enabled).toBe(true)
   })
 
   it("removes a duplicate even when every current criterion is present", () => {
@@ -134,7 +135,7 @@ describe("sortingConfigMigration", () => {
       config([
         ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria,
         {
-          ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria[0],
+          ...atIndex(DEFAULT_SORTING_PRIORITY_CONFIG.criteria, 0),
           priority: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length,
         },
       ]),

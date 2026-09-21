@@ -13,6 +13,7 @@ import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("protection bypass execution constructors", () => {
   it("builds a versioned automatic execution without inferring its intent", () => {
@@ -92,7 +93,7 @@ describe("withProtectionBypassUserCommand", () => {
       },
     )
 
-    const executions = workers.map((worker) => worker.mock.calls[0][0])
+    const executions = workers.map((worker) => atIndex(worker.mock.calls, 0)[0])
     expect(executions).toEqual([
       {
         version: PROTECTION_BYPASS_EXECUTION_VERSION,

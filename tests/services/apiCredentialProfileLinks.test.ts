@@ -14,6 +14,7 @@ import {
   type ApiCredentialProfile,
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const storageData = new Map<string, unknown>()
 
@@ -420,7 +421,8 @@ describe("apiCredentialProfileLinks", () => {
       linkedBy: "creation-response",
     })
 
-    const [listed] = await apiCredentialProfileLinks.list()
+    const destructuredSource0 = await apiCredentialProfileLinks.list()
+    const [listed] = [atIndex(destructuredSource0, 0)]
     expect(JSON.stringify(listed)).not.toContain("sk-private-secret")
     listed.profileId = "mutated-profile"
 

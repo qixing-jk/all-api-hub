@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function textResponse(text: string) {
   return {
@@ -26,7 +27,7 @@ function textResponse(text: string) {
 
 function textResponseEvents(text: string) {
   const response = textResponse(text)
-  const message = response.output[0]
+  const message = atIndex(response.output, 0)
   return [
     {
       type: "response.created",

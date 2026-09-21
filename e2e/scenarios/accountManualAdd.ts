@@ -18,6 +18,7 @@ import {
   expectAccountListItemVisible,
   openAccountManagementPage,
 } from "~~/e2e/utils/realSite/accountAdd"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type ManualAccountInput = {
   siteName: string
@@ -126,7 +127,7 @@ export async function refreshAccountRowsAndReadStorage(params: {
     await waitForStoredAccountQuota({
       serviceWorker: params.serviceWorker,
       accountId,
-      expectedQuota: params.expectedQuotas[index],
+      expectedQuota: atIndex(params.expectedQuotas, index),
     })
   }
 

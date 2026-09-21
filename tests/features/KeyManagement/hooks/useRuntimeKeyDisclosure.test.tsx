@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useRuntimeKeyDisclosure } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyDisclosure"
 import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 const { resolveSecret, writeText, success, error, complete } = vi.hoisted(
@@ -93,7 +94,8 @@ describe("native runtime key disclosure", () => {
       })
       await act(async () => view.result.current.copy())
       expect(resolveSecret).toHaveBeenCalledTimes(1)
-      const signal = resolveSecret.mock.calls[0][2].abortSignal as AbortSignal
+      const signal = atIndex(resolveSecret.mock.calls, 0)[2]
+        .abortSignal as AbortSignal
       if (event === "unmount") view.unmount()
       else
         view.rerender({

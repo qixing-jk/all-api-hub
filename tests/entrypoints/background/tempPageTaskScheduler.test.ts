@@ -6,6 +6,7 @@ import {
   type TempPageTaskScheduler,
 } from "~/entrypoints/background/tempPageTaskScheduler"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("createTempPageTaskScheduler", () => {
   it("limits global concurrency to three and refills a slot as soon as any task finishes", async () => {
@@ -32,16 +33,16 @@ describe("createTempPageTaskScheduler", () => {
     })
     expect(maxActive).toBe(3)
 
-    controls[1].resolve()
+    atIndex(controls, 1).resolve()
 
     await vi.waitFor(() => {
       expect(started).toEqual([1, 2, 3, 4])
     })
     expect(maxActive).toBe(3)
 
-    controls[0].resolve()
-    controls[2].resolve()
-    controls[3].resolve()
+    atIndex(controls, 0).resolve()
+    atIndex(controls, 2).resolve()
+    atIndex(controls, 3).resolve()
     await expect(Promise.all(tasks)).resolves.toEqual([
       undefined,
       undefined,

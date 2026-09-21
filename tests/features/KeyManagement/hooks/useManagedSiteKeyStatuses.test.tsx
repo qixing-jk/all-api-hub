@@ -9,6 +9,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
@@ -131,8 +132,8 @@ describe("managed-site status for runtime keys", () => {
       service,
     ])
     // Both keys belong to one scan, so they share its channel search cache.
-    expect(check.mock.calls[0][0].operationContext).toBe(
-      check.mock.calls[1][0].operationContext,
+    expect(atIndex(check.mock.calls, 0)[0].operationContext).toBe(
+      atIndex(check.mock.calls, 1)[0].operationContext,
     )
     expect(JSON.stringify(view.result.current.states)).not.toContain(
       "private-channel-secret",
@@ -149,30 +150,34 @@ describe("managed-site status for runtime keys", () => {
     const second = key("second")
     const view = renderStatuses([first])
     await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
-    const signal = check.mock.calls[0][0].signal as AbortSignal
+    const signal = atIndex(check.mock.calls, 0)[0].signal as AbortSignal
     view.rerender({ keys: [first, second] })
     await waitFor(() => expect(check).toHaveBeenCalledTimes(2))
     expect(signal.aborted).toBe(false)
     // A later scan must not reuse searches that could predate its own edits.
-    expect(check.mock.calls[1][0].operationContext).not.toBe(
-      check.mock.calls[0][0].operationContext,
+    expect(atIndex(check.mock.calls, 1)[0].operationContext).not.toBe(
+      atIndex(check.mock.calls, 0)[0].operationContext,
     )
     await act(async () => pending.resolve({ status: "added" }))
-    expect(view.result.current.states[first.id].result?.status).toBe("added")
+    expect(atIndex(view.result.current.states, first.id).result?.status).toBe(
+      "added",
+    )
   })
 
   it("gives a manual refresh its own channel search cache", async () => {
     const first = key("first")
     const view = renderStatuses([first])
     await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
-    const scanContext = check.mock.calls[0][0].operationContext
+    const scanContext = atIndex(check.mock.calls, 0)[0].operationContext
 
     await act(async () => {
       await view.result.current.refresh()
     })
 
     expect(check).toHaveBeenCalledTimes(2)
-    expect(check.mock.calls[1][0].operationContext).not.toBe(scanContext)
+    expect(atIndex(check.mock.calls, 1)[0].operationContext).not.toBe(
+      scanContext,
+    )
   })
 
   it.each(["credentials", "endpoint", "models"])(
@@ -183,7 +188,7 @@ describe("managed-site status for runtime keys", () => {
       const before = key()
       const view = renderStatuses([before])
       await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
-      const signal = check.mock.calls[0][0].signal as AbortSignal
+      const signal = atIndex(check.mock.calls, 0)[0].signal as AbortSignal
       const after = {
         ...before,
         ...(change === "models"
@@ -207,9 +212,9 @@ describe("managed-site status for runtime keys", () => {
       await waitFor(() => expect(check).toHaveBeenCalledTimes(2))
       expect(signal.aborted).toBe(true)
       await act(async () => pending.resolve({ status: "added" }))
-      expect(view.result.current.states[before.id].result?.status).toBe(
-        "not-added",
-      )
+      expect(
+        atIndex(view.result.current.states, before.id).result?.status,
+      ).toBe("not-added")
     },
   )
 
@@ -219,7 +224,7 @@ describe("managed-site status for runtime keys", () => {
     const source = key()
     const view = renderStatuses([source])
     await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
-    const signal = check.mock.calls[0][0].signal as AbortSignal
+    const signal = atIndex(check.mock.calls, 0)[0].signal as AbortSignal
     preferences = {
       ...preferences,
       newApi: { ...preferences.newApi, adminToken: "rotated-admin" },
@@ -233,7 +238,7 @@ describe("managed-site status for runtime keys", () => {
         resolvedChannelKeysByResourceKey: { channel: "stale-secret" },
       }),
     )
-    expect(view.result.current.states[source.id].result?.status).toBe(
+    expect(atIndex(view.result.current.states, source.id).result?.status).toBe(
       "not-added",
     )
     await act(async () => view.result.current.refreshKey(source))
@@ -252,8 +257,8 @@ describe("managed-site status for runtime keys", () => {
     const other = key("other")
     const view = renderStatuses([first, other])
     await waitFor(() => expect(check).toHaveBeenCalledTimes(2))
-    const firstSignal = check.mock.calls[0][0].signal as AbortSignal
-    const otherSignal = check.mock.calls[1][0].signal as AbortSignal
+    const firstSignal = atIndex(check.mock.calls, 0)[0].signal as AbortSignal
+    const otherSignal = atIndex(check.mock.calls, 1)[0].signal as AbortSignal
     await act(async () =>
       view.result.current.refreshKey(first, {
         resolvedChannelKeysByResourceKey: { channel: "verified-key" },
@@ -268,10 +273,12 @@ describe("managed-site status for runtime keys", () => {
       firstResponse.resolve({ status: "added" })
       otherResponse.resolve({ status: "added" })
     })
-    expect(view.result.current.states[first.id].result?.status).toBe(
+    expect(atIndex(view.result.current.states, first.id).result?.status).toBe(
       "not-added",
     )
-    expect(view.result.current.states[other.id].result?.status).toBe("added")
+    expect(atIndex(view.result.current.states, other.id).result?.status).toBe(
+      "added",
+    )
   })
 
   it("removes disappeared keys and does not reuse their evidence on return", async () => {
@@ -302,9 +309,11 @@ describe("managed-site status for runtime keys", () => {
     await waitFor(() =>
       expect(view.result.current.states[source.id]?.isChecking).toBe(false),
     )
-    expect(view.result.current.states[source.id].result?.status).toBe("unknown")
+    expect(atIndex(view.result.current.states, source.id).result?.status).toBe(
+      "unknown",
+    )
     await act(async () => view.result.current.refresh())
-    expect(view.result.current.states[source.id].result?.status).toBe(
+    expect(atIndex(view.result.current.states, source.id).result?.status).toBe(
       "not-added",
     )
     expect(analytics).toHaveBeenCalledTimes(1)
@@ -332,7 +341,9 @@ describe("managed-site status for runtime keys", () => {
       }),
     )
     expect(check).toHaveBeenCalledTimes(1)
-    expect(view.result.current.states[source.id].result?.status).toBe("added")
+    expect(atIndex(view.result.current.states, source.id).result?.status).toBe(
+      "added",
+    )
   })
 
   it("cannot overwrite a newer check after delayed secret confirmation", async () => {
@@ -360,7 +371,7 @@ describe("managed-site status for runtime keys", () => {
       await confirmation
     })
     expect(verifyKey).not.toHaveBeenCalled()
-    expect(view.result.current.states[source.id].result?.status).toBe(
+    expect(atIndex(view.result.current.states, source.id).result?.status).toBe(
       "not-added",
     )
   })
@@ -377,7 +388,9 @@ describe("managed-site status for runtime keys", () => {
         "not-added",
       ),
     )
-    expect((check.mock.calls[0][0].signal as AbortSignal).aborted).toBe(true)
+    expect(
+      (atIndex(check.mock.calls, 0)[0].signal as AbortSignal).aborted,
+    ).toBe(true)
     view.unmount()
     await act(async () => pending.resolve({ status: "added" }))
   })
@@ -398,10 +411,10 @@ describe("managed-site status for runtime keys", () => {
     const view = renderStatuses(keys)
     await waitFor(() => expect(check).toHaveBeenCalledTimes(4))
     view.rerender({ keys: keys.filter((_, index) => index !== 4) })
-    await act(async () => pending[0].resolve({ status: "added" }))
+    await act(async () => atIndex(pending, 0).resolve({ status: "added" }))
     await waitFor(() => expect(check).toHaveBeenCalledTimes(5))
-    expect(check.mock.lastCall?.[0].runtimeKey.id).toBe(keys[5].id)
-    expect(view.result.current.states[keys[4].id]).toBeUndefined()
+    expect(check.mock.lastCall?.[0].runtimeKey.id).toBe(atIndex(keys, 5).id)
+    expect(view.result.current.states[atIndex(keys, 4).id]).toBeUndefined()
     await act(async () => {
       for (const response of pending.slice(1))
         response.resolve({ status: "added" })

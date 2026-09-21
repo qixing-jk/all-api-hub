@@ -11,6 +11,7 @@ import {
 } from "~/types/accountAutoRefresh"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
@@ -216,7 +217,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    fireEvent.click(screen.getAllByRole("switch", { name: "Toggle" })[1])
+    fireEvent.click(
+      atIndex(screen.getAllByRole("switch", { name: "Toggle" }), 1),
+    )
 
     await waitFor(() => {
       expect(updateRefreshOnOpen).toHaveBeenCalledWith(true)

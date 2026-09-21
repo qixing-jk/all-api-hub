@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import type { Tag } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
@@ -476,7 +477,7 @@ describe("TagPicker", () => {
       }),
     )
     await user.click(
-      screen.getAllByLabelText("accountDialog:form.tagsRename")[0],
+      atIndex(screen.getAllByLabelText("accountDialog:form.tagsRename"), 0),
     )
     const input = screen.getByDisplayValue("Work")
     await user.clear(input)

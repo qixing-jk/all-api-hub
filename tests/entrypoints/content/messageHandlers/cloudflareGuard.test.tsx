@@ -7,6 +7,7 @@ import {
   detectCloudflareChallengePage,
   logCloudflareGuard,
 } from "~/entrypoints/content/messageHandlers/utils/cloudflareGuard"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   oauthHandlers,
@@ -301,7 +302,7 @@ describe("cloudflare guard utilities and handlers", () => {
     setupContentMessageHandlers()
 
     expect(addListenerMock).toHaveBeenCalledTimes(1)
-    const listener = addListenerMock.mock.calls[0][0] as (
+    const listener = atIndex(addListenerMock.mock.calls, 0)[0] as (
       request: { action: string },
       sender: unknown,
       sendResponse: (value?: unknown) => void,

@@ -25,6 +25,7 @@ import {
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
 } from "~/services/managedSites/providers/sub2api"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -515,7 +516,8 @@ describe("Sub2API native managed resource", () => {
 
   it("keeps platform read-only while editing notes, key, and routing fields", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource0 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource0, 0)]
     const editor = await workspace.openEditEditor(facts.ref)
 
     expect(editor.fields).toEqual(
@@ -607,7 +609,8 @@ describe("Sub2API native managed resource", () => {
     mocks.listAccounts.mockResolvedValueOnce({ items: [edgeAccount], total: 1 })
     mocks.getAccount.mockResolvedValue(edgeAccount)
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource1 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource1, 0)]
 
     expect(facts).toMatchObject({
       displayName: "Sub2API account 18",
@@ -661,7 +664,8 @@ describe("Sub2API native managed resource", () => {
 
   it("skips the provider update when editable values are unchanged", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource2 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource2, 0)]
     const editor = await workspace.openEditEditor(facts.ref)
 
     const result = await editor.submit(editor.initialValues)
@@ -675,7 +679,8 @@ describe("Sub2API native managed resource", () => {
 
   it("rejects malformed resource references before provider dispatch", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource3 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource3, 0)]
 
     await expectFailureCode(
       workspace.openEditEditor({ ...facts.ref, resourceId: "not-a-number" }),
@@ -686,7 +691,8 @@ describe("Sub2API native managed resource", () => {
 
   it("accepts upstream-supported zero concurrency and priority values", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource4 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource4, 0)]
     const editor = await workspace.openEditEditor(facts.ref)
     const values = {
       ...editor.initialValues,
@@ -736,7 +742,7 @@ describe("Sub2API native managed resource", () => {
       ]),
     })
 
-    const editor = await workspace.openEditEditor(page.items[0].ref)
+    const editor = await workspace.openEditEditor(atIndex(page.items, 0).ref)
     const values = { ...editor.initialValues, name: "Renamed unknown status" }
     expect(editor.validate(values)).toEqual({ valid: true })
     mocks.updateAccount.mockImplementationOnce(
@@ -773,7 +779,8 @@ describe("Sub2API native managed resource", () => {
     })
 
     const updateWorkspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await updateWorkspace.list()).items
+    const destructuredSource5 = (await updateWorkspace.list()).items
+    const [facts] = [atIndex(destructuredSource5, 0)]
     const updateEditor = await updateWorkspace.openEditEditor(facts.ref)
     await updateEditor.submit(
       { ...updateEditor.initialValues, name: "Signal update" },
@@ -784,7 +791,8 @@ describe("Sub2API native managed resource", () => {
     })
 
     const deleteWorkspace = await sub2ApiManagedResourceRegistration.open()
-    const [deleteFacts] = (await deleteWorkspace.list()).items
+    const destructuredSource6 = (await deleteWorkspace.list()).items
+    const [deleteFacts] = [atIndex(destructuredSource6, 0)]
     await deleteWorkspace.delete(deleteFacts.ref, { signal: controller.signal })
     expect(mocks.deleteAccount.mock.calls.at(-1)?.[2]).toMatchObject({
       signal: controller.signal,
@@ -805,7 +813,8 @@ describe("Sub2API native managed resource", () => {
       ),
     )
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource7 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource7, 0)]
     const editor = await workspace.openEditEditor(facts.ref)
 
     await expect(editor.loadSecret?.("key")).rejects.toMatchObject({
@@ -820,7 +829,8 @@ describe("Sub2API native managed resource", () => {
 
   it("deletes through the native resource workspace", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const [facts] = (await workspace.list()).items
+    const destructuredSource8 = (await workspace.list()).items
+    const [facts] = [atIndex(destructuredSource8, 0)]
 
     const result = await workspace.delete(facts.ref)
 

@@ -48,6 +48,7 @@ import {
   replaceWithinOptionsPage,
 } from "~/utils/navigation"
 import { getSiteSupportRequestUrl } from "~/utils/navigation/feedbackLinks"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
@@ -185,7 +186,7 @@ describe("navigation utilities", () => {
     await openKeysPage()
 
     expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
-    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    const baseUrl = atIndex(mockedGetExtensionURL.mock.results, 0).value
     expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#keys`, true)
     expect(closeSpy).not.toHaveBeenCalled()
 
@@ -196,7 +197,7 @@ describe("navigation utilities", () => {
     await openKeysPage("123")
 
     expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
-    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    const baseUrl = atIndex(mockedGetExtensionURL.mock.results, 0).value
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${baseUrl}?accountId=123#keys`,
       true,
@@ -216,7 +217,7 @@ describe("navigation utilities", () => {
     await openKeysPage({ associationId: "association-123" })
 
     expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
-    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    const baseUrl = atIndex(mockedGetExtensionURL.mock.results, 0).value
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${baseUrl}?associationId=association-123#keys`,
       true,
@@ -281,10 +282,10 @@ describe("navigation utilities", () => {
 
     expect(mockedGetExtensionURL).toHaveBeenCalledTimes(4)
     expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
-    const baseUrl = mockedGetExtensionURL.mock.results[0].value
-    const baseUrl2 = mockedGetExtensionURL.mock.results[1].value
-    const baseUrl3 = mockedGetExtensionURL.mock.results[2].value
-    const baseUrl4 = mockedGetExtensionURL.mock.results[3].value
+    const baseUrl = atIndex(mockedGetExtensionURL.mock.results, 0).value
+    const baseUrl2 = atIndex(mockedGetExtensionURL.mock.results, 1).value
+    const baseUrl3 = atIndex(mockedGetExtensionURL.mock.results, 2).value
+    const baseUrl4 = atIndex(mockedGetExtensionURL.mock.results, 3).value
     expect(baseUrl2).toBe(baseUrl)
     expect(baseUrl3).toBe(baseUrl)
     expect(baseUrl4).toBe(baseUrl)

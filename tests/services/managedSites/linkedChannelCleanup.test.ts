@@ -15,6 +15,7 @@ import {
   prepareLinkedChannelCleanup,
   runLinkedChannelCleanup,
 } from "~/services/managedSites/linkedChannelCleanup"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   stored: new Map<string, unknown>(),
@@ -269,7 +270,7 @@ describe("linked channel cleanup", () => {
     const task = await prepare()
     expect(task?.targets.map(({ name }) => name)).toEqual(["single", "multi"])
     expect(mocks.list).toHaveBeenCalledTimes(2)
-    expect(mocks.list.mock.calls[1][0]).toEqual({ cursor: "next" })
+    expect(atIndex(mocks.list.mock.calls, 1)[0]).toEqual({ cursor: "next" })
   })
 
   it("rejects a repeated inventory cursor without saving incomplete work", async () => {
@@ -299,7 +300,7 @@ describe("linked channel cleanup", () => {
       await vi.advanceTimersByTimeAsync(30_000)
       await rejection
       expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
-      expect(mocks.open.mock.calls[1][0].signal.aborted).toBe(true)
+      expect(atIndex(mocks.open.mock.calls, 1)[0].signal.aborted).toBe(true)
       await runLinkedChannelCleanup(task!)
       expect(await getLinkedChannelCleanupTasks()).toEqual([])
     } finally {
@@ -419,11 +420,11 @@ describe("linked channel cleanup", () => {
     channels.get("multi")!.fail = true
     await finishLinkedChannelCleanup(task)
     const pending = await getLinkedChannelCleanupTasks()
-    expect(pending[0].targets.map((target) => target.ref.resourceId)).toEqual([
-      "multi",
-    ])
+    expect(
+      atIndex(pending, 0).targets.map((target) => target.ref.resourceId),
+    ).toEqual(["multi"])
     channels.get("multi")!.fail = false
-    await runLinkedChannelCleanup(pending[0])
+    await runLinkedChannelCleanup(atIndex(pending, 0))
     expect(await getLinkedChannelCleanupTasks()).toEqual([])
     expect(mocks.removeChannel).toHaveBeenCalledTimes(1)
   })
@@ -451,7 +452,9 @@ describe("linked channel cleanup", () => {
     await finishLinkedChannelCleanup(task)
     expect(mocks.removeChannel).not.toHaveBeenCalled()
     expect(channels.get("multi")?.keys).toEqual(["replacement"])
-    expect((await getLinkedChannelCleanupTasks())[0].targets).toHaveLength(1)
+    expect(
+      atIndex(await getLinkedChannelCleanupTasks(), 0).targets,
+    ).toHaveLength(1)
   })
   it("does not delete a channel when another credential was added after inspection", async () => {
     const task = await prepare()
@@ -494,9 +497,9 @@ describe("cleanup activity", () => {
     await operation
     const pending = await getPendingLinkedChannelCleanupTasks()
     expect(pending).toHaveLength(1)
-    expect(pending[0].targets.map((target) => target.ref.resourceId)).toEqual([
-      "multi",
-    ])
+    expect(
+      atIndex(pending, 0).targets.map((target) => target.ref.resourceId),
+    ).toEqual(["multi"])
   })
 
   it("releases activity when source deletion fails without touching target channels", async () => {

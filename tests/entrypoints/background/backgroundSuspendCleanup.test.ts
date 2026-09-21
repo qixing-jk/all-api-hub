@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
 const {
   applyActionClickBehaviorMock,
   getPreferencesMock,
@@ -259,9 +261,9 @@ describe("background onSuspend temp-context cleanup", () => {
     expect(setupActionClickBehaviorListenerMock).toHaveBeenCalledTimes(1)
     expect(
       setupActionClickBehaviorListenerMock.mock.invocationCallOrder[0],
-    ).toBeLessThan(initializeServicesMock.mock.invocationCallOrder[0])
+    ).toBeLessThan(atIndex(initializeServicesMock.mock.invocationCallOrder, 0))
     expect(initializeServicesMock.mock.invocationCallOrder[0]).toBeLessThan(
-      getPreferencesStrictMock.mock.invocationCallOrder[0],
+      atIndex(getPreferencesStrictMock.mock.invocationCallOrder, 0),
     )
     expect(applyActionClickBehaviorMock).toHaveBeenCalledWith("popup")
   })

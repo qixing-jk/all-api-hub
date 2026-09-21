@@ -7,6 +7,7 @@ import {
   LinkedChannelCleanupPending,
 } from "~/features/KeyManagement/components/LinkedChannelCleanup"
 import { LINKED_CHANNEL_CLEANUP_STORAGE_KEY } from "~/services/core/storageKeys"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({
@@ -103,7 +104,9 @@ describe("linked cleanup controls", () => {
       mocks.unwatch.mock.calls.filter(
         ([callbacks]) =>
           callbacks[LINKED_CHANNEL_CLEANUP_STORAGE_KEY] ===
-          cleanupSubscriptions[0][0][LINKED_CHANNEL_CLEANUP_STORAGE_KEY],
+          atIndex(cleanupSubscriptions, 0)[0][
+            LINKED_CHANNEL_CLEANUP_STORAGE_KEY
+          ],
       ),
     ).toHaveLength(1)
   })

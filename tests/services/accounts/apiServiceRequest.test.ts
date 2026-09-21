@@ -21,6 +21,7 @@ import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
@@ -688,8 +689,9 @@ describe("display account API context and native runtime keys", () => {
       key: "service-credential-secret",
       isAuthenticated: true,
     })
-    const [runtimeKey] = await fetchDisplayAccountRuntimeKeys(
-      serviceCredentialAccount as any,
+    const runtimeKey = atIndex(
+      await fetchDisplayAccountRuntimeKeys(serviceCredentialAccount as any),
+      0,
     )
 
     fetchServiceCredential.mockResolvedValueOnce({
@@ -737,8 +739,9 @@ describe("display account API context and native runtime keys", () => {
       isAuthenticated: true,
       baseUrl: "https://initial-runtime.example.invalid",
     })
-    const [runtimeKey] = await fetchDisplayAccountRuntimeKeys(
-      serviceCredentialAccount as any,
+    const runtimeKey = atIndex(
+      await fetchDisplayAccountRuntimeKeys(serviceCredentialAccount as any),
+      0,
     )
 
     fetchServiceCredential.mockResolvedValueOnce({

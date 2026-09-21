@@ -5,6 +5,7 @@ import {
   useStarPromotionActive,
   useStarPromotionPromptImpression,
 } from "~/features/StarPromotion/useStarPromotionActive"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { getStateMock, trackPromptShownMock, unwatchMock, watchStateMock } =
   vi.hoisted(() => ({
@@ -73,7 +74,7 @@ describe("useStarPromotionActive", () => {
     await waitFor(() => expect(result.current).toBe(true))
 
     act(() => {
-      watchStateMock.mock.calls[0][0]({ status: "completed" })
+      atIndex(watchStateMock.mock.calls, 0)[0]({ status: "completed" })
     })
 
     expect(result.current).toBe(false)

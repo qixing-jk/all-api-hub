@@ -13,6 +13,7 @@ import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { MODEL_UNAVAILABLE_PRICE_REASONS } from "~/services/modelList/pricingModel"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { buildModelListItemFixture } from "~~/tests/test-utils/modelListSource"
 
 const options = {
@@ -49,8 +50,8 @@ describe("model list price evaluation", () => {
         compareAcrossSources: true,
       })
       expect(result.map((item) => item.source)).toEqual([
-        items[1].source,
-        items[0].source,
+        atIndex(items, 1).source,
+        atIndex(items, 0).source,
       ])
       expect(result.map((item) => item.isLowestPrice)).toEqual([true, false])
     },
@@ -85,8 +86,8 @@ describe("model list price evaluation", () => {
       compareAcrossSources: true,
     })
     expect(result.map((item) => item.source)).toEqual([
-      items[1].source,
-      items[0].source,
+      atIndex(items, 1).source,
+      atIndex(items, 0).source,
     ])
     expect(result.every((item) => item.isLowestPrice)).toBe(true)
   })
@@ -95,7 +96,7 @@ describe("model list price evaluation", () => {
       buildModelListItemFixture("cached", { a: 1 }),
       buildModelListItemFixture("uncached", { a: 1 }),
     ])
-    items[0].calculatedPrice = {
+    atIndex(items, 0).calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.TOKEN,
       usdPerMillionTokens: {
         input: 10,
@@ -104,7 +105,7 @@ describe("model list price evaluation", () => {
         cacheWrite: 1,
       },
     }
-    items[1].calculatedPrice = {
+    atIndex(items, 1).calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.TOKEN,
       usdPerMillionTokens: {
         input: 1,
@@ -138,15 +139,15 @@ describe("model list price evaluation", () => {
       buildModelListItemFixture("missing", { a: 1 }),
     ])
     for (const item of items) item.model = { ...item.model, quota_type: 1 }
-    items[0].calculatedPrice = {
+    atIndex(items, 0).calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.PER_CALL,
       usdPerCall: { input: 1, output: 3 },
     }
-    items[1].calculatedPrice = {
+    atIndex(items, 1).calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.PER_CALL,
       usdPerCall: { input: 1, output: 2 },
     }
-    items[2].calculatedPrice = {
+    atIndex(items, 2).calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.PER_CALL,
       usdPerCall: { input: Number.NaN, output: Number.NaN },
     }
@@ -158,9 +159,9 @@ describe("model list price evaluation", () => {
       compareAcrossSources: true,
     })
     expect(result.map((item) => item.source)).toEqual([
-      items[1].source,
-      items[0].source,
-      items[2].source,
+      atIndex(items, 1).source,
+      atIndex(items, 0).source,
+      atIndex(items, 2).source,
     ])
     expect(result.map((item) => item.isLowestPrice)).toEqual([
       true,
@@ -192,11 +193,17 @@ describe("model list price evaluation", () => {
       compareAcrossSources: true,
     })
     expect(result.map((item) => item.isPriceComparable)).toEqual([true, false])
-    expect(result[0].source).toEqual(items[1].source)
+    expect(atIndex(result, 0).source).toEqual(atIndex(items, 1).source)
   })
   it("breaks equal prices by source labels and preserves order for identical row keys", () => {
-    const first = calculate([buildModelListItemFixture("first", { a: 1 })])[0]
-    const second = calculate([buildModelListItemFixture("second", { a: 1 })])[0]
+    const first = atIndex(
+      calculate([buildModelListItemFixture("first", { a: 1 })]),
+      0,
+    )
+    const second = atIndex(
+      calculate([buildModelListItemFixture("second", { a: 1 })]),
+      0,
+    )
     if (first.source.kind === "account") first.source.account.name = "Zulu"
     if (second.source.kind === "account") second.source.account.name = "Alpha"
     const duplicate: CalculatedModelItem = {
@@ -222,28 +229,32 @@ describe("model list price evaluation", () => {
   })
   it("retains revealed unavailable rows without fabricating prices or actions", () => {
     const denied = buildModelListItemFixture("a", {}, [])
-    const [item] = calculate([denied], [])
+    const destructuredSource0 = calculate([denied], [])
+    const [item] = [atIndex(destructuredSource0, 0)]
     expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
     expect(item.activeGroupContext.actionGroups).toEqual([])
     expect(item.effectiveGroup).toBeUndefined()
   })
   it("selects a valid zero multiplier and limits action scope to the selected best group", () => {
-    const item = calculate([buildModelListItemFixture("a", { a: 1, b: 0 })])[0]
+    const item = atIndex(
+      calculate([buildModelListItemFixture("a", { a: 1, b: 0 })]),
+      0,
+    )
     expect(item.effectiveGroup).toBe("b")
     expect(item.activeGroupContext.actionGroups).toEqual(["b"])
     expect(item.hasUniquelyOptimalGroup).toBe(true)
   })
   it("breaks tied group prices deterministically without claiming a unique optimum", () => {
-    const item = calculate(
-      [buildModelListItemFixture("a", { a: 1, b: 1 })],
-      ["b", "a"],
-    )[0]
+    const item = atIndex(
+      calculate([buildModelListItemFixture("a", { a: 1, b: 1 })], ["b", "a"]),
+      0,
+    )
     expect(item.effectiveGroup).toBe("a")
     expect(item.hasUniquelyOptimalGroup).toBe(false)
   })
   it("returns unavailable when active groups have no ratios", () => {
     const item = buildModelListItemFixture("a", { a: 1, b: 2 })
-    const [result] = calculate([{ ...item, groupRatios: {} }])
+    const result = atIndex(calculate([{ ...item, groupRatios: {} }]), 0)
     expect(result.calculatedPrice).toMatchObject({
       kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
       reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
@@ -253,13 +264,16 @@ describe("model list price evaluation", () => {
 
   it("reports per-call billing when a per-call model has no usable group ratio", () => {
     const item = buildModelListItemFixture("a", { a: 1, b: 2 })
-    const [result] = calculate([
-      {
-        ...item,
-        model: { ...item.model, quota_type: 1 },
-        groupRatios: {},
-      },
-    ])
+    const result = atIndex(
+      calculate([
+        {
+          ...item,
+          model: { ...item.model, quota_type: 1 },
+          groupRatios: {},
+        },
+      ]),
+      0,
+    )
     expect(result.calculatedPrice).toMatchObject({
       kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
       billingMode: "per-call",
@@ -269,7 +283,10 @@ describe("model list price evaluation", () => {
   })
 
   it("keeps a usable unpriced group visible without inventing a multiplier", () => {
-    const item = calculate([buildModelListItemFixture("a", {})], ["b"])[0]
+    const item = atIndex(
+      calculate([buildModelListItemFixture("a", {})], ["b"]),
+      0,
+    )
     expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
     expect(item.activeGroupContext.actionGroups).toEqual(["b"])
   })

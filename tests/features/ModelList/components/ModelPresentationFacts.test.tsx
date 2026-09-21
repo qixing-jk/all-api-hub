@@ -13,6 +13,7 @@ import {
   type ModelPresentation,
 } from "~/services/models/modelDisplayFacts"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const firstProviderPresentation: ModelPresentation = {
@@ -121,9 +122,11 @@ describe("generic model presentation facts", () => {
     expect(
       facts.map((fact) => within(fact).getByRole("term").textContent),
     ).toEqual(["Context limit", "Output modalities"])
-    expect(within(facts[0]).getByText("128,000 tokens")).toBeInTheDocument()
     expect(
-      within(facts[1])
+      within(atIndex(facts, 0)).getByText("128,000 tokens"),
+    ).toBeInTheDocument()
+    expect(
+      within(atIndex(facts, 1))
         .getAllByRole("listitem")
         .map((item) => item.textContent),
     ).toEqual(["text", "image"])
@@ -132,8 +135,8 @@ describe("generic model presentation facts", () => {
       <ModelPresentationSummary
         presentation={{
           summaryFacts: [
-            firstProviderPresentation.sections![0].facts[0],
-            firstProviderPresentation.summaryFacts![0],
+            atIndex(atIndex(firstProviderPresentation.sections!, 0).facts, 0),
+            atIndex(firstProviderPresentation.summaryFacts!, 0),
           ],
         }}
       />,
@@ -152,7 +155,7 @@ describe("generic model presentation facts", () => {
     expect(
       facts.map((fact) => within(fact).getByRole("term").textContent),
     ).toEqual(["Latency", "Supported features"])
-    expect(within(facts[0]).getByText("120 ms")).toBeInTheDocument()
+    expect(within(atIndex(facts, 0)).getByText("120 ms")).toBeInTheDocument()
   })
 
   it("omits missing sections and renders long values without truncating their content", () => {

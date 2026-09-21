@@ -22,6 +22,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -114,11 +115,13 @@ describe("DoneHub native managed resource", () => {
       key: "remove-me\nkeep-me\nalso-keep",
     })
     const api = await doneHubManagedResourceRegistration.open()
-    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    const cleanup = await api.openKeyCleanup!(
+      atIndex((await api.list()).items, 0).ref,
+    )
     expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
     expect(mocks.fetchChannelRaw).toHaveBeenCalledTimes(1)
     await cleanup.remove([0])
-    expect(mocks.update.mock.calls[0][1]).toEqual({
+    expect(atIndex(mocks.update.mock.calls, 0)[1]).toEqual({
       id: channel.id,
       key: "keep-me\nalso-keep",
     })
@@ -168,7 +171,7 @@ describe("DoneHub native managed resource", () => {
       mocks.fetchEditorModels.mockResolvedValue(["recovered-model"])
       const workspace = await doneHubManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       await expect(
         editor.loadOptions!("doneHub.models", {
@@ -230,7 +233,7 @@ describe("DoneHub native managed resource", () => {
     mocks.fetchEditorModels.mockResolvedValue(["discovered-model"])
     const workspace = await doneHubManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     const result = await editor.loadOptions!("doneHub.models", {
       ...editor.initialValues,
@@ -263,7 +266,7 @@ describe("DoneHub native managed resource", () => {
     mocks.fetchChannelRaw.mockResolvedValue({ ...saved, key: "saved-key" })
     const workspace = await doneHubManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     await editor.submit({
       ...editor.initialValues,
@@ -273,7 +276,7 @@ describe("DoneHub native managed resource", () => {
       "doneHub.modelMapping": "{unfinished",
       "doneHub.testModel": "changed-chat",
     })
-    const payload = mocks.update.mock.calls[0][1]
+    const payload = atIndex(mocks.update.mock.calls, 0)[1]
     expect(payload).not.toHaveProperty("plugin")
     expect(payload).not.toHaveProperty("test_model")
     expect(payload).not.toHaveProperty("model_mapping")
@@ -298,7 +301,7 @@ describe("DoneHub native managed resource", () => {
       future_field: { fresh: true },
     })
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
     expect(editor.initialValues["doneHub.compatibleResponse"]).toBe(true)
     expect(editor.initialValues["doneHub.testModel"]).toBe("model-a")
@@ -353,7 +356,7 @@ describe("DoneHub native managed resource", () => {
     })
     const workspace = await doneHubManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(editor.initialValues["doneHub.responsesPath"]).toBe("/old/responses")
     await editor.submit({
@@ -384,7 +387,7 @@ describe("DoneHub native managed resource", () => {
     async (fieldId, value) => {
       const workspace = await doneHubManagedResourceRegistration.open()
       const editor = await workspace.openEditEditor(
-        (await workspace.list()).items[0].ref,
+        atIndex((await workspace.list()).items, 0).ref,
       )
       const values = { ...editor.initialValues, [fieldId]: value }
       expect(editor.validate(values)).toEqual({
@@ -444,7 +447,7 @@ describe("DoneHub native managed resource", () => {
         displayName: "Primary channel",
       }),
     )
-    expect(page.items[0].fields).toEqual(
+    expect(atIndex(page.items, 0).fields).toEqual(
       expect.arrayContaining([
         {
           fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
@@ -465,7 +468,7 @@ describe("DoneHub native managed resource", () => {
 
   it("uses a minimal payload when every changed field is safe for selective updates", async () => {
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -487,7 +490,7 @@ describe("DoneHub native managed resource", () => {
       tag: "linked-channels",
     })
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -519,7 +522,7 @@ describe("DoneHub native managed resource", () => {
       .mockResolvedValueOnce({ ...channel, key: "opened-credential" })
       .mockResolvedValueOnce(latest)
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -542,7 +545,7 @@ describe("DoneHub native managed resource", () => {
 
   it("uses a full update when clearing or zeroing a field cannot be applied selectively", async () => {
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -570,7 +573,7 @@ describe("DoneHub native managed resource", () => {
   it("blocks a required full update when the latest credential is masked", async () => {
     mocks.fetchChannelRaw.mockResolvedValue({ ...channel, key: "sk-********" })
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expectFailureCode(
@@ -585,7 +588,7 @@ describe("DoneHub native managed resource", () => {
 
   it("can replace a credential with a minimal update", async () => {
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -605,7 +608,7 @@ describe("DoneHub native managed resource", () => {
 
   it("uses a replacement credential when a model change requires a full update", async () => {
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await editor.submit({
@@ -655,7 +658,7 @@ describe("DoneHub native managed resource", () => {
     })
 
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     await workspace.delete(ref)
     expect(mocks.remove).toHaveBeenCalledWith(config, channel.id, undefined)
   })
@@ -771,7 +774,7 @@ describe("DoneHub native managed resource", () => {
 
       expect(page.total).toBe(1)
       expect(page.items).toHaveLength(1)
-      expect(page.items[0].ref.resourceId).toBe("17")
+      expect(atIndex(page.items, 0).ref.resourceId).toBe("17")
     },
   )
 
@@ -799,7 +802,7 @@ describe("DoneHub native managed resource", () => {
       const page = await workspace.list({ search })
       expect(page.total).toBe(1)
       expect(page.items).toHaveLength(1)
-      expect(page.items[0].ref.resourceId).toBe("17")
+      expect(atIndex(page.items, 0).ref.resourceId).toBe("17")
     }
     await expect(
       workspace.list({ search: "private-credential" }),
@@ -825,7 +828,7 @@ describe("DoneHub native managed resource", () => {
       items: [expect.objectContaining({ displayName: "Primary channel" })],
     })
     const editor = await workspace.openEditEditor(
-      (await workspace.list()).items[0].ref,
+      atIndex((await workspace.list()).items, 0).ref,
     )
     expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
     await expect(
@@ -902,7 +905,7 @@ describe("DoneHub native managed resource", () => {
 
   it("rejects invalid refs and malformed native channel identities", async () => {
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
 
     await expectFailureCode(
       workspace.openEditEditor({ ...ref, resourceId: "invalid" }),
@@ -930,7 +933,7 @@ describe("DoneHub native managed resource", () => {
       diagnostic: { message: "partially applied" },
     })
     const workspace = await doneHubManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0].ref
+    const ref = atIndex((await workspace.list()).items, 0).ref
     const editor = await workspace.openEditEditor(ref)
 
     await expect(

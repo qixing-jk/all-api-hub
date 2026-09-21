@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("browsing-context ownership queries", () => {
   afterEach(() => vi.restoreAllMocks())
@@ -17,7 +18,7 @@ describe("browsing-context ownership queries", () => {
       ]),
     ).toEqual([[{ id: 13 }], []])
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send.mock.calls[0][0]).toEqual({
+    expect(atIndex(send.mock.calls, 0)[0]).toEqual({
       action: RuntimeActionIds.GetInternalTabIds,
       tabIds: [12, 13],
     })

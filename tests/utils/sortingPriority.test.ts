@@ -24,6 +24,7 @@ import {
   buildDisplaySiteData,
   buildSiteAccount,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function config(
   criteria: SortingPriorityConfig["criteria"] = [],
@@ -497,7 +498,7 @@ describe("browsing context priority", () => {
         "normal",
         "disabled",
       ])
-      expect(comparator(accounts[1], accounts[1])).toBe(0)
+      expect(comparator(atIndex(accounts, 1), atIndex(accounts, 1))).toBe(0)
     },
   )
 
@@ -511,13 +512,13 @@ describe("browsing context priority", () => {
         "current",
       ),
     ).toBe("current-site")
-    settings.criteria[1].enabled = false
+    atIndex(settings.criteria, 1).enabled = false
     expect(
       createAccountContextBoostResolver(settings, "current", { current: 1 })(
         "current",
       ),
     ).toBe("open-tabs")
-    settings.criteria[0].enabled = false
+    atIndex(settings.criteria, 0).enabled = false
     const resolve = createAccountContextBoostResolver(settings, "current", {
       current: 1,
     })

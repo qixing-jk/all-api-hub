@@ -80,6 +80,7 @@ import {
 } from "~~/tests/services/protectionBypass/fixtures"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const manualExecution = (
   surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
@@ -573,8 +574,8 @@ describe("daily automatic check-in preparation", () => {
 
     expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
     expect(
-      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].account.checkIn
-        .selection.methodId,
+      atIndex(mockedMethods.executeSelectedCheckIn.mock.calls, 0)[0].account
+        .checkIn.selection.methodId,
     ).toBe("sub2api-pro:daily-checkin")
     expect(storedStatus.perAccount[account.id].status).toBe("success")
     expect(storedStatus.accountsSnapshot[0]).toMatchObject({
@@ -750,8 +751,8 @@ describe("daily automatic check-in preparation", () => {
     expect(prepareAutomaticCheckIn).toHaveBeenCalledTimes(2)
     expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(2)
     expect(
-      mockedMethods.executeSelectedCheckIn.mock.calls[1][0].account.checkIn
-        .selection.methodId,
+      atIndex(mockedMethods.executeSelectedCheckIn.mock.calls, 1)[0].account
+        .checkIn.selection.methodId,
     ).toBe("genius-programmer:daily-checkin")
     expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
@@ -6935,7 +6936,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
     let refreshIndex = 0
     mockedAccountStorage.refreshAccount.mockImplementation(
-      () => deferredRefreshes[refreshIndex++].promise,
+      () => atIndex(deferredRefreshes, refreshIndex++).promise,
     )
 
     const refreshPromise = (
@@ -6983,10 +6984,10 @@ describe("autoCheckinScheduler private helpers", () => {
       },
     )
 
-    deferredRefreshes[0].resolve({ refreshed: true })
-    deferredRefreshes[1].resolve(null)
-    deferredRefreshes[2].reject(new Error("refresh failed"))
-    deferredRefreshes[3].resolve({ refreshed: false })
+    atIndex(deferredRefreshes, 0).resolve({ refreshed: true })
+    atIndex(deferredRefreshes, 1).resolve(null)
+    atIndex(deferredRefreshes, 2).reject(new Error("refresh failed"))
+    atIndex(deferredRefreshes, 3).resolve({ refreshed: false })
 
     await expect(refreshPromise).resolves.toBeUndefined()
   })
@@ -7891,7 +7892,7 @@ describe("AgentRouter login provider claims", () => {
 
     expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
     expect(
-      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].account.id,
+      atIndex(mockedMethods.executeSelectedCheckIn.mock.calls, 0)[0].account.id,
     ).toBe("a")
     expect(storedStatus.perAccount.a).toMatchObject({ status: "success" })
     expect(storedStatus.perAccount.b).toMatchObject({
@@ -7941,7 +7942,7 @@ describe("AgentRouter login provider claims", () => {
     await runCheckinsForTest({})
 
     expect(
-      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].account.id,
+      atIndex(mockedMethods.executeSelectedCheckIn.mock.calls, 0)[0].account.id,
     ).toBe("b")
   })
 
@@ -7954,7 +7955,7 @@ describe("AgentRouter login provider claims", () => {
     await runCheckinsForTest({})
 
     expect(
-      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].account.id,
+      atIndex(mockedMethods.executeSelectedCheckIn.mock.calls, 0)[0].account.id,
     ).toBe("b")
   })
 

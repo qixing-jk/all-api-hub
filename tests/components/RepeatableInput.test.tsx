@@ -2,6 +2,7 @@ import React from "react"
 import { describe, expect, it } from "vitest"
 
 import { RepeatableInput } from "~/components/ui"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 interface TestItem {
@@ -48,7 +49,7 @@ describe("RepeatableInput", () => {
     const removeButtons = await screen.findAllByRole("button", {
       name: "Remove Row",
     })
-    fireEvent.click(removeButtons[0])
+    fireEvent.click(atIndex(removeButtons, 0))
 
     expect(screen.queryByLabelText("Row 1")).not.toBeInTheDocument()
     expect(await screen.findByLabelText("Row 2")).toBeInTheDocument()

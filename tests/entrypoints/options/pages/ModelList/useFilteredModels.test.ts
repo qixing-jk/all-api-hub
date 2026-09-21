@@ -52,6 +52,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -203,7 +204,8 @@ describe("useFilteredModels", () => {
     })
     await waitFor(() =>
       expect(
-        result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+        atIndex(result.current.filteredModels, 0).calculatedPrice.quote?.source
+          .url,
       ).toBe("https://site.example/gateway/pricing?search=vendor%2Fmodel"),
     )
   })
@@ -232,7 +234,8 @@ describe("useFilteredModels", () => {
     })
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
     expect(
-      result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+      atIndex(result.current.filteredModels, 0).calculatedPrice.quote?.source
+        .url,
     ).toContain("https://first.example/pricing")
     expect(pricingPlan.source.url).toBeUndefined()
   })
@@ -358,7 +361,8 @@ describe("useFilteredModels", () => {
       ).toMatchObject({ status: "complete", amount: 2 }),
     )
     expect(
-      result.current.filteredModels[0].calculatedPrice.isComparisonActive,
+      atIndex(result.current.filteredModels, 0).calculatedPrice
+        .isComparisonActive,
     ).toBe(false)
     rerender({
       ...props,
@@ -3904,7 +3908,7 @@ describe("useFilteredModels", () => {
 
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
 
-    const row = result.current.filteredModels[0]
+    const row = atIndex(result.current.filteredModels, 0)
     expect(result.current.availableGroups).toEqual(["default"])
     expect(row.groupContext).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
@@ -3945,7 +3949,7 @@ describe("useFilteredModels", () => {
 
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
 
-    const row = result.current.filteredModels[0]
+    const row = atIndex(result.current.filteredModels, 0)
     expect(row.calculatedPrice).toEqual({
       kind: "unavailable",
       billingMode: "token",
@@ -4156,7 +4160,7 @@ describe("useFilteredModels", () => {
 
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
 
-    const row = result.current.filteredModels[0]
+    const row = atIndex(result.current.filteredModels, 0)
     expect(result.current.availableGroups).toEqual([])
     expect(row.groupContext.accessState).toBe(MODEL_GROUP_ACCESS_STATES.KNOWN)
     expect(row.activeGroupContext.activeUsableGroups).toEqual([])
@@ -4193,9 +4197,9 @@ describe("useFilteredModels", () => {
     }
     const { result, rerender } = renderUseFilteredModels(inputs)
     await waitFor(() => expect(result.current?.filteredModels).toHaveLength(1))
-    expect(result.current.filteredModels[0].groupContext.accessState).toBe(
-      MODEL_GROUP_ACCESS_STATES.UNKNOWN,
-    )
+    expect(
+      atIndex(result.current.filteredModels, 0).groupContext.accessState,
+    ).toBe(MODEL_GROUP_ACCESS_STATES.UNKNOWN)
     const refreshed = {
       ...inputs,
       pricingData: createPricingResponse([
@@ -4350,7 +4354,7 @@ describe("useFilteredModels", () => {
 
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
 
-    const row = result.current.filteredModels[0]
+    const row = atIndex(result.current.filteredModels, 0)
     expect(row.groupRatios).toEqual({ vip: 0.5 })
     expect(row.groupContext.priceableGroups).toEqual(["vip"])
     expect(row.effectiveGroup).toBe("vip")
@@ -4855,12 +4859,16 @@ it("reverses same-model rankings across context thresholds using one shared quot
   }
   const { result, rerender } = renderUseFilteredModels(props)
   await waitFor(() =>
-    expect(result.current.filteredModels[0].effectiveGroup).toBe("half"),
+    expect(atIndex(result.current.filteredModels, 0).effectiveGroup).toBe(
+      "half",
+    ),
   )
   expect(
-    result.current.filteredModels[0].groupContext.usableGroups,
+    atIndex(result.current.filteredModels, 0).groupContext.usableGroups,
   ).toHaveLength(4)
-  expect(result.current.filteredModels[0].calculatedPrice.quote).toMatchObject({
+  expect(
+    atIndex(result.current.filteredModels, 0).calculatedPrice.quote,
+  ).toMatchObject({
     amount: expect.closeTo(0.136, 10),
     status: "complete",
   })
@@ -4874,14 +4882,15 @@ it("reverses same-model rankings across context thresholds using one shared quot
     },
   })
   await waitFor(() =>
-    expect(result.current.filteredModels[0].source).toMatchObject({
+    expect(atIndex(result.current.filteredModels, 0).source).toMatchObject({
       account: { id: "b" },
     }),
   )
   expect(
-    result.current.filteredModels[1].calculatedPrice.quote?.matchedRules.map(
-      (rule) => rule.id,
-    ),
+    atIndex(
+      result.current.filteredModels,
+      1,
+    ).calculatedPrice.quote?.matchedRules.map((rule) => rule.id),
   ).toEqual(["long"])
 })
 
@@ -4915,7 +4924,9 @@ it("keeps catalog quotes out of recharge-cost comparisons without a purchase con
     },
   })
   await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
-  expect(result.current.filteredModels[0].isPriceComparable).toBe(false)
+  expect(atIndex(result.current.filteredModels, 0).isPriceComparable).toBe(
+    false,
+  )
 })
 
 it.each([0, -2])(
@@ -4951,7 +4962,7 @@ it.each([0, -2])(
     })
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
     expect(
-      result.current.filteredModels[0].calculatedPrice.quote,
+      atIndex(result.current.filteredModels, 0).calculatedPrice.quote,
     ).toMatchObject({
       status: "complete",
       currency: "CNY",
@@ -5155,11 +5166,13 @@ it("quotes image plans through the list even when their flat display price is un
     },
   })
   await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
-  expect(result.current.filteredModels[0].calculatedPrice.quote).toMatchObject({
+  expect(
+    atIndex(result.current.filteredModels, 0).calculatedPrice.quote,
+  ).toMatchObject({
     status: "complete",
     amount: 0.4,
   })
-  expect(result.current.filteredModels[0].isPriceComparable).toBe(true)
+  expect(atIndex(result.current.filteredModels, 0).isPriceComparable).toBe(true)
 })
 
 it.each([false, true])(
@@ -5199,8 +5212,10 @@ it.each([false, true])(
     })
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
     expect(
-      result.current.filteredModels[0].calculatedPrice.quote,
+      atIndex(result.current.filteredModels, 0).calculatedPrice.quote,
     ).toMatchObject({ status: "complete", unit: "request", amount: 0.2 })
-    expect(result.current.filteredModels[0].isPriceComparable).toBe(true)
+    expect(atIndex(result.current.filteredModels, 0).isPriceComparable).toBe(
+      true,
+    )
   },
 )

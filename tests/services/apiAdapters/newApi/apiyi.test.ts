@@ -22,6 +22,7 @@ import {
   apiyiPricingSample,
 } from "~~/tests/fixtures/apiyi/pricing.sample"
 import { server } from "~~/tests/msw/server"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser/tempWindowFetch")>()),
@@ -483,9 +484,9 @@ describe("APIyi account capabilities", () => {
       auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
     })
 
-    expect(pricing.data[0].model_ratio).toBeCloseTo(0.054794520548, 10)
-    expect(pricing.data[0].completion_ratio).toBe(2.5)
-    expect(pricing.data[0].pricingPlan).toMatchObject({
+    expect(atIndex(pricing.data, 0).model_ratio).toBeCloseTo(0.054794520548, 10)
+    expect(atIndex(pricing.data, 0).completion_ratio).toBe(2.5)
+    expect(atIndex(pricing.data, 0).pricingPlan).toMatchObject({
       requiresRuleMatch: true,
       issues: [{ code: "unverified-axis" }],
       rules: [
@@ -545,7 +546,10 @@ describe("APIyi account capabilities", () => {
       },
     })
     expect(
-      pricing.data[0].pricingPlan?.rules[1].conditions[0],
+      atIndex(
+        atIndex(atIndex(pricing.data, 0).pricingPlan?.rules, 1).conditions,
+        0,
+      ),
     ).not.toHaveProperty("maxExclusive")
   })
 
@@ -589,7 +593,7 @@ describe("APIyi account capabilities", () => {
           unavailable_reason: "pricing-source-unavailable",
         },
       })
-      expect(pricing.data[0].pricingPlan?.issues).toEqual([
+      expect(atIndex(pricing.data, 0).pricingPlan?.issues).toEqual([
         { code: "unsupported-rule" },
       ])
     },

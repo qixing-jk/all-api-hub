@@ -17,6 +17,7 @@ import {
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   safeRandomUUID: vi.fn(
@@ -111,7 +112,7 @@ describe("tagStoreUtils.sanitizeTagStore", () => {
     })
 
     expect(Object.keys(store.tagsById)).toEqual(["good"])
-    expect(store.tagsById.good.name).toBe("Work")
+    expect(atIndex(store.tagsById, "good").name).toBe("Work")
     vi.restoreAllMocks()
   })
 
@@ -240,7 +241,7 @@ describe("accountTagsDataMigration.migrateAccountTagsData", () => {
 
     expect(result.migratedAccountCount).toBe(0)
     expect(result.createdTagCount).toBe(0)
-    expect(result.accounts[0].tagIds).toEqual(["t1"])
+    expect(atIndex(result.accounts, 0).tagIds).toEqual(["t1"])
   })
 })
 
@@ -297,7 +298,7 @@ describe("tagStoreUtils.mergeTagStoresAndRemapAccounts", () => {
     })
 
     expect(Object.keys(merged.tagStore.tagsById)).toEqual(["local"])
-    expect(merged.remoteAccounts[0].tagIds).toEqual(["local"])
+    expect(atIndex(merged.remoteAccounts, 0).tagIds).toEqual(["local"])
   })
 
   it("remaps remote taggables (non-account entities) using the same id map", () => {
@@ -364,7 +365,9 @@ describe("tagStoreUtils.mergeTagStoresAndRemapAccounts", () => {
     expect(merged.tagStore.tagsById["fresh-remote-id"]).toMatchObject({
       name: "Personal",
     })
-    expect(merged.remoteAccounts[0].tagIds).toEqual(["fresh-remote-id"])
+    expect(atIndex(merged.remoteAccounts, 0).tagIds).toEqual([
+      "fresh-remote-id",
+    ])
   })
 
   it("deduplicates remapped ids, preserves unmapped ids, and leaves empty tag lists untouched", () => {
@@ -401,8 +404,14 @@ describe("tagStoreUtils.mergeTagStoresAndRemapAccounts", () => {
       remoteTaggables: [{ id: "y", tagIds: ["remote", "remote"] } as any],
     })
 
-    expect(merged.remoteAccounts[0].tagIds).toEqual(["local", "orphan"])
-    expect(merged.remoteBookmarks[0].tagIds).toEqual(["local", "orphan"])
+    expect(atIndex(merged.remoteAccounts, 0).tagIds).toEqual([
+      "local",
+      "orphan",
+    ])
+    expect(atIndex(merged.remoteBookmarks, 0).tagIds).toEqual([
+      "local",
+      "orphan",
+    ])
     expect(merged.remoteTaggables[0].tagIds).toEqual(["local"])
     expect(merged.localBookmarks[0]).toBe(emptyBookmark)
     expect(merged.localTaggables[0]).toEqual({ id: "x" })

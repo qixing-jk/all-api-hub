@@ -32,6 +32,7 @@ import {
   buildDisplaySiteData,
   buildSiteAccount,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => {
   const storageMap = new Map<string, unknown>()
@@ -303,8 +304,8 @@ describe("accountKeyRepair", () => {
       )
       expect(snapshots.length).toBeGreaterThan(1)
       for (let index = 1; index < snapshots.length; index++) {
-        expect(snapshots[index].updatedAt).toBeGreaterThan(
-          snapshots[index - 1].updatedAt!,
+        expect(atIndex(snapshots, index).updatedAt).toBeGreaterThan(
+          atIndex(snapshots, index - 1).updatedAt!,
         )
       }
     } finally {
@@ -1274,15 +1275,27 @@ describe("accountKeyRepair", () => {
       )
       if (cleanupLinkedChannels)
         expect(mocks.finishCleanup).toHaveBeenCalledWith({ id: "pending-task" })
-      expect(deleteResource).toHaveBeenNthCalledWith(1, resources[0].ref, {
-        signal: expect.any(AbortSignal),
-      })
-      expect(deleteResource).toHaveBeenNthCalledWith(2, resources[1].ref, {
-        signal: expect.any(AbortSignal),
-      })
-      expect(deleteResource).toHaveBeenNthCalledWith(3, resources[2].ref, {
-        signal: expect.any(AbortSignal),
-      })
+      expect(deleteResource).toHaveBeenNthCalledWith(
+        1,
+        atIndex(resources, 0).ref,
+        {
+          signal: expect.any(AbortSignal),
+        },
+      )
+      expect(deleteResource).toHaveBeenNthCalledWith(
+        2,
+        atIndex(resources, 1).ref,
+        {
+          signal: expect.any(AbortSignal),
+        },
+      )
+      expect(deleteResource).toHaveBeenNthCalledWith(
+        3,
+        atIndex(resources, 2).ref,
+        {
+          signal: expect.any(AbortSignal),
+        },
+      )
       expect(openCollection).toHaveBeenCalledTimes(3)
       expect(openCollection).toHaveBeenCalledWith("default", {
         signal: expect.any(AbortSignal),
@@ -1294,7 +1307,9 @@ describe("accountKeyRepair", () => {
       const progress = mocks.storageMap.get(
         REPAIR_PROGRESS_STORAGE_KEY,
       ) as AccountKeyRepairProgress
-      expect(progress.results[0].invalidResources).toEqual(resources.slice(1))
+      expect(atIndex(progress.results, 0).invalidResources).toEqual(
+        resources.slice(1),
+      )
       expect(progress.summary).toMatchObject({
         invalidResources: 2,
         deleteApplied: 1,
@@ -1386,7 +1401,7 @@ describe("accountKeyRepair", () => {
           signal: expect.any(AbortSignal),
         })
         await vi.advanceTimersByTimeAsync(30_000)
-        expect(stalled.mock.calls[0][1].signal.aborted).toBe(true)
+        expect(atIndex(stalled.mock.calls, 0)[1].signal.aborted).toBe(true)
         if (stage === "resolve") expect(deleteResource).not.toHaveBeenCalled()
 
         await expect(responsePromise).resolves.toMatchObject({

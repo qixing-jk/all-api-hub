@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { StarPromotionCard } from "~/features/StarPromotion/StarPromotionCard"
 import { STAR_PROMOTION_CARD_TEST_IDS } from "~/features/StarPromotion/StarPromotionCardView"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render } from "~~/tests/test-utils/render"
 
 const {
@@ -154,7 +155,7 @@ describe("star promotion card", () => {
     ).toBeInTheDocument()
 
     act(() => {
-      watchStateMock.mock.calls[0][0]({ status: "completed" })
+      atIndex(watchStateMock.mock.calls, 0)[0]({ status: "completed" })
     })
 
     await waitFor(() => {

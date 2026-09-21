@@ -49,6 +49,7 @@ import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { resolveManagedResourceTestPolicy } from "~~/tests/test-utils/managedResourceFieldPolicy"
 
 describe("Octopus native editor vocabulary", () => {
@@ -351,29 +352,29 @@ describe("managed resource field policy", () => {
       priority: "managedSiteChannels:editor.fields.priority.label",
       notes: "managedSiteChannels:editor.fields.notes.label",
     })
-    expect(fields.platform.resolveHelp?.(resolveKey)).toBe(
+    expect(atIndex(fields, "platform").resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.sub2apiPlatform.help",
     )
-    expect(fields.supportedModels.resolveHelp?.(resolveKey)).toBe(
+    expect(atIndex(fields, "supportedModels").resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.sub2apiModels.help",
     )
-    expect(fields.concurrency.resolveHelp?.(resolveKey)).toBe(
+    expect(atIndex(fields, "concurrency").resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.concurrency.help",
     )
-    expect(fields.priority.resolveHelp?.(resolveKey)).toBe(
+    expect(atIndex(fields, "priority").resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.priority.help",
     )
-    expect(fields.notes.resolveHelp?.(resolveKey)).toBe(
+    expect(atIndex(fields, "notes").resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.notes.help",
     )
-    expect(fields.notes.resolvePlaceholder?.(resolveKey)).toBe(
+    expect(atIndex(fields, "notes").resolvePlaceholder?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.notes.placeholder",
     )
 
     for (const platform of SUB2API_API_KEY_ACCOUNT_PLATFORMS) {
       expect(
         getManagedResourceFieldOptionLabel(
-          fields.platform,
+          atIndex(fields, "platform"),
           platform,
           resolveKey,
         ),
@@ -381,21 +382,21 @@ describe("managed resource field policy", () => {
     }
     expect(
       getManagedResourceFieldOptionLabel(
-        fields.status,
+        atIndex(fields, "status"),
         SUB2API_MANAGED_RESOURCE_STATUS.Active,
         resolveKey,
       ),
     ).toBe("common:status.enabled")
     expect(
       getManagedResourceFieldOptionLabel(
-        fields.status,
+        atIndex(fields, "status"),
         SUB2API_MANAGED_RESOURCE_STATUS.Inactive,
         resolveKey,
       ),
     ).toBe("common:status.disabled")
     expect(
       getManagedResourceFieldOptionLabel(
-        fields.status,
+        atIndex(fields, "status"),
         SUB2API_MANAGED_RESOURCE_STATUS.Error,
         resolveKey,
       ),
@@ -1026,7 +1027,7 @@ it("separates the editable key state from its previous disable reason", () => {
       ],
     },
   )
-  const field = policy.fields[0]
+  const field = atIndex(policy.fields, 0)
   const t = ((key: string) => key) as TFunction
   const original = {
     enabled: "false",
@@ -1043,6 +1044,8 @@ it("separates the editable key state from its previous disable reason", () => {
   expect(
     field.resolveEntryDescription!(t, { ...original, enabled: "true" }),
   ).toBe("")
-  expect(field.entryFields![0].resolveLabel(t)).toBe("ui:secretList.enableKey")
-  expect(field.entryFields![0].resolveHelp).toBeUndefined()
+  expect(atIndex(field.entryFields!, 0).resolveLabel(t)).toBe(
+    "ui:secretList.enableKey",
+  )
+  expect(atIndex(field.entryFields!, 0).resolveHelp).toBeUndefined()
 })

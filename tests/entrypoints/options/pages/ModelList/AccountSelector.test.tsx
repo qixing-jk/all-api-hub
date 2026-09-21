@@ -11,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
@@ -157,7 +158,7 @@ describe("AccountSelector", () => {
       }),
     )
     const comboboxes = await screen.findAllByRole("combobox")
-    fireEvent.click(comboboxes[1])
+    fireEvent.click(atIndex(comboboxes, 1))
 
     expect(await screen.findByText("vip (2x)")).toBeInTheDocument()
     expect(screen.getByText("default (1x)")).toBeInTheDocument()

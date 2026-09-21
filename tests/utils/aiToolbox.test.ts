@@ -6,6 +6,7 @@ import {
   openInAiToolbox,
 } from "~/services/integrations/aiToolbox"
 import type { CredentialExportData } from "~/services/integrations/credentialExport"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -26,7 +27,7 @@ function captureDeeplink(run: () => void) {
   const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
   run()
   expect(openSpy).toHaveBeenCalled()
-  const deeplink = openSpy.mock.calls[0][0] as string
+  const deeplink = atIndex(openSpy.mock.calls, 0)[0] as string
   openSpy.mockRestore()
   return new URL(deeplink)
 }

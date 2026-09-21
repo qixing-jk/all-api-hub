@@ -10,6 +10,7 @@ import {
 import { FEEDBACK_SCAN_LIMITS } from "~/services/checkin/feedback/scanLimits"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const baseUrl = "https://example.com"
 const response = (body: string, type = "application/json", status = 200) =>
@@ -437,7 +438,7 @@ describe("optional check-in clue scan", () => {
       )
       expect(clues.status).toBe("completed")
       expect(clues.routes).toEqual(["/new/checkin", "/api/redeem"])
-      expect(clues.statusQueries[0].keys).toEqual(["success", "data"])
+      expect(atIndex(clues.statusQueries, 0).keys).toEqual(["success", "data"])
       for (const [url, init] of fetch.mock.calls as unknown as Array<
         [string, RequestInit]
       >) {
@@ -621,7 +622,7 @@ describe("optional check-in clue scan", () => {
     )
     controller.abort()
     await first
-    expect(signals[0].aborted).toBe(true)
+    expect(atIndex(signals, 0).aborted).toBe(true)
     const second = collectCheckInFeedbackClues(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
@@ -630,7 +631,7 @@ describe("optional check-in clue scan", () => {
     const timedOut = await second
     expect(timedOut.status).toBe("empty")
     expect(timedOut.issues).toContain("timeout")
-    expect(signals[1].aborted).toBe(true)
+    expect(atIndex(signals, 1).aborted).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
   })
 })

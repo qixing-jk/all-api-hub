@@ -32,6 +32,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   buildManagedResourceMatchCandidate,
   matchingResourceRef,
@@ -276,7 +277,7 @@ const executeSingleNativeBatchImport = async (
   })
   const result = await executeManagedSiteTokenBatchExport({
     preview,
-    selectedItemIds: [preview.items[0].id],
+    selectedItemIds: [atIndex(preview.items, 0).id],
   })
 
   return { result, managedSite }
@@ -385,7 +386,7 @@ describe("managed-site token batch export", () => {
 
     const result = await executeManagedSiteTokenBatchExport({
       preview,
-      selectedItemIds: [preview.items[0].id],
+      selectedItemIds: [atIndex(preview.items, 0).id],
     })
 
     expect(result).toMatchObject({
@@ -635,7 +636,7 @@ describe("managed-site token batch export", () => {
         },
       })
     }
-    expect(preview.items[0].id).not.toBe(preview.items[1].id)
+    expect(atIndex(preview.items, 0).id).not.toBe(atIndex(preview.items, 1).id)
     expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledTimes(2)
     expect(
       mockResolveDisplayAccountRuntimeKeySecret.mock.calls.map(
@@ -779,7 +780,7 @@ describe("managed-site token batch export", () => {
 
     const result = await executeManagedSiteTokenBatchExport({
       preview,
-      selectedItemIds: [preview.items[0].id],
+      selectedItemIds: [atIndex(preview.items, 0).id],
     })
 
     expect(managedSite.submit).toHaveBeenCalledTimes(1)
@@ -789,7 +790,7 @@ describe("managed-site token batch export", () => {
       failedCount: 1,
     })
     expect(result.items[0]).toMatchObject({
-      id: preview.items[0].id,
+      id: atIndex(preview.items, 0).id,
       result: "failed",
       success: false,
       skipped: false,
@@ -834,7 +835,7 @@ describe("managed-site token batch export", () => {
 
       const result = await executeManagedSiteTokenBatchExport({
         preview,
-        selectedItemIds: [preview.items[0].id],
+        selectedItemIds: [atIndex(preview.items, 0).id],
       })
 
       expect(managedSite.submit).toHaveBeenCalledOnce()
@@ -913,12 +914,12 @@ describe("managed-site token batch export", () => {
     })
     expect(result.items).toEqual([
       expect.objectContaining({
-        id: preview.items[0].id,
+        id: atIndex(preview.items, 0).id,
         result: "uncertain",
         error: "Failed to create channel: write failed for [REDACTED]",
       }),
       expect.objectContaining({
-        id: preview.items[1].id,
+        id: atIndex(preview.items, 1).id,
         result: "created",
       }),
     ])
@@ -1020,7 +1021,7 @@ describe("managed-site token batch export", () => {
     await expect(
       executeManagedSiteTokenBatchExport({
         preview,
-        selectedItemIds: [preview.items[0].id],
+        selectedItemIds: [atIndex(preview.items, 0).id],
       }),
     ).rejects.toThrow("Invalid managed site mutation result")
 
@@ -1418,7 +1419,7 @@ describe("managed-site token batch export", () => {
         intent: repairTrustedNewIntent,
       })
 
-      expect(preview.items[0].status).toBe(status)
+      expect(atIndex(preview.items, 0).status).toBe(status)
       expect(managedSite.submit).not.toHaveBeenCalled()
       expect(mockOpenNativeManagedChannelImportSession).not.toHaveBeenCalled()
       expect(mockResolveManagedSiteChannelMatch).not.toHaveBeenCalled()
@@ -1667,7 +1668,7 @@ describe("managed-site token batch export", () => {
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
       })
-      expect(preview.items[0].warningCodes).toContain(expectedWarning)
+      expect(atIndex(preview.items, 0).warningCodes).toContain(expectedWarning)
     },
   )
 
@@ -1792,7 +1793,7 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
       ],
     })
-    expect(preview.items[0].verificationCandidate).toBeUndefined()
+    expect(atIndex(preview.items, 0).verificationCandidate).toBeUndefined()
   })
 
   it("skips exact duplicates when preview can resolve a hidden managed-site channel key", async () => {
@@ -1972,7 +1973,7 @@ describe("managed-site token batch export", () => {
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
     })
-    expect(preview.items[0].blockingMessage).toBeTruthy()
+    expect(atIndex(preview.items, 0).blockingMessage).toBeTruthy()
   })
 
   it("blocks preview items when draft preparation throws", async () => {
@@ -1996,7 +1997,7 @@ describe("managed-site token batch export", () => {
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
     })
-    expect(preview.items[0].blockingMessage).toContain("boom")
+    expect(atIndex(preview.items, 0).blockingMessage).toContain("boom")
   })
 
   it("redacts admin, password, and TOTP config secrets from preview failures", async () => {
@@ -2032,7 +2033,7 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    const blockingMessage = preview.items[0].blockingMessage ?? ""
+    const blockingMessage = atIndex(preview.items, 0).blockingMessage ?? ""
     expect(blockingMessage).toContain("Preparation refused")
     expect(blockingMessage).not.toContain(adminToken)
     expect(blockingMessage).not.toContain(password)
@@ -2071,7 +2072,7 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    expect(preview.items[0].blockingMessage).toBe(
+    expect(atIndex(preview.items, 0).blockingMessage).toBe(
       "Failed to prepare this key for batch import",
     )
     expect(JSON.stringify(preview)).not.toContain(providerText)
@@ -2108,7 +2109,7 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    const blockingMessage = preview.items[0].blockingMessage ?? ""
+    const blockingMessage = atIndex(preview.items, 0).blockingMessage ?? ""
     expect(blockingMessage).toContain("Matcher refused")
     expect(blockingMessage).not.toContain(draftSecret)
   })
@@ -2150,7 +2151,7 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    expect(preview.items[0].blockingMessage).toBe(
+    expect(atIndex(preview.items, 0).blockingMessage).toBe(
       "Failed to prepare this key for batch import",
     )
     const serializedPreview = JSON.stringify(preview)
@@ -2298,7 +2299,7 @@ describe("managed-site token batch export", () => {
       await expect(
         executeManagedSiteTokenBatchExport({
           preview,
-          selectedItemIds: [preview.items[0].id],
+          selectedItemIds: [atIndex(preview.items, 0).id],
         }),
       ).rejects.toMatchObject({
         name: "ManagedSiteTokenBatchImportTargetChangedError",
@@ -2329,7 +2330,7 @@ describe("managed-site token batch export", () => {
 
     const result = await executeManagedSiteTokenBatchExport({
       preview,
-      selectedItemIds: [preview.items[0].id],
+      selectedItemIds: [atIndex(preview.items, 0).id],
     })
 
     expect(result).toMatchObject({
@@ -2342,7 +2343,7 @@ describe("managed-site token batch export", () => {
     })
     expect(result.items).toEqual([
       expect.objectContaining({
-        id: preview.items[0].id,
+        id: atIndex(preview.items, 0).id,
         result: "created",
       }),
     ])
@@ -2434,13 +2435,15 @@ describe("managed-site token batch export", () => {
       })
       const result = await executeManagedSiteTokenBatchExport({
         preview,
-        selectedItemIds: [preview.items[0].id],
+        selectedItemIds: [atIndex(preview.items, 0).id],
       })
 
       expect(result.items[0]).toMatchObject({ result: "failed" })
-      expect(result.items[0].error).toContain("Failed to create channel")
-      expect(result.items[0].error).toContain(`HTTP ${statusCode}`)
-      expect(result.items[0].error).toContain(message)
+      expect(atIndex(result.items, 0).error).toContain(
+        "Failed to create channel",
+      )
+      expect(atIndex(result.items, 0).error).toContain(`HTTP ${statusCode}`)
+      expect(atIndex(result.items, 0).error).toContain(message)
     },
   )
 
@@ -2470,7 +2473,7 @@ describe("managed-site token batch export", () => {
     await expect(
       executeManagedSiteTokenBatchExport({
         preview,
-        selectedItemIds: [preview.items[0].id],
+        selectedItemIds: [atIndex(preview.items, 0).id],
       }),
     ).rejects.toMatchObject({
       name: "ManagedSiteTokenBatchImportTargetChangedError",

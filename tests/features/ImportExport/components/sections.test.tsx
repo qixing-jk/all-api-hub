@@ -21,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockStartProductAnalyticsAction,
@@ -145,9 +146,9 @@ describe("ImportExport section components", () => {
       name: "common:actions.export",
     })
 
-    fireEvent.click(buttons[0])
-    fireEvent.click(buttons[1])
-    fireEvent.click(buttons[2])
+    fireEvent.click(atIndex(buttons, 0))
+    fireEvent.click(atIndex(buttons, 1))
+    fireEvent.click(atIndex(buttons, 2))
 
     expect(mockStartProductAnalyticsAction).toHaveBeenNthCalledWith(1, {
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -185,9 +186,12 @@ describe("ImportExport section components", () => {
     )
 
     fireEvent.click(
-      screen.getAllByRole("button", {
-        name: "common:actions.export",
-      })[0],
+      atIndex(
+        screen.getAllByRole("button", {
+          name: "common:actions.export",
+        }),
+        0,
+      ),
     )
 
     await vi.waitFor(() => {

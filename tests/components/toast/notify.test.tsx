@@ -20,6 +20,7 @@ import { RedemptionToaster } from "~/entrypoints/content/redemptionAssist/compon
 import notify from "~/lib/notify"
 import contentNotify from "~/lib/notify/content"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/contexts/ThemeContext", () => ({
   useTheme: () => ({ resolvedTheme: "light" }),
@@ -193,7 +194,7 @@ describe("notification facade", () => {
       name: "common:actions.close",
     })
     expect(closeButtons).toHaveLength(4)
-    await user.click(closeButtons[0])
+    await user.click(atIndex(closeButtons, 0))
     await waitFor(() => expect(screen.getAllByRole("status")).toHaveLength(3), {
       timeout: 2000,
     })

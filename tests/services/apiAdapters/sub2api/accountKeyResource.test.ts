@@ -12,6 +12,7 @@ import { sub2ApiAccountKeyResources } from "~/services/apiAdapters/sub2api/accou
 import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
   mockCreateSub2ApiKey,
@@ -321,12 +322,12 @@ describe("Sub2API account key resources", () => {
     })
     const snapshot = await session.provisioning!.inspect()
 
-    expect(snapshot.items[0].renameSuggestion).toEqual({
+    expect(atIndex(snapshot.items, 0).renameSuggestion).toEqual({
       targetDisplayName: "Premium group (auto)",
     })
-    expect(snapshot.items[1].renameSuggestion).toBeUndefined()
-    expect(snapshot.items[2].renameSuggestion).toBeUndefined()
-    expect(snapshot.items[3].renameSuggestion).toBeUndefined()
+    expect(atIndex(snapshot.items, 1).renameSuggestion).toBeUndefined()
+    expect(atIndex(snapshot.items, 2).renameSuggestion).toBeUndefined()
+    expect(atIndex(snapshot.items, 3).renameSuggestion).toBeUndefined()
   })
 
   it("renames the exact provider-owned template while preserving native token configuration", async () => {
@@ -352,7 +353,7 @@ describe("Sub2API account key resources", () => {
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
       request,
     })
-    const ref = (await session.provisioning!.inspect()).items[0].ref
+    const ref = atIndex((await session.provisioning!.inspect()).items, 0).ref
 
     await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
       certainty: "applied",

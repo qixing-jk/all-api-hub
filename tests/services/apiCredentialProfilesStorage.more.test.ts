@@ -21,6 +21,7 @@ import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
 } from "~/types/apiCredentialProfiles"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const storageData = new Map<string, any>()
 
@@ -463,7 +464,9 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       { now: 12345 },
     )
 
-    expect(coerced.profiles[0].telemetrySnapshot?.facts?.quota).toBeUndefined()
+    expect(
+      atIndex(coerced.profiles, 0).telemetrySnapshot?.facts?.quota,
+    ).toBeUndefined()
   })
 
   it("keeps cross-origin HTTP(S) custom telemetry endpoint details", () => {
@@ -660,7 +663,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     })
 
     expect(
-      merged.profiles[0].telemetrySnapshot?.facts?.usage?.totalUsed,
+      atIndex(merged.profiles, 0).telemetrySnapshot?.facts?.usage?.totalUsed,
     ).toEqual({
       value: 12.5,
       unit: { kind: "money", currency: "USD", decimalPlaces: 2 },

@@ -49,6 +49,7 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { expectAccountListItemVisibleBySite } from "~~/e2e/utils/realSite/accountAdd"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
 
@@ -601,7 +602,7 @@ test("adds an account through the real add-account auto-detect flow", async ({
             reject(new Error(error.message))
             return
           }
-          resolve(stored.site_accounts)
+          resolve(atIndex(stored, "site_accounts"))
         },
       )
     })

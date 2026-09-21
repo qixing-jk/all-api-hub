@@ -11,6 +11,7 @@ import {
   webAiApiCheckBaseUrlHistoryStorage,
   type WebAiApiCheckBaseUrlHistoryStore,
 } from "~/services/verification/webAiApiCheck/baseUrlHistory"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("webAiApiCheckBaseUrlHistoryStorage", () => {
   const storage = new Storage({ area: "local" })
@@ -49,8 +50,8 @@ describe("webAiApiCheckBaseUrlHistoryStorage", () => {
         (entry) => entry.baseUrl === "https://api-1.example.com",
       ),
     ).toBe(false)
-    const origins = Object.keys(stored.entries[0].sourceOrigins)
-    expect(stored.entries[0].baseUrl).toBe(baseUrl)
+    const origins = Object.keys(atIndex(stored.entries, 0).sourceOrigins)
+    expect(atIndex(stored.entries, 0).baseUrl).toBe(baseUrl)
     expect(origins).toHaveLength(8)
     expect(origins).not.toContain("https://source-0.example.com")
     expect(origins).not.toContain("https://source-1.example.com")
@@ -115,7 +116,7 @@ describe("webAiApiCheckBaseUrlHistoryStorage", () => {
       lastUpdated: 10,
     })
 
-    const coercedSourceOrigins = store.entries[0].sourceOrigins
+    const coercedSourceOrigins = atIndex(store.entries, 0).sourceOrigins
     expect(Object.keys(coercedSourceOrigins)).toEqual(
       Array.from(
         { length: 8 },
@@ -198,7 +199,7 @@ describe("webAiApiCheckBaseUrlHistoryStorage", () => {
       "https://source-match.example.com",
       "https://recent.example.com",
     ])
-    expect(suggestions[0].matchedSourceOrigin).toBe(
+    expect(atIndex(suggestions, 0).matchedSourceOrigin).toBe(
       "https://source.example.invalid",
     )
   })

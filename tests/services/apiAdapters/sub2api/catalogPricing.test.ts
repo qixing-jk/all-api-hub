@@ -17,6 +17,7 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const priceTable = {
   source: "synthetic-test",
@@ -76,7 +77,7 @@ describe("applySub2ApiPriceEstimates", () => {
       },
     })
     const quote = quoteCanonicalModelPrice(
-      result.data[0],
+      atIndex(result.data, 0),
       { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1 } },
       {},
     )
@@ -335,10 +336,10 @@ it.each([
         },
       },
     })
-    const model = response.data[0]
+    const model = atIndex(response.data, 0)
     expect(model.pricingPlan?.rates.input?.amount).toBe(0.000003)
     expect(model.pricingPlan?.rules).toHaveLength(1)
-    expect(model.pricingPlan?.rules[0].conditions).toContainEqual({
+    expect(atIndex(model.pricingPlan?.rules, 0).conditions).toContainEqual({
       kind: "time-window",
       timeZone: "UTC",
       startMinute: 1020,
@@ -423,7 +424,7 @@ it("prefers the selected runtime group's station schedule over LiteLLM and appli
   })
   const quote = (at: string) =>
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         purpose: PRICING_PURPOSES.REQUEST,
         inputTokens: 300000,
@@ -439,7 +440,7 @@ it("prefers the selected runtime group's station schedule over LiteLLM and appli
     source: { kind: "account" },
   })
   expect(quote("2026-09-08T09:00:00Z").amount).toBe(1.0125)
-  expect(response.data[0].enable_groups).toEqual(["vip"])
+  expect(atIndex(response.data, 0).enable_groups).toEqual(["vip"])
 })
 
 it("preserves station interval gaps, inclusive upper bounds and explicit-price precedence", () => {
@@ -480,7 +481,7 @@ it("preserves station interval gaps, inclusive upper bounds and explicit-price p
   })
   const quote = (inputTokens: number) =>
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         purpose: PRICING_PURPOSES.TOKEN_INDEX,
         inputTokens,
@@ -540,8 +541,10 @@ it("keeps unresolved channel policy and ambiguous station rows out of estimated 
       },
     },
   ]) {
-    const model = applySub2ApiPriceEstimates({ ...params, pricingCatalogs })
-      .data[0]
+    const model = atIndex(
+      applySub2ApiPriceEstimates({ ...params, pricingCatalogs }).data,
+      0,
+    )
     expect(model.price_metadata).toMatchObject({
       precision: "unavailable",
       unavailable_reason: "pricing-source-unavailable",
@@ -591,28 +594,31 @@ it.each([
 ])(
   "keeps malformed station schedules unavailable without estimated fallback %j",
   (pricing) => {
-    const model = applySub2ApiPriceEstimates({
-      models: [{ id: "example-priced-model" }],
-      group: { groupId: "9", groupName: "vip" },
-      groupRates: { "9": 1 },
-      priceTable,
-      pricingCatalogs: {
-        plaza: {
-          groups: [
-            {
-              id: 9,
-              models: [
-                {
-                  name: "example-priced-model",
-                  long_context_basis: "whole_request",
-                  pricing,
-                },
-              ],
-            },
-          ],
+    const model = atIndex(
+      applySub2ApiPriceEstimates({
+        models: [{ id: "example-priced-model" }],
+        group: { groupId: "9", groupName: "vip" },
+        groupRates: { "9": 1 },
+        priceTable,
+        pricingCatalogs: {
+          plaza: {
+            groups: [
+              {
+                id: 9,
+                models: [
+                  {
+                    name: "example-priced-model",
+                    long_context_basis: "whole_request",
+                    pricing,
+                  },
+                ],
+              },
+            ],
+          },
         },
-      },
-    }).data[0]
+      }).data,
+      0,
+    )
     expect(model.price_metadata).toMatchObject({ precision: "unavailable" })
     expect(
       quoteCanonicalModelPrice(
@@ -659,13 +665,13 @@ it("quotes per-request station prices with the selected group and time discount 
       },
     },
   })
-  expect(calculateModelPrice(response.data[0], 0.5)).toEqual({
+  expect(calculateModelPrice(atIndex(response.data, 0), 0.5)).toEqual({
     kind: "per-call",
     usdPerCall: 0.01,
   })
   expect(
     quoteCanonicalModelPrice(
-      response.data[0],
+      atIndex(response.data, 0),
       {
         purpose: PRICING_PURPOSES.REQUEST,
         at: "2026-09-08T10:00:00Z",
@@ -677,35 +683,46 @@ it("quotes per-request station prices with the selected group and time discount 
 })
 
 it("selects station image size prices and replaces the user rate with the independent image rate", () => {
-  const model = applySub2ApiPriceEstimates({
-    models: [{ id: "example-priced-model" }],
-    group: { groupId: "9", groupName: "vip" },
-    groupRates: { "9": 0.5 },
-    priceTable,
-    pricingCatalogs: {
-      plaza: {
-        groups: [
-          {
-            id: 9,
-            image_rate_independent: true,
-            image_rate_multiplier: 0.8,
-            models: [
-              {
-                name: "example-priced-model",
-                pricing: {
-                  billing_mode: "image",
-                  intervals: [
-                    { tier_label: "1K", min_tokens: 0, per_request_price: 0.1 },
-                    { tier_label: "2K", min_tokens: 0, per_request_price: 0.2 },
-                  ],
+  const model = atIndex(
+    applySub2ApiPriceEstimates({
+      models: [{ id: "example-priced-model" }],
+      group: { groupId: "9", groupName: "vip" },
+      groupRates: { "9": 0.5 },
+      priceTable,
+      pricingCatalogs: {
+        plaza: {
+          groups: [
+            {
+              id: 9,
+              image_rate_independent: true,
+              image_rate_multiplier: 0.8,
+              models: [
+                {
+                  name: "example-priced-model",
+                  pricing: {
+                    billing_mode: "image",
+                    intervals: [
+                      {
+                        tier_label: "1K",
+                        min_tokens: 0,
+                        per_request_price: 0.1,
+                      },
+                      {
+                        tier_label: "2K",
+                        min_tokens: 0,
+                        per_request_price: 0.2,
+                      },
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-        ],
+              ],
+            },
+          ],
+        },
       },
-    },
-  }).data[0]
+    }).data,
+    0,
+  )
   expect(
     quoteCanonicalModelPrice(
       model,
