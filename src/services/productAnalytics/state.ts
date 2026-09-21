@@ -30,6 +30,8 @@ export type ProductAnalyticsShieldBypassSummaryState = {
   tempWindowFetchFailureCount?: number
   tempWindowTurnstileFetchSuccessCount?: number
   tempWindowTurnstileFetchFailureCount?: number
+  tempWindowFetchFailureCategoryCounts?: ProductAnalyticsProtectionBypassCounter<"tempWindowFetchFailureCategoryCounts">
+  tempWindowTurnstileFetchFailureCategoryCounts?: ProductAnalyticsProtectionBypassCounter<"tempWindowTurnstileFetchFailureCategoryCounts">
   featureCounts?: ProductAnalyticsProtectionBypassCounter<"featureCounts">
   invocationKindCounts?: ProductAnalyticsProtectionBypassCounter<"invocationKindCounts">
   automaticTriggerCounts?: ProductAnalyticsProtectionBypassCounter<"automaticTriggerCounts">

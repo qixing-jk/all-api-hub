@@ -22,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
   type ProductAnalyticsProtectionBypassCountProperty,
 } from "./contracts"
 import {
@@ -52,6 +53,8 @@ function emptySummary(
     tempWindowFetchFailureCount: 0,
     tempWindowTurnstileFetchSuccessCount: 0,
     tempWindowTurnstileFetchFailureCount: 0,
+    tempWindowFetchFailureCategoryCounts: {},
+    tempWindowTurnstileFetchFailureCategoryCounts: {},
     featureCounts: {},
     invocationKindCounts: {},
     automaticTriggerCounts: {},
@@ -89,6 +92,12 @@ function hasSummaryActivity(summary: ProductAnalyticsShieldBypassSummaryState) {
   ].some((counts) =>
     Object.values(counts ?? {}).some((count) => (count ?? 0) > 0),
   )
+  const hasTempWindowFailureCategoryActivity = [
+    summary.tempWindowFetchFailureCategoryCounts,
+    summary.tempWindowTurnstileFetchFailureCategoryCounts,
+  ].some((counts) =>
+    Object.values(counts ?? {}).some((count) => (count ?? 0) > 0),
+  )
   return (
     (summary.promptShownCount ?? 0) > 0 ||
     (summary.promptDismissedCount ?? 0) > 0 ||
@@ -97,7 +106,8 @@ function hasSummaryActivity(summary: ProductAnalyticsShieldBypassSummaryState) {
     (summary.tempWindowFetchFailureCount ?? 0) > 0 ||
     (summary.tempWindowTurnstileFetchSuccessCount ?? 0) > 0 ||
     (summary.tempWindowTurnstileFetchFailureCount ?? 0) > 0 ||
-    hasPolicyDecisionActivity
+    hasPolicyDecisionActivity ||
+    hasTempWindowFailureCategoryActivity
   )
 }
 
@@ -113,30 +123,41 @@ function buildProtectionBypassCountProperties(
     Record<ProductAnalyticsProtectionBypassCountProperty, number>
   > = {}
   const dimensions = [
-    ["feature", summary.featureCounts],
-    ["invocation", summary.invocationKindCounts],
-    ["trigger", summary.automaticTriggerCounts],
-    ["operation", summary.operationCounts],
-    ["decision", summary.decisionCounts],
-    ["denial", summary.denialReasonCounts],
-    ["adapter", summary.adapterCounts],
-    ["focus_start", summary.focusStartCounts],
-    ["focus_end", summary.focusEndCounts],
-    ["focus_transition", summary.focusTransitionCounts],
+    ["protection_bypass_feature", summary.featureCounts],
+    ["protection_bypass_invocation", summary.invocationKindCounts],
+    ["protection_bypass_trigger", summary.automaticTriggerCounts],
+    ["protection_bypass_operation", summary.operationCounts],
+    ["protection_bypass_decision", summary.decisionCounts],
+    ["protection_bypass_denial", summary.denialReasonCounts],
+    ["protection_bypass_adapter", summary.adapterCounts],
+    ["protection_bypass_focus_start", summary.focusStartCounts],
+    ["protection_bypass_focus_end", summary.focusEndCounts],
+    ["protection_bypass_focus_transition", summary.focusTransitionCounts],
     [
-      "focus_background_start_adapter",
+      "protection_bypass_focus_background_start_adapter",
       summary.focusBackgroundStartAdapterCounts,
     ],
     [
-      "focus_foreground_activation_adapter",
+      "protection_bypass_focus_foreground_activation_adapter",
       summary.focusForegroundActivationAdapterCounts,
     ],
-    ["focus_unknown_adapter", summary.focusUnknownAdapterCounts],
+    [
+      "protection_bypass_focus_unknown_adapter",
+      summary.focusUnknownAdapterCounts,
+    ],
+    [
+      "temp_window_fetch_failure_category",
+      summary.tempWindowFetchFailureCategoryCounts,
+    ],
+    [
+      "temp_window_turnstile_fetch_failure_category",
+      summary.tempWindowTurnstileFetchFailureCategoryCounts,
+    ],
   ] as const
 
   for (const [dimension, counts] of dimensions) {
     for (const [value, count] of Object.entries(counts ?? {})) {
-      const property = `protection_bypass_${dimension}_${value}_count`
+      const property = `${dimension}_${value}_count`
       if (!PROTECTION_BYPASS_COUNT_PROPERTY_SET.has(property)) continue
       properties[property as ProductAnalyticsProtectionBypassCountProperty] =
         count
@@ -200,17 +221,26 @@ export async function recordShieldBypassSettingsVisited() {
 
 /**
  * Records the temp-window fetch outcome used by shield-bypass analysis.
+ *
+ * Failures carry a reviewed error category so the daily summary can report a
+ * category breakdown without one event per attempt. Failures without a
+ * category still count towards the total, so category counts may sum to less
+ * than `temp_window_fetch_failure_count`.
  */
 export async function recordShieldBypassTempWindowFetchResult(
   result:
     | typeof PRODUCT_ANALYTICS_RESULTS.Success
     | typeof PRODUCT_ANALYTICS_RESULTS.Failure,
+  errorCategory?: ProductAnalyticsErrorCategory,
 ) {
-  await incrementShieldBypassSummary(
-    result === PRODUCT_ANALYTICS_RESULTS.Success
+  await incrementShieldBypassSummary({
+    ...(result === PRODUCT_ANALYTICS_RESULTS.Success
       ? { tempWindowFetchSuccessCount: 1 }
-      : { tempWindowFetchFailureCount: 1 },
-  )
+      : { tempWindowFetchFailureCount: 1 }),
+    ...(result === PRODUCT_ANALYTICS_RESULTS.Failure && errorCategory
+      ? { tempWindowFetchFailureCategoryCounts: { [errorCategory]: 1 } }
+      : {}),
+  })
 }
 
 /**
@@ -220,12 +250,20 @@ export async function recordShieldBypassTempWindowTurnstileFetchResult(
   result:
     | typeof PRODUCT_ANALYTICS_RESULTS.Success
     | typeof PRODUCT_ANALYTICS_RESULTS.Failure,
+  errorCategory?: ProductAnalyticsErrorCategory,
 ) {
-  await incrementShieldBypassSummary(
-    result === PRODUCT_ANALYTICS_RESULTS.Success
+  await incrementShieldBypassSummary({
+    ...(result === PRODUCT_ANALYTICS_RESULTS.Success
       ? { tempWindowTurnstileFetchSuccessCount: 1 }
-      : { tempWindowTurnstileFetchFailureCount: 1 },
-  )
+      : { tempWindowTurnstileFetchFailureCount: 1 }),
+    ...(result === PRODUCT_ANALYTICS_RESULTS.Failure && errorCategory
+      ? {
+          tempWindowTurnstileFetchFailureCategoryCounts: {
+            [errorCategory]: 1,
+          },
+        }
+      : {}),
+  })
 }
 
 export type ProtectionBypassDecisionSummary = {
