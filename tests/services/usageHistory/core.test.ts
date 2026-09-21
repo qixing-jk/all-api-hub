@@ -44,6 +44,34 @@ function createConsumeLogItem(
 }
 
 describe("usageHistory core", () => {
+  it("records latency at the last bound in the overflow bucket", () => {
+    const accountStore = createEmptyUsageHistoryAccountStore()
+    const createdAt = Math.floor(Date.UTC(2026, 0, 1, 12, 0, 0) / 1000)
+    const dayKey = "2026-01-01"
+    const startCursor = {
+      ...accountStore.cursor,
+      fingerprintsAtLastSeenCreatedAt: [],
+    }
+    ingestConsumeLogItems({
+      accountStore,
+      items: [
+        createConsumeLogItem({
+          created_at: createdAt,
+          use_time: USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.at(-1),
+        }),
+      ],
+      startCursor,
+      cursorCandidate: {
+        ...startCursor,
+        fingerprintsAtLastSeenCreatedAt: [],
+      },
+      timeZone: "UTC",
+    })
+
+    const overflowIndex =
+      USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS.length
+    expect(accountStore.latencyDaily[dayKey].buckets[overflowIndex]).toBe(1)
+  })
   it("keeps a valid cutoff for retention periods beyond the Date range", () => {
     expect(
       computeRetentionCutoffDayKey(

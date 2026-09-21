@@ -216,6 +216,42 @@ describe("AutoCheckinSettings", () => {
     expect(updateAutoCheckin).not.toHaveBeenCalled()
   })
 
+  it("rejects a stored boundary that has no minute", async () => {
+    useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        autoCheckin: createPreferences({ windowEnd: "10" }),
+      },
+      updateAutoCheckin,
+      resetAutoCheckinConfig,
+    })
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const windowStartInput = screen.getByLabelText(
+      "autoCheckin:settings.windowStart",
+    )
+    fireEvent.change(windowStartInput, { target: { value: "07:30" } })
+    fireEvent.blur(windowStartInput)
+    await waitFor(() => expect(windowStartInput).toHaveValue("08:00"))
+
+    const deterministicTimeInput = screen.getByLabelText(
+      "autoCheckin:settings.deterministicTimeTitle",
+    )
+    fireEvent.change(deterministicTimeInput, { target: { value: "09:30" } })
+    fireEvent.blur(deterministicTimeInput)
+    await waitFor(() => expect(deterministicTimeInput).toHaveValue("09:00"))
+
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.invalidTimeWindow",
+    )
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.deterministicTimeOutsideWindow",
+    )
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+  })
+
   it("saves valid schedule and retry changes and navigates to the execution view", async () => {
     const user = userEvent.setup()
     render(<AutoCheckinSettings />, {
