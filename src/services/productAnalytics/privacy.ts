@@ -105,6 +105,7 @@ const EVENT_ALLOWED_KEYS = {
     "failure_reason",
     "account_auto_detect_failure_reason",
     "account_auto_detect_attempt_outcome",
+    "account_auto_detect_identity_detected",
     "auto_detect_strategy",
     "requested_auth_mode",
     "site_type",
@@ -792,6 +793,7 @@ const FEATURE_ACTION_COMPLETED_BOOLEAN_FIELDS = new Set([
   "stale_response_ignored",
   "background_execution",
   "current_tab_matched",
+  "account_auto_detect_identity_detected",
   "route_params_present",
   "usage_data_present",
 ])

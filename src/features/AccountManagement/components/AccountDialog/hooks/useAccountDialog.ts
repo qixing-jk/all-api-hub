@@ -86,6 +86,7 @@ import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiSer
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
+  isIdentityKnownAutoDetectFailureReason,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
@@ -2204,6 +2205,16 @@ export function useAccountDialog({
       return {
         requestedAuthMode: authType,
         fallbackUsed,
+        ...(result &&
+        "autoDetectFailureReason" in result &&
+        result.success === false
+          ? {
+              accountAutoDetectIdentityDetected:
+                isIdentityKnownAutoDetectFailureReason(
+                  result.autoDetectFailureReason,
+                ),
+            }
+          : {}),
         ...(checkInInspection
           ? {
               checkInDiscoveryTrigger,

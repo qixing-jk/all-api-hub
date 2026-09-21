@@ -4,8 +4,10 @@ import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   analyzeAutoDetectError,
+  AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
   getAutoDetectErrorByCode,
+  isIdentityKnownAutoDetectFailureReason,
   openLoginTab,
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
@@ -596,6 +598,46 @@ describe("autoDetectUtils", () => {
       const values = Object.values(AutoDetectErrorType)
       const uniqueValues = new Set(values)
       expect(uniqueValues.size).toBe(values.length)
+    })
+  })
+
+  describe("isIdentityKnownAutoDetectFailureReason", () => {
+    it("marks completion-stage credential failures as identity-detected", () => {
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+        ),
+      ).toBe(true)
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+        ),
+      ).toBe(true)
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+        ),
+      ).toBe(true)
+    })
+
+    it("does not mark detection-stage or missing reasons as identity-detected", () => {
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+        ),
+      ).toBe(false)
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+        ),
+      ).toBe(false)
+      expect(
+        isIdentityKnownAutoDetectFailureReason(
+          AUTO_DETECT_FAILURE_REASONS.SiteTypeDetectionFailed,
+        ),
+      ).toBe(false)
+      expect(isIdentityKnownAutoDetectFailureReason(undefined)).toBe(false)
+      expect(isIdentityKnownAutoDetectFailureReason(null)).toBe(false)
     })
   })
 

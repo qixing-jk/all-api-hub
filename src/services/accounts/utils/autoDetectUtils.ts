@@ -48,6 +48,32 @@ export {
   type AutoDetectFailureReason,
 }
 
+/**
+ * Failure reasons raised only after the account identity (userId) was resolved.
+ * These come from the completion/credential stage, so a failure carrying one of
+ * them means the user was identified but the access token could not be
+ * provisioned automatically — a guided detour, not a detection miss.
+ */
+const IDENTITY_KNOWN_AUTO_DETECT_FAILURE_REASONS =
+  new Set<AutoDetectFailureReason>([
+    AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+    AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+    AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+  ])
+
+/**
+ * Whether an auto-detect failure reason implies the account identity was
+ * already resolved. Unknown/missing reasons stay false so analysis never
+ * over-counts identity detection.
+ */
+export function isIdentityKnownAutoDetectFailureReason(
+  reason: AutoDetectFailureReason | null | undefined,
+): boolean {
+  return (
+    reason != null && IDENTITY_KNOWN_AUTO_DETECT_FAILURE_REASONS.has(reason)
+  )
+}
+
 // 自动识别错误信息
 export interface AutoDetectError {
   type: AutoDetectErrorType

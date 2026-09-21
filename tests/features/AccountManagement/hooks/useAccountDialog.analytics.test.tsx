@@ -427,6 +427,7 @@ describe("useAccountDialog analytics", () => {
           fallbackUsed: true,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+          accountAutoDetectIdentityDetected: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           autoDetectStrategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
           siteType: SITE_TYPES.NEW_API,
@@ -491,6 +492,7 @@ describe("useAccountDialog analytics", () => {
           fallbackUsed: true,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+          accountAutoDetectIdentityDetected: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           autoDetectStrategy: AUTO_DETECT_STRATEGIES.CurrentTab,
           siteType: SITE_TYPES.VELOERA,
@@ -543,10 +545,46 @@ describe("useAccountDialog analytics", () => {
           requestedAuthMode: AuthTypeEnum.AccessToken,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+          accountAutoDetectIdentityDetected: true,
         },
       },
     )
     expectNoSensitiveAnalyticsFields()
+  })
+
+  it("marks identity as not detected when auto-detect fails before resolving the account", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      message: "no user id",
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+      detailedError: {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: "private backend text",
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          accountAutoDetectFailureReason:
+            AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+          accountAutoDetectIdentityDetected: false,
+        }),
+      }),
+    )
   })
 
   it.each([
