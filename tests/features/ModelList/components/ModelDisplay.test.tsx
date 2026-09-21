@@ -343,6 +343,36 @@ describe("ModelDisplay", () => {
     expect(renderedProps.resolvedVendor).toBe(resolvedVendor)
   })
 
+  it("resolves a whitespace-padded model name to the row's verification summary", () => {
+    // Pins the trimming contract shared by every model-list lookup: the target
+    // factories normalize the model name, so a row whose upstream name carries
+    // whitespace still finds the summary the filters found.
+    const summaryKey = serializeVerificationHistoryTarget(
+      requireHistoryTarget(
+        createAccountModelVerificationHistoryTarget("account-1", "gpt-4o-mini"),
+      ),
+    )
+
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({ model: { model_name: "  gpt-4o-mini  " } }),
+        ]}
+        verificationSummariesByKey={{
+          [summaryKey]: { status: "success" } as any,
+        }}
+        showRealPrice={false}
+        showEndpointTypes={false}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
+      "data-summary-status",
+      "success",
+    )
+  })
+
   it("shows an empty state when no filtered models are available", () => {
     render(
       <ModelDisplay

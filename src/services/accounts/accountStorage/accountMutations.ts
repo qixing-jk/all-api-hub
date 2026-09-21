@@ -7,6 +7,7 @@ import {
 import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
+import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -17,6 +18,28 @@ import { accountConfigStore } from "./accountConfigStore"
 import { createAccountDeletedEntryRecord } from "./configPolicies"
 
 const logger = createLogger("AccountMutations")
+
+/**
+ * Drops persisted verification results owned by accounts that no longer exist.
+ *
+ * Runs after the account write has committed, never inside the account lock: the
+ * verification store takes its own write lock and the lock is not reentrant. A
+ * failure is logged rather than propagated, so a cleanup problem cannot fail the
+ * deletion the caller asked for.
+ */
+async function pruneDeletedAccountVerificationResults(
+  accountIds: string[],
+): Promise<void> {
+  if (accountIds.length === 0) return
+
+  try {
+    await verificationResultHistoryStorage.reconcileOwners({
+      removeAccountIds: accountIds,
+    })
+  } catch (error) {
+    logger.error("清理账号验证结果失败", { accountIds, error })
+  }
+}
 
 type UpdateAccountOptions = AccountUpdateOptions
 
@@ -206,6 +229,7 @@ class AccountMutations {
       void autoCheckinStorage.pruneStatusForAccountIds([id]).catch((error) => {
         logger.error("清理自动签到账号状态失败", { accountId: id, error })
       })
+      await pruneDeletedAccountVerificationResults([id])
       return deleted
     } catch (error) {
       logger.error("删除账号失败", { accountId: id, error })
@@ -250,6 +274,7 @@ class AccountMutations {
               error,
             })
           })
+        await pruneDeletedAccountVerificationResults(result.deletedIds)
       }
       return result
     } catch (error) {

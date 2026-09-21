@@ -1,4 +1,5 @@
 export { verificationResultHistoryStorage } from "./storage"
+export type { VerificationOwnerReconcileInput } from "./storage"
 export type {
   ApiVerificationHistoryConfig,
   ApiVerificationHistoryDisplayStatus,

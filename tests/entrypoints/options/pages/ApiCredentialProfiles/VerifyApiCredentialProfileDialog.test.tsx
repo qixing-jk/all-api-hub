@@ -35,6 +35,7 @@ import {
   waitFor,
   within,
 } from "~~/tests/test-utils/render"
+import { stubVerificationOwnerStoresUnavailable } from "~~/tests/test-utils/verificationOwnerStores"
 
 const {
   loggerErrorMock,
@@ -231,6 +232,9 @@ vi.mock("~/components/ui", async (importOriginal) => {
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(async () => {
     vi.restoreAllMocks()
+    // This suite passes profiles in as props instead of persisting them, so the
+    // orphan sweep must not read the empty owner stores as "every owner is gone".
+    stubVerificationOwnerStoresUnavailable()
     loggerErrorMock.mockReset()
     mockGetApiVerificationProbeDefinitions.mockClear()
     mockRunApiVerificationProbe.mockReset()
