@@ -80,11 +80,24 @@ export const siteAnnouncementsSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:site-announcements-upstream-read",
+    SITE_ANNOUNCEMENTS_TAB_ID,
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_UPSTREAM_READ,
+    "settings:siteAnnouncementNotifications.polling.upstreamRead",
+    619,
+    {
+      descriptionKey:
+        "settings:siteAnnouncementNotifications.polling.upstreamReadDesc",
+      breadcrumbsKeys: SITE_ANNOUNCEMENT_SETTINGS_BREADCRUMBS,
+      keywords: ["announcement", "notice", "read state", "upstream", "sync"],
+    },
+  ),
+  buildControlDefinition(
     "control:site-announcements-page",
     SITE_ANNOUNCEMENTS_TAB_ID,
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     "settings:siteAnnouncementNotifications.page.title",
-    619,
+    620,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
       breadcrumbsKeys: SITE_ANNOUNCEMENT_SETTINGS_BREADCRUMBS,

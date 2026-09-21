@@ -642,7 +642,9 @@
       "intervalInvalid": "Ingresa una cantidad entera de minutos entre {{min}} y {{max}}.",
       "maxAge": "Antigüedad de las notificaciones",
       "maxAgeDesc": "Los anuncios publicados antes de este límite se guardan como leídos y no generan notificación.",
-      "maxAgeInvalid": "Ingresa una cantidad entera de días entre {{min}} y {{max}}."
+      "maxAgeInvalid": "Ingresa una cantidad entera de días entre {{min}} y {{max}}.",
+      "upstreamRead": "Marcar como leídos en el sitio después de notificar",
+      "upstreamReadDesc": "Cuando está activado, una notificación entregada también marca como leídos los anuncios obtenidos en el sitio. Cuando está desactivado, el estado de lectura solo se sincroniza después de que marques un anuncio como leído en la página; recibir una notificación no equivale a haberlo leído. Solo aplica a sitios que admiten la sincronización del estado de lectura."
     },
     "title": "Anuncios del sitio"
   },

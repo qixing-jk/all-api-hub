@@ -30,6 +30,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
       notificationMaxAgeDays:
         DEFAULT_PREFERENCES.siteAnnouncementNotifications!
           .notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify: false,
     },
     updateSiteAnnouncementNotifications:
       updateSiteAnnouncementNotificationsMock,
@@ -82,6 +83,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
       enabled: defaults.enabled,
       intervalMinutes: defaults.intervalMinutes,
       notificationMaxAgeDays: defaults.notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify: defaults.autoMarkUpstreamReadOnNotify,
     })
   })
 
@@ -200,6 +202,38 @@ describe("SiteAnnouncementNotificationSettings", () => {
     expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith(
       "settings:siteAnnouncementNotifications.polling.maxAgeInvalid",
+    )
+  })
+
+  it("updates the upstream read opt-in through the preferences context", async () => {
+    render(<SiteAnnouncementsSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const upstreamReadItem = (
+      await screen.findByText(
+        "settings:siteAnnouncementNotifications.polling.upstreamRead",
+      )
+    ).closest('[id="site-announcement-notifications-upstream-read"]')
+    const upstreamReadSwitch = upstreamReadItem?.querySelector(
+      '[role="switch"]',
+    ) as HTMLElement | null
+
+    expect(upstreamReadSwitch).not.toBeNull()
+    expect(upstreamReadSwitch).toHaveAttribute("aria-checked", "false")
+
+    fireEvent.click(upstreamReadSwitch!)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        autoMarkUpstreamReadOnNotify: true,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      { success: true },
+      "settings:siteAnnouncementNotifications.polling.upstreamRead",
     )
   })
 

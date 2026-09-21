@@ -54,6 +54,7 @@ If you only disable **`Site announcement notifications`**, new announcements are
 | Interval range | Configured values are limited to 15 minutes through 24 hours. |
 | Deduplication | New announcements from the same site are deduplicated by content or upstream announcement ID. |
 | Notification age limit | 7 days by default, configurable. Announcements published earlier than the limit are saved to the list as already read and never notify. Announcements returned by a site's first scan are all treated as history and do not notify either. |
+| Upstream read sync | Marking an announcement read on the page syncs to the site; whether a delivered notification also syncs is controlled by a setting. |
 | Local retention | Up to 100 announcement records are kept per site. |
 | Manual check | **`Check now`** on the **`Site Announcements`** page is not blocked by the background polling switch, and manual checks never send notifications. |
 
@@ -66,7 +67,7 @@ Site announcements currently support two main sources:
 | Source | How it is fetched | Notes |
 |--------|-------------------|-------|
 | One API / New API compatible sites and common variants | Reads the site's `/api/notice` endpoint | Applies to many One API, New API, Veloera, OneHub, DoneHub, and similar compatible deployments. Actual availability depends on whether the target site keeps this endpoint and returns usable announcement content. |
-| Sub2API | Reads the account's unread announcement endpoint | After unread announcements are fetched, All API Hub will try to sync the upstream read state after successful notification or local reading. |
+| Sub2API | Reads the account's unread announcement endpoint | Fetches the account's unread announcements. Marking one read on the page syncs upstream; to also sync right after a successful notification (which clears the unread state on the site), enable **`Mark announcements read on the site after notifying`** in settings. |
 
 If a site has no usable announcement endpoint, or the endpoint returns empty content, All API Hub treats it as no displayable announcement for now. You can check the latest per-site status on the **`Site Announcements`** page.
 
@@ -106,7 +107,7 @@ The background polling switch only controls scheduled tasks. Manual checks are u
 
 ### Does Sub2API read state sync back to the site?
 
-All API Hub tries to sync it. After successfully notifying you about new announcements, it attempts to mark the corresponding Sub2API announcements as read. When you expand an unread Sub2API announcement locally, it also tries to sync the upstream read state. If the site API fails, the local read state still follows your local action.
+In two different cases. When you mark an announcement read on the page, or expand an unread Sub2API announcement, All API Hub tries to sync the upstream read state. To also sync right after a successful notification, enable **`Mark announcements read on the site after notifying`** in settings; it will not do that on its own, because it clears your unread state on the site. If the site API fails, the local read state still follows your local action.
 
 ## Related docs
 

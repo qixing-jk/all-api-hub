@@ -641,7 +641,9 @@
       "intervalInvalid": "Geben Sie eine ganze Minutenzahl zwischen {{min}} und {{max}} ein.",
       "maxAge": "Gültigkeitsdauer für Benachrichtigungen",
       "maxAgeDesc": "Ankündigungen, die früher veröffentlicht wurden, werden als gelesen gespeichert und lösen keine Benachrichtigung aus.",
-      "maxAgeInvalid": "Geben Sie eine ganze Zahl zwischen {{min}} und {{max}} Tagen ein."
+      "maxAgeInvalid": "Geben Sie eine ganze Zahl zwischen {{min}} und {{max}} Tagen ein.",
+      "upstreamRead": "Nach der Benachrichtigung auf der Website als gelesen markieren",
+      "upstreamReadDesc": "Wenn aktiviert, markiert eine zugestellte Benachrichtigung die abgerufenen Ankündigungen auch auf der Website als gelesen. Wenn deaktiviert, wird der Lesestatus nur synchronisiert, nachdem du eine Ankündigung auf der Seite als gelesen markierst; benachrichtigt zu werden ist nicht dasselbe wie gelesen zu haben. Gilt nur für Websites, die eine Synchronisierung des Lesestatus unterstützen."
     },
     "title": "Website-Ankündigungen"
   },

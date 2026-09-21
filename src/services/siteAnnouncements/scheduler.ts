@@ -581,9 +581,15 @@ class SiteAnnouncementScheduler {
 
               if (notification.success) {
                 result.notified += news.length
-                // Ack every item in checkResult.announcements, not just createdRecords,
-                // so provider.markRead can stop returning already-seen unread payloads.
-                await provider.markRead?.(request, checkResult.announcements)
+                // Only an explicit opt-in acks the upstream unread state,
+                // because delivering a notification is not the same as the user
+                // having read the announcement.
+                if (pollingPreferences.autoMarkUpstreamReadOnNotify) {
+                  // Ack every item in checkResult.announcements, not just
+                  // createdRecords, so provider.markRead can stop returning
+                  // already-seen unread payloads.
+                  await provider.markRead?.(request, checkResult.announcements)
+                }
               }
             }
           }

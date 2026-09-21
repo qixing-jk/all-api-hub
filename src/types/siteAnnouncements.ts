@@ -60,6 +60,15 @@ export interface SiteAnnouncementPreferences {
    * read, so re-published history never notifies or inflates unread counts.
    */
   notificationMaxAgeDays: number
+  /**
+   * Whether delivering a notification also marks the fetched announcements
+   * read on the site itself.
+   *
+   * Disabled by default: being notified is not the same as having read, and the
+   * upstream write consumes the site's own unread state. Marking read from the
+   * announcement page still syncs upstream, because that is a user action.
+   */
+  autoMarkUpstreamReadOnNotify: boolean
 }
 
 export const DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES: SiteAnnouncementPreferences =
@@ -68,6 +77,7 @@ export const DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES: SiteAnnouncementPreferences 
     notificationEnabled: true,
     intervalMinutes: 360,
     notificationMaxAgeDays: 7,
+    autoMarkUpstreamReadOnNotify: false,
   }
 
 /**
@@ -125,6 +135,9 @@ export function normalizeSiteAnnouncementPreferences(
       preferences?.notificationMaxAgeDays ??
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
     ),
+    autoMarkUpstreamReadOnNotify:
+      preferences?.autoMarkUpstreamReadOnNotify ??
+      DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
   }
 }
 

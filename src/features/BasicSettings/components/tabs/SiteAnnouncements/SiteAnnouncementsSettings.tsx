@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, Megaphone } from "lucide-react"
+import { CalendarDays, CheckCheck, Clock, Megaphone } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -80,6 +80,18 @@ export default function SiteAnnouncementsSettings() {
   const handleToggle = async (enabled: boolean) => {
     const response = await updateSiteAnnouncementNotifications({ enabled })
     showUpdateToast(response, t("siteAnnouncementNotifications.polling.enable"))
+  }
+
+  const handleUpstreamReadToggle = async (
+    autoMarkUpstreamReadOnNotify: boolean,
+  ) => {
+    const response = await updateSiteAnnouncementNotifications({
+      autoMarkUpstreamReadOnNotify,
+    })
+    showUpdateToast(
+      response,
+      t("siteAnnouncementNotifications.polling.upstreamRead"),
+    )
   }
 
   const intervalField = useDeferredPreferenceField({
@@ -164,6 +176,9 @@ export default function SiteAnnouncementsSettings() {
         siteAnnouncementNotifications.notificationMaxAgeDays ===
           DEFAULT_PREFERENCES.siteAnnouncementNotifications!
             .notificationMaxAgeDays &&
+        siteAnnouncementNotifications.autoMarkUpstreamReadOnNotify ===
+          DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+            .autoMarkUpstreamReadOnNotify &&
         !intervalField.isDirty &&
         !maxAgeDaysField.isDirty
       }
@@ -173,6 +188,7 @@ export default function SiteAnnouncementsSettings() {
           enabled: defaults.enabled,
           intervalMinutes: defaults.intervalMinutes,
           notificationMaxAgeDays: defaults.notificationMaxAgeDays,
+          autoMarkUpstreamReadOnNotify: defaults.autoMarkUpstreamReadOnNotify,
         })
         if (result.success) {
           intervalField.setDraft(String(defaults.intervalMinutes))
@@ -247,6 +263,24 @@ export default function SiteAnnouncementsSettings() {
                 onKeyDown={maxAgeDaysField.handleKeyDown}
                 disabled={maxAgeDaysField.isCommitting}
                 containerClassName="w-full sm:w-32"
+              />
+            }
+          />
+          <CardItem
+            id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_UPSTREAM_READ}
+            icon={
+              <CheckCheck className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
+            title={t("siteAnnouncementNotifications.polling.upstreamRead")}
+            description={t(
+              "siteAnnouncementNotifications.polling.upstreamReadDesc",
+            )}
+            rightContent={
+              <Switch
+                checked={
+                  siteAnnouncementNotifications.autoMarkUpstreamReadOnNotify
+                }
+                onChange={handleUpstreamReadToggle}
               />
             }
           />

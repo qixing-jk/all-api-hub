@@ -86,6 +86,7 @@ describe("overview automation model", () => {
           notificationEnabled: true,
           intervalMinutes: 180,
           notificationMaxAgeDays: 7,
+          autoMarkUpstreamReadOnNotify: false,
         },
         managedSiteModelSync: {
           ...basePreferences.managedSiteModelSync!,
@@ -250,6 +251,7 @@ describe("overview automation model", () => {
             notificationEnabled: false,
             intervalMinutes: 180,
             notificationMaxAgeDays: 7,
+            autoMarkUpstreamReadOnNotify: false,
           },
         },
         managedSiteType: undefined,

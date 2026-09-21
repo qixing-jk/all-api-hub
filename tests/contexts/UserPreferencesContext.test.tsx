@@ -2682,6 +2682,8 @@ describe("UserPreferencesContext", () => {
         intervalMinutes: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes,
         notificationMaxAgeDays:
           DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+        autoMarkUpstreamReadOnNotify:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
       },
     })
   })
@@ -2712,6 +2714,8 @@ describe("UserPreferencesContext", () => {
       intervalMinutes: 120,
       notificationMaxAgeDays:
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
     })
     expect((latestContext as any)?.preferences.lastUpdated).toBeGreaterThan(
       preferences.lastUpdated,
@@ -2722,6 +2726,8 @@ describe("UserPreferencesContext", () => {
       intervalMinutes: 120,
       notificationMaxAgeDays:
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
     })
   })
 

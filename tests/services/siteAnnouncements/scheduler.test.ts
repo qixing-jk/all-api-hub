@@ -1137,6 +1137,96 @@ describe("siteAnnouncementScheduler", () => {
     ])
   })
 
+  it("does not acknowledge upstream announcements after notifying by default", async () => {
+    await seedCheckedSite({
+      siteKey: "sub2api:sub-1:https://sub.example.com",
+      accountId: "sub-1",
+      siteType: SITE_TYPES.SUB2API,
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      baseUrl: "https://sub.example.com",
+    })
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      siteKey: "sub2api:sub-1:https://sub.example.com",
+      status: "success",
+      announcements: [
+        {
+          id: "42",
+          title: "Sub2API notice",
+          content: "Body",
+          createdAt: Date.now(),
+        },
+      ],
+    })
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({
+        id: "sub-1",
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://sub.example.com",
+      }),
+    ])
+
+    await siteAnnouncementScheduler.initialize()
+    const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
+    expect(alarmHandler).toBeTypeOf("function")
+    await alarmHandler?.({ name: "siteAnnouncementsCheck" })
+
+    expect(notifySiteAnnouncementsMock).toHaveBeenCalledTimes(1)
+    expect(providerMarkReadMock).not.toHaveBeenCalled()
+    await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([
+      expect.objectContaining({ title: "Sub2API notice", read: false }),
+    ])
+  })
+
+  it("acknowledges upstream announcements after notifying when the opt-in is enabled", async () => {
+    getPreferencesMock.mockResolvedValue({
+      siteAnnouncementNotifications: {
+        enabled: true,
+        notificationEnabled: true,
+        intervalMinutes: 360,
+        autoMarkUpstreamReadOnNotify: true,
+      },
+    })
+    await seedCheckedSite({
+      siteKey: "sub2api:sub-1:https://sub.example.com",
+      accountId: "sub-1",
+      siteType: SITE_TYPES.SUB2API,
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      baseUrl: "https://sub.example.com",
+    })
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      siteKey: "sub2api:sub-1:https://sub.example.com",
+      status: "success",
+      announcements: [
+        {
+          id: "42",
+          title: "Sub2API notice",
+          content: "Body",
+          createdAt: Date.now(),
+        },
+      ],
+    })
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({
+        id: "sub-1",
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://sub.example.com",
+      }),
+    ])
+
+    await siteAnnouncementScheduler.initialize()
+    const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
+    expect(alarmHandler).toBeTypeOf("function")
+    await alarmHandler?.({ name: "siteAnnouncementsCheck" })
+
+    expect(notifySiteAnnouncementsMock).toHaveBeenCalledTimes(1)
+    expect(providerMarkReadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "sub-1" }),
+      [expect.objectContaining({ id: "42" })],
+    )
+  })
+
   it("notifies news inside the age window and stores older findings as read", async () => {
     const now = 1_800_000_000_000
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)

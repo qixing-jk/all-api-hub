@@ -640,7 +640,9 @@
       "intervalInvalid": "Nhập số phút nguyên từ {{min}} đến {{max}}.",
       "maxAge": "Giới hạn thời gian thông báo",
       "maxAgeDesc": "Thông báo được đăng trước giới hạn này sẽ được lưu ở trạng thái đã đọc và không gửi thông báo.",
-      "maxAgeInvalid": "Nhập số ngày nguyên từ {{min}} đến {{max}}."
+      "maxAgeInvalid": "Nhập số ngày nguyên từ {{min}} đến {{max}}.",
+      "upstreamRead": "Đánh dấu đã đọc trên site sau khi thông báo",
+      "upstreamReadDesc": "Khi bật, thông báo gửi thành công cũng sẽ đánh dấu các thông báo vừa lấy là đã đọc trên site. Khi tắt, trạng thái đã đọc phía máy chủ chỉ được đồng bộ sau khi bạn tự đánh dấu đã đọc trên trang; được thông báo không có nghĩa là đã đọc. Chỉ áp dụng cho các site hỗ trợ đồng bộ đã đọc."
     },
     "title": "Thông báo website"
   },

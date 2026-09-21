@@ -1394,6 +1394,7 @@ describe("preferencesMigration", () => {
           notificationEnabled: false,
           intervalMinutes: 120,
           notificationMaxAgeDays: 7,
+          autoMarkUpstreamReadOnNotify: false,
         },
       })
 
@@ -1405,6 +1406,7 @@ describe("preferencesMigration", () => {
         notificationEnabled: false,
         intervalMinutes: 120,
         notificationMaxAgeDays: 7,
+        autoMarkUpstreamReadOnNotify: false,
       })
     })
 
