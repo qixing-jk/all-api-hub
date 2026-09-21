@@ -362,6 +362,13 @@ describe("SiteAnnouncementsPage", () => {
 
   it("links the disabled page description to announcement polling settings", async () => {
     const user = userEvent.setup()
+    vi.mocked(userPreferences.getPreferences).mockResolvedValueOnce(
+      deepOverride(structuredClone(DEFAULT_PREFERENCES), {
+        siteAnnouncementNotifications: {
+          enabled: false,
+        },
+      }),
+    )
 
     render(<SiteAnnouncementsPage />)
 
@@ -1246,6 +1253,14 @@ describe("SiteAnnouncementsPage", () => {
             return { success: true }
         }
       },
+    )
+
+    vi.mocked(userPreferences.getPreferences).mockResolvedValueOnce(
+      deepOverride(structuredClone(DEFAULT_PREFERENCES), {
+        siteAnnouncementNotifications: {
+          enabled: false,
+        },
+      }),
     )
 
     render(<SiteAnnouncementsPage />)

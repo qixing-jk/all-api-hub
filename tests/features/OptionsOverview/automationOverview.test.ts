@@ -235,7 +235,7 @@ describe("overview automation model", () => {
       }).items.map((item) => [item.id, item.status, item.statusLabel]),
     ).toEqual([
       ["autoCheckin", "warning", "enabled"],
-      ["siteAnnouncements", "info", "disabled"],
+      ["siteAnnouncements", "warning", "enabled"],
       ["webdavAutoSync", "info", "disabled"],
     ])
   })

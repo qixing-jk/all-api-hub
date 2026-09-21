@@ -120,7 +120,13 @@ describe("configuration status helpers", () => {
     expect(
       resolveSiteAnnouncementsConfigurationStatus({
         enabledAccountCount: 1,
-        preferences: DEFAULT_PREFERENCES,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          siteAnnouncementNotifications: {
+            ...DEFAULT_PREFERENCES.siteAnnouncementNotifications!,
+            enabled: false,
+          },
+        },
       }),
     ).toBe("disabled")
   })

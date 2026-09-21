@@ -1,6 +1,6 @@
 # All API Hub Privacy Policy
 
-**Last Updated:** December 30, 2025
+**Last Updated:** September 21, 2026
 
 ## Overview
 
@@ -10,7 +10,7 @@ All API Hub is a browser extension designed to help users manage account informa
 
 ### Data Collection
 
-This extension **does not collect or transmit any personal identifiable data or sensitive account data to our servers**. The account data you add and manage is primarily used for local functionality, including account display, balance refresh, key management, model management, usage analysis, automatic sign-in, website announcements, and synchronization, among other capabilities you actively enable or trigger.
+This extension **does not collect or transmit any personal identifiable data or sensitive account data to our servers**. The account data you add and manage is primarily used for local functionality, including account display, balance refresh, key management, model management, usage analysis, automatic sign-in, website announcements, and synchronization.
 
 Specifically, All API Hub does not collect or transmit the following data to our servers:
 
@@ -70,7 +70,7 @@ This extension will only communicate with the following third-party services **i
 *   AI API aggregation platforms you add (e.g., one-api, new-api, etc.)
 *   Your configured WebDAV server (e.g., if the sync feature is enabled)
 
-All communication with these services is actively triggered by you, or by automated functions you explicitly enable according to their settings, and is solely for the purpose of enabling the corresponding functionality.
+All communication with these services is triggered by you, or by the extension's background tasks according to your configured settings, and is solely for the purpose of enabling the corresponding functionality.
 We do not receive, monitor, or store any data transmitted to these services.
 
 ## Changes to This Privacy Policy

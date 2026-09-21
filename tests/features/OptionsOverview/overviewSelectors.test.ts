@@ -490,7 +490,7 @@ describe("Options overview selectors", () => {
     expect(
       view.configurationOverviewItems.find((item) => item.id === "automation"),
     ).toMatchObject({
-      status: "disabled",
+      status: "needs_setup",
     })
     expect(
       view.configurationOverviewItems
@@ -514,11 +514,11 @@ describe("Options overview selectors", () => {
       ],
       [
         "siteAnnouncements",
-        "disabled",
-        MENU_ITEM_IDS.BASIC,
-        "siteAnnouncements",
-        SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-        SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
+        "needs_setup",
+        MENU_ITEM_IDS.ACCOUNT,
+        undefined,
+        undefined,
+        undefined,
       ],
     ])
     expect(

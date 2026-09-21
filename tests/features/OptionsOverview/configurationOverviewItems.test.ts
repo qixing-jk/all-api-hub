@@ -65,15 +65,8 @@ describe("overview configuration model", () => {
       ],
       [
         "siteAnnouncements",
-        "disabled",
-        {
-          menuItemId: MENU_ITEM_IDS.BASIC,
-          params: {
-            tab: "siteAnnouncements",
-            anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-            highlight: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-          },
-        },
+        "needs_setup",
+        { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
       ],
     ])
     expect(
