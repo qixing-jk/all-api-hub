@@ -85,8 +85,8 @@ test("custom color roles reach page content, controls and portals in both modes"
       "rgb(228, 222, 240)",
     )
     // The removed appearance preview carried these samples. The checked preset
-    // badge paints the accent pair, and the announcements row is a real
-    // outline control on the same page.
+    // badge paints the accent pair, and the announcements action is a real
+    // outline control in its owning settings tab.
     const accentSample = page.locator(
       `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="${THEME_PRESET.DEFAULT}"]) span.bg-primary.text-primary-foreground`,
     )
@@ -95,11 +95,18 @@ test("custom color roles reach page content, controls and portals in both modes"
       "rgb(135, 63, 160)",
     )
     await expect(accentSample).toHaveCSS("color", "rgb(255, 242, 207)")
+    const basicSettings = page.getByTestId("basic-settings-page")
+    await basicSettings
+      .getByRole("button", { name: "Site announcements", exact: true })
+      .click()
     const outline = page
       .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE}`)
       .getByRole("button", { name: "View announcements", exact: true })
     await expect(outline).toHaveCSS("background-color", "rgb(247, 237, 222)")
     await expect(outline).toHaveCSS("border-top-color", "rgb(137, 98, 73)")
+    await basicSettings
+      .getByRole("button", { name: "General", exact: true })
+      .click()
     await page.getByRole("button", { name: /^Current:/ }).click()
     await expect(page.getByRole("menu")).toHaveCSS(
       "background-color",

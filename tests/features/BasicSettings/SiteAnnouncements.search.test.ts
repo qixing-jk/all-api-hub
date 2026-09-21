@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   siteAnnouncementsSearchControls,
@@ -31,5 +32,14 @@ describe("site announcements settings search definitions", () => {
       SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_UPSTREAM_READ,
       SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     ])
+  })
+
+  it("routes every searchable control to the site announcements tab", () => {
+    for (const control of siteAnnouncementsSearchControls) {
+      expect(control.targetId).toBeTruthy()
+      expect(BASIC_SETTINGS_ANCHOR_TO_TAB[control.targetId!]).toBe(
+        "siteAnnouncements",
+      )
+    }
   })
 })

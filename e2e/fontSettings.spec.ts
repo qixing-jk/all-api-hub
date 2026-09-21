@@ -34,8 +34,8 @@ for (const width of [390, 320]) {
     // control on the same page covers the control case.
     const sample = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE} h6`)
     const sampleControl = page
-      .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}`)
-      .getByRole("spinbutton")
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}`)
+      .getByRole("combobox")
     const initialFont = await sample.evaluate(
       (element) => getComputedStyle(element).fontFamily,
     )

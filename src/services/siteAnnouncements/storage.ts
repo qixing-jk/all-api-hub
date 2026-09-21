@@ -597,6 +597,76 @@ class SiteAnnouncementStorage {
   }
 
   /**
+   * Marks discovered identities read even when their cached records were
+   * evicted by per-site retention before the caller classified the batch.
+   */
+  async markRecordIdentitiesRead(
+    records: ReadonlyArray<
+      Pick<
+        SiteAnnouncementRecord,
+        "siteKey" | "fingerprint" | "firstSeenAt" | "lastSeenAt"
+      >
+    >,
+  ): Promise<number> {
+    if (records.length === 0) {
+      return 0
+    }
+
+    const identities = await Promise.all(
+      records.map(async (record) => ({
+        ...record,
+        digest: await digestAnnouncementFingerprint(record.fingerprint),
+      })),
+    )
+
+    return await this.mutateStore((store) => {
+      const now = Date.now()
+      let markedCount = 0
+      let recordSyncChanged = false
+      const identitiesBySite = new Map<string, Map<string, string>>()
+
+      for (const identity of identities) {
+        const markers = (store.identityLedger[identity.siteKey] ??= {})
+        const marker = (markers[identity.digest] ??= {
+          firstSeenAt: identity.firstSeenAt,
+          lastSeenAt: identity.lastSeenAt,
+        })
+        if (marker.readAt === undefined) {
+          marker.readAt = now
+          markedCount += 1
+        }
+
+        const identitiesByFingerprint =
+          identitiesBySite.get(identity.siteKey) ?? new Map<string, string>()
+        identitiesByFingerprint.set(identity.fingerprint, identity.digest)
+        identitiesBySite.set(identity.siteKey, identitiesByFingerprint)
+      }
+
+      for (const [siteKey, identitiesByFingerprint] of identitiesBySite) {
+        const site = store.sites[siteKey]
+        if (!site) continue
+
+        for (const record of site.records) {
+          const digest = identitiesByFingerprint.get(record.fingerprint)
+          if (!digest) continue
+
+          const readAt = store.identityLedger[siteKey]?.[digest]?.readAt
+          if (readAt === undefined) continue
+
+          recordSyncChanged ||= !record.read || record.readAt !== readAt
+          record.read = true
+          record.readAt = readAt
+        }
+      }
+
+      return {
+        changed: markedCount > 0 || recordSyncChanged,
+        result: markedCount,
+      }
+    })
+  }
+
+  /**
    * Marks several records as read in one write, for batches that were stored as
    * history rather than as news.
    */

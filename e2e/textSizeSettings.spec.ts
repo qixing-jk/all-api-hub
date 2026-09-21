@@ -281,8 +281,8 @@ for (const width of [1280, 390, 320]) {
       .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
       .locator("xpath=ancestor::*[@data-slot='card'][1]")
     const controlSample = page
-      .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}`)
-      .getByRole("spinbutton")
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}`)
+      .getByRole("combobox")
     await expect(primaryText).toHaveCSS("font-size", "20px")
     await expect(primaryText).toHaveCSS("line-height", "28px")
     await expect(supportingText).toHaveCSS("font-size", "12px")

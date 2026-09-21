@@ -558,9 +558,7 @@ class SiteAnnouncementScheduler {
             })
 
             if (history.length > 0) {
-              await siteAnnouncementStorage.markRecordsRead(
-                history.map((record) => record.id),
-              )
+              await siteAnnouncementStorage.markRecordIdentitiesRead(history)
             }
 
             // A manual check means the user is already looking at the page it

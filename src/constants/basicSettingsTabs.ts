@@ -57,6 +57,8 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
       "siteAnnouncements",
     [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_MAX_AGE]:
       "siteAnnouncements",
+    [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_UPSTREAM_READ]:
+      "siteAnnouncements",
     [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE]:
       "siteAnnouncements",
     [SETTINGS_ANCHORS.BALANCE_HISTORY]: "balanceHistory",

@@ -373,7 +373,7 @@ test("polls site announcements through the MV3 alarm scheduler and stores fetche
       accountId: POLLING_ACCOUNT_ID,
       providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
       content: POLLING_NOTICE_TEXT,
-      read: false,
+      read: true,
     })
   expect(noticeRequests).toBeGreaterThanOrEqual(1)
 
