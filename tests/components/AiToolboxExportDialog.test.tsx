@@ -21,7 +21,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 /** Keep export fixtures valid while making each test's credential inputs explicit. */
 function createAccountExportSource(
@@ -36,6 +36,22 @@ function createAccountExportSource(
     account,
     buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
     { preferCurrentSecret: true },
+  )
+}
+
+/** Source whose secret always resolves through the mocked async account read. */
+function createDeferredAccountExportSource(
+  accountOverrides: Partial<DisplaySiteData>,
+  tokenOverrides: Partial<NewApiToken>,
+) {
+  const account = buildDisplaySiteData({
+    siteType: SITE_TYPES.NEW_API,
+    ...accountOverrides,
+  })
+  return createAccountRuntimeKeyExportSource(
+    account,
+    buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
+    { preferCurrentSecret: false },
   )
 }
 
@@ -360,7 +376,58 @@ describe("AiToolboxExportDialog", () => {
     expect(modelCombo).toHaveTextContent(
       "ui:dialog.aiToolbox.modelOptions.none",
     )
+
+    // The retry affordance re-runs discovery for the same endpoint.
+    const attempts = mockFetchModelIds.mock.calls.length
+    await userEvent.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    await waitFor(() => {
+      expect(mockFetchModelIds.mock.calls.length).toBeGreaterThan(attempts)
+    })
     warnSpy.mockRestore()
+  })
+
+  it("exports the edited provider details", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const nameInput = await screen.findByLabelText(
+      "ui:dialog.aiToolbox.fields.name",
+    )
+    await user.clear(nameInput)
+    await user.type(nameInput, "Edited Relay")
+    const homepageInput = screen.getByLabelText(
+      "ui:dialog.aiToolbox.fields.homepage",
+    )
+    await user.clear(homepageInput)
+    await user.type(homepageInput, "https://relay.example")
+    const notesInput = screen.getByLabelText("ui:dialog.aiToolbox.fields.notes")
+    await user.type(notesInput, "edited note")
+
+    await user.click(
+      screen.getByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.exportButton),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenInAiToolbox).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Edited Relay",
+          homepage: "https://relay.example",
+          notes: "edited note",
+        }),
+      )
+    })
   })
 
   it("tracks successful exports without sensitive metadata", async () => {
@@ -514,6 +581,199 @@ describe("AiToolboxExportDialog", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
     })
+  })
+
+  it("discovers models from the edited base URL", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://x.test",
+        apiKey: "sk-test",
+      })
+    })
+    mockFetchModelIds.mockClear()
+
+    const baseUrlInput = screen.getByLabelText(
+      "ui:dialog.aiToolbox.fields.baseUrl",
+    )
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, "https://y.test/v1")
+
+    // The picker must follow the endpoint the export will actually target.
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://y.test",
+        apiKey: "sk-test",
+      })
+    })
+  })
+
+  it("sends the discovered model catalogue with the export", async () => {
+    const user = userEvent.setup()
+    mockFetchModelIds.mockResolvedValue(["model-a", "model-b"])
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalled()
+    })
+    // Catalogue targets build their model list from `models`; exporting without
+    // it would create configurations with no models at all.
+    await user.click(
+      await screen.findByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.exportButton),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenInAiToolbox).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: undefined,
+          models: ["model-a", "model-b"],
+        }),
+      )
+    })
+  })
+
+  it("appends a custom selected model to the exported catalogue", async () => {
+    const user = userEvent.setup()
+    mockFetchModelIds.mockResolvedValue(["model-a"])
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalled()
+    })
+
+    await user.click(
+      await screen.findByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.modelPicker),
+    )
+    await user.type(
+      await screen.findByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.modelSearchInput),
+      "model-c",
+    )
+    await user.click(await screen.findByText(/searchableSelect\.useValue/))
+
+    await user.click(
+      screen.getByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.exportButton),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenInAiToolbox).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: "model-c",
+          models: ["model-a", "model-c"],
+        }),
+      )
+    })
+  })
+
+  it("cancels a pending export when the dialog closes", async () => {
+    const user = userEvent.setup()
+    let resolveSecret!: (value: { secret: string }) => void
+    mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
+      () =>
+        new Promise<{ secret: string }>((resolve) => {
+          resolveSecret = resolve
+        }),
+    )
+    const onClose = vi.fn()
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={onClose}
+        source={createDeferredAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.exportButton),
+    )
+    await user.click(
+      screen.getByTestId(AI_TOOLBOX_EXPORT_TEST_IDS.cancelButton),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    // The deferred credential resolution landing after the close must not send
+    // the key anywhere.
+    resolveSecret({ secret: "sk-test" })
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    })
+    expect(mockOpenInAiToolbox).not.toHaveBeenCalled()
+  })
+
+  it("disables duplicate submissions while an export is pending", async () => {
+    const user = userEvent.setup()
+    let resolveSecret!: (value: { secret: string }) => void
+    mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
+      () =>
+        new Promise<{ secret: string }>((resolve) => {
+          resolveSecret = resolve
+        }),
+    )
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createDeferredAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const exportButton = await screen.findByTestId(
+      AI_TOOLBOX_EXPORT_TEST_IDS.exportButton,
+    )
+    await user.click(exportButton)
+    expect(exportButton).toBeDisabled()
+    // A keyboard re-submit bypasses the disabled button, so the handler itself
+    // must refuse the duplicate too.
+    fireEvent.submit((exportButton as HTMLButtonElement).form!)
+
+    resolveSecret({ secret: "sk-test" })
+    await waitFor(() => {
+      expect(mockOpenInAiToolbox).toHaveBeenCalledTimes(1)
+    })
+    // One resolution for model discovery on open, one for the export itself; a
+    // duplicate submission would have added a third.
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledTimes(2)
   })
 
   it("does not export while the dialog is closed", async () => {

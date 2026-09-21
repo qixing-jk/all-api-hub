@@ -106,6 +106,7 @@ describe("LinkedCredentialProfileActions", () => {
   it.each([
     ["keyManagement:actions.copyKelivoImportCode", "kelivo"],
     ["keyManagement:actions.exportToCCSwitch", "cc-switch"],
+    ["keyManagement:actions.exportToAiToolbox", "ai-toolbox"],
     ["keyManagement:actions.exportToCursorPlus", "cursor-plus"],
     ["keyManagement:actions.exportToKiloCode", "kilo-code"],
   ] as const)("opens the %s export dialog", async (label, dialog) => {

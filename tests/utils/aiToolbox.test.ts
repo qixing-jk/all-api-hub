@@ -113,6 +113,47 @@ describe("aiToolbox", () => {
       expect(parsed.searchParams.get("apiFormat")).toBe("anthropic_messages")
     })
 
+    it("serializes the model catalogue as the JSON entries AI Toolbox builders read", () => {
+      const parsed = captureDeeplink(() =>
+        openInAiToolbox({
+          credential: mockCredential,
+          app: "grok",
+          model: "vendor/model-a",
+          models: ["vendor/model-a", "vendor/model-b"],
+        }),
+      )
+
+      // Catalogue targets build their model list from `models`; the singular
+      // `model` only picks the default among those entries.
+      expect(parsed.searchParams.get("model")).toBe("vendor/model-a")
+      expect(JSON.parse(parsed.searchParams.get("models")!)).toEqual([
+        { id: "vendor/model-a" },
+        { id: "vendor/model-b" },
+      ])
+    })
+
+    it("omits the models parameter when no catalogue is provided", () => {
+      const parsed = captureDeeplink(() =>
+        openInAiToolbox({ credential: mockCredential, app: "grok" }),
+      )
+
+      expect(parsed.searchParams.get("models")).toBeNull()
+    })
+
+    it("drops blank entries from the model catalogue", () => {
+      const parsed = captureDeeplink(() =>
+        openInAiToolbox({
+          credential: mockCredential,
+          app: "grok",
+          models: [" ", "vendor/model-a"],
+        }),
+      )
+
+      expect(JSON.parse(parsed.searchParams.get("models")!)).toEqual([
+        { id: "vendor/model-a" },
+      ])
+    })
+
     it("reports the base URL style only when the caller supplies one", () => {
       const parsed = captureDeeplink(() =>
         openInAiToolbox({
@@ -175,6 +216,49 @@ describe("aiToolbox", () => {
       expect(opened).toBe(false)
       expect(openSpy).not.toHaveBeenCalled()
       openSpy.mockRestore()
+    })
+
+    it("rejects an export without a credential", () => {
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+
+      const opened = openInAiToolbox({
+        credential: undefined as never,
+        app: "claude",
+      })
+
+      expect(opened).toBe(false)
+      expect(openSpy).not.toHaveBeenCalled()
+      openSpy.mockRestore()
+    })
+
+    it("rejects a non-http homepage", () => {
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+
+      const opened = openInAiToolbox({
+        credential: mockCredential,
+        app: "claude",
+        homepage: "ftp://x.test",
+      })
+
+      expect(opened).toBe(false)
+      expect(openSpy).not.toHaveBeenCalled()
+      openSpy.mockRestore()
+    })
+
+    it("reports a failure when the deeplink cannot be opened", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => {
+        throw new Error("no handler")
+      })
+
+      const opened = openInAiToolbox({
+        credential: mockCredential,
+        app: "claude",
+      })
+
+      expect(opened).toBe(false)
+      openSpy.mockRestore()
+      warnSpy.mockRestore()
     })
   })
 })

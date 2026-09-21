@@ -1,5 +1,13 @@
 import type { TFunction } from "i18next"
-import { useEffect, useId, useMemo, useState, type FormEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -16,6 +24,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import {
+  buildProviderModelDiscoveryCacheKey,
   PROVIDER_MODEL_DISCOVERY_STATUSES,
   useProviderModelDiscovery,
 } from "~/hooks/useProviderModelDiscovery"
@@ -46,6 +55,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "./AiToolboxExportDialog.testIds"
+import { UPSTREAM_MODEL_FETCH_DEBOUNCE_MS } from "./ClaudeCodeRouterImportDialog"
 
 interface AiToolboxExportDialogProps {
   isOpen: boolean
@@ -143,18 +153,48 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
   // tool-specific settings itself, so the stored URL is sent verbatim.
   // https://github.com/coulsontl/ai-toolbox/blob/v1.1.5/tauri/src/coding/deeplink/provider.rs
   const [baseUrl, setBaseUrl] = useState(source.baseUrl)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const formId = useId()
+
+  // Model discovery follows the endpoint the export will actually target, not
+  // the stored URL the user may be replacing. Debounced so typing does not
+  // fire a discovery request per keystroke.
+  const [discoveryBaseUrl, setDiscoveryBaseUrl] = useState(source.baseUrl)
+  useEffect(() => {
+    const handle = setTimeout(
+      () => setDiscoveryBaseUrl(baseUrl),
+      UPSTREAM_MODEL_FETCH_DEBOUNCE_MS,
+    )
+    return () => clearTimeout(handle)
+  }, [baseUrl])
+
+  // Closing the dialog or swapping the source invalidates an in-flight export
+  // so a late credential resolution cannot send the key after a cancel.
+  const exportGenerationRef = useRef(0)
+  const invalidatePendingExport = useCallback(() => {
+    exportGenerationRef.current += 1
+  }, [])
+  useEffect(() => {
+    return invalidatePendingExport
+  }, [source, invalidatePendingExport])
+  const handleClose = useCallback(() => {
+    invalidatePendingExport()
+    onClose()
+  }, [invalidatePendingExport, onClose])
 
   const discoverySources = useMemo(
     () => [
       {
         selectionId: source.id,
-        cacheKey: source.cacheKey,
-        baseUrl: source.baseUrl,
+        cacheKey: buildProviderModelDiscoveryCacheKey([
+          source.cacheKey,
+          discoveryBaseUrl,
+        ]),
+        baseUrl: discoveryBaseUrl,
         resolveApiKey: source.resolveApiKey,
       },
     ],
-    [source],
+    [source, discoveryBaseUrl],
   )
   const { getInventory, loadModels } = useProviderModelDiscovery({
     isOpen,
@@ -190,8 +230,12 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isSubmitting) return
 
     void (async () => {
+      const generation = exportGenerationRef.current + 1
+      exportGenerationRef.current = generation
+      setIsSubmitting(true)
       const tracker = startProductAnalyticsAction(
         analyticsContext ?? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -204,10 +248,22 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
 
       try {
         const credential = await resolveCredentialExport(source)
+        if (exportGenerationRef.current !== generation) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+          return
+        }
+
+        const selectedModel = model.trim()
+        const discoveredModelIds = inventory.modelIds
+        const modelIds =
+          selectedModel && !discoveredModelIds.includes(selectedModel)
+            ? [...discoveredModelIds, selectedModel]
+            : discoveredModelIds
         const opened = openInAiToolbox({
           credential,
           app,
-          model: model.trim() || undefined,
+          model: selectedModel || undefined,
+          models: modelIds.length > 0 ? modelIds : undefined,
           notes: notes.trim() || undefined,
           name: providerName,
           homepage,
@@ -217,7 +273,7 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
 
         if (opened) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-          onClose()
+          handleClose()
         } else {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
@@ -231,6 +287,8 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             error: getErrorMessage(error),
           }),
         )
+      } finally {
+        setIsSubmitting(false)
       }
     })()
   }
@@ -238,7 +296,7 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       panelTestId={AI_TOOLBOX_EXPORT_TEST_IDS.dialog}
       header={
         <div>
@@ -256,13 +314,14 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             variant="ghost"
             type="button"
             data-testid={AI_TOOLBOX_EXPORT_TEST_IDS.cancelButton}
-            onClick={onClose}
+            onClick={handleClose}
           >
             {t("common:actions.cancel")}
           </Button>
           <Button
             type="submit"
             form={formId}
+            disabled={isSubmitting}
             data-testid={AI_TOOLBOX_EXPORT_TEST_IDS.exportButton}
           >
             {t("ui:dialog.aiToolbox.actions.export")}

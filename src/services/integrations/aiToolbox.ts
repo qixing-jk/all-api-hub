@@ -69,6 +69,11 @@ interface AiToolboxDeeplinkPayload {
   baseUrl: string
   apiKey: string
   model?: string
+  /**
+   * Catalogue entries; targets such as Grok/Kimi build their model list from
+   * this array and treat the singular `model` only as the default selector.
+   */
+  models?: { id: string }[]
   notes?: string
   apiFormat?: AiToolboxApiFormat
   baseUrlStyle?: AiToolboxBaseUrlStyle
@@ -83,6 +88,8 @@ interface OpenInAiToolboxOptions {
   /** Connection URL to export. Defaults to the credential base URL. */
   endpoint?: string
   model?: string
+  /** Model ids for the target's catalogue; blank entries are dropped. */
+  models?: string[]
   notes?: string
   name?: string
   homepage?: string
@@ -110,6 +117,10 @@ function generateAiToolboxURL(payload: AiToolboxDeeplinkPayload) {
   if (payload.model) {
     params.set("model", payload.model)
   }
+  if (payload.models?.length) {
+    // The parser decodes `models` as JSON; anything else fails the whole link.
+    params.set("models", JSON.stringify(payload.models))
+  }
   if (payload.notes) {
     params.set("notes", payload.notes)
   }
@@ -134,6 +145,7 @@ export function openInAiToolbox(options: OpenInAiToolboxOptions) {
     credential,
     app,
     model,
+    models,
     notes,
     name,
     homepage: homepageOverride,
@@ -179,6 +191,10 @@ export function openInAiToolbox(options: OpenInAiToolboxOptions) {
     baseUrl: normalizedBaseUrl,
     apiKey: credential.apiKey,
     model: model?.trim() || undefined,
+    models: models
+      ?.map((id) => id.trim())
+      .filter(Boolean)
+      .map((id) => ({ id })),
     notes: notes?.trim() || undefined,
     apiFormat,
     baseUrlStyle,

@@ -10,6 +10,10 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: () => <div data-testid="cc-switch-dialog" />,
 }))
 
+vi.mock("~/components/AiToolboxExportDialog", () => ({
+  AiToolboxExportDialog: () => <div data-testid="ai-toolbox-dialog" />,
+}))
+
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: () => (
     <div data-testid="claude-code-router-dialog" />
@@ -73,6 +77,7 @@ const buildController = (
 
 const activeDialogCases = [
   ["cc-switch", "cc-switch-dialog"],
+  ["ai-toolbox", "ai-toolbox-dialog"],
   ["cursor-plus", "cursor-plus-dialog"],
   ["kilo-code", "kilo-code-dialog"],
   ["kelivo", "kelivo-dialog"],

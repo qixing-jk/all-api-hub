@@ -26,6 +26,7 @@ import {
 
 const {
   mockCCSwitchDialog,
+  mockAiToolboxDialog,
   mockClaudeCodeRouterDialog,
   mockCursorPlusDialog,
   mockKiloCodeDialog,
@@ -40,6 +41,7 @@ const {
   mockVerifyCliDialog,
 } = vi.hoisted(() => ({
   mockCCSwitchDialog: vi.fn(),
+  mockAiToolboxDialog: vi.fn(),
   mockClaudeCodeRouterDialog: vi.fn(),
   mockCursorPlusDialog: vi.fn(),
   mockKiloCodeDialog: vi.fn(),
@@ -63,6 +65,21 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: (props: unknown) => {
     mockCCSwitchDialog(props)
     return null
+  },
+}))
+
+vi.mock("~/components/AiToolboxExportDialog", () => ({
+  AiToolboxExportDialog: (props: unknown) => {
+    mockAiToolboxDialog(props)
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close AI Toolbox export
+      </button>
+    ) : null
   },
 }))
 
@@ -686,6 +703,24 @@ describe("ServiceCredentialCard", () => {
     await expect(
       mockCCSwitchDialog.mock.lastCall?.[0].source.resolveApiKey(),
     ).resolves.toBe("sk-service-credential")
+
+    await selectExportAction(user, "keyManagement:actions.exportToAiToolbox")
+    expect(mockAiToolboxDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        source: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
+          providerName: "SharedChat - Codex API Key",
+          resolveApiKey: expect.any(Function),
+        }),
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "close AI Toolbox export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close AI Toolbox export" }),
+    ).not.toBeInTheDocument()
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     expect(mockKiloCodeDialog).toHaveBeenCalledWith(
