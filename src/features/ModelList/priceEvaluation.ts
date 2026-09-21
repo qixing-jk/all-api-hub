@@ -425,12 +425,21 @@ function resolveBestCalculatedItem(
     }
   }
 
-  // activePriceableGroups is non-empty after the guard above, so the loop
-  // always initializes the best candidate. Preserve that invariant for TS.
-  const resolvedBestResult = bestResult as CalculatedModelItem
+  if (!bestResult) {
+    return createCalculatedItem({
+      calculatedPrice: {
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        billingMode: isTokenBillingType(rawItem.model.quota_type)
+          ? "token"
+          : "per-call",
+        reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+      },
+      activeGroupContext,
+    })
+  }
 
   return {
-    ...resolvedBestResult,
+    ...bestResult,
     // Keep deterministic tie-breaking for price calculation, but only present
     // one group as optimal when it is the unique lowest-price candidate.
     hasUniquelyOptimalGroup:
