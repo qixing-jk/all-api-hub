@@ -41,9 +41,7 @@ import {
 } from "~/services/accounts/utils/accountDisplayName"
 import {
   computeRetentionCutoffDayKey,
-  getDayKeyFromUnixSeconds,
   listDayKeysInRange,
-  subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import {
@@ -74,6 +72,10 @@ import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { assertNever } from "~/utils/core/assert"
+import {
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"

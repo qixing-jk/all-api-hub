@@ -23,7 +23,10 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
+
+parallelizeShardableSpec()
 
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)

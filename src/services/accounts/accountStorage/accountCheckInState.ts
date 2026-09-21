@@ -23,14 +23,13 @@ import {
 import type { SiteAccount } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { DeepPartial } from "~/types/utils"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { accountConfigStore } from "./accountConfigStore"
 
 const logger = createLogger("AccountCheckInState")
-
-const getUtcDayKey = (): string => new Date().toISOString().split("T")[0]
 
 const hasSameCheckInIdentity = (account: SiteAccount, snapshot: SiteAccount) =>
   account.id === snapshot.id &&
@@ -257,7 +256,7 @@ class AccountCheckInState {
           })
         }
 
-        const today = getUtcDayKey()
+        const today = formatLocalDayKey()
         if (
           refreshedCheckIn &&
           checkIn.customCheckIn?.url &&
@@ -384,7 +383,7 @@ class AccountCheckInState {
           customCheckIn: {
             ...customCheckIn,
             isCheckedInToday: true,
-            lastCheckInDate: getUtcDayKey(),
+            lastCheckInDate: formatLocalDayKey(),
           },
         }
         return {
@@ -406,7 +405,7 @@ class AccountCheckInState {
 
   async resetExpiredCheckIns(): Promise<void> {
     try {
-      const today = getUtcDayKey()
+      const today = formatLocalDayKey()
       const didReset = await accountConfigStore.mutate((config) => {
         let changed = false
         for (const account of config.accounts) {

@@ -59,7 +59,10 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
+
+parallelizeShardableSpec()
 
 function createStubApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)

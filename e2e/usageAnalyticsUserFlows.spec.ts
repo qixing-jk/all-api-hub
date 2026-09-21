@@ -3,15 +3,15 @@ import fs from "node:fs/promises"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { USAGE_ANALYTICS_TEST_IDS } from "~/features/UsageAnalytics/testIds"
-import {
-  getDayKeyFromUnixSeconds,
-  subtractDaysFromDayKey,
-} from "~/services/history/usageHistory/core"
 import type {
   UsageHistoryAggregate,
   UsageHistoryExport,
   UsageHistoryLatencyAggregate,
 } from "~/types/usageHistory"
+import {
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,

@@ -14,12 +14,27 @@ import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHin
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
+import {
+  buildDevIdentity,
+  DEV_IDENTITY_FIXTURE_COLOR,
+  DEV_IDENTITY_FIXTURE_PATH,
+  DEV_IDENTITY_FIXTURE_PATH_TAIL,
+} from "~~/tests/test-utils/devIdentityFixtures"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
-  toastErrorMock: vi.fn(),
-  toastSuccessMock: vi.fn(),
+const { toastErrorMock, toastSuccessMock, getDevIdentityMock } = vi.hoisted(
+  () => ({
+    toastErrorMock: vi.fn(),
+    toastSuccessMock: vi.fn(),
+    getDevIdentityMock: vi.fn(),
+  }),
+)
+
+vi.mock("~/utils/browser/extensionIdentity", () => ({
+  getDevIdentity: (...args: unknown[]) => getDevIdentityMock(...args),
 }))
+
+const devIdentityFixture = buildDevIdentity()
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -112,6 +127,7 @@ describe("DevPanel", () => {
     mockedDebugQueuePopupInterruptionHint.mockResolvedValue(undefined)
     toastErrorMock.mockReset()
     toastSuccessMock.mockReset()
+    getDevIdentityMock.mockReturnValue(devIdentityFixture)
     vi.spyOn(changelogOnUpdateState, "setPendingVersion").mockResolvedValue(
       undefined,
     )
@@ -271,6 +287,173 @@ describe("DevPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close dev panel" }))
     expect(screen.queryByTestId("dev-panel")).not.toBeInTheDocument()
+  })
+
+  it("folds a section that only asks for a collapsed default", async () => {
+    function CollapsedByDefaultSectionRegistrar() {
+      useRegisterDevPanelSection({
+        id: "collapsed-by-default",
+        title: "Reference section",
+        defaultCollapsed: true,
+        summary: "folded",
+        actions: [
+          { id: "hidden-action", label: "Hidden action", run: () => {} },
+        ],
+      })
+      return null
+    }
+
+    render(
+      <DevPanelProvider surface="options">
+        <CollapsedByDefaultSectionRegistrar />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+
+    const toggle = await screen.findByRole("button", {
+      name: /Reference section/,
+    })
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Hidden action")).not.toBeInTheDocument()
+
+    fireEvent.click(toggle)
+
+    expect(await screen.findByText("Hidden action")).toBeVisible()
+  })
+
+  it("marks the floating ball with the build's instance color and source path", async () => {
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    const trigger = await screen.findByTestId("dev-panel-trigger")
+
+    expect(screen.getByTestId("dev-panel-identity")).toHaveTextContent(
+      DEV_IDENTITY_FIXTURE_PATH_TAIL,
+    )
+    expect(trigger.firstElementChild).toHaveStyle({
+      borderColor: DEV_IDENTITY_FIXTURE_COLOR,
+    })
+  })
+
+  it("reports the build's directories when the ball is hovered", async () => {
+    const outputPath = `${DEV_IDENTITY_FIXTURE_PATH}\\.output\\chrome-mv3-dev`
+    getDevIdentityMock.mockReturnValue(buildDevIdentity({ outputPath }))
+
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    const trigger = await screen.findByTestId("dev-panel-trigger")
+    fireEvent.mouseOver(trigger)
+
+    await waitFor(() =>
+      expect(screen.getByText(DEV_IDENTITY_FIXTURE_PATH)).toBeInTheDocument(),
+    )
+    expect(screen.getByText(outputPath)).toBeInTheDocument()
+  })
+
+  it("falls back to the badge code when the build baked no path", async () => {
+    getDevIdentityMock.mockReturnValue(
+      buildDevIdentity({ path: null, pathTail: null }),
+    )
+
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    expect(await screen.findByTestId("dev-panel-identity")).toHaveTextContent(
+      "TEM",
+    )
+  })
+
+  it("keeps this build's details folded until they are asked for", async () => {
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+
+    const toggle = await screen.findByRole("button", { name: /^This build/ })
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Source path")).not.toBeInTheDocument()
+    // The folded header still answers "which build", from the same code the
+    // toolbar badge and the floating ball show.
+    expect(toggle).toHaveTextContent(DEV_IDENTITY_FIXTURE_PATH_TAIL)
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+    expect(await screen.findByText("Source path")).toBeVisible()
+  })
+
+  it("shows which build this instance is and copies its source path", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(globalThis.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    fireEvent.click(await screen.findByRole("button", { name: /^This build/ }))
+
+    expect(await screen.findByText("Source path")).toBeVisible()
+    expect(screen.getByText(DEV_IDENTITY_FIXTURE_PATH)).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy Source path" }))
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(DEV_IDENTITY_FIXTURE_PATH),
+    )
+    expect(toastSuccessMock).toHaveBeenCalledWith("Dev: copied Source path")
   })
 
   it("labels the panel with the hosting surface", async () => {

@@ -8,6 +8,7 @@ import { useContentAppearance } from "~/features/Appearance/useContentAppearance
 import { getAppearanceScopeAttributes } from "~/utils/ui/themePreferences"
 
 import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"
+import { DevIdentityTag } from "./DevIdentityTag"
 
 const stopHostPageKeyboardShortcuts = (
   event: React.KeyboardEvent<HTMLDivElement>,
@@ -33,6 +34,8 @@ export const ContentReactRoot: React.FC = () => {
     >
       {ready && <ApiCheckModalHost />}
       {ready && <RedemptionToaster />}
+      {/* Marks this build's UI as it appears on the page. */}
+      {ready && <DevIdentityTag />}
     </div>
   )
 }

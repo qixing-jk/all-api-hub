@@ -12,7 +12,6 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -26,6 +25,7 @@ import type {
   CheckInSelectionState,
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],

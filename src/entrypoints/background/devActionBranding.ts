@@ -1,5 +1,6 @@
 import { getActionApi, getManifest } from "~/utils/browser/browserApi"
-import { formatDevActionTitle, getDevBadgeText } from "~/utils/core/devBranding"
+import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { formatDevActionTitle } from "~/utils/core/devBranding"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 
@@ -9,11 +10,27 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("DevActionBranding")
 
 /**
+ * Runs one toolbar call in isolation: the badge APIs are best-effort and vary per
+ * browser, so a rejected call must not skip the others. A rejected badge color,
+ * for example, would otherwise also cost the tooltip.
+ */
+async function applyActionSetting(
+  label: string,
+  setting: () => Promise<void> | void,
+) {
+  try {
+    await setting()
+  } catch (error) {
+    logger.debug(`Failed to apply toolbar ${label}`, error)
+  }
+}
+
+/**
  * Adds a small dev-only visual indicator on the extension toolbar icon.
  *
- * This is intentionally best-effort: in some browsers/environments the action API
- * may not exist (or may not support badges), and failures should not break the
- * background script.
+ * The badge carries the instance color plus a code derived from the source
+ * directory, and the tooltip carries the full path, so several local builds are
+ * distinguishable from the toolbar alone.
  */
 export async function applyDevActionBranding() {
   if (!isDevelopmentMode()) return
@@ -21,19 +38,29 @@ export async function applyDevActionBranding() {
   try {
     const actionApi = getActionApi()
     const manifest = getManifest()
+    const identity = getDevIdentity()
+    const badgeColor = identity.color
     const versionName = (manifest as any).version_name as string | undefined
-    const title = formatDevActionTitle(manifest.name, versionName)
+    const title = formatDevActionTitle(
+      manifest.name,
+      versionName,
+      identity.path,
+    )
 
     if (typeof actionApi.setBadgeText === "function") {
-      await actionApi.setBadgeText({ text: getDevBadgeText() })
+      await applyActionSetting("badge text", () =>
+        actionApi.setBadgeText?.({ text: identity.badgeText }),
+      )
     }
 
-    if (typeof actionApi.setBadgeBackgroundColor === "function") {
-      await actionApi.setBadgeBackgroundColor({ color: "#DC2626" })
+    if (badgeColor && typeof actionApi.setBadgeBackgroundColor === "function") {
+      await applyActionSetting("badge color", () =>
+        actionApi.setBadgeBackgroundColor?.({ color: badgeColor }),
+      )
     }
 
     if (typeof actionApi.setTitle === "function") {
-      await actionApi.setTitle({ title })
+      await applyActionSetting("title", () => actionApi.setTitle?.({ title }))
     }
   } catch (error) {
     logger.debug("Failed to apply toolbar badge/title", error)

@@ -4,10 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
-import {
-  fingerprintLogItem,
-  getDayKeyFromUnixSeconds,
-} from "~/services/history/usageHistory/core"
+import { fingerprintLogItem } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
@@ -17,6 +14,7 @@ import {
   USAGE_HISTORY_SCHEDULE_MODE,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 

@@ -23,6 +23,7 @@ import {
 } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -127,7 +128,7 @@ export const handleExportAll = async (
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `all-api-hub-backup-${new Date().toISOString().split("T")[0]}.json`
+    link.download = `all-api-hub-backup-${formatUtcDayKey()}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -172,7 +173,7 @@ export const handleExportAccounts = async (
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `accounts-backup-${new Date().toISOString().split("T")[0]}.json`
+    link.download = `accounts-backup-${formatUtcDayKey()}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -217,7 +218,7 @@ export const handleExportPreferences = async (
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `preferences-backup-${new Date().toISOString().split("T")[0]}.json`
+    link.download = `preferences-backup-${formatUtcDayKey()}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

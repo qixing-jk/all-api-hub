@@ -25,6 +25,9 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+
+parallelizeShardableSpec()
 
 const dimensions = (locator: Locator) =>
   locator.evaluate((el) => {

@@ -8,8 +8,8 @@ import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
 } from "~/services/checkin/autoCheckin/inspection"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type { DisplaySiteData } from "~/types"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 import { isCheckInStatusDetectedToday } from "./checkInStatus"
 

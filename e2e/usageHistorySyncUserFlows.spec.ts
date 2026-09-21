@@ -5,12 +5,12 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import {
   USAGE_HISTORY_SCHEDULE_MODE,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,

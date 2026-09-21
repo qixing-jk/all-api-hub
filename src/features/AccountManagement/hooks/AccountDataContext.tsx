@@ -37,7 +37,6 @@ import { accountReadModels } from "~/services/accounts/accountStorage/accountRea
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
-import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   buildEstimatedTodayIncomeMoneyTotals,
@@ -83,6 +82,7 @@ import {
   onTabUpdated,
 } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
 /**

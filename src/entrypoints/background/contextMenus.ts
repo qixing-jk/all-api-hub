@@ -20,6 +20,8 @@ import {
   removeContextMenu,
   sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
+import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { formatDevInstancePrefix } from "~/utils/core/devBranding"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -125,6 +127,10 @@ export async function refreshContextMenus(preferences: UserPreferences) {
   ensureContextMenuClickListener()
 
   try {
+    // Menu titles cannot carry colors, so development builds prefix their source
+    // path to stay apart from other locally loaded builds of this extension.
+    const devPrefix = formatDevInstancePrefix(getDevIdentity())
+
     const redemptionTitle =
       getBrowserI18nMessage("context_menu_redeem_selection") ||
       "使用兑换助手兑换选中文本"
@@ -148,7 +154,7 @@ export async function refreshContextMenus(preferences: UserPreferences) {
     if (shouldShowRedemptionAssistMenu) {
       createContextMenu({
         id: REDEMPTION_MENU_ID,
-        title: redemptionTitle,
+        title: `${devPrefix}${redemptionTitle}`,
         contexts: ["selection"],
       })
     }
@@ -156,7 +162,7 @@ export async function refreshContextMenus(preferences: UserPreferences) {
     if (shouldShowApiCheckMenu) {
       createContextMenu({
         id: API_CHECK_MENU_ID,
-        title: apiCheckTitle,
+        title: `${devPrefix}${apiCheckTitle}`,
         contexts: ["page", "selection"],
       })
     }

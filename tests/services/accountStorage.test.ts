@@ -14,7 +14,6 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/capture"
-import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -33,6 +32,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
@@ -1672,7 +1672,7 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    const today = new Date().toISOString().split("T")[0]
+    const today = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
     const success =
       await accountStorage.markAccountAsCustomCheckedIn("custom-1")
 
@@ -3107,7 +3107,9 @@ describe("accountStorage core behaviors", () => {
         customCheckIn: {
           url: "https://example.com/check",
           isCheckedInToday: true,
-          lastCheckInDate: new Date().toISOString().split("T")[0],
+          lastCheckInDate: getDayKeyFromUnixSeconds(
+            Math.floor(Date.now() / 1000),
+          ),
         },
       },
     })

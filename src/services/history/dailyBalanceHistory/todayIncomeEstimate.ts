@@ -1,11 +1,11 @@
 import { QUOTA_PER_USD } from "~/constants/money"
-import { subtractDaysFromDayKey } from "~/services/history/dailyBalanceHistory/dayKeys"
 import type { CurrencyAmount, SiteAccount } from "~/types"
 import type {
   DailyBalanceHistoryStore,
   TodayIncomeEstimateResult,
 } from "~/types/dailyBalanceHistory"
 import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
+import { subtractDaysFromDayKey } from "~/utils/core/dayKey"
 
 type TodayIncomeEstimateAccount = Pick<SiteAccount, "id" | "manualBalanceUsd">
 

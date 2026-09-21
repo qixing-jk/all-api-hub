@@ -35,12 +35,15 @@ import {
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
+import {
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "./constants"
-import { getDayKeyFromUnixSeconds, subtractDaysFromDayKey } from "./dayKeys"
 import {
   onBalanceHistoryMessage,
   type BalanceHistoryRefreshNowRequest,

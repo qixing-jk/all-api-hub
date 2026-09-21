@@ -87,6 +87,20 @@ pnpm test:ci
 
 During normal development, run the smallest relevant test set and let the pull request CI run the full sharded suite with coverage. Run `pnpm test` or `pnpm test:ci` locally when changing test infrastructure, Vitest or coverage configuration, widely shared runtime behavior, or when reproducing a CI-only failure. Documentation, copy, formatting, type-only, and similarly narrow changes do not require the full local suite unless they affect executable behavior.
 
+### Sharding in CI
+
+CI splits the unit suite across six runners (`unit-tests` in `.github/workflows/test.yml`). `vitest.shardSequencer.ts` assigns files by measured cost instead of by file count, because test files differ by two orders of magnitude in cost: equal file counts left the slowest shard running about twice the work of the fastest one.
+
+The costs come from the blob reports the shards already upload. The `unit-tests-merge` job turns them into `.vitest-durations/shard-durations.json` and saves that to the Actions cache, and the next run's shards restore it, so there is nothing to maintain by hand. Published weights are corrected for each shard's measured load, because a file measured in an overloaded shard reads expensive from contention rather than from its own cost. The correction is conditional: when shard attribution is incomplete or a shard measured nothing, the raw measurements are published with a warning in the job log. A partial report set warns separately but does not by itself force raw weights. Without a cached manifest — a first run, an evicted cache, or any local `--shard` run — sharding falls back to Vitest's default file-count slices.
+
+To see a duration-balanced split locally, publish a manifest from your own run and shard against it:
+
+```bash
+pnpm exec vitest --run --reporter=blob
+pnpm test:durations
+UNIT_TEST_SHARD_DURATIONS=.vitest-durations/shard-durations.json pnpm exec vitest --run --shard=1/6
+```
+
 ### Test Coverage
 
 Coverage reports are automatically generated when running `pnpm test:ci`. You can view detailed coverage reports in the `coverage/` directory after running tests.

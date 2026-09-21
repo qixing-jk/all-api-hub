@@ -3,4 +3,10 @@ export {
   DevPanelProvider,
   useRegisterDevPanelSection,
 } from "./DevPanelSectionsContext"
-export type { DevPanelAction, DevPanelSection, DevPanelSurface } from "./types"
+export type {
+  DevPanelAction,
+  DevPanelInfoRow,
+  DevPanelInfoTone,
+  DevPanelSection,
+  DevPanelSurface,
+} from "./types"

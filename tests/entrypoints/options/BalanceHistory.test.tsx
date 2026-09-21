@@ -10,10 +10,6 @@ import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import {
-  getDayKeyFromUnixSeconds,
-  subtractDaysFromDayKey,
-} from "~/services/history/dailyBalanceHistory/dayKeys"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -31,6 +27,10 @@ import {
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import {
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import {
   fireEvent,
