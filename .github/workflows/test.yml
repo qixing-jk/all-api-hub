@@ -164,6 +164,9 @@ jobs:
           path: .vitest-reports/*.json
           include-hidden-files: true
           retention-days: 1
+          # The merge job downloads this by name. A rerun must replace the
+          # previous attempt's blob instead of adding a second artifact.
+          overwrite: true
 
   unit-tests-merge:
     runs-on: ubuntu-latest
