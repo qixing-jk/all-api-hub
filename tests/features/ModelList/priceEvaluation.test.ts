@@ -251,6 +251,23 @@ describe("model list price evaluation", () => {
     expect(result.effectiveGroup).toBeUndefined()
   })
 
+  it("reports per-call billing when a per-call model has no usable group ratio", () => {
+    const item = buildModelListItemFixture("a", { a: 1, b: 2 })
+    const [result] = calculate([
+      {
+        ...item,
+        model: { ...item.model, quota_type: 1 },
+        groupRatios: {},
+      },
+    ])
+    expect(result.calculatedPrice).toMatchObject({
+      kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+      billingMode: "per-call",
+      reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+    })
+    expect(result.effectiveGroup).toBeUndefined()
+  })
+
   it("keeps a usable unpriced group visible without inventing a multiplier", () => {
     const item = calculate([buildModelListItemFixture("a", {})], ["b"])[0]
     expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
