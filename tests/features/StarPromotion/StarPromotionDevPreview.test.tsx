@@ -153,6 +153,22 @@ describe("star promotion dev preview", () => {
     expect(resetMock).not.toHaveBeenCalled()
   })
 
+  it("records the remaining fixture outcomes", async () => {
+    const user = userEvent.setup()
+    await renderPreview()
+
+    const scenario = getScenario("account-threshold")
+    await user.click(
+      within(scenario).getByTestId(STAR_PROMOTION_CARD_TEST_IDS.alreadyStarred),
+    )
+    expect(screen.getByText(/account-threshold:already-starred/)).toBeVisible()
+
+    await user.click(
+      within(scenario).getByTestId(STAR_PROMOTION_CARD_TEST_IDS.later),
+    )
+    expect(screen.getByText(/account-threshold:defer/)).toBeVisible()
+  })
+
   it("resets the stored state from the current-device card", async () => {
     const user = userEvent.setup()
     await renderPreview()
@@ -203,5 +219,26 @@ describe("star promotion dev preview", () => {
     expect(
       await within(currentState).findByText("card would stay hidden"),
     ).toBeInTheDocument()
+  })
+
+  it("formats a live deferral timestamp", async () => {
+    getStateMock.mockResolvedValue({
+      status: "active",
+      lifetimeCheckinSuccesses: 0,
+      baselineCheckinSuccesses: 0,
+      nextThreshold: 30,
+      baselineAccountCount: 0,
+      nextAccountThreshold: 5,
+      deferredUntil: 1_700_000_000_000,
+    })
+
+    await renderPreview()
+
+    const currentState = screen.getByTestId(
+      STAR_PROMOTION_DEV_PREVIEW_TEST_IDS.currentState,
+    )
+    expect(
+      within(currentState).getByText(/2023-11-14T22:13:20.000Z/),
+    ).toBeVisible()
   })
 })

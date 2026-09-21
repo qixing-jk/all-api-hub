@@ -7,6 +7,7 @@ import { render } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({
   createTab: vi.fn(),
+  isPopup: false,
   markCompleted: vi.fn(),
   trackImpression: vi.fn(),
 }))
@@ -21,7 +22,7 @@ vi.mock("~/services/starPromotion/state", () => ({
 }))
 
 vi.mock("~/utils/browser", () => ({
-  isExtensionPopup: () => false,
+  isExtensionPopup: () => mocks.isPopup,
   isExtensionSidePanel: () => false,
 }))
 
@@ -33,6 +34,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
 describe("FeedbackDropdownMenu star promotion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.isPopup = false
     mocks.markCompleted.mockResolvedValue(undefined)
     mocks.createTab.mockResolvedValue(undefined)
   })
@@ -57,6 +59,20 @@ describe("FeedbackDropdownMenu star promotion", () => {
     await waitFor(() => {
       expect(mocks.markCompleted).toHaveBeenCalledTimes(1)
       expect(mocks.createTab).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("attributes impressions to the popup entrypoint", () => {
+    mocks.isPopup = true
+
+    render(<FeedbackDropdownMenu language="en" />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(mocks.trackImpression).toHaveBeenCalledWith(true, {
+      surfaceId: "feedback_menu_star_item",
+      entrypoint: "popup",
     })
   })
 })

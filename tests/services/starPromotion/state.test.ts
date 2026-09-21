@@ -64,6 +64,18 @@ describe("starPromotionState", () => {
     expect(mocks.set).not.toHaveBeenCalled()
   })
 
+  it("preserves a baseline initialized by another context while waiting for the lock", async () => {
+    mocks.get
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ status: "active", baselineAccountCount: 4 })
+
+    const state = await starPromotionState.getState()
+
+    expect(state.baselineAccountCount).toBe(4)
+    expect(mocks.getAllAccounts).not.toHaveBeenCalled()
+    expect(mocks.set).not.toHaveBeenCalled()
+  })
+
   it("anchors the account baseline when the first operation is a mutation", async () => {
     await starPromotionState.markCompleted()
 
@@ -86,6 +98,73 @@ describe("starPromotionState", () => {
     await expect(starPromotionState.markCompleted()).rejects.toThrow(
       "write failed",
     )
+  })
+
+  it("rejects a first mutation when the account baseline cannot be read", async () => {
+    mocks.getAllAccounts.mockRejectedValue(new Error("accounts unavailable"))
+
+    await expect(starPromotionState.markCompleted()).rejects.toThrow(
+      "Account count unavailable",
+    )
+    expect(mocks.set).not.toHaveBeenCalled()
+  })
+
+  it("lowers a stale account baseline before evaluating the prompt", async () => {
+    mocks.get.mockResolvedValue({
+      status: "active",
+      baselineAccountCount: 10,
+      nextAccountThreshold: 5,
+    })
+
+    await starPromotionState.isThresholdPromptDue()
+
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({ baselineAccountCount: 7 }),
+    )
+  })
+
+  it("ignores non-positive and non-finite check-in increments", async () => {
+    await starPromotionState.addCheckinSuccesses(0)
+    await starPromotionState.addCheckinSuccesses(Number.NaN)
+
+    expect(mocks.get).not.toHaveBeenCalled()
+    expect(mocks.set).not.toHaveBeenCalled()
+  })
+
+  it("anchors a deferral to the live account count", async () => {
+    mocks.get.mockResolvedValue({
+      status: "active",
+      baselineAccountCount: 0,
+    })
+
+    await starPromotionState.deferThresholdPrompt()
+
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({
+        baselineAccountCount: 7,
+        deferredUntil: expect.any(Number),
+      }),
+    )
+  })
+
+  it("falls back to the check-in signal when account reads fail", async () => {
+    mocks.get.mockResolvedValue({
+      status: "active",
+      baselineAccountCount: 0,
+    })
+    mocks.getAllAccounts.mockRejectedValue(new Error("accounts unavailable"))
+
+    await expect(starPromotionState.isThresholdPromptDue()).resolves.toBe(false)
+  })
+
+  it("resets stored state and contains reset failures to dev tooling", async () => {
+    await starPromotionState.reset()
+    expect(mocks.remove).toHaveBeenCalledWith(STORAGE_KEYS.STAR_PROMOTION_STATE)
+
+    mocks.remove.mockRejectedValueOnce(new Error("remove failed"))
+    await expect(starPromotionState.reset()).resolves.toBeUndefined()
   })
 
   it("does not overwrite storage after a failed read", async () => {
