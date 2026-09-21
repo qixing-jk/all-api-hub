@@ -576,6 +576,7 @@ export type ProductAnalyticsFeatureId =
 export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyApiCredentialBundle: "copy_api_credential_bundle",
   CopyApiCredentialExportConfig: "copy_api_credential_export_config",
+  CopyApiCredentialProfileKey: "copy_api_credential_profile_key",
   CopyApiCredentialProfileKelivoImportCode:
     "copy_api_credential_profile_kelivo_import_code",
   CopyApiCredentialProfileCursorPlusProviderConfig:
@@ -683,6 +684,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenAutoCheckinAccountExternalCheckIn:
     "open_auto_checkin_account_external_check_in",
   OpenAutoCheckinManualSignIn: "open_auto_checkin_manual_sign_in",
+  OpenAutoCheckinSettingsPage: "open_auto_checkin_settings_page",
   OpenBookmark: "open_bookmark",
   OpenBookmarkImportDialog: "open_bookmark_import_dialog",
   OpenBatchModelVerifyDialog: "open_batch_model_verify_dialog",

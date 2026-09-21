@@ -398,7 +398,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
 
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinSettingsPage,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
