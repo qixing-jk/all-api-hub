@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -95,8 +97,13 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
     ).resolves.toEqual([profile.id])
 
     const readSpy = vi
-      .spyOn(apiCredentialProfilesStorage, "listProfileIdsOrThrow")
-      .mockRejectedValueOnce(new Error("unreadable"))
+      .spyOn(Storage.prototype, "get")
+      .mockImplementationOnce(async (key) => {
+        expect(key).toBe(
+          API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+        )
+        throw new Error("unreadable")
+      })
     await expect(
       apiCredentialProfilesStorage.listProfileIdsOrThrow(),
     ).rejects.toThrow("unreadable")
@@ -126,6 +133,27 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
     await expect(listStoredTargetKeys()).resolves.toEqual([
       `profile:${survivor.id}`,
     ])
+  })
+
+  it("keeps a profile deletion committed when verification cleanup fails", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "cleanup failure",
+      apiType: API_TYPES.OPENAI,
+      baseUrl: "https://cleanup-failure.example.com",
+      apiKey: "sk-cleanup-failure",
+    })
+    const reconcileSpy = vi
+      .spyOn(verificationResultHistoryStorage, "reconcileOwners")
+      .mockRejectedValueOnce(new Error("verification storage unavailable"))
+
+    await expect(
+      apiCredentialProfilesStorage.deleteProfile(profile.id),
+    ).resolves.toBe(true)
+    await expect(apiCredentialProfilesStorage.listProfiles()).resolves.toEqual(
+      [],
+    )
+
+    reconcileSpy.mockRestore()
   })
 
   it("drops a profile's results when its credentials change", async () => {
@@ -270,6 +298,26 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
     })
 
     expect(reconcileSpy).not.toHaveBeenCalled()
+    reconcileSpy.mockRestore()
+  })
+
+  it("does not reconcile verification results when removing an unused tag", async () => {
+    await apiCredentialProfilesStorage.createProfile({
+      name: "untagged",
+      apiType: API_TYPES.OPENAI,
+      baseUrl: "https://untagged.example.com",
+      apiKey: "sk-untagged",
+    })
+    const reconcileSpy = vi.spyOn(
+      verificationResultHistoryStorage,
+      "reconcileOwners",
+    )
+
+    await expect(
+      apiCredentialProfilesStorage.removeTagIdFromAllProfiles("unused-tag"),
+    ).resolves.toEqual({ updatedProfiles: 0 })
+    expect(reconcileSpy).not.toHaveBeenCalled()
+
     reconcileSpy.mockRestore()
   })
 

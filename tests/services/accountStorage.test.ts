@@ -2795,6 +2795,27 @@ describe("accountStorage core behaviors", () => {
     ])
   })
 
+  it("deleteAccount should stay committed when verification cleanup fails", async () => {
+    seedStorage([createAccount({ id: "cleanup-failure" })])
+    const cleanupError = new Error("verification storage unavailable")
+    const reconcileSpy = vi
+      .spyOn(verificationResultHistoryStorage, "reconcileOwners")
+      .mockRejectedValueOnce(cleanupError)
+
+    await expect(accountStorage.deleteAccount("cleanup-failure")).resolves.toBe(
+      true,
+    )
+    await expect(
+      accountStorage.getAccountById("cleanup-failure"),
+    ).resolves.toBeNull()
+    expect(mockLoggerError).toHaveBeenCalledWith("清理账号验证结果失败", {
+      accountIds: ["cleanup-failure"],
+      error: cleanupError,
+    })
+
+    reconcileSpy.mockRestore()
+  })
+
   it("deleteAccounts should drop verification results for every deleted id", async () => {
     seedStorage([
       createAccount({ id: "bulk-verify-live" }),

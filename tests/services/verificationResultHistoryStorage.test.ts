@@ -944,6 +944,81 @@ describe("verificationResultHistoryStorage", () => {
     ).resolves.toEqual([unsanitized])
   })
 
+  it("sanitizes a current-version payload with an invalid timestamp", async () => {
+    const storage = new Storage({ area: "local" })
+    const summary = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("invalid-timestamp")!,
+      apiType: API_TYPES.OPENAI,
+      results: [
+        { id: "models", status: "pass", latencyMs: 1, summary: "Available" },
+      ],
+    })!
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      {
+        version: API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
+        summaries: [summary],
+        lastUpdated: 0,
+      },
+    )
+
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([summary])
+    const persisted = (await storage.get(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+    )) as { lastUpdated: number }
+    expect(persisted.lastUpdated).toBeGreaterThan(0)
+  })
+
+  it("returns sanitized results when persisting a read migration fails", async () => {
+    const storage = new Storage({ area: "local" })
+    const summary = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("migration-failure")!,
+      apiType: API_TYPES.OPENAI,
+      results: [
+        { id: "models", status: "pass", latencyMs: 1, summary: "Available" },
+      ],
+    })!
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      {
+        version: API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION - 1,
+        summaries: [summary],
+        lastUpdated: Date.now(),
+      },
+    )
+    const setSpy = vi
+      .spyOn(browser.storage.local, "set")
+      .mockRejectedValueOnce(new Error("migration write failed"))
+
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([summary])
+
+    setSpy.mockRestore()
+  })
+
+  it("clones listed summaries through the JSON fallback", async () => {
+    const summary = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("json-fallback")!,
+      apiType: API_TYPES.OPENAI,
+      results: [
+        { id: "models", status: "pass", latencyMs: 1, summary: "Available" },
+      ],
+    })!
+    await verificationResultHistoryStorage.upsertLatestSummary(summary)
+    vi.stubGlobal("structuredClone", undefined)
+
+    try {
+      await expect(
+        verificationResultHistoryStorage.listSummaries(),
+      ).resolves.toEqual([summary])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("sanitizes and upgrades a payload from the previous schema version", async () => {
     const storage = new Storage({ area: "local" })
     await storage.set(

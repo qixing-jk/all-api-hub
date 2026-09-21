@@ -302,6 +302,33 @@ describe("useVerificationResultHistorySummaries", () => {
     expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
   })
 
+  it("ignores an in-flight reload failure after the hook unmounts", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-unmount-in-flight"),
+    )
+    const pendingRequest =
+      createDeferred<Record<string, ApiVerificationHistorySummary>>()
+
+    getLatestSummariesMock.mockReturnValueOnce(pendingRequest.promise)
+
+    const { unmount } = renderHook(() =>
+      useVerificationResultHistorySummaries([target]),
+    )
+
+    await waitFor(() => {
+      expect(getLatestSummariesMock).toHaveBeenCalledTimes(1)
+    })
+
+    unmount()
+
+    await act(async () => {
+      pendingRequest.reject(new Error("late failure"))
+      await Promise.resolve()
+    })
+
+    expect(loggerErrorMock).not.toHaveBeenCalled()
+  })
+
   it("ignores stale reload failures after a newer reload succeeds", async () => {
     const target = requireHistoryTarget(
       createProfileVerificationHistoryTarget("profile-4"),

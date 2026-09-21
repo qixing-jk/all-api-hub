@@ -90,6 +90,7 @@ function useStoredVerificationSummaries<T>(
       unsubscribe()
       // Drop a pending reload so an unmounted hook cannot commit state.
       if (timer !== undefined) clearTimeout(timer)
+      latestRequestIdRef.current += 1
     }
   }, [reload])
 

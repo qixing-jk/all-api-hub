@@ -42,7 +42,11 @@ for (const count of [10, 100]) {
     context,
     extensionId,
   }, testInfo) => {
-    testInfo.setTimeout(120_000)
+    // The 100-account path visits four pages, then intentionally reloads the
+    // serialized key inventory after clearing search. Keep its outer budget
+    // above the existing per-phase readiness limits so they can report the
+    // actual stalled operation instead of being pre-empted by the test timer.
+    testInfo.setTimeout(count === 100 ? 180_000 : 120_000)
     const worker = await getServiceWorker(context)
     await seedUserPreferences(worker, {
       refreshOnOpen: false,
