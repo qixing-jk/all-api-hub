@@ -29,10 +29,9 @@ function isAllApiHubRepoPage(): boolean {
 }
 
 /**
- * Watches the repository page for a resolvable star state and reports each
- * change to the background. Unknown states stay unreported (fail-open); once
- * detection reports a starred state, the background suppresses every star
- * prompt permanently.
+ * Watches the repository page for a starred state and reports it to the
+ * background. Unknown and unstarred states stay unreported (fail-open); once
+ * detection reports a star, the background suppresses every prompt permanently.
  */
 export function setupStarPromotionContent(): () => void {
   if (!isAllApiHubRepoPage()) {
@@ -40,16 +39,16 @@ export function setupStarPromotionContent(): () => void {
   }
 
   let disposed = false
-  let lastReportedState: "starred" | "not_starred" | null = null
+  let starredReported = false
 
-  const reportState = (state: "starred" | "not_starred") => {
+  const reportStarred = () => {
     void sendRuntimeActionMessage<{ success: boolean }>({
       action: RuntimeActionIds.ContentStarPromotionReport,
-      starred: state === "starred",
+      starred: true,
     })
       .then((response) => {
         if (response?.success === true) {
-          lastReportedState = state
+          starredReported = true
           return
         }
         logger.debug("Star state report was not acknowledged")
@@ -67,11 +66,11 @@ export function setupStarPromotionContent(): () => void {
     }
 
     const state = resolveGitHubRepoStarState(document)
-    if (!state || state === lastReportedState) {
+    if (state !== "starred" || starredReported) {
       return
     }
 
-    reportState(state)
+    reportStarred()
   }
 
   const observer = new MutationObserver(evaluate)

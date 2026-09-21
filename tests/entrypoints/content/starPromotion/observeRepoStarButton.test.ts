@@ -50,21 +50,20 @@ describe("setupStarPromotionContent", () => {
   })
 
   it("keeps mutation detection active after hydration polling times out", async () => {
+    renderStarButton(false)
     const cleanup = setupStarPromotionContent()
-    await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
-    })
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(30_000)
-    document.querySelector("button")?.setAttribute("aria-pressed", "false")
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
 
     await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
     })
     cleanup()
   })
 
-  it("reports acknowledged state changes without duplicating unchanged state", async () => {
+  it("does not report unstarred changes or duplicate the starred state", async () => {
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
@@ -75,9 +74,8 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
 
     document.querySelector("button")?.setAttribute("aria-pressed", "false")
-    await vi.waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
-    })
+    await Promise.resolve()
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
     cleanup()
   })
 
@@ -87,6 +85,10 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
 
     renderStarButton(false)
+    await Promise.resolve()
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
+
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
     })
