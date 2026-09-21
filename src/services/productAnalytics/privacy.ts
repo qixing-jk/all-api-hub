@@ -512,7 +512,14 @@ const EVENT_ALLOWED_KEYS = {
     "managed_site_count",
   ],
   [PRODUCT_ANALYTICS_EVENTS.SiteTypePresent]: ["site_type", "account_count"],
-} satisfies Record<ProductAnalyticsEventName, readonly string[]>
+} as const satisfies Record<ProductAnalyticsEventName, readonly string[]>
+
+/**
+ * The allow-listed property names per event, exposed as a type so tests can
+ * assert at compile time that every payload field is allow-listed. Adding
+ * `as const` above is what makes the key names available at type level.
+ */
+export type ProductAnalyticsEventAllowedKeys = typeof EVENT_ALLOWED_KEYS
 
 const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   active_tab: DASHBOARD_TAB_TYPES,
