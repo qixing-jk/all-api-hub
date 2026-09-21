@@ -153,6 +153,7 @@ export const RuntimeActionIds = {
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
+  ContentStarPromotionReport: "starPromotionReport",
 } as const
 
 export type RuntimeActionId =

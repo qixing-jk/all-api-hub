@@ -419,6 +419,7 @@
       "loading": "Đang tải nhật ký cập nhật...",
       "missingSection": "Tải bản xem trước nhật ký cập nhật thất bại (v{{version}}). Bạn có thể mở toàn bộ nhật ký cập nhật để xem.",
       "openFullChangelog": "Mở toàn bộ nhật ký cập nhật",
+      "starPrompt": "All API Hub hữu ích với bạn? Hãy gắn sao trên GitHub để theo dõi các cập nhật",
       "title": "Nội dung cập nhật",
       "updatedTo": "Đã cập nhật lên v{{version}}"
     }
@@ -430,6 +431,7 @@
     "featureRequest": "Đề xuất tính năng",
     "languageRequest": "Yêu cầu ngôn ngữ mới",
     "siteSupportRequest": "Phản hồi trang web chưa được hỗ trợ",
+    "starOnGithub": "Gắn sao trên GitHub",
     "trigger": "Phản hồi",
     "triggerTooltip": "Mở lối tắt phản hồi"
   },
@@ -506,6 +508,7 @@
     "settingsOptions": "Tùy chọn cài đặt",
     "sidebarCollapsedHint": "Thanh bên đã được thu gọn, chỉ hiển thị biểu tượng",
     "siteAnnouncements": "Thông báo trang web",
+    "starPromotionPreview": "Xem trước quảng bá Star (Dev)",
     "toggleMenu": "Chuyển đổi menu",
     "unifiedApiGuidancePreview": "Xem trước hướng dẫn API hợp nhất (Dev)",
     "usageAnalytics": "Phân tích sử dụng"
@@ -582,6 +585,16 @@
     "shortRow": "Khóa {{number}}",
     "show": "Hiện khóa",
     "title": "Khóa API"
+  },
+  "starPromotion": {
+    "actions": {
+      "alreadyStarred": "Tôi đã gắn sao rồi",
+      "defer": "Đóng",
+      "later": "Để sau",
+      "star": "Gắn sao"
+    },
+    "cardDescription": "All API Hub hoàn toàn mã nguồn mở, không ngừng hỗ trợ thêm nhiều trang và cải thiện trải nghiệm. Một sao giúp duy trì việc bảo trì và để nhiều người cần nó hơn tìm thấy nó.",
+    "cardTitle": "All API Hub có hữu ích không?"
   },
   "textEntries": {
     "add": "Thêm dòng",

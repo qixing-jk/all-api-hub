@@ -419,6 +419,7 @@
       "loading": "正在載入更新日誌…",
       "missingSection": "更新日誌預覽載入失敗（v{{version}}）。你可以開啟完整更新日誌檢視。",
       "openFullChangelog": "開啟完整更新日誌",
+      "starPrompt": "覺得 All API Hub 有幫助？點個 Star 跟隨每日更新",
       "title": "更新內容",
       "updatedTo": "已更新至 v{{version}}"
     }
@@ -430,6 +431,7 @@
     "featureRequest": "提出功能建議",
     "languageRequest": "請求支援新語言",
     "siteSupportRequest": "反饋未適配站點",
+    "starOnGithub": "去 GitHub 點個 Star",
     "trigger": "反饋",
     "triggerTooltip": "開啟反饋快捷入口"
   },
@@ -506,6 +508,7 @@
     "settingsOptions": "設定選項",
     "sidebarCollapsedHint": "側邊欄已摺疊，僅顯示圖示",
     "siteAnnouncements": "網站公告",
+    "starPromotionPreview": "Star 推廣預覽 (Dev)",
     "toggleMenu": "切換選單",
     "unifiedApiGuidancePreview": "統一 API 引導預覽 (Dev)",
     "usageAnalytics": "用量分析"
@@ -582,6 +585,16 @@
     "shortRow": "金鑰 {{number}}",
     "show": "查看金鑰",
     "title": "API 金鑰"
+  },
+  "starPromotion": {
+    "actions": {
+      "alreadyStarred": "我已經 Star 過了",
+      "defer": "關閉",
+      "later": "以後再說",
+      "star": "去 Star"
+    },
+    "cardDescription": "All API Hub 完全開源，不斷適配更多站點、優化使用體驗。點個 Star，支持它持續維護，也讓更多需要它的人發現這裡。",
+    "cardTitle": "用得順手嗎？"
   },
   "textEntries": {
     "add": "新增一列",

@@ -19,6 +19,7 @@ import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
 } from "~/features/ProductTour/constants"
+import { StarPromotionCard } from "~/features/StarPromotion"
 import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
 import { cn } from "~/lib/utils"
 import {
@@ -227,6 +228,7 @@ function OptionsPage() {
             context={searchContext}
           />
           <DevPanel />
+          <StarPromotionCard />
         </div>
       </DevPanelProvider>
     </ProductTourProvider>

@@ -98,6 +98,11 @@ export const STORAGE_LOCKS = {
    * recommendation catalog cache.
    */
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the GitHub
+   * star promotion state store.
+   */
+  STAR_PROMOTION: "all-api-hub:star-promotion",
   /** Exclusive claim of a popup account draft by its destination view. */
   ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
   /**
@@ -217,6 +222,10 @@ const POPUP_INTERRUPTION_STORAGE_KEYS = {
   HINT: "popupInterruption_hint_v1",
 } as const
 
+const STAR_PROMOTION_STORAGE_KEYS = {
+  STATE: "starPromotion_state_v1",
+} as const
+
 export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
   DRAFT_PREFIX: "accountDialogRecovery_draft_v1:",
   PENDING_PREFIX: "accountDialogRecovery_pending_v1:",
@@ -260,4 +269,5 @@ export const STORAGE_KEYS = {
   SPONSOR_ADD_ACCOUNT_PENDING_PREFILL:
     SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS.PENDING_PREFILL,
   POPUP_INTERRUPTION_HINT: POPUP_INTERRUPTION_STORAGE_KEYS.HINT,
+  STAR_PROMOTION_STATE: STAR_PROMOTION_STORAGE_KEYS.STATE,
 } as const

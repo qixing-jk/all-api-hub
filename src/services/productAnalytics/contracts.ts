@@ -537,6 +537,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   WebDavSync: "webdav_sync",
   WebAiApiCheck: "web_ai_api_check",
   SponsorRecommendations: "sponsor_recommendations",
+  StarPromotion: "star_promotion",
 } as const
 
 export const PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGERS = [
@@ -847,6 +848,11 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   RunProductTour: "run_product_tour",
   DeferProductTour: "defer_product_tour",
   ViewProductTourStep: "view_product_tour_step",
+  ShowStarPromotionPrompt: "show_star_promotion_prompt",
+  ClickStarPromotion: "click_star_promotion",
+  DeferStarPromotion: "defer_star_promotion",
+  ConfirmStarPromotionAlreadyStarred: "confirm_star_promotion_already_starred",
+  SuppressStarPromotionDetected: "suppress_star_promotion_detected",
 } as const
 
 export type ProductAnalyticsActionId =
@@ -954,6 +960,10 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   SidepanelActionBar: "sidepanel_action_bar",
   SidepanelHeader: "sidepanel_header",
   SidepanelViewTabs: "sidepanel_view_tabs",
+  OptionsStarPromotionCard: "options_star_promotion_card",
+  UpdateLogDialogStarPrompt: "update_log_dialog_star_prompt",
+  FeedbackMenuStarItem: "feedback_menu_star_item",
+  PermissionOnboardingStarCta: "permission_onboarding_star_cta",
 } as const
 
 export type ProductAnalyticsSurfaceId =

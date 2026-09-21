@@ -426,6 +426,7 @@
       "loading": "Änderungsprotokoll wird geladen…",
       "missingSection": "Die Änderungsprotokollvorschau für v{{version}} konnte nicht geladen werden. Sie können das vollständige Änderungsprotokoll öffnen.",
       "openFullChangelog": "Vollständiges Änderungsprotokoll öffnen",
+      "starPrompt": "Finden Sie All API Hub nützlich? Vergeben Sie einen Stern, um die täglichen Updates zu verfolgen",
       "title": "Was ist neu",
       "updatedTo": "Aktualisiert auf v{{version}}"
     }
@@ -437,6 +438,7 @@
     "featureRequest": "Fordern Sie eine Funktion an",
     "languageRequest": "Fordern Sie eine neue Sprache an",
     "siteSupportRequest": "Website-Unterstützung anfordern",
+    "starOnGithub": "Stern auf GitHub vergeben",
     "trigger": "Feedback",
     "triggerTooltip": "Feedback-Verknüpfungen öffnen"
   },
@@ -513,6 +515,7 @@
     "settingsOptions": "Einstellungsoptionen",
     "sidebarCollapsedHint": "Seitenleiste minimiert, zeigt nur Symbole an",
     "siteAnnouncements": "Website-Ankündigungen",
+    "starPromotionPreview": "Star-Promo-Vorschau (Dev)",
     "toggleMenu": "Menü umschalten",
     "unifiedApiGuidancePreview": "Unified API Guidance Preview (Entwickler)",
     "usageAnalytics": "Nutzungsanalyse"
@@ -590,6 +593,16 @@
     "shortRow": "Schlüssel {{number}}",
     "show": "Schlüssel anzeigen",
     "title": "API-Schlüssel"
+  },
+  "starPromotion": {
+    "actions": {
+      "alreadyStarred": "Schon markiert",
+      "defer": "Schließen",
+      "later": "Später",
+      "star": "Stern vergeben"
+    },
+    "cardDescription": "All API Hub ist vollständig Open Source und unterstützt laufend mehr Seiten, während die Bedienung weiter verfeinert wird. Ein Stern trägt die laufende Pflege mit und hilft mehr Menschen, es zu finden.",
+    "cardTitle": "Hilft Ihnen All API Hub?"
   },
   "textEntries": {
     "add": "Zeile hinzufügen",

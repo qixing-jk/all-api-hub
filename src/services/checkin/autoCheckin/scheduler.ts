@@ -70,6 +70,7 @@ import {
   type ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { starPromotionState } from "~/services/starPromotion/state"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
@@ -989,6 +990,14 @@ class AutoCheckinScheduler {
     })
 
     return updated ? nextSnapshots : snapshots
+  }
+
+  /**
+   * Reports successful check-ins to the star promotion value signal. Non-positive
+   * counts are no-ops in the state service, so callers can pass a raw tally.
+   */
+  private recordStarPromotionCheckinSuccesses(count: number): void {
+    void starPromotionState.addCheckinSuccesses(count)
   }
 
   /**
@@ -2523,6 +2532,8 @@ class AutoCheckinScheduler {
         .filter((outcome) => isSuccessfulCheckinStatus(outcome.result.status))
         .map((outcome) => outcome.result.accountId)
 
+      this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
+
       const accountIdsToRefresh = checkinOutcomes
         .filter(
           (outcome) => outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
@@ -2906,6 +2917,8 @@ class AutoCheckinScheduler {
         }
       },
     )
+
+    this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
     const summary =
       retryOutcome?.summary ?? this.recalculateSummaryFromResults(updates)
     const accountsSnapshot = retryOutcome?.accountsSnapshot
@@ -3122,6 +3135,10 @@ class AutoCheckinScheduler {
         }
       },
     )
+
+    if (isSuccessfulCheckinStatus(result.status)) {
+      this.recordStarPromotionCheckinSuccesses(1)
+    }
     const summary: AutoCheckinRunSummary =
       retryOutcome?.summary ??
       this.recalculateSummaryFromResults({ [result.accountId]: result })

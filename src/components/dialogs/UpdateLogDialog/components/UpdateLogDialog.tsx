@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from "react"
+import { Star } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Modal } from "~/components/ui"
+import { REPO_URL } from "~/constants/about"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
+import { starPromotionState } from "~/services/starPromotion/state"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -10,6 +20,11 @@ import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "../testIds"
+
+/**
+ * Unified logger scoped to the update log dialog.
+ */
+const logger = createLogger("UpdateLogDialog")
 
 export interface UpdateLogDialogProps {
   isOpen: boolean
@@ -33,8 +48,29 @@ export function UpdateLogDialog({
     useUserPreferencesContext()
   const [autoOpenOverride, setAutoOpenOverride] = useState<boolean | null>(null)
   const [isSavingAutoOpen, setIsSavingAutoOpen] = useState(false)
+  const [starPromptDismissed, setStarPromptDismissed] = useState(false)
 
   const autoOpenEnabled = autoOpenOverride ?? openChangelogOnUpdate
+  // The update flow doubles as a star moment: the user is staring at evidence
+  // of active development. Only show the ask while promotion is still active.
+  const showStarPrompt = useStarPromotionActive(isOpen) && !starPromptDismissed
+
+  const handleStarFromUpdateLog = useCallback(async () => {
+    setStarPromptDismissed(true)
+    trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.UpdateLogDialogStarPrompt,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    void starPromotionState.markCompleted()
+    try {
+      await createTab(REPO_URL, true)
+    } catch (error) {
+      logger.error(
+        `Failed opening repository after star click: ${getErrorMessage(error)}`,
+        error,
+      )
+    }
+  }, [])
 
   const iframeUrl = useMemo(
     () => getDocsChangelogUrl(version, i18n.language),
@@ -103,48 +139,62 @@ export function UpdateLogDialog({
   )
 
   const footer = (
-    <div
-      data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footer}
-      className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <Button
-        data-testid={UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle}
-        variant="outline"
-        loading={isSavingAutoOpen}
-        onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
-        type="button"
-        className="py-density-2 h-auto min-h-(--density-control) w-full text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
-      >
-        {isSavingAutoOpen
-          ? autoOpenEnabled
-            ? t("common:status.disabling")
-            : t("common:status.enabling")
-          : autoOpenEnabled
-            ? t("ui:dialog.updateLog.disableAutoOpen")
-            : t("ui:dialog.updateLog.enableAutoOpen")}
-      </Button>
-
+    <div className="gap-y-density-2 flex w-full flex-col">
+      {showStarPrompt ? (
+        <Button
+          variant="link"
+          size="sm"
+          type="button"
+          onClick={() => void handleStarFromUpdateLog()}
+          leftIcon={<Star className="text-link h-4 w-4" />}
+          className="h-auto justify-center py-0 text-left sm:justify-start"
+        >
+          {t("ui:dialog.updateLog.starPrompt")}
+        </Button>
+      ) : null}
       <div
-        data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footerActions}
-        className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:justify-end"
+        data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footer}
+        className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <Button
-          data-testid={UPDATE_LOG_DIALOG_TEST_IDS.closeButton}
+          data-testid={UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle}
           variant="outline"
-          onClick={onClose}
+          loading={isSavingAutoOpen}
+          onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
           type="button"
-          className="w-full sm:w-auto"
+          className="py-density-2 h-auto min-h-(--density-control) w-full text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
         >
-          {t("common:actions.close")}
+          {isSavingAutoOpen
+            ? autoOpenEnabled
+              ? t("common:status.disabling")
+              : t("common:status.enabling")
+            : autoOpenEnabled
+              ? t("ui:dialog.updateLog.disableAutoOpen")
+              : t("ui:dialog.updateLog.enableAutoOpen")}
         </Button>
-        <Button
-          data-testid={UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton}
-          onClick={() => void handleOpenFullChangelog()}
-          type="button"
-          className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
+
+        <div
+          data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footerActions}
+          className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:justify-end"
         >
-          {t("ui:dialog.updateLog.openFullChangelog")}
-        </Button>
+          <Button
+            data-testid={UPDATE_LOG_DIALOG_TEST_IDS.closeButton}
+            variant="outline"
+            onClick={onClose}
+            type="button"
+            className="w-full sm:w-auto"
+          >
+            {t("common:actions.close")}
+          </Button>
+          <Button
+            data-testid={UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton}
+            onClick={() => void handleOpenFullChangelog()}
+            type="button"
+            className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
+          >
+            {t("ui:dialog.updateLog.openFullChangelog")}
+          </Button>
+        </div>
       </div>
     </div>
   )

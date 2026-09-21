@@ -419,6 +419,7 @@
       "loading": "更新ログを読み込み中…",
       "missingSection": "v{{version}} の更新ログプレビューを読み込めませんでした。完全版の更新ログを開けます。",
       "openFullChangelog": "完全な更新ログを開く",
+      "starPrompt": "All API Hub が役に立ったら、GitHub で Star を付けて最新動向をフォローしましょう",
       "title": "新着情報",
       "updatedTo": "v{{version}} に更新しました"
     }
@@ -430,6 +431,7 @@
     "featureRequest": "機能要望を送る",
     "languageRequest": "新しい言語をリクエスト",
     "siteSupportRequest": "サイト対応を依頼",
+    "starOnGithub": "GitHub で Star を付ける",
     "trigger": "フィードバック",
     "triggerTooltip": "フィードバックショートカットを開く"
   },
@@ -506,6 +508,7 @@
     "settingsOptions": "設定オプション",
     "sidebarCollapsedHint": "サイドバーは折りたたまれており、アイコンのみ表示されています",
     "siteAnnouncements": "サイトのお知らせ",
+    "starPromotionPreview": "Star プロモーションプレビュー (Dev)",
     "toggleMenu": "メニューを切り替え",
     "unifiedApiGuidancePreview": "統一 API ガイダンスプレビュー（開発用）",
     "usageAnalytics": "利用分析"
@@ -582,6 +585,16 @@
     "shortRow": "キー {{number}}",
     "show": "キーを表示",
     "title": "API キー"
+  },
+  "starPromotion": {
+    "actions": {
+      "alreadyStarred": "すでに Star 済みです",
+      "defer": "閉じる",
+      "later": "後で",
+      "star": "Star を付ける"
+    },
+    "cardDescription": "All API Hub は完全オープンソースで、対応サイトを増やしながら使い心地も磨き続けています。Star を付けると、継続的なメンテナンスを支えられ、必要としている人にも見つけてもらいやすくなります。",
+    "cardTitle": "使い心地はいかがですか？"
   },
   "textEntries": {
     "add": "行を追加",

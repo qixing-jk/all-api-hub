@@ -8,17 +8,26 @@ import { Alert, AlertDescription } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Heading6, Link } from "~/components/ui/Typography"
+import { REPO_URL } from "~/constants/about"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
+import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
 import {
   ensurePermissionsDetailed,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import {
   PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   trackOptionalPermissionRequestResult,
 } from "~/services/productAnalytics/permissions"
+import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
+import { starPromotionState } from "~/services/starPromotion/state"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openLanguageRequestPage } from "~/utils/navigation"
@@ -28,8 +37,6 @@ import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
  * Unified logger scoped to the optional-permissions onboarding dialog.
  */
 const logger = createLogger("PermissionOnboardingDialog")
-
-const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
 
 interface PermissionOnboardingDialogProps {
   open: boolean
@@ -51,6 +58,9 @@ export function PermissionOnboardingDialog({
 }: PermissionOnboardingDialogProps) {
   const { t, i18n } = useTranslation(["settings", "common"])
   const [isRequesting, setIsRequesting] = useState(false)
+  // Suppressed once the promotion is completed (star click, self-report, or
+  // repository page detection) so onboarding stops re-asking.
+  const starCtaVisible = useStarPromotionActive(open)
   const getStartedUrl = getDocsGetStartedUrl(i18n.language)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
@@ -113,7 +123,12 @@ export function PermissionOnboardingDialog({
   }, [hasOptionalPermissions, loadStatuses, statuses, t])
 
   const handleOpenGithub = useCallback(() => {
-    window.open(GITHUB_URL, "_blank", "noopener,noreferrer")
+    trackStarPromotionAction(PRODUCT_ANALYTICS_ACTION_IDS.ClickStarPromotion, {
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PermissionOnboardingStarCta,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    void starPromotionState.markCompleted()
+    window.open(REPO_URL, "_blank", "noopener,noreferrer")
   }, [])
 
   const handleOpenLanguageRequest = useCallback(() => {
@@ -154,15 +169,17 @@ export function PermissionOnboardingDialog({
       >
         {t("permissionsOnboarding.actions.maybeLater")}
       </Button>
-      <Button
-        variant="secondary"
-        className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:col-span-2"
-        onClick={handleOpenGithub}
-        disabled={isRequesting}
-        leftIcon={<Star className="text-link h-4 w-4" />}
-      >
-        {t("permissionsOnboarding.project.starCta")}
-      </Button>
+      {starCtaVisible ? (
+        <Button
+          variant="secondary"
+          className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:col-span-2"
+          onClick={handleOpenGithub}
+          disabled={isRequesting}
+          leftIcon={<Star className="text-link h-4 w-4" />}
+        >
+          {t("permissionsOnboarding.project.starCta")}
+        </Button>
+      ) : null}
     </div>
   )
 
@@ -253,13 +270,13 @@ export function PermissionOnboardingDialog({
                       {t("permissionsOnboarding.project.label")}
                     </Heading6>
                     <Link
-                      href={GITHUB_URL}
+                      href={REPO_URL}
                       target="_blank"
                       rel="noreferrer"
                       size="sm"
                       className="gap-y-density-1 inline-flex max-w-full items-center gap-x-1"
                     >
-                      <span className="break-all">{GITHUB_URL}</span>
+                      <span className="break-all">{REPO_URL}</span>
                       <Github className="h-4 w-4 shrink-0" />
                     </Link>
                   </div>

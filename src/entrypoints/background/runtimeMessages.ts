@@ -29,6 +29,8 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/scheduler"
+import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
+import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
 import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
 import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
@@ -154,6 +156,21 @@ export function setupRuntimeMessageListeners() {
               error: getErrorMessage(error),
             })
           })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.ContentStarPromotionReport) {
+        // Only trust reports that originate from the All API Hub repository page.
+        const fromRepoPage = classifyAllApiHubRepoPageUrl(sender.url) !== null
+        if (!fromRepoPage || request.starred !== true) {
+          sendResponse({ success: false })
+          return true
+        }
+
+        void starPromotionState
+          .markCompleted()
+          .then(() => sendResponse({ success: true }))
+          .catch(() => sendResponse({ success: false }))
         return true
       }
 
