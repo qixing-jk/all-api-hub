@@ -23,6 +23,7 @@ import {
   useBalanceHistoryDevSection,
   useDevPagesSection,
 } from "./sections/miscSections"
+import { useStarPromotionDevSection } from "./sections/starPromotionSection"
 import {
   isDevPanelSectionVisible,
   type DevPanelInfoRow,
@@ -215,6 +216,7 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
   useRegisterDevPanelSection(useFixtureAccountsDevSection(isPanelOpen))
   useRegisterDevPanelSection(useBalanceHistoryDevSection())
   useRegisterDevPanelSection(useDevPagesSection())
+  useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   return null
 }
 

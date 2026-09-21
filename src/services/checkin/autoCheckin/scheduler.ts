@@ -70,6 +70,7 @@ import {
   type ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { starPromotionState } from "~/services/starPromotion/state"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
@@ -989,6 +990,22 @@ class AutoCheckinScheduler {
     })
 
     return updated ? nextSnapshots : snapshots
+  }
+
+  /**
+   * Reports successful check-ins to the star promotion value signal. Non-positive
+   * counts are no-ops in the state service, so callers can pass a raw tally.
+   */
+  private async recordStarPromotionCheckinSuccesses(
+    count: number,
+  ): Promise<void> {
+    try {
+      await starPromotionState.addCheckinSuccesses(count)
+    } catch (error) {
+      logger.warn("Failed to record star promotion check-in progress", {
+        error: getErrorMessage(error),
+      })
+    }
   }
 
   /**
@@ -2523,6 +2540,8 @@ class AutoCheckinScheduler {
         .filter((outcome) => isSuccessfulCheckinStatus(outcome.result.status))
         .map((outcome) => outcome.result.accountId)
 
+      await this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
+
       const accountIdsToRefresh = checkinOutcomes
         .filter(
           (outcome) => outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
@@ -2906,6 +2925,8 @@ class AutoCheckinScheduler {
         }
       },
     )
+
+    await this.recordStarPromotionCheckinSuccesses(updatedAccountIds.length)
     const summary =
       retryOutcome?.summary ?? this.recalculateSummaryFromResults(updates)
     const accountsSnapshot = retryOutcome?.accountsSnapshot
@@ -3122,6 +3143,10 @@ class AutoCheckinScheduler {
         }
       },
     )
+
+    if (isSuccessfulCheckinStatus(result.status)) {
+      await this.recordStarPromotionCheckinSuccesses(1)
+    }
     const summary: AutoCheckinRunSummary =
       retryOutcome?.summary ??
       this.recalculateSummaryFromResults({ [result.accountId]: result })

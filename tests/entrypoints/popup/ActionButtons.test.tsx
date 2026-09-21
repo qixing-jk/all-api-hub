@@ -127,6 +127,37 @@ describe("popup ActionButtons", () => {
     })
   })
 
+  it("tracks opening the bookmark dialog instead of a bookmark creation attempt", async () => {
+    const onPrimaryAction = vi.fn()
+    const { default: ActionButtons } = await import(
+      "~/entrypoints/popup/components/ActionButtons"
+    )
+    render(
+      <ActionButtons
+        primaryActionLabel="addBookmark"
+        onPrimaryAction={onPrimaryAction}
+        primaryAnalyticsAction={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+        }}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole("button", { name: "addBookmark" }))
+
+    expect(onPrimaryAction).toHaveBeenCalledTimes(1)
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+    })
+    // `create_bookmark` must stay reserved for the save span.
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+      }),
+    )
+  })
+
   it("opens auto check-in page and triggers run when quick check-in button clicked", async () => {
     vi.resetModules()
     const navigation = await import("~/utils/navigation")

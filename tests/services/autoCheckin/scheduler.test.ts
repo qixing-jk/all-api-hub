@@ -176,6 +176,16 @@ const pretriggerDailyOnUiOpenForTest = (
   })
 }
 
+const starPromotionMocks = vi.hoisted(() => ({
+  addCheckinSuccesses: vi.fn(),
+}))
+
+vi.mock("~/services/starPromotion/state", () => ({
+  starPromotionState: {
+    addCheckinSuccesses: starPromotionMocks.addCheckinSuccesses,
+  },
+}))
+
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     autoCheckin: {
@@ -531,6 +541,7 @@ describe("daily automatic check-in preparation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    starPromotionMocks.addCheckinSuccesses.mockResolvedValue(undefined)
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: { ...DEFAULT_PREFERENCES.autoCheckin, globalEnabled: true },
     })
@@ -570,6 +581,46 @@ describe("daily automatic check-in preparation", () => {
       detectionEnabled: true,
       providerAvailable: true,
     })
+  })
+
+  it("waits for successful check-ins to persist promotion progress", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    let finishProgressWrite: (() => void) | undefined
+    starPromotionMocks.addCheckinSuccesses.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishProgressWrite = resolve
+      }),
+    )
+
+    let runSettled = false
+    const runPromise = runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+    }).then(() => {
+      runSettled = true
+    })
+
+    await vi.waitFor(() => {
+      expect(starPromotionMocks.addCheckinSuccesses).toHaveBeenCalledWith(1)
+    })
+    expect(runSettled).toBe(false)
+
+    finishProgressWrite?.()
+    await runPromise
+    expect(runSettled).toBe(true)
+  })
+
+  it("keeps a successful check-in successful when promotion progress cannot persist", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    starPromotionMocks.addCheckinSuccesses.mockRejectedValue(
+      new Error("promotion storage unavailable"),
+    )
+
+    await expect(
+      runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY }),
+    ).resolves.toBeUndefined()
+    expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
 
   it.each(["manual", "globally disabled"])(

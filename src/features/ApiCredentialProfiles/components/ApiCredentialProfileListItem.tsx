@@ -463,7 +463,9 @@ export function ApiCredentialProfileListItem({
                       }
                       aria-label={t("apiCredentialProfiles:actions.copyApiKey")}
                       className="shrink-0"
-                      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKey
+                      }
                     >
                       <Copy className="h-4 w-4" />
                     </IconButton>

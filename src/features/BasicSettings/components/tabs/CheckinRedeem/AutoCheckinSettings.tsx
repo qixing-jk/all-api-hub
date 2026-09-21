@@ -102,7 +102,7 @@ export default function AutoCheckinSettings() {
   const handleNavigateToExecution = () => {
     void trackProductAnalyticsActionStarted({
       ...AUTO_CHECKIN_SETTINGS_ANALYTICS_CONTEXT,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinSettingsPage,
     })
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`)
   }

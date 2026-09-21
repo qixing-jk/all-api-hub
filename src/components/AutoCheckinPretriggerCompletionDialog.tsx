@@ -70,7 +70,7 @@ export function AutoCheckinPretriggerCompletionDialog({
   const handleViewDetails = async () => {
     void trackProductAnalyticsActionStarted({
       ...COMPLETION_DIALOG_ANALYTICS_CONTEXT,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinSettingsPage,
     })
     const targetHash = `#${MENU_ITEM_IDS.AUTO_CHECKIN}`
 

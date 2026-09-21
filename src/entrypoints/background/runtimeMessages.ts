@@ -21,7 +21,13 @@ import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOw
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
+import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
 import { setupProductAnnouncementMessagingListeners } from "~/services/productAnnouncements/service"
 import {
   isProtectionBypassExecution,
@@ -29,6 +35,8 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/scheduler"
+import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
+import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
 import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
 import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
@@ -154,6 +162,31 @@ export function setupRuntimeMessageListeners() {
               error: getErrorMessage(error),
             })
           })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.ContentStarPromotionReport) {
+        // Only trust reports that originate from the All API Hub repository page.
+        const fromRepoPage = classifyAllApiHubRepoPageUrl(sender.url) !== null
+        if (!fromRepoPage || request.starred !== true) {
+          sendResponse({ success: false })
+          return true
+        }
+
+        void starPromotionState
+          .markCompleted()
+          .then(() => {
+            trackStarPromotionAction(
+              PRODUCT_ANALYTICS_ACTION_IDS.SuppressStarPromotionDetected,
+              {
+                surfaceId:
+                  PRODUCT_ANALYTICS_SURFACE_IDS.ContentRepositoryStarDetection,
+                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+              },
+            )
+            sendResponse({ success: true })
+          })
+          .catch(() => sendResponse({ success: false }))
         return true
       }
 

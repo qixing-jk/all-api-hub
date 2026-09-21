@@ -489,6 +489,7 @@
       "loading": "Cargando changelog…",
       "missingSection": "No se pudo cargar la vista previa del changelog de v{{version}}. Puedes abrir el changelog completo.",
       "openFullChangelog": "Abrir changelog completo",
+      "starPrompt": "¿Te resulta útil All API Hub? Dale una estrella en GitHub para seguir las novedades",
       "title": "Novedades",
       "updatedTo": "Actualizado a v{{version}}"
     }
@@ -500,6 +501,7 @@
     "featureRequest": "Solicitar una función",
     "languageRequest": "Solicitar un idioma nuevo",
     "siteSupportRequest": "Solicitar soporte de sitio",
+    "starOnGithub": "Dar una estrella en GitHub",
     "trigger": "Comentarios",
     "triggerTooltip": "Abrir accesos rapidos de comentarios"
   },
@@ -578,6 +580,7 @@
     "settingsOptions": "Opciones de ajustes",
     "sidebarCollapsedHint": "Barra lateral contraída, solo se muestran íconos",
     "siteAnnouncements": "Anuncios del sitio",
+    "starPromotionPreview": "Vista previa de promoción de Star (Dev)",
     "toggleMenu": "Alternar menú",
     "unifiedApiGuidancePreview": "Vista previa de guía Unified API (Dev)",
     "usageAnalytics": "Analítica de uso"
@@ -656,6 +659,16 @@
     "shortRow": "Clave {{number}}",
     "show": "Mostrar clave",
     "title": "Claves API"
+  },
+  "starPromotion": {
+    "actions": {
+      "alreadyStarred": "Ya le di estrella",
+      "defer": "Cerrar",
+      "later": "Más tarde",
+      "star": "Dar estrella"
+    },
+    "cardDescription": "All API Hub es totalmente de código abierto, y sigue adaptándose a más sitios mientras mejora la experiencia. Una estrella sostiene su mantenimiento y ayuda a que más gente que lo necesita lo encuentre.",
+    "cardTitle": "¿Te sirve All API Hub?"
   },
   "textEntries": {
     "add": "Agregar fila",

@@ -287,7 +287,7 @@ describe("AutoCheckinSettings", () => {
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith(
       expect.objectContaining({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinSettingsPage,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
     )

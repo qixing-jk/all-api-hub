@@ -289,16 +289,13 @@ export default function BookmarkDialog({
             >
               {t("common:actions.cancel")}
             </Button>
+            {/* `handleSubmit` owns the started/completed span; declaring the
+                same action id here would emit a duplicate started per attempt. */}
             <Button
               type="button"
               onClick={handleSubmit}
               loading={isWorking}
               data-testid={SITE_BOOKMARKS_TEST_IDS.dialogSaveButton}
-              analyticsAction={
-                mode === "add"
-                  ? PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark
-                  : PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark
-              }
             >
               {isWorking
                 ? mode === "add"

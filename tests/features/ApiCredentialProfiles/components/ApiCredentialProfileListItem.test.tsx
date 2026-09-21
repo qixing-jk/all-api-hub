@@ -390,7 +390,7 @@ describe("ApiCredentialProfileListItem", () => {
       }),
     ).toHaveAttribute(
       "data-analytics-action",
-      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey),
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKey),
     )
     expect(
       screen.getByRole("button", {
