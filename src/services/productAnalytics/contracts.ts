@@ -120,6 +120,20 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION = {
   >
 >
 
+export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
+  Network: "network",
+  Auth: "auth",
+  Permission: "permission",
+  Validation: "validation",
+  Unsupported: "unsupported",
+  RateLimit: "rate_limit",
+  Timeout: "timeout",
+  Unknown: "unknown",
+} as const
+
+export type ProductAnalyticsErrorCategory =
+  (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
+
 const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_REASONS = Object.keys(
   PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION,
 ) as ProtectionBypassDeniedReason[]
@@ -156,6 +170,12 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS = {
     "other",
   ],
   focusUnknownAdapterCounts: [...Object.values(TEMP_CONTEXT_MODES), "other"],
+  tempWindowFetchFailureCategoryCounts: Object.values(
+    PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  ),
+  tempWindowTurnstileFetchFailureCategoryCounts: Object.values(
+    PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  ),
 } as const
 
 /** Fixed scalar properties emitted by the bounded daily bypass summary. */
@@ -228,6 +248,22 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_focus_unknown_adapter_composite_count",
   "protection_bypass_focus_unknown_adapter_tab_count",
   "protection_bypass_focus_unknown_adapter_other_count",
+  "temp_window_fetch_failure_category_network_count",
+  "temp_window_fetch_failure_category_auth_count",
+  "temp_window_fetch_failure_category_permission_count",
+  "temp_window_fetch_failure_category_validation_count",
+  "temp_window_fetch_failure_category_unsupported_count",
+  "temp_window_fetch_failure_category_rate_limit_count",
+  "temp_window_fetch_failure_category_timeout_count",
+  "temp_window_fetch_failure_category_unknown_count",
+  "temp_window_turnstile_fetch_failure_category_network_count",
+  "temp_window_turnstile_fetch_failure_category_auth_count",
+  "temp_window_turnstile_fetch_failure_category_permission_count",
+  "temp_window_turnstile_fetch_failure_category_validation_count",
+  "temp_window_turnstile_fetch_failure_category_unsupported_count",
+  "temp_window_turnstile_fetch_failure_category_rate_limit_count",
+  "temp_window_turnstile_fetch_failure_category_timeout_count",
+  "temp_window_turnstile_fetch_failure_category_unknown_count",
 ] as const
 
 export type ProductAnalyticsProtectionBypassCountProperty =
@@ -240,20 +276,6 @@ export const PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS = {
 
 export type ProductAnalyticsKiloCodeExportTarget =
   (typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS)[keyof typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS]
-
-export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
-  Network: "network",
-  Auth: "auth",
-  Permission: "permission",
-  Validation: "validation",
-  Unsupported: "unsupported",
-  RateLimit: "rate_limit",
-  Timeout: "timeout",
-  Unknown: "unknown",
-} as const
-
-export type ProductAnalyticsErrorCategory =
-  (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
 
 export const PRODUCT_ANALYTICS_FAILURE_REASONS = {
   MissingCredentials: "missing_credentials",

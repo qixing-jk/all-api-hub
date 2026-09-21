@@ -178,6 +178,30 @@ describe("productAnalyticsState", () => {
     )
   })
 
+  it("atomically merges temp-window fetch failure categories", async () => {
+    await Promise.all([
+      productAnalyticsState.incrementShieldBypassSummary({
+        tempWindowFetchFailureCount: 1,
+        tempWindowFetchFailureCategoryCounts: { timeout: 1 },
+      }),
+      productAnalyticsState.incrementShieldBypassSummary({
+        tempWindowFetchFailureCount: 1,
+        tempWindowFetchFailureCategoryCounts: { timeout: 1, unsupported: 1 },
+        tempWindowTurnstileFetchFailureCategoryCounts: { auth: 1 },
+      }),
+    ])
+
+    await expect(
+      productAnalyticsState.getShieldBypassSummaryState(),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        tempWindowFetchFailureCount: 2,
+        tempWindowFetchFailureCategoryCounts: { timeout: 2, unsupported: 1 },
+        tempWindowTurnstileFetchFailureCategoryCounts: { auth: 1 },
+      }),
+    )
+  })
+
   it("rolls shield bypass summary counts to a new UTC day", async () => {
     await productAnalyticsState.replaceShieldBypassSummaryState({
       day: "2026-05-11",
@@ -364,6 +388,8 @@ describe("productAnalyticsState", () => {
         focusBackgroundStartAdapterCounts: { window: 1, auto: 2 },
         focusForegroundActivationAdapterCounts: { composite: 3, auto: 4 },
         focusUnknownAdapterCounts: { tab: 5, auto: 6 },
+        tempWindowFetchFailureCategoryCounts: { timeout: 2, raw_message: 5 },
+        tempWindowTurnstileFetchFailureCategoryCounts: { auth: 1, host: 3 },
       }),
     ).toEqual({
       day: "2026-05-12",
@@ -381,6 +407,8 @@ describe("productAnalyticsState", () => {
       focusBackgroundStartAdapterCounts: { window: 1, other: 2 },
       focusForegroundActivationAdapterCounts: { composite: 3, other: 4 },
       focusUnknownAdapterCounts: { tab: 5, other: 6 },
+      tempWindowFetchFailureCategoryCounts: { timeout: 2 },
+      tempWindowTurnstileFetchFailureCategoryCounts: { auth: 1 },
     })
   })
 

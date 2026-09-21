@@ -46,7 +46,6 @@ import {
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   buildAutoCheckinDiagnostics,
-  trackAutoCheckinConfigSnapshot,
   trackAutoCheckinRunAnalytics,
 } from "~/services/productAnalytics/autoCheckin"
 import {
@@ -1435,10 +1434,6 @@ class AutoCheckinScheduler {
 
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-    trackAutoCheckinConfigSnapshot(
-      config,
-      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-    )
 
     // Always remove the legacy single-alarm schedule to prevent duplicate executions.
     await clearAlarm(AutoCheckinScheduler.LEGACY_ALARM_NAME)

@@ -10,13 +10,8 @@ import { executeTempCheckinFeedbackScan } from "~/entrypoints/background/checkin
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_STATUS_KINDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -61,6 +56,15 @@ vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
     recordTempWindowTurnstileFetchResultMock,
   recordShieldBypassFocusObservation: recordShieldBypassFocusObservationMock,
 }))
+
+/**
+ * Temp-window attempts are counted into the daily shield-bypass summary instead
+ * of emitting one completion event per request, so no temp-window path may
+ * reach the per-action analytics helper.
+ */
+function expectNoPerRequestTempWindowCompletion() {
+  expect(trackProductAnalyticsActionCompletedMock).not.toHaveBeenCalled()
+}
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
@@ -780,19 +784,10 @@ describe("tempWindowPool window fallback", () => {
         data: "ok",
       },
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      undefined,
     )
     expect(createWindowMock).toHaveBeenCalledTimes(1)
     expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
@@ -2247,20 +2242,10 @@ describe("tempWindowPool window fallback", () => {
       success: false,
       error: "messages:background.incognitoAccessRequired",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
     )
   })
 
@@ -3663,18 +3648,11 @@ describe("tempWindowPool window fallback", () => {
       code: API_ERROR_CODES.HTTP_429,
       error: "rate limited",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
+    expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+    )
     expect(removeTabMock).toHaveBeenCalledWith(510)
   })
 
@@ -5072,6 +5050,7 @@ describe("tempWindowPool window fallback", () => {
     })
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      undefined,
     )
   })
 
@@ -5328,20 +5307,10 @@ describe("tempWindowPool window fallback", () => {
         action: RuntimeActionIds.ContentPerformTempWindowFetch,
       }),
     )
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
     )
     // The pool schedules the delayed release via setTimeout(2000); advance
     // fake timers instead of sleeping on real time (matches other suites here).
@@ -5418,24 +5387,14 @@ describe("tempWindowPool window fallback", () => {
       url: "https://example.com/api/checkin?turnstile=token-xyz",
       cookieHeader: "cf_clearance=1",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
     )
 
     const analyticsCallsJson = JSON.stringify(
-      trackProductAnalyticsActionCompletedMock.mock.calls,
+      recordTempWindowTurnstileFetchResultMock.mock.calls,
     )
     expect(analyticsCallsJson).not.toContain("token-xyz")
     expect(analyticsCallsJson).not.toContain("turnstile=token-xyz")
@@ -5512,18 +5471,11 @@ describe("tempWindowPool window fallback", () => {
         hasTurnstile: true,
       },
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
+    expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+    )
     expect(removeTabMock).toHaveBeenCalledWith(813)
   })
 })

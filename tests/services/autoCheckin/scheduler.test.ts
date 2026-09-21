@@ -980,66 +980,10 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
   })
 
-  it("tracks a background config snapshot with exact numeric schedule fields", async () => {
+  it("does not emit a settings snapshot on every schedule refresh", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      autoCheckin: {
-        ...(DEFAULT_PREFERENCES as any).autoCheckin,
-        globalEnabled: true,
-        pretriggerDailyOnUiOpen: false,
-        notifyUiOnCompletion: true,
-        windowStart: "08:15",
-        windowEnd: "12:45",
-        scheduleMode: "deterministic",
-        deterministicTime: "09:30",
-        retryStrategy: {
-          enabled: true,
-          intervalMinutes: 30,
-          maxAttemptsPerDay: 3,
-        },
-      },
-    })
-
-    await autoCheckinScheduler.scheduleNextRun()
-
-    expect(mockedProductAnalytics.trackProductAnalyticsEvent).toHaveBeenCalled()
-    const snapshotCall =
-      mockedProductAnalytics.trackProductAnalyticsEvent.mock.calls.find(
-        ([eventName, payload]) =>
-          eventName === PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured &&
-          payload?.setting_id ===
-            PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
-      )
-
-    expect(snapshotCall).toBeTruthy()
-    expect(snapshotCall?.[1]).toEqual({
-      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      global_enabled: true,
-      ui_pretrigger_enabled: false,
-      notify_completion_enabled: true,
-      retry_enabled: true,
-      schedule_mode: "deterministic",
-      retry_interval_minutes: 30,
-      retry_max_attempts: 3,
-      window_length_minutes: 270,
-      deterministic_time_minutes: 570,
-    })
-    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("08:15")
-    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("12:45")
-    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("09:30")
-    expect(snapshotCall?.[1]).not.toHaveProperty("intervalMinutes")
-    expect(snapshotCall?.[1]).not.toHaveProperty("maxAttemptsPerDay")
-
-    vi.useRealTimers()
-  })
-
-  it("still schedules alarms when background config snapshot tracking fails", async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
-    mockedProductAnalytics.trackProductAnalyticsEvent.mockResolvedValue(false)
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
@@ -1058,6 +1002,18 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     await expect(
       autoCheckinScheduler.scheduleNextRun(),
     ).resolves.toBeUndefined()
+
+    // `scheduleNextRun` runs on every MV3 service-worker start, so a per-call
+    // event turns into a heartbeat. Every field it used to report is already
+    // carried by the cadence-limited aggregate background settings snapshot.
+    const backgroundConfigSnapshots =
+      mockedProductAnalytics.trackProductAnalyticsEvent.mock.calls.filter(
+        ([eventName, payload]) =>
+          eventName === PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured &&
+          payload?.setting_id ===
+            PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      )
+    expect(backgroundConfigSnapshots).toEqual([])
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckin")
     expect(alarmStore.autoCheckinDaily).toBeDefined()
