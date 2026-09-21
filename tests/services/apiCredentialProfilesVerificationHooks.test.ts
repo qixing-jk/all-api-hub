@@ -222,7 +222,12 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
       baseUrl: "https://shared.example.com",
       apiKey: "sk-shared",
     })
-    await seedProfileResults({ profileId: merged.id, modelIds: ["m-1"] })
+    const mergedVerifiedAt = Date.now()
+    await seedProfileResults({
+      profileId: merged.id,
+      modelIds: ["m-1"],
+      verifiedAt: mergedVerifiedAt,
+    })
     const survivor = await apiCredentialProfilesStorage.createProfile({
       name: "survivor",
       apiType: API_TYPES.OPENAI,
@@ -231,7 +236,11 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
     })
     // The survivor's own results were measured with its previous credentials, so
     // they must not outlive the edit.
-    await seedProfileResults({ profileId: survivor.id, modelIds: ["m-1"] })
+    await seedProfileResults({
+      profileId: survivor.id,
+      modelIds: ["m-1"],
+      verifiedAt: mergedVerifiedAt + 1,
+    })
 
     await apiCredentialProfilesStorage.updateProfile(survivor.id, {
       apiType: API_TYPES.OPENAI,
@@ -246,6 +255,20 @@ describe("apiCredentialProfilesStorage verification hooks", () => {
       `profile:${survivor.id}`,
       `profile:${survivor.id}:model:m-1`,
     ])
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          targetKey: `profile:${survivor.id}`,
+          verifiedAt: mergedVerifiedAt,
+        }),
+        expect.objectContaining({
+          targetKey: `profile:${survivor.id}:model:m-1`,
+          verifiedAt: mergedVerifiedAt,
+        }),
+      ]),
+    )
   })
 
   it("moves merged results onto the survivor when an imported payload de-dupes", async () => {
