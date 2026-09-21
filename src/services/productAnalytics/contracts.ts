@@ -789,6 +789,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   SelectManagedSiteModelSyncTab: "select_managed_site_model_sync_tab",
   SelectModelSource: "select_model_source",
   FilterModelList: "filter_model_list",
+  SelectModelListFilterScope: "select_model_list_filter_scope",
   SelectApiCredentialProfileExportDestination:
     "select_api_credential_profile_export_destination",
   SelectApiCredentialBaseUrlHistory: "select_api_credential_base_url_history",
