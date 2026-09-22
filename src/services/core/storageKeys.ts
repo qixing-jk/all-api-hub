@@ -130,6 +130,11 @@ export const STORAGE_LOCKS = {
    * search recent-items list.
    */
   OPTIONS_SEARCH_RECENT_ITEMS: "all-api-hub:options-search-recent-items",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the uninstall
+   * survey state store.
+   */
+  UNINSTALL_SURVEY: "all-api-hub:uninstall-survey",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -236,6 +241,10 @@ const STAR_PROMOTION_STORAGE_KEYS = {
   STATE: "starPromotion_state_v1",
 } as const
 
+const UNINSTALL_SURVEY_STORAGE_KEYS = {
+  STATE: "uninstallSurvey_state_v1",
+} as const
+
 export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
   DRAFT_PREFIX: "accountDialogRecovery_draft_v1:",
   PENDING_PREFIX: "accountDialogRecovery_pending_v1:",
@@ -280,4 +289,5 @@ export const STORAGE_KEYS = {
     SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS.PENDING_PREFILL,
   POPUP_INTERRUPTION_HINT: POPUP_INTERRUPTION_STORAGE_KEYS.HINT,
   STAR_PROMOTION_STATE: STAR_PROMOTION_STORAGE_KEYS.STATE,
+  UNINSTALL_SURVEY_STATE: UNINSTALL_SURVEY_STORAGE_KEYS.STATE,
 } as const

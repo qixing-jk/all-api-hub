@@ -78,6 +78,7 @@ import {
   setActionPopup,
   setNativeSidePanelActionClick,
   setSessionStorageValues,
+  setUninstallUrl,
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
@@ -1426,6 +1427,40 @@ describe("browserApi window and manifest helpers", () => {
     })
 
     expect(() => reloadRuntime()).not.toThrow()
+  })
+
+  it("sets the uninstall URL through the runtime API", async () => {
+    // Native browser API methods require their own receiver; calling a
+    // detached reference throws "Illegal invocation" in Chromium.
+    const setUninstallURL = vi.fn(function (this: unknown) {
+      expect(this).toBe((globalThis as any).browser.runtime)
+      return Promise.resolve()
+    })
+    ;(globalThis as any).browser.runtime.setUninstallURL = setUninstallURL
+
+    await expect(
+      setUninstallUrl("https://example.test/uninstall.html"),
+    ).resolves.toBe(true)
+
+    expect(setUninstallURL).toHaveBeenCalledWith(
+      "https://example.test/uninstall.html",
+    )
+  })
+
+  it("reports failure when the browser exposes no uninstall URL API", async () => {
+    delete (globalThis as any).browser.runtime.setUninstallURL
+
+    await expect(
+      setUninstallUrl("https://example.test/uninstall.html"),
+    ).resolves.toBe(false)
+  })
+
+  it("reports failure instead of throwing when the browser rejects the URL", async () => {
+    ;(globalThis as any).browser.runtime.setUninstallURL = vi
+      .fn()
+      .mockRejectedValue(new Error("invalid url"))
+
+    await expect(setUninstallUrl("not a url")).resolves.toBe(false)
   })
 
   it("opens the standard runtime options page", async () => {

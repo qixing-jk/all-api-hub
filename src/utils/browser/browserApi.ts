@@ -1303,6 +1303,29 @@ export function reloadRuntime(): void {
 }
 
 /**
+ * Sets the URL opened after the user uninstalls the extension.
+ *
+ * Only Chromium browsers and Firefox expose `runtime.setUninstallURL`
+ * (Safari does not); returns false instead of throwing when it is missing.
+ * The browser rejects URLs longer than its own limit (Chromium: 255
+ * characters).
+ */
+export async function setUninstallUrl(url: string): Promise<boolean> {
+  try {
+    // Optional at runtime, required in the shared browser typings.
+    const runtime = browser.runtime as {
+      setUninstallURL?: (targetUrl: string) => Promise<void>
+    }
+    if (typeof runtime.setUninstallURL !== "function") return false
+    await runtime.setUninstallURL(url)
+    return true
+  } catch (error) {
+    logger.warn("Failed to set uninstall URL", error)
+    return false
+  }
+}
+
+/**
  * Opens the extension's standard options page through the browser runtime API.
  */
 export async function openRuntimeOptionsPage(): Promise<void> {
