@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>All API Hub</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #1f2328;
+        --fg-muted: #59636e;
+        --bg: #f6f8fa;
+        --card: #ffffff;
+        --border: #d1d9e0;
+        --accent: #0969da;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #e6edf3;
+          --fg-muted: #9198a1;
+          --bg: #0d1117;
+          --card: #161b22;
+          --border: #3d444d;
+          --accent: #4493f8;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          "PingFang SC",
+          "Microsoft YaHei",
+          "Noto Sans",
+          sans-serif;
+        line-height: 1.5;
+      }
+      .card {
+        width: 100%;
+        max-width: 480px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      .subtitle {
+        margin: 0 0 16px;
+        color: var(--fg-muted);
+        font-size: 14px;
+      }
+      /* Radio rows keep the control on the first line when a label wraps. */
+      .option {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 6px 0;
+        font-size: 14px;
+      }
+      .option input {
+        margin: 4px 0 0;
+        accent-color: var(--accent);
+      }
+      #options {
+        margin-top: 8px;
+      }
+      /* Step labels read as form labels, not as more muted body text: at 12px
+         muted-bold they sat too close to the subtitle and the footer note. */
+      .step {
+        display: block;
+        color: var(--fg);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      /* The radio group is a fieldset so the step label is its accessible name. */
+      fieldset {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      #step-comment {
+        margin: 20px 0 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 64px;
+        margin-top: 0;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        resize: vertical;
+      }
+      button {
+        margin-top: 16px;
+        width: 100%;
+        padding: 8px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button[disabled] {
+        opacity: 0.6;
+        cursor: default;
+      }
+      /* Keyboard focus stays visible on the radios, the select and the button. */
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .footer {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .note {
+        margin: 0;
+        min-width: 0;
+        flex: 1 1 auto;
+        color: var(--fg-muted);
+        font-size: 12px;
+      }
+      .thanks {
+        margin: 8px 0 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .issue {
+        margin: 8px 0 0;
+        font-size: 13px;
+      }
+      .issue a {
+        color: var(--accent);
+      }
+      .lang {
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+      .lang select {
+        padding: 2px 4px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--fg-muted);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .lang select:hover {
+        color: var(--fg);
+      }
+      /* An explicit display value would otherwise defeat the `hidden` attribute. */
+      .lang[hidden] {
+        display: none;
+      }
+      /* On narrow screens the note gets the full width and the selector drops to
+         its own row instead of squeezing the text into a column. */
+      @media (max-width: 420px) {
+        .footer {
+          flex-wrap: wrap;
+        }
+        .note {
+          flex: 1 1 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1 id="title"></h1>
+      <p class="subtitle" id="subtitle"></p>
+      <form id="survey">
+        <fieldset>
+          <legend class="step" id="step-reason"></legend>
+          <div id="options"></div>
+        </fieldset>
+        <label class="step" id="step-comment" for="comment"></label>
+        <textarea id="comment" maxlength="500"></textarea>
+        <button type="submit" id="submit" disabled></button>
+      </form>
+      <p class="thanks" id="thanks" aria-live="polite" hidden></p>
+      <p class="issue" id="issue" hidden>
+        <a id="issue-link" target="_blank" rel="noopener noreferrer"></a>
+      </p>
+      <noscript>
+        <!-- Same target as ISSUE_URL below; kept literal so it survives without JS. -->
+        <style>
+          /* Without JS the form and selector would render as empty shells. */
+          #survey,
+          .footer {
+            display: none;
+          }
+        </style>
+        <p class="note">
+          This survey needs JavaScript. You can also reach us on
+          <a href="https://github.com/qixing-jk/all-api-hub/issues/new">GitHub</a
+          >. 此问卷需要 JavaScript；你也可以在 GitHub 上直接反馈。
+        </p>
+      </noscript>
+      <div class="footer">
+        <p class="note" id="note"></p>
+        <div class="lang" id="lang-row">
+          <select id="lang-select" aria-label="Language"></select>
+        </div>
+      </div>
+    </main>
+    <script>
+      // PostHog public project config. The values are safe to embed in a static
+      // page (PostHog project tokens are public by design). The placeholders are
+      // replaced by the docs deploy workflow; with placeholders in place the page
+      // renders the survey but does not send anything.
+      var POSTHOG_HOST = "__POSTHOG_HOST__"
+      var POSTHOG_TOKEN = "__POSTHOG_TOKEN__"
+
+      // Alternative channel for users who want to explain a specific problem.
+      var ISSUE_URL = "https://github.com/qixing-jk/all-api-hub/issues/new"
+
+      var STRINGS = {
+        "zh-CN": {
+          name: "简体中文",
+          title: "是什么让你卸载了 All API Hub？",
+          subtitle:
+            "只需要几秒钟，您的选择将决定我们之后的方向，感谢您的时间。",
+          stepReason: "1. 选一个主要原因",
+          stepComment: "2. 补充说明（选填）",
+          commentPlaceholder: "例如：哪个操作出错、希望支持哪个站点",
+          submit: "提交反馈",
+          thanks: "感谢您的反馈！",
+          sending: "提交中…",
+          issueLink: "想详细说明？在 GitHub 上反馈",
+          note: "我们知道它还不够好，只是不清楚问题出在哪。你的选择能帮我们找到方向。",
+          options: [
+            "不支持我在用的站点或服务",
+            "功能没达到预期",
+            "出错或卡住的情况太多",
+            "更新后出现问题",
+            "改用其他工具了",
+            "不再需要了",
+            "影响浏览器性能",
+            "担心隐私或账号安全",
+            "其他原因",
+          ],
+        },
+        "zh-TW": {
+          name: "繁體中文",
+          title: "是什麼讓你解除安裝 All API Hub？",
+          subtitle:
+            "只需要幾秒鐘，您的選擇將決定我們之後的方向，感謝您的時間。",
+          stepReason: "1. 選一個主要原因",
+          stepComment: "2. 補充說明（選填）",
+          commentPlaceholder: "例如：哪個操作出錯、希望支援哪個網站",
+          submit: "送出回饋",
+          thanks: "感謝您的回饋！",
+          sending: "送出中…",
+          issueLink: "想詳細說明？在 GitHub 上回報",
+          note: "我們知道它還不夠好，只是不清楚問題出在哪。你的選擇能幫我們找到方向。",
+          options: [
+            "不支援我在用的網站或服務",
+            "功能沒有達到預期",
+            "出錯或卡住的情況太多",
+            "更新後出現問題",
+            "改用其他工具了",
+            "不再需要了",
+            "影響瀏覽器效能",
+            "擔心隱私或帳號安全",
+            "其他原因",
+          ],
+        },
+        en: {
+          name: "English",
+          title: "What made you uninstall All API Hub?",
+          subtitle:
+            "It only takes a few seconds — your choice decides where we go next. Thank you for your time.",
+          stepReason: "1. Pick one main reason",
+          stepComment: "2. Anything to add? (optional)",
+          commentPlaceholder:
+            "For example: which action failed, which site you need",
+          submit: "Submit feedback",
+          thanks: "Thanks for your feedback!",
+          sending: "Sending…",
+          issueLink: "Want to explain in detail? Tell us on GitHub",
+          note: "We know it isn't good enough yet — we just can't see where it falls short. Your pick helps us find the way.",
+          options: [
+            "The sites or services I use aren't supported",
+            "Features didn't meet expectations",
+            "Too many errors or stalls",
+            "Something broke after an update",
+            "Switched to another tool",
+            "No longer needed",
+            "Slowed down my browser",
+            "Privacy or account security concerns",
+            "Other reason",
+          ],
+        },
+        ja: {
+          name: "日本語",
+          title: "なぜ All API Hub をアンインストールしましたか？",
+          subtitle:
+            "数秒で終わります。あなたの選択が今後の方向を決めます。お時間ありがとうございます。",
+          stepReason: "1. 主な理由を1つ選ぶ",
+          stepComment: "2. 補足（任意）",
+          commentPlaceholder: "例：どの操作で失敗したか、対応してほしいサイト",
+          submit: "送信する",
+          thanks: "フィードバックありがとうございます！",
+          sending: "送信中…",
+          issueLink: "詳しく伝えたい場合は GitHub でお知らせください",
+          note: "まだ十分ではないことは分かっていますが、どこが問題なのか見えていません。あなたの選択が道しるべになります。",
+          options: [
+            "利用しているサイト/サービスに対応していない",
+            "機能が期待どおりでなかった",
+            "エラーや停止が多すぎた",
+            "更新後に問題が起きた",
+            "他のツールに乗り換えた",
+            "もう必要なくなった",
+            "ブラウザが重くなった",
+            "プライバシーやアカウントの安全が心配",
+            "その他の理由",
+          ],
+        },
+        vi: {
+          name: "Tiếng Việt",
+          title: "Điều gì khiến bạn gỡ cài đặt All API Hub?",
+          subtitle:
+            "Chỉ mất vài giây — lựa chọn của bạn quyết định hướng đi tiếp theo của chúng tôi. Cảm ơn bạn đã dành thời gian.",
+          stepReason: "1. Chọn một lý do chính",
+          stepComment: "2. Bổ sung thêm (không bắt buộc)",
+          commentPlaceholder:
+            "Ví dụ: thao tác nào bị lỗi, trang bạn cần được hỗ trợ",
+          submit: "Gửi phản hồi",
+          thanks: "Cảm ơn phản hồi của bạn!",
+          sending: "Đang gửi…",
+          issueLink: "Muốn nói rõ hơn? Hãy cho chúng tôi biết trên GitHub",
+          note: "Chúng tôi biết nó vẫn chưa đủ tốt, chỉ là không rõ vấn đề nằm ở đâu. Lựa chọn của bạn giúp chúng tôi tìm ra hướng đi.",
+          options: [
+            "Không hỗ trợ trang hoặc dịch vụ tôi dùng",
+            "Tính năng không như mong đợi",
+            "Quá nhiều lỗi hoặc bị treo",
+            "Có vấn đề sau khi cập nhật",
+            "Đã chuyển sang công cụ khác",
+            "Không còn cần đến",
+            "Làm trình duyệt chậm đi",
+            "Lo ngại về quyền riêng tư hoặc bảo mật tài khoản",
+            "Lý do khác",
+          ],
+        },
+        "pt-BR": {
+          name: "Português (Brasil)",
+          title: "Por que você desinstalou o All API Hub?",
+          subtitle:
+            "Leva só alguns segundos — sua escolha define a nossa direção daqui em diante. Obrigado pelo seu tempo.",
+          stepReason: "1. Escolha um motivo principal",
+          stepComment: "2. Algo a acrescentar? (opcional)",
+          commentPlaceholder:
+            "Por exemplo: qual ação falhou, qual site você precisa",
+          submit: "Enviar feedback",
+          thanks: "Obrigado pelo seu feedback!",
+          sending: "Enviando…",
+          issueLink: "Quer detalhar? Conte para nós no GitHub",
+          note: "Sabemos que ainda não está bom o suficiente, só não vemos onde está falhando. Sua escolha nos ajuda a encontrar o caminho.",
+          options: [
+            "Os sites ou serviços que uso não são suportados",
+            "Os recursos não atenderam às expectativas",
+            "Erros ou travamentos demais",
+            "Algo quebrou após uma atualização",
+            "Mudei para outra ferramenta",
+            "Não preciso mais",
+            "Deixou o navegador mais lento",
+            "Preocupações com privacidade ou segurança da conta",
+            "Outro motivo",
+          ],
+        },
+        "es-419": {
+          name: "Español (Latinoamérica)",
+          title: "¿Qué te llevó a desinstalar All API Hub?",
+          subtitle:
+            "Solo toma unos segundos — tu elección define hacia dónde vamos después. Gracias por tu tiempo.",
+          stepReason: "1. Elige un motivo principal",
+          stepComment: "2. ¿Algo que agregar? (opcional)",
+          commentPlaceholder:
+            "Por ejemplo: qué acción falló, qué sitio necesitas",
+          submit: "Enviar comentarios",
+          thanks: "¡Gracias por tus comentarios!",
+          sending: "Enviando…",
+          issueLink: "¿Quieres detallarlo? Cuéntanoslo en GitHub",
+          note: "Sabemos que aún no es suficientemente bueno, solo que no vemos dónde está fallando. Tu elección nos ayuda a encontrar el camino.",
+          options: [
+            "No admite los sitios o servicios que uso",
+            "Las funciones no cumplieron lo que esperaba",
+            "Demasiados errores o bloqueos",
+            "Algo se rompió tras una actualización",
+            "Cambié a otra herramienta",
+            "Ya no lo necesito",
+            "Puso más lento el navegador",
+            "Preocupaciones de privacidad o seguridad de la cuenta",
+            "Otro motivo",
+          ],
+        },
+        de: {
+          name: "Deutsch",
+          title: "Warum hast du All API Hub deinstalliert?",
+          subtitle:
+            "Es dauert nur Sekunden — deine Wahl bestimmt, wohin wir uns als Nächstes wenden. Danke für deine Zeit.",
+          stepReason: "1. Wähle einen Hauptgrund",
+          stepComment: "2. Noch etwas hinzuzufügen? (optional)",
+          commentPlaceholder:
+            "Zum Beispiel: welche Aktion fehlschlug, welche Seite du brauchst",
+          submit: "Feedback senden",
+          thanks: "Danke für dein Feedback!",
+          sending: "Wird gesendet…",
+          issueLink: "Möchtest du es genauer erklären? Melde dich auf GitHub",
+          note: "Wir wissen, dass es noch nicht gut genug ist — wir sehen nur nicht, wo es hakt. Deine Wahl hilft uns, den Weg zu finden.",
+          options: [
+            "Meine Seiten oder Dienste werden nicht unterstützt",
+            "Funktionen haben die Erwartungen nicht erfüllt",
+            "Zu viele Fehler oder Hänger",
+            "Nach einem Update trat ein Problem auf",
+            "Zu einem anderen Tool gewechselt",
+            "Nicht mehr benötigt",
+            "Hat den Browser verlangsamt",
+            "Bedenken zu Privatsphäre oder Kontosicherheit",
+            "Anderer Grund",
+          ],
+        },
+      }
+
+      /**
+       * Stable event values for PostHog queries; the order matches the `options`
+       * arrays above, and ids are never reused for a different reason.
+       */
+      var REASON_IDS = [
+        "site_not_supported",
+        "feature_gap",
+        "bugs",
+        "regression",
+        "switched_alternative",
+        "no_longer_needed",
+        "performance",
+        "privacy_concern",
+        "other",
+      ]
+
+      /**
+       * Remembers a manual language choice for later visits; the URL only carries
+       * what the extension detected at uninstall time.
+       */
+      var STORED_LANG_KEY = "aah-uninstall-survey-lang"
+
+      function readStoredLanguage() {
+        try {
+          var stored = globalThis.localStorage?.getItem(STORED_LANG_KEY)
+          return stored && STRINGS[stored] ? stored : null
+        } catch (e) {
+          return null
+        }
+      }
+
+      function storeLanguage(lang) {
+        try {
+          globalThis.localStorage?.setItem(STORED_LANG_KEY, lang)
+        } catch (e) {
+          /* a blocked storage only costs the remembered choice */
+        }
+      }
+
+      /**
+       * Resolves the page language: a manual choice beats the parameter the
+       * extension detected at uninstall time, which beats the browser language.
+       * The source (`param`, `browser`, `stored`, or `manual`) is reported with
+       * every event, so a share of `browser` values means the parameter the
+       * extension sent is not reaching the page.
+       */
+      function resolveStrings(lang) {
+        var stored = readStoredLanguage()
+        if (stored) {
+          return { lang: stored, strings: STRINGS[stored], source: "stored" }
+        }
+        if (lang && STRINGS[lang]) {
+          return { lang: lang, strings: STRINGS[lang], source: "param" }
+        }
+
+        var browserLang = (navigator.language || "").toLowerCase()
+        if (browserLang.indexOf("zh") === 0) {
+          var isTraditional = /-tw|-hk|-mo|-hant/.test(browserLang)
+          return isTraditional
+            ? { lang: "zh-TW", strings: STRINGS["zh-TW"], source: "browser" }
+            : { lang: "zh-CN", strings: STRINGS["zh-CN"], source: "browser" }
+        }
+        if (browserLang.indexOf("ja") === 0)
+          return { lang: "ja", strings: STRINGS.ja, source: "browser" }
+        if (browserLang.indexOf("vi") === 0)
+          return { lang: "vi", strings: STRINGS.vi, source: "browser" }
+        if (browserLang.indexOf("pt") === 0)
+          return { lang: "pt-BR", strings: STRINGS["pt-BR"], source: "browser" }
+        if (browserLang.indexOf("es") === 0)
+          return { lang: "es-419", strings: STRINGS["es-419"], source: "browser" }
+        if (browserLang.indexOf("de") === 0)
+          return { lang: "de", strings: STRINGS.de, source: "browser" }
+        return { lang: "en", strings: STRINGS.en, source: "browser" }
+      }
+
+      var params = new URLSearchParams(window.location.search)
+      var uid = (params.get("uid") || "").trim()
+      var version = (params.get("v") || "").trim()
+      var daysParam = parseInt(params.get("d") || "", 10)
+      var days = Number.isFinite(daysParam) && daysParam >= 0 ? daysParam : null
+      var resolved = resolveStrings((params.get("lang") || "").trim())
+      var strings = resolved.strings
+
+      var context = {
+        $lib: "web/uninstall-survey",
+        v: version || null,
+        days_since_install: days,
+        ui_language: resolved.lang,
+        ui_language_source: resolved.source,
+      }
+
+      function captureConfigured() {
+        return (
+          POSTHOG_HOST.indexOf("http") === 0 &&
+          POSTHOG_TOKEN &&
+          POSTHOG_TOKEN.indexOf("__") !== 0
+        )
+      }
+
+      /**
+       * Sends one survey event. Passive events (page opened) are only reported
+       * while the page carries an anonymous statistics id, so a user who turned
+       * anonymous product statistics off sends nothing on page load. An explicit
+       * submit is always delivered, since clicking the button is a deliberate
+       * request to hand the feedback over.
+       */
+      function capture(event, properties, requireLinked) {
+        if (requireLinked && !uid) return
+        var payload = {
+          api_key: POSTHOG_TOKEN,
+          event: event,
+          distinct_id: uid || "unknown",
+          properties: Object.assign({}, context, properties),
+        }
+        if (!captureConfigured()) {
+          // No PostHog config injected (local preview, or a deploy without the
+          // project variables): surface the payload instead of sending it.
+          console.info(
+            "[uninstall-survey] not sent (no PostHog config):",
+            payload,
+          )
+          return
+        }
+        var body = JSON.stringify(payload)
+        try {
+          var blob = new Blob([body], { type: "application/json" })
+          if (
+            navigator.sendBeacon &&
+            navigator.sendBeacon(POSTHOG_HOST + "/i/v0/e/", blob)
+          )
+            return
+        } catch (e) {
+          /* fall through to fetch */
+        }
+        try {
+          fetch(POSTHOG_HOST + "/i/v0/e/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: body,
+            keepalive: true,
+          }).catch(function () {})
+        } catch (e) {
+          /* the survey still completes without analytics */
+        }
+      }
+
+      var selectedReasonId = null
+      var isSubmitted = false
+
+      /**
+       * Keeps the submit button disabled until a reason is picked, so clicking it
+       * with nothing selected cannot silently do nothing.
+       */
+      function updateSubmitState() {
+        document.getElementById("submit").disabled = !selectedReasonId
+      }
+
+      /**
+       * Renders every localized string. Safe to run again after a manual language
+       * switch: the chosen reason, the typed comment and the submitted state all
+       * survive a re-render.
+       */
+      function render() {
+        document.title = strings.title
+        document.documentElement.lang = resolved.lang
+        document.getElementById("title").textContent = strings.title
+        document.getElementById("subtitle").textContent = strings.subtitle
+        document.getElementById("step-reason").textContent = strings.stepReason
+        document.getElementById("step-comment").textContent = strings.stepComment
+        document.getElementById("submit").textContent = strings.submit
+        document.getElementById("note").textContent = strings.note
+        var comment = document.getElementById("comment")
+        comment.placeholder = strings.commentPlaceholder
+
+        var issueLink = document.getElementById("issue-link")
+        issueLink.href = ISSUE_URL
+        issueLink.textContent = strings.issueLink
+
+        if (isSubmitted) {
+          document.getElementById("thanks").textContent = strings.thanks
+        }
+
+        var container = document.getElementById("options")
+        container.textContent = ""
+        strings.options.forEach(function (label, index) {
+          var reasonId = REASON_IDS[index]
+          var row = document.createElement("label")
+          row.className = "option"
+          var input = document.createElement("input")
+          input.type = "radio"
+          input.name = "reason"
+          input.value = reasonId
+          input.checked = reasonId === selectedReasonId
+          input.addEventListener("change", function () {
+            selectedReasonId = reasonId
+            updateSubmitState()
+          })
+          row.appendChild(input)
+          row.appendChild(document.createTextNode(label))
+          container.appendChild(row)
+        })
+
+        document.getElementById("lang-select").value = resolved.lang
+        updateSubmitState()
+      }
+
+      /**
+       * Manual language switch: re-render in place, remember the choice, and let
+       * the submitted event report the language the visitor actually picked.
+       */
+      function switchLanguage(lang) {
+        if (!STRINGS[lang]) return
+        storeLanguage(lang)
+        resolved = { lang: lang, strings: STRINGS[lang], source: "manual" }
+        strings = resolved.strings
+        context.ui_language = resolved.lang
+        context.ui_language_source = resolved.source
+        render()
+      }
+
+      /**
+       * Native names, so the switcher stays readable in any language. Derived
+       * from STRINGS so a locale can never be available to the page yet missing
+       * from the switcher, or vice versa.
+       */
+      function buildLanguageSelect(select) {
+        Object.keys(STRINGS).forEach(function (lang) {
+          var option = document.createElement("option")
+          option.value = lang
+          option.textContent = STRINGS[lang].name
+          select.appendChild(option)
+        })
+      }
+
+      var langSelect = document.getElementById("lang-select")
+      buildLanguageSelect(langSelect)
+      langSelect.addEventListener("change", function () {
+        switchLanguage(langSelect.value)
+      })
+
+      document
+        .getElementById("survey")
+        .addEventListener("submit", function (event) {
+          event.preventDefault()
+          // The button stays disabled until a reason is picked, so this only
+          // guards against a programmatic submit.
+          if (!selectedReasonId) return
+          isSubmitted = true
+
+          var button = document.getElementById("submit")
+          button.disabled = true
+          button.textContent = strings.sending
+
+          var comment = document.getElementById("comment").value.trim()
+          capture(
+            "uninstall_survey_submitted",
+            {
+              reason: selectedReasonId,
+              comment: comment ? comment.slice(0, 500) : undefined,
+              analytics_linked: Boolean(uid),
+            },
+            false,
+          )
+
+          document.getElementById("survey").hidden = true
+          document.getElementById("lang-row").hidden = true
+          var thanks = document.getElementById("thanks")
+          thanks.textContent = strings.thanks
+          thanks.hidden = false
+          document.getElementById("issue").hidden = false
+        })
+
+      render()
+      capture("uninstall_survey_viewed", {}, true)
+    </script>
+  </body>
+</html>

@@ -49,6 +49,22 @@ jobs:
       - name: 安装依赖
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: 注入卸载问卷 PostHog 配置
+        env:
+          VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
+          VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+        run: |-
+          # 卸载问卷页（静态 HTML）在构建前替换 PostHog 占位符。
+          # 未配置时保留占位符：页面照常展示问卷，只是不上报。
+          if [ -n "$VITE_PUBLIC_POSTHOG_HOST" ] && [ -n "$VITE_PUBLIC_POSTHOG_PROJECT_TOKEN" ]; then
+            sed -i \
+              -e "s|__POSTHOG_HOST__|${VITE_PUBLIC_POSTHOG_HOST}|g" \
+              -e "s|__POSTHOG_TOKEN__|${VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}|g" \
+              docs/.vuepress/public/uninstall.html
+          else
+            echo "PostHog 配置缺失，卸载问卷将不进行数据上报"
+          fi
+
       - name: 构建文档
         env:
           NODE_OPTIONS: --max_old_space_size=8192

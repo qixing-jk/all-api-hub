@@ -40,7 +40,59 @@
 
 ---
 
+## アンインストール時アンケートのローカル検証
+
+アンインストール時アンケートのページは `docs/docs/.vuepress/public/uninstall.html` にあり、ドキュメントサイトによってそのまま公開されます。既定では、ローカルでビルドした拡張機能はアンインストールページのアドレスを登録しないため、ローカルでアンインストールしても何も開きません。ローカルで検証する場合は、以下の手順で一時的に有効化してください。
+
+### 1. アンケートページをローカルでプレビューする
+
+アンケートページは完全に静的なページで、設定を注入しなくても開けます：
+
+```bash
+# ファイルを直接開く
+start docs/docs/.vuepress/public/uninstall.html   # Windows
+open docs/docs/.vuepress/public/uninstall.html    # macOS
+
+# またはドキュメントサイトの開発サーバー経由（本番と同じパス）
+pnpm --dir docs docs:dev
+# その後 http://localhost:8080/uninstall.html にアクセス
+```
+
+実際のアンインストールを模擬するには、アドレスに手動でパラメータを付けて開きます：
+
+```text
+uninstall.html?uid=analytics-test&v=4.0.0&d=42&lang=zh-CN
+```
+
+`d` はインストールからアンインストールまでの日数です。PostHog の設定がない場合、ページは一切のネットワークリクエストを送信せず、送信予定の内容をブラウザのコンソールに出力するだけです（`[uninstall-survey] not sent`）。そのため、ローカルでのプレビューが統計として記録されることはありません。
+
+### 2. ローカルビルドで実際のアンインストールを一度試す
+
+既定の dev/test ビルドは登録をスキップします。開発モードで、設定ページ右下の **Dev panel**（フローティングボールのアイコン）を開き、「Uninstall survey」セクションで操作します：
+
+- **Survey target**：現在の対象アドレスを表示し、「ローカルドキュメントサイト（`http://localhost:8080/uninstall.html`）」と「本番ページ」を切り替えます。選択は記憶されます。切り替えは再登録後に反映されます。
+- **Compose URL preview**：登録せずにアドレスを組み立てて表示するだけです。パラメータはコピーできます。
+- **Register uninstall URL**：現在の対象アドレスを直ちにブラウザへ登録します。その後 `chrome://extensions` で拡張機能を**削除**すると、ブラウザがそのページを開きます。登録は明示的な操作であり、dev/test の既定のスキップ対象外です。
+- **Open survey page**：アンケートページをプレビューとして直接開きます。`uid` パラメータは自動的に除去されるため、プレビューが実際のアンインストールとして記録されることはありません。
+- **Clear uninstall URL**：登録済みのアドレスを削除します。
+
+ブラウザがこのページを開くのは**アンインストール**後だけです。拡張機能を無効化しても開きません。バックグラウンドの Service Worker コンソールにある `Uninstall survey URL registered` ログには、パラメータが別途表示されます（URL のクエリ文字列はロガーにより秘匿されます）。
+
+スクリプトによる自動テストでは、環境変数を使ってバックグラウンドの起動ごとに自動登録することもできます：
+
+```bash
+VITE_PUBLIC_UNINSTALL_SURVEY_DEV=1 \
+VITE_PUBLIC_UNINSTALL_SURVEY_URL=http://localhost:8080/uninstall.html \
+pnpm dev
+```
+
+- `VITE_PUBLIC_UNINSTALL_SURVEY_DEV=1` が重要なスイッチです。これがない場合、dev/test ビルドは自動登録を常にスキップします。
+- `VITE_PUBLIC_UNINSTALL_SURVEY_URL` は、アドレスをローカルページまたは自前のテストページに向け、本番のアンケートページに到達させないようにします。省略した場合は本番のアドレスが使用されます。
+
+---
+
 ## 関連ドキュメント
 
 - [シェアスナップショット](./share-snapshot.md)
+- [プライバシーポリシー](./privacy.md)
 - [よくある質問](./faq.md)
