@@ -45,6 +45,19 @@ function pathFiltersFor(workflow: string, trigger: string) {
   return filters
 }
 
+function concurrencyGroup(workflow: string) {
+  const lines = workflow.replace(/\r\n/g, "\n").split("\n")
+  const start = lines.indexOf("concurrency:")
+  if (start === -1) throw new Error("missing concurrency block")
+
+  const line = lines
+    .slice(start + 1)
+    .find((candidate) => candidate.trimStart().startsWith("group: "))
+  if (!line) throw new Error("missing concurrency group")
+
+  return line.trim().slice("group: ".length)
+}
+
 describe("commitlint policy", () => {
   it.each([
     translationSubject,
@@ -90,16 +103,43 @@ describe("commitlint policy", () => {
     expect(lintMessage(translationSubject).status).toBe(0)
   })
 
-  it("checks subjects from the commit-msg hook and pull requests", () => {
+  it("checks subjects from the commit-msg hook and the commit range", () => {
     const hook = readFileSync(".husky/commit-msg", "utf8")
     expect(hook).toContain('commitlint --edit "$1"')
 
     const check = readFileSync(".github/workflows/commitlint.yml", "utf8")
-    expect(check).toContain("github.event.pull_request.title")
     expect(check).toContain("github.event.pull_request.base.sha")
     expect(check).toContain("github.event.pull_request.head.sha")
-    expect(check).toContain("edited")
     expect(check).toContain("commitlint")
+    // Title edits travel in their own workflow, otherwise both runs share a
+    // concurrency group and one of them is cancelled before it starts.
+    expect(check).not.toContain("edited")
+    expect(check).not.toContain("github.event.pull_request.title")
+  })
+
+  it("keeps commit-range runs of different commits from cancelling each other", () => {
+    const check = readFileSync(".github/workflows/commitlint.yml", "utf8")
+    const group = concurrencyGroup(check)
+
+    expect(group).toContain("github.event.pull_request.number")
+    // Without the commit, a second push lands in the same group and can win the
+    // race against the newer one, leaving the newer range unlinted.
+    expect(group).toContain("github.event.pull_request.head.sha")
+  })
+
+  it("lints the pull request title on title edits", () => {
+    const title = readFileSync(".github/workflows/commitlint-title.yml", "utf8")
+
+    expect(title).toContain("types: [edited]")
+    expect(title).toContain("github.event.changes.title")
+    expect(title).toContain("github.event.pull_request.title")
+    expect(title).toContain("commitlint")
+    // The workflow name keys the group, so it can never collide with the
+    // commit-range workflow's group.
+    expect(concurrencyGroup(title)).toContain("github.workflow")
+    // A cancelled title run can leave the newest title unchecked, and the only
+    // edits it processes are the ones that changed the title.
+    expect(title).toContain("cancel-in-progress: false")
   })
 
   it("runs the policy tests whenever their workflow inputs change", () => {
@@ -108,6 +148,7 @@ describe("commitlint policy", () => {
       "commitlint.config.mjs",
       ".husky/commit-msg",
       ".github/workflows/commitlint.yml",
+      ".github/workflows/commitlint-title.yml",
       ".github/workflows/translate-docs.yml",
     ]
 
