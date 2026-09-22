@@ -1,7 +1,5 @@
 import type { Locator } from "@playwright/test"
 
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
-
 /** WCAG AA thresholds for normal text and non-text controls respectively. */
 export const MIN_CONTRAST_RATIO = {
   TEXT: 4.5,
@@ -21,20 +19,20 @@ export async function readColorContrast(
       context.fillStyle = color
       context.fillRect(0, 0, 1, 1)
     }
-    const pixel = () => [...context.getImageData(0, 0, 1, 1).data].slice(0, 3)
-    const luminance = (rgb: number[]) => {
-      const linear = rgb.map((channel) => {
-        const value = channel / 255
-        return value <= 0.04045
-          ? value / 12.92
-          : ((value + 0.055) / 1.055) ** 2.4
-      })
-      return (
-        atIndex(linear, 0) * 0.2126 +
-        atIndex(linear, 1) * 0.7152 +
-        atIndex(linear, 2) * 0.0722
-      )
+    const pixel = (): [number, number, number] =>
+      [...context.getImageData(0, 0, 1, 1).data].slice(0, 3) as [
+        number,
+        number,
+        number,
+      ]
+    const linearize = (channel: number) => {
+      const value = channel / 255
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
     }
+    const luminance = (rgb: [number, number, number]) =>
+      linearize(rgb[0]) * 0.2126 +
+      linearize(rgb[1]) * 0.7152 +
+      linearize(rgb[2]) * 0.0722
     const ancestors: Element[] = []
     const surface =
       foregroundSource === "background" ? element.parentElement : element
@@ -49,14 +47,10 @@ export async function readColorContrast(
       foregroundSource === "background" ? style.backgroundColor : style.color,
     )
     const foreground = pixel()
-    const destructuredSource0 = [
-      luminance(background),
-      luminance(foreground),
-    ].sort((a, b) => a - b)
-    const [low, high] = [
-      atIndex(destructuredSource0, 0),
-      atIndex(destructuredSource0, 1),
-    ]
+    const first = luminance(background)
+    const second = luminance(foreground)
+    const low = Math.min(first, second)
+    const high = Math.max(first, second)
     return { background, foreground, ratio: (high + 0.05) / (low + 0.05) }
   }, foreground)
 }

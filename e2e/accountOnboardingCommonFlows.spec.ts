@@ -49,7 +49,6 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { expectAccountListItemVisibleBySite } from "~~/e2e/utils/realSite/accountAdd"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
 
@@ -593,7 +592,7 @@ test("adds an account through the real add-account auto-detect flow", async ({
   const persistedAccounts = await serviceWorker.evaluate(async () => {
     const chromeApi = (globalThis as any).chrome
 
-    return await new Promise<string>((resolve, reject) => {
+    return await new Promise<string | undefined>((resolve, reject) => {
       chromeApi.storage.local.get(
         "site_accounts",
         (stored: Record<string, string>) => {
@@ -602,7 +601,10 @@ test("adds an account through the real add-account auto-detect flow", async ({
             reject(new Error(error.message))
             return
           }
-          resolve(atIndex(stored, "site_accounts"))
+          const entry = Object.entries(stored).find(
+            ([storedKey]) => storedKey === "site_accounts",
+          )
+          resolve(entry ? entry[1] : undefined)
         },
       )
     })

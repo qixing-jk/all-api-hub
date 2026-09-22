@@ -32,7 +32,6 @@ import {
   setVisualDarkMode,
   setVisualThemeAttribute,
 } from "~~/e2e/utils/visualTheme"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const BALANCE_HISTORY_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BALANCE_HISTORY}`
@@ -215,13 +214,16 @@ test("filters balance history by tag/account and persists the selected currency"
           canvas.width,
           canvas.height,
         ).data
+        // The page cannot reach the test helper, and an absent byte reads as NaN,
+        // which keeps both comparisons below false just as an absent value did.
+        const pixelAt = (byteIndex: number) => pixels[byteIndex] ?? Number.NaN
         for (let index = 0; index < pixels.length; index += 4) {
           if (
             target.every(
               (channel, offset) =>
-                Math.abs(atIndex(pixels, index + offset) - channel) < 4,
+                Math.abs(pixelAt(index + offset) - channel) < 4,
             ) &&
-            atIndex(pixels, index + 3) > 200
+            pixelAt(index + 3) > 200
           )
             count++
         }

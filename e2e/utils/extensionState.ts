@@ -4,7 +4,6 @@ import { expect } from "@playwright/test"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { getExtensionServiceWorker } from "~~/e2e/utils/extension"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 /**
  * Detect whether a page URL is an options page carrying the permissions
@@ -120,7 +119,11 @@ export async function getPlasmoStorageRawValue<T>(
           reject(new Error(error.message))
           return
         }
-        resolve(atIndex(stored, storageKey))
+        const entry = Object.entries(stored).find(
+          ([storedKey]) => storedKey === storageKey,
+        )
+        // The worker cannot reach the test helper, and an absent key reads as undefined.
+        resolve(entry ? entry[1] : (undefined as T))
       })
     })
   }, key)
