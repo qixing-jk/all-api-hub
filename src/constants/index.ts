@@ -14,6 +14,8 @@ export const DATA_TYPE_CHECK_IN_REQUIREMENT = "check_in_requirement"
 export const DATA_TYPE_CUSTOM_CHECK_IN_URL = "custom_check_in_url"
 export const DATA_TYPE_CUSTOM_REDEEM_URL = "custom_redeem_url"
 export const DATA_TYPE_HEALTH_STATUS = "health_status"
+/** Sort field for the account display name. */
+export const DATA_TYPE_NAME = "name"
 
 export * from "./branding"
 export * from "./i18n"

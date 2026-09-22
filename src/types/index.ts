@@ -8,6 +8,7 @@ import {
   DATA_TYPE_CUSTOM_REDEEM_URL,
   DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_INCOME,
+  DATA_TYPE_NAME,
 } from "~/constants"
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
@@ -346,7 +347,7 @@ export interface AccountStats {
 
 // 用于排序的字段类型
 export const SORT_FIELDS = [
-  "name",
+  DATA_TYPE_NAME,
   DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CUSTOM_CHECK_IN_URL,
   DATA_TYPE_CUSTOM_REDEEM_URL,

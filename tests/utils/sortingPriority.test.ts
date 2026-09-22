@@ -7,6 +7,7 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_INCOME,
+  DATA_TYPE_NAME,
 } from "~/constants"
 import {
   createAccountContextBoostResolver,
@@ -15,7 +16,7 @@ import {
   getAccountSortGroup,
   OPEN_TAB_MATCH_TIER,
 } from "~/services/preferences/utils/sortingPriority"
-import { SiteHealthStatus } from "~/types"
+import { SiteHealthStatus, type SortOrder } from "~/types"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
@@ -231,7 +232,7 @@ describe("createDynamicSortComparator", () => {
           }),
         }),
       ]
-      const compare = (order: "asc" | "desc") =>
+      const compare = (order: SortOrder) =>
         createDynamicSortComparator(
           config(),
           null,
@@ -394,7 +395,7 @@ describe("createDynamicSortComparator", () => {
     ]
 
     accounts.sort(
-      createDynamicSortComparator(config(), null, "name", "USD", "asc"),
+      createDynamicSortComparator(config(), null, DATA_TYPE_NAME, "USD", "asc"),
     )
 
     expect(accounts.map(({ id }) => id)).toEqual(["alpha", "beta"])
@@ -531,7 +532,7 @@ describe("browsing context priority", () => {
       createDynamicSortComparator(
         DEFAULT_SORTING_PRIORITY_CONFIG,
         buildSiteAccount({ id: "current" }),
-        "name",
+        DATA_TYPE_NAME,
         "USD",
         "asc",
         {
@@ -550,19 +551,19 @@ describe("browsing context priority", () => {
       { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 9 },
     ])
     expect(
-      createAccountContextBoostResolver(settings, "current", { current: 1 })(
-        "current",
-      ),
+      createAccountContextBoostResolver(settings, "current", {
+        current: OPEN_TAB_MATCH_TIER.BACKGROUND,
+      })("current"),
     ).toBe("current-site")
     atIndex(settings.criteria, 1).enabled = false
     expect(
-      createAccountContextBoostResolver(settings, "current", { current: 1 })(
-        "current",
-      ),
+      createAccountContextBoostResolver(settings, "current", {
+        current: OPEN_TAB_MATCH_TIER.BACKGROUND,
+      })("current"),
     ).toBe("open-tabs")
     atIndex(settings.criteria, 0).enabled = false
     const resolve = createAccountContextBoostResolver(settings, "current", {
-      current: 1,
+      current: OPEN_TAB_MATCH_TIER.BACKGROUND,
     })
     expect(resolve("current")).toBeUndefined()
     const accounts = [
@@ -575,10 +576,10 @@ describe("browsing context priority", () => {
           createDynamicSortComparator(
             settings,
             buildSiteAccount({ id: "current" }),
-            "name",
+            DATA_TYPE_NAME,
             "USD",
             "asc",
-            { current: 1 },
+            { current: OPEN_TAB_MATCH_TIER.BACKGROUND },
           ),
         )
         .map(({ id }) => id),
