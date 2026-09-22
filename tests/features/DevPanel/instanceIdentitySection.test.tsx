@@ -8,8 +8,8 @@ import {
   DEV_IDENTITY_FIXTURE_COLOR,
   DEV_IDENTITY_FIXTURE_PATH,
 } from "~~/tests/test-utils/devIdentityFixtures"
+import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { render } from "~~/tests/test-utils/render"
 
 const {
   getDevIdentityMock,
@@ -53,47 +53,8 @@ vi.mock("~/lib/notify", () => ({
 
 const BUILD_IDENTITY = buildDevIdentity()
 
-function SectionHarness() {
-  const section = useInstanceIdentityDevSection()
-
-  return (
-    <div>
-      <p data-testid="section-meta">
-        {[
-          section.collapsible,
-          section.defaultCollapsed,
-          section.summary ?? "no-summary",
-          section.order ?? "default-order",
-        ].join("|")}
-      </p>
-      {section.rows?.map((row) => (
-        <p key={row.id} data-testid={`row-${row.id}`}>
-          {`${row.label}|${row.value ?? "unavailable"}|${row.tone ?? "none"}`}
-        </p>
-      ))}
-      {section.actions.map((action) => (
-        <button
-          key={action.id}
-          type="button"
-          onClick={() => void action.run()}
-          disabled={action.disabled}
-          aria-busy={action.loading || undefined}
-        >
-          {action.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-const RENDER_OPTIONS = {
-  withReleaseUpdateStatusProvider: false,
-  withUserPreferencesProvider: false,
-  withThemeProvider: false,
-} as const
-
 async function renderHarness() {
-  render(<SectionHarness />, RENDER_OPTIONS)
+  renderDevPanelSection(useInstanceIdentityDevSection)
   await waitFor(() => expect(getManagementSelfMock).toHaveBeenCalled())
 }
 

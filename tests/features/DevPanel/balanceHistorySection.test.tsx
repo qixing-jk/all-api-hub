@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useBalanceHistoryDevSection } from "~/features/DevPanel/sections/miscSections"
 import toast from "~/lib/notify"
-import { render } from "~~/tests/test-utils/render"
+import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 
 const { sendRuntimeMessageMock } = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
@@ -30,32 +30,6 @@ vi.mock("~/lib/notify", () => {
   return { default: toastMock }
 })
 
-function SectionHarness() {
-  const section = useBalanceHistoryDevSection()
-
-  return (
-    <div>
-      {section.actions.map((action) => (
-        <button
-          key={action.id}
-          type="button"
-          onClick={() => void action.run()}
-          disabled={action.disabled}
-          aria-busy={action.loading || undefined}
-        >
-          {action.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-const RENDER_OPTIONS = {
-  withReleaseUpdateStatusProvider: false,
-  withUserPreferencesProvider: false,
-  withThemeProvider: false,
-} as const
-
 describe("balance history dev section", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -67,7 +41,7 @@ describe("balance history dev section", () => {
       data: { seeded: 2, skipped: 1 },
     })
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useBalanceHistoryDevSection)
 
     fireEvent.click(
       screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
@@ -87,7 +61,7 @@ describe("balance history dev section", () => {
       error: "seed unavailable",
     })
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useBalanceHistoryDevSection)
     fireEvent.click(
       screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
     )
@@ -102,7 +76,7 @@ describe("balance history dev section", () => {
   it("reports exception details when seeding throws", async () => {
     sendRuntimeMessageMock.mockRejectedValue(new Error("runtime closed"))
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useBalanceHistoryDevSection)
     fireEvent.click(
       screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
     )
@@ -116,7 +90,7 @@ describe("balance history dev section", () => {
   it("falls back to a generic message when the failure omits an error", async () => {
     sendRuntimeMessageMock.mockResolvedValue({ success: false })
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useBalanceHistoryDevSection)
     fireEvent.click(
       screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
     )
@@ -132,7 +106,7 @@ describe("balance history dev section", () => {
   it("reports zero counts when a successful seed omits the payload", async () => {
     sendRuntimeMessageMock.mockResolvedValue({ success: true })
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useBalanceHistoryDevSection)
     fireEvent.click(
       screen.getByRole("button", { name: "Dev: Seed estimate snapshots" }),
     )
