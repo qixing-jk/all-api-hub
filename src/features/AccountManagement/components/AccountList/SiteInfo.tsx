@@ -70,10 +70,13 @@ export default function SiteInfo({
   const contextBoost = showContextBoost
     ? getAccountContextBoost?.(site.id)
     : undefined
+  // Both related-page tiers share one badge; the viewed tab only changes ordering.
+  const isRelatedPageOpen =
+    contextBoost === "open-tabs" || contextBoost === "active-tab"
   const contextHint =
     contextBoost === "current-site"
       ? t("list.site.currentSiteBoostHint")
-      : contextBoost === "open-tabs"
+      : isRelatedPageOpen
         ? t("list.site.openTabsBoostHint")
         : t("list.site.currentSiteExists")
 
@@ -189,7 +192,7 @@ export default function SiteInfo({
                   size="sm"
                   className="whitespace-nowrap"
                 >
-                  {contextBoost === "open-tabs"
+                  {isRelatedPageOpen
                     ? t("list.site.openTabsBoost")
                     : t("list.site.currentSite")}
                 </Badge>

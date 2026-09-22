@@ -11,16 +11,17 @@ Open **Settings → Account Management → Sorting Priority Settings**, or use t
 Two independent switches save changes automatically:
 
 - **Prioritize the current site account**: show the account matching the current site's signed-in user first.
-- **Prioritize accounts matching other open tabs**: prioritize accounts whose site or configured check-in or redeem page is open, and show a “Related page open” badge. Similar tab titles alone do not trigger priority. Configured page paths, query parameters, and hash routes also participate in matching, so other pages on a shared site are not mistaken for related pages.
+- **Prioritize accounts matching other open tabs**: prioritize accounts whose site or configured check-in or redeem page is open, and show a “Related page open” badge. Accounts matched by the tab you are viewing appear before accounts matched only by other tabs. Similar tab titles alone do not trigger priority. Configured page paths, query parameters, and hash routes also participate in matching, so other pages on a shared site are not mistaken for related pages.
 
 During normal browsing, the order is:
 
 1. The account matching the current site's signed-in user.
-2. Other accounts with related pages open.
-3. Accounts that match neither rule.
-4. Disabled accounts, which always stay last.
+2. Other accounts matched by the tab you are viewing.
+3. Accounts matched by other open tabs only.
+4. Accounts that match neither rule.
+5. Disabled accounts, which always stay last.
 
-Within each of the first three tiers, pinned accounts come first, followed by the selected field sort. Ties use saved manual order, then account name. Turning off a switch removes its boost; with both switches off, accounts are grouped as pinned, normal, and disabled.
+Within each of the first four tiers, pinned accounts come first, followed by the selected field sort. Ties use saved manual order, then account name. Turning off a switch removes its boost; with both switches off, accounts are grouped as pinned, normal, and disabled.
 
 For example, an unpinned account with a related page open can appear before an unrelated pinned account. Row badges and their tooltips explain these priorities.
 

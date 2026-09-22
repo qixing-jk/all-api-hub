@@ -89,7 +89,7 @@ const {
   accountDataScenario: {
     detectedSiteAccounts: [] as Array<{ id: string }>,
     getAccountContextBoost: vi.fn<
-      () => "current-site" | "open-tabs" | undefined
+      () => "current-site" | "active-tab" | "open-tabs" | undefined
     >(() => undefined),
     isPinFeatureEnabled: false,
     isAccountPinned: vi.fn(() => false),
@@ -295,6 +295,18 @@ describe("SiteInfo", () => {
     rerender(<SiteInfo site={site} showContextBoost={false} />)
     expect(
       screen.queryByText("account:list.site.openTabsBoost"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shares the related-page badge with accounts matched by the viewed tab", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("active-tab")
+    render(<SiteInfo site={buildDisplaySiteData({ id: "viewed" })} />)
+
+    expect(
+      screen.getByText("account:list.site.openTabsBoost"),
+    ).toHaveAccessibleDescription("account:list.site.openTabsBoostHint")
+    expect(
+      screen.queryByText("account:list.site.currentSite"),
     ).not.toBeInTheDocument()
   })
 

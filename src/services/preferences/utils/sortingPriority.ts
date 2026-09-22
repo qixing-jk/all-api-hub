@@ -59,13 +59,41 @@ export const CONFIGURABLE_SORTING_CRITERIA = [
 
 export type AccountSortGroup = "pinned" | "normal" | "disabled"
 
-export type AccountContextBoost = "current-site" | "open-tabs"
+export type AccountContextBoost = "current-site" | "active-tab" | "open-tabs"
+
+/**
+ * Strength of a related-page match found among open tabs. The tab the user is
+ * viewing outranks related pages that only stay open in the background.
+ */
+export const OPEN_TAB_MATCH_TIER = {
+  /** A related page is open in a tab the user is not viewing. */
+  BACKGROUND: 1,
+  /** A related page is open in the tab the user is viewing. */
+  ACTIVE: 2,
+} as const
+
+export type OpenTabMatchTier =
+  (typeof OPEN_TAB_MATCH_TIER)[keyof typeof OPEN_TAB_MATCH_TIER]
+
+/** Account id to the strongest related-page tier found among its open tabs. */
+export type OpenTabMatchTiers = Record<string, OpenTabMatchTier>
+
+/** Browsing-context tiers in display order; each tier splits into pinned then normal. */
+const CONTEXT_BOOST_RANKS: Record<AccountContextBoost | "none", number> = {
+  "current-site": 0,
+  "active-tab": 1,
+  "open-tabs": 2,
+  none: 3,
+}
+
+/** Keeps disabled accounts behind every context tier and its pin split. */
+const DISABLED_ACCOUNT_PRIORITY = Object.keys(CONTEXT_BOOST_RANKS).length * 2
 
 /** Shares the enabled browsing-context tiers between ordering and its UI hints. */
 export function createAccountContextBoostResolver(
   config: SortingPriorityConfig,
   detectedAccountId: string | undefined,
-  matchedAccountScores: Record<string, number>,
+  matchedTabTiers: OpenTabMatchTiers,
 ): (accountId: string) => AccountContextBoost | undefined {
   const enabled = new Set(
     config.criteria
@@ -78,11 +106,10 @@ export function createAccountContextBoostResolver(
       accountId === detectedAccountId
     )
       return "current-site"
-    if (
-      enabled.has(SortingCriteriaType.MATCHED_OPEN_TABS) &&
-      (matchedAccountScores[accountId] ?? 0) > 0
-    )
-      return "open-tabs"
+    if (!enabled.has(SortingCriteriaType.MATCHED_OPEN_TABS)) return undefined
+    const tier = matchedTabTiers[accountId]
+    if (tier === OPEN_TAB_MATCH_TIER.ACTIVE) return "active-tab"
+    if (tier === OPEN_TAB_MATCH_TIER.BACKGROUND) return "open-tabs"
     return undefined
   }
 }
@@ -104,10 +131,8 @@ export function getAccountDisplayPriority(
   boost?: AccountContextBoost,
 ): number {
   const group = getAccountSortGroup(account, pinnedAccountIds)
-  if (group === "disabled") return 6
-  const contextRank =
-    boost === "current-site" ? 0 : boost === "open-tabs" ? 1 : 2
-  return contextRank * 2 + (group === "pinned" ? 0 : 1)
+  if (group === "disabled") return DISABLED_ACCOUNT_PRIORITY
+  return CONTEXT_BOOST_RANKS[boost ?? "none"] * 2 + (group === "pinned" ? 0 : 1)
 }
 
 /**
@@ -297,7 +322,7 @@ function compareManualOrder(
  * @param userSortField Field selected by the user for sorting, or null when field sorting is cleared.
  * @param currencyType Currency used for balance/consumption/income comparisons.
  * @param sortOrder Sort order ('asc' or 'desc').
- * @param matchedAccountScores Map of account IDs to matching scores from open tabs.
+ * @param matchedTabTiers Map of account IDs to the strongest related-page tier found among open tabs.
  * @param pinnedAccountIds The list of pinned account IDs in priority order.
  * @param manualOrderIndices Map of account ID to manual order index (0-based).
  * @returns Comparator function for `Array.prototype.sort()`.
@@ -308,7 +333,7 @@ export function createDynamicSortComparator(
   userSortField: ActiveSortField,
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
-  matchedAccountScores: Record<string, number> = {},
+  matchedTabTiers: OpenTabMatchTiers = {},
   pinnedAccountIds: string[] = [],
   manualOrderIndices: Record<string, number> = {},
 ) {
@@ -316,7 +341,7 @@ export function createDynamicSortComparator(
   const getContextBoost = createAccountContextBoostResolver(
     config,
     detectedAccount?.id,
-    matchedAccountScores,
+    matchedTabTiers,
   )
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
     const priorityComparison =

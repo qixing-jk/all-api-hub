@@ -13,6 +13,7 @@ import {
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
   getAccountSortGroup,
+  OPEN_TAB_MATCH_TIER,
 } from "~/services/preferences/utils/sortingPriority"
 import { SiteHealthStatus } from "~/types"
 import {
@@ -458,12 +459,13 @@ describe("createDynamicSortComparator", () => {
 
 describe("browsing context priority", () => {
   it.each(["asc", "desc"] as const)(
-    "promotes context above pinned accounts and sorts each tier by balance (%s)",
+    "promotes the active tab and other related pages above pinned accounts and sorts each tier by balance (%s)",
     (direction) => {
       const accounts = [
         buildDisplaySiteData({ id: "normal", balance: { USD: 100, CNY: 100 } }),
         buildDisplaySiteData({ id: "open-low", balance: { USD: 1, CNY: 1 } }),
         buildDisplaySiteData({ id: "open-high", balance: { USD: 9, CNY: 9 } }),
+        buildDisplaySiteData({ id: "active", balance: { USD: 5, CNY: 5 } }),
         buildDisplaySiteData({ id: "current", balance: { USD: 5, CNY: 5 } }),
         buildDisplaySiteData({ id: "pinned" }),
         buildDisplaySiteData({
@@ -472,12 +474,13 @@ describe("browsing context priority", () => {
         }),
         buildDisplaySiteData({ id: "disabled", disabled: true }),
       ]
-      const scores = {
-        "open-low": 100,
-        "open-pinned": 1,
-        "open-high": 1,
-        current: 2,
-        disabled: 999,
+      const tiers = {
+        "open-low": OPEN_TAB_MATCH_TIER.BACKGROUND,
+        "open-pinned": OPEN_TAB_MATCH_TIER.BACKGROUND,
+        "open-high": OPEN_TAB_MATCH_TIER.BACKGROUND,
+        active: OPEN_TAB_MATCH_TIER.ACTIVE,
+        current: OPEN_TAB_MATCH_TIER.ACTIVE,
+        disabled: OPEN_TAB_MATCH_TIER.ACTIVE,
       }
       const comparator = createDynamicSortComparator(
         DEFAULT_SORTING_PRIORITY_CONFIG,
@@ -485,11 +488,12 @@ describe("browsing context priority", () => {
         DATA_TYPE_BALANCE,
         "USD",
         direction,
-        scores,
+        tiers,
         ["pinned", "open-pinned", "disabled"],
       )
       expect(accounts.sort(comparator).map(({ id }) => id)).toEqual([
         "current",
+        "active",
         "open-pinned",
         ...(direction === "asc"
           ? ["open-low", "open-high"]
@@ -501,6 +505,44 @@ describe("browsing context priority", () => {
       expect(comparator(atIndex(accounts, 1), atIndex(accounts, 1))).toBe(0)
     },
   )
+
+  it("resolves the active tab tier above related pages open in other tabs", () => {
+    const settings = config([
+      { id: SortingCriteriaType.MATCHED_OPEN_TABS, enabled: true, priority: 0 },
+    ])
+    const resolve = createAccountContextBoostResolver(settings, undefined, {
+      active: OPEN_TAB_MATCH_TIER.ACTIVE,
+      background: OPEN_TAB_MATCH_TIER.BACKGROUND,
+    })
+
+    expect(resolve("active")).toBe("active-tab")
+    expect(resolve("background")).toBe("open-tabs")
+    expect(resolve("unmatched")).toBeUndefined()
+  })
+
+  it("keeps the signed-in account and the field sort ahead of the active tab tier", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "active", name: "A" }),
+      buildDisplaySiteData({ id: "current", name: "M" }),
+      buildDisplaySiteData({ id: "other", name: "B" }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        buildSiteAccount({ id: "current" }),
+        "name",
+        "USD",
+        "asc",
+        {
+          active: OPEN_TAB_MATCH_TIER.ACTIVE,
+          current: OPEN_TAB_MATCH_TIER.ACTIVE,
+        },
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual(["current", "active", "other"])
+  })
 
   it("preserves disabled choices and uses current-site priority regardless of legacy priority numbers", () => {
     const settings = config([

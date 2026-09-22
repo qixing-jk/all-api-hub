@@ -46,7 +46,9 @@ import {
 import {
   createAccountContextBoostResolver,
   createDynamicSortComparator,
+  OPEN_TAB_MATCH_TIER,
   type AccountContextBoost,
+  type OpenTabMatchTiers,
 } from "~/services/preferences/utils/sortingPriority"
 import {
   createAutomaticProtectionBypassExecution,
@@ -1212,10 +1214,8 @@ export const AccountDataProvider = ({
     [bookmarks, orderedAccountIds, pinnedAccountIds],
   )
 
-  // State to hold matched account scores from open tabs
-  const [matchedAccountScores, setMatchedAccountScores] = useState<
-    Record<string, number>
-  >({})
+  // State to hold related-page match tiers from open tabs
+  const [matchedTabTiers, setMatchedTabTiers] = useState<OpenTabMatchTiers>({})
   const openTabsCheckSeqRef = useRef(0)
   // Check and match open tabs with accounts
   const checkOpenTabs = useCallback(async () => {
@@ -1223,25 +1223,41 @@ export const AccountDataProvider = ({
     try {
       const tabs = await excludeInternalTabs(await getAllTabs())
       if (seq !== openTabsCheckSeqRef.current) return
-      if (!tabs || tabs.length === 0 || displayData.length === 0) {
-        setMatchedAccountScores({})
+      if (tabs.length === 0 || displayData.length === 0) {
+        setMatchedTabTiers({})
         return
       }
 
-      const scores: Record<string, number> = {}
+      const [activeTab] = await getActiveTabs()
+      if (seq !== openTabsCheckSeqRef.current) return
+
+      // The viewed tab outranks related pages left open elsewhere. It only counts
+      // when it survived the internal-page filter, so extension task pages cannot
+      // claim the tier even when another tab shows the same URL.
+      const activeTabId =
+        typeof activeTab?.id === "number" &&
+        tabs.some((tab) => tab.id === activeTab.id)
+          ? activeTab.id
+          : undefined
+
+      const tiers: OpenTabMatchTiers = {}
 
       // Only recognized sites and explicitly configured pages establish a relation.
       for (const account of displayData) {
-        if (tabs.some((tab) => isAccountRelatedTab(account, tab.url))) {
-          scores[account.id] = 1
-        }
+        const relatedTabs = tabs.filter((tab) =>
+          isAccountRelatedTab(account, tab.url),
+        )
+        if (relatedTabs.length === 0) continue
+        tiers[account.id] = relatedTabs.some((tab) => tab.id === activeTabId)
+          ? OPEN_TAB_MATCH_TIER.ACTIVE
+          : OPEN_TAB_MATCH_TIER.BACKGROUND
       }
 
-      setMatchedAccountScores(scores)
+      setMatchedTabTiers(tiers)
     } catch (error) {
       if (seq !== openTabsCheckSeqRef.current) return
       logger.error("Error matching open tabs", error)
-      setMatchedAccountScores({})
+      setMatchedTabTiers({})
     } finally {
       if (
         seq === openTabsCheckSeqRef.current &&
@@ -1330,9 +1346,9 @@ export const AccountDataProvider = ({
       createAccountContextBoostResolver(
         sortingPriorityConfig,
         detectedAccount?.id,
-        matchedAccountScores,
+        matchedTabTiers,
       ),
-    [sortingPriorityConfig, detectedAccount?.id, matchedAccountScores],
+    [sortingPriorityConfig, detectedAccount?.id, matchedTabTiers],
   )
 
   const sortedData = useMemo(() => {
@@ -1346,7 +1362,7 @@ export const AccountDataProvider = ({
       sortField,
       currencyType,
       sortOrder,
-      matchedAccountScores,
+      matchedTabTiers,
       pinnedAccountIds,
       manualOrderIndices,
     )
@@ -1358,7 +1374,7 @@ export const AccountDataProvider = ({
     sortField,
     currencyType,
     sortOrder,
-    matchedAccountScores,
+    matchedTabTiers,
     pinnedAccountIds,
     orderedAccountIds,
   ])
