@@ -1,29 +1,34 @@
 name: Pull request title
 
-# Title edits land in the same second as the push that triggered them, because
-# release-please rewrites its pull request right after force-pushing the release
-# branch. Keeping them in their own workflow keeps them out of the commit-range
-# workflow's concurrency group, which would otherwise cancel one of the two runs.
+# Covers every action that can leave a pull request with an unchecked title. A
+# new head or a reopened pull request has to report the check again, or a title
+# that failed on the previous head stops appearing in the check list. Edits are
+# here because a title can only change through one, and they arrive in the same
+# second as the push that triggered them: release-please rewrites its pull
+# request right after force-pushing the release branch. Their own workflow keeps
+# them out of the commit-range concurrency group, which would otherwise cancel
+# one of the two runs.
 on:
   pull_request:
-    types: [edited]
+    types: [opened, reopened, synchronize, edited]
 
 permissions:
   contents: read
 
 concurrency:
-  # Own group, keyed by the workflow name, so it never competes with the
-  # commit-range workflow. Queuing instead of cancelling: a cancelled run can
-  # let the newest title through unchecked.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  # Keyed by the workflow name, so it never competes with the commit-range
+  # workflow, and by the action, so a body edit that only skips cannot take the
+  # queue slot of the title check for the same head. Queuing instead of
+  # cancelling: a cancelled run can let the newest title through unchecked.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ github.event.action }}
   cancel-in-progress: false
 
 jobs:
   title:
     name: Pull request title
-    # Every edit to the release pull request body only rewrites the generated
-    # release notes, and retyping them cannot change the title.
-    if: github.event.changes.title != null
+    # Rewriting the generated release notes cannot change a title that already
+    # passed, but every other action checks the title that gets squash-merged.
+    if: github.event.action != 'edited' || github.event.changes.title != null
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

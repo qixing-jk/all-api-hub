@@ -127,18 +127,23 @@ describe("commitlint policy", () => {
     expect(group).toContain("github.event.pull_request.head.sha")
   })
 
-  it("lints the pull request title on title edits", () => {
+  it("lints the pull request title on title edits and on every new head", () => {
     const title = readFileSync(".github/workflows/commitlint-title.yml", "utf8")
 
-    expect(title).toContain("types: [edited]")
-    expect(title).toContain("github.event.changes.title")
+    // A title that nobody edits is still the title that gets squash-merged, and
+    // a check that only ran on the previous head disappears from the next one.
+    expect(title).toContain("types: [opened, reopened, synchronize, edited]")
+    expect(title).toContain("github.event.action != 'edited'")
+    expect(title).toContain("github.event.changes.title != null")
     expect(title).toContain("github.event.pull_request.title")
     expect(title).toContain("commitlint")
     // The workflow name keys the group, so it can never collide with the
-    // commit-range workflow's group.
-    expect(concurrencyGroup(title)).toContain("github.workflow")
-    // A cancelled title run can leave the newest title unchecked, and the only
-    // edits it processes are the ones that changed the title.
+    // commit-range workflow's group, and the action keeps a body edit that only
+    // skips out of the queue that carries the title check for the same head.
+    const group = concurrencyGroup(title)
+    expect(group).toContain("github.workflow")
+    expect(group).toContain("github.event.action")
+    // A cancelled title run can leave the newest title unchecked.
     expect(title).toContain("cancel-in-progress: false")
   })
 
