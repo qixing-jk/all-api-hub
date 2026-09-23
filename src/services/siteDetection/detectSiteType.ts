@@ -4,6 +4,7 @@ import {
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
 } from "~/services/accountSiteOnboarding/registry"
+import { fetchSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -92,6 +93,39 @@ export const fetchSiteOriginalTitle = async (
 }
 
 /**
+ * Matches one piece of detection text (page title, public site name, or upstream
+ * auth message) against the registered title rules.
+ */
+function matchAccountSiteTitleRules(text: string): AccountSiteType {
+  for (const rule of getAccountSiteTitleRules()) {
+    if (rule.regex.test(text)) {
+      return rule.name
+    }
+  }
+
+  return SITE_TYPES.UNKNOWN
+}
+
+/**
+ * Resolves the first detection text that identifies a registered site type,
+ * in the order the caller ranked them.
+ */
+function matchFirstIdentifyingText(
+  ...texts: (string | undefined)[]
+): AccountSiteType {
+  for (const text of texts) {
+    if (text === undefined) continue
+
+    const matchedType = matchAccountSiteTitleRules(text)
+    if (matchedType !== SITE_TYPES.UNKNOWN) {
+      return matchedType
+    }
+  }
+
+  return SITE_TYPES.UNKNOWN
+}
+
+/**
  * Runs ordered matching against an API error message:
  * 1. Known site-specific compat user-id header markers from upstream auth errors
  * 2. Whole-message matching against existing site detection rules
@@ -110,13 +144,7 @@ function detectAccountSiteTypeFromApiErrorMessage(
     }
   }
 
-  for (const rule of getAccountSiteTitleRules()) {
-    if (rule.regex.test(normalizedMessage)) {
-      return rule.name
-    }
-  }
-
-  return SITE_TYPES.UNKNOWN
+  return matchAccountSiteTitleRules(normalizedMessage)
 }
 
 /**
@@ -247,6 +275,38 @@ async function detectVoApiV2FromProtectedEndpoint(
 }
 
 /**
+ * Reads the operator-configured site name from the public New API-family status
+ * endpoint.
+ *
+ * `system_name` carries the deployment's own brand, so it still identifies a
+ * fork when the front-end shell serves a generic title. The endpoint is rooted at
+ * the origin, and an absent or unreachable status is not an error: the caller
+ * keeps title detection. The caller's bypass context is forwarded so a shielded
+ * deployment still answers; whether it applies is the bypass policy's call.
+ */
+async function fetchPublicSiteStatusName(
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+): Promise<string | undefined> {
+  try {
+    const siteStatus = await fetchSiteStatus({
+      baseUrl: new URL("/", url).toString(),
+      auth: { authType: AuthTypeEnum.None },
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+    })
+    const systemName = siteStatus?.system_name
+
+    return typeof systemName === "string" && systemName.trim()
+      ? systemName
+      : undefined
+  } catch (error) {
+    logger.debug("public site status name probe failed", { url, error })
+  }
+
+  return undefined
+}
+
+/**
  * detectAccountSiteTypeFromDomain parses the URL hostname and compares it
  * case-insensitively against account-site domain rules. It returns the matched
  * AccountSiteType rule name, or SITE_TYPES.UNKNOWN when parsing fails or no
@@ -283,13 +343,19 @@ export const getAccountSiteType = async (
     return sub2ApiSiteType
   }
 
-  const title = await fetchSiteOriginalTitle(url, protectionBypassExecution)
-  if (title !== undefined) {
-    for (const rule of getAccountSiteTitleRules()) {
-      if (rule.regex.test(title)) {
-        return rule.name
-      }
-    }
+  // The public status name is operator-configured while a white-label shell keeps
+  // the stock title, so resolve both and let the name win over the title.
+  const [title, publicSiteName] = await Promise.all([
+    fetchSiteOriginalTitle(url, protectionBypassExecution),
+    fetchPublicSiteStatusName(url, protectionBypassExecution),
+  ])
+
+  const identifyingTextSiteType = matchFirstIdentifyingText(
+    publicSiteName,
+    title,
+  )
+  if (identifyingTextSiteType !== SITE_TYPES.UNKNOWN) {
+    return identifyingTextSiteType
   }
 
   return await detectNewApiFamilySiteTypeFromCompatAuthError(

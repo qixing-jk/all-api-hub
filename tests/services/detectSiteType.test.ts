@@ -29,6 +29,9 @@ describe("detectSiteType", () => {
       http.get(/\/api\/v1\/auth\/me$/, () => {
         return HttpResponse.json({ message: "not found" }, { status: 404 })
       }),
+      http.get(/\/api\/status$/, () => {
+        return HttpResponse.json({ message: "not found" }, { status: 404 })
+      }),
     )
   }
 
@@ -394,6 +397,110 @@ describe("detectSiteType", () => {
         await expect(
           getAccountSiteType("https://mirror.example.com"),
         ).resolves.toBe(SITE_TYPES.AIHUBMIX)
+      })
+    })
+
+    describe("Public site status name detection", () => {
+      const serveShellTitle = (origin: string, title: string) =>
+        http.get(origin, () => {
+          return new HttpResponse(`<html><title>${title}</title></html>`, {
+            headers: { "Content-Type": "text/html" },
+          })
+        })
+
+      const serveStatusData = (data: Record<string, unknown>) =>
+        http.get("https://example.com/api/status", () => {
+          return HttpResponse.json({ success: true, message: "", data })
+        })
+
+      it("detects the branded site type from the public status name behind a stock shell title", async () => {
+        server.use(
+          // The title probe joins the base URL with "/", so a pasted path keeps
+          // that path instead of collapsing to the origin.
+          http.get("https://example.com/console/", () => {
+            return new HttpResponse("<html><title>New API</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          serveStatusData({ system_name: "Veloera", checkin_enabled: true }),
+        )
+
+        await expect(
+          getAccountSiteType("https://example.com/console"),
+        ).resolves.toBe(SITE_TYPES.VELOERA)
+      })
+
+      it("prefers the public status name over a conflicting HTML title", async () => {
+        server.use(
+          serveShellTitle("https://example.com", "One API"),
+          serveStatusData({ system_name: "Veloera" }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.VELOERA,
+        )
+      })
+
+      it("keeps title detection when the public status endpoint is unavailable", async () => {
+        server.use(
+          serveShellTitle("https://example.com", "One API"),
+          http.get("https://example.com/api/status", () => {
+            return HttpResponse.text("not found", {
+              status: 404,
+              headers: { "Content-Type": "text/plain" },
+            })
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.ONE_API,
+        )
+      })
+
+      it("ignores a public status response that is not the status envelope", async () => {
+        server.use(
+          serveShellTitle("https://example.com", "New API"),
+          http.get("https://example.com/api/status", () => {
+            return new HttpResponse("<html><title>Veloera</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.NEW_API,
+        )
+      })
+
+      it("ignores a blank public status name", async () => {
+        server.use(
+          serveShellTitle("https://example.com", "New API"),
+          serveStatusData({ system_name: "   " }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.NEW_API,
+        )
+      })
+
+      it("does not widen the ruleset to managed-only site names", async () => {
+        server.use(
+          serveShellTitle("https://example.com", "White Label Dashboard"),
+          serveStatusData({ system_name: "Octopus" }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
       })
     })
 
