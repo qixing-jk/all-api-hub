@@ -1043,6 +1043,102 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
   })
 
+  it("keeps a manual method that is no longer a candidate without probing it", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: {
+          mode: "manual",
+          methodId: "veloera:daily-checkin",
+        },
+      },
+    })
+    const detect = vi.spyOn(registration.provider, "detect")
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result).toEqual({ kind: "skipped", reason: "method_unavailable" })
+    expect(detect).not.toHaveBeenCalled()
+  })
+
+  it("skips an unrecorded manual method when its probe throws", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createUnrecordedMethodAccount()
+    vi.spyOn(registration.provider, "detect").mockRejectedValue(
+      new Error("status read failed"),
+    )
+    const checkInRequest = vi.spyOn(registration.provider, "checkIn")
+    const revalidateAccount = vi.fn(async () => account)
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+      revalidateAccount,
+    })
+
+    expect(result).toEqual({ kind: "skipped", reason: "method_not_matched" })
+    expect(checkInRequest).not.toHaveBeenCalled()
+    expect(revalidateAccount).not.toHaveBeenCalled()
+  })
+
+  it("does not execute when the selected manual method cannot be resolved", async () => {
+    const account = createUnrecordedMethodAccount()
+    vi.spyOn(autoCheckinMethodRegistry, "resolveById").mockReturnValue(null)
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result).toEqual({ kind: "skipped", reason: "method_not_matched" })
+  })
+
+  it.each([
+    ["returns no account", async () => null],
+    [
+      "throws",
+      async () => {
+        throw new Error("write failed")
+      },
+    ],
+  ] as const)(
+    "blocks check-in when saving a matched manual probe %s",
+    async (_name, revalidateAccount) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createUnrecordedMethodAccount()
+      vi.spyOn(registration.provider, "detect").mockResolvedValue({
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 400 },
+        },
+      })
+      const checkInRequest = vi.spyOn(registration.provider, "checkIn")
+
+      const result = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+        revalidateAccount,
+      })
+
+      expect(result).toEqual({
+        kind: "blocked",
+        reason: "account_unavailable",
+        retryable: false,
+      })
+      expect(checkInRequest).not.toHaveBeenCalled()
+    },
+  )
+
   it("rechecks a cached disabled method and executes after the site enables it", async () => {
     const methodId = "new-api:daily-checkin"
     const registration = getNewApiExecutionRegistration()
