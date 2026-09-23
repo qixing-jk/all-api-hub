@@ -1167,7 +1167,10 @@ describe("useAccountDialog re-detect preservation", () => {
       await result.current.handlers.handleRedetectCheckInMethods()
     })
 
-    expect(mockClearSiteTypeObservation).toHaveBeenCalledWith(accountId)
+    expect(mockClearSiteTypeObservation).toHaveBeenCalledWith(
+      accountId,
+      SITE_TYPES.NEW_API,
+    )
     expect(mockRecordSiteTypeObservation).not.toHaveBeenCalled()
     expect(result.current.state.checkInRedetectionFeedback).not.toHaveProperty(
       "siteTypeSuggestion",

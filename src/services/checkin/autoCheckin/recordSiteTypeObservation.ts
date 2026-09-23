@@ -61,7 +61,7 @@ export async function recordSiteTypeObservationForResult(
       return
     }
     if (check.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Agrees) {
-      await siteTypeObservations.clear(account.id)
+      await siteTypeObservations.clear(account.id, account.site_type)
     }
   } catch (error) {
     logger.debug("site type observation skipped", { error })

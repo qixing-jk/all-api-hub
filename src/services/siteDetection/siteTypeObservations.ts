@@ -160,17 +160,25 @@ class SiteTypeObservationStore {
   }
 
   /**
-   * Retires the observation for one account, once a later reading shows it no
-   * longer holds. Never fails the caller's flow.
+   * Retires the observation for one account, when it is the one recorded for the
+   * given stored type. Scoping by type keeps a reading that agreed with a draft
+   * the user has not saved yet from dropping advice the stored account still
+   * needs. Never fails the caller's flow.
    */
-  async clear(accountId: string): Promise<void> {
+  async clear(
+    accountId: string,
+    storedSiteType: AccountSiteType,
+  ): Promise<void> {
     await this.mutate((current) => {
-      if (!(accountId in current)) return current
+      const observation = current[accountId]
+      if (!observation || observation.storedSiteType !== storedSiteType) {
+        return current
+      }
 
       const remaining: SiteTypeObservationMap = {}
-      for (const [id, observation] of Object.entries(current)) {
+      for (const [id, entry] of Object.entries(current)) {
         if (id === accountId) continue
-        remaining[id] = observation
+        remaining[id] = entry
       }
 
       return remaining

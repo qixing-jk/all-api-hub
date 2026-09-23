@@ -106,7 +106,7 @@ describe("recordSiteTypeObservationForResult", () => {
       { checkMismatch },
     )
 
-    expect(clear).toHaveBeenCalledWith(ACCOUNT.id)
+    expect(clear).toHaveBeenCalledWith(ACCOUNT.id, ACCOUNT.site_type)
     expect(record).not.toHaveBeenCalled()
   })
 

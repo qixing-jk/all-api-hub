@@ -227,7 +227,7 @@ export function useAccountCheckInRedetection({
         accountId &&
         siteTypeCheck?.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Agrees
       ) {
-        await siteTypeObservations.clear(accountId)
+        await siteTypeObservations.clear(accountId, requestedSiteType)
       }
       setCheckInRedetectionFeedback({
         kind: "completed",
