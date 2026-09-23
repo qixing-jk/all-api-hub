@@ -310,6 +310,7 @@
     "batchSaveToApiProfilesPartialFailed": "已保存 {{savedCount}}/{{totalCount}} 个所选密钥，{{failedCount}} 个未能保存。",
     "copyFailed": "复制失败",
     "keyCopied": "密钥 {{name}} 已复制到剪贴板",
+    "keySiteTypeMismatch": "该站点本身对应「{{suggestedType}}」，而账号当前是「{{storedType}}」。请在「编辑账号」把站点类型改为「{{suggestedType}}」后重试。",
     "loadFailed": "加载密钥列表失败",
     "revealFailed": "显示密钥失败",
     "savedToApiProfiles": "已保存 {{name}} 到 API 凭据库",

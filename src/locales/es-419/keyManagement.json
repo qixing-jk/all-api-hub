@@ -330,6 +330,7 @@
     "batchSaveToApiProfilesPartialFailed": "Se guardaron {{savedCount}} de {{totalCount}} claves seleccionadas. {{failedCount}} no se pudieron guardar.",
     "copyFailed": "No se pudo copiar",
     "keyCopied": "La clave {{name}} se copió al portapapeles",
+    "keySiteTypeMismatch": "Este sitio corresponde a {{suggestedType}}, pero la cuenta está configurada como {{storedType}}. Cambia el Tipo de sitio a {{suggestedType}} en 'Editar cuenta' y vuelve a intentarlo.",
     "loadFailed": "No se pudo cargar la lista de claves",
     "revealFailed": "No se pudo revelar la clave",
     "savedToApiProfiles": "{{name}} se guardó en la biblioteca de credenciales API",

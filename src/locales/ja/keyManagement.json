@@ -310,6 +310,7 @@
     "batchSaveToApiProfilesPartialFailed": "選択した {{totalCount}} 件のうち {{savedCount}} 件を保存しました。{{failedCount}} 件は保存できませんでした。",
     "copyFailed": "コピーに失敗しました",
     "keyCopied": "キー {{name}} をクリップボードにコピーしました",
+    "keySiteTypeMismatch": "このサイトは {{suggestedType}} に該当しますが、アカウントは {{storedType}} になっています。「アカウント編集」でサイト種別を {{suggestedType}} に変更してから再試行してください。",
     "loadFailed": "キー一覧の読み込みに失敗しました",
     "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",

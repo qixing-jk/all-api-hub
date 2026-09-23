@@ -320,6 +320,7 @@
     "batchSaveToApiProfilesPartialFailed": "Saved {{savedCount}} of {{totalCount}} selected keys. {{failedCount}} could not be saved.",
     "copyFailed": "Copy failed",
     "keyCopied": "Key {{name}} copied to clipboard",
+    "keySiteTypeMismatch": "This site matches {{suggestedType}}, but the account is set to {{storedType}}. Set the Site Type to {{suggestedType}} in 'Edit Account' and try again.",
     "loadFailed": "Failed to load key list",
     "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API credential library",

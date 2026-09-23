@@ -320,6 +320,7 @@
     "batchSaveToApiProfilesPartialFailed": "Gespeicherte Schlüssel: {{savedCount}}/{{totalCount}}. Nicht gespeicherte Schlüssel: {{failedCount}}.",
     "copyFailed": "Kopieren fehlgeschlagen",
     "keyCopied": "Schlüssel {{name}} in Zwischenablage kopiert",
+    "keySiteTypeMismatch": "Diese Website entspricht {{suggestedType}}, das Konto ist jedoch auf {{storedType}} eingestellt. Stellen Sie den Website-Typ unter „Konto bearbeiten“ auf {{suggestedType}} um und versuchen Sie es erneut.",
     "loadFailed": "Schlüsselliste konnte nicht geladen werden",
     "revealFailed": "Schlüssel konnte nicht angezeigt werden",
     "savedToApiProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert",

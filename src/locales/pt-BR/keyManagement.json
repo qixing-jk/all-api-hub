@@ -330,6 +330,7 @@
     "batchSaveToApiProfilesPartialFailed": "{{savedCount}} de {{totalCount}} chaves selecionadas foram salvas. Não foi possível salvar {{failedCount}}.",
     "copyFailed": "Falha ao copiar",
     "keyCopied": "Chave {{name}} copiada para a área de transferência",
+    "keySiteTypeMismatch": "Este site corresponde a {{suggestedType}}, mas a conta está definida como {{storedType}}. Altere o Tipo de site para {{suggestedType}} em “Editar conta” e tente novamente.",
     "loadFailed": "Falha ao carregar a lista de chaves",
     "revealFailed": "Falha ao revelar a chave",
     "savedToApiProfiles": "{{name}} foi salva na biblioteca de credenciais de API",

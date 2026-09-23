@@ -310,6 +310,7 @@
     "batchSaveToApiProfilesPartialFailed": "Đã lưu {{savedCount}}/{{totalCount}} khóa đã chọn. {{failedCount}} khóa chưa được lưu.",
     "copyFailed": "Sao chép thất bại",
     "keyCopied": "Khóa {{name}} đã được sao chép vào clipboard",
+    "keySiteTypeMismatch": "Trang này tương ứng với {{suggestedType}}, nhưng tài khoản đang đặt là {{storedType}}. Hãy đổi Loại trang web thành {{suggestedType}} trong \"Chỉnh sửa tài khoản\" rồi thử lại.",
     "loadFailed": "Tải danh sách khóa thất bại",
     "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",

@@ -1,27 +1,43 @@
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyDisclosure } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyDisclosure"
 import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
-const { resolveSecret, writeText, success, error, complete } = vi.hoisted(
-  () => ({
+const { resolveSecret, writeText, success, error, complete, readObservation } =
+  vi.hoisted(() => ({
     resolveSecret: vi.fn(),
     writeText: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
     complete: vi.fn(),
-  }),
-)
+    readObservation: vi.fn(),
+  }))
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   resolveDisplayAccountRuntimeKeySecret: resolveSecret,
 }))
+// Only storage access is stubbed: the module's pure helpers stay real, so the
+// suite keeps exercising them instead of failing on a missing mock export.
+vi.mock(
+  "~/services/siteDetection/siteTypeObservations",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/siteDetection/siteTypeObservations")
+      >()
+    return {
+      ...actual,
+      siteTypeObservations: { readForAccount: readObservation },
+    }
+  },
+)
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: () => ({ complete }),
 }))
@@ -50,6 +66,7 @@ describe("native runtime key disclosure", () => {
       .mockReset()
       .mockResolvedValue({ ...key, secret: "resolved-private-key" })
     writeText.mockReset().mockResolvedValue(undefined)
+    readObservation.mockReset().mockResolvedValue(null)
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -141,6 +158,47 @@ describe("native runtime key disclosure", () => {
     await act(async () => view.result.current.toggle())
     expect(error).toHaveBeenCalledWith("messages.revealFailed")
     expect(writeText).not.toHaveBeenCalled()
+  })
+
+  it("names a mismatched site type when revealing fails", async () => {
+    resolveSecret.mockRejectedValueOnce(new Error("denied"))
+    readObservation.mockResolvedValueOnce({
+      storedSiteType: SITE_TYPES.NEW_API,
+      suggestedSiteType: SITE_TYPES.VELOERA,
+    })
+    const view = renderDisclosure()
+
+    await act(async () => view.result.current.toggle())
+
+    expect(readObservation).toHaveBeenCalledWith(account.id, account.siteType)
+    expect(error).toHaveBeenCalledWith(
+      "messages.revealFailed messages.keySiteTypeMismatch",
+    )
+  })
+
+  it("keeps the plain failure when no site type advice applies", async () => {
+    resolveSecret.mockRejectedValueOnce(new Error("denied"))
+    readObservation.mockResolvedValueOnce(null)
+    const view = renderDisclosure()
+
+    await act(async () => view.result.current.toggle())
+
+    expect(error).toHaveBeenCalledWith("messages.revealFailed")
+  })
+
+  it("keeps a clipboard failure unrelated to the site type", async () => {
+    writeText.mockRejectedValueOnce(new Error("denied"))
+    readObservation.mockResolvedValueOnce({
+      storedSiteType: SITE_TYPES.NEW_API,
+      suggestedSiteType: SITE_TYPES.VELOERA,
+      at: 1,
+    })
+    const view = renderDisclosure()
+
+    await act(async () => view.result.current.copy())
+
+    expect(error).toHaveBeenCalledWith("messages.copyFailed")
+    expect(readObservation).not.toHaveBeenCalled()
   })
 
   it("reports a failed clipboard operation without exposing the resolved secret", async () => {
