@@ -30,7 +30,9 @@ const t = ((key: string, options?: Record<string, unknown>) =>
         ? `${key}:${options.method}`
         : options?.error
           ? `${key}:${options.error}`
-          : key) as TFunction<"accountDialog">
+          : options?.suggestedType
+            ? `${key}:${options.storedType}->${options.suggestedType}`
+            : key) as TFunction<"accountDialog">
 
 const createAmbiguousState = (): CheckInAccountState => ({
   decision: {
@@ -222,6 +224,46 @@ describe("check-in presentation", () => {
       title: "messages.checkInRedetectUnknown",
       description:
         "messages.checkInRedetectSaveRequired messages.checkInRedetectUnknownReasons.network",
+    })
+  })
+
+  it("points at the site type the site itself resolves to", () => {
+    expect(
+      getCheckInRedetectionFeedbackPresentation(t, {
+        kind: "completed",
+        decisionOutcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown,
+        selectedMethodDisabled: false,
+        saveRequired: false,
+        unknownReasons: [CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse],
+        siteTypeSuggestion: {
+          storedSiteType: SITE_TYPES.NEW_API,
+          suggestedSiteType: SITE_TYPES.VELOERA,
+        },
+      }),
+    ).toEqual({
+      tone: "warning",
+      title: "messages.checkInRedetectUnknown",
+      description:
+        "messages.checkInRedetectSiteTypeMismatch:new-api->Veloera messages.checkInRedetectUnknownReasons.invalid_response",
+    })
+  })
+
+  it("does not repeat the site type suggestion once a method resolved", () => {
+    expect(
+      getCheckInRedetectionFeedbackPresentation(t, {
+        kind: "completed",
+        decisionOutcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved,
+        selectedMethodDisabled: false,
+        saveRequired: false,
+        unknownReasons: [],
+        siteTypeSuggestion: {
+          storedSiteType: SITE_TYPES.NEW_API,
+          suggestedSiteType: SITE_TYPES.VELOERA,
+        },
+      }),
+    ).toEqual({
+      tone: "success",
+      title: "messages.checkInRedetectResolved",
     })
   })
 

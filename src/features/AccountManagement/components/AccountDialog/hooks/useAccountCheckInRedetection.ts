@@ -24,6 +24,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
+import { resolveSiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
+import { siteTypeObservations } from "~/services/siteDetection/siteTypeObservations"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
@@ -114,12 +116,13 @@ export function useAccountCheckInRedetection({
 
     try {
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const discovery = await discoverAccountDialogCheckInMethods({
-        draft,
-        url: requestedUrl,
-        accountId,
-        tempWindowRequestSource,
-      })
+      const { discovery, protectionBypassExecution } =
+        await discoverAccountDialogCheckInMethods({
+          draft,
+          url: requestedUrl,
+          accountId,
+          tempWindowRequestSource,
+        })
 
       if (
         invocationLeaseRef.current !== lease ||
@@ -184,6 +187,26 @@ export function useAccountCheckInRedetection({
           ),
         ),
       ]
+      // A method that resolved needs no type advice; every other outcome is a
+      // candidate for a stored type the site itself no longer agrees with. The
+      // probe shares this click's bypass context; the policy still decides.
+      const siteTypeSuggestion =
+        discovery.decision.outcome ===
+        CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
+          ? null
+          : await resolveSiteTypeMismatch({
+              siteUrl: requestedUrl,
+              storedSiteType: requestedSiteType,
+              protectionBypassExecution,
+            })
+      // Share what the dialog just learned, so features that never run
+      // auto check-in still see the account-level observation.
+      if (accountId && siteTypeSuggestion) {
+        await siteTypeObservations.record({
+          accountId,
+          mismatch: siteTypeSuggestion,
+        })
+      }
       setCheckInRedetectionFeedback({
         kind: "completed",
         decisionOutcome: discovery.decision.outcome,
@@ -193,6 +216,7 @@ export function useAccountCheckInRedetection({
           discovery.decision.outcome !==
             CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown,
         unknownReasons,
+        ...(siteTypeSuggestion ? { siteTypeSuggestion } : {}),
       })
     } catch (error) {
       logger.error("Check-in method redetection failed", {

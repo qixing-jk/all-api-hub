@@ -7,6 +7,7 @@ import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
   CheckInDiscoveryDecision,
@@ -68,6 +69,8 @@ export type AccountCheckInRedetectionFeedback =
       selectedMethodDisabled: boolean
       saveRequired: boolean
       unknownReasons: CheckInMethodUnknownReason[]
+      /** Present when the site itself resolves to a type other than the stored one. */
+      siteTypeSuggestion?: SiteTypeMismatch
     }
   | {
       kind: "failed"

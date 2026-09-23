@@ -63,6 +63,29 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("useAccountDialog aggregate exclusion flags", () => {
   beforeEach(async () => {
     server.resetHandlers()
+    // An unknown site type re-runs site detection, which probes these endpoints
+    // before falling back to the page title. Answer them locally so the suite
+    // never depends on the network for a detection result.
+    server.use(
+      http.get(/\/api\/user\/info$/, () =>
+        HttpResponse.json({ message: "not found" }, { status: 404 }),
+      ),
+      http.get(/\/api\/v1\/auth\/me$/, () =>
+        HttpResponse.json({ message: "not found" }, { status: 404 }),
+      ),
+      http.get(/\/api\/status$/, () =>
+        HttpResponse.json({ message: "not found" }, { status: 404 }),
+      ),
+      http.get("https://api.example.com", () =>
+        HttpResponse.html("<html><title>Unbranded Console</title></html>"),
+      ),
+      http.get("https://api.example.com/api/log/self/stat", () =>
+        HttpResponse.json(
+          { success: false, message: "fetch failed" },
+          { status: 500 },
+        ),
+      ),
+    )
     await accountStorage.clearAllData()
   })
 

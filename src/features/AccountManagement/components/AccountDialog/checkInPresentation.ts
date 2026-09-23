@@ -140,6 +140,12 @@ const getUnknownReasonMessage = (
   }
 }
 
+/** Joins optional notice sentences, omitting the field when nothing remains. */
+function joinFeedbackDescription(parts: readonly string[]): string | undefined {
+  const description = parts.join(" ")
+  return description || undefined
+}
+
 /** Maps classified re-detection feedback to a reusable Notice presentation. */
 export function getCheckInRedetectionFeedbackPresentation(
   t: TFunction<"accountDialog">,
@@ -163,11 +169,23 @@ export function getCheckInRedetectionFeedbackPresentation(
   const descriptionParts = feedback.saveRequired
     ? [t("messages.checkInRedetectSaveRequired")]
     : []
+  // A resolved redetection needs no type advice; the other outcomes are where a
+  // stored type that no longer matches the site shows up.
+  const suggestionParts =
+    feedback.siteTypeSuggestion &&
+    feedback.decisionOutcome !== CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
+      ? [
+          t("messages.checkInRedetectSiteTypeMismatch", {
+            storedType: feedback.siteTypeSuggestion.storedSiteType,
+            suggestedType: feedback.siteTypeSuggestion.suggestedSiteType,
+          }),
+        ]
+      : []
   if (feedback.selectedMethodDisabled) {
     return {
       tone: "warning" as const,
       title: t("messages.checkInRedetectDisabled"),
-      description: descriptionParts.join(" ") || undefined,
+      description: joinFeedbackDescription(descriptionParts),
     }
   }
 
@@ -176,35 +194,41 @@ export function getCheckInRedetectionFeedbackPresentation(
       return {
         tone: "success" as const,
         title: t("messages.checkInRedetectResolved"),
-        description: descriptionParts.join(" ") || undefined,
+        description: joinFeedbackDescription(descriptionParts),
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous:
       return {
         tone: "warning" as const,
         title: t("messages.checkInRedetectAmbiguous"),
-        description: descriptionParts.join(" ") || undefined,
+        description: joinFeedbackDescription([
+          ...suggestionParts,
+          ...descriptionParts,
+        ]),
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported:
       return {
         tone: "info" as const,
         title: t("messages.checkInRedetectUnsupported"),
-        description: descriptionParts.join(" ") || undefined,
+        description: joinFeedbackDescription([
+          ...suggestionParts,
+          ...descriptionParts,
+        ]),
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown:
       return {
         tone: "warning" as const,
         title: t("messages.checkInRedetectUnknown"),
-        description:
-          [
-            ...descriptionParts,
-            ...(feedback.unknownReasons.length > 0
-              ? [
-                  feedback.unknownReasons
-                    .map((reason) => getUnknownReasonMessage(t, reason))
-                    .join(" "),
-                ]
-              : []),
-          ].join(" ") || undefined,
+        description: joinFeedbackDescription([
+          ...suggestionParts,
+          ...descriptionParts,
+          ...(feedback.unknownReasons.length > 0
+            ? [
+                feedback.unknownReasons
+                  .map((reason) => getUnknownReasonMessage(t, reason))
+                  .join(" "),
+              ]
+            : []),
+        ]),
       }
   }
 }

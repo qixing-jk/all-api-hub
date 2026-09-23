@@ -70,26 +70,35 @@ function createAccountDialogCheckInDiscoveryContext(params: {
   return { account, request }
 }
 
-/** Runs the dialog's provider discovery in the existing read-only bypass flow. */
+/**
+ * Runs the dialog's provider discovery in the existing read-only bypass flow and
+ * reports the context it ran under, so a probe in the same click shares it instead
+ * of reading the site without one.
+ */
 export function discoverAccountDialogCheckInMethods(params: {
   draft: AccountDialogDraft
   url: string
   accountId?: string
   tempWindowRequestSource: TempWindowRequestSource
-}) {
+}): Promise<{
+  discovery: Awaited<ReturnType<typeof discoverCheckInMethods>>
+  protectionBypassExecution: ProtectionBypassExecution
+}> {
   return withProtectionBypassUserCommand(
     PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
     params.tempWindowRequestSource,
-    (protectionBypassExecution) => {
+    async (protectionBypassExecution) => {
       const context = createAccountDialogCheckInDiscoveryContext({
         ...params,
         protectionBypassExecution,
       })
-      return discoverCheckInMethods({
+      const discovery = await discoverCheckInMethods({
         account: context.account,
         config: params.draft.checkIn,
         request: context.request,
       })
+
+      return { discovery, protectionBypassExecution }
     },
   )
 }
