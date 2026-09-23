@@ -7,6 +7,7 @@ const { storageState } = vi.hoisted(() => ({
   storageState: {
     value: undefined as unknown,
     fail: false,
+    failWrite: false,
     setCalls: 0,
   },
 }))
@@ -19,7 +20,9 @@ vi.mock("@plasmohq/storage", () => ({
     }
     async set(_key: string, value: unknown) {
       storageState.setCalls += 1
-      if (storageState.fail) throw new Error("storage unavailable")
+      if (storageState.fail || storageState.failWrite) {
+        throw new Error("storage unavailable")
+      }
       storageState.value = value
     }
   },
@@ -35,6 +38,7 @@ describe("site type observation store", () => {
   beforeEach(() => {
     storageState.value = undefined
     storageState.fail = false
+    storageState.failWrite = false
     storageState.setCalls = 0
   })
 
@@ -228,5 +232,21 @@ describe("site type observation store", () => {
       "account-1": OBSERVATION,
       "account-2": OBSERVATION,
     })
+  })
+
+  it("never rejects the caller when the write fails", async () => {
+    storageState.value = { "account-1": OBSERVATION }
+    storageState.failWrite = true
+
+    await expect(
+      siteTypeObservations.clear("account-1", SITE_TYPES.NEW_API),
+    ).resolves.toBeUndefined()
+    await expect(
+      siteTypeObservations.record({
+        accountId: "account-2",
+        mismatch: MISMATCH,
+      }),
+    ).resolves.toBeUndefined()
+    expect(storageState.value).toEqual({ "account-1": OBSERVATION })
   })
 })

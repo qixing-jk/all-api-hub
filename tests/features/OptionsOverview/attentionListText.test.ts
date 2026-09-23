@@ -374,6 +374,14 @@ describe("attention list text helpers", () => {
     expect(
       getAttentionActionLabel(
         createAttentionItem({
+          kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch,
+        }),
+        t,
+      ),
+    ).toBe("optionsOverview:attention.actions.editAccount")
+    expect(
+      getAttentionActionLabel(
+        createAttentionItem({
           kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved,
         }),
         t,
