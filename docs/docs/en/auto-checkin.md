@@ -22,7 +22,7 @@
 
 - Open an account → **Edit Account** → Check-in Settings.
 - Accounts with a built-in provider show:
-  - **Check-in Method**: Automatic Selection re-detects as needed when no method is selected or the current method is confirmed unavailable. It selects or switches only when a suitable method can be uniquely determined. A manual choice stays fixed.
+  - **Check-in Method**: Automatic Selection re-detects as needed when no method is selected or the current method is confirmed unavailable. It selects or switches only when a suitable method can be uniquely determined. A manual choice stays fixed. If it still belongs to the current site but has no detection record, execution confirms only that method and keeps that choice whether the result matches, is unsupported, or is uncertain.
   - **Enable Daily Auto Check-in**: Enabled by default. When disabled, the account does not participate even if the global schedule is enabled.
   - **External Check-in Site URL** (optional): Enter it when the page is not at the standard path. Every account can configure an external entry point.
   - **Custom Recharge/Redemption Page URL** (optional) and "Open the recharge page when using external check-in".

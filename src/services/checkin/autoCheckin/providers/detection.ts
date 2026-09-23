@@ -6,6 +6,7 @@ import {
 } from "~/constants/checkIn"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import type {
+  CheckInMethodDetection,
   CheckInMethodStatus,
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
@@ -25,6 +26,17 @@ const getHttpStatusCode = (error: unknown): number | undefined =>
       ? error.statusCode
       : undefined
     : undefined
+
+/** Separates a provider detect result from an optional status observation. */
+export const readProviderDetectResult = (
+  value: AutoCheckinProviderDetectResult,
+): { detection: CheckInMethodDetection; status?: CheckInMethodStatus } =>
+  "detection" in value
+    ? {
+        detection: value.detection,
+        ...(value.status ? { status: value.status } : {}),
+      }
+    : { detection: value }
 
 /** Converts one provider-owned safe status GET into strict discovery evidence. */
 export async function detectWithStatusReadback(

@@ -8,6 +8,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
+  CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
@@ -26,10 +27,15 @@ import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
-import type { AutoCheckinMethodRegistration } from "~/services/checkin/autoCheckin/providers/registry"
+import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
+import {
+  isCheckInMethodId,
+  type AutoCheckinMethodRegistration,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import {
+  isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
@@ -44,7 +50,9 @@ import {
 import type {
   CheckInConfig,
   CheckInExecutionSkipReason,
+  CheckInMethodDetection,
   CheckInMethodId,
+  CheckInMethodStatus,
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
 
@@ -392,6 +400,134 @@ export function inspectSelectedCheckInCompatibility(input: {
   }
 }
 
+/** Records the first probe for one method without changing the saved selection. */
+const recordInitialMethodProbe = (input: {
+  config: CheckInConfig
+  methodId: CheckInMethodId
+  detection: CheckInMethodDetection
+  status?: CheckInMethodStatus
+}): CheckInConfig => {
+  const previous = input.config.methodKnowledge.methods[input.methodId]
+  if (previous?.detection) return input.config
+  return {
+    ...input.config,
+    methodKnowledge: {
+      ...input.config.methodKnowledge,
+      methods: {
+        ...input.config.methodKnowledge.methods,
+        [input.methodId]: {
+          detection: input.detection,
+          ...(input.status ? { status: input.status } : {}),
+        },
+      },
+    },
+  }
+}
+
+/** Confirms one selected method with that provider's own request timing. */
+const probeSelectedMethod = async (
+  registration: AutoCheckinMethodRegistration,
+  account: SiteAccount,
+): Promise<
+  | { detection: CheckInMethodDetection; status?: CheckInMethodStatus }
+  | undefined
+> => {
+  if (!registration.provider.detect) return undefined
+  try {
+    return readProviderDetectResult(
+      await registration.provider.detect({
+        account,
+        observedAt: Date.now(),
+      }),
+    )
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * A manual choice stays fixed, but a candidate with no detection record is
+ * confirmed before execution. Uncertain probes are not saved, so a later run
+ * can try the same method again.
+ */
+const confirmUnrecordedManualCheckInMethod = async (input: {
+  account: SiteAccount
+  globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
+  revalidateAccount?: RevalidateCheckInAccount
+}): Promise<
+  | { outcome: "continue"; account: SiteAccount }
+  | { outcome: "finished"; result: ExecuteSelectedCheckInResult }
+> => {
+  const selection = input.account.checkIn.selection
+  const methodId = selection.methodId
+  if (
+    selection.mode !== CHECK_IN_SELECTION_MODES.Manual ||
+    !isCheckInMethodId(methodId) ||
+    input.account.checkIn.methodKnowledge.methods[methodId]?.detection
+  ) {
+    return { outcome: "continue", account: input.account }
+  }
+
+  const state = inspectAccountCheckIn({
+    config: input.account.checkIn,
+    siteType: input.account.site_type,
+    siteUrl: input.account.site_url,
+    accountDisabled: input.account.disabled,
+    globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
+  })
+  if (
+    state.executionEligibility.eligible ||
+    state.executionEligibility.skipReason !==
+      CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched
+  ) {
+    return { outcome: "continue", account: input.account }
+  }
+
+  const registration = autoCheckinMethodRegistry.resolveById(methodId)
+  if (!registration) {
+    return { outcome: "continue", account: input.account }
+  }
+  const probed = await probeSelectedMethod(registration, input.account)
+  if (!probed || !isPersistableInitialCheckInDetection(probed.detection)) {
+    return { outcome: "continue", account: input.account }
+  }
+
+  const updatedConfig = recordInitialMethodProbe({
+    config: input.account.checkIn,
+    methodId,
+    detection: probed.detection,
+    status: probed.status,
+  })
+  let account = { ...input.account, checkIn: updatedConfig }
+  if (input.revalidateAccount) {
+    try {
+      const persisted = await input.revalidateAccount(updatedConfig)
+      if (!persisted) {
+        return { outcome: "finished", result: accountStateWriteFailure() }
+      }
+      const persistedDetection =
+        persisted.checkIn.methodKnowledge.methods[methodId]?.detection
+      if (persistedDetection) account = persisted
+    } catch {
+      return { outcome: "finished", result: accountStateWriteFailure() }
+    }
+  }
+  if (
+    probed.detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
+  ) {
+    return {
+      outcome: "finished",
+      result: {
+        kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+        reason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported,
+      },
+    }
+  }
+  return { outcome: "continue", account }
+}
+
 /** Compatibility execution entrance used by the scheduler. */
 export async function executeSelectedCheckIn(input: {
   account: SiteAccount
@@ -412,11 +548,14 @@ export async function executeSelectedCheckIn(input: {
    */
   requireStatusConfirmationBeforeMutation?: boolean
 }): Promise<ExecuteSelectedCheckInResult> {
+  const prepared = await confirmUnrecordedManualCheckInMethod(input)
+  if (prepared.outcome === "finished") return prepared.result
+  const account = prepared.account
   const initialState = inspectAccountCheckIn({
-    config: input.account.checkIn,
-    siteType: input.account.site_type,
-    siteUrl: input.account.site_url,
-    accountDisabled: input.account.disabled,
+    config: account.checkIn,
+    siteType: account.site_type,
+    siteUrl: account.site_url,
+    accountDisabled: account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
     loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
@@ -434,9 +573,9 @@ export async function executeSelectedCheckIn(input: {
   }
 
   const selectedMethodId = resolveSelectedCheckInMethod({
-    config: input.account.checkIn,
-    siteType: input.account.site_type,
-    siteUrl: input.account.site_url,
+    config: account.checkIn,
+    siteType: account.site_type,
+    siteUrl: account.site_url,
   })
   const registration = selectedMethodId
     ? autoCheckinMethodRegistry.resolveById(selectedMethodId)
@@ -447,7 +586,7 @@ export async function executeSelectedCheckIn(input: {
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider,
     }
   }
-  const initialReadiness = registration.provider.getReadiness(input.account)
+  const initialReadiness = registration.provider.getReadiness(account)
   if (!initialReadiness.ready) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
@@ -469,7 +608,7 @@ export async function executeSelectedCheckIn(input: {
   if (registration.provider.getStatus) {
     try {
       const status = await registration.provider.getStatus({
-        account: input.account,
+        account: account,
         observedAt: Date.now(),
       })
       if (status) {
@@ -497,7 +636,7 @@ export async function executeSelectedCheckIn(input: {
           statusProof = status
         }
         refreshedConfig = replaceCheckInMethodStatus({
-          config: input.account.checkIn,
+          config: account.checkIn,
           methodId: registration.id,
           status,
         })
@@ -514,7 +653,7 @@ export async function executeSelectedCheckIn(input: {
       if (reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported) {
         if (
           !(await persistUnsupportedMethod(
-            input.account,
+            account,
             registration.id,
             input.revalidateAccount,
           ))
@@ -534,8 +673,8 @@ export async function executeSelectedCheckIn(input: {
   }
 
   let currentAccount: SiteAccount | null = refreshedConfig
-    ? { ...input.account, checkIn: refreshedConfig }
-    : input.account
+    ? { ...account, checkIn: refreshedConfig }
+    : account
   if (input.revalidateAccount) {
     try {
       currentAccount = await input.revalidateAccount(refreshedConfig)
@@ -545,7 +684,7 @@ export async function executeSelectedCheckIn(input: {
   }
   if (
     !currentAccount ||
-    !hasSameCheckInAccountIdentity(input.account, currentAccount)
+    !hasSameCheckInAccountIdentity(account, currentAccount)
   ) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,

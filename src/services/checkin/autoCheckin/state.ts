@@ -8,11 +8,19 @@ import {
 } from "~/constants/checkIn"
 import type {
   CheckInConfig,
+  CheckInMethodDetection,
   CheckInMethodId,
   CheckInMethodKnowledge,
   CheckInMethodSelection,
   CheckInMethodStatus,
 } from "~/types/checkIn"
+
+/** A first saved record must be a definitive match or an authoritative negative. */
+export const isPersistableInitialCheckInDetection = (
+  detection: CheckInMethodDetection,
+): boolean =>
+  detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
+  detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
 
 export const replaceCheckInMethodStatus = (input: {
   config: CheckInConfig
@@ -222,9 +230,20 @@ export function mergeRefreshedCheckInStatus(input: {
   for (const [methodId, refreshedKnowledge] of Object.entries(
     input.refreshed.methodKnowledge.methods,
   ) as Array<[CheckInMethodId, CheckInMethodKnowledge]>) {
-    const latestKnowledge = methods[methodId]
-    if (!latestKnowledge) continue
     const detection = refreshedKnowledge.detection
+    const latestKnowledge = methods[methodId]
+    // A manual selection can name a method before any detection exists.
+    // Only that selected method may gain its first matched or unsupported probe.
+    if (!latestKnowledge) {
+      if (
+        methodId === input.latest.selection.methodId &&
+        isPersistableInitialCheckInDetection(detection)
+      ) {
+        methods[methodId] = refreshedKnowledge
+        changed = true
+      }
+      continue
+    }
     const latestDetection = latestKnowledge.detection
     const latestDetectionTimestamp =
       latestDetection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown

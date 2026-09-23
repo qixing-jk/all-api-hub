@@ -16,6 +16,7 @@ import type {
   AutoCheckinProviderDetectResult,
   AutoCheckinProviderReadContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
+import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
 import type {
   AutoCheckinMethodRegistration,
   AutoCheckinMethodRegistry,
@@ -144,13 +145,7 @@ const runDetection = async (
     }
   }
   return {
-    detection:
-      "detection" in result.value ? result.value.detection : result.value,
-    ...(typeof result.value === "object" &&
-    "status" in result.value &&
-    result.value.status
-      ? { status: result.value.status }
-      : {}),
+    ...readProviderDetectResult(result.value),
     timedOut: false,
   }
 }
