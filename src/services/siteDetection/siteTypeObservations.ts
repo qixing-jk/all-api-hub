@@ -160,6 +160,24 @@ class SiteTypeObservationStore {
   }
 
   /**
+   * Retires the observation for one account, once a later reading shows it no
+   * longer holds. Never fails the caller's flow.
+   */
+  async clear(accountId: string): Promise<void> {
+    await this.mutate((current) => {
+      if (!(accountId in current)) return current
+
+      const remaining: SiteTypeObservationMap = {}
+      for (const [id, observation] of Object.entries(current)) {
+        if (id === accountId) continue
+        remaining[id] = observation
+      }
+
+      return remaining
+    })
+  }
+
+  /**
    * Applies one read-modify-write under the store's lock. The read happens
    * inside the lock, and a failed read skips the write: patching an unknown base
    * would drop observations recorded in between.

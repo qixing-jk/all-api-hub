@@ -188,4 +188,36 @@ describe("site type observation store", () => {
       }),
     ).resolves.toBeUndefined()
   })
+
+  it("retires one account's observation once it no longer holds", async () => {
+    storageState.value = { "account-1": OBSERVATION, "account-2": OBSERVATION }
+
+    await siteTypeObservations.clear("account-1")
+
+    expect(storageState.value).toEqual({ "account-2": OBSERVATION })
+    await expect(
+      siteTypeObservations.readForAccount("account-1", SITE_TYPES.NEW_API),
+    ).resolves.toBeNull()
+  })
+
+  it("leaves storage untouched when there is nothing to retire", async () => {
+    storageState.value = { "account-2": OBSERVATION }
+
+    await siteTypeObservations.clear("account-1")
+
+    expect(storageState.setCalls).toBe(0)
+  })
+
+  it("retires nothing when the current observations cannot be read", async () => {
+    storageState.value = { "account-1": OBSERVATION, "account-2": OBSERVATION }
+    storageState.fail = true
+
+    await siteTypeObservations.clear("account-1")
+
+    expect(storageState.setCalls).toBe(0)
+    expect(storageState.value).toEqual({
+      "account-1": OBSERVATION,
+      "account-2": OBSERVATION,
+    })
+  })
 })

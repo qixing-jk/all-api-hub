@@ -24,7 +24,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
-import { resolveSiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
+import {
+  checkSiteTypeMismatch,
+  SITE_TYPE_MISMATCH_OUTCOMES,
+} from "~/services/siteDetection/siteTypeMismatch"
 import { siteTypeObservations } from "~/services/siteDetection/siteTypeObservations"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
@@ -114,6 +117,15 @@ export function useAccountCheckInRedetection({
     )
     setIsRedetectingCheckInMethods(true)
 
+    /**
+     * An invocation is stale once its lease is released, or once the type or URL
+     * the user has in front of them is no longer the one it started on.
+     */
+    const isInvocationCurrent = () =>
+      invocationLeaseRef.current === lease &&
+      selectedSiteTypeRef.current === requestedSiteType &&
+      selectedSiteUrlRef.current.trim() === requestedUrl
+
     try {
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const { discovery, protectionBypassExecution } =
@@ -124,11 +136,7 @@ export function useAccountCheckInRedetection({
           tempWindowRequestSource,
         })
 
-      if (
-        invocationLeaseRef.current !== lease ||
-        selectedSiteTypeRef.current !== requestedSiteType ||
-        selectedSiteUrlRef.current.trim() !== requestedUrl
-      ) {
+      if (!isInvocationCurrent()) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
           insights: createRedetectionInsights({
             candidateCount,
@@ -189,23 +197,37 @@ export function useAccountCheckInRedetection({
       ]
       // A method that resolved needs no type advice; every other outcome is a
       // candidate for a stored type the site itself no longer agrees with. The
-      // probe shares this click's bypass context; the policy still decides.
-      const siteTypeSuggestion =
+      // reading shares this click's bypass context; the policy still decides.
+      const siteTypeCheck =
         discovery.decision.outcome ===
         CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
           ? null
-          : await resolveSiteTypeMismatch({
+          : await checkSiteTypeMismatch({
               siteUrl: requestedUrl,
               storedSiteType: requestedSiteType,
               protectionBypassExecution,
             })
-      // Share what the dialog just learned, so features that never run
-      // auto check-in still see the account-level observation.
+      // The reading is another round trip, so this invocation can go stale while
+      // it runs. Dropping the result keeps a type the user has already moved away
+      // from out of the notice and out of the record other surfaces read.
+      if (!isInvocationCurrent()) return
+      const siteTypeSuggestion =
+        siteTypeCheck?.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Mismatch
+          ? siteTypeCheck.mismatch
+          : undefined
+      // Share what the dialog just learned, so features that never run auto
+      // check-in still see the account-level observation, and retire one the site
+      // has agreed with since.
       if (accountId && siteTypeSuggestion) {
         await siteTypeObservations.record({
           accountId,
           mismatch: siteTypeSuggestion,
         })
+      } else if (
+        accountId &&
+        siteTypeCheck?.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Agrees
+      ) {
+        await siteTypeObservations.clear(accountId)
       }
       setCheckInRedetectionFeedback({
         kind: "completed",

@@ -8,6 +8,10 @@ import {
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
 import {
+  SITE_TYPE_MISMATCH_OUTCOMES,
+  type SiteTypeCheck,
+} from "~/services/siteDetection/siteTypeMismatch"
+import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinSkipReason,
@@ -15,9 +19,12 @@ import {
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
-const { record } = vi.hoisted(() => ({ record: vi.fn() }))
+const { record, clear } = vi.hoisted(() => ({
+  record: vi.fn(),
+  clear: vi.fn(),
+}))
 vi.mock("~/services/siteDetection/siteTypeObservations", () => ({
-  siteTypeObservations: { record },
+  siteTypeObservations: { record, clear },
 }))
 
 const ACCOUNT = {
@@ -47,18 +54,21 @@ const MISMATCH = {
   suggestedSiteType: SITE_TYPES.VELOERA,
 }
 
+const MISMATCH_CHECK: SiteTypeCheck = {
+  outcome: SITE_TYPE_MISMATCH_OUTCOMES.Mismatch,
+  mismatch: MISMATCH,
+}
+
 describe("recordSiteTypeObservationForResult", () => {
   it("records the type the site resolves to for a failure the stored type explains", async () => {
-    const resolveMismatch = vi.fn().mockResolvedValue(MISMATCH)
+    const checkMismatch = vi.fn().mockResolvedValue(MISMATCH_CHECK)
     const result = buildSkippedResult(
       AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
     )
 
-    await recordSiteTypeObservationForResult(ACCOUNT, result, {
-      resolveMismatch,
-    })
+    await recordSiteTypeObservationForResult(ACCOUNT, result, { checkMismatch })
 
-    expect(resolveMismatch).toHaveBeenCalledWith({
+    expect(checkMismatch).toHaveBeenCalledWith({
       siteUrl: ACCOUNT.site_url,
       storedSiteType: ACCOUNT.site_type,
     })
@@ -66,40 +76,70 @@ describe("recordSiteTypeObservationForResult", () => {
       accountId: ACCOUNT.id,
       mismatch: MISMATCH,
     })
+    expect(clear).not.toHaveBeenCalled()
   })
 
   it("probes under the run's bypass context", async () => {
-    const resolveMismatch = vi.fn().mockResolvedValue(MISMATCH)
+    const checkMismatch = vi.fn().mockResolvedValue(MISMATCH_CHECK)
 
     await recordSiteTypeObservationForResult(
       ACCOUNT,
       buildSkippedResult(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE),
-      { resolveMismatch, protectionBypassExecution: RUN_BYPASS },
+      { checkMismatch, protectionBypassExecution: RUN_BYPASS },
     )
 
-    expect(resolveMismatch).toHaveBeenCalledWith({
+    expect(checkMismatch).toHaveBeenCalledWith({
       siteUrl: ACCOUNT.site_url,
       storedSiteType: ACCOUNT.site_type,
       protectionBypassExecution: RUN_BYPASS,
     })
   })
 
+  it("retires the record once the site agrees with the stored type", async () => {
+    const checkMismatch = vi
+      .fn()
+      .mockResolvedValue({ outcome: SITE_TYPE_MISMATCH_OUTCOMES.Agrees })
+
+    await recordSiteTypeObservationForResult(
+      ACCOUNT,
+      buildSkippedResult(AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE),
+      { checkMismatch },
+    )
+
+    expect(clear).toHaveBeenCalledWith(ACCOUNT.id)
+    expect(record).not.toHaveBeenCalled()
+  })
+
+  it("keeps the record when the reading resolves to nothing", async () => {
+    const checkMismatch = vi
+      .fn()
+      .mockResolvedValue({ outcome: SITE_TYPE_MISMATCH_OUTCOMES.Undetermined })
+
+    await recordSiteTypeObservationForResult(
+      ACCOUNT,
+      buildSkippedResult(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE),
+      { checkMismatch },
+    )
+
+    expect(record).not.toHaveBeenCalled()
+    expect(clear).not.toHaveBeenCalled()
+  })
+
   it("leaves failures with their own cause alone", async () => {
-    const resolveMismatch = vi.fn().mockResolvedValue(MISMATCH)
+    const checkMismatch = vi.fn().mockResolvedValue(MISMATCH_CHECK)
     const result = buildSkippedResult(
       AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
     )
 
-    await recordSiteTypeObservationForResult(ACCOUNT, result, {
-      resolveMismatch,
-    })
+    await recordSiteTypeObservationForResult(ACCOUNT, result, { checkMismatch })
 
-    expect(resolveMismatch).not.toHaveBeenCalled()
+    expect(checkMismatch).not.toHaveBeenCalled()
     expect(record).not.toHaveBeenCalled()
+    expect(clear).not.toHaveBeenCalled()
   })
 
   it("does not probe a result that carries no skip reason", async () => {
-    const resolveMismatch = vi.fn().mockResolvedValue(MISMATCH)
+    const checkMismatch = vi.fn().mockResolvedValue(MISMATCH_CHECK)
     const result: CheckinAccountResult = {
       accountId: ACCOUNT.id,
       accountName: "Account",
@@ -107,36 +147,24 @@ describe("recordSiteTypeObservationForResult", () => {
       timestamp: 1,
     }
 
-    await recordSiteTypeObservationForResult(ACCOUNT, result, {
-      resolveMismatch,
-    })
+    await recordSiteTypeObservationForResult(ACCOUNT, result, { checkMismatch })
 
-    expect(resolveMismatch).not.toHaveBeenCalled()
+    expect(checkMismatch).not.toHaveBeenCalled()
     expect(record).not.toHaveBeenCalled()
-  })
-
-  it("records nothing when the site still resolves to the stored type", async () => {
-    const resolveMismatch = vi.fn().mockResolvedValue(null)
-
-    await recordSiteTypeObservationForResult(
-      ACCOUNT,
-      buildSkippedResult(AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER),
-      { resolveMismatch },
-    )
-
-    expect(record).not.toHaveBeenCalled()
+    expect(clear).not.toHaveBeenCalled()
   })
 
   it("never fails the result when the probe breaks", async () => {
-    const resolveMismatch = vi.fn().mockRejectedValue(new Error("probe down"))
+    const checkMismatch = vi.fn().mockRejectedValue(new Error("probe down"))
 
     await expect(
       recordSiteTypeObservationForResult(
         ACCOUNT,
         buildSkippedResult(AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER),
-        { resolveMismatch },
+        { checkMismatch },
       ),
     ).resolves.toBeUndefined()
     expect(record).not.toHaveBeenCalled()
+    expect(clear).not.toHaveBeenCalled()
   })
 })

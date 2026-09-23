@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { resolveSiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
+import { checkSiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import { server } from "~~/tests/msw/server"
 
 vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
@@ -16,7 +16,7 @@ vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
   }
 })
 
-describe("resolveSiteTypeMismatch", () => {
+describe("checkSiteTypeMismatch", () => {
   const addDefaultUnsupportedProtectedProbeHandlers = () => {
     server.use(
       http.get(/\/api\/user\/info$/, () =>
@@ -59,31 +59,34 @@ describe("resolveSiteTypeMismatch", () => {
     )
 
     await expect(
-      resolveSiteTypeMismatch({
+      checkSiteTypeMismatch({
         siteUrl: "https://example.com",
         storedSiteType: SITE_TYPES.NEW_API,
       }),
     ).resolves.toEqual({
-      storedSiteType: SITE_TYPES.NEW_API,
-      suggestedSiteType: SITE_TYPES.VELOERA,
+      outcome: "mismatch",
+      mismatch: {
+        storedSiteType: SITE_TYPES.NEW_API,
+        suggestedSiteType: SITE_TYPES.VELOERA,
+      },
     })
   })
 
-  it("stays silent when the site resolves to the stored type", async () => {
+  it("reports agreement when the site resolves to the stored type", async () => {
     server.use(
       serveShellTitle("https://example.com", "New API"),
       serveStatusName("https://example.com", "New API"),
     )
 
     await expect(
-      resolveSiteTypeMismatch({
+      checkSiteTypeMismatch({
         siteUrl: "https://example.com",
         storedSiteType: SITE_TYPES.NEW_API,
       }),
-    ).resolves.toBeNull()
+    ).resolves.toEqual({ outcome: "agrees" })
   })
 
-  it("stays silent when the site resolves to no registered type at all", async () => {
+  it("reports no reading when the site resolves to no registered type at all", async () => {
     server.use(
       serveShellTitle("https://example.com", "Unbranded Console"),
       http.get("https://example.com/api/user/self", () =>
@@ -95,14 +98,14 @@ describe("resolveSiteTypeMismatch", () => {
     )
 
     await expect(
-      resolveSiteTypeMismatch({
+      checkSiteTypeMismatch({
         siteUrl: "https://example.com",
         storedSiteType: SITE_TYPES.NEW_API,
       }),
-    ).resolves.toBeNull()
+    ).resolves.toEqual({ outcome: "undetermined" })
   })
 
-  it("stays silent without a site URL", async () => {
+  it("reports no reading without a site URL, and reads nothing", async () => {
     let fetched = false
     server.use(
       http.get("https://example.com", () => {
@@ -112,22 +115,22 @@ describe("resolveSiteTypeMismatch", () => {
     )
 
     await expect(
-      resolveSiteTypeMismatch({
+      checkSiteTypeMismatch({
         siteUrl: "   ",
         storedSiteType: SITE_TYPES.NEW_API,
       }),
-    ).resolves.toBeNull()
+    ).resolves.toEqual({ outcome: "undetermined" })
     expect(fetched).toBe(false)
   })
 
-  it("stays silent when detection itself fails", async () => {
+  it("reports no reading when detection itself fails", async () => {
     server.use(http.get("https://example.com", () => HttpResponse.error()))
 
     await expect(
-      resolveSiteTypeMismatch({
+      checkSiteTypeMismatch({
         siteUrl: "https://example.com",
         storedSiteType: SITE_TYPES.NEW_API,
       }),
-    ).resolves.toBeNull()
+    ).resolves.toEqual({ outcome: "undetermined" })
   })
 })

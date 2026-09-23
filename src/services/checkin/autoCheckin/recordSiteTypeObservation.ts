@@ -1,5 +1,8 @@
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { resolveSiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
+import {
+  checkSiteTypeMismatch,
+  SITE_TYPE_MISMATCH_OUTCOMES,
+} from "~/services/siteDetection/siteTypeMismatch"
 import { siteTypeObservations } from "~/services/siteDetection/siteTypeObservations"
 import type { SiteAccount } from "~/types"
 import {
@@ -10,7 +13,7 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("SiteTypeObservation")
 
-type MismatchResolver = typeof resolveSiteTypeMismatch
+type MismatchChecker = typeof checkSiteTypeMismatch
 
 interface RecordSiteTypeObservationOptions {
   /**
@@ -18,17 +21,19 @@ interface RecordSiteTypeObservationOptions {
    * answers its probe. Whether it applies stays the bypass policy's call.
    */
   protectionBypassExecution?: ProtectionBypassExecution
-  /** Test seam: the probe to use instead of detection. */
-  resolveMismatch?: MismatchResolver
+  /** Test seam: the reading to use instead of detection. */
+  checkMismatch?: MismatchChecker
 }
 
 /**
- * Records the type a site resolves to when a check-in failed for a reason a
- * wrong site type explains.
+ * Keeps the recorded site-type advice in step with a check-in result.
  *
- * The record is advice other features read; it never changes the run's outcome.
- * Failures with their own cause (auth, credentials, network, permission, manual
- * verification) are not probed, so the advice cannot attach to them.
+ * A failure a wrong site type explains records the type the site resolves to; a
+ * reading that agrees with the stored type retires what an earlier result
+ * recorded. Either way the record is advice other features read, and it never
+ * changes the run's outcome. Failures with their own cause (auth, credentials,
+ * network, permission, manual verification) are not probed, so the advice cannot
+ * attach to them.
  */
 export async function recordSiteTypeObservationForResult(
   account: Pick<SiteAccount, "id" | "site_url" | "site_type">,
@@ -39,20 +44,25 @@ export async function recordSiteTypeObservationForResult(
     return
   }
 
-  const {
-    protectionBypassExecution,
-    resolveMismatch = resolveSiteTypeMismatch,
-  } = options
+  const { protectionBypassExecution, checkMismatch = checkSiteTypeMismatch } =
+    options
 
   try {
-    const mismatch = await resolveMismatch({
+    const check = await checkMismatch({
       siteUrl: account.site_url,
       storedSiteType: account.site_type,
       ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
     })
-    if (!mismatch) return
-
-    await siteTypeObservations.record({ accountId: account.id, mismatch })
+    if (check.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Mismatch) {
+      await siteTypeObservations.record({
+        accountId: account.id,
+        mismatch: check.mismatch,
+      })
+      return
+    }
+    if (check.outcome === SITE_TYPE_MISMATCH_OUTCOMES.Agrees) {
+      await siteTypeObservations.clear(account.id)
+    }
   } catch (error) {
     logger.debug("site type observation skipped", { error })
   }

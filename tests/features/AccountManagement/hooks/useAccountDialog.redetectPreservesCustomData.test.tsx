@@ -17,6 +17,10 @@ import {
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
+import {
+  SITE_TYPE_MISMATCH_OUTCOMES,
+  type SiteTypeCheck,
+} from "~/services/siteDetection/siteTypeMismatch"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
@@ -35,18 +39,20 @@ type CheckInDiscoveryResult = Awaited<ReturnType<typeof discoverCheckInMethods>>
 
 const {
   mockRecordSiteTypeObservation,
+  mockClearSiteTypeObservation,
   mockAutoDetectAccount,
   mockDiscoverCheckInMethods,
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
-  mockResolveSiteTypeMismatch,
+  mockCheckSiteTypeMismatch,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockDiscoverCheckInMethods: vi.fn(),
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
-  mockResolveSiteTypeMismatch: vi.fn(),
+  mockCheckSiteTypeMismatch: vi.fn(),
   mockRecordSiteTypeObservation: vi.fn(),
+  mockClearSiteTypeObservation: vi.fn(),
 }))
 
 vi.mock("~/lib/notify", () => ({
@@ -115,7 +121,10 @@ vi.mock("~/services/checkin/autoCheckin/discovery", async (importOriginal) => {
 })
 
 vi.mock("~/services/siteDetection/siteTypeObservations", () => ({
-  siteTypeObservations: { record: mockRecordSiteTypeObservation },
+  siteTypeObservations: {
+    record: mockRecordSiteTypeObservation,
+    clear: mockClearSiteTypeObservation,
+  },
 }))
 
 vi.mock("~/services/siteDetection/siteTypeMismatch", async (importOriginal) => {
@@ -125,7 +134,7 @@ vi.mock("~/services/siteDetection/siteTypeMismatch", async (importOriginal) => {
     >()
   return {
     ...actual,
-    resolveSiteTypeMismatch: mockResolveSiteTypeMismatch,
+    checkSiteTypeMismatch: mockCheckSiteTypeMismatch,
   }
 })
 
@@ -144,8 +153,11 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("useAccountDialog re-detect preservation", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockResolveSiteTypeMismatch.mockResolvedValue(null)
+    mockCheckSiteTypeMismatch.mockResolvedValue({
+      outcome: SITE_TYPE_MISMATCH_OUTCOMES.Undetermined,
+    })
     mockRecordSiteTypeObservation.mockReset()
+    mockClearSiteTypeObservation.mockReset()
     await accountStorage.clearAllData()
   })
 
@@ -622,6 +634,52 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.checkInRedetectionFeedback).toBeNull()
   })
 
+  it("ignores a site type suggestion that arrives after the site type changed", async () => {
+    const mismatchDeferred = createDeferred<SiteTypeCheck>()
+    mockDiscoverCheckInMethods.mockResolvedValueOnce({
+      config: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      decision: { outcome: "unknown" },
+      detections: {},
+      timedOutMethodIds: [],
+    })
+    mockCheckSiteTypeMismatch.mockReturnValueOnce(mismatchDeferred.promise)
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+
+    let redetection!: Promise<void>
+    await act(async () => {
+      redetection = result.current.handlers.handleRedetectCheckInMethods()
+    })
+    await waitFor(() => expect(mockCheckSiteTypeMismatch).toHaveBeenCalled())
+    act(() => {
+      result.current.setters.setSiteType(SITE_TYPES.VELOERA)
+    })
+    mismatchDeferred.resolve({
+      outcome: SITE_TYPE_MISMATCH_OUTCOMES.Mismatch,
+      mismatch: {
+        storedSiteType: SITE_TYPES.NEW_API,
+        suggestedSiteType: SITE_TYPES.WONG_GONGYI,
+      },
+    })
+    await act(async () => {
+      await redetection
+    })
+
+    expect(result.current.state.siteType).toBe(SITE_TYPES.VELOERA)
+    expect(result.current.state.checkInRedetectionFeedback).toBeNull()
+  })
+
   it("prefills detected check-in support on the first add-account auto-detect", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
@@ -910,15 +968,18 @@ describe("useAccountDialog re-detect preservation", () => {
       detections: {},
       timedOutMethodIds: [],
     })
-    mockResolveSiteTypeMismatch.mockResolvedValueOnce({
-      storedSiteType: SITE_TYPES.NEW_API,
-      suggestedSiteType: SITE_TYPES.WONG_GONGYI,
+    mockCheckSiteTypeMismatch.mockResolvedValueOnce({
+      outcome: SITE_TYPE_MISMATCH_OUTCOMES.Mismatch,
+      mismatch: {
+        storedSiteType: SITE_TYPES.NEW_API,
+        suggestedSiteType: SITE_TYPES.WONG_GONGYI,
+      },
     })
 
     const result = await runBasicAddModeRedetection()
 
     // The probe shares this click's read-only detection context.
-    expect(mockResolveSiteTypeMismatch).toHaveBeenCalledWith({
+    expect(mockCheckSiteTypeMismatch).toHaveBeenCalledWith({
       siteUrl: "https://new-api.example.invalid",
       storedSiteType: SITE_TYPES.NEW_API,
       protectionBypassExecution: expect.objectContaining({
@@ -951,7 +1012,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     const result = await runBasicAddModeRedetection()
 
-    expect(mockResolveSiteTypeMismatch).not.toHaveBeenCalled()
+    expect(mockCheckSiteTypeMismatch).not.toHaveBeenCalled()
     expect(result.current.state.checkInRedetectionFeedback).toEqual({
       kind: "completed",
       decisionOutcome: "resolved",
@@ -1035,9 +1096,12 @@ describe("useAccountDialog re-detect preservation", () => {
       detections: {},
       timedOutMethodIds: [],
     })
-    mockResolveSiteTypeMismatch.mockResolvedValueOnce({
-      storedSiteType: SITE_TYPES.NEW_API,
-      suggestedSiteType: SITE_TYPES.WONG_GONGYI,
+    mockCheckSiteTypeMismatch.mockResolvedValueOnce({
+      outcome: SITE_TYPE_MISMATCH_OUTCOMES.Mismatch,
+      mismatch: {
+        storedSiteType: SITE_TYPES.NEW_API,
+        suggestedSiteType: SITE_TYPES.WONG_GONGYI,
+      },
     })
 
     const account = { id: accountId } as any
@@ -1065,6 +1129,49 @@ describe("useAccountDialog re-detect preservation", () => {
         suggestedSiteType: SITE_TYPES.WONG_GONGYI,
       },
     })
+  })
+
+  it("retires the recorded observation once the site agrees with the stored type", async () => {
+    const accountId = await accountStorage.addAccount(
+      buildSiteAccount({
+        site_url: "https://new-api.example.invalid",
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
+    )
+    mockDiscoverCheckInMethods.mockResolvedValueOnce({
+      config: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      decision: { outcome: "unknown" },
+      detections: {},
+      timedOutMethodIds: [],
+    })
+    mockCheckSiteTypeMismatch.mockResolvedValueOnce({
+      outcome: SITE_TYPE_MISMATCH_OUTCOMES.Agrees,
+    })
+
+    const account = { id: accountId } as any
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://new-api.example.invalid")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(mockClearSiteTypeObservation).toHaveBeenCalledWith(accountId)
+    expect(mockRecordSiteTypeObservation).not.toHaveBeenCalled()
+    expect(result.current.state.checkInRedetectionFeedback).not.toHaveProperty(
+      "siteTypeSuggestion",
+    )
   })
 
   it("reports the concrete reason for inconclusive edit-mode detection without asking to save", async () => {
