@@ -1044,7 +1044,12 @@ describe("check-in methods compatibility activation", () => {
   })
 
   it("keeps a manual method that is no longer a candidate without probing it", async () => {
-    const registration = getNewApiExecutionRegistration()
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "veloera:daily-checkin",
+    )
+    if (!registration?.provider.detect) {
+      throw new Error("Veloera check-in detection is not registered")
+    }
     const account = buildSiteAccount({
       site_type: SITE_TYPES.NEW_API,
       checkIn: {
