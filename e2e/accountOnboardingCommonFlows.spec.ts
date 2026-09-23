@@ -629,6 +629,8 @@ test("adds an rc22 account from AuthBundle and persists only its PAT", async ({
 
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
+    // This scenario enters its URL manually; avoid racing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
     tempWindowFallback: {
       enabled: false,
     },
