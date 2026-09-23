@@ -545,6 +545,7 @@ export default function SiteAnnouncementsPage({
       {siteKey === "all" && hasAggregateIssues ? (
         <Notice
           tone="warning"
+          className="mb-density-4"
           title={t("status.aggregateIssuesTitle")}
           description={t("status.aggregateIssues", {
             failed: aggregateFailedSiteCount,
@@ -640,6 +641,7 @@ export default function SiteAnnouncementsPage({
         <SiteAnnouncementsList
           records={filteredRecords}
           expandedIds={expandedIds}
+          navigationTargetId={routeParams?.recordId}
           onToggleExpanded={toggleExpanded}
           onMarkRead={handleMarkRead}
         />

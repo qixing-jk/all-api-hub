@@ -801,6 +801,17 @@ describe("SiteAnnouncementsPage", () => {
     ).toBeVisible()
   })
 
+  it("separates the aggregate issues notice from the announcement list", async () => {
+    render(<SiteAnnouncementsPage />)
+
+    const notice = (
+      await screen.findByText("siteAnnouncements:status.aggregateIssuesTitle")
+    ).closest("[data-tone]")
+
+    expect(notice).toHaveClass("mb-density-4")
+    expect(notice?.nextElementSibling).toHaveClass("space-y-density-4")
+  })
+
   it("checks all visible site accounts when no filters are selected", async () => {
     const user = userEvent.setup()
 
