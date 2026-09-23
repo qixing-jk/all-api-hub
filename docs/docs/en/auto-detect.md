@@ -39,10 +39,10 @@ Auto-identification reads its signals in a fixed order: the domain first, then t
 If the result still does not match the site:
 
 -   In **Edit Account**, set the **Site Type** to the correct type yourself and save. The Site Type decides which set of interfaces the extension calls, so it matters more than the brand name.
--   If you are unsure which type to pick, run a check-in for the account first (its **Quick check-in**), or click **Re-detect check-in method** in Edit Account: the extension then probes the type the site itself resolves to and writes it into the Edit Account notice, the Auto Check-in execution results, the Key Management failure hint, and the Overview "Needs Attention" list.
+-   If you are unsure which type to pick, run a check-in for the account first (its **Quick check-in**), or click **Re-detect check-in method** in Edit Account: the extension then infers the type from the site's own signals and writes it into the Edit Account notice, the Auto Check-in execution results, the Key Management failure hint, and the Overview "Needs Attention" list.
 -   After changing the type, identify again and confirm that a usable check-in method is found.
 
-This hint is shown only while the account still carries the Site Type recorded at the time; once you change the Site Type, the old record stops applying instead of naming a type you have already moved away from.
+This hint is shown only while the account still carries the Site Type recorded at the time; once you change the Site Type, the old record stops applying instead of naming a type you have already moved away from. A later reading that finds the site agreeing with the stored type retires it as well.
 
 ## Unable to Submit / Unable to Save: Check Required Fields Item by Item
 
