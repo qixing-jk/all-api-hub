@@ -1103,16 +1103,16 @@ describe("check-in methods compatibility activation", () => {
   })
 
   it.each([
-    ["returns no account", async () => null],
+    ["returns no account", async (): Promise<null> => null],
     [
       "throws",
-      async () => {
+      async (): Promise<null> => {
         throw new Error("write failed")
       },
     ],
   ] as const)(
     "blocks check-in when saving a matched manual probe %s",
-    async (_name, revalidateAccount) => {
+    async (_name, revalidateAccount): Promise<void> => {
       const registration = getNewApiExecutionRegistration()
       const account = createUnrecordedMethodAccount()
       vi.spyOn(registration.provider, "detect").mockResolvedValue({
