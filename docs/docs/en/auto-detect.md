@@ -32,6 +32,18 @@ Different sites/modified versions handle interfaces and login states differently
 -   **Access Token authentication failed**: Switch to **Cookie authentication** and auto-identify again.
 -   **AnyRouter**: Must use **Cookie authentication**, and the Cookie must come from the currently logged-in account; Cookie authentication does not support multiple accounts on the same site simultaneously.
 
+## The Identified Site Type Is Wrong
+
+Auto-identification reads its signals in a fixed order: the domain first, then the site name the deployment publishes for itself (the `system_name` returned by the site's `/api/status`), and the page title last. A deployment whose shell serves a stock "New API" title while a customized build runs behind it is therefore still identified by the brand it publishes.
+
+If the result still does not match the site:
+
+-   In **Edit Account**, set the **Site Type** to the correct type yourself and save. The Site Type decides which set of interfaces the extension calls, so it matters more than the brand name.
+-   If you are unsure which type to pick, run a check-in for the account first (its **Quick check-in**), or click **Re-detect check-in method** in Edit Account: the extension then probes the type the site itself resolves to and writes it into the Edit Account notice, the Auto Check-in execution results, the Key Management failure hint, and the Overview "Needs Attention" list.
+-   After changing the type, identify again and confirm that a usable check-in method is found.
+
+This hint is shown only while the account still carries the Site Type recorded at the time; once you change the Site Type, the old record stops applying instead of naming a type you have already moved away from.
+
 ## Unable to Submit / Unable to Save: Check Required Fields Item by Item
 
 When required fields are missing, the submit button is disabled or saving fails. Requirements vary by site, so confirm the site type first and check the corresponding fields:
