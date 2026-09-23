@@ -181,10 +181,23 @@ const starPromotionMocks = vi.hoisted(() => ({
   addCheckinSuccesses: vi.fn(),
 }))
 
+const siteTypeObservationMocks = vi.hoisted(() => ({
+  recordSiteTypeObservationForResult: vi.fn(),
+}))
+
 vi.mock("~/services/starPromotion/state", () => ({
   starPromotionState: {
     addCheckinSuccesses: starPromotionMocks.addCheckinSuccesses,
   },
+}))
+
+/**
+ * The scheduler asks this module to record which type a failed site resolves to;
+ * tests answer locally instead of probing a site.
+ */
+vi.mock("~/services/checkin/autoCheckin/recordSiteTypeObservation", () => ({
+  recordSiteTypeObservationForResult:
+    siteTypeObservationMocks.recordSiteTypeObservationForResult,
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -410,6 +423,9 @@ beforeEach(() => {
   mockedRefreshSelectedStatus.mockReset()
   mockedInspection.getSelectedCheckInStatus.mockReset()
   mockedInspection.getSelectedCheckInStatus.mockReturnValue(undefined)
+  siteTypeObservationMocks.recordSiteTypeObservationForResult
+    .mockReset()
+    .mockResolvedValue(undefined)
   vi.mocked(prepareAutomaticCheckIn)
     .mockReset()
     .mockImplementation(async ({ account }) => ({
@@ -551,6 +567,29 @@ describe("daily automatic check-in preparation", () => {
     resolveProviderForTest.mockReturnValue({
       getReadiness: () => ({ ready: true }),
       checkIn: vi.fn(async () => ({ status: "success" })),
+    })
+  })
+
+  it("leaves the site type observation for a failure the stored type explains, under the run's bypass context", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "status_unavailable",
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(
+      siteTypeObservationMocks.recordSiteTypeObservationForResult,
+    ).toHaveBeenCalledWith(
+      account,
+      expect.objectContaining({ reasonCode: "status_unavailable" }),
+      { protectionBypassExecution: SCHEDULED_EXECUTION },
+    )
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "skipped",
+      reasonCode: "status_unavailable",
     })
   })
 

@@ -34,6 +34,7 @@ import {
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
+import { recordSiteTypeObservationForResult } from "~/services/checkin/autoCheckin/recordSiteTypeObservation"
 import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
   refreshSelectedStatus,
@@ -176,6 +177,16 @@ const toSchedulerSkipReason = (
     case CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported:
       return AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED
   }
+}
+
+interface RunAccountCheckinOptions {
+  requireStatusConfirmationBeforeMutation?: boolean
+  allowAutomaticDiscovery?: boolean
+  /**
+   * Provider ownership resolved over the full stored account list. Absent means
+   * the guard could not be evaluated and the run stays unblocked.
+   */
+  loginProviderOwners?: ReadonlyMap<AccountLoginProvider, SiteAccount>
 }
 
 const createAutomaticCheckinExecution = (
@@ -1129,8 +1140,33 @@ class AutoCheckinScheduler {
    * Notes:
    * - Provider `already_checked` is treated as a successful outcome (and should not enter retries).
    * - We mark the account as checked-in only for successful outcomes to keep local status fresh.
+   * - A result a wrong site type explains leaves an observation other features read.
    */
   private async runAccountCheckin(
+    account: SiteAccount,
+    accountName: string,
+    tempWindowRequestSource: TempWindowRequestSource,
+    protectionBypassExecution: ProtectionBypassExecution,
+    options: RunAccountCheckinOptions = {},
+  ): Promise<{
+    result: CheckinAccountResult
+  }> {
+    const outcome = await this.executeAccountCheckin(
+      account,
+      accountName,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+      options,
+    )
+
+    await recordSiteTypeObservationForResult(account, outcome.result, {
+      protectionBypassExecution,
+    })
+
+    return outcome
+  }
+
+  private async executeAccountCheckin(
     account: SiteAccount,
     accountName: string,
     tempWindowRequestSource: TempWindowRequestSource,
@@ -1139,15 +1175,7 @@ class AutoCheckinScheduler {
       requireStatusConfirmationBeforeMutation = false,
       allowAutomaticDiscovery = false,
       loginProviderOwners,
-    }: {
-      requireStatusConfirmationBeforeMutation?: boolean
-      allowAutomaticDiscovery?: boolean
-      /**
-       * Provider ownership resolved over the full stored account list. Absent
-       * means the guard could not be evaluated and the run stays unblocked.
-       */
-      loginProviderOwners?: ReadonlyMap<AccountLoginProvider, SiteAccount>
-    } = {},
+    }: RunAccountCheckinOptions = {},
   ): Promise<{
     result: CheckinAccountResult
   }> {

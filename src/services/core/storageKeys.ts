@@ -116,6 +116,11 @@ export const STORAGE_LOCKS = {
    */
   AUTO_CHECKIN_STATUS: "all-api-hub:auto-checkin-status",
   /**
+   * Exclusive lock used for read-modify-write sequences touching recorded
+   * site-type observations.
+   */
+  SITE_TYPE_OBSERVATIONS: "all-api-hub:site-type-observations",
+  /**
    * Exclusive lock used for read-modify-write sequences touching the usage
    * history store.
    */
@@ -138,6 +143,11 @@ export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
 export const LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS = {
   /** Last observed browser login outcome per account, keyed by account id. */
   EVIDENCE: "login_provider_evidence",
+} as const
+
+export const SITE_TYPE_OBSERVATION_STORAGE_KEYS = {
+  /** Last recorded site-type mismatch per account, keyed by account id. */
+  OBSERVATIONS: "site_type_observations",
 } as const
 
 export const TAG_STORAGE_KEYS = {

@@ -79,6 +79,27 @@ export const AUTO_CHECKIN_SKIP_REASONS = Object.values(
 ) as AutoCheckinSkipReason[]
 
 /**
+ * Skip reasons a stale or wrong site type explains. Auth, credential, network,
+ * permission, manual-verification, and upstream failures are excluded: they have
+ * their own cause, and pointing at the site type would mislead.
+ */
+const SITE_TYPE_RELATED_SKIP_REASONS: readonly AutoCheckinSkipReason[] = [
+  AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+  AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+  AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+  AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
+  AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
+  AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE,
+]
+
+/** Returns whether a wrong site type can explain this skip reason. */
+export function isSiteTypeRelatedSkipReason(
+  reason: AutoCheckinSkipReason,
+): boolean {
+  return SITE_TYPE_RELATED_SKIP_REASONS.includes(reason)
+}
+
+/**
  * Localized label key per reason code. The map is exhaustive by type, so a new
  * reason code cannot silently miss its copy.
  */
