@@ -71,6 +71,10 @@
     },
     "filterAll": "全部",
     "severityFilterLabel": "嚴重度",
+    "siteTypeMismatch": {
+      "description": "該站點本身對應「{{suggestedType}}」，而帳號目前是「{{storedType}}」。請編輯帳號並把站點型別改為「{{suggestedType}}」。",
+      "title": "{{name}} 的站點型別可能不正確"
+    },
     "siteTypeUnknown": {
       "description": "自動簽到暫時無法判斷該站點的協定。請編輯帳號並選擇正確的站點類型，或重新自動偵測。",
       "title": "{{name}} 的站點類型未知"

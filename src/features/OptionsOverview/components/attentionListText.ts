@@ -43,6 +43,10 @@ const attentionTitleResolvers = {
     item: OptionsOverviewAttentionItem,
     t: TFunction,
   ) => t("optionsOverview:attention.siteTypeUnknown.title", item.titleOptions),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) => t("optionsOverview:attention.siteTypeMismatch.title", item.titleOptions),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (
     item: OptionsOverviewAttentionItem,
     t: TFunction,
@@ -144,6 +148,14 @@ const attentionDescriptionResolvers = {
   ) =>
     t(
       "optionsOverview:attention.siteTypeUnknown.description",
+      item.descriptionOptions,
+    ),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch]: (
+    item: OptionsOverviewAttentionItem,
+    t: TFunction,
+  ) =>
+    t(
+      "optionsOverview:attention.siteTypeMismatch.description",
       item.descriptionOptions,
     ),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (
@@ -250,6 +262,8 @@ const attentionActionResolvers = {
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.accountUnhealthy]: (t: TFunction) =>
     t("optionsOverview:attention.actions.viewAccount"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeUnknown]: (t: TFunction) =>
+    t("optionsOverview:attention.actions.editAccount"),
+  [OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch]: (t: TFunction) =>
     t("optionsOverview:attention.actions.editAccount"),
   [OPTIONS_OVERVIEW_ATTENTION_KINDS.checkInMethodUnresolved]: (t: TFunction) =>
     t("optionsOverview:attention.actions.handleCheckIn"),

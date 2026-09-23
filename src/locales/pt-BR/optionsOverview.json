@@ -83,6 +83,10 @@
     },
     "filterAll": "Todos",
     "severityFilterLabel": "Gravidade",
+    "siteTypeMismatch": {
+      "description": "Este site corresponde a {{suggestedType}}, mas a conta está definida como {{storedType}}. Edite a conta e defina o Tipo de site como {{suggestedType}}.",
+      "title": "{{name}} pode estar com o tipo de site errado"
+    },
     "siteTypeUnknown": {
       "description": "O check-in automático não consegue determinar o protocolo deste site. Edite a conta e escolha o tipo correto ou execute a detecção automática novamente.",
       "title": "{{name}} tem um tipo de site desconhecido"

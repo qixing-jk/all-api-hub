@@ -71,6 +71,10 @@
     },
     "filterAll": "Tất cả",
     "severityFilterLabel": "Mức độ",
+    "siteTypeMismatch": {
+      "description": "Trang này tương ứng với {{suggestedType}}, nhưng tài khoản đang đặt là {{storedType}}. Hãy chỉnh sửa tài khoản và đặt Loại trang web thành {{suggestedType}}.",
+      "title": "{{name}} có thể đang sai loại trang web"
+    },
     "siteTypeUnknown": {
       "description": "Điểm danh tự động không thể xác định giao thức của trang này. Hãy chỉnh sửa tài khoản và chọn đúng loại trang, hoặc chạy lại tự động phát hiện.",
       "title": "{{name}} có loại trang web không xác định"

@@ -6,6 +6,7 @@ import {
 import type { FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
 import {
   SiteHealthStatus,
   type AccountStats,
@@ -38,6 +39,7 @@ interface BuildOptionsOverviewViewModelInput {
   guidanceState?: FeatureGuidanceState | null
   managedSiteType: ManagedSiteType | undefined
   autoCheckinStatus: AutoCheckinStatus | null | undefined
+  siteTypeMismatches?: SiteTypeMismatchMap
   siteAnnouncementRecords: SiteAnnouncementRecord[]
   siteAnnouncementStatuses: SiteAnnouncementSiteState[]
   unifiedApiGuidanceDataAvailable?: boolean
@@ -89,6 +91,7 @@ export function buildOptionsOverviewViewModel(
     problemAccounts,
     accounts: input.displayData,
     autoCheckinStatus: input.autoCheckinStatus,
+    siteTypeMismatches: input.siteTypeMismatches,
     globalAutomaticExecutionEnabled,
     usageRefreshPendingCount,
     unreadAnnouncementCount,

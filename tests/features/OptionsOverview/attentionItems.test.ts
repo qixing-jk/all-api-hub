@@ -231,6 +231,63 @@ describe("overview attention items", () => {
     ).not.toContain("checkin:manual-account:site-type-unknown")
   })
 
+  it("names the site type an account's failed run should be switched to", () => {
+    const account = buildDisplaySiteData({
+      id: "mismatch-account",
+      name: "Mismatch relay",
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 0,
+        problemAccounts: [],
+        accounts: [account],
+        siteTypeMismatches: {
+          [account.id]: {
+            storedSiteType: SITE_TYPES.NEW_API,
+            suggestedSiteType: SITE_TYPES.VELOERA,
+          },
+        },
+      }),
+    ).toContainEqual({
+      id: `checkin:${account.id}:site-type-mismatch`,
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
+      severity: "warning",
+      titleOptions: { name: account.name },
+      descriptionOptions: {
+        storedType: SITE_TYPES.NEW_API,
+        suggestedType: SITE_TYPES.VELOERA,
+      },
+      target: expect.anything(),
+    })
+  })
+
+  it("names a site type mismatch only for an account it belongs to", () => {
+    const account = buildDisplaySiteData({
+      id: "listed-account",
+      name: "Listed relay",
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 0,
+        problemAccounts: [],
+        accounts: [account],
+        siteTypeMismatches: {
+          "hidden-account": {
+            storedSiteType: SITE_TYPES.NEW_API,
+            suggestedSiteType: SITE_TYPES.VELOERA,
+          },
+        },
+      }).map((item) => item.id),
+    ).not.toContain("checkin:hidden-account:site-type-mismatch")
+  })
+
   it("adds one aggregate item for failed or uncertain check-in results", () => {
     const autoCheckinStatus: AutoCheckinStatus = {
       summary: {

@@ -12,6 +12,7 @@ import { featureGuidanceState } from "~/services/featureGuidance/featureGuidance
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
+import { siteTypeObservations } from "~/services/siteDetection/siteTypeObservations"
 import type { AccountStats } from "~/types"
 import type {
   SiteAnnouncementRecord,
@@ -150,6 +151,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         const preferences = settledValue(preferencesResult, null)
         const guidanceState = settledValue(featureGuidanceResult, null)
         const autoCheckinStatus = settledValue(autoCheckinStatusResult, null)
+
         const siteAnnouncementRecords = settledValue(
           siteAnnouncementRecordsResult,
           [],
@@ -170,6 +172,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           ? configuredManagedSiteType
           : undefined
         const displayData = accountPresentation.convertToDisplayData(accounts)
+        // Best-effort advice: a failed read reports none and never counts as a
+        // failed source, so it cannot hide a broken environment. The store drops
+        // what a later site-type edit retired.
+        const siteTypeMismatches =
+          await siteTypeObservations.readForAccounts(displayData)
+        if (!isCurrent) return
+
         setViewModel(
           buildOptionsOverviewViewModel({
             accounts,
@@ -181,6 +190,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             guidanceState,
             managedSiteType,
             autoCheckinStatus,
+            siteTypeMismatches,
             siteAnnouncementRecords:
               siteAnnouncementRecords as SiteAnnouncementRecord[],
             siteAnnouncementStatuses:

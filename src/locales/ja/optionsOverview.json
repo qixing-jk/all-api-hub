@@ -71,6 +71,10 @@
     },
     "filterAll": "すべて",
     "severityFilterLabel": "重大度",
+    "siteTypeMismatch": {
+      "description": "このサイトは {{suggestedType}} に該当しますが、アカウントは {{storedType}} になっています。アカウントを編集してサイト種別を {{suggestedType}} に変更してください。",
+      "title": "{{name}} のサイト種別が正しくない可能性があります"
+    },
     "siteTypeUnknown": {
       "description": "自動チェックインでこのサイトのプロトコルを判定できません。アカウントを編集して正しいサイト種別を選択するか、自動検出を再実行してください。",
       "title": "{{name}} のサイト種別が不明です"

@@ -71,6 +71,10 @@
     },
     "filterAll": "全部",
     "severityFilterLabel": "严重度",
+    "siteTypeMismatch": {
+      "description": "该站点本身对应「{{suggestedType}}」，而账号当前是「{{storedType}}」。请编辑账号并把站点类型改为「{{suggestedType}}」。",
+      "title": "{{name}} 的站点类型可能不正确"
+    },
     "siteTypeUnknown": {
       "description": "自动签到暂时无法确定该站点的协议。请编辑账号并选择正确的站点类型，或重新自动识别。",
       "title": "{{name}} 的站点类型未知"

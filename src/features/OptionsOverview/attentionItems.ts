@@ -9,6 +9,7 @@ import {
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { isAutoCheckinSkipReasonActionable } from "~/features/AutoCheckin/utils/skipCategories"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -81,6 +82,11 @@ export function buildAttentionItems(input: {
   problemAccounts: DisplaySiteData[]
   accounts?: DisplaySiteData[]
   autoCheckinStatus?: AutoCheckinStatus | null
+  /**
+   * Site type each account's last failed run resolved to, already reduced to the
+   * accounts it still applies to, keyed by account id.
+   */
+  siteTypeMismatches?: SiteTypeMismatchMap
   globalAutomaticExecutionEnabled?: boolean
   usageRefreshPendingCount?: number
   unreadAnnouncementCount?: number
@@ -123,6 +129,28 @@ export function buildAttentionItems(input: {
   const automaticExecutionEnabled =
     input.globalAutomaticExecutionEnabled !== false
   const accounts = input.accounts ?? []
+
+  // Recorded for the accounts a failed run could not use, so the overview can
+  // name the type to switch to without probing the site again.
+  const mismatches = input.siteTypeMismatches ?? {}
+  for (const account of accounts) {
+    const mismatch = mismatches[account.id]
+    if (!mismatch) continue
+
+    items.push({
+      id: `checkin:${account.id}:site-type-mismatch`,
+      kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.siteTypeMismatch,
+      category: OPTIONS_OVERVIEW_ATTENTION_CATEGORIES.accounts,
+      severity: "warning",
+      titleOptions: { name: account.name },
+      descriptionOptions: {
+        storedType: mismatch.storedSiteType,
+        suggestedType: mismatch.suggestedSiteType,
+      },
+      target: buildAccountNavigationTarget(account.id),
+    })
+  }
+
   if (automaticExecutionEnabled) {
     for (const account of accounts) {
       if (

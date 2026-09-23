@@ -26,6 +26,7 @@ export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   accountTempWindowIssue: "accountTempWindowIssue",
   accountsAllDisabled: "accountsAllDisabled",
   siteTypeUnknown: "siteTypeUnknown",
+  siteTypeMismatch: "siteTypeMismatch",
   checkInMethodUnresolved: "checkInMethodUnresolved",
   autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
   autoCheckinGloballyDisabled: "autoCheckinGloballyDisabled",
