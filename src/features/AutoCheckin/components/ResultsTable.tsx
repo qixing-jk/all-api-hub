@@ -41,6 +41,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
@@ -60,6 +61,11 @@ import TablePagination, {
 
 interface ResultsTableProps extends ResultsTableActionsProps {
   results: CheckinAccountResult[]
+  /**
+   * Site type each account's failed run resolved to, already reduced to what
+   * still applies, keyed by account id.
+   */
+  siteTypeMismatches?: SiteTypeMismatchMap
 }
 
 const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
@@ -75,6 +81,7 @@ const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
  */
 export default function ResultsTable({
   results,
+  siteTypeMismatches,
   ...actionProps
 }: ResultsTableProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
@@ -272,6 +279,7 @@ export default function ResultsTable({
                 <ResultsTableRow
                   key={result.accountId}
                   result={result}
+                  siteTypeMismatch={siteTypeMismatches?.[result.accountId]}
                   {...actionProps}
                 />
               ))}

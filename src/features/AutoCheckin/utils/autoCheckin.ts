@@ -3,6 +3,7 @@ import type { TFunction } from "i18next"
 import {
   AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
+  isSiteTypeRelatedSkipReason,
   translateAutoCheckinSkipReason,
   type AutoCheckinSkipReason,
   type CheckinAccountResult,
@@ -555,11 +556,22 @@ function isManualVerificationRequiredMessage(message: string): boolean {
   )
 }
 
-type AutoCheckinTroubleshootingHintKey =
-  | "execution.hints.invalidAccessToken"
-  | "execution.hints.manualVerificationRequired"
-  | "execution.hints.noTabWithId"
-  | "execution.hints.siteTypeCheckinUnsupported"
+/**
+ * Translation keys of the per-result troubleshooting hints.
+ *
+ * Keep each key's text as a literal argument at its `t()` call site as well: the
+ * i18n extractor only sees literal arguments, so copy translated through this
+ * constant alone counts as unused and is pruned from the locale files.
+ */
+export const AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS = {
+  invalidAccessToken: "execution.hints.invalidAccessToken",
+  manualVerificationRequired: "execution.hints.manualVerificationRequired",
+  noTabWithId: "execution.hints.noTabWithId",
+  siteTypeCheckinUnsupported: "execution.hints.siteTypeCheckinUnsupported",
+} as const
+
+export type AutoCheckinTroubleshootingHintKey =
+  (typeof AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS)[keyof typeof AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS]
 
 /**
  * Resolve an optional troubleshooting hint for a result row based on its
@@ -567,14 +579,16 @@ type AutoCheckinTroubleshootingHintKey =
  */
 export function resolveAutoCheckinTroubleshootingHintKey(params: {
   status?: string
+  reasonCode?: AutoCheckinSkipReason
   messageKey?: string
   message: string
 }): AutoCheckinTroubleshootingHintKey | null {
   if (
+    (params.reasonCode && isSiteTypeRelatedSkipReason(params.reasonCode)) ||
     params.messageKey === "autoCheckin:skipReasons.no_provider" ||
     params.messageKey === "autoCheckin:providerFallback.endpointNotSupported"
   ) {
-    return "execution.hints.siteTypeCheckinUnsupported"
+    return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.siteTypeCheckinUnsupported
   }
 
   if (params.status !== CHECKIN_RESULT_STATUS.FAILED) {
@@ -582,15 +596,15 @@ export function resolveAutoCheckinTroubleshootingHintKey(params: {
   }
 
   if (isInvalidAccessTokenMessage(params.message)) {
-    return "execution.hints.invalidAccessToken"
+    return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.invalidAccessToken
   }
 
   if (isNoTabWithIdMessage(params.message)) {
-    return "execution.hints.noTabWithId"
+    return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.noTabWithId
   }
 
   if (isManualVerificationRequiredMessage(params.message)) {
-    return "execution.hints.manualVerificationRequired"
+    return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired
   }
 
   return null

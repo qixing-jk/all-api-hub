@@ -69,7 +69,8 @@
       "noTabWithId": "Dica: Não feche nenhuma aba/janela aberta automaticamente pela extensão. A extensão irá fechá-los após um curto período de tempo. Se for necessário fechá-los manualmente, aguarde pelo menos 1 minuto antes de fechá-los.",
       "openExternalCheckIn": "Abra check-ins externos não verificados por padrão. Ctrl/Cmd abre tudo; Shift abre em uma nova janela.",
       "openFailedManualNewWindow": "Abre a página de check-in do site para cada conta cujo último check-in automático falhou. Mantenha Shift pressionado ao clicar para abri-las em uma nova janela.",
-      "siteTypeCheckinUnsupported": "Solução: em “Gerenciamento de contas → Editar conta”, primeiro confirme se o tipo de site selecionado corresponde ao site real. Se ele foi detectado automaticamente, entre novamente no site de destino e repita a detecção. Se o tipo estiver correto e esta mensagem continuar aparecendo, o site provavelmente ainda não é compatível com check-in automático; por enquanto, use “Abrir site” ou “Check-in manual”."
+      "siteTypeCheckinUnsupported": "Solução: em “Gerenciamento de contas → Editar conta”, confirme se o tipo de site corresponde ao site real. O título da página pode ser apenas uma casca genérica (por exemplo “New API”) enquanto a instância usa outro backend, então a detecção automática pode escolher o tipo errado. Se o tipo foi detectado automaticamente, entre novamente no site de destino e detecte outra vez, ou escolha você mesmo o tipo correto e execute de novo. Se o tipo estiver correto e o check-in continuar falhando, o site provavelmente ainda não é compatível com check-in automático; use “Abrir site” ou “Check-in manual”.",
+      "siteTypeMismatch": "Este site corresponde a {{suggestedType}}, que difere do Tipo de site selecionado {{storedType}}. Altere o Tipo de site em “Editar conta” para {{suggestedType}} e execute novamente."
     },
     "manualTitle": "Check-in em lote",
     "pagination": {

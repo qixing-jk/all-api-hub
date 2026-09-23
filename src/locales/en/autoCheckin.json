@@ -67,7 +67,8 @@
       "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing.",
       "openExternalCheckIn": "Open unchecked external check-ins by default. Ctrl/Cmd opens all; Shift opens in a new window.",
       "openFailedManualNewWindow": "Open the site check-in page for every account whose latest auto check-in failed. Shift-click to open them in a new window.",
-      "siteTypeCheckinUnsupported": "Solution: In 'Account Management → Edit Account', first verify that the selected site type matches the real site. If the type was auto-detected before, log back into the target site and run detection again. If the site type is correct but this message still appears, the site likely does not support automatic check-in yet, so use 'Open site' or 'Manual sign-in' instead."
+      "siteTypeCheckinUnsupported": "Solution: in 'Account Management → Edit Account', confirm the site type matches the real site. A page title can be a generic shell (New API, for example) while the deployment itself runs a different backend, so auto-detection can pick the wrong type. If the type was auto-detected, log back into the target site and detect again, or pick the correct type yourself, then run once more. If the type is right and check-in still fails, the site likely does not support automatic check-in yet — use 'Open site' or 'Manual sign-in' instead.",
+      "siteTypeMismatch": "This site matches {{suggestedType}}, which differs from the selected Site Type {{storedType}}. Set the Site Type in 'Edit Account' to {{suggestedType}}, then run again."
     },
     "manualTitle": "Batch Check-in",
     "pagination": {

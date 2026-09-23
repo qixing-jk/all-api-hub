@@ -47,7 +47,11 @@ import {
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import type { DisplaySiteData } from "~/types"
+import {
+  siteTypeObservations,
+  type SiteTypeMismatchMap,
+} from "~/services/siteDetection/siteTypeObservations"
+import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
@@ -161,11 +165,13 @@ const getRetryAnalyticsResult = (
 }
 
 /**
- * Resolves saved-account setup state for auto check-in empty-state guidance.
+ * Loads the saved accounts and the setup state derived from them, for empty-state
+ * guidance and for the site-type advice the results table names.
  */
-async function resolveAutoCheckinAccountSetupState(): Promise<
-  "ready" | "no_accounts" | "no_detection_accounts" | null
-> {
+async function loadAutoCheckinAccountSetup(): Promise<{
+  state: "ready" | "no_accounts" | "no_detection_accounts" | null
+  accounts: SiteAccount[]
+}> {
   try {
     const accounts = await accountQueries.getAllAccounts()
     const enabledAccounts = accounts.filter(
@@ -173,10 +179,10 @@ async function resolveAutoCheckinAccountSetupState(): Promise<
     )
 
     if (enabledAccounts.length === 0) {
-      return "no_accounts"
+      return { state: "no_accounts", accounts }
     }
 
-    return enabledAccounts.some((account) =>
+    const state = enabledAccounts.some((account) =>
       isAutomaticCheckInConfiguredForAccount({
         config: account.checkIn,
         siteType: account.site_type,
@@ -186,9 +192,11 @@ async function resolveAutoCheckinAccountSetupState(): Promise<
     )
       ? "ready"
       : "no_detection_accounts"
+
+    return { state, accounts }
   } catch (error) {
     logger.warn("Failed to load accounts for auto check-in empty state", error)
-    return null
+    return { state: null, accounts: [] }
   }
 }
 
@@ -207,6 +215,8 @@ export default function AutoCheckin(props: {
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
+  const [siteTypeMismatches, setSiteTypeMismatches] =
+    useState<SiteTypeMismatchMap>({})
   const [accountSetupState, setAccountSetupState] = useState<
     "ready" | "no_accounts" | "no_detection_accounts" | null
   >(null)
@@ -273,13 +283,22 @@ export default function AutoCheckin(props: {
 
     try {
       setIsLoading(true)
-      const [response, nextAccountSetupState] = await Promise.all([
+      const [response, accountSetup] = await Promise.all([
         sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
-        resolveAutoCheckinAccountSetupState(),
+        loadAutoCheckinAccountSetup(),
       ])
+      // Read through the account, so an observation a later site-type edit
+      // retired is not named on a result row.
+      const siteTypeMismatches = await siteTypeObservations.readForAccounts(
+        accountSetup.accounts.map((account) => ({
+          id: account.id,
+          siteType: account.site_type,
+        })),
+      )
 
       if (loadId === latestStatusLoadIdRef.current) {
-        setAccountSetupState(nextAccountSetupState)
+        setAccountSetupState(accountSetup.state)
+        setSiteTypeMismatches(siteTypeMismatches)
 
         if (response.success) {
           setStatus(response.data)
@@ -1100,6 +1119,7 @@ export default function AutoCheckin(props: {
   const resultsContent = hasHistory ? (
     <ResultsTable
       results={accountResults}
+      siteTypeMismatches={siteTypeMismatches}
       showDevActions={showDebugButtons}
       retryingAccountId={retryingAccountId}
       verifyingAccountId={verifyingAccountId}

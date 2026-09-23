@@ -951,6 +951,45 @@ describe("autoCheckin utils", () => {
       ).toBe("execution.hints.siteTypeCheckinUnsupported")
     })
 
+    it.each([
+      AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+      AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+      AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
+      AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
+      AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE,
+    ])(
+      "returns the site-type hint when %s can be explained by a wrong site type",
+      (reasonCode) => {
+        expect(
+          resolveAutoCheckinTroubleshootingHintKey({
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode,
+            messageKey: `autoCheckin:skipReasons.${reasonCode}`,
+            message: "",
+          }),
+        ).toBe("execution.hints.siteTypeCheckinUnsupported")
+      },
+    )
+
+    it.each([
+      AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+      AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+      AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+      AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+      AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
+      AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+      AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    ])("keeps %s on its own explanation", (reasonCode) => {
+      expect(
+        resolveAutoCheckinTroubleshootingHintKey({
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode,
+          messageKey: `autoCheckin:skipReasons.${reasonCode}`,
+          message: "",
+        }),
+      ).toBeNull()
+    })
+
     it("still matches access-token hints for failed raw messages", () => {
       expect(
         resolveAutoCheckinTroubleshootingHintKey({

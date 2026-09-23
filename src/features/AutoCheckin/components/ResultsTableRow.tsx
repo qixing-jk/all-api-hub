@@ -4,11 +4,14 @@ import AccountLinkButton from "~/components/AccountLinkButton"
 import { TableCell, TableRow } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
 import {
+  AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS,
   getAutoCheckinResultMessage,
   resolveAutoCheckinTroubleshootingHintKey,
+  type AutoCheckinTroubleshootingHintKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
+import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import { type CheckinAccountResult } from "~/types/autoCheckin"
 import { openProtectionBypassHistory } from "~/utils/navigation"
 
@@ -19,33 +22,44 @@ import ResultStatusBadge from "./ResultStatusBadge"
 
 interface ResultsTableRowProps extends ResultsTableActionsProps {
   result: CheckinAccountResult
+  siteTypeMismatch?: SiteTypeMismatch
 }
 
 /** Renders one execution result while keeping table orchestration in the parent. */
 export default function ResultsTableRow({
   result,
+  siteTypeMismatch,
   ...actionProps
 }: ResultsTableRowProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
   const message = getAutoCheckinResultMessage(t, result)
   const troubleshootingHintKey = resolveAutoCheckinTroubleshootingHintKey({
     status: result.status,
+    reasonCode: result.reasonCode,
     messageKey: result.messageKey,
     message,
   })
 
-  const getTroubleshootingHintLabel = (hintKey: string) => {
+  const getTroubleshootingHintLabel = (
+    hintKey: AutoCheckinTroubleshootingHintKey,
+  ) => {
+    // Keys stay literal at the t() call: the i18n extractor only sees literal
+    // arguments, so a hint translated through its constant alone would be pruned.
     switch (hintKey) {
-      case "execution.hints.invalidAccessToken":
+      case AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.invalidAccessToken:
         return t("execution.hints.invalidAccessToken")
-      case "execution.hints.manualVerificationRequired":
+      case AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired:
         return t("execution.hints.manualVerificationRequired")
-      case "execution.hints.noTabWithId":
+      case AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.noTabWithId:
         return t("execution.hints.noTabWithId")
-      case "execution.hints.siteTypeCheckinUnsupported":
-        return t("execution.hints.siteTypeCheckinUnsupported")
-      default:
-        return hintKey
+      case AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.siteTypeCheckinUnsupported:
+        // A named type replaces the generic advice to go and check it.
+        return siteTypeMismatch
+          ? t("execution.hints.siteTypeMismatch", {
+              storedType: siteTypeMismatch.storedSiteType,
+              suggestedType: siteTypeMismatch.suggestedSiteType,
+            })
+          : t("execution.hints.siteTypeCheckinUnsupported")
     }
   }
 
@@ -70,8 +84,9 @@ export default function ResultsTableRow({
             </div>
           )}
           {(troubleshootingHintKey ===
-            "execution.hints.manualVerificationRequired" ||
-            troubleshootingHintKey === "execution.hints.noTabWithId") && (
+            AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired ||
+            troubleshootingHintKey ===
+              AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.noTabWithId) && (
             <ProtectionBypassHistoryLink
               className="text-xs"
               onOpen={openProtectionBypassHistory}

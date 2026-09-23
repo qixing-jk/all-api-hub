@@ -1,9 +1,16 @@
 import userEvent from "@testing-library/user-event"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import enAutoCheckinMessages from "~/locales/en/autoCheckin.json"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { openProtectionBypassHistory } from "~/utils/navigation"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
@@ -110,6 +117,45 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     expect(
       await screen.findByText(
         "autoCheckin:execution.hints.siteTypeCheckinUnsupported",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("names the site type a failed result should be switched to", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckinMessages },
+    })
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ResultsTable
+          results={[
+            {
+              accountId: "account-6",
+              accountName: "Account 6",
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+              timestamp: 0,
+            },
+          ]}
+          siteTypeMismatches={{
+            "account-6": {
+              storedSiteType: SITE_TYPES.NEW_API,
+              suggestedSiteType: SITE_TYPES.VELOERA,
+            },
+          }}
+        />
+      </I18nextProvider>,
+    )
+
+    expect(
+      await screen.findByText(
+        /This site matches Veloera, which differs from the selected Site Type new-api\./,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /The current check-in status could not be confirmed, so no check-in was attempted/,
       ),
     ).toBeInTheDocument()
   })
