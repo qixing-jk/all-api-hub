@@ -9,6 +9,11 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 
+import type {
+  SiteAnnouncementsDevFixtureResult,
+  SiteAnnouncementsDevSeedRequest,
+} from "./devFixtures"
+
 export interface SiteAnnouncementsCheckNowRequest {
   accountIds?: string[]
 }
@@ -44,6 +49,10 @@ interface SiteAnnouncementsProtocolMap {
   [SiteAnnouncementsMessageTypes.UpdatePreferences](
     data: SiteAnnouncementsUpdatePreferencesRequest,
   ): RuntimeMessageResponse<SiteAnnouncementPreferences>
+  [SiteAnnouncementsMessageTypes.DebugSeedFixtures](
+    data?: SiteAnnouncementsDevSeedRequest,
+  ): RuntimeMessageResponse<SiteAnnouncementsDevFixtureResult>
+  [SiteAnnouncementsMessageTypes.DebugClearFixtures](): RuntimeMessageResponse<SiteAnnouncementsDevFixtureResult>
 }
 
 export const {

@@ -14,7 +14,7 @@ interface SiteAnnouncementsListProps {
 }
 
 /** Longest history that still renders as plain DOM, mirroring bounded key lists. */
-const VIRTUALIZATION_THRESHOLD = 20
+export const SITE_ANNOUNCEMENTS_VIRTUALIZATION_THRESHOLD = 20
 
 /** Initial card estimate; expanded cards are re-measured by the virtualizer. */
 const ESTIMATED_CARD_HEIGHT = 140
@@ -47,7 +47,10 @@ export function SiteAnnouncementsList({
     navigationTargetId !== undefined &&
     records.some((record) => record.id === navigationTargetId)
 
-  if (records.length <= VIRTUALIZATION_THRESHOLD || hasNavigationTarget) {
+  if (
+    records.length <= SITE_ANNOUNCEMENTS_VIRTUALIZATION_THRESHOLD ||
+    hasNavigationTarget
+  ) {
     return (
       <div className="space-y-density-4">
         {records.map((record) => (

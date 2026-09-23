@@ -1453,8 +1453,10 @@ describe("siteAnnouncementScheduler", () => {
       SiteAnnouncementsMessageTypes.MarkRead,
       SiteAnnouncementsMessageTypes.MarkAllRead,
       SiteAnnouncementsMessageTypes.UpdatePreferences,
+      SiteAnnouncementsMessageTypes.DebugSeedFixtures,
+      SiteAnnouncementsMessageTypes.DebugClearFixtures,
     ])
-    expect(onSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(6)
+    expect(onSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(8)
 
     await expect(
       siteAnnouncementsMessageHandlers.get(

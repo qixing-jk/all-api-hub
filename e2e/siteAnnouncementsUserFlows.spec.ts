@@ -297,6 +297,43 @@ test("filters cached site announcements and marks unread items as read", async (
   ).toBeVisible()
 })
 
+test("refuses the announcement fixture dev message outside development mode", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+
+  await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const seedResponse = await sendTypedRuntimeMessageFromPage<{
+    success: boolean
+    error?: string
+  }>(page, SiteAnnouncementsMessageTypes.DebugSeedFixtures, {
+    announcementCount: 5,
+  })
+
+  // The response names the dev guard, which also proves the background
+  // registered a handler for the dev-only message type.
+  expect(seedResponse).toEqual({
+    success: false,
+    error: "Debug action unavailable",
+  })
+
+  const clearResponse = await sendTypedRuntimeMessageFromPage<{
+    success: boolean
+    error?: string
+  }>(page, SiteAnnouncementsMessageTypes.DebugClearFixtures)
+
+  expect(clearResponse).toEqual({
+    success: false,
+    error: "Debug action unavailable",
+  })
+  expect(await readSiteAnnouncementsStore(serviceWorker)).toBeNull()
+})
+
 test("virtualizes long cached announcement histories while keeping the last announcement reachable", async ({
   context,
   extensionId,

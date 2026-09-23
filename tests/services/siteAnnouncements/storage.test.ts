@@ -1585,6 +1585,72 @@ describe("siteAnnouncementStorage", () => {
     ])
   })
 
+  it("removes cached sites with their identity markers without touching the rest of the store", async () => {
+    const realSiteKey = "notice:new-api:https://example.invalid"
+    const removedSiteKey = "dev-fixture:new-api:https://fixture.invalid"
+    const createSite = (siteKey: string) => ({
+      siteKey,
+      siteName: "Example",
+      siteType: "new-api" as const,
+      baseUrl: siteKey.slice(siteKey.lastIndexOf("https://")),
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    })
+    const createRecord = (
+      siteKey: string,
+      site: ReturnType<typeof createSite>,
+      fingerprint: string,
+    ) => ({
+      siteKey,
+      siteName: site.siteName,
+      siteType: site.siteType,
+      baseUrl: site.baseUrl,
+      accountId: site.accountId,
+      providerId: site.providerId,
+      title: "Notice",
+      content: "Body",
+      fingerprint,
+    })
+
+    const realSite = createSite(realSiteKey)
+    const removedSite = createSite(removedSiteKey)
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site: realSite,
+      records: [createRecord(realSiteKey, realSite, "real-record")],
+    })
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site: removedSite,
+      records: [
+        createRecord(removedSiteKey, removedSite, "removed-record-1"),
+        createRecord(removedSiteKey, removedSite, "removed-record-2"),
+      ],
+    })
+
+    const removed = await siteAnnouncementStorage.removeSites([removedSiteKey])
+
+    expect(removed).toEqual({ sites: 1, records: 2 })
+    const store = await siteAnnouncementStorage.getStore()
+    expect(Object.keys(store.sites)).toEqual([realSiteKey])
+    expect(store.identityLedger[removedSiteKey]).toBeUndefined()
+
+    // A site removed from the store is unknown again, so its next sighting is
+    // new rather than a resurrection of the old identity.
+    const reseeded = await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site: removedSite,
+      records: [createRecord(removedSiteKey, removedSite, "removed-record-1")],
+    })
+    expect(reseeded).toHaveLength(1)
+  })
+
+  it("reports an empty removal for site keys the store does not hold", async () => {
+    await expect(
+      siteAnnouncementStorage.removeSites([
+        "notice:new-api:https://missing.invalid",
+      ]),
+    ).resolves.toEqual({ sites: 0, records: 0 })
+  })
+
   it("swallows record-failure persistence errors after logging the warning path", async () => {
     vi.spyOn(siteAnnouncementStorage, "upsertSiteStatus").mockRejectedValueOnce(
       new Error("write failed"),

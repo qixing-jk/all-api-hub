@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
+import {
+  DevPanelProvider,
+  useDevPanelSections,
+} from "~/features/DevPanel/DevPanelSectionsContext"
 import notify from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -140,6 +144,26 @@ const status: SiteAnnouncementSiteState[] = [
     records: [records[1]!],
   },
 ]
+
+/** Reports the dev panel sections the page under test registers. */
+function DevSectionProbe() {
+  const sections = useDevPanelSections()
+
+  return (
+    <div>
+      {sections.map((section) => (
+        <div key={section.id} data-testid={`dev-section-${section.id}`}>
+          <span>{section.title}</span>
+          {section.rows?.map((row) => (
+            <span key={row.id} data-testid={`dev-row-${row.id}`}>
+              {row.value}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 describe("SiteAnnouncementsPage", () => {
   beforeEach(() => {
@@ -799,6 +823,26 @@ describe("SiteAnnouncementsPage", () => {
     expect(
       screen.getByText("siteAnnouncements:status.aggregateIssues"),
     ).toBeVisible()
+  })
+
+  it("registers its fixture controls as a dev panel section on this page", async () => {
+    render(
+      <DevPanelProvider
+        surface="options"
+        page={MENU_ITEM_IDS.SITE_ANNOUNCEMENTS}
+      >
+        <SiteAnnouncementsPage />
+        <DevSectionProbe />
+      </DevPanelProvider>,
+    )
+
+    const section = await screen.findByTestId(
+      "dev-section-site-announcements-fixtures",
+    )
+    expect(section).toHaveTextContent("Site announcements")
+    await waitFor(() => {
+      expect(screen.getByTestId("dev-row-records")).toHaveTextContent("2")
+    })
   })
 
   it("separates the aggregate issues notice from the announcement list", async () => {

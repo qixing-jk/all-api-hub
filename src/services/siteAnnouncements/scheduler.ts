@@ -39,6 +39,10 @@ import { createLogger } from "~/utils/core/logger"
 
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "./constants"
 import {
+  resolveSiteAnnouncementsDebugClearFixturesMessage,
+  resolveSiteAnnouncementsDebugSeedFixturesMessage,
+} from "./devFixtures"
+import {
   onSiteAnnouncementsMessage,
   type SiteAnnouncementsCheckNowRequest,
   type SiteAnnouncementsMarkAllReadRequest,
@@ -669,6 +673,14 @@ export function setupSiteAnnouncementsMessagingListeners() {
     onSiteAnnouncementsMessage(
       SiteAnnouncementsMessageTypes.UpdatePreferences,
       ({ data }) => resolveSiteAnnouncementsUpdatePreferencesMessage(data),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.DebugSeedFixtures,
+      ({ data }) => resolveSiteAnnouncementsDebugSeedFixturesMessage(data),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.DebugClearFixtures,
+      () => resolveSiteAnnouncementsDebugClearFixturesMessage(),
     ),
   ]
 }

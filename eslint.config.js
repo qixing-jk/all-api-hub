@@ -126,6 +126,7 @@ const siteTypeImportOwners = [
   "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
   "src/services/productAnalytics/settings.ts", // Fixed analytics event schema.
   "src/services/siteAnnouncements/providers.ts", // Announcement provider dispatch.
+  "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
   "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
   "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx", // OpenRouter management-key onboarding UI.

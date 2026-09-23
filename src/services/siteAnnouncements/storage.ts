@@ -761,6 +761,40 @@ class SiteAnnouncementStorage {
     })
   }
 
+  /**
+   * Drops persisted sites by key, together with their identity markers.
+   *
+   * Markers go with the site so a site that comes back later is a first
+   * sighting again instead of a resurrection of the identity that was removed.
+   */
+  async removeSites(
+    siteKeys: readonly string[],
+  ): Promise<{ sites: number; records: number }> {
+    const keys = new Set(siteKeys)
+    if (keys.size === 0) {
+      return { sites: 0, records: 0 }
+    }
+
+    return await this.mutateStore((store) => {
+      let sites = 0
+      let records = 0
+
+      for (const siteKey of keys) {
+        const site = store.sites[siteKey]
+        if (!site) {
+          continue
+        }
+
+        delete store.sites[siteKey]
+        delete store.identityLedger[siteKey]
+        sites += 1
+        records += site.records.length
+      }
+
+      return { changed: sites > 0, result: { sites, records } }
+    })
+  }
+
   async recordFailure(params: {
     siteKey: string
     siteName: string

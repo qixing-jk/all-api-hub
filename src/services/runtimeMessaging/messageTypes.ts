@@ -45,6 +45,10 @@ export const SiteAnnouncementsMessageTypes = {
   MarkRead: "siteAnnouncements:markRead",
   MarkAllRead: "siteAnnouncements:markAllRead",
   UpdatePreferences: "siteAnnouncements:updatePreferences",
+  // Development-only: seed and clear fixture announcements, rejected outside
+  // development mode by the background handlers.
+  DebugSeedFixtures: "siteAnnouncements:debugSeedFixtures",
+  DebugClearFixtures: "siteAnnouncements:debugClearFixtures",
 } as const
 
 export const ProductAnnouncementsMessageTypes = {
