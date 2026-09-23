@@ -160,6 +160,26 @@ describe("native runtime key disclosure", () => {
     expect(writeText).not.toHaveBeenCalled()
   })
 
+  it("treats a rejected resolve as cancellation once the disclosure was aborted", async () => {
+    const pending = createDeferred<typeof key>()
+    resolveSecret.mockReturnValueOnce(pending.promise)
+    const view = renderDisclosure()
+    let action!: Promise<void>
+    act(() => {
+      action = view.result.current.toggle()
+    })
+    view.unmount()
+    await act(async () => {
+      pending.reject(
+        new DOMException("The operation was aborted", "AbortError"),
+      )
+      await action
+    })
+    expect(error).not.toHaveBeenCalled()
+    expect(success).not.toHaveBeenCalled()
+    expect(complete).toHaveBeenCalledWith("cancelled")
+  })
+
   it("names a mismatched site type when revealing fails", async () => {
     resolveSecret.mockRejectedValueOnce(new Error("denied"))
     readObservation.mockResolvedValueOnce({
