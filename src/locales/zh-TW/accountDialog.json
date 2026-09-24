@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "未找到 refresh_token。請先登入 Sub2API 控制台後重試。",
     "importSub2apiSessionSuccess": "已匯入 Sub2API 會話",
     "loadFailed": "載入帳號資料失敗",
+    "managedSiteSettingsOpened": "已在新分頁開啟 {{managedSite}} 設定，填好連線資訊後回來點這個按鈕即可。",
     "newApiConfigFailed": "自動配置到 New API失敗: {{error}}",
     "operationFailed": "操作失敗: {{error}}",
     "reloadExtensionConfirm": "重新載入擴充套件會關閉目前擴充套件頁面，請確認已儲存需要的資訊。",

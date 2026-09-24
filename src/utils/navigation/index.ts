@@ -503,9 +503,11 @@ const _openSettingsTab = (
 interface OpenSettingsTabInNewTabOptions {
   anchor?: string
   /**
-   * Leaves the current popup open after the settings tab opens, so an
-   * in-progress form there survives the jump. Defaults to closing it, matching
-   * the flows that move the user out of the popup for good.
+   * Leaves the current window as it is: the settings tab opens in the
+   * background and the popup is not closed, so an in-progress form there keeps
+   * its focus. A page-action popup is dismissed as soon as focus moves, so
+   * activating the tab would unmount that form. Defaults to closing the popup,
+   * matching the flows that move the user out of it for good.
    */
   keepCurrentWindow?: boolean
 }
@@ -521,9 +523,14 @@ const _openSettingsTabInNewTab = async (
     tab: tabId,
     anchor: options?.anchor,
   })
-  await createActiveTab(
-    `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`,
-  )
+  const url = `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`
+
+  if (options?.keepCurrentWindow) {
+    await createTabApi(url, false)
+    return
+  }
+
+  await createActiveTab(url)
 }
 
 /**

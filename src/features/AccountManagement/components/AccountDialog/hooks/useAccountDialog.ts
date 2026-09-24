@@ -1876,22 +1876,33 @@ export function useAccountDialog({
     const settingsTarget = getManagedSiteSettingsTarget(
       promptedSiteType ?? managedSiteType,
     )
-    // A separate tab keeps this account form (and the popup) alive while the
-    // user fills in the managed-site connection details.
+    // The settings tab opens in the background so this account form, and the
+    // popup holding it, keep their focus; name the tab so it is findable.
     void openSettingsTabInNewTab(settingsTarget.tabId, {
       ...(settingsTarget.anchor ? { anchor: settingsTarget.anchor } : {}),
       keepCurrentWindow: true,
-    }).catch((error) => {
-      toast.error(
-        t("messages.operationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-      logger.error("Failed to open managed-site settings", {
-        managedSiteType,
-        error: getErrorMessage(error),
-      })
     })
+      .then(() => {
+        toast.success(
+          t("messages.managedSiteSettingsOpened", {
+            managedSite: getManagedSiteLabel(
+              t,
+              promptedSiteType ?? managedSiteType,
+            ),
+          }),
+        )
+      })
+      .catch((error) => {
+        toast.error(
+          t("messages.operationFailed", {
+            error: getErrorMessage(error),
+          }),
+        )
+        logger.error("Failed to open managed-site settings", {
+          managedSiteType,
+          error: getErrorMessage(error),
+        })
+      })
   }, [
     handleManagedSiteConfigPromptClose,
     managedSiteConfigPromptState?.siteType,

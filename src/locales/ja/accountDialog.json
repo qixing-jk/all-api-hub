@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "refresh_token が見つかりません。Sub2API ダッシュボードにログインしてから再試行してください。",
     "importSub2apiSessionSuccess": "Sub2API セッションを取り込みました",
     "loadFailed": "アカウントデータの読み込みに失敗しました",
+    "managedSiteSettingsOpened": "{{managedSite}} の設定を新しいタブで開きました。接続情報を入力してから、このボタンをもう一度押してください。",
     "newApiConfigFailed": "New API への自動設定に失敗しました: {{error}}",
     "operationFailed": "操作に失敗しました: {{error}}",
     "reloadExtensionConfirm": "拡張機能を再読み込みすると現在の拡張機能ページが閉じます。必要な情報を保存済みであることを確認してください。",

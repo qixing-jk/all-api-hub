@@ -1100,9 +1100,11 @@ describe("navigation utilities", () => {
       keepCurrentWindow: true,
     })
 
+    // A page-action popup is dismissed as soon as focus moves, so the settings
+    // tab has to open in the background for the popup form to survive.
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}?tab=managedSite&anchor=axonhub#basic`,
-      true,
+      false,
     )
     expect(closeSpy).not.toHaveBeenCalled()
 

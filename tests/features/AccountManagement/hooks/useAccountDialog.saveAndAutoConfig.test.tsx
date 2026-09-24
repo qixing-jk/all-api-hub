@@ -651,6 +651,31 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.managedSiteConfigPrompt.isOpen).toBe(false)
   })
 
+  it("points the user at the background settings tab it opened", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
+        expect.stringContaining("managedSiteSettingsOpened"),
+      )
+    })
+  })
+
   it("opens the prompted provider's settings section in a new tab", async () => {
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...structuredClone(DEFAULT_PREFERENCES),

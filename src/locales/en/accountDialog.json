@@ -261,6 +261,7 @@
     "importSub2apiSessionMissing": "No refresh_token found. Please log in to the Sub2API dashboard and try again.",
     "importSub2apiSessionSuccess": "Sub2API session imported",
     "loadFailed": "Failed to load account data",
+    "managedSiteSettingsOpened": "Opened {{managedSite}} settings in a new tab. Fill in the connection details, then come back and press this button.",
     "newApiConfigFailed": "Auto-configuration to New API failed: {{error}}",
     "operationFailed": "Operation failed: {{error}}",
     "reloadExtensionConfirm": "Reloading the extension will close the current extension page. Make sure any needed information has been saved.",

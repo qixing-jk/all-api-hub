@@ -262,6 +262,7 @@
     "importSub2apiSessionMissing": "No se encontró refresh_token. Inicia sesión en el dashboard de Sub2API y vuelve a intentarlo.",
     "importSub2apiSessionSuccess": "Sesión de Sub2API importada",
     "loadFailed": "No se pudieron cargar los datos de la cuenta",
+    "managedSiteSettingsOpened": "Se abrió la configuración de {{managedSite}} en una pestaña nueva. Completa los datos de conexión y vuelve a pulsar este botón.",
     "newApiConfigFailed": "Falló la configuración automática en New API: {{error}}",
     "operationFailed": "Operación fallida: {{error}}",
     "reloadExtensionConfirm": "Recargar la extensión cerrará la página actual de la extensión. Asegúrate de haber guardado cualquier información necesaria.",

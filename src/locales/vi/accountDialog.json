@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "Không tìm thấy refresh_token. Vui lòng đăng nhập vào bảng điều khiển Sub2API và thử lại.",
     "importSub2apiSessionSuccess": "Đã nhập phiên Sub2API",
     "loadFailed": "Tải dữ liệu tài khoản thất bại",
+    "managedSiteSettingsOpened": "Đã mở cài đặt {{managedSite}} trong tab mới. Hãy điền thông tin kết nối rồi quay lại bấm nút này.",
     "newApiConfigFailed": "Cấu hình tự động vào New API thất bại: {{error}}",
     "operationFailed": "Thao tác thất bại: {{error}}",
     "reloadExtensionConfirm": "Tải lại tiện ích sẽ đóng trang tiện ích hiện tại. Vui lòng xác nhận bạn đã lưu thông tin cần thiết.",
