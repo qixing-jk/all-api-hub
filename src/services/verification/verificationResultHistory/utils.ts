@@ -277,7 +277,9 @@ export function createVerificationHistorySummary(params: {
   preferredModelId?: string
   verifiedAt?: number
 }): ApiVerificationHistorySummary | null {
-  const results = params.results.filter(Boolean)
+  const results = params.results.filter(
+    (result) => result.summaryKey !== "verifyDialog.summaries.stopped",
+  )
   if (results.length === 0) return null
 
   const verifiedAt =

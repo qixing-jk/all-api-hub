@@ -143,4 +143,53 @@ describe("useVerificationDialogState", () => {
     expect(result.current.persistedSummary).toBeNull()
     expect(result.current.probes).toEqual(liveProbes)
   })
+
+  it("excludes stopped probes when persisting later verification results", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-stopped"),
+    )
+    const upsertLatestSummary = vi
+      .spyOn(verificationResultHistoryStorage, "upsertLatestSummary")
+      .mockImplementation(async (summary) => summary)
+    const { result } = renderHook(() => useVerificationDialogState(target))
+
+    const probes: ProbeItemState[] = [
+      {
+        definition: { id: "models", requiresModelId: false },
+        isRunning: false,
+        attempts: 1,
+        result: {
+          id: "models",
+          status: "unsupported",
+          latencyMs: 0,
+          summary: "Stopped",
+          summaryKey: "verifyDialog.summaries.stopped",
+        },
+      },
+      {
+        definition: { id: "text-generation", requiresModelId: true },
+        isRunning: false,
+        attempts: 1,
+        result: {
+          id: "text-generation",
+          mode: "streaming",
+          status: "pass",
+          latencyMs: 5,
+          summary: "Chat passed",
+        },
+      },
+    ]
+
+    await act(async () => {
+      await result.current.persistCurrentResults(
+        API_TYPES.OPENAI_COMPATIBLE,
+        probes,
+      )
+    })
+
+    expect(upsertLatestSummary).toHaveBeenCalledOnce()
+    expect(upsertLatestSummary.mock.calls[0]![0].probes).toEqual([
+      expect.objectContaining({ id: "text-generation", status: "pass" }),
+    ])
+  })
 })
