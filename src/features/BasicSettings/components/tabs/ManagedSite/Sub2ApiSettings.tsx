@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Button,
   Card,
@@ -24,8 +25,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
-
-import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 /** Configures Sub2API management and guides administrators to key setup. */
 export default function Sub2ApiSettings() {

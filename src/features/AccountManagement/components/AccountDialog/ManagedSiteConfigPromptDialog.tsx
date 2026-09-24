@@ -1,26 +1,32 @@
-import { TriangleAlert } from "lucide-react"
+import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import type { ManagedSiteType } from "~/constants/siteType"
 
 export interface ManagedSiteConfigPromptDialogProps {
   isOpen: boolean
   managedSiteLabel: string
+  /** Resolves the provider deployment docs shown to users who host none yet. */
+  managedSiteType: ManagedSiteType | null
   missingMessage: string
   onClose: () => void
   onOpenSettings: () => void
 }
 
 /**
- * Prompt users to configure the selected managed site before using the
- * account-to-channel shortcut so the entry point can stay discoverable.
+ * Explains the managed-site prerequisite before the account-to-channel shortcut
+ * can run: the selected provider is a gateway the user deploys themselves, so a
+ * fresh install is expected to lack it rather than broken.
  */
 export function ManagedSiteConfigPromptDialog({
   isOpen,
   managedSiteLabel,
+  managedSiteType,
   missingMessage,
   onClose,
   onOpenSettings,
@@ -38,7 +44,7 @@ export function ManagedSiteConfigPromptDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <TriangleAlert className="text-warning-indicator h-5 w-5" />
+            <Info className="text-info-indicator h-5 w-5" />
             <h2 className="text-foreground text-lg font-semibold">
               {t("accountDialog:warnings.managedSiteConfig.title", {
                 managedSite: managedSiteLabel,
@@ -73,8 +79,8 @@ export function ManagedSiteConfigPromptDialog({
     >
       <div className="space-y-density-3">
         <Alert
-          variant="warning"
-          title={t("accountDialog:warnings.managedSiteConfig.warningTitle", {
+          variant="info"
+          title={t("accountDialog:warnings.managedSiteConfig.alertTitle", {
             managedSite: managedSiteLabel,
           })}
           description={t(
@@ -85,10 +91,21 @@ export function ManagedSiteConfigPromptDialog({
           )}
         />
         <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
-          {t("accountDialog:warnings.managedSiteConfig.guide", {
+          {t("accountDialog:warnings.managedSiteConfig.benefit", {
             managedSite: managedSiteLabel,
           })}
         </p>
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          {t("accountDialog:warnings.managedSiteConfig.nextSteps", {
+            managedSite: managedSiteLabel,
+          })}
+        </p>
+        {managedSiteType ? (
+          <ManagedSiteDeploymentLink
+            siteType={managedSiteType}
+            withSettingsAnchor={false}
+          />
+        ) : null}
       </div>
     </Modal>
   )

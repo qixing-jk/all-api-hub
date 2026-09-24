@@ -336,12 +336,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "Để sau",
-        "openSettings": "Đi đến cài đặt"
+        "openSettings": "Điền trong cài đặt"
       },
+      "alertTitle": "Bạn cần {{managedSite}} của riêng mình",
+      "benefit": "Sau khi cấu hình xong, bạn có thể nhập key tài khoản thành kênh của {{managedSite}} và dùng mọi tài khoản qua một địa chỉ API.",
       "description": "{{message}}",
-      "guide": "Tính năng này trước tiên sẽ lưu tài khoản hiện tại, sau đó tự động chuẩn bị API Key khả dụng và điền sẵn vào kênh mới của {{managedSite}}, giúp bạn hoàn thành việc tạo kênh nhanh hơn. Bạn có thể sử dụng tính năng này sau khi hoàn tất cấu hình trang web được quản lý.",
-      "title": "Cấu hình {{managedSite}} trước",
-      "warningTitle": "{{managedSite}} chưa hoàn tất cấu hình"
+      "nextSteps": "Chưa triển khai cũng không sao: hãy làm theo tài liệu chính thức bên dưới rồi điền thông tin kết nối trong cài đặt. Việc lưu tài khoản, làm mới số dư và điểm danh vẫn hoạt động như thường.",
+      "title": "Chưa có {{managedSite}}?"
     },
     "reloadExtension": {
       "title": "Tải lại tiện ích",

@@ -585,6 +585,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
     expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
       isOpen: true,
+      managedSiteType: SITE_TYPES.NEW_API,
       managedSiteLabel: "settings:managedSite.newApi",
       missingMessage: "messages:newapi.configMissing",
     })

@@ -336,12 +336,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "稍后再说",
-        "openSettings": "前往设置"
+        "openSettings": "前往设置填写"
       },
+      "alertTitle": "需要你自己的 {{managedSite}}",
+      "benefit": "配置好后，账号里的密钥可以导入成 {{managedSite}} 的渠道，用一个 API 地址调用所有账号。",
       "description": "{{message}}",
-      "guide": "这个功能会先保存当前账号，再自动准备可用的 API Key，并预填到 {{managedSite}} 的新建渠道中，帮你更快完成渠道创建。完成托管站点配置后即可使用。",
-      "title": "先配置 {{managedSite}}",
-      "warningTitle": "{{managedSite}} 尚未完成配置"
+      "nextSteps": "还没部署也没关系：按下面的官方文档装一个，再回到设置里填好连接信息即可。这些都不影响保存账号、刷新余额和签到。",
+      "title": "还没有 {{managedSite}}？"
     },
     "reloadExtension": {
       "title": "重新加载扩展",

@@ -462,6 +462,7 @@ export function useAccountDialog({
     useState<ManagedSiteConfigPromptState | null>(null)
   const managedSiteConfigPrompt = {
     isOpen: managedSiteConfigPromptState?.isOpen ?? false,
+    managedSiteType: managedSiteConfigPromptState?.siteType ?? null,
     managedSiteLabel: managedSiteConfigPromptState
       ? getManagedSiteLabel(t, managedSiteConfigPromptState.siteType)
       : "",

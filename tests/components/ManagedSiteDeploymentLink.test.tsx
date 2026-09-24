@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ManagedSiteDeploymentLink } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteDeploymentLink"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("ManagedSiteDeploymentLink", () => {
@@ -28,5 +28,23 @@ describe("ManagedSiteDeploymentLink", () => {
       "href",
       "https://github.com/Wei-Shaw/sub2api#deployment",
     )
+  })
+
+  it("keeps the deployment docs reachable outside the settings page", async () => {
+    render(
+      <ManagedSiteDeploymentLink
+        siteType={SITE_TYPES.NEW_API}
+        withSettingsAnchor={false}
+      />,
+    )
+
+    const link = await screen.findByRole("link", {
+      name: "settings:managedSite.deploymentDocsLink",
+    })
+    expect(link).toHaveAttribute(
+      "href",
+      "https://docs.newapi.ai/en/docs/installation",
+    )
+    expect(link).not.toHaveAttribute("id")
   })
 })

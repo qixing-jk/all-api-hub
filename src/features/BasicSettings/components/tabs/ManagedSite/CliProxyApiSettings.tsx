@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -15,8 +16,6 @@ import {
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
-
-import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 const CLI_PROXY_API_MANAGEMENT_DOC_URL =
   "https://help.router-for.me/management/api"

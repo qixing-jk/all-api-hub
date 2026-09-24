@@ -340,12 +340,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "Talvez mais tarde",
-        "openSettings": "Abrir configurações"
+        "openSettings": "Definir nas configurações"
       },
+      "alertTitle": "É preciso ter o seu próprio {{managedSite}}",
+      "benefit": "Depois de configurado, você pode importar as chaves de conta como canais do {{managedSite}} e usar todas as contas por um único endereço de API.",
       "description": "{{message}}",
-      "guide": "Este recurso salva a conta atual, prepara uma chave de API utilizável e a preenche em um novo canal de {{managedSite}}, agilizando a criação do canal. Ele estará disponível depois que você concluir a configuração do site gerenciado.",
-      "title": "Configure {{managedSite}} primeiro",
-      "warningTitle": "{{managedSite}} ainda não está configurado"
+      "nextSteps": "Ainda não instalou um? Sem problema: instale pela documentação oficial abaixo e depois preencha os dados de conexão nas configurações. Salvar contas, atualizar saldos e fazer check-in seguem funcionando normalmente.",
+      "title": "Ainda não tem um {{managedSite}}?"
     },
     "reloadExtension": {
       "title": "Recarregar extensão",

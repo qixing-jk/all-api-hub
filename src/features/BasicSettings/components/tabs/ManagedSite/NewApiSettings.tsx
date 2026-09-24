@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Button,
   Card,
@@ -26,8 +27,6 @@ import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/util
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
-
-import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).

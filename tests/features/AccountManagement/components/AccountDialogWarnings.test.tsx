@@ -718,7 +718,7 @@ describe("AccountDialog warnings", () => {
     expect(onDisableWarningAndContinue).toHaveBeenCalledTimes(1)
   })
 
-  it("renders managed-site setup guidance and wires both actions", () => {
+  it("renders managed-site setup guidance, its deployment docs, and wires both actions", () => {
     const onClose = vi.fn()
     const onOpenSettings = vi.fn()
 
@@ -726,6 +726,7 @@ describe("AccountDialog warnings", () => {
       <ManagedSiteConfigPromptDialog
         isOpen
         managedSiteLabel="New API"
+        managedSiteType={SITE_TYPES.NEW_API}
         missingMessage="Please configure New API first"
         onClose={onClose}
         onOpenSettings={onOpenSettings}
@@ -735,7 +736,17 @@ describe("AccountDialog warnings", () => {
     expect(
       screen.getByText(
         JSON.stringify({
-          key: "accountDialog:warnings.managedSiteConfig.warningTitle",
+          key: "accountDialog:warnings.managedSiteConfig.title",
+          options: {
+            managedSite: "New API",
+          },
+        }),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        JSON.stringify({
+          key: "accountDialog:warnings.managedSiteConfig.alertTitle",
           options: {
             managedSite: "New API",
           },
@@ -752,6 +763,35 @@ describe("AccountDialog warnings", () => {
         }),
       ),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        JSON.stringify({
+          key: "accountDialog:warnings.managedSiteConfig.benefit",
+          options: {
+            managedSite: "New API",
+          },
+        }),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        JSON.stringify({
+          key: "accountDialog:warnings.managedSiteConfig.nextSteps",
+          options: {
+            managedSite: "New API",
+          },
+        }),
+      ),
+    ).toBeInTheDocument()
+
+    // Users who do not run a managed site yet must be able to reach its
+    // official deployment docs, without claiming the settings search anchor.
+    const deploymentDocsLink = screen.getByRole("link")
+    expect(deploymentDocsLink).toHaveAttribute(
+      "href",
+      "https://docs.newapi.ai/en/docs/installation",
+    )
+    expect(deploymentDocsLink).not.toHaveAttribute("id")
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -766,6 +806,21 @@ describe("AccountDialog warnings", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it("omits the deployment docs link when no managed site type is resolved", () => {
+    render(
+      <ManagedSiteConfigPromptDialog
+        isOpen
+        managedSiteLabel="New API"
+        managedSiteType={null}
+        missingMessage="Please configure New API first"
+        onClose={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 
   it("renders the exact-match duplicate warning for non-empty string user ids", () => {

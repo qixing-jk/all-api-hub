@@ -338,12 +338,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "Maybe later",
-        "openSettings": "Open settings"
+        "openSettings": "Set it up in settings"
       },
+      "alertTitle": "You'll need your own {{managedSite}}",
+      "benefit": "Once it is set up, you can import your account keys as {{managedSite}} channels and use every account through one API address.",
       "description": "{{message}}",
-      "guide": "This feature first saves the current account, then prepares a usable API key and prefills it into a new channel in {{managedSite}}, helping you finish channel creation faster. It becomes available after the managed-site setup is complete.",
-      "title": "Configure {{managedSite}} first",
-      "warningTitle": "{{managedSite}} is not configured yet"
+      "nextSteps": "Don't have one yet? That's fine: install it from the official docs below, then add the connection details in settings. Saving accounts, refreshing balances, and check-in keep working either way.",
+      "title": "No {{managedSite}} yet?"
     },
     "reloadExtension": {
       "title": "Reload extension",
