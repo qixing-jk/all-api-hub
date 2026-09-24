@@ -20,6 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Spinner,
 } from "~/components/ui"
 import {
   DropdownMenu,
@@ -265,7 +266,13 @@ export default function ProtectionBypassHistoryDialog({
             />
           ) : entries.length === 0 ? (
             <EmptyState
-              icon={<History className="size-8" />}
+              icon={
+                isLoading ? (
+                  <Spinner size="xl" variant="gray" aria-hidden="true" />
+                ) : (
+                  <History className="size-8" />
+                )
+              }
               title={
                 isLoading
                   ? t("common:status.loading")

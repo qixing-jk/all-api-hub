@@ -2094,6 +2094,37 @@ describe("ManagedSiteModelSync page", () => {
     },
   )
 
+  it("shows an animated indicator while the manual tab loads channels", async () => {
+    const pending = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.ListChannels) {
+          return await pending.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    const placeholder = await screen.findByText(
+      "managedSiteModelSync:execution.manual.loading",
+    )
+    // The dashed placeholder has to look busy on its own, not only say so.
+    expect(placeholder.querySelector("svg.animate-spin")).not.toBeNull()
+
+    await act(async () => {
+      pending.resolve({
+        success: true,
+        data: { items: [{ ref: pageRef(201), name: "Manual Alpha" }] },
+      })
+    })
+
+    expect(await screen.findByText("Manual Alpha#201")).toBeVisible()
+  })
+
   it("reloads and clears selection when the deployment URL changes within one site type", async () => {
     let context = mockUseUserPreferencesContext.getMockImplementation()!()
     mockUseUserPreferencesContext.mockImplementation(() => context)

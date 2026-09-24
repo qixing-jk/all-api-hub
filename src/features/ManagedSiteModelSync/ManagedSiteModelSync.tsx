@@ -11,6 +11,7 @@ import {
   Button,
   EmptyState,
   Input,
+  Spinner,
   Tabs,
   TabsContent,
   TabsList,
@@ -1547,7 +1548,11 @@ export default function ManagedSiteModelSync({
           </div>
 
           {isChannelsLoading ? (
-            <div className="border-border-strong text-muted-foreground dark:border-border py-density-6 rounded-lg border border-dashed px-6 text-center text-sm">
+            <div
+              role="status"
+              className="border-border-strong text-muted-foreground dark:border-border py-density-6 gap-y-density-3 flex flex-col items-center rounded-lg border border-dashed px-6 text-center text-sm"
+            >
+              <Spinner size="lg" variant="gray" aria-hidden="true" />
               {t("execution.manual.loading")}
             </div>
           ) : manualHasResults ? (

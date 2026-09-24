@@ -383,7 +383,7 @@ export function ProtectionBypassDevTrigger() {
                 {t("refresh.shieldDevTriggerCancel")}
               </Button>
             ) : (
-              <Button size="sm" onClick={handleStart} disabled={isRunning}>
+              <Button size="sm" onClick={handleStart} loading={isRunning}>
                 {isRunning
                   ? t("refresh.shieldDevTriggerRunning")
                   : t("refresh.shieldDevTriggerStart")}

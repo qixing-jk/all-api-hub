@@ -345,6 +345,58 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
+  it("renders the manual model fetch as a busy button instead of a text swap", async () => {
+    let resolveFetch!: (value: { success: true; modelIds: string[] }) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation((type: any) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
+        return new Promise((resolve) => {
+          resolveFetch = resolve
+        })
+      }
+      return Promise.resolve({ success: false })
+    })
+
+    await openModal({
+      sourceText: "",
+    })
+
+    fireEvent.change(
+      await screen.findByPlaceholderText("https://example.com/api"),
+      {
+        target: { value: "https://proxy.example.com/api" },
+      },
+    )
+    fireEvent.change(await screen.findByPlaceholderText("sk-..."), {
+      target: { value: "sk-test-busy-fetch-fixture" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    )
+
+    const busyButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.fetchingModels",
+    })
+
+    // Swapping only the label leaves the in-flight fetch with no busy state and
+    // no progress affordance for sighted users.
+    expect(busyButton).toHaveAttribute("aria-busy", "true")
+    expect(busyButton.querySelector("svg.animate-spin")).not.toBeNull()
+
+    await act(async () => {
+      resolveFetch({ success: true, modelIds: ["m1"] })
+    })
+
+    await waitFor(() => {
+      const idleButton = screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      })
+      expect(idleButton).not.toHaveAttribute("aria-busy")
+      expect(idleButton.querySelector("svg.animate-spin")).toBeNull()
+    })
+  })
+
   it("does not refetch for unchanged trimmed credentials until the modal is reopened", async () => {
     const user = userEvent.setup()
     const detail: ApiCheckOpenModalDetail = {

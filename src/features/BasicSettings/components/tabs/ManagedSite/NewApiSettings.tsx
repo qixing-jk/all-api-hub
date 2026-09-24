@@ -169,6 +169,11 @@ export default function NewApiSettings() {
     }
   }
 
+  /** The dialog also serves token and channel flows; only this tab owns this button's busy state. */
+  const isTestingManagedSession =
+    verification.dialogState.isBusy &&
+    verification.dialogState.request?.kind === "settings"
+
   const handleTestManagedSession = () => {
     verification.openNewApiManagedVerification({
       kind: "settings",
@@ -377,9 +382,9 @@ export default function NewApiSettings() {
                 size="sm"
                 onClick={handleTestManagedSession}
                 disabled={!trimmedBaseUrl || verification.dialogState.isBusy}
+                loading={isTestingManagedSession}
               >
-                {verification.dialogState.isBusy &&
-                verification.dialogState.request?.kind === "settings"
+                {isTestingManagedSession
                   ? t("newApi.sessionTest.testing")
                   : t("newApi.sessionTest.action")}
               </Button>

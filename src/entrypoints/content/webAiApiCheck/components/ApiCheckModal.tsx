@@ -413,6 +413,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     variant="outline"
                     onClick={actions.fetchModels}
                     disabled={!view.canFetchModels}
+                    loading={view.isFetchingModels}
                   >
                     {view.isFetchingModels
                       ? t("webAiApiCheck:modal.actions.fetchingModels")

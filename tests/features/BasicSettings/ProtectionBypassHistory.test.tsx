@@ -10,6 +10,7 @@ import enShieldBypass from "~/locales/en/shieldBypass.json"
 import zhCnShieldBypass from "~/locales/zh-CN/shieldBypass.json"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
@@ -71,6 +72,52 @@ describe("protection bypass history settings", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     )
     expect(trigger).toHaveFocus()
+  })
+
+  it("shows a progress indicator instead of plain text while history loads", async () => {
+    const user = userEvent.setup()
+    const pending =
+      createDeferred<
+        Awaited<ReturnType<typeof protectionBypassHistoryStorage.list>>
+      >()
+    const list = vi
+      .spyOn(protectionBypassHistoryStorage, "list")
+      .mockReturnValue(pending.promise)
+
+    try {
+      render(<ProtectionBypassHistory />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+
+      const dialog = within(
+        await screen.findByRole("dialog", {
+          name: "shieldBypass:history.title",
+        }),
+      )
+      const loadingState = dialog.getByRole("status")
+
+      expect(loadingState).toHaveTextContent("common:status.loading")
+      // A lone label does not read as progress, so the state also carries an
+      // animated indicator.
+      expect(loadingState.querySelector("svg.animate-spin")).not.toBeNull()
+
+      await act(async () => {
+        pending.resolve([])
+      })
+
+      await waitFor(() => {
+        expect(dialog.getByText("shieldBypass:history.empty")).toBeVisible()
+      })
+      expect(
+        dialog.queryByText("common:status.loading"),
+      ).not.toBeInTheDocument()
+    } finally {
+      list.mockRestore()
+    }
   })
 
   it("shows all 100 retained summaries without expanding details or loading another page", async () => {

@@ -9,14 +9,25 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { render, screen, within } from "~~/tests/test-utils/render"
+import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
+  mockedEnsureNewApiManagedSession,
   mockedGetAllAccounts,
   mockedConvertToDisplayData,
   mockedPushWithinOptionsPage,
   mockedUseUserPreferencesContext,
 } = vi.hoisted(() => ({
+  mockedEnsureNewApiManagedSession: vi.fn(),
   mockedGetAllAccounts: vi.fn(),
   mockedConvertToDisplayData: vi.fn(),
   mockedPushWithinOptionsPage: vi.fn(),
@@ -85,6 +96,20 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     pushWithinOptionsPage: mockedPushWithinOptionsPage,
   }
 })
+
+vi.mock(
+  "~/services/managedSites/providers/newApiSession",
+  async (importOriginal) => {
+    const actual =
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiSession")
+
+    return {
+      ...actual,
+      ensureNewApiManagedSession: (config: unknown) =>
+        mockedEnsureNewApiManagedSession(config),
+    }
+  },
+)
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   preferences: { lastUpdated: 1 },
@@ -350,6 +375,43 @@ describe("ManagedSiteTab", () => {
         "settings:newApi.fields.totpSecretPlaceholder",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("renders the New API session test as a busy button instead of a text swap", async () => {
+    const deferred = createDeferred<{ status: string }>()
+    mockedEnsureNewApiManagedSession.mockReturnValue(deferred.promise)
+
+    render(<ManagedSiteTab />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:newApi.sessionTest.action",
+      }),
+    )
+
+    const busyButton = await screen.findByRole("button", {
+      name: "settings:newApi.sessionTest.testing",
+    })
+
+    // The session test hits the provider over the network, so the button has to
+    // expose a busy state and a progress affordance rather than only relabel
+    // itself while the request is in flight.
+    expect(busyButton).toHaveAttribute("aria-busy", "true")
+    expect(busyButton.querySelector("svg.animate-spin")).not.toBeNull()
+
+    await act(async () => {
+      deferred.resolve({
+        status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
+      })
+    })
+
+    await waitFor(() => {
+      const idleButton = screen.getByRole("button", {
+        name: "settings:newApi.sessionTest.action",
+      })
+      expect(idleButton).not.toHaveAttribute("aria-busy")
+      expect(idleButton.querySelector("svg.animate-spin")).toBeNull()
+    })
   })
 
   it("does not render the New API login-assist fields when the managed site is not new-api", () => {

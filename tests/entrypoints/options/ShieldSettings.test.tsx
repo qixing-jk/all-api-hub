@@ -1513,6 +1513,55 @@ describe("ShieldSettings", () => {
     }
   })
 
+  it("keeps the development trigger busy while the protected task is in flight", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    const pendingRequest = createDeferred<{
+      success: boolean
+      status: number
+      data: string
+    }>()
+    executeProtectionBypassTaskMock.mockReturnValueOnce(pendingRequest.promise)
+
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "settings:refresh.shieldDevTriggerDelayLabel",
+      }),
+      { target: { value: "0" } },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    const busyButton = await screen.findByRole("button", {
+      name: "settings:refresh.shieldDevTriggerRunning",
+    })
+
+    // The protected request runs for as long as the target page takes, so the
+    // trigger needs a busy state and a progress affordance rather than only a
+    // relabelled button.
+    expect(busyButton).toHaveAttribute("aria-busy", "true")
+    expect(busyButton.querySelector("svg.animate-spin")).not.toBeNull()
+
+    await act(async () => {
+      pendingRequest.resolve({ success: true, status: 200, data: "ok" })
+      await pendingRequest.promise
+    })
+
+    await waitFor(() => {
+      const idleButton = screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      })
+      expect(idleButton).not.toHaveAttribute("aria-busy")
+      expect(idleButton.querySelector("svg.animate-spin")).toBeNull()
+    })
+  })
+
   it("cancels focus observation without updating after unmount", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
     const pendingRequest = createDeferred<{
