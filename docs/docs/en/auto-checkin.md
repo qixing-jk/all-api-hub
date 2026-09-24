@@ -102,7 +102,7 @@ The following sites have supported check-in methods. Availability still depends 
 | `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
 | `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
 | `sub2api` | Yes | Valid login credentials for the detected Sub2API Pro or Denxio check-in method |
-| AgentRouter (`agentrouter.org`) | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
+| AgentRouter | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
 
 ### AgentRouter login check-in limits
 

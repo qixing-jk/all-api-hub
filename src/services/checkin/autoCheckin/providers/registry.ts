@@ -1,5 +1,6 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -166,7 +167,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],
-    origins: ["https://agentrouter.org"],
+    origins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: false,
     newAccountCompatibility: false,
@@ -196,7 +197,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
     // Agent Router uses login check-in instead of this deployment's protocol.
-    excludedOrigins: ["https://agentrouter.org"],
+    excludedOrigins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,

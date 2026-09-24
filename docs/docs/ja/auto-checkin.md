@@ -102,7 +102,7 @@
 | `wong-gongyi` | あり | Access Token または Cookie とアカウント ID |
 | `voapi-v2` | あり | 保存済みダッシュボード JWT（Access Token） |
 | `sub2api` | あり | 検出された Sub2API Pro または Denxio のチェックイン方式に必要な有効なログイン情報 |
-| AgentRouter（`agentrouter.org`） | あり | ログインによるチェックインが検出されたら、アカウントの設定で対応する GitHub または LinuxDo を選択します。案内に従ってログインや認可を完了し、実行結果でチェックイン状態を確認してください。 |
+| AgentRouter | あり | ログインによるチェックインが検出されたら、アカウントの設定で対応する GitHub または LinuxDo を選択します。案内に従ってログインや認可を完了し、実行結果でチェックイン状態を確認してください。 |
 
 ### AgentRouter のログインチェックインの制約
 

@@ -64,6 +64,17 @@ describe("AgentRouter login provider claims", () => {
     ).toBe(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
   })
 
+  it("claims the provider of an enabled automatic mirror account", () => {
+    expect(
+      getLoginProviderClaim(
+        agentRouterAccount("a", {
+          siteUrl: "https://ps.air-outer.com",
+          provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
+        }),
+      ),
+    ).toBe(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
+  })
+
   it.each([
     ["a disabled account", { disabled: true }],
     [

@@ -17,6 +17,12 @@ describe("new-account check-in defaults", () => {
     expect(
       getNewAccountAutomaticExecutionDefault(
         SITE_TYPES.UNKNOWN,
+        "https://ps.air-outer.com",
+      ),
+    ).toBe(true)
+    expect(
+      getNewAccountAutomaticExecutionDefault(
+        SITE_TYPES.UNKNOWN,
         "https://other.example",
       ),
     ).toBe(false)

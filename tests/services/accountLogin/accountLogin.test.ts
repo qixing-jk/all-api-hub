@@ -49,12 +49,37 @@ describe("account login", () => {
     },
   )
 
+  it.each(["github", "linuxdo"] as const)(
+    "logs in to mirror ps.air-outer.com with %s",
+    async (provider) => {
+      const mirrorAccount = {
+        ...account,
+        site_url: "https://ps.air-outer.com",
+      }
+      await expect(
+        loginAccount({ account: mirrorAccount, provider, requestId: "login" }),
+      ).resolves.toEqual({
+        status: "authenticated",
+        identity: "17",
+        evidence: {},
+      })
+      expect(contexts[provider]).toHaveBeenCalledWith({
+        origin: "https://ps.air-outer.com",
+        expectedIdentity: "17",
+        requestId: "login",
+      })
+    },
+  )
+
   it.each([
     "https://example.com",
     "not a URL",
     "https://agentrouter.org.evil.test",
     "http://agentrouter.org",
     "https://agentrouter.org:444",
+    "https://ps.air-outer.com.evil.test",
+    "http://ps.air-outer.com",
+    "https://ps.air-outer.com:444",
   ])(
     "rejects unsupported deployment %s without opening a login",
     async (site_url) => {

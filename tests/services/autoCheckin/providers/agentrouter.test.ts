@@ -223,21 +223,53 @@ describe("AgentRouter login check-in", () => {
     })
   })
 
-  it("discovers the canonical deployment using either supported login provider", async () => {
+  it.each(["Agent Router", "agent router", "AgentRouter", "Agent Router Pro"])(
+    "discovers the deployment with system_name %s without requiring OAuth flags",
+    async (system_name) => {
+      const { provider, fetchStatus } = setup()
+      fetchStatus.mockResolvedValue({
+        success: true,
+        data: { system_name },
+      })
+      await expect(
+        provider.detect!({ account: account(), observedAt: 123 }),
+      ).resolves.toMatchObject({ outcome: "matched" })
+    },
+  )
+
+  it.each(["New API", "One API", "Router", "Agent", "", undefined])(
+    "rejects discovery when system_name is %s",
+    async (system_name) => {
+      const { provider, fetchStatus } = setup()
+      fetchStatus.mockResolvedValue({
+        success: true,
+        data: { system_name },
+      })
+      await expect(
+        provider.detect!({ account: account(), observedAt: 123 }),
+      ).resolves.toMatchObject({ outcome: "unsupported" })
+    },
+  )
+
+  it("rejects discovery when status request fails", async () => {
     const { provider, fetchStatus } = setup()
     fetchStatus.mockResolvedValue({
-      success: true,
-      data: { system_name: "Agent Router", linuxdo_oauth: true },
+      success: false,
+      data: { system_name: "Agent Router" },
     })
     await expect(
       provider.detect!({ account: account(), observedAt: 123 }),
-    ).resolves.toMatchObject({ outcome: "matched" })
+    ).resolves.toMatchObject({ outcome: "unsupported" })
   })
+
   it.each([
     "https://other.example",
     "http://agentrouter.org",
     "https://agentrouter.org.attacker.example",
     "https://agentrouter.org:444",
+    "http://ps.air-outer.com",
+    "https://ps.air-outer.com.attacker.example",
+    "https://ps.air-outer.com:444",
   ])("rejects %s before requests or login", async (site_url) => {
     const { provider, authenticate, fetchStatus } = setup()
     const saved = { ...account(), site_url }
@@ -249,6 +281,22 @@ describe("AgentRouter login check-in", () => {
     })
     expect(authenticate).not.toHaveBeenCalled()
     expect(fetchStatus).not.toHaveBeenCalled()
+  })
+  it("accepts known mirror ps.air-outer.com for detection and check-in", async () => {
+    const { provider, authenticate, fetchStatus } = setup()
+    const saved = { ...account(), site_url: "https://ps.air-outer.com" }
+    await expect(
+      provider.detect!({ account: saved, observedAt: 123 }),
+    ).resolves.toMatchObject({ outcome: "matched" })
+    await expect(provider.checkIn(saved, context)).resolves.toMatchObject({
+      status: "success",
+    })
+    expect(fetchStatus).toHaveBeenCalled()
+    expect(authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: saved,
+      }),
+    )
   })
   it("requires an account identity", async () => {
     const { provider, authenticate } = setup()

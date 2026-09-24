@@ -102,7 +102,7 @@
 | `wong-gongyi` | 有 | Access Token 或 Cookie，以及账号 ID |
 | `voapi-v2` | 有 | 保存的仪表盘 JWT（Access Token） |
 | `sub2api` | 有 | 已检测到的 Sub2API Pro 或 Denxio 签到方式所需的有效登录凭据 |
-| AgentRouter（`agentrouter.org`） | 有 | 检测到登录签到后，在账号签到配置中选择对应的 GitHub 或 LinuxDo 登录方式；按提示完成浏览器登录或授权，并以执行结果确认签到状态 |
+| AgentRouter | 有 | 检测到登录签到后，在账号签到配置中选择对应的 GitHub 或 LinuxDo 登录方式；按提示完成浏览器登录或授权，并以执行结果确认签到状态 |
 
 ### AgentRouter 登录签到的限制
 

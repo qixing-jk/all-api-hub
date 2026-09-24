@@ -12,7 +12,10 @@ import {
   loginProviderEvidence,
   type LoginProviderEvidenceOutcome,
 } from "~/services/accountLogin/providerEvidence"
-import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
+import {
+  isAgentRouterLoginUrl,
+  isAgentRouterSystemName,
+} from "~/services/accountLogin/providers/agentrouter/config"
 import {
   fetchAgentRouterPublicStatus,
   type AgentRouterPublicStatusEnvelope,
@@ -98,9 +101,7 @@ export function createAgentRouterProvider(
         const status = await deps.fetchStatus(context)
         matched =
           status.success === true &&
-          status.data?.system_name === "Agent Router" &&
-          (status.data.github_oauth === true ||
-            status.data.linuxdo_oauth === true)
+          isAgentRouterSystemName(status.data?.system_name)
       }
       return {
         outcome: matched

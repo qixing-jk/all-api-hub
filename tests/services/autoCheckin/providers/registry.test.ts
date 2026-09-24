@@ -125,12 +125,22 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
     expect(
       autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://ps.air-outer.com")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(
+      autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.NEW_API, "https://normal.example")
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn])
     expect(
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.UNKNOWN, "https://ps.air-outer.com")
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.UNKNOWN)).toEqual([])
