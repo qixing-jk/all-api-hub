@@ -237,7 +237,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     // orphan sweep must not read the empty owner stores as "every owner is gone".
     stubVerificationOwnerStoresUnavailable()
     loggerErrorMock.mockReset()
-    mockGetApiVerificationProbeDefinitions.mockClear()
+    mockGetApiVerificationProbeDefinitions.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockStartProductAnalyticsAction.mockReset()
     mockCompleteProductAnalyticsAction.mockReset()
@@ -530,6 +530,107 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(
       screen.getByText("aiApiVerification:verifyDialog.summaries.stopped"),
     ).toBeVisible()
+  })
+
+  it("stops a single probe when its request rejects after abort", async () => {
+    const user = userEvent.setup()
+    let probeSignal: AbortSignal | undefined
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        probeSignal = abortSignal
+        return new Promise((_resolve, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("models"),
+    )
+    const probeButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await user.click(probeButton)
+    await waitFor(() =>
+      expect(probeButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.stopProbe",
+      ),
+    )
+
+    await user.click(probeButton)
+
+    expect(probeSignal?.aborted).toBe(true)
+    await waitFor(() =>
+      expect(probeButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.retry",
+      ),
+    )
+    expect(
+      within(probeCard).getByText(
+        "aiApiVerification:verifyDialog.summaries.stopped",
+      ),
+    ).toBeVisible()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+    )
+  })
+
+  it("tracks an empty verification suite as skipped", async () => {
+    const user = userEvent.setup()
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([])
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      ),
+    )
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 
   it("marks only the initiating probe busy through rejected execution and persistence", async () => {
