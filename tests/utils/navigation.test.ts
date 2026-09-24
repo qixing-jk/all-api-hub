@@ -1091,6 +1091,26 @@ describe("navigation utilities", () => {
     expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}#keyManagement`)
   })
 
+  it("keeps the popup workflow alive when the settings tab opens in a new tab", async () => {
+    mockedIsExtensionPopup.mockReturnValue(true)
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
+
+    await openSettingsTabInNewTab("managedSite", {
+      anchor: "axonhub",
+      keepCurrentWindow: true,
+    })
+
+    // A page-action popup is dismissed as soon as focus moves, so the settings
+    // tab has to open in the background for the popup form to survive.
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?tab=managedSite&anchor=axonhub#basic`,
+      false,
+    )
+    expect(closeSpy).not.toHaveBeenCalled()
+
+    closeSpy.mockRestore()
+  })
+
   it("opens shield history in the current options page and keeps a return path", async () => {
     mockedIsExtensionPopup.mockReturnValue(false)
     window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)

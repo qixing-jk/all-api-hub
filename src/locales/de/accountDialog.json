@@ -261,6 +261,7 @@
     "importSub2apiSessionMissing": "Kein refresh_token gefunden. Bitte melden Sie sich beim Sub2API-Dashboard an und versuchen Sie es erneut.",
     "importSub2apiSessionSuccess": "Sub2API-Sitzung importiert",
     "loadFailed": "Kontodaten konnten nicht geladen werden",
+    "managedSiteSettingsOpened": "{{managedSite}}-Einstellungen in einem neuen Tab geöffnet. Tragen Sie die Verbindungsdaten ein und klicken Sie danach hier erneut auf diese Schaltfläche.",
     "newApiConfigFailed": "Automatische Konfiguration auf New API fehlgeschlagen: {{error}}",
     "operationFailed": "Vorgang fehlgeschlagen: {{error}}",
     "reloadExtensionConfirm": "Durch das erneute Laden der Erweiterung wird die aktuelle Erweiterungsseite geschlossen. Stellen Sie sicher, dass alle erforderlichen Informationen gespeichert wurden.",
@@ -338,12 +339,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "Vielleicht später",
-        "openSettings": "Einstellungen öffnen"
+        "openSettings": "In den Einstellungen eintragen"
       },
+      "alertTitle": "Dafür brauchen Sie ein eigenes {{managedSite}}",
+      "benefit": "Nach der Einrichtung können Sie die Kontoschlüssel als Kanäle in {{managedSite}} importieren und alle Konten über eine API-Adresse nutzen.",
       "description": "{{message}}",
-      "guide": "Diese Funktion speichert zuerst das aktuelle Konto, bereitet dann einen verwendbaren API-Schlüssel vor und füllt ihn vorab in einen neuen Kanal in {{managedSite}} ein, sodass Sie die Kanalerstellung schneller abschließen können. Die Funktion wird verfügbar, nachdem die Einrichtung der verwalteten Website abgeschlossen ist.",
-      "title": "Konfigurieren Sie zuerst {{managedSite}}",
-      "warningTitle": "{{managedSite}} ist noch nicht konfiguriert"
+      "nextSteps": "Noch keines installiert? Kein Problem: Richten Sie eines über die offizielle Dokumentation unten ein und tragen Sie anschließend die Verbindungsdaten in den Einstellungen ein. Konten speichern, Guthaben aktualisieren und Check-in funktionieren trotzdem.",
+      "title": "Noch kein {{managedSite}}?"
     },
     "reloadExtension": {
       "title": "Erweiterung neu laden",

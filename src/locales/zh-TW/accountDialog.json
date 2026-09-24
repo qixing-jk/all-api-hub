@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "未找到 refresh_token。請先登入 Sub2API 控制台後重試。",
     "importSub2apiSessionSuccess": "已匯入 Sub2API 會話",
     "loadFailed": "載入帳號資料失敗",
+    "managedSiteSettingsOpened": "已在新分頁開啟 {{managedSite}} 設定，填好連線資訊後回來點這個按鈕即可。",
     "newApiConfigFailed": "自動配置到 New API失敗: {{error}}",
     "operationFailed": "操作失敗: {{error}}",
     "reloadExtensionConfirm": "重新載入擴充套件會關閉目前擴充套件頁面，請確認已儲存需要的資訊。",
@@ -336,12 +337,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "稍後再說",
-        "openSettings": "前往設定"
+        "openSettings": "前往設定填寫"
       },
+      "alertTitle": "需要你自己的 {{managedSite}}",
+      "benefit": "設定好之後，帳號裡的金鑰可以匯入成 {{managedSite}} 的渠道，用同一個 API 地址呼叫所有帳號。",
       "description": "{{message}}",
-      "guide": "這個功能會先儲存目前帳號，再自動準備可用的 API Key，並預填到 {{managedSite}} 的新建渠道中，幫你更快完成渠道建立。完成託管站點配置後即可使用。",
-      "title": "先配置 {{managedSite}}",
-      "warningTitle": "{{managedSite}} 尚未完成配置"
+      "nextSteps": "還沒部署也沒關係：依下面的官方文件裝一個，再回到設定裡填好連線資訊即可。這些都不影響儲存帳號、重新整理餘額和簽到。",
+      "title": "還沒有 {{managedSite}}？"
     },
     "reloadExtension": {
       "title": "重新載入擴充套件",

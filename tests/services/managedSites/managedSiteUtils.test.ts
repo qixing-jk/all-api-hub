@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   getManagedSiteConfigMissingMessage,
@@ -8,6 +9,7 @@ import {
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteNoChannelsToSyncMessage,
+  getManagedSiteSettingsTarget,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 
@@ -67,6 +69,26 @@ describe("managedSite utils", () => {
     expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.NEW_API)).toBe(
       "newapi",
     )
+  })
+
+  it("resolves the settings target that owns each provider's connection form", () => {
+    expect(getManagedSiteSettingsTarget(SITE_TYPES.NEW_API)).toEqual({
+      tabId: "managedSite",
+    })
+    expect(getManagedSiteSettingsTarget(SITE_TYPES.AXON_HUB)).toEqual({
+      tabId: "managedSite",
+      anchor: SETTINGS_ANCHORS.AXON_HUB,
+    })
+    expect(getManagedSiteSettingsTarget(SITE_TYPES.SUB2API)).toEqual({
+      tabId: "managedSite",
+      anchor: SETTINGS_ANCHORS.SUB2API,
+    })
+    // A provider that manages no resources has no connection form to land on.
+    expect(
+      getManagedSiteSettingsTarget(
+        SITE_TYPES.AIHUBMIX as unknown as ManagedSiteType,
+      ),
+    ).toEqual({ tabId: "managedSite" })
   })
 
   it("builds managed-site target options and respects exclusions", () => {

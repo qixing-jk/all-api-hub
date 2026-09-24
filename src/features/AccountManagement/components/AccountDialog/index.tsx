@@ -531,6 +531,7 @@ export default function AccountDialog({
       <ManagedSiteConfigPromptDialog
         isOpen={state.managedSiteConfigPrompt.isOpen}
         managedSiteLabel={state.managedSiteConfigPrompt.managedSiteLabel}
+        managedSiteType={state.managedSiteConfigPrompt.managedSiteType}
         missingMessage={state.managedSiteConfigPrompt.missingMessage}
         onClose={handlers.handleManagedSiteConfigPromptClose}
         onOpenSettings={handlers.handleOpenManagedSiteSettings}

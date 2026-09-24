@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -14,8 +15,6 @@ import { signIn } from "~/services/apiService/axonHub"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
-
-import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 const isLikelyCorsSetupError = (message: string) =>
   /cors|failed to fetch|network|http 403|forbidden/i.test(message)

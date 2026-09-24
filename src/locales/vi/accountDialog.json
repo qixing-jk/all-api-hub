@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "Không tìm thấy refresh_token. Vui lòng đăng nhập vào bảng điều khiển Sub2API và thử lại.",
     "importSub2apiSessionSuccess": "Đã nhập phiên Sub2API",
     "loadFailed": "Tải dữ liệu tài khoản thất bại",
+    "managedSiteSettingsOpened": "Đã mở cài đặt {{managedSite}} trong tab mới. Hãy điền thông tin kết nối rồi quay lại bấm nút này.",
     "newApiConfigFailed": "Cấu hình tự động vào New API thất bại: {{error}}",
     "operationFailed": "Thao tác thất bại: {{error}}",
     "reloadExtensionConfirm": "Tải lại tiện ích sẽ đóng trang tiện ích hiện tại. Vui lòng xác nhận bạn đã lưu thông tin cần thiết.",
@@ -336,12 +337,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "Để sau",
-        "openSettings": "Đi đến cài đặt"
+        "openSettings": "Điền trong cài đặt"
       },
+      "alertTitle": "Bạn cần {{managedSite}} của riêng mình",
+      "benefit": "Sau khi cấu hình xong, bạn có thể nhập key tài khoản thành kênh của {{managedSite}} và dùng mọi tài khoản qua một địa chỉ API.",
       "description": "{{message}}",
-      "guide": "Tính năng này trước tiên sẽ lưu tài khoản hiện tại, sau đó tự động chuẩn bị API Key khả dụng và điền sẵn vào kênh mới của {{managedSite}}, giúp bạn hoàn thành việc tạo kênh nhanh hơn. Bạn có thể sử dụng tính năng này sau khi hoàn tất cấu hình trang web được quản lý.",
-      "title": "Cấu hình {{managedSite}} trước",
-      "warningTitle": "{{managedSite}} chưa hoàn tất cấu hình"
+      "nextSteps": "Chưa triển khai cũng không sao: hãy làm theo tài liệu chính thức bên dưới rồi điền thông tin kết nối trong cài đặt. Việc lưu tài khoản, làm mới số dư và điểm danh vẫn hoạt động như thường.",
+      "title": "Chưa có {{managedSite}}?"
     },
     "reloadExtension": {
       "title": "Tải lại tiện ích",

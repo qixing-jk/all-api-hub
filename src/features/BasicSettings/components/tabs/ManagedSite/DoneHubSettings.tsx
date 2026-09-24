@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Card,
   CardItem,
@@ -19,8 +20,6 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
-
-import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 /**
  * Settings panel for configuring Done Hub connection credentials (base URL, admin token, user ID).

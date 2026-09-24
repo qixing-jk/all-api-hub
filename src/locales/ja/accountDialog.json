@@ -260,6 +260,7 @@
     "importSub2apiSessionMissing": "refresh_token が見つかりません。Sub2API ダッシュボードにログインしてから再試行してください。",
     "importSub2apiSessionSuccess": "Sub2API セッションを取り込みました",
     "loadFailed": "アカウントデータの読み込みに失敗しました",
+    "managedSiteSettingsOpened": "{{managedSite}} の設定を新しいタブで開きました。接続情報を入力してから、このボタンをもう一度押してください。",
     "newApiConfigFailed": "New API への自動設定に失敗しました: {{error}}",
     "operationFailed": "操作に失敗しました: {{error}}",
     "reloadExtensionConfirm": "拡張機能を再読み込みすると現在の拡張機能ページが閉じます。必要な情報を保存済みであることを確認してください。",
@@ -336,12 +337,13 @@
     "managedSiteConfig": {
       "actions": {
         "later": "あとで",
-        "openSettings": "設定を開く"
+        "openSettings": "設定で入力する"
       },
+      "alertTitle": "つなぐには自分の {{managedSite}} が必要です",
+      "benefit": "設定が済むと、アカウントキーを {{managedSite}} のチャネルとして取り込み、1 つの API アドレスからすべてのアカウントを利用できます。",
       "description": "{{message}}",
-      "guide": "この機能は現在のアカウントを先に保存し、そのアカウントで使える API Key を自動で用意して {{managedSite}} の新規チャネルに事前入力します。より素早くチャネルを作成でき、管理サイト設定の完了後に利用できます。",
-      "title": "先に {{managedSite}} を設定してください",
-      "warningTitle": "{{managedSite}} はまだ設定されていません"
+      "nextSteps": "まだ構築していなくても大丈夫です。下の公式ドキュメントで構築し、設定で接続情報を入力してください。アカウントの保存、残高の更新、チェックインはこれまでどおり使えます。",
+      "title": "{{managedSite}} はまだありませんか？"
     },
     "reloadExtension": {
       "title": "拡張機能を再読み込み",

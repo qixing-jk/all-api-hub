@@ -102,6 +102,7 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
+  getManagedSiteSettingsTarget,
 } from "~/services/managedSites/utils/managedSite"
 import {
   ensurePermissionsDetailed,
@@ -160,7 +161,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
-import { openSettingsTab } from "~/utils/navigation"
+import { openSettingsTab, openSettingsTabInNewTab } from "~/utils/navigation"
 
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
@@ -462,6 +463,7 @@ export function useAccountDialog({
     useState<ManagedSiteConfigPromptState | null>(null)
   const managedSiteConfigPrompt = {
     isOpen: managedSiteConfigPromptState?.isOpen ?? false,
+    managedSiteType: managedSiteConfigPromptState?.siteType ?? null,
     managedSiteLabel: managedSiteConfigPromptState
       ? getManagedSiteLabel(t, managedSiteConfigPromptState.siteType)
       : "",
@@ -1867,10 +1869,30 @@ export function useAccountDialog({
   }, [])
 
   const handleOpenManagedSiteSettings = useCallback(() => {
+    // Land on the provider whose prompt was shown, not on a stale preference.
+    const promptedSiteType = managedSiteConfigPromptState?.siteType
     handleManagedSiteConfigPromptClose()
 
-    void openSettingsTab("managedSite", { preserveHistory: true }).catch(
-      (error) => {
+    const settingsTarget = getManagedSiteSettingsTarget(
+      promptedSiteType ?? managedSiteType,
+    )
+    // The settings tab opens in the background so this account form, and the
+    // popup holding it, keep their focus; name the tab so it is findable.
+    void openSettingsTabInNewTab(settingsTarget.tabId, {
+      ...(settingsTarget.anchor ? { anchor: settingsTarget.anchor } : {}),
+      keepCurrentWindow: true,
+    })
+      .then(() => {
+        toast.success(
+          t("messages.managedSiteSettingsOpened", {
+            managedSite: getManagedSiteLabel(
+              t,
+              promptedSiteType ?? managedSiteType,
+            ),
+          }),
+        )
+      })
+      .catch((error) => {
         toast.error(
           t("messages.operationFailed", {
             error: getErrorMessage(error),
@@ -1880,9 +1902,13 @@ export function useAccountDialog({
           managedSiteType,
           error: getErrorMessage(error),
         })
-      },
-    )
-  }, [handleManagedSiteConfigPromptClose, managedSiteType, t])
+      })
+  }, [
+    handleManagedSiteConfigPromptClose,
+    managedSiteConfigPromptState?.siteType,
+    managedSiteType,
+    t,
+  ])
 
   const ensureManagedSiteAutoConfigReady = useCallback(async () => {
     const managedSite = getManagedSiteCapabilities(managedSiteType)

@@ -500,20 +500,37 @@ const _openSettingsTab = (
   return navigateToBasicSettings(tabId, options)
 }
 
+interface OpenSettingsTabInNewTabOptions {
+  anchor?: string
+  /**
+   * Leaves the current window as it is: the settings tab opens in the
+   * background and the popup is not closed, so an in-progress form there keeps
+   * its focus. A page-action popup is dismissed as soon as focus moves, so
+   * activating the tab would unmount that form. Defaults to closing the popup,
+   * matching the flows that move the user out of it for good.
+   */
+  keepCurrentWindow?: boolean
+}
+
 /**
  * Opens a settings target in a fresh tab so the current workflow stays mounted.
  */
 const _openSettingsTabInNewTab = async (
   tabId: BasicSettingsTabId,
-  options?: { anchor?: string },
+  options?: OpenSettingsTabInNewTabOptions,
 ) => {
   const searchString = buildSearchString({
     tab: tabId,
     anchor: options?.anchor,
   })
-  await createActiveTab(
-    `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`,
-  )
+  const url = `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`
+
+  if (options?.keepCurrentWindow) {
+    await createTabApi(url, false)
+    return
+  }
+
+  await createActiveTab(url)
 }
 
 /**
@@ -853,7 +870,15 @@ export const openPermissionsOnboardingPage = withPopupClose(
  * dispatching the navigation request.
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
-export const openSettingsTabInNewTab = withPopupClose(_openSettingsTabInNewTab)
+export const openSettingsTabInNewTab = async (
+  tabId: BasicSettingsTabId,
+  options?: OpenSettingsTabInNewTabOptions,
+) => {
+  await _openSettingsTabInNewTab(tabId, options)
+  if (!options?.keepCurrentWindow) {
+    closeIfPopup()
+  }
+}
 
 /** Opens local shield diagnostics, preserving the originating options workflow. */
 export const openProtectionBypassHistory = () =>

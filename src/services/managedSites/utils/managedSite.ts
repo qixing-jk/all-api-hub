@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type {
+  ManagedResourceProductPolicy,
   ManagedSiteLabelKey,
   ManagedSiteMessagesKey,
 } from "~/services/accountSiteDefinitions/contracts"
@@ -44,6 +45,25 @@ export function getManagedSiteMessagesKeyFromSiteType(
  */
 export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
   return prefs.managedSiteType || SITE_TYPES.NEW_API
+}
+
+/**
+ * Returns the settings tab that owns the managed-site connection form for the
+ * given provider, including its section anchor when the provider defines one.
+ */
+export function getManagedSiteSettingsTarget(siteType: ManagedSiteType): {
+  tabId: ManagedResourceProductPolicy["settingsTarget"]["tabId"]
+  anchor?: string
+} {
+  const target =
+    getAccountSiteDefinition(siteType)?.managedResource?.settingsTarget
+  if (!target) {
+    return { tabId: "managedSite" }
+  }
+
+  return target.anchor
+    ? { tabId: target.tabId, anchor: target.anchor }
+    : { tabId: target.tabId }
 }
 
 /**
