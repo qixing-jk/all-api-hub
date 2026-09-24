@@ -187,23 +187,30 @@ describe("useOptionsSearch", () => {
       "control:managed-site-type",
     )
 
-    const cliProxyActive = renderHook(
-      () =>
-        useOptionsSearch(
-          { ...context, managedSiteType: "cli-proxy-api" },
-          "cpa",
-        ),
-      {
-        withReleaseUpdateStatusProvider: false,
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
-    )
-    expect(
-      cliProxyActive.result.current.results.some(
-        (item) => item.id === "section:cli-proxy",
-      ),
-    ).toBe(true)
+    for (const alias of ["cliproxyapi", "cpa"]) {
+      const cliProxyActive = renderHook(
+        () =>
+          useOptionsSearch(
+            { ...context, managedSiteType: "cli-proxy-api" },
+            alias,
+          ),
+        {
+          withReleaseUpdateStatusProvider: false,
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        },
+      )
+      expect(
+        cliProxyActive.result.current.results.map((item) => item.id),
+      ).toEqual(
+        expect.arrayContaining([
+          "section:cli-proxy",
+          "control:cli-proxy-base-url",
+          "control:cli-proxy-management-key",
+          "control:cli-proxy-check-connection",
+        ]),
+      )
+    }
   })
 })
 
