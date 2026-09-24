@@ -1651,6 +1651,33 @@ describe("siteAnnouncementStorage", () => {
     ).resolves.toEqual({ sites: 0, records: 0 })
   })
 
+  it("does not read or persist the store when no sites are requested", async () => {
+    const siteKey = "notice:new-api:https://kept.invalid"
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey,
+      siteName: "Kept",
+      siteType: "new-api",
+      baseUrl: "https://kept.invalid",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    })
+    const storage = getSiteAnnouncementStorageBackend()
+    const getSpy = vi.spyOn(storage, "get")
+    const setSpy = vi.spyOn(storage, "set")
+
+    await expect(siteAnnouncementStorage.removeSites([])).resolves.toEqual({
+      sites: 0,
+      records: 0,
+    })
+
+    expect(getSpy).not.toHaveBeenCalled()
+    expect(setSpy).not.toHaveBeenCalled()
+    await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual([
+      expect.objectContaining({ siteKey }),
+    ])
+  })
+
   it("swallows record-failure persistence errors after logging the warning path", async () => {
     vi.spyOn(siteAnnouncementStorage, "upsertSiteStatus").mockRejectedValueOnce(
       new Error("write failed"),
