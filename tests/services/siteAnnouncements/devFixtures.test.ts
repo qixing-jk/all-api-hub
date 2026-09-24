@@ -172,6 +172,20 @@ describe("site announcement dev fixtures", () => {
     await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual([])
   })
 
+  it("reports an exception through the typed message when clearing fails", async () => {
+    vi.stubEnv("MODE", "development")
+    vi.spyOn(siteAnnouncementStorage, "removeSites").mockRejectedValue(
+      new Error("write lock unavailable"),
+    )
+
+    await expect(
+      resolveSiteAnnouncementsDebugClearFixturesMessage(),
+    ).resolves.toEqual({
+      success: false,
+      error: "write lock unavailable",
+    })
+  })
+
   it("reports an exception through the typed message when seeding fails", async () => {
     vi.stubEnv("MODE", "development")
     vi.spyOn(siteAnnouncementStorage, "getStatus").mockRejectedValue(

@@ -218,33 +218,30 @@ export async function seedDevSiteAnnouncementFixtures(
     MAX_FIXTURE_ISSUE_SITES,
   )
 
-  const recordsBySite = new Map<number, SiteAnnouncementRecordInput[]>()
-  for (let index = 0; index < announcementCount; index += 1) {
-    const siteIndex = index % FIXTURE_ANNOUNCEMENT_SITE_COUNT
-    const site = FIXTURE_ANNOUNCEMENT_SITES[siteIndex]
-    if (!site) {
-      continue
+  // Walking each site's own stride keeps a record's site a function of its
+  // index alone, so a larger seed later only appends to what is cached.
+  const recordsBySite = FIXTURE_ANNOUNCEMENT_SITES.map((site, siteIndex) => {
+    const records: SiteAnnouncementRecordInput[] = []
+    const fixtureSite = buildFixtureSite(
+      site.slug,
+      site.siteName,
+      site.siteType,
+      site.providerId,
+    )
+
+    for (
+      let index = siteIndex;
+      index < announcementCount;
+      index += FIXTURE_ANNOUNCEMENT_SITE_COUNT
+    ) {
+      records.push(buildFixtureRecord(fixtureSite, index, now))
     }
 
-    const records = recordsBySite.get(siteIndex) ?? []
-    records.push(
-      buildFixtureRecord(
-        buildFixtureSite(
-          site.slug,
-          site.siteName,
-          site.siteType,
-          site.providerId,
-        ),
-        index,
-        now,
-      ),
-    )
-    recordsBySite.set(siteIndex, records)
-  }
+    return { site, records }
+  })
 
-  for (const [siteIndex, records] of recordsBySite) {
-    const site = FIXTURE_ANNOUNCEMENT_SITES[siteIndex]
-    if (!site) {
+  for (const { site, records } of recordsBySite) {
+    if (records.length === 0) {
       continue
     }
 

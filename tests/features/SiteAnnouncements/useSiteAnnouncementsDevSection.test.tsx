@@ -167,6 +167,55 @@ describe("site announcements dev section", () => {
     })
   })
 
+  it("seeds just past the virtualization threshold", async () => {
+    renderSection()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Seed 25 announcements" }),
+    )
+
+    await waitFor(() => {
+      expect(sendSiteAnnouncementsMessage).toHaveBeenCalledWith(
+        SiteAnnouncementsMessageTypes.DebugSeedFixtures,
+        { announcementCount: 25 },
+      )
+    })
+  })
+
+  it("falls back to local copy when a failure response carries no message", async () => {
+    vi.mocked(sendSiteAnnouncementsMessage).mockResolvedValue({
+      success: false,
+      error: "  ",
+    })
+    renderSection()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Seed 200 announcements" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        "Dev: announcement fixture action failed",
+      )
+    })
+  })
+
+  it("reports a transport failure when a fixture action throws", async () => {
+    vi.mocked(sendSiteAnnouncementsMessage).mockRejectedValue(
+      new Error("runtime closed"),
+    )
+    const { refreshData } = renderSection()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Seed 200 announcements" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith("runtime closed")
+    })
+    expect(refreshData).not.toHaveBeenCalled()
+  })
+
   it("clears fixture announcements through the runtime message", async () => {
     vi.mocked(sendSiteAnnouncementsMessage).mockResolvedValue({
       success: true,
