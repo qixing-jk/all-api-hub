@@ -14,7 +14,7 @@ type SlottedChildProps = React.AriaAttributes & {
 }
 
 const buttonVariants = cva(
-  "inline-flex min-w-0 max-w-full shrink items-center justify-center gap-x-2 gap-y-density-2 rounded-md text-center text-sm font-medium whitespace-normal break-words transition-all disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex min-w-0 max-w-full shrink items-center justify-center gap-x-2 gap-y-density-2 rounded-md text-center text-sm font-medium whitespace-normal break-words transition-all disabled:pointer-events-none disabled:not-aria-busy:opacity-50 aria-disabled:pointer-events-none aria-disabled:not-aria-busy:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -122,7 +122,10 @@ function Button({
     variant: spinnerVariantProp,
     ...restSpinnerProps
   } = spinnerProps ?? {}
-  const resolvedSpinnerVariant = spinnerVariantProp ?? "primary"
+  // Follow the button's own foreground: the resolved --spinner-primary-color is
+  // --primary, which is also --button-primary-bg, so the default would paint the
+  // icon the same colour as a solid button's background.
+  const resolvedSpinnerVariant = spinnerVariantProp ?? "current"
   const resolvedSpinnerSize = spinnerSizeProp ?? "sm"
   const resolvedLeftIcon = loading ? (
     <Spinner

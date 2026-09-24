@@ -18,6 +18,12 @@ const spinnerVariants = cva("animate-spin", {
       white: "text-[var(--spinner-white-color)]",
       gray: "text-[var(--spinner-gray-color)]",
       primary: "text-[var(--spinner-primary-color)]",
+      /**
+       * Follows the colour of the surrounding control. Use it wherever the
+       * spinner sits on a surface it does not own, such as a filled button
+       * whose background and icon would otherwise resolve to the same token.
+       */
+      current: "text-current",
     },
   },
   defaultVariants: {
