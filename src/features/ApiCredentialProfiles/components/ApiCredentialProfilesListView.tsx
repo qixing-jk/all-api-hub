@@ -408,7 +408,10 @@ export function ApiCredentialProfilesListView({
       ) : null}
 
       {isInitialLoading ? (
-        <div className="gap-y-density-2 py-density-6 flex items-center gap-x-2">
+        <div
+          className="gap-y-density-2 py-density-6 flex items-center gap-x-2"
+          data-options-page-pending
+        >
           <Spinner size="sm" />
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.loading")}

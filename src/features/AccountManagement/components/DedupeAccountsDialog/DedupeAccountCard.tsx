@@ -1,5 +1,7 @@
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { TFunction } from "i18next"
 import { Info } from "lucide-react"
+import type { ReactNode } from "react"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge, Button } from "~/components/ui"
@@ -209,11 +211,8 @@ export function DedupeAccountCard({
         </div>
       </div>
 
-      {detailsOpen && (
-        <div
-          id={detailsId}
-          className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground py-density-3 rounded-md border px-3 text-xs"
-        >
+      <AnimatedDetails open={detailsOpen} id={detailsId}>
+        <div className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground py-density-3 rounded-md border px-3 text-xs">
           <dl className="gap-y-density-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <div className="space-y-0.5">
               <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
@@ -416,7 +415,40 @@ export function DedupeAccountCard({
             </div>
           </dl>
         </div>
-      )}
+      </AnimatedDetails>
     </div>
+  )
+}
+
+/** Keeps closed detail content unmounted while letting the visible panel settle. */
+function AnimatedDetails({
+  open,
+  id,
+  children,
+}: {
+  open: boolean
+  id: string
+  children: ReactNode
+}) {
+  const shouldReduceMotion = useReducedMotion()
+
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          id={id}
+          className="overflow-hidden"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{
+            duration: shouldReduceMotion ? 0 : 0.2,
+            ease: "easeOut",
+          }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

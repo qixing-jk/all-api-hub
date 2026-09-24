@@ -42,6 +42,7 @@ export function AccountListInitialLoadingState() {
       padding="none"
       className="overflow-hidden"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
+      data-options-page-pending
       aria-busy="true"
     >
       <CardContent padding="none" spacing="none">

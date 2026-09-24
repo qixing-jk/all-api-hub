@@ -12,7 +12,7 @@ import ResetSettingsSection from "./ResetSettingsSection"
  */
 export default function GeneralTab() {
   return (
-    <div className="space-y-density-6">
+    <div className="space-y-density-6" data-page-motion-group>
       <DisplaySettings />
       <AppearanceSettings />
       <ActionClickBehaviorSettings />

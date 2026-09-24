@@ -168,26 +168,33 @@ export default function OptionsOverview() {
     <div
       className="space-y-density-6 py-density-6 px-6"
       data-testid={OPTIONS_OVERVIEW_TEST_IDS.page}
+      data-options-page-pending={isLoading && !viewModel ? "" : undefined}
     >
-      <PageHeader
-        icon={LayoutDashboard}
-        title={t("optionsOverview:title")}
-        description={t("optionsOverview:description")}
-        actions={
-          gatewayGuidanceComplete ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={gatewayGuidance.expanded}
-              onClick={gatewayGuidance.toggle}
-            >
-              {t("optionsOverview:unifiedApiGuidance.overview.reopen")}
-            </Button>
-          ) : undefined
-        }
-      />
+      <div>
+        <PageHeader
+          icon={LayoutDashboard}
+          title={t("optionsOverview:title")}
+          description={t("optionsOverview:description")}
+          actions={
+            gatewayGuidanceComplete ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-expanded={gatewayGuidance.expanded}
+                onClick={gatewayGuidance.toggle}
+              >
+                {t("optionsOverview:unifiedApiGuidance.overview.reopen")}
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
 
-      {!showPermissionsOnboarding ? <ProductTourInvitation /> : null}
+      {!showPermissionsOnboarding ? (
+        <div className="empty:hidden">
+          <ProductTourInvitation />
+        </div>
+      ) : null}
 
       {isLoading && !viewModel ? (
         <div className="dark:text-secondary-foreground text-muted-foreground gap-y-density-3 flex min-h-64 items-center justify-center gap-x-3 text-sm">
@@ -197,36 +204,40 @@ export default function OptionsOverview() {
       ) : null}
 
       {error ? (
-        <Alert
-          variant="warning"
-          compact
-          title={t("optionsOverview:states.loadedWithError")}
-          showIcon
-        >
-          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm">{error}</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRetry}
-              leftIcon={<AlertTriangle className="h-4 w-4" />}
-            >
-              {t("common:actions.retry")}
-            </Button>
-          </div>
-        </Alert>
+        <div>
+          <Alert
+            variant="warning"
+            compact
+            title={t("optionsOverview:states.loadedWithError")}
+            showIcon
+          >
+            <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm">{error}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                leftIcon={<AlertTriangle className="h-4 w-4" />}
+              >
+                {t("common:actions.retry")}
+              </Button>
+            </div>
+          </Alert>
+        </div>
       ) : null}
 
       {viewModel ? (
         <>
           {primaryRiskNotice ? (
-            <ProductAnnouncementBanner
-              notice={primaryRiskNotice}
-              additionalCount={additionalRiskNoticeCount}
-              onViewAll={handleViewAllProductAnnouncements}
-              onDismiss={dismissProductAnnouncement}
-            />
+            <div>
+              <ProductAnnouncementBanner
+                notice={primaryRiskNotice}
+                additionalCount={additionalRiskNoticeCount}
+                onViewAll={handleViewAllProductAnnouncements}
+                onDismiss={dismissProductAnnouncement}
+              />
+            </div>
           ) : null}
           <OptionsOverviewGrid
             viewModel={viewModel}

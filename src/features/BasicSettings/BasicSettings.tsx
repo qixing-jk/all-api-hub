@@ -485,7 +485,10 @@ function SettingsTabContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="flex min-h-[240px] items-center justify-center">
+    <div
+      className="flex min-h-[240px] items-center justify-center"
+      data-options-page-pending
+    >
       <Spinner size="lg" aria-label={t("status.loading")} />
     </div>
   )
@@ -609,6 +612,7 @@ export default function BasicSettings() {
       />
 
       <Tabs
+        data-page-motion-group
         value={selectedTabId}
         onValueChange={(tabId) => {
           const index = getTabIndexFromId(tabId)
@@ -665,6 +669,7 @@ export default function BasicSettings() {
               key={config.id}
               value={config.id}
               forceMount
+              data-page-motion-group
               className="data-[state=inactive]:hidden"
             >
               {mountedTabIds.includes(config.id) ? (

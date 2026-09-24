@@ -47,6 +47,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
+      data-page-motion-item
       className={cn(
         "[container-type:inline-size] [overflow-wrap:anywhere]",
         spacing === "compact" ? "mb-density-4" : "mb-density-6",

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { TFunction } from "i18next"
 
 import { Badge, Separator } from "~/components/ui"
@@ -36,22 +37,38 @@ export function DedupeAccountsGroupsList({
   onKeepChange,
   onToggleDetails,
 }: DedupeAccountsGroupsListProps) {
+  const shouldReduceMotion = useReducedMotion()
+  const transition = {
+    duration: shouldReduceMotion ? 0 : 0.2,
+    ease: "easeOut",
+  } as const
+
   return (
     <div className="space-y-density-3">
-      {groups.map((group) => (
-        <DedupeAccountsGroupCard
-          key={group.groupId}
-          group={group}
-          accountLabelById={accountLabelById}
-          orderedIndexByAccountId={orderedIndexByAccountId}
-          pinnedAccountIds={pinnedAccountIds}
-          detailsOpenByAccountId={detailsOpenByAccountId}
-          isWorking={isWorking}
-          t={t}
-          onKeepChange={onKeepChange}
-          onToggleDetails={onToggleDetails}
-        />
-      ))}
+      <AnimatePresence initial={false}>
+        {groups.map((group) => (
+          <motion.div
+            key={group.groupId}
+            layout="position"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+          >
+            <DedupeAccountsGroupCard
+              group={group}
+              accountLabelById={accountLabelById}
+              orderedIndexByAccountId={orderedIndexByAccountId}
+              pinnedAccountIds={pinnedAccountIds}
+              detailsOpenByAccountId={detailsOpenByAccountId}
+              isWorking={isWorking}
+              t={t}
+              onKeepChange={onKeepChange}
+              onToggleDetails={onToggleDetails}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   )
 }
@@ -102,6 +119,11 @@ function DedupeAccountsGroupCard({
   onKeepChange: (input: DedupeAccountsKeepChangeInput) => void
   onToggleDetails: (accountId: string) => void
 }) {
+  const shouldReduceMotion = useReducedMotion()
+  const transition = {
+    duration: shouldReduceMotion ? 0 : 0.2,
+    ease: "easeOut",
+  } as const
   const orderedGroupAccounts = sortAccountsByOrder({
     accounts: group.accounts,
     orderedIndexByAccountId,
@@ -133,20 +155,30 @@ function DedupeAccountsGroupCard({
       <Separator className="my-density-3" />
 
       <div className="space-y-density-2">
-        {orderedGroupAccounts.map((account) => (
-          <DedupeAccountCard
-            key={account.id}
-            account={account}
-            group={{ ...group, reason: group.key.reason }}
-            accountLabelById={accountLabelById}
-            pinnedAccountIds={pinnedAccountIds}
-            detailsOpenByAccountId={detailsOpenByAccountId}
-            isWorking={isWorking}
-            t={t}
-            onKeepChange={onKeepChange}
-            onToggleDetails={onToggleDetails}
-          />
-        ))}
+        <AnimatePresence initial={false}>
+          {orderedGroupAccounts.map((account) => (
+            <motion.div
+              key={account.id}
+              layout="position"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={transition}
+            >
+              <DedupeAccountCard
+                account={account}
+                group={{ ...group, reason: group.key.reason }}
+                accountLabelById={accountLabelById}
+                pinnedAccountIds={pinnedAccountIds}
+                detailsOpenByAccountId={detailsOpenByAccountId}
+                isWorking={isWorking}
+                t={t}
+                onKeepChange={onKeepChange}
+                onToggleDetails={onToggleDetails}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </fieldset>
   )
