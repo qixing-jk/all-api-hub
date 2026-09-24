@@ -261,7 +261,7 @@
     "importSub2apiSessionMissing": "Kein refresh_token gefunden. Bitte melden Sie sich beim Sub2API-Dashboard an und versuchen Sie es erneut.",
     "importSub2apiSessionSuccess": "Sub2API-Sitzung importiert",
     "loadFailed": "Kontodaten konnten nicht geladen werden",
-    "managedSiteSettingsOpened": "{{managedSite}}-Einstellungen in einem neuen Tab geöffnet. Tragen Sie die Verbindungsdaten ein und kommen Sie dann hierher zurück.",
+    "managedSiteSettingsOpened": "{{managedSite}}-Einstellungen in einem neuen Tab geöffnet. Tragen Sie die Verbindungsdaten ein und klicken Sie danach hier erneut auf diese Schaltfläche.",
     "newApiConfigFailed": "Automatische Konfiguration auf New API fehlgeschlagen: {{error}}",
     "operationFailed": "Vorgang fehlgeschlagen: {{error}}",
     "reloadExtensionConfirm": "Durch das erneute Laden der Erweiterung wird die aktuelle Erweiterungsseite geschlossen. Stellen Sie sicher, dass alle erforderlichen Informationen gespeichert wurden.",
