@@ -165,6 +165,45 @@ describe("useOptionsSearch", () => {
     expect(compatibility.result.current.results[0]?.id).toBe(
       "control:managed-site-type",
     )
+
+    const cliProxyAlias = renderHook(
+      () => useOptionsSearch(context, "cliproxyapi"),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(cliProxyAlias.result.current.results[0]?.id).toBe(
+      "control:managed-site-type",
+    )
+
+    const cpaAlias = renderHook(() => useOptionsSearch(context, "cpa"), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    expect(cpaAlias.result.current.results[0]?.id).toBe(
+      "control:managed-site-type",
+    )
+
+    const cliProxyActive = renderHook(
+      () =>
+        useOptionsSearch(
+          { ...context, managedSiteType: "cli-proxy-api" },
+          "cpa",
+        ),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      cliProxyActive.result.current.results.some(
+        (item) => item.id === "section:cli-proxy",
+      ),
+    ).toBe(true)
   })
 })
 
