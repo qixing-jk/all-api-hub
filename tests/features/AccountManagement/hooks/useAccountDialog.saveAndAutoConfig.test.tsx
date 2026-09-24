@@ -683,6 +683,49 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   })
 
+  it("falls back to the preferred managed site when no prompt is showing", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+    })
+
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      keepCurrentWindow: true,
+    })
+  })
+
+  it("reports a failed settings jump instead of leaving the dialog silent", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+    mockOpenSettingsTabInNewTab.mockRejectedValueOnce(new Error("no tab"))
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
+        expect.stringContaining("operationFailed"),
+      )
+    })
+    expect(result.current.state.managedSiteConfigPrompt.isOpen).toBe(false)
+  })
+
   it("passes trimmed Sub2API refresh-token auth into save and opens the post-save token dialog when display data is available", async () => {
     const savedDisplayData = {
       id: "saved-account-id",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   getManagedSiteConfigMissingMessage,
@@ -83,6 +83,12 @@ describe("managedSite utils", () => {
       tabId: "managedSite",
       anchor: SETTINGS_ANCHORS.SUB2API,
     })
+    // A provider that manages no resources has no connection form to land on.
+    expect(
+      getManagedSiteSettingsTarget(
+        SITE_TYPES.AIHUBMIX as unknown as ManagedSiteType,
+      ),
+    ).toEqual({ tabId: "managedSite" })
   })
 
   it("builds managed-site target options and respects exclusions", () => {
