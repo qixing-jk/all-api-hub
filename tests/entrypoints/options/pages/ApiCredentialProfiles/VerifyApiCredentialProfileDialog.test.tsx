@@ -30,6 +30,7 @@ import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -373,7 +374,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("marks only the full suite busy and suppresses duplicate suite runs", async () => {
+  it("marks only the full suite busy while it runs", async () => {
     const user = userEvent.setup()
     const deferredProbe = createDeferred<{
       id: string
@@ -413,20 +414,28 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
     await user.click(suiteButton)
 
-    await waitFor(() => {
-      expect(suiteButton).toHaveAccessibleName(
-        "aiApiVerification:verifyDialog.actions.running",
-      )
+    // A running suite replaces Run with an interruptible Stop, so the suite can
+    // no longer be started a second time from this button.
+    const runningSuiteButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.stop",
     })
-    const runningSuiteButton = suiteButton
-    expect(runningSuiteButton).toBeDisabled()
+    expect(runningSuiteButton).toBeEnabled()
     expect(runningSuiteButton).toHaveAttribute("aria-busy", "true")
 
-    for (const probeButton of screen.getAllByTestId(
+    const probeButtons = screen.getAllByTestId(
       API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
-    )) {
+    )
+    const runningProbeButton = probeButtons.find(
+      (probeButton) => probeButton.getAttribute("aria-busy") === "true",
+    )
+    // Only the probe that is actually executing carries the progress state, and
+    // the suite's own Stop is the way to interrupt it.
+    expect(runningProbeButton).toBeDefined()
+    expect(runningProbeButton).toHaveTextContent(
+      "aiApiVerification:verifyDialog.actions.stop",
+    )
+    for (const probeButton of probeButtons) {
       expect(probeButton).toBeDisabled()
-      expect(probeButton).not.toHaveAttribute("aria-busy")
     }
     expect(
       screen.getByRole("button", {
@@ -434,7 +443,6 @@ describe("VerifyApiCredentialProfileDialog", () => {
       }),
     ).not.toHaveAttribute("aria-busy")
 
-    await user.click(runningSuiteButton)
     expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
 
     deferredProbe.resolve({
@@ -451,6 +459,77 @@ describe("VerifyApiCredentialProfileDialog", () => {
       expect(restoredButton).toBeEnabled()
       expect(restoredButton).not.toHaveAttribute("aria-busy")
     })
+  })
+
+  it("stops the running suite and reports the interrupted probe as stopped", async () => {
+    const user = userEvent.setup()
+    const deferredProbe = createDeferred<{
+      id: string
+      status: "pass"
+      latencyMs: number
+      summary: string
+    }>()
+    let probeSignal: AbortSignal | undefined
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      (params: { abortSignal?: AbortSignal }) => {
+        probeSignal = params.abortSignal
+        return deferredProbe.promise
+      },
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      }),
+    )
+    await waitFor(() => expect(probeSignal).toBeDefined())
+    expect(probeSignal?.aborted).toBe(false)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.stop",
+      }),
+    )
+    expect(probeSignal?.aborted).toBe(true)
+
+    // The provider may settle a cancelled request either way, so the suite has
+    // to treat the completed probe as interrupted rather than as a pass.
+    await act(async () => {
+      deferredProbe.resolve({
+        id: "models",
+        status: "pass",
+        latencyMs: 1,
+        summary: "OK",
+      })
+    })
+
+    await waitFor(() => {
+      const restoredButton = screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      })
+      expect(restoredButton).toBeEnabled()
+    })
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.summaries.stopped"),
+    ).toBeVisible()
   })
 
   it("marks only the initiating probe busy through rejected execution and persistence", async () => {
@@ -515,10 +594,12 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await waitFor(() => {
       expect(initiatingButton).toHaveAccessibleName(
-        "aiApiVerification:verifyDialog.actions.running",
+        "aiApiVerification:verifyDialog.actions.stopProbe",
       )
     })
-    expect(initiatingButton).toBeDisabled()
+    // A single probe run is interruptible from its own row, so the button stays
+    // actionable while it carries the progress state.
+    expect(initiatingButton).toBeEnabled()
     expect(initiatingButton).toHaveAttribute("aria-busy", "true")
     expect(siblingButton).toBeDisabled()
     expect(siblingButton).toHaveAccessibleName(
@@ -528,7 +609,8 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(suiteButton).toBeDisabled()
     expect(suiteButton).not.toHaveAttribute("aria-busy")
 
-    await user.click(initiatingButton)
+    // A disabled sibling cannot start a second probe while one is in flight.
+    fireEvent.click(siblingButton)
     expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
 
     deferredProbe.reject(new Error("probe failed"))
@@ -538,10 +620,14 @@ describe("VerifyApiCredentialProfileDialog", () => {
         verificationResultHistoryStorage.upsertLatestSummary,
       ).toHaveBeenCalledTimes(1)
     })
+    // Persistence is part of the run, so the button stays busy until it settles
+    // even though the aborted request already returned.
     expect(initiatingButton).toHaveAccessibleName(
       "aiApiVerification:verifyDialog.actions.running",
     )
     expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+    // Nothing is abortable in this window, so the row must not accept a restart.
+    expect(initiatingButton).toBeDisabled()
 
     persistDeferred.reject(new Error("persist failed"))
 

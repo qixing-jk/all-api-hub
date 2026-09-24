@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { buildProbeState } from "~/components/dialogs/VerifyApiDialog/probeState"
+import {
+  buildProbeState,
+  withStoppedProbe,
+  withUnfinishedProbesStopped,
+} from "~/components/dialogs/VerifyApiDialog/probeState"
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
 import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
@@ -16,6 +20,7 @@ import {
   Alert,
   Badge,
   Button,
+  BUTTON_LOADING_BEHAVIORS,
   CollapsibleSection,
   Heading5,
   SearchableSelect,
@@ -57,6 +62,7 @@ import {
 } from "~/services/verification/aiApiVerification/i18n"
 import {
   buildSafeProbeFailureDiagnostics,
+  isAbortError,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
 import {
@@ -219,6 +225,12 @@ export function VerifyApiCredentialProfileDialog({
   const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const pendingHistoryContextKeyRef = useRef<string | null>(null)
   const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
+  /** Set by Stop so an in-flight probe settles as interrupted, not as a result. */
+  const shouldStopRef = useRef(false)
+  const suiteAbortControllerRef = useRef<AbortController | null>(null)
+  const probeAbortControllersRef = useRef(
+    new Map<ApiVerificationProbeId, AbortController>(),
+  )
   const trimmedModelId = modelId.trim()
   const historyTarget = useMemo(() => {
     if (!profile) return null
@@ -497,10 +509,20 @@ export function VerifyApiCredentialProfileDialog({
     ],
   )
 
+  /** Settles a stopped probe without claiming it produced a verification result. */
+  const settleProbeAsStopped = (
+    probeId: ApiVerificationProbeId,
+    executedMode: ApiVerificationMode,
+  ): null => {
+    replaceProbes(withStoppedProbe(probesRef.current, probeId, executedMode))
+    return null
+  }
+
   const runProbe = async (
     probeId: ApiVerificationProbeId,
     modelIdOverride?: string,
     trackAnalytics = true,
+    abortSignal?: AbortSignal,
   ): Promise<ApiVerificationProbeResult | null> => {
     if (!profile) return null
 
@@ -518,16 +540,26 @@ export function VerifyApiCredentialProfileDialog({
     )
     replaceProbes(pendingProbes)
 
+    const executedMode = verificationMode
+
     try {
       const modelForProbe = (modelIdOverride ?? modelId).trim()
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
         apiType,
-        mode: verificationMode,
+        mode: executedMode,
         modelId: modelForProbe || undefined,
         probeId,
+        abortSignal,
       })
+
+      // A provider may settle an aborted request with a real response, so the
+      // stop flag decides the outcome, not the resolved value.
+      if (abortSignal?.aborted || shouldStopRef.current) {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return settleProbeAsStopped(probeId, executedMode)
+      }
 
       const nextProbes = probesRef.current.map((probe) =>
         probe.definition.id === probeId
@@ -571,6 +603,11 @@ export function VerifyApiCredentialProfileDialog({
       }
       return result
     } catch (error) {
+      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return settleProbeAsStopped(probeId, executedMode)
+      }
+
       const sanitizedMessage = toSanitizedErrorSummary(error, [
         profile.apiKey,
         profile.baseUrl,
@@ -623,12 +660,29 @@ export function VerifyApiCredentialProfileDialog({
   }
 
   const runSingleProbe = async (probeId: ApiVerificationProbeId) => {
+    shouldStopRef.current = false
+    const abortController = new AbortController()
+    probeAbortControllersRef.current.set(probeId, abortController)
     setActiveProbeId(probeId)
     try {
-      await runProbe(probeId)
+      await runProbe(probeId, undefined, true, abortController.signal)
     } finally {
+      if (probeAbortControllersRef.current.get(probeId) === abortController) {
+        probeAbortControllersRef.current.delete(probeId)
+      }
       setActiveProbeId(null)
     }
+  }
+
+  const stopProbe = (probeId: ApiVerificationProbeId) => {
+    shouldStopRef.current = true
+    probeAbortControllersRef.current.get(probeId)?.abort()
+  }
+
+  const stopRun = () => {
+    shouldStopRef.current = true
+    suiteAbortControllerRef.current?.abort()
+    probeAbortControllersRef.current.forEach((controller) => controller.abort())
   }
 
   const runAll = async () => {
@@ -638,6 +692,9 @@ export function VerifyApiCredentialProfileDialog({
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
     })
     const results: ApiVerificationProbeResult[] = []
+    shouldStopRef.current = false
+    const abortController = new AbortController()
+    suiteAbortControllerRef.current = abortController
     setIsRunning(true)
     setPersistedSummary(null)
 
@@ -647,11 +704,15 @@ export function VerifyApiCredentialProfileDialog({
       let modelIdForSuite = modelId.trim()
 
       for (const probe of ordered) {
+        // Stopping must stop the queue too, so no probe starts after the abort.
+        if (shouldStopRef.current || abortController.signal.aborted) break
+
         if (probe.id === API_VERIFICATION_PROBE_IDS.Models) {
           const result = await runProbe(
             API_VERIFICATION_PROBE_IDS.Models,
             undefined,
             false,
+            abortController.signal,
           )
           if (result) results.push(result)
           if (!modelIdForSuite && result) {
@@ -672,15 +733,17 @@ export function VerifyApiCredentialProfileDialog({
         }
 
         if (probe.requiresModelId && !modelIdForSuite) continue
-        const result = await runProbe(probe.id, modelIdForSuite, false)
+        const result = await runProbe(
+          probe.id,
+          modelIdForSuite,
+          false,
+          abortController.signal,
+        )
         if (result) results.push(result)
       }
 
-      if (results.length === 0) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-        return
-      }
-
+      // Both the interrupted and the completed report describe the same run, so
+      // derive its shape once before either outcome is chosen.
       const successCount = results.filter(
         (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
       ).length
@@ -691,6 +754,19 @@ export function VerifyApiCredentialProfileDialog({
         itemCount: results.length,
         successCount,
         failureCount,
+      }
+
+      if (shouldStopRef.current || abortController.signal.aborted) {
+        // Report the interruption as its own outcome instead of letting the
+        // partial results look like a completed suite.
+        replaceProbes(withUnfinishedProbesStopped(probesRef.current))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
+        return
+      }
+
+      if (results.length === 0) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        return
       }
 
       const hasFailedProbe = failureCount > 0
@@ -731,6 +807,9 @@ export function VerifyApiCredentialProfileDialog({
         errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
     } finally {
+      if (suiteAbortControllerRef.current === abortController) {
+        suiteAbortControllerRef.current = null
+      }
       setIsRunning(false)
     }
   }
@@ -754,13 +833,16 @@ export function VerifyApiCredentialProfileDialog({
           {t("aiApiVerification:verifyDialog.actions.close")}
         </Button>
         <Button
-          variant="default"
-          onClick={runAll}
-          disabled={isPersisting || isAnyProbeRunning || !profile}
+          variant={isRunning ? "secondary" : "default"}
+          onClick={isRunning ? stopRun : runAll}
+          disabled={
+            !isRunning && (isPersisting || isAnyProbeRunning || !profile)
+          }
           loading={isRunning}
+          loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
         >
           {isRunning
-            ? t("aiApiVerification:verifyDialog.actions.running")
+            ? t("aiApiVerification:verifyDialog.actions.stop")
             : t("aiApiVerification:verifyDialog.actions.run")}
         </Button>
       </ActionGroup>
@@ -906,6 +988,18 @@ export function VerifyApiCredentialProfileDialog({
               const result = probe.result
               const isDisabledForModel =
                 probe.definition.requiresModelId && !modelId.trim()
+              // The row is interruptible only while it owns an abortable
+              // request; the persistence that follows is busy but not stoppable.
+              const canStopProbe = probe.isRunning
+              const isProbePersisting =
+                !canStopProbe && activeProbeId === probe.definition.id
+              const probeActionLabel = canStopProbe
+                ? t("aiApiVerification:verifyDialog.actions.stop")
+                : isProbePersisting
+                  ? t("aiApiVerification:verifyDialog.actions.running")
+                  : probe.attempts > 0
+                    ? t("aiApiVerification:verifyDialog.actions.retry")
+                    : t("aiApiVerification:verifyDialog.actions.runOne")
 
               const resultSummary = isDisabledForModel
                 ? t("aiApiVerification:verifyDialog.requiresModelId")
@@ -969,25 +1063,43 @@ export function VerifyApiCredentialProfileDialog({
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => void runSingleProbe(probe.definition.id)}
+                      onClick={() => {
+                        if (canStopProbe) {
+                          stopProbe(probe.definition.id)
+                          return
+                        }
+                        void runSingleProbe(probe.definition.id)
+                      }}
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton
+                      }
+                      loadingBehavior={
+                        canStopProbe
+                          ? BUTTON_LOADING_BEHAVIORS.Interactive
+                          : BUTTON_LOADING_BEHAVIORS.Disabled
+                      }
+                      loading={canStopProbe || isProbePersisting}
+                      aria-label={
+                        canStopProbe
+                          ? t(
+                              "aiApiVerification:verifyDialog.actions.stopProbe",
+                              {
+                                probe: getApiVerificationProbeLabel(
+                                  t,
+                                  probe.definition.id,
+                                ),
+                              },
+                            )
+                          : undefined
                       }
                       disabled={
                         isRunning ||
                         isPersisting ||
-                        isAnyProbeRunning ||
-                        probe.isRunning ||
-                        isDisabledForModel ||
-                        !profile
+                        (!canStopProbe &&
+                          (isAnyProbeRunning || isDisabledForModel || !profile))
                       }
-                      loading={activeProbeId === probe.definition.id}
                     >
-                      {activeProbeId === probe.definition.id
-                        ? t("aiApiVerification:verifyDialog.actions.running")
-                        : probe.attempts > 0
-                          ? t("aiApiVerification:verifyDialog.actions.retry")
-                          : t("aiApiVerification:verifyDialog.actions.runOne")}
+                      {probeActionLabel}
                     </Button>
                   </div>
 

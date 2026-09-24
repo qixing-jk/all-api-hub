@@ -74,7 +74,11 @@ import {
   filterVerificationRedactions as filterRedactions,
   isVerificationAbortError as isAbortError,
 } from "../verificationDialogUtils"
-import { buildProbeState } from "./probeState"
+import {
+  buildProbeState,
+  withStoppedProbe,
+  withUnfinishedProbesStopped,
+} from "./probeState"
 import type { VerifyApiDialogProps } from "./types"
 import { useVerificationDialogState } from "./useVerificationDialogState"
 import { formatLatency, safeJsonStringify } from "./utils"
@@ -84,23 +88,6 @@ import { VerificationModeSelect } from "./VerificationMode"
  * Unified logger scoped to the API verification dialog.
  */
 const logger = createLogger("VerifyApiDialog")
-
-/**
- * Builds a synthetic result so interrupted probes render as stopped, not failed.
- */
-function buildStoppedProbeResult(
-  probeId: ApiVerificationProbeId,
-  mode?: ApiVerificationMode,
-): ApiVerificationProbeResult {
-  return {
-    id: probeId,
-    mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
-    status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
-    latencyMs: 0,
-    summary: "Stopped",
-    summaryKey: "verifyDialog.summaries.stopped",
-  }
-}
 
 /**
  * Applies model/group context to the owner-projected runtime-key policy.
@@ -293,17 +280,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         { abortSignal },
       )
       if (abortSignal?.aborted || shouldStopRef.current) {
-        replaceProbes(
-          probesRef.current.map((probe) =>
-            probe.definition.id === probeId
-              ? {
-                  ...probe,
-                  isRunning: false,
-                  result: buildStoppedProbeResult(probeId),
-                }
-              : probe,
-          ),
-        )
+        replaceProbes(withStoppedProbe(probesRef.current, probeId))
         return null
       }
       executedMode = verificationMode
@@ -320,15 +297,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       if (abortSignal?.aborted || shouldStopRef.current) {
         replaceProbes(
-          probesRef.current.map((probe) =>
-            probe.definition.id === probeId
-              ? {
-                  ...probe,
-                  isRunning: false,
-                  result: buildStoppedProbeResult(probeId, executedMode),
-                }
-              : probe,
-          ),
+          withStoppedProbe(probesRef.current, probeId, executedMode),
         )
         return null
       }
@@ -348,15 +317,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     } catch (error) {
       if (isAbortError(error, abortSignal) || shouldStopRef.current) {
         replaceProbes(
-          probesRef.current.map((probe) =>
-            probe.definition.id === probeId
-              ? {
-                  ...probe,
-                  isRunning: false,
-                  result: buildStoppedProbeResult(probeId, executedMode),
-                }
-              : probe,
-          ),
+          withStoppedProbe(probesRef.current, probeId, executedMode),
         )
         return null
       }
@@ -450,17 +411,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         }
       }
       if (shouldStopRef.current || abortController.signal.aborted) {
-        replaceProbes(
-          probesRef.current.map((probe) =>
-            probe.result
-              ? { ...probe, isRunning: false }
-              : {
-                  ...probe,
-                  isRunning: false,
-                  result: buildStoppedProbeResult(probe.definition.id),
-                },
-          ),
-        )
+        replaceProbes(withUnfinishedProbesStopped(probesRef.current))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
           insights: {
             successCount,

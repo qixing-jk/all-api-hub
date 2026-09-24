@@ -2,7 +2,36 @@ import { getErrorMessage } from "~/utils/core/error"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
+import {
+  API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_PROBE_STATUSES,
+  type ApiVerificationMode,
+  type ApiVerificationProbeId,
+  type ApiVerificationProbeResult,
+} from "./types"
+
 const COMPLETE_VERSIONED_PATH_PATTERN = /\/v\d+(?:beta\d*)?$/i
+
+/**
+ * Report a caller-interrupted probe without claiming it passed or failed.
+ *
+ * Callers stop a run by aborting the in-flight request; the registry may settle
+ * that request either way, so both paths build this same synthetic result.
+ * `mode` is omitted for probes that never reach a model request.
+ */
+export function buildStoppedProbeResult(
+  probeId: ApiVerificationProbeId,
+  mode?: ApiVerificationMode,
+): ApiVerificationProbeResult {
+  return {
+    id: probeId,
+    mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
+    status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
+    latencyMs: 0,
+    summary: "Stopped",
+    summaryKey: "verifyDialog.summaries.stopped",
+  }
+}
 
 /**
  * Redact any known secret strings from a message.
