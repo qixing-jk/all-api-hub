@@ -102,6 +102,7 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
+  getManagedSiteSettingsTarget,
 } from "~/services/managedSites/utils/managedSite"
 import {
   ensurePermissionsDetailed,
@@ -160,7 +161,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
-import { openSettingsTab } from "~/utils/navigation"
+import { openSettingsTab, openSettingsTabInNewTab } from "~/utils/navigation"
 
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
@@ -1868,22 +1869,35 @@ export function useAccountDialog({
   }, [])
 
   const handleOpenManagedSiteSettings = useCallback(() => {
+    // Land on the provider whose prompt was shown, not on a stale preference.
+    const promptedSiteType = managedSiteConfigPromptState?.siteType
     handleManagedSiteConfigPromptClose()
 
-    void openSettingsTab("managedSite", { preserveHistory: true }).catch(
-      (error) => {
-        toast.error(
-          t("messages.operationFailed", {
-            error: getErrorMessage(error),
-          }),
-        )
-        logger.error("Failed to open managed-site settings", {
-          managedSiteType,
-          error: getErrorMessage(error),
-        })
-      },
+    const settingsTarget = getManagedSiteSettingsTarget(
+      promptedSiteType ?? managedSiteType,
     )
-  }, [handleManagedSiteConfigPromptClose, managedSiteType, t])
+    // A separate tab keeps this account form (and the popup) alive while the
+    // user fills in the managed-site connection details.
+    void openSettingsTabInNewTab(settingsTarget.tabId, {
+      ...(settingsTarget.anchor ? { anchor: settingsTarget.anchor } : {}),
+      keepCurrentWindow: true,
+    }).catch((error) => {
+      toast.error(
+        t("messages.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+      logger.error("Failed to open managed-site settings", {
+        managedSiteType,
+        error: getErrorMessage(error),
+      })
+    })
+  }, [
+    handleManagedSiteConfigPromptClose,
+    managedSiteConfigPromptState?.siteType,
+    managedSiteType,
+    t,
+  ])
 
   const ensureManagedSiteAutoConfigReady = useCallback(async () => {
     const managedSite = getManagedSiteCapabilities(managedSiteType)

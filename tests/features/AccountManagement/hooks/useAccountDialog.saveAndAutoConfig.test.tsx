@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import toast from "~/lib/notify"
@@ -66,6 +67,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
+  mockOpenSettingsTabInNewTab,
   mockSendRuntimeMessage,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
@@ -82,6 +84,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockOpenSettingsTabInNewTab: vi.fn().mockResolvedValue(undefined),
   mockSendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
@@ -196,6 +199,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
 vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
+  openSettingsTabInNewTab: mockOpenSettingsTabInNewTab,
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -623,7 +627,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     }
   })
 
-  it("opens managed-site settings from the setup guidance dialog", async () => {
+  it("opens managed-site settings in a new tab from the setup guidance dialog", async () => {
     mockGetManagedSiteConfig.mockResolvedValue(null)
 
     const { result } = renderAddHook()
@@ -640,10 +644,43 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.handlers.handleOpenManagedSiteSettings()
     })
 
-    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
-      preserveHistory: true,
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      keepCurrentWindow: true,
     })
+    expect(mockOpenSettingsTab).not.toHaveBeenCalled()
     expect(result.current.state.managedSiteConfigPrompt.isOpen).toBe(false)
+  })
+
+  it("opens the prompted provider's settings section in a new tab", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      managedSiteType: SITE_TYPES.AXON_HUB,
+    })
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+      isOpen: true,
+      managedSiteType: SITE_TYPES.AXON_HUB,
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+    })
+
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      anchor: SETTINGS_ANCHORS.AXON_HUB,
+      keepCurrentWindow: true,
+    })
   })
 
   it("passes trimmed Sub2API refresh-token auth into save and opens the post-save token dialog when display data is available", async () => {
