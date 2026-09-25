@@ -71,6 +71,21 @@ describe("account login", () => {
     },
   )
 
+  it("forwards a run that nobody can complete to the browser flow", async () => {
+    await loginAccount({
+      account,
+      provider: "github",
+      requestId: "login",
+      attended: false,
+    })
+    expect(contexts.github).toHaveBeenCalledWith({
+      origin: account.site_url,
+      expectedIdentity: "17",
+      requestId: "login",
+      attended: false,
+    })
+  })
+
   it.each([
     "https://example.com",
     "not a URL",

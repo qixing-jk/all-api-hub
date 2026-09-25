@@ -14,7 +14,7 @@ const browserContexts = {
 
 export const agentRouterAccountLogin: AccountLoginCapability = {
   supports: (account) => isAgentRouterLoginUrl(account.site_url),
-  async login({ account, provider, requestId }) {
+  async login({ account, provider, requestId, attended }) {
     if (!isAgentRouterLoginUrl(account.site_url))
       return { status: "unsupported" }
     const expectedIdentity = String(account.account_info.id ?? "").trim()
@@ -29,6 +29,7 @@ export const agentRouterAccountLogin: AccountLoginCapability = {
       origin: new URL(account.site_url).origin,
       expectedIdentity,
       requestId,
+      ...(attended === undefined ? {} : { attended }),
     })
   },
 }

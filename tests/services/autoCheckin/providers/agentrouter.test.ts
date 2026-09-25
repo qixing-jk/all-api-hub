@@ -80,6 +80,7 @@ describe("AgentRouter login check-in", () => {
         account: saved,
         provider: "github",
         requestId: "checkin-request",
+        attended: false,
       })
     },
   )
@@ -91,7 +92,23 @@ describe("AgentRouter login check-in", () => {
       account: saved,
       provider: "linuxdo",
       requestId: "checkin-request",
+      attended: false,
     })
+  })
+
+  it.each([
+    TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    TEMP_WINDOW_REQUEST_SOURCES.Options,
+    TEMP_WINDOW_REQUEST_SOURCES.Sidepanel,
+  ])("waits for a person when the run came from %s", async (source) => {
+    const { provider, authenticate } = setup()
+    await provider.checkIn(account(), {
+      ...context,
+      tempWindowRequestSource: source,
+    })
+    expect(authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({ attended: true }),
+    )
   })
   it("records the provider identity a successful login proved", async () => {
     const { provider, recordLoginProviderEvidence } = setup()

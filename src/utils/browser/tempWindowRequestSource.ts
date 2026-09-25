@@ -22,6 +22,20 @@ export function normalizeTempWindowRequestSource(
     : TEMP_WINDOW_REQUEST_SOURCES.Background
 }
 
+/**
+ * Whether no person is at the browser for this request.
+ *
+ * A background run is driven by an alarm or a retry, so a prompt it opens can
+ * never be completed; every other surface belongs to a visible extension UI the
+ * person is looking at.
+ */
+export function isUnattendedRequestSource(value: unknown): boolean {
+  return (
+    normalizeTempWindowRequestSource(value) ===
+    TEMP_WINDOW_REQUEST_SOURCES.Background
+  )
+}
+
 /** Detects the current extension surface in semantic-priority order. */
 export function getCurrentTempWindowRequestSource(): TempWindowRequestSource {
   if (isExtensionPopup()) {

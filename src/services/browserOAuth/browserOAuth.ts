@@ -16,9 +16,28 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("BrowserOAuth")
-const AUTH_TIMEOUT_MS = 4 * 60 * 1000
+/**
+ * How long a person gets to finish the provider sign-in in the popup. The flow
+ * signs in with the identity the browser already holds, so this only has to
+ * cover a typed password or a second factor.
+ */
+const INTERACTIVE_TIMEOUT_MS = 2 * 60 * 1000
+/**
+ * Bound for a run nobody can complete: an unattended prompt still settles the
+ * identity when the browser already holds one, and otherwise has to fail fast so
+ * the logins queued behind it in the shared session still get their turn.
+ */
+const UNATTENDED_TIMEOUT_MS = 45 * 1000
 const INITIAL_PAGE_TIMEOUT_MS = 30 * 1000
 const KEEPALIVE_INTERVAL_MS = 20 * 1000
+/**
+ * How long a queued login waits for the shared session. Its clock starts
+ * together with the flow ahead of it, so it only has to outlive that flow's own
+ * bound - page load plus one interactive login - with room for the
+ * content-script round trips.
+ */
+const SESSION_WAIT_TIMEOUT_MS =
+  INITIAL_PAGE_TIMEOUT_MS + INTERACTIVE_TIMEOUT_MS + 30 * 1000
 
 // Browser flows that share a concurrency key act on the same site session, so
 // they cannot run at the same time. Queue the later request instead of rejecting
@@ -39,6 +58,11 @@ interface BrowserOAuthInput {
   expectedIdentity?: string
   origin: string
   requestId: string
+  /**
+   * Whether a person is expected to complete the provider sign-in in the popup.
+   * Absent means one is: only a run nobody can interact with passes `false`.
+   */
+  attended?: boolean
 }
 
 export type BrowserOAuthFailureStatus =
@@ -67,7 +91,7 @@ export interface BrowserOAuthContextOptions {
   /**
    * How long a queued login waits for the shared session before it reports
    * `BROWSER_OAUTH_STATUS.SessionBusy` instead of opening another popup.
-   * Defaults to one interactive login budget.
+   * Defaults to a bound that outlives one interactive login ahead of it.
    */
   sessionWaitTimeoutMs?: number
 }
@@ -301,7 +325,7 @@ async function authenticateBrowserOAuth<Evidence>(
           return false
         }
       },
-      AUTH_TIMEOUT_MS,
+      input.attended === false ? UNATTENDED_TIMEOUT_MS : INTERACTIVE_TIMEOUT_MS,
       (tab) => {
         const interaction = flow.authorizationInteraction
         if (!interaction || !tab.url) return
@@ -451,7 +475,9 @@ function buildJoinKey<Evidence>(
   input: BrowserOAuthInput,
 ): string | null {
   if (!input.expectedIdentity) return null
-  return `${flow.id}\u0000${input.origin}\u0000${input.expectedIdentity}`
+  // Different interaction budgets cannot share one deadline. They still take
+  // turns through the shared session queue.
+  return `${flow.id}\u0000${input.origin}\u0000${input.expectedIdentity}\u0000${input.attended === false ? "unattended" : "attended"}`
 }
 
 /** Creates a reusable browser OAuth context for one browser flow. */
@@ -459,7 +485,8 @@ export function createBrowserOAuthContext<Evidence>(
   flow: BrowserOAuthFlow<Evidence>,
   options: BrowserOAuthContextOptions = {},
 ): BrowserOAuthContext<Evidence> {
-  const sessionWaitTimeoutMs = options.sessionWaitTimeoutMs ?? AUTH_TIMEOUT_MS
+  const sessionWaitTimeoutMs =
+    options.sessionWaitTimeoutMs ?? SESSION_WAIT_TIMEOUT_MS
 
   return {
     async authenticate(input) {

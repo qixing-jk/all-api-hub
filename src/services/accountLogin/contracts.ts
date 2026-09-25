@@ -16,6 +16,11 @@ export interface AccountLoginRequest {
   account: AccountLoginTarget
   provider: AccountLoginProvider
   requestId: string
+  /**
+   * Whether a person is expected to complete the provider sign-in. Absent means
+   * one is; a run triggered by an alarm passes `false`.
+   */
+  attended?: boolean
 }
 
 export type AccountLoginResult =

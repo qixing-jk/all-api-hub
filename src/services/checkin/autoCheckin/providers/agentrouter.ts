@@ -27,6 +27,7 @@ import {
   CHECKIN_RESULT_STATUS,
   getAutoCheckinSkipReasonTranslationKey,
 } from "~/types/autoCheckin"
+import { isUnattendedRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 import type {
@@ -113,7 +114,7 @@ export function createAgentRouterProvider(
         },
       }
     },
-    async checkIn(account) {
+    async checkIn(account, context) {
       if (
         !("site_type" in account) ||
         !account.account_info?.id ||
@@ -146,6 +147,9 @@ export function createAgentRouterProvider(
         account,
         provider,
         requestId: deps.createRequestId(),
+        // A scheduled or retry run opens a popup nobody is looking at, so it
+        // must not hold the shared session for the whole interactive budget.
+        attended: !isUnattendedRequestSource(context.tempWindowRequestSource),
       })
       // Record what this attempt proved about the browser identity, but only
       // when it proved anything: a cancelled or inconclusive login must not be
