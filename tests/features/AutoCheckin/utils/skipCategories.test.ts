@@ -77,6 +77,8 @@ describe("auto check-in skip categories", () => {
     expect(getCheckinSkipReasonCategory(null)).toBeNull()
     expect(getCheckinSkipReasonCategory("")).toBeNull()
     expect(getCheckinSkipReasonCategory("legacy_reason_code")).toBeNull()
+    expect(getCheckinSkipReasonCategory("constructor")).toBeNull()
+    expect(getCheckinSkipReasonCategory("toString")).toBeNull()
   })
 
   it("only marks user-fixable reasons as action required", () => {

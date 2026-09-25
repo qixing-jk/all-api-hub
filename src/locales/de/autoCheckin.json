@@ -216,7 +216,7 @@
     "detection_disabled": "Die Check-in-Erkennung ist für dieses Konto aus.",
     "execution_context_invalid": "Dieser Lauf konnte keine nutzbare Anmeldung herstellen. Starten Sie den Check-in erneut.",
     "login_provider_in_use": "Diese Anmeldemethode nutzt bereits ein anderes AgentRouter-Konto. Wählen Sie eine andere oder ändern Sie es dort.",
-    "login_provider_required": "Keine Anmeldemethode ausgewählt. Wähle in den Einstellungen die Methode, mit der sich dieses Konto anmeldet.",
+    "login_provider_required": "Keine Anmeldemethode ausgewählt. Wählen Sie in den Einstellungen die Methode, mit der sich dieses Konto anmeldet.",
     "manual_verification_required": "Die Website verlangt zuerst eine Verifizierung durch Sie auf der Seite.",
     "method_disabled": "Diese Website hat den Check-in derzeit ausgeschaltet.",
     "method_not_matched": "Die Check-in-Methode passt nicht mehr zu dieser Website. Erkennen Sie sie erneut.",

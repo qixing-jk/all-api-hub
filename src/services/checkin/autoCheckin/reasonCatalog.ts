@@ -118,7 +118,12 @@ export const CHECKIN_SKIP_REASON_CATEGORIES: Record<
 export function getCheckinSkipReasonCategory(
   reasonCode: string | null | undefined,
 ): AutoCheckinSkipCategory | null {
-  if (!reasonCode) return null
+  if (
+    !reasonCode ||
+    !Object.hasOwn(CHECKIN_SKIP_REASON_CATEGORIES, reasonCode)
+  ) {
+    return null
+  }
 
   return (
     CHECKIN_SKIP_REASON_CATEGORIES[reasonCode as AutoCheckinSkipReason] ?? null
