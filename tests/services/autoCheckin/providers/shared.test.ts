@@ -347,4 +347,45 @@ describe("auto-checkin provider error normalization", () => {
       retryable: false,
     })
   })
+
+  it("handles non-object error values gracefully", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: "string failure message",
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      rawMessage: "string failure message",
+      retryable: true,
+    })
+  })
+
+  it("falls back to checkinFailed message key when determinate rejection lacks message", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: Object.assign(new Error(""), { statusCode: 422 }),
+      }),
+    ).toEqual({
+      status: "failed",
+      reasonCode: "upstream_rejected",
+      rawMessage: undefined,
+      messageKey: "autoCheckin:providerFallback.checkinFailed",
+      retryable: true,
+    })
+  })
+
+  it("falls back to unknownError message key when 401/403 rejection lacks message", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: Object.assign(new Error(""), { statusCode: 401 }),
+      }),
+    ).toEqual({
+      status: "uncertain",
+      reasonCode: "upstream_error",
+      rawMessage: undefined,
+      messageKey: "autoCheckin:providerFallback.unknownError",
+      retryable: true,
+    })
+  })
 })

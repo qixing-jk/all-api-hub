@@ -145,6 +145,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.source_unavailable",
       "autoCheckin:skipReasons.timeout",
       "autoCheckin:skipReasons.upstream_error",
+      "autoCheckin:skipReasons.upstream_rejected",
       "autoCheckin:skipReasons.auto_checkin_disabled",
       "autoCheckin:skipReasons.already_checked_today",
       "autoCheckin:skipReasons.status_unavailable",

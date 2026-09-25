@@ -480,6 +480,63 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
+  it.each([CHECKIN_RESULT_STATUS.FAILED, CHECKIN_RESULT_STATUS.UNCERTAIN])(
+    "shows an error toast when retry settles with %s result",
+    async (resultStatus) => {
+      const user = userEvent.setup()
+      const browserApi = await import("~/utils/browser/browserApi")
+
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: unknown) => {
+          if (message === AutoCheckinMessageTypes.GetStatus) {
+            return {
+              success: true,
+              data: {
+                perAccount: {
+                  alpha: {
+                    accountId: "alpha",
+                    accountName: "Alpha",
+                    status: CHECKIN_RESULT_STATUS.FAILED,
+                    timestamp: 1700000000000,
+                    message: "needs retry",
+                  },
+                },
+              },
+            }
+          }
+
+          if (message === AutoCheckinMessageTypes.RetryAccount) {
+            return {
+              success: true,
+              result: {
+                accountId: "alpha",
+                accountName: "Alpha",
+                status: resultStatus,
+                rawMessage: "retry failed with error",
+                timestamp: 1700000001000,
+              },
+            }
+          }
+
+          return { success: true }
+        },
+      )
+
+      render(<AutoCheckin routeParams={{}} />)
+
+      const retryButton = await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      })
+      await user.click(retryButton)
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "autoCheckin:messages.error.retryFailed",
+        )
+      })
+    },
+  )
+
   it("keeps verification successful when the follow-up account refresh fails", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")

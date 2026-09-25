@@ -72,6 +72,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import {
   AUTO_CHECKIN_RUN_TYPE,
+  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
@@ -3622,6 +3623,27 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(storedStatus.pendingRetry).toBe(false)
   })
 
+  it("clears retry alarm and retains ledger when maxAttempts is omitted", async () => {
+    storedStatus = {
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    }
+
+    await (autoCheckinScheduler as any).clearRetryAlarm()
+
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
+    expect(storedStatus.pendingRetry).toBe(false)
+    expect(storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: ["a"],
+      attemptsByAccount: { a: 1 },
+    })
+  })
+
   it("syncs a preserved same-day retry alarm back into stored state", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
@@ -3944,6 +3966,41 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
     expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
+
+    vi.useRealTimers()
+  })
+
+  it("clears retry state and skips retry when retryState is from a different day", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 2, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    storedStatus = {
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    } as any
+
+    await (autoCheckinScheduler as any).runRetryCheckins()
+
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
+    expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
 
@@ -5263,6 +5320,8 @@ describe("auto check-in operation helpers", () => {
           accountId: verificationAccount.id,
           accountName: "Verify Account",
           status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+          messageKey: "autoCheckin:skipReasons.upstream_error",
           methodId,
           timestamp: 1,
         },
@@ -5346,6 +5405,26 @@ describe("auto check-in operation helpers", () => {
     ).not.toHaveBeenCalled()
   })
 
+  it("reports unsupported when status readback is unsupported by the provider", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unsupported)
+        return config
+      },
+    )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toMatchObject({
+      outcome: "unsupported",
+      error: "autoCheckin:messages.error.statusVerificationUnsupported",
+    })
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+
   it("does not report success when persistence fails", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
@@ -5361,6 +5440,58 @@ describe("auto check-in operation helpers", () => {
     await expect(
       autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
     ).resolves.toMatchObject({ outcome: "not_saved" })
+  })
+
+  it("does not update stored status when verified status is unknown", async () => {
+    let storedStatus: any = {
+      perAccount: {
+        [verificationAccount.id]: {
+          accountId: verificationAccount.id,
+          accountName: "Verify Account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          timestamp: 1,
+        },
+      },
+    }
+    mockedAutoCheckinStorage.getStatus.mockImplementation(
+      async () => storedStatus,
+    )
+    mockedAutoCheckinStorage.updateStatus.mockImplementation(
+      async (updater: any) => {
+        const applied = updater(storedStatus)
+        if (applied.patch) {
+          storedStatus = { ...storedStatus, ...applied.patch }
+        }
+        return { ok: true, result: applied.result ?? null }
+      },
+    )
+
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+      observedAt: Date.now(),
+    })
+
+    const outcome = await autoCheckinScheduler.verifyAccountStatus(
+      verificationAccount.id,
+    )
+    expect(outcome).toMatchObject({
+      outcome: "verified",
+      verifiedStatus: "unknown",
+    })
+    expect(storedStatus.perAccount[verificationAccount.id].status).toBe(
+      CHECKIN_RESULT_STATUS.UNCERTAIN,
+    )
   })
 
   it("should run checkins on autoCheckin:runNow", async () => {

@@ -1607,6 +1607,34 @@ describe("typed runtime messaging setup", () => {
     ).resolves.toEqual({ success: true, outcome: "verified" })
     verifyAccountStatus.mockResolvedValueOnce({
       outcome: "verified",
+      verifiedStatus: "checked",
+    })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:verifyAccountStatus",
+      )({ data: { accountId: "account-1" } }),
+    ).resolves.toEqual({
+      success: true,
+      outcome: "verified",
+      verifiedStatus: "checked",
+    })
+    verifyAccountStatus.mockResolvedValueOnce({
+      outcome: "unsupported",
+      error: "autoCheckin:messages.error.statusVerificationUnsupported",
+    })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:verifyAccountStatus",
+      )({ data: { accountId: "account-1" } }),
+    ).resolves.toEqual({
+      success: false,
+      outcome: "unsupported",
+      error: "autoCheckin:messages.error.statusVerificationUnsupported",
+    })
+    verifyAccountStatus.mockResolvedValueOnce({
+      outcome: "verified",
       verifiedStatus: "unknown",
     })
     await expect(

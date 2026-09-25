@@ -228,6 +228,23 @@ describe("anyrouterProvider", () => {
       })
     })
 
+    it("returns terminal failure result when response is unsuccessful and message indicates a terminal condition", async () => {
+      mockEnvelope.mockResolvedValueOnce({
+        code: -1,
+        ret: 0,
+        success: false,
+        message: "签到功能已关闭",
+      })
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+        retryable: false,
+      })
+    })
+
     it("returns the fallback failure key when the backend fails without a message", async () => {
       mockEnvelope.mockResolvedValueOnce({
         code: 1,
