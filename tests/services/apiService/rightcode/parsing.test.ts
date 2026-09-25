@@ -15,6 +15,7 @@ import {
   toOptionalString,
   toStringArray,
 } from "~/services/apiService/rightcode/parsing"
+import { RIGHTCODE_PROTOCOLS } from "~/services/apiService/rightcode/type"
 
 describe("rightcode parsing helpers", () => {
   it("toOptionalFiniteNumber converts numbers and numeric strings", () => {
@@ -106,5 +107,14 @@ describe("rightcode parsing helpers", () => {
   it("isRightCodeEffectiveUpstreamPayload validates upstreams array", () => {
     expect(isRightCodeEffectiveUpstreamPayload({ upstreams: [] })).toBe(true)
     expect(isRightCodeEffectiveUpstreamPayload({})).toBe(false)
+  })
+
+  it("exports RIGHTCODE_PROTOCOLS constant", () => {
+    expect(RIGHTCODE_PROTOCOLS).toEqual([
+      "responses",
+      "messages",
+      "completions",
+      "gemini",
+    ])
   })
 })

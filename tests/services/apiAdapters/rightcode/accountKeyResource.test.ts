@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { rightCodeAccountKeyResources } from "~/services/apiAdapters/rightcode/accountKeyResource"
 import type { RightCodeApiKey } from "~/services/apiService/rightcode/type"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -99,7 +100,7 @@ const openSession = async () => {
 
 describe("rightCodeAccountKeyResources", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it("declares the inventory secret as recoverable", () => {
@@ -352,5 +353,162 @@ describe("rightCodeAccountKeyResources", () => {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
     })
+  })
+
+  it("lists scopes and marks account scope as default", async () => {
+    const session = await openSession()
+    const scopes = await session.listScopes()
+    expect(scopes).toEqual([
+      expect.objectContaining({
+        scopeKey: "account",
+        isDefault: true,
+      }),
+    ])
+  })
+
+  it("marks key as expired when expired_at is in the past", async () => {
+    const session = await openSession()
+    mockFetchRightCodeKeys.mockResolvedValueOnce([
+      key({ id: 14, expired_at: "2020-01-01T00:00:00" }),
+    ])
+    const page = await (await session.openCollection("account")).list()
+    expect(atIndex(page.items, 0).status).toBe("expired")
+  })
+
+  it("rejects non-numeric or non-positive locator", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    await expect(collection.get("0")).rejects.toBeDefined()
+    await expect(collection.get("abc")).rejects.toBeDefined()
+  })
+
+  it("returns unavailable when runtime key lookup fails", async () => {
+    const session = await openSession()
+    mockFetchRightCodeKey.mockRejectedValueOnce(new Error("network failure"))
+    const resolved = await session.runtimeKey!.resolve({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    expect(resolved).toEqual({
+      kind: "unavailable",
+      failure: expect.objectContaining({ code: "unexpected" }),
+    })
+  })
+
+  it("handles business rejection on create without uncertainty", async () => {
+    const session = await openSession()
+    const denied = new ApiError(
+      "denied",
+      undefined,
+      "/tokens",
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
+    mockCreateRightCodeKey.mockRejectedValueOnce(denied)
+    const editor = await session.openCreateEditor("account")
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "New Key", channel: "1" }),
+    ).rejects.toBeDefined()
+  })
+
+  it("falls back to created key if immediate readback fails", async () => {
+    const session = await openSession()
+    const createdKey = key({ id: 88, name: "Created" })
+    mockCreateRightCodeKey.mockResolvedValueOnce(createdKey)
+    mockFetchRightCodeKey.mockRejectedValueOnce(new Error("readback failure"))
+    const editor = await session.openCreateEditor("account")
+    const created = await editor.submit({
+      ...editor.initialValues,
+      name: "Created",
+      channel: "1",
+    })
+    expect(created.facts?.ref.resourceId).toBe("88")
+  })
+
+  it("returns immediately without mutation when no values changed", async () => {
+    const session = await openSession()
+    const original = key({ id: 11, name: "Original" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    const result = await editor.submit(editor.initialValues)
+    expect(result).toBeDefined()
+    expect(mockUpdateRightCodeKey).not.toHaveBeenCalled()
+  })
+
+  it("handles business rejection on update without uncertainty", async () => {
+    const session = await openSession()
+    const original = key({ id: 11, name: "Original" })
+    mockFetchRightCodeKey.mockResolvedValueOnce(original)
+    const denied = new ApiError(
+      "denied",
+      undefined,
+      "/tokens",
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
+    mockUpdateRightCodeKey.mockRejectedValueOnce(denied)
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Renamed" }),
+    ).rejects.toBeDefined()
+  })
+
+  it("surfaces uncertainty when readback does not reflect submitted update", async () => {
+    const session = await openSession()
+    const original = key({ id: 11, name: "Original" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+    mockUpdateRightCodeKey.mockResolvedValueOnce(original)
+
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "New Name" }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+  })
+
+  it("handles business rejection on delete without retry", async () => {
+    const session = await openSession()
+    const denied = new ApiError(
+      "denied",
+      undefined,
+      "/tokens",
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
+    mockDeleteRightCodeKey.mockRejectedValueOnce(denied)
+    const collection = await session.openCollection("account")
+    await expect(
+      collection.delete({
+        accountId: "account-example",
+        siteType: SITE_TYPES.RIGHT_CODE,
+        scopeKey: "account",
+        resourceId: "11",
+      }),
+    ).rejects.toBeDefined()
   })
 })

@@ -148,5 +148,65 @@ describe("rightCodeKeyEditor", () => {
     })
     const snapshot = toRightCodeKeySnapshot(raw)
     expect(snapshot.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+
+    const invalidDateKey = key({ expired_at: "not-a-valid-date" })
+    expect(toRightCodeKeySnapshot(invalidDateKey).expiresAt).toBeNull()
+  })
+
+  it("validates required name, valid quota, valid expiry, models array, and boolean allowWallet", async () => {
+    const editor = createRightCodeKeyEditor({ channels, key: key() })
+
+    const emptyName = editor.validate({
+      ...editor.initialValues,
+      name: "   ",
+    })
+    expect(emptyName).toEqual({
+      valid: false,
+      issues: [{ fieldId: "name", code: "required" }],
+    })
+
+    const invalidQuota = editor.validate({
+      ...editor.initialValues,
+      name: "Valid",
+      unlimited_quota: false,
+      quotaUsd: -1,
+    })
+    expect(invalidQuota).toEqual({
+      valid: false,
+      issues: [{ fieldId: "quotaUsd", code: "out_of_range" }],
+    })
+
+    const invalidExpiry = editor.validate({
+      ...editor.initialValues,
+      name: "Valid",
+      expires_at: "invalid-date",
+    })
+    expect(invalidExpiry).toEqual({
+      valid: false,
+      issues: [{ fieldId: "expires_at", code: "invalid_value" }],
+    })
+
+    const invalidModels = editor.validate({
+      ...editor.initialValues,
+      name: "Valid",
+      models: "not-an-array" as never,
+    })
+    expect(invalidModels).toEqual({
+      valid: false,
+      issues: [{ fieldId: "models", code: "invalid_value" }],
+    })
+
+    const invalidAllowWallet = editor.validate({
+      ...editor.initialValues,
+      name: "Valid",
+      allow_wallet: "true" as never,
+    })
+    expect(invalidAllowWallet).toEqual({
+      valid: false,
+      issues: [{ fieldId: "allow_wallet", code: "invalid_value" }],
+    })
+
+    const options = await editor.loadOptions("unknown_field", {})
+    expect(options).toEqual([])
   })
 })

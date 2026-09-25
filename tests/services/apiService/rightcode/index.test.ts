@@ -20,6 +20,7 @@ import {
   RIGHTCODE_ENDPOINTS,
   RIGHTCODE_INVITE_PATH,
 } from "~/services/apiService/rightcode/constants"
+import { resyncRightCodeAuthToken } from "~/services/apiService/rightcode/tokenResync"
 import {
   fetchRightCodeData,
   isRightCodeAuthFailureError,
@@ -565,6 +566,64 @@ describe("rightcode apiService index", () => {
         "invalid_rightcode_overall_usage_stats",
       )
     })
+
+    it("handles invalid usage stats by marking availability request_failed", async () => {
+      vi.mocked(fetchRightCodeData).mockImplementation(
+        async (_req, endpoint) => {
+          if (endpoint === RIGHTCODE_ENDPOINTS.me) {
+            return {
+              id: 42,
+              username: "testuser",
+              user_token: "token",
+              balance: 1,
+            }
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.usageStatsOverall) {
+            return { total_requests: 1, total_tokens: 10, total_cost: 0.1 }
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.usageStats) {
+            return { invalid: true }
+          }
+          return {}
+        },
+      )
+
+      const result = await fetchAccountData(accountRequest)
+      expect(result.todayStatsAvailability.consumption.status).toBe(
+        "unavailable",
+      )
+      expect(result.todayStatsAvailability.consumption.reason).toBe(
+        ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
+      )
+    })
+
+    it("handles invalid subscriptions by omitting subscription", async () => {
+      vi.mocked(fetchRightCodeData).mockImplementation(
+        async (_req, endpoint) => {
+          if (endpoint === RIGHTCODE_ENDPOINTS.me) {
+            return {
+              id: 42,
+              username: "testuser",
+              user_token: "token",
+              balance: 1,
+            }
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.usageStatsOverall) {
+            return { total_requests: 1, total_tokens: 10, total_cost: 0.1 }
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.usageStats) {
+            return { total_cost: 0, total_requests: 0, total_tokens: 0 }
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.subscriptions) {
+            return { invalid: true }
+          }
+          return {}
+        },
+      )
+
+      const result = await fetchAccountData(accountRequest)
+      expect(result.subscription).toBeUndefined()
+    })
   })
 
   describe("refreshAccountData", () => {
@@ -603,6 +662,70 @@ describe("rightcode apiService index", () => {
       const result = await refreshAccountData(accountRequest)
       expect(result.success).toBe(false)
       expect(result.healthStatus?.status).toBe(SiteHealthStatus.Unknown)
+    })
+
+    it("handles resyncRightCodeAuthToken rejection gracefully", async () => {
+      vi.mocked(fetchRightCodeData).mockRejectedValueOnce(
+        new Error("token expired"),
+      )
+      vi.mocked(isRightCodeAuthFailureError).mockReturnValueOnce(true)
+      vi.mocked(resyncRightCodeAuthToken).mockRejectedValueOnce(
+        new Error("resync failed"),
+      )
+
+      const result = await refreshAccountData(accountRequest)
+      expect(result.success).toBe(false)
+    })
+
+    it("rejects retry when resynced session belongs to different user on me check", async () => {
+      vi.mocked(fetchRightCodeData).mockImplementation(
+        async (_req, endpoint) => {
+          if (endpoint === RIGHTCODE_ENDPOINTS.me) {
+            // First call fails with auth failure, second call (retry) returns different user id
+            if (vi.mocked(fetchRightCodeData).mock.calls.length === 1) {
+              throw new Error("401 Unauthorized")
+            }
+            return { id: 99, username: "other", user_token: "other-tok" }
+          }
+          return {}
+        },
+      )
+      vi.mocked(isRightCodeAuthFailureError).mockReturnValueOnce(true)
+      vi.mocked(resyncRightCodeAuthToken).mockResolvedValueOnce({
+        accessToken: "resynced-token",
+        userId: 42,
+      })
+
+      const result = await refreshAccountData(accountRequest)
+      expect(result.success).toBe(false)
+    })
+
+    it("handles error thrown during retry fetchAccountData", async () => {
+      let callCount = 0
+      vi.mocked(fetchRightCodeData).mockImplementation(
+        async (_req, endpoint) => {
+          callCount++
+          if (callCount === 1) {
+            throw new Error("401 Unauthorized")
+          }
+          if (endpoint === RIGHTCODE_ENDPOINTS.me) {
+            return {
+              id: 42,
+              username: "testuser",
+              user_token: "resynced-token",
+            }
+          }
+          throw new Error("retry network fail")
+        },
+      )
+      vi.mocked(isRightCodeAuthFailureError).mockReturnValueOnce(true)
+      vi.mocked(resyncRightCodeAuthToken).mockResolvedValueOnce({
+        accessToken: "resynced-token",
+        userId: 42,
+      })
+
+      const result = await refreshAccountData(accountRequest)
+      expect(result.success).toBe(false)
     })
   })
 })

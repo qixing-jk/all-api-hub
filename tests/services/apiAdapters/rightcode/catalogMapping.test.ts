@@ -241,4 +241,89 @@ describe("buildRightCodePricingResponse", () => {
       2.5,
     )
   })
+
+  it("skips models with empty or missing name", () => {
+    const snapshot = buildRightCodePricingResponse([
+      upstream({
+        models: [
+          {
+            model_id: 1,
+            name: "   ",
+            is_available: true,
+          } as never,
+        ],
+      }),
+    ])
+
+    expect(snapshot.data).toEqual([])
+  })
+
+  it("sorts upstreams with undefined rate after those with defined rate", () => {
+    const snapshot = buildRightCodePricingResponse([
+      upstream({
+        upstream_id: 1,
+        effective_upstream_rate: undefined,
+        models: [
+          {
+            model_id: 1,
+            name: "claude-3-opus",
+            is_available: true,
+            billing_mode: "token",
+            effective_price_config: { input_price: "15" },
+          },
+        ],
+      }),
+      upstream({
+        upstream_id: 2,
+        effective_upstream_rate: "0.8",
+        models: [
+          {
+            model_id: 2,
+            name: "claude-3-opus",
+            is_available: true,
+            billing_mode: "token",
+            effective_price_config: { input_price: "10" },
+          },
+        ],
+      }),
+    ])
+
+    expect(snapshot.data).toHaveLength(1)
+    expect(atIndex(snapshot.data, 0).token_price_usd_per_million?.input).toBe(
+      10,
+    )
+  })
+
+  it("selects cheaper per-call model when competing across channels", () => {
+    const snapshot = buildRightCodePricingResponse([
+      upstream({
+        upstream_id: 1,
+        models: [
+          {
+            model_id: 1,
+            name: "dall-e-3",
+            is_available: true,
+            billing_mode: "request",
+            request_price: "0.08",
+          },
+        ],
+      }),
+      upstream({
+        upstream_id: 2,
+        models: [
+          {
+            model_id: 2,
+            name: "dall-e-3",
+            is_available: true,
+            billing_mode: "request",
+            request_price: "0.04",
+          },
+        ],
+      }),
+    ])
+
+    expect(snapshot.data).toHaveLength(1)
+    expect(atIndex(snapshot.data, 0).quota_type).toBe(1)
+    expect(atIndex(snapshot.data, 0).model_price).toBe(0.04)
+  })
 })

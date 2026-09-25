@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { toRightCodeChannelInfos } from "~/services/apiAdapters/rightcode/channels"
 import {
   resolveRightCodeChannelBaseUrl,
   resolveRightCodeKeyBaseUrl,
@@ -95,5 +96,42 @@ describe("resolveRightCodeKeyBaseUrl", () => {
         boundChannel: null,
       }),
     ).toBeNull()
+  })
+})
+
+describe("toRightCodeChannelInfos", () => {
+  it("extracts channel info and models from upstreams", () => {
+    const channels = toRightCodeChannelInfos([
+      {
+        upstream_id: 1,
+        name: "Codex",
+        prefix: "/codex",
+        default_protocol: "responses",
+        copy_with_v1: true,
+        models: [
+          { model_id: 1, name: "gpt-5", is_available: true },
+          { model_id: 2, name: "gpt-4", is_available: false },
+        ],
+      },
+      {
+        upstream_id: Number.NaN,
+        prefix: "/invalid-id",
+      } as never,
+      {
+        upstream_id: 2,
+        prefix: "   ",
+      } as never,
+    ])
+
+    expect(channels).toEqual([
+      {
+        id: 1,
+        name: "Codex",
+        prefix: "/codex",
+        protocol: "responses",
+        copyWithV1: true,
+        models: ["gpt-5"],
+      },
+    ])
   })
 })
