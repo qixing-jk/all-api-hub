@@ -1,5 +1,40 @@
 # Changelog
 
+## [4.1.0](https://github.com/qixing-jk/all-api-hub/compare/v4.0.0...v4.1.0) (2026-09-25)
+
+
+### Features
+
+* **accounts:** rank the viewed tab above background related pages ([#1524](https://github.com/qixing-jk/all-api-hub/issues/1524)) ([0083d45](https://github.com/qixing-jk/all-api-hub/commit/0083d45845dd9bc6ff64d532e9f28c246a5d04ca))
+* **checkin:** support AgentRouter mirror domain ps.air-outer.com ([#1534](https://github.com/qixing-jk/all-api-hub/issues/1534)) ([#1538](https://github.com/qixing-jk/all-api-hub/issues/1538)) ([0397566](https://github.com/qixing-jk/all-api-hub/commit/0397566804f75206ed1ef833e3055b0196c9065d))
+* **dev:** bake an instance identity into local builds ([#1508](https://github.com/qixing-jk/all-api-hub/issues/1508)) ([c33dabc](https://github.com/qixing-jk/all-api-hub/commit/c33dabc5bd31c175e90e04a7b63d246e40190553))
+* **integrations:** export credentials to AI Toolbox via aitoolbox:// deeplink ([#1516](https://github.com/qixing-jk/all-api-hub/issues/1516)) ([d41fbc3](https://github.com/qixing-jk/all-api-hub/commit/d41fbc3c402e6a59a85d0506dd9563830b9983fc))
+* **rightcode:** add RightCode account integration ([#1540](https://github.com/qixing-jk/all-api-hub/issues/1540)) ([370e9dd](https://github.com/qixing-jk/all-api-hub/commit/370e9ddae6bf2956d22e5933db6e6b4ee1f96b33))
+* **site-announcements:** reduce notification noise and enable polling by default for new profiles ([#1511](https://github.com/qixing-jk/all-api-hub/issues/1511)) ([663c281](https://github.com/qixing-jk/all-api-hub/commit/663c281c089c51934c24ddb2f031989ed83f1443))
+* **site-detection:** name the resolved site type when it disagrees with the account ([#1527](https://github.com/qixing-jk/all-api-hub/issues/1527)) ([96345d5](https://github.com/qixing-jk/all-api-hub/commit/96345d51b8f9430001b9fc1af6ab867aec48ce94))
+* **star-promotion:** add value-gated GitHub star prompts ([#1515](https://github.com/qixing-jk/all-api-hub/issues/1515)) ([918f864](https://github.com/qixing-jk/all-api-hub/commit/918f86409d0878ed3f127bd54ba9db83a55b4a2c))
+* **verification:** bound persisted test results by age and owner liveness ([#1513](https://github.com/qixing-jk/all-api-hub/issues/1513)) ([61e3135](https://github.com/qixing-jk/all-api-hub/commit/61e3135ce582220784e0a55bd5461cc94092a3aa))
+
+
+### Bug Fixes
+
+* **account-dialog:** explain the self-hosted gateway prompt and keep the account form ([#1531](https://github.com/qixing-jk/all-api-hub/issues/1531)) ([b042fa5](https://github.com/qixing-jk/all-api-hub/commit/b042fa5527b87c6fe559f88a415ac0080a3811b3))
+* **analytics:** de-conflate action ids and guard payload parity ([#1517](https://github.com/qixing-jk/all-api-hub/issues/1517)) ([dc3d6af](https://github.com/qixing-jk/all-api-hub/commit/dc3d6af78db01984ed7e1d2d250911782a789678))
+* **auto-checkin:** explain check-in failures in plain language ([99ffb19](https://github.com/qixing-jk/all-api-hub/commit/99ffb19078df6e79d5167a0d789f805ac0ad9b1f))
+* **auto-checkin:** retry same-day results that are not clear dead ends ([#1539](https://github.com/qixing-jk/all-api-hub/issues/1539)) ([e30624c](https://github.com/qixing-jk/all-api-hub/commit/e30624cc2a0e5da10e972792b92fac018a4c724f))
+* **checkin:** confirm an unrecorded manual method before execution ([#1528](https://github.com/qixing-jk/all-api-hub/issues/1528)) ([3f97058](https://github.com/qixing-jk/all-api-hub/commit/3f970588a383f66cd9c181833211ea32bcc9155b))
+* **product-analytics:** reduce background event volume ([#1514](https://github.com/qixing-jk/all-api-hub/issues/1514)) ([1ae434c](https://github.com/qixing-jk/all-api-hub/commit/1ae434cee6b2cb59ff959ae96cc6d2b91d5bd9cb))
+* **settings:** index CLIProxyAPI and CPA aliases for managed site search ([#1535](https://github.com/qixing-jk/all-api-hub/issues/1535)) ([2a9256e](https://github.com/qixing-jk/all-api-hub/commit/2a9256ea9a4b5097c7843b4a0526cfdb56960e5e))
+* stop doomed work and close two telemetry blind spots ([#1518](https://github.com/qixing-jk/all-api-hub/issues/1518)) ([57275a6](https://github.com/qixing-jk/all-api-hub/commit/57275a6ee9ad68c7e52bc9f009519b235d3fd4fb))
+* **test:** correct shard weights for each shard's measured load ([#1507](https://github.com/qixing-jk/all-api-hub/issues/1507)) ([a522b80](https://github.com/qixing-jk/all-api-hub/commit/a522b80c5c2825160da3ff6ab04acf13c4b72a3d))
+* **time:** unify day-key semantics on the local day boundary ([#1510](https://github.com/qixing-jk/all-api-hub/issues/1510)) ([cbf4e16](https://github.com/qixing-jk/all-api-hub/commit/cbf4e1628da7d9c5e4c82deae49c2abefb88fe45))
+* **ui:** make button loading states legible and interruptible ([#1532](https://github.com/qixing-jk/all-api-hub/issues/1532)) ([4b8cfa8](https://github.com/qixing-jk/all-api-hub/commit/4b8cfa808a4cc94ea8f434ab825648ee2c053b6a))
+
+
+### Performance Improvements
+
+* **site-announcements:** window the cached announcement list ([#1530](https://github.com/qixing-jk/all-api-hub/issues/1530)) ([14181d3](https://github.com/qixing-jk/all-api-hub/commit/14181d302defc4b3a3188d865d722cca83aafb9c))
+
 ## [4.0.0](https://github.com/qixing-jk/all-api-hub/compare/v3.62.0...v4.0.0) (2026-09-20)
 
 
