@@ -90,7 +90,13 @@ export function isAlreadyCheckedMessage(message: string): boolean {
 /** Clear login-failure copy. A bare HTTP status is not enough. */
 function isAuthenticationFailureMessage(message: string): boolean {
   const normalized = message.toLowerCase()
+  const invalidAccessToken =
+    normalized.includes("access token") &&
+    ["无效", "失效", "过期", "invalid", "expired"].some((hint) =>
+      normalized.includes(hint),
+    )
   return (
+    invalidAccessToken ||
     normalized.includes("unauthorized") ||
     normalized.includes("unauthenticated") ||
     normalized.includes("authentication") ||

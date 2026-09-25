@@ -2670,7 +2670,8 @@ class AutoCheckinScheduler {
           const retryStrategy = config.retryStrategy
           const retryState = mergeRunResults({
             today,
-            enabled: retryStrategy?.enabled === true,
+            enabled:
+              config.globalEnabled === true && retryStrategy?.enabled === true,
             maxAttempts: retryStrategy?.maxAttemptsPerDay ?? 0,
             current: current?.retryState,
             results,
@@ -3156,9 +3157,9 @@ class AutoCheckinScheduler {
     // while this one was executing is not reverted. The result carries what was
     // persisted back to the caller below.
     const retryPreferences = await userPreferences.getPreferences()
-    const manualRetryStrategy = (
+    const manualRetryConfig =
       retryPreferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin
-    )?.retryStrategy
+    const manualRetryStrategy = manualRetryConfig?.retryStrategy
     const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
       (current) => {
         const perAccount: Record<string, CheckinAccountResult> = {
@@ -3175,7 +3176,9 @@ class AutoCheckinScheduler {
           today,
           // One strategy reading for every path. A manual retry must not admit a
           // queue that the retry run and the alarm would then refuse to process.
-          enabled: manualRetryStrategy?.enabled === true,
+          enabled:
+            manualRetryConfig?.globalEnabled === true &&
+            manualRetryStrategy?.enabled === true,
           maxAttempts: manualRetryStrategy?.maxAttemptsPerDay ?? 0,
           current: current?.retryState,
           results: { [result.accountId]: result },
@@ -3650,10 +3653,19 @@ async function verifyAutoCheckinAccountStatus(accountId?: string) {
   }
   const result = await autoCheckinScheduler.verifyAccountStatus(accountId)
   if (result.outcome === "verified") {
+    if (result.verifiedStatus === "unknown") {
+      return {
+        success: false as const,
+        outcome: "unknown" as const,
+        error: t("autoCheckin:messages.error.statusVerificationFailed"),
+      }
+    }
     return {
       success: true as const,
       outcome: result.outcome,
-      verifiedStatus: result.verifiedStatus,
+      ...(result.verifiedStatus
+        ? { verifiedStatus: result.verifiedStatus }
+        : {}),
     }
   }
   return {

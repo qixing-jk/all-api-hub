@@ -1605,6 +1605,20 @@ describe("typed runtime messaging setup", () => {
         "autoCheckin:verifyAccountStatus",
       )({ data: { accountId: "account-1" } }),
     ).resolves.toEqual({ success: true, outcome: "verified" })
+    verifyAccountStatus.mockResolvedValueOnce({
+      outcome: "verified",
+      verifiedStatus: "unknown",
+    })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:verifyAccountStatus",
+      )({ data: { accountId: "account-1" } }),
+    ).resolves.toEqual({
+      success: false,
+      outcome: "unknown",
+      error: "autoCheckin:messages.error.statusVerificationFailed",
+    })
     await expect(
       getRegisteredHandler(
         onAutoCheckinMessage,

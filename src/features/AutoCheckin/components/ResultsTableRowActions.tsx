@@ -110,7 +110,8 @@ export default function ResultsTableRowActions({
   const showVerifyAction = Boolean(
     onVerifyAccountStatus &&
       isUncertainResult &&
-      supportsCheckInStatusReadback(result.methodId),
+      (result.methodId === undefined ||
+        supportsCheckInStatusReadback(result.methodId)),
   )
   const showManualAction = Boolean(
     onOpenManualSignIn && (forceShowActions || isFailedResult),

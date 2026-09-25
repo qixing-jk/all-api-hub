@@ -100,7 +100,7 @@ type AutoCheckinVerifyAccountStatusResponse =
   | {
       success: true
       outcome: "verified"
-      verifiedStatus?: "checked" | "not_checked" | "unknown"
+      verifiedStatus?: "checked" | "not_checked"
     }
   | {
       success: false
@@ -110,6 +110,7 @@ type AutoCheckinVerifyAccountStatusResponse =
         | "unavailable"
         | "not_saved"
         | "account_not_found"
+        | "unknown"
     }
 
 interface AutoCheckinProtocolMap {

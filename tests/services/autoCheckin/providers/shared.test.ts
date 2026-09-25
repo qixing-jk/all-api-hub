@@ -90,6 +90,13 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({ reasonCode: "authentication_required" })
     expect(
       resolveProviderErrorResult({
+        error: Object.assign(new Error("无权进行此操作，access token 无效"), {
+          statusCode: 401,
+        }),
+      }),
+    ).toMatchObject({ reasonCode: "authentication_required" })
+    expect(
+      resolveProviderErrorResult({
         error: Object.assign(new Error("Forbidden"), { statusCode: 403 }),
       }),
     ).toMatchObject({ reasonCode: "permission_denied" })
