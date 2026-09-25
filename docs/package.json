@@ -2,11 +2,12 @@
   "name": "all-api-hub-docs",
   "description": "A VuePress project",
   "version": "0.0.1",
+  "packageManager": "pnpm@12.6.0",
   "license": "AGPL-3.0",
   "type": "module",
   "engines": {
     "node": ">=24",
-    "pnpm": ">=10"
+    "pnpm": ">=12 <13"
   },
   "scripts": {
     "docs:dev": "pnpm run docs:generate-changelog-index && vuepress dev docs",

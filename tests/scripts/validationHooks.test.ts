@@ -11,9 +11,27 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 
+import { getPnpmInvocation } from "../../scripts/utils/run-pnpm.mjs"
+
 const temporaryRoots: string[] = []
 const scriptsRoot = path.resolve("scripts")
 const zeroSha = "0".repeat(40)
+
+describe("pnpm invocation", () => {
+  it("runs a native pnpm executable directly", () => {
+    expect(getPnpmInvocation(["run", "lint"], "C:\\tools\\pnpm.exe")).toEqual({
+      command: "C:\\tools\\pnpm.exe",
+      args: ["run", "lint"],
+    })
+  })
+
+  it("runs a JavaScript pnpm entry point through Node.js", () => {
+    expect(getPnpmInvocation(["run", "lint"], "/tools/pnpm.cjs")).toEqual({
+      command: process.execPath,
+      args: ["/tools/pnpm.cjs", "run", "lint"],
+    })
+  })
+})
 
 /** Create a real isolated Git repository with a recording pnpm substitute. */
 function createRepository() {

@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process"
 import fs from "node:fs/promises"
 import path from "node:path"
 
+import { getPnpmInvocation } from "./utils/run-pnpm.mjs"
+
 const repoRoot = process.cwd()
 const localesRoot = path.join(repoRoot, "src", "locales")
 const configPath = path.join(repoRoot, "i18next.config.ts")
@@ -69,11 +71,9 @@ function logLocaleJsonParseError({ absolutePath, relativePath, error }) {
  * @param args pnpm arguments excluding the executable itself.
  */
 function runPnpm(args) {
-  if (
-    typeof process.env.npm_execpath === "string" &&
-    process.env.npm_execpath
-  ) {
-    execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+  const invocation = getPnpmInvocation(args)
+  if (invocation) {
+    execFileSync(invocation.command, invocation.args, {
       stdio: "inherit",
     })
     return

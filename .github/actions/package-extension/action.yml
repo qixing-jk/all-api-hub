@@ -6,10 +6,6 @@ inputs:
     description: Path to the Node.js version file relative to the repository root
     required: false
     default: ".nvmrc"
-  pnpm-version:
-    description: pnpm version to use
-    required: false
-    default: "10"
   working-directory:
     description: Directory containing package.json and pnpm-lock.yaml
     required: false
@@ -38,7 +34,7 @@ runs:
     - name: Setup pnpm
       uses: pnpm/action-setup@v5
       with:
-        version: ${{ inputs.pnpm-version }}
+        package_json_file: ${{ inputs.working-directory }}/package.json
         run_install: false
 
     - name: Setup Node.js

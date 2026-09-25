@@ -1,12 +1,28 @@
 import { execFileSync } from "node:child_process"
 
 /**
+ * Resolve pnpm's script entry point or native executable from npm_execpath.
+ * @param args pnpm arguments.
+ * @param npmExecPath Entry point exported by the current package manager.
+ */
+export function getPnpmInvocation(
+  args,
+  npmExecPath = process.env.npm_execpath,
+) {
+  if (!npmExecPath) return null
+  return /\.[cm]?js$/i.test(npmExecPath)
+    ? { command: process.execPath, args: [npmExecPath, ...args] }
+    : { command: npmExecPath, args }
+}
+
+/**
  * Run fixed, repository-owned pnpm arguments, propagating gate failures.
  * @param args pnpm arguments, never user input or Git paths.
  */
 export function runPnpm(args) {
-  if (process.env.npm_execpath) {
-    execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+  const invocation = getPnpmInvocation(args)
+  if (invocation) {
+    execFileSync(invocation.command, invocation.args, {
       stdio: "inherit",
     })
   } else if (process.platform === "win32") {

@@ -7,6 +7,7 @@ import {
   filterRealSiteE2eMatrix,
   normalizeRealSiteE2eCategory,
 } from "./real-site-e2e-matrix.mjs"
+import { getPnpmInvocation } from "./utils/run-pnpm.mjs"
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const firstArg = process.argv[2]
@@ -100,18 +101,18 @@ function buildEntryEnv(entry, options = {}) {
 }
 
 function runPnpm(args, env) {
-  const result =
-    typeof process.env.npm_execpath === "string" && process.env.npm_execpath
-      ? spawnSync(process.execPath, [process.env.npm_execpath, ...args], {
-          cwd: rootDir,
-          env,
-          stdio: "inherit",
-        })
-      : spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, {
-          cwd: rootDir,
-          env,
-          stdio: "inherit",
-        })
+  const invocation = getPnpmInvocation(args)
+  const result = invocation
+    ? spawnSync(invocation.command, invocation.args, {
+        cwd: rootDir,
+        env,
+        stdio: "inherit",
+      })
+    : spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, {
+        cwd: rootDir,
+        env,
+        stdio: "inherit",
+      })
 
   if (result.status !== 0) {
     if (result.error) {

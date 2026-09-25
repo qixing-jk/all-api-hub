@@ -9,6 +9,7 @@ on:
       - "docs/docs/**" # 匹配 /docs/docs/ 目录下所有文档内容和配置 (包括 .vuepress/、config.js 等)
       - "docs/package.json" # 匹配 /docs/package.json 文件 (因为依赖定义在这里)
       - "docs/pnpm-lock.yaml" # 匹配 /docs/pnpm-lock.yaml 文件 (因为依赖版本锁定在这里)
+      - "docs/pnpm-workspace.yaml"
       - "resources/wechat_group.png" # 文档首页直接引用的微信群二维码，更新时也需要重新部署 Pages
 
 concurrency:
@@ -36,7 +37,7 @@ jobs:
       - name: 安装 pnpm
         uses: pnpm/action-setup@v5
         with:
-          version: 10
+          package_json_file: docs/package.json
           run_install: false
 
       - name: 设置 Node.js

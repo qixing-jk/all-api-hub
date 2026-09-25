@@ -1,0 +1,10 @@
+nodeLinker: hoisted
+autoInstallPeers: true
+
+allowBuilds:
+  '@swc/core': false
+  core-js: false
+  electron: true
+  esbuild: false
+  msw: false
+  spawn-sync: false
