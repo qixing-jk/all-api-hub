@@ -11,11 +11,16 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { getPnpmInvocation } from "../../scripts/utils/run-pnpm.mjs"
+import {
+  getPnpmInvocation,
+  resolvePnpmInvocation,
+} from "~~/scripts/utils/run-pnpm.mjs"
 
 const temporaryRoots: string[] = []
 const scriptsRoot = path.resolve("scripts")
 const zeroSha = "0".repeat(40)
+/** Stands for a process started outside a package manager, so `npm_execpath` is unset. */
+const noExportedEntryPoint = ""
 
 describe("pnpm invocation", () => {
   it("runs a native pnpm executable directly", () => {
@@ -29,6 +34,33 @@ describe("pnpm invocation", () => {
     expect(getPnpmInvocation(["run", "lint"], "/tools/pnpm.cjs")).toEqual({
       command: process.execPath,
       args: ["/tools/pnpm.cjs", "run", "lint"],
+    })
+  })
+
+  it("prefers an exported entry point over the platform fallback", () => {
+    expect(
+      resolvePnpmInvocation(["run", "lint"], "/tools/pnpm.cjs", "win32"),
+    ).toEqual({
+      command: process.execPath,
+      args: ["/tools/pnpm.cjs", "run", "lint"],
+    })
+  })
+
+  it("runs the Windows command shim through the command interpreter", () => {
+    expect(
+      resolvePnpmInvocation(["run", "lint"], noExportedEntryPoint, "win32"),
+    ).toEqual({
+      command: "cmd.exe",
+      args: ["/d", "/s", "/c", "pnpm", "run", "lint"],
+    })
+  })
+
+  it("finds pnpm on the PATH on other platforms", () => {
+    expect(
+      resolvePnpmInvocation(["run", "lint"], noExportedEntryPoint, "linux"),
+    ).toEqual({
+      command: "pnpm",
+      args: ["run", "lint"],
     })
   })
 })

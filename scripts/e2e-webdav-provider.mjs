@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { getPnpmInvocation } from "./utils/run-pnpm.mjs"
+import { resolvePnpmInvocation } from "./utils/run-pnpm.mjs"
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const webdavSpec = "e2e/realSite/webdavProviderFlow.spec.ts"
@@ -125,19 +125,17 @@ function toTitleCase(value) {
     .join(" ")
 }
 
+/**
+ * Run pnpm with fixed, repository-owned arguments, propagating failures.
+ * @param args pnpm arguments, never user input or Git paths.
+ */
 function runPnpm(args) {
-  const invocation = getPnpmInvocation(args)
-  const result = invocation
-    ? spawnSync(invocation.command, invocation.args, {
-        cwd: rootDir,
-        env,
-        stdio: "inherit",
-      })
-    : spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, {
-        cwd: rootDir,
-        env,
-        stdio: "inherit",
-      })
+  const invocation = resolvePnpmInvocation(args)
+  const result = spawnSync(invocation.command, invocation.args, {
+    cwd: rootDir,
+    env,
+    stdio: "inherit",
+  })
 
   if (result.status !== 0) {
     if (result.error) {

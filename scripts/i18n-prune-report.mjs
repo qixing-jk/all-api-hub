@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import fs from "node:fs/promises"
 import path from "node:path"
 
-import { getPnpmInvocation } from "./utils/run-pnpm.mjs"
+import { resolvePnpmInvocation } from "./utils/run-pnpm.mjs"
 
 const repoRoot = process.cwd()
 const localesRoot = path.join(repoRoot, "src", "locales")
@@ -71,26 +71,8 @@ function logLocaleJsonParseError({ absolutePath, relativePath, error }) {
  * @param args pnpm arguments excluding the executable itself.
  */
 function runPnpm(args) {
-  const invocation = getPnpmInvocation(args)
-  if (invocation) {
-    execFileSync(invocation.command, invocation.args, {
-      stdio: "inherit",
-    })
-    return
-  }
-
-  if (process.platform === "win32") {
-    execFileSync(
-      process.env.comspec ?? "cmd.exe",
-      ["/d", "/s", "/c", "pnpm", ...args],
-      {
-        stdio: "inherit",
-      },
-    )
-    return
-  }
-
-  execFileSync("pnpm", args, {
+  const invocation = resolvePnpmInvocation(args)
+  execFileSync(invocation.command, invocation.args, {
     stdio: "inherit",
   })
 }
