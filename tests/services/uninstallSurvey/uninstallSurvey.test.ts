@@ -279,6 +279,19 @@ describe("uninstallSurveyService", () => {
     expect(url).toMatch(/lang=(?:[a-zA-Z-]+|unknown)/)
   })
 
+  it("resolves UI language using 'unknown' when neither i18n nor navigator has a language", async () => {
+    i18nMock.resolvedLanguage = undefined
+    i18nMock.language = undefined
+    const navSpy = vi.spyOn(navigator, "language", "get").mockReturnValue("")
+
+    try {
+      const url = await uninstallSurveyService.composeUrl()
+      expect(url).toContain("lang=unknown")
+    } finally {
+      navSpy.mockRestore()
+    }
+  })
+
   it("normalizes malformed stored state with non-finite firstSeenAt", async () => {
     storageDouble.data.set(stateKey, { firstSeenAt: "not-a-number" })
 
@@ -286,8 +299,19 @@ describe("uninstallSurveyService", () => {
     expect(url).toContain("d=0")
   })
 
-  it("registerNow catches and logs when ensureFirstSeenAt throws", async () => {
-    storageDouble.failReads = true
+  it("catches and logs when buildSurveyUrl throws inside composeUrl", async () => {
+    mockedGetAnonymousId.mockRejectedValueOnce(
+      new Error("analytics read failed"),
+    )
+
+    const result = await uninstallSurveyService.composeUrl()
+    expect(result).toBeNull()
+  })
+
+  it("catches and logs when buildSurveyUrl throws inside registerNow", async () => {
+    mockedGetAnonymousId.mockRejectedValueOnce(
+      new Error("analytics read failed"),
+    )
 
     const result = await uninstallSurveyService.registerNow()
     expect(result).toBeNull()

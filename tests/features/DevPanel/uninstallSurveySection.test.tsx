@@ -344,4 +344,34 @@ describe("uninstall survey dev section", () => {
       )
     })
   })
+
+  it("opens the preview URL unchanged when withoutAnalyticsId encounters a malformed URL", async () => {
+    composeUrlMock.mockResolvedValue("http://[invalid-url")
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Open survey page (no uid)" }),
+    )
+
+    await waitFor(() => {
+      expect(windowOpenMock).toHaveBeenCalledWith(
+        "http://[invalid-url",
+        "_blank",
+        "noopener,noreferrer",
+      )
+    })
+  })
+
+  it("catches unhandled exceptions in action execution and shows an error toast", async () => {
+    composeUrlMock.mockRejectedValue(new Error("unexpected compose crash"))
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Compose URL preview" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("unexpected compose crash")
+    })
+  })
 })
