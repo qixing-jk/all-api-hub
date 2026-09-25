@@ -120,6 +120,8 @@
       "retryFailed": "Falha na nova tentativa: {{error}}",
       "runFailed": "Falha ao executar o check-in automático: {{error}}",
       "statusVerificationFailed": "Não foi possível verificar o status de check-in selecionado. Tente novamente ou abra o site da conta.",
+      "statusVerificationNotSaved": "O status do check-in foi lido, mas não foi salvo",
+      "statusVerificationUnsupported": "Este método de check-in não consegue ler o status de hoje",
       "uiOpenPretriggerDidNotStart": "O pré-acionamento ao abrir a UI não foi iniciado: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Falha ao avaliar o pré-acionamento de abertura da UI: {{error}}",
       "uiOpenPretriggerIneligible": "O pré-acionamento de abertura da UI não é elegível: {{reason}}",
@@ -164,7 +166,6 @@
     "nativePageStatusUnconfirmed": "A ação de check-in da página foi clicada, mas o status da conta de destino não foi confirmado. Por favor, abra a página de check-in e verifique manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "O botão de check-in não foi encontrado na página. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "A ação de check-in da página não pôde ser acionada. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
-    "resultPendingConfirmation": "Resultado do check-in aguardando confirmação",
     "sessionBusy": "Outro login já está em andamento. Tente novamente mais tarde.",
     "turnstileIncognitoAccessRequired": "A extensão deve ter permissão para ser executada em janelas anônimas/privadas para buscar o token Turnstile em uma janela temporária privada (cenário de múltiplas contas). Ative \"Permitir modo anônimo\" para esta extensão e tente novamente ou abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "turnstileManualRequired": "A verificação Cloudflare Turnstile é necessária. Abra a página de check-in para concluir a verificação: {{checkInUrl}}",
@@ -186,7 +187,7 @@
     "notifyUiOnCompletionDesc": "Quando o check-in automático for concluído, atualize imediatamente os dados da conta de check-in e as interfaces relevantes.",
     "pretriggerDailyOnUiOpen": "Antecipar a execução diária ao abrir a interface",
     "pretriggerDailyOnUiOpenDesc": "Ao abrir a UI de extensão durante a janela de tempo de hoje e a execução diária ainda não tiver sido executada, inicie-a imediatamente.",
-    "retryDesc": "Tentar novamente contas com falha automaticamente algumas vezes durante o mesmo dia.",
+    "retryDesc": "Tenta novamente no mesmo dia os resultados com falha ou não confirmados, exceto os becos sem saída claros.",
     "retryInterval": "Intervalo entre tentativas (minutos)",
     "retryIntervalDesc": "Quanto tempo esperar antes da próxima tentativa.",
     "retryMaxAttempts": "Máximo de tentativas por dia",
@@ -231,7 +232,8 @@
     "source_unavailable": "O site de origem está temporariamente indisponível. Tente novamente mais tarde.",
     "status_unavailable": "Não foi possível confirmar o status atual, portanto o check-in não foi realizado",
     "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente.",
-    "upstream_error": "O site retornou um resultado de check-in não reconhecido. Tente novamente mais tarde."
+    "upstream_error": "O site retornou um resultado de check-in não reconhecido. Tente novamente mais tarde.",
+    "upstream_rejected": "O site recusou esta solicitação de check-in."
   },
   "snapshot": {
     "badges": {

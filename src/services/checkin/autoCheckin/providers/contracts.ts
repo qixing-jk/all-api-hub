@@ -75,10 +75,11 @@ export type AutoCheckinProviderReadiness =
 export interface AutoCheckinProvider {
   /** Maps provider-specific status errors for both discovery and execution. */
   classifyStatusError?: (error: unknown) => CheckInMethodUnknownReason
-  /** This protocol must never mutate without fresh authoritative readback. */
+  /**
+   * This protocol must confirm today's status before it mutates. Only a method
+   * with `getStatus` can honour it; a method without readback submits directly.
+   */
   readonly requiresAuthoritativeStatusBeforeMutation?: boolean
-  /** Pinned server idempotency permits a later status-first retry. */
-  readonly retryAfterUncertainNotChecked?: boolean
   getReadiness(account: SiteAccount): AutoCheckinProviderReadiness
   /** Optional read-only protocol probe used by full discovery. */
   detect?: (

@@ -63,6 +63,7 @@ export class ApiError extends Error {
       this.endpoint ??= cause.endpoint
       this.code ??= cause.code
       this.upstreamCode ??= cause.upstreamCode
+      this.unattributedMessage ??= cause.unattributedMessage
     }
   }
 
@@ -72,4 +73,28 @@ export class ApiError extends Error {
    * could have been recovered via temp-window fallback but the feature was unavailable.
    */
   public originalCode?: ApiErrorCode
+
+  /**
+   * True when the message is not text the site sent: it was recovered from, or
+   * replaced by, a body that is not the site's JSON answer (an interceptor page,
+   * a proxy notice). It can still be the best copy to show, but no policy may
+   * read it as the site claiming an authentication or permission problem.
+   *
+   * Unset means the site's own JSON answer or the raising caller supplied it.
+   */
+  public unattributedMessage?: boolean
+}
+
+/**
+ * Returns whether an error's message cannot be attributed to the site.
+ *
+ * Reads the marker structurally: errors crossing a transport or message
+ * boundary are not guaranteed to be `ApiError` instances.
+ */
+export function hasUnattributedMessage(error: unknown): boolean {
+  return (
+    Boolean(error) &&
+    typeof error === "object" &&
+    (error as { unattributedMessage?: unknown }).unattributedMessage === true
+  )
 }

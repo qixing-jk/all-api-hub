@@ -95,6 +95,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Ungültiges Antwortformat",
+      "nonJsonContent": "{{contentType}} statt JSON zurückgegeben (HTTP {{status}})",
       "onlyJsonSupported": "Nur JSON-Antworten werden unterstützt",
       "requestFailed": "Anfrage fehlgeschlagen: {{status}}"
     },

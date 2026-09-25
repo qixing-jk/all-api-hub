@@ -20,6 +20,8 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
+import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -78,22 +80,38 @@ export default function ResultsTableRowActions({
   onDisableAccount,
   onDeleteAccount,
 }: ResultsTableRowActionsProps) {
-  const { t } = useTranslation(["autoCheckin", "account"])
+  const { t } = useTranslation([
+    "autoCheckin",
+    "account",
+    "accountDialog",
+    "common",
+  ])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
   const accountId = result.accountId
   const forceShowActions = Boolean(showDevActions)
   const isOpeningSite = pendingOpeningSiteAccountIds?.has(accountId) ?? false
   const isFailedResult = result.status === CHECKIN_RESULT_STATUS.FAILED
   const isUncertainResult = result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+  /**
+   * The button asks the policy the execution path applies, so a provider's own
+   * `retryable` flag can neither hide nor invent the action. The queue reads the
+   * decision the row stored instead; for every row this version produced the two
+   * agree, which the execution tests assert, and the status-unavailable clause
+   * keeps a manual attempt available for rows stored before that contract.
+   */
   const canRetryResult =
-    isFailedResult ||
+    canAutomaticallyRetryCheckinResult(result, result.methodId) ||
     result.reasonCode === AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
   const canOpenExternalCheckIn =
     externalCheckInAccountIds?.has(accountId) ?? false
   const showRetryAction = Boolean(
     onRetryAccount && (forceShowActions || canRetryResult),
   )
-  const showVerifyAction = Boolean(onVerifyAccountStatus && isUncertainResult)
+  const showVerifyAction = Boolean(
+    onVerifyAccountStatus &&
+      isUncertainResult &&
+      supportsCheckInStatusReadback(result.methodId),
+  )
   const showManualAction = Boolean(
     onOpenManualSignIn && (forceShowActions || isFailedResult),
   )

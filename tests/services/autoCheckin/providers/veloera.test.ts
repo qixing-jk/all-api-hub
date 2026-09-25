@@ -258,7 +258,7 @@ describe("veloeraProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
-        reasonCode: "upstream_error",
+        reasonCode: "upstream_rejected",
         retryable: true,
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",
@@ -312,6 +312,7 @@ describe("veloeraProvider", () => {
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
         reasonCode: "no_provider",
+        retryable: false,
       })
     })
 

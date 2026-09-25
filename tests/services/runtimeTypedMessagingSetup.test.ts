@@ -1516,7 +1516,9 @@ describe("typed runtime messaging setup", () => {
       summary: { executed: 1 },
       pendingRetry: false,
     })
-    const verifyAccountStatus = vi.fn().mockResolvedValue(undefined)
+    const verifyAccountStatus = vi
+      .fn()
+      .mockResolvedValue({ outcome: "verified" })
     const getAccountDisplayData = vi.fn().mockResolvedValue({
       id: "account-1",
       siteName: "Example",
@@ -1602,7 +1604,7 @@ describe("typed runtime messaging setup", () => {
         onAutoCheckinMessage,
         "autoCheckin:verifyAccountStatus",
       )({ data: { accountId: "account-1" } }),
-    ).resolves.toEqual({ success: true })
+    ).resolves.toEqual({ success: true, outcome: "verified" })
     await expect(
       getRegisteredHandler(
         onAutoCheckinMessage,

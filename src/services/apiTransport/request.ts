@@ -885,8 +885,15 @@ async function parseResponseByType<T>(
       try {
         return (await response.json()) as ApiResponse<T>
       } catch {
+        const contentType = response.headers.get("content-type") || ""
+        const nonJsonType = contentType !== "" && !/\bjson\b/i.test(contentType)
         throw new ApiError(
-          t("messages:errors.api.invalidResponseFormat"),
+          nonJsonType
+            ? t("messages:errors.api.nonJsonContent", {
+                contentType,
+                status: response.status,
+              })
+            : t("messages:errors.api.invalidResponseFormat"),
           response.status,
           endpoint,
           API_ERROR_CODES.JSON_PARSE_ERROR,

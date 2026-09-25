@@ -116,6 +116,8 @@
       "retryFailed": "重新嘗試失敗：{{error}}",
       "runFailed": "執行自動簽到失敗：{{error}}",
       "statusVerificationFailed": "無法驗證所選簽到狀態。請重試或開啟帳號網站。",
+      "statusVerificationNotSaved": "簽到狀態已讀取，但沒有保存",
+      "statusVerificationUnsupported": "這個簽到方式不能讀取當天狀態",
       "uiOpenPretriggerDidNotStart": "介面開啟預觸發未啟動：{{reason}}",
       "uiOpenPretriggerEvaluationFailed": "評估介面開啟預觸發失敗：{{error}}",
       "uiOpenPretriggerIneligible": "介面開啟預觸發條件不滿足：{{reason}}",
@@ -156,7 +158,6 @@
     "nativePageStatusUnconfirmed": "已點擊頁面簽到操作，但未確認目標帳號完成簽到。請開啟簽到頁面手動確認：{{checkInUrl}}",
     "nativePageTargetNotFound": "未在頁面上找到簽到按鈕。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
     "nativePageTriggerFailed": "無法觸發頁面簽到操作。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
-    "resultPendingConfirmation": "簽到結果待確認",
     "sessionBusy": "另一個登入流程正在進行中，請稍後重試。",
     "turnstileIncognitoAccessRequired": "需要允許擴充套件在無痕模式執行，才能在無痕頁面獲取 Turnstile Token（多帳號場景）。請在擴充套件管理頁開啟“允許在無痕模式執行”後重試；或手動開啟簽到頁面完成驗證：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 驗證，請開啟簽到頁面完成驗證：{{checkInUrl}}",
@@ -178,7 +179,7 @@
     "notifyUiOnCompletionDesc": "當自動簽到執行完成後，立即重新整理簽到帳號的資料並重新整理相關介面。",
     "pretriggerDailyOnUiOpen": "開啟介面時提前觸發今日簽到",
     "pretriggerDailyOnUiOpenDesc": "當你在今日時間視窗內開啟擴充套件介面且今日每日計劃尚未執行時，立即觸發一次每日自動簽到。",
-    "retryDesc": "在同一天內自動重試失敗的帳號。",
+    "retryDesc": "當天自動重試失敗和待確認的結果，明確無法完成的除外。",
     "retryInterval": "重試間隔（分鐘）",
     "retryIntervalDesc": "每次重試之間等待的時間。",
     "retryMaxAttempts": "每日最大嘗試次數",
@@ -223,7 +224,8 @@
     "source_unavailable": "目標站點暫時無法使用，請稍後重試。",
     "status_unavailable": "暫時無法確認目前簽到狀態，因此未執行簽到",
     "timeout": "連線逾時，簽到未能完成，請重試。",
-    "upstream_error": "目標站點回傳了無法識別的簽到結果，請稍後重試。"
+    "upstream_error": "目標站點回傳了無法識別的簽到結果，請稍後重試。",
+    "upstream_rejected": "站點拒絕了這次簽到請求。"
   },
   "snapshot": {
     "badges": {

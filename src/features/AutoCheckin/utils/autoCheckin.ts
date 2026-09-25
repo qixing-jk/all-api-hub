@@ -423,6 +423,8 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.status_unavailable", messageParams)
     case "autoCheckin:skipReasons.upstream_error":
       return t("autoCheckin:skipReasons.upstream_error", messageParams)
+    case "autoCheckin:skipReasons.upstream_rejected":
+      return t("autoCheckin:skipReasons.upstream_rejected", messageParams)
     case "autoCheckin:skipReasons.no_provider":
       return t("autoCheckin:skipReasons.no_provider", messageParams)
     case "autoCheckin:skipReasons.account_unavailable":
@@ -433,6 +435,13 @@ export function translateAutoCheckinMessageKey(
       return messageKey
   }
 }
+
+const RECONCILIATION_MESSAGE_KEYS = {
+  checked: "autoCheckin:providerFallback.alreadyCheckedToday",
+  not_checked: "autoCheckin:skipReasons.checkin_unconfirmed",
+  unknown: "autoCheckin:skipReasons.status_unavailable",
+  unavailable: "autoCheckin:skipReasons.source_unavailable",
+} as const
 
 /**
  * Resolves the user-facing message for one persisted execution result.
@@ -446,11 +455,9 @@ export function getAutoCheckinResultMessage<
     | "messageParams"
     | "rawMessage"
     | "message"
+    | "reconciliation"
   >,
 >(t: TFunction, result: T): string {
-  if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
-    return t("autoCheckin:providerFallback.resultPendingConfirmation")
-  }
   if (result.messageKey) {
     return translateAutoCheckinMessageKey(
       t,
@@ -458,10 +465,13 @@ export function getAutoCheckinResultMessage<
       result.messageParams,
     )
   }
+  if (result.rawMessage) return result.rawMessage
   if (result.reasonCode) {
     return translateAutoCheckinSkipReason(t, result.reasonCode)
   }
-  if (result.rawMessage) return result.rawMessage
+  if (result.reconciliation) {
+    return t(RECONCILIATION_MESSAGE_KEYS[result.reconciliation])
+  }
   if (result.message) return result.message
   return t("autoCheckin:providerFallback.unknownError")
 }
@@ -591,7 +601,10 @@ export function resolveAutoCheckinTroubleshootingHintKey(params: {
     return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.siteTypeCheckinUnsupported
   }
 
-  if (params.status !== CHECKIN_RESULT_STATUS.FAILED) {
+  if (
+    params.status !== CHECKIN_RESULT_STATUS.FAILED &&
+    params.status !== CHECKIN_RESULT_STATUS.UNCERTAIN
+  ) {
     return null
   }
 

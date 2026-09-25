@@ -151,4 +151,193 @@ describe("auto-checkin provider error normalization", () => {
       messageKey: undefined,
     })
   })
+
+  it.each([
+    [
+      "a transport rejection",
+      new ApiError(
+        "example refusal",
+        400,
+        "/api/user/checkin",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+    ],
+    [
+      "a rate limit",
+      new ApiError(
+        "too many requests",
+        429,
+        "/api/user/checkin",
+        API_ERROR_CODES.HTTP_429,
+      ),
+    ],
+    [
+      "a business envelope the provider inspected",
+      new ApiError(
+        "example business refusal",
+        undefined,
+        "/api/user/checkin",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      ),
+    ],
+  ])(
+    "records %s as a determinate refusal that stays retryable",
+    (_name, error) => {
+      expect(resolveProviderErrorResult({ error })).toEqual({
+        status: "failed",
+        reasonCode: "upstream_rejected",
+        // The site's own copy wins over the generic failure label.
+        rawMessage: error.message,
+        messageKey: undefined,
+        retryable: true,
+      })
+    },
+  )
+
+  it("keeps a dispatched refusal determinate instead of uncertain", () => {
+    // The site answered, so the answer is the outcome: a lost response is the
+    // uncertain case, not a delivered refusal.
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "example refusal",
+          400,
+          "/api/user/checkin",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+        mutationDispatched: true,
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_rejected",
+      retryable: true,
+    })
+  })
+
+  it.each([
+    ["a bare HTTP 403", 403, API_ERROR_CODES.HTTP_403],
+    ["an HTML 401", 401, API_ERROR_CODES.CONTENT_TYPE_MISMATCH],
+  ])(
+    "leaves %s retryable because a status alone is not permission evidence",
+    (_name, statusCode, code) => {
+      // The transport's own copy carries no site message, so nothing here
+      // proves the site refused the check-in rather than rejecting the client.
+      expect(
+        resolveProviderErrorResult({
+          error: new ApiError(
+            `请求失败: ${statusCode}`,
+            statusCode,
+            "/api/user/checkin",
+            code,
+          ),
+        }),
+      ).toEqual({
+        status: "uncertain",
+        reasonCode: "upstream_error",
+        rawMessage: `请求失败: ${statusCode}`,
+        messageKey: undefined,
+        retryable: true,
+      })
+    },
+  )
+
+  it("refuses an unsupported endpoint instead of retrying it", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "Not found",
+          405,
+          "/api/user/checkin",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "no_provider",
+      retryable: false,
+    })
+  })
+
+  it.each([
+    ["permission wording", "Forbidden", 403, API_ERROR_CODES.HTTP_403],
+    ["login wording", "未登录", 401, API_ERROR_CODES.HTTP_401],
+  ])(
+    "keeps a recovered %s from deciding a dead end",
+    (_name, message, statusCode, code) => {
+      // The transport marks text that came from a body which is not the site's
+      // JSON answer. It is shown as-is, but an interceptor page must not turn a
+      // retryable refusal into an authentication or permission dead end.
+      expect(
+        resolveProviderErrorResult({
+          error: Object.assign(
+            new ApiError(message, statusCode, "/api/user/checkin", code),
+            { unattributedMessage: true },
+          ),
+        }),
+      ).toMatchObject({
+        status: "uncertain",
+        reasonCode: "upstream_error",
+        rawMessage: message,
+        retryable: true,
+      })
+    },
+  )
+
+  it("keeps a recovered message without a status out of the auth bucket", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: Object.assign(new ApiError("未登录"), {
+          unattributedMessage: true,
+        }),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "upstream_error",
+      rawMessage: "未登录",
+      retryable: true,
+    })
+  })
+
+  it("still reads an attributed message as the site's own claim", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "Forbidden",
+          403,
+          "/api/user/checkin",
+          API_ERROR_CODES.HTTP_403,
+        ),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "permission_denied",
+      retryable: false,
+    })
+  })
+
+  it("classifies explicit method disabled copy as non-retryable METHOD_DISABLED", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError("签到功能已关闭", 200, "/api/user/checkin"),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "method_disabled",
+      retryable: false,
+    })
+
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "Checkin disabled by admin",
+          200,
+          "/api/user/checkin",
+        ),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "method_disabled",
+      retryable: false,
+    })
+  })
 })

@@ -20,7 +20,10 @@ import { accountReadModels } from "~/services/accounts/accountStorage/accountRea
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import {
+  getSelectedCheckInStatus,
+  resolveSelectedCheckInMethod,
+} from "~/services/checkin/autoCheckin/inspection"
 import {
   onAutoCheckinMessage,
   type AutoCheckinDebugScheduleDailyAlarmForTodayRequest,
@@ -33,7 +36,10 @@ import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
-import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  resolveProviderErrorResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
 import { recordSiteTypeObservationForResult } from "~/services/checkin/autoCheckin/recordSiteTypeObservation"
 import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
@@ -79,12 +85,12 @@ import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_ACCOUNT_STATE_DURABILITY,
+  CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
   getAutoCheckinRunResultFromSummary,
   getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinAccountSnapshot,
   type AutoCheckinPreferences,
-  type AutoCheckinRetryState,
   type AutoCheckinRunCompletedRuntimeMessage,
   type AutoCheckinRunKind,
   type AutoCheckinRunResult,
@@ -121,7 +127,15 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { isRetryableCheckinResult } from "./resultPolicy"
+import {
+  canAutomaticallyRetryCheckinResult,
+  isRetryableCheckinResult,
+} from "./resultPolicy"
+import {
+  mergeRetryRunOutcomes,
+  mergeRunResults,
+  pruneExhaustedPending,
+} from "./retryQueue"
 import { autoCheckinStorage } from "./storage"
 
 const logger = createLogger("AutoCheckin")
@@ -1294,8 +1308,9 @@ class AutoCheckinScheduler {
         reasonCode: providerResult.reasonCode,
         methodId: execution.methodId,
         reconciliation: providerResult.reconciliation,
-        ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED
-          ? { retryable: execution.retryable }
+        ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
+        providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+          ? { retryable: execution.retryable === true }
           : {}),
       })
 
@@ -1334,14 +1349,37 @@ class AutoCheckinScheduler {
         siteName: account.site_name,
         error: errorMessage,
       })
+      // The provider graph crashed instead of reporting an outcome, so this
+      // result is produced here instead of by the execution layer. It still
+      // goes through the shared retry authority: the same reason codes that
+      // admit a reported failure admit this one, and a dead end stays refused.
+      const methodId = resolveSelectedCheckInMethod({
+        config: account.checkIn,
+        siteType: account.site_type,
+        siteUrl: account.site_url,
+      })
+      const retryable = canAutomaticallyRetryCheckinResult(
+        normalizedError,
+        methodId ?? undefined,
+      )
       return {
         result: buildResult(normalizedError.status, {
+          // Every other produced result names its method. Naming it here too
+          // keeps capability gating (status readback, the not-repeat-safe set)
+          // working for a row that came from a crash.
+          ...(methodId ? { methodId } : {}),
           messageKey: normalizedError.messageKey,
           messageParams: normalizedError.messageParams,
           rawMessage: normalizedError.rawMessage,
           reasonCode: normalizedError.reasonCode,
-          ...(normalizedError.status === CHECKIN_RESULT_STATUS.FAILED
-            ? { retryable: false }
+          ...(normalizedError.status === CHECKIN_RESULT_STATUS.FAILED ||
+          normalizedError.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+            ? { retryable }
+            : {}),
+          ...(normalizedError.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+            ? {
+                reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+              }
             : {}),
         }),
       }
@@ -1614,7 +1652,43 @@ class AutoCheckinScheduler {
   }
 
   /**
-   * Clear retry alarm + any persisted retry state.
+   * Clear the retry alarm without touching the day's retry ledger.
+   *
+   * The ledger outlives the work list: an account that spent the day's attempt
+   * budget must stay spent, so clearing "there is nothing to retry right now"
+   * must not also clear what today already cost. Passing `maxAttempts` also drops
+   * exhausted accounts from the stored work list, which is how a queue whose
+   * accounts all ran out of budget stops looking like pending work.
+   */
+  private async clearRetryAlarm(maxAttempts?: number) {
+    await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
+    const today = formatLocalDayKey()
+
+    await autoCheckinStorage.updateStatus((current) => {
+      if (!current) return { patch: null }
+      const ledger = current.retryState
+      const nextRetryState =
+        maxAttempts != null && ledger?.day === today
+          ? pruneExhaustedPending({ state: ledger, maxAttempts })
+          : ledger
+
+      return {
+        patch: {
+          nextRetryScheduledAt: undefined,
+          retryAlarmTargetDay: undefined,
+          pendingRetry: false,
+          ...(nextRetryState === ledger ? {} : { retryState: nextRetryState }),
+        },
+      }
+    })
+  }
+
+  /**
+   * Clear the retry alarm and today's retry ledger.
+   *
+   * Used when no retry can happen today at all: another day's ledger, the
+   * feature or the retry strategy switched off. "Nothing to retry right now"
+   * is `clearRetryAlarm` instead, because the day's spent attempts stay spent.
    */
   private async clearRetryAlarmAndState() {
     await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
@@ -1681,16 +1755,16 @@ class AutoCheckinScheduler {
     await autoCheckinStorage.updateStatus((current) => {
       const retryState = current?.retryState
 
-      // Retries are scoped to one local day; a queue from another day, or none
+      // Retries are scoped to one local day; a ledger from another day, or none
       // at all, must not be adopted by this alarm.
       if (!retryState || retryState.day !== day) {
         return { patch: null }
       }
 
-      const eligiblePending = retryState.pendingAccountIds.filter(
-        (accountId) =>
-          (retryState.attemptsByAccount?.[accountId] ?? 1) < maxAttempts,
-      )
+      // Pruning the work list must not drop the day's counts: an account that
+      // spent the budget stays spent even though nothing is left to run.
+      const pruned = pruneExhaustedPending({ state: retryState, maxAttempts })
+      const eligiblePending = pruned?.pendingAccountIds ?? []
       if (eligiblePending.length === 0) {
         return { patch: null }
       }
@@ -1710,16 +1784,7 @@ class AutoCheckinScheduler {
         patch: {
           nextRetryScheduledAt: scheduledIso,
           retryAlarmTargetDay: day,
-          retryState: {
-            ...retryState,
-            pendingAccountIds: eligiblePending,
-            attemptsByAccount: Object.fromEntries(
-              eligiblePending.map((accountId) => [
-                accountId,
-                retryState.attemptsByAccount?.[accountId] ?? 1,
-              ]),
-            ),
-          },
+          retryState: pruned,
           pendingRetry: true,
         },
       }
@@ -1746,29 +1811,28 @@ class AutoCheckinScheduler {
       return
     }
 
-    // Retry runs only after today's normal run and never carry over to another day.
-    if (
-      currentStatus?.lastDailyRunDay !== today ||
-      currentStatus?.retryState?.day !== today
-    ) {
-      await this.clearRetryAlarmAndState()
-      return
-    }
-
-    const retryState = currentStatus.retryState
-    if (!retryState || retryState.pendingAccountIds.length === 0) {
+    // A pending queue is enough. Manual runs do not set lastDailyRunDay.
+    if (currentStatus?.retryState?.day !== today) {
       await this.clearRetryAlarmAndState()
       return
     }
 
     const maxAttempts = config.retryStrategy.maxAttemptsPerDay
+    const retryState = currentStatus.retryState
+    if (!retryState || retryState.pendingAccountIds.length === 0) {
+      await this.clearRetryAlarm(maxAttempts)
+      return
+    }
+
     const eligiblePending = retryState.pendingAccountIds.filter((accountId) => {
       const attempts = retryState.attemptsByAccount?.[accountId] ?? 1
       return attempts < maxAttempts
     })
 
     if (eligiblePending.length === 0) {
-      await this.clearRetryAlarmAndState()
+      // Every queued account spent the day's budget. Nothing to schedule, and
+      // the counts stay: they are what stops the next run from re-adding them.
+      await this.clearRetryAlarm(maxAttempts)
       return
     }
 
@@ -2603,43 +2667,15 @@ class AutoCheckinScheduler {
       // reverted.
       const { result: runOutcome } = await autoCheckinStorage.updateStatus(
         (current) => {
-          let retryState: AutoCheckinRetryState | undefined =
-            current?.retryState
-          if (isDailyRun) {
-            retryState = undefined
-            if (
-              config.retryStrategy?.enabled &&
-              config.retryStrategy.maxAttemptsPerDay > 1 &&
-              summaryNeedsRetry
-            ) {
-              // Retry queue is derived only from today's *failed* runnable accounts.
-              // Provider `already_checked` is treated as success and excluded automatically.
-              const failedAccountIds = checkinOutcomes
-                .filter((outcome) => isRetryableCheckinResult(outcome.result))
-                .map((outcome) => outcome.result.accountId)
-
-              retryState = {
-                day: today,
-                pendingAccountIds: failedAccountIds,
-                // Attempt counter includes the initial daily run failure as attempt=1.
-                attemptsByAccount: Object.fromEntries(
-                  failedAccountIds.map((id) => [id, 1]),
-                ),
-              }
-            }
-          } else if (
-            retryState?.day === today &&
-            retryState.pendingAccountIds.length > 0
-          ) {
-            const pending = retryState.pendingAccountIds.filter((accountId) => {
-              const result = results[accountId]
-              return result ? isRetryableCheckinResult(result) : true
-            })
-            retryState =
-              pending.length > 0
-                ? { ...retryState, pendingAccountIds: pending }
-                : undefined
-          }
+          const retryStrategy = config.retryStrategy
+          const retryState = mergeRunResults({
+            today,
+            enabled: retryStrategy?.enabled === true,
+            maxAttempts: retryStrategy?.maxAttemptsPerDay ?? 0,
+            current: current?.retryState,
+            results,
+            replacePendingWithResults: isDailyRun,
+          })
 
           const perAccount = mergePerAccountIfNeeded(current, results)
           const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
@@ -2782,8 +2818,7 @@ class AutoCheckinScheduler {
   /**
    * Execute account-level retries for the current day.
    *
-   * This MUST only retry accounts from today's retry queue and MUST NOT run if the
-   * normal daily run has not executed today.
+   * This MUST only retry accounts from today's retry queue.
    *
    * Attempt counting:
    * - `attemptsByAccount[id]` starts at 1 for the initial daily run failure.
@@ -2812,12 +2847,9 @@ class AutoCheckinScheduler {
       return
     }
 
-    // Ensure that today's normal run has executed
-    if (
-      currentStatus?.lastDailyRunDay !== today ||
-      currentStatus?.retryState?.day !== today
-    ) {
-      logger.info("Retry skipped (no normal run today)")
+    // Same-day queue only. Do not require the daily alarm to have run.
+    if (currentStatus?.retryState?.day !== today) {
+      logger.info("Retry skipped (no same-day queue)")
       await this.clearRetryAlarmAndState()
       return
     }
@@ -2826,19 +2858,16 @@ class AutoCheckinScheduler {
     const retryState = currentStatus.retryState
     if (!retryState || retryState.pendingAccountIds.length === 0) {
       logger.info("Retry skipped (no pending accounts)")
-      await this.clearRetryAlarmAndState()
+      await this.clearRetryAlarm(config.retryStrategy.maxAttemptsPerDay)
       return
     }
 
     const maxAttempts = config.retryStrategy.maxAttemptsPerDay
-    const attemptsByAccount: Record<string, number> = {
-      ...(retryState.attemptsByAccount ?? {}),
-    }
     const retryPendingBefore = retryState.pendingAccountIds.length
     let retryExhausted = 0
 
     const updates: Record<string, CheckinAccountResult> = {}
-    const remaining: string[] = []
+    const attemptedAccountIds: string[] = []
     const updatedAccountIds: string[] = []
     const accountIdsToRefresh: string[] = []
     const loginProviderOwners =
@@ -2846,7 +2875,7 @@ class AutoCheckinScheduler {
 
     for (const accountId of retryState.pendingAccountIds) {
       // Default to 1 to represent the initial daily run failure when the stored map is missing.
-      const attempts = attemptsByAccount[accountId] ?? 1
+      const attempts = retryState.attemptsByAccount?.[accountId] ?? 1
       if (attempts >= maxAttempts) {
         retryExhausted += 1
         continue
@@ -2898,21 +2927,14 @@ class AutoCheckinScheduler {
           loginProviderOwners,
         },
       )
-      // Persist that we've attempted one more time for this account today, regardless of outcome.
-      attemptsByAccount[accountId] = attempts + 1
+      // This account spent one of the day's attempts, whatever the outcome.
+      attemptedAccountIds.push(accountId)
       updates[accountId] = outcome.result
       if (isSuccessfulCheckinStatus(outcome.result.status)) {
         updatedAccountIds.push(outcome.result.accountId)
       }
       if (outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS) {
         accountIdsToRefresh.push(outcome.result.accountId)
-      }
-
-      if (
-        isRetryableCheckinResult(outcome.result) &&
-        attemptsByAccount[accountId] < maxAttempts
-      ) {
-        remaining.push(accountId)
       }
     }
 
@@ -2936,16 +2958,13 @@ class AutoCheckinScheduler {
           nextSnapshots = this.updateSnapshotWithResult(nextSnapshots, result)
         }
 
-        const nextRetryState: AutoCheckinRetryState | undefined =
-          remaining.length > 0
-            ? {
-                day: today,
-                pendingAccountIds: remaining,
-                attemptsByAccount: Object.fromEntries(
-                  remaining.map((id) => [id, attemptsByAccount[id] ?? 1]),
-                ),
-              }
-            : undefined
+        const nextRetryState = mergeRetryRunOutcomes({
+          today,
+          maxAttempts,
+          current: current?.retryState,
+          attemptedAccountIds,
+          results: updates,
+        })
 
         return {
           result: {
@@ -3136,6 +3155,10 @@ class AutoCheckinScheduler {
     // Derived from the stored status inside the update so a run that persisted
     // while this one was executing is not reverted. The result carries what was
     // persisted back to the caller below.
+    const retryPreferences = await userPreferences.getPreferences()
+    const manualRetryStrategy = (
+      retryPreferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin
+    )?.retryStrategy
     const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
       (current) => {
         const perAccount: Record<string, CheckinAccountResult> = {
@@ -3148,21 +3171,16 @@ class AutoCheckinScheduler {
           current?.summary,
         )
 
-        let retryState = current?.retryState
-        if (
-          retryState?.day === today &&
-          retryState.pendingAccountIds.includes(accountId)
-        ) {
-          if (!isRetryableCheckinResult(result)) {
-            const nextPending = retryState.pendingAccountIds.filter(
-              (id) => id !== accountId,
-            )
-            retryState =
-              nextPending.length > 0
-                ? { ...retryState, pendingAccountIds: nextPending }
-                : undefined
-          }
-        }
+        const retryState = mergeRunResults({
+          today,
+          // One strategy reading for every path. A manual retry must not admit a
+          // queue that the retry run and the alarm would then refuse to process.
+          enabled: manualRetryStrategy?.enabled === true,
+          maxAttempts: manualRetryStrategy?.maxAttemptsPerDay ?? 0,
+          current: current?.retryState,
+          results: { [result.accountId]: result },
+          replacePendingWithResults: false,
+        })
 
         const pendingRetry = Boolean(
           retryState?.day === today && retryState.pendingAccountIds.length > 0,
@@ -3210,7 +3228,10 @@ class AutoCheckinScheduler {
   async verifyAccountStatus(accountId: string) {
     const account = await accountQueries.getAccountById(accountId)
     if (!account) {
-      throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
+      return {
+        outcome: "account_not_found" as const,
+        error: t("messages:storage.accountNotFound", { id: accountId }),
+      }
     }
 
     let refreshOutcome
@@ -3223,8 +3244,17 @@ class AutoCheckinScheduler {
         refreshOutcome = outcome
       },
     })
+    if (refreshOutcome === CHECK_IN_STATUS_REFRESH_OUTCOMES.Unsupported) {
+      return {
+        outcome: "unsupported" as const,
+        error: t("autoCheckin:messages.error.statusVerificationUnsupported"),
+      }
+    }
     if (refreshOutcome !== CHECK_IN_STATUS_REFRESH_OUTCOMES.Read) {
-      throw new Error("Check-in status could not be verified")
+      return {
+        outcome: "unavailable" as const,
+        error: t("autoCheckin:messages.error.statusVerificationFailed"),
+      }
     }
 
     const persistedAccount =
@@ -3233,10 +3263,139 @@ class AutoCheckinScheduler {
         refreshedCheckIn,
       )
     if (!persistedAccount) {
-      throw new Error("Check-in status could not be saved")
+      return {
+        outcome: "not_saved" as const,
+        error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
+      }
     }
 
-    return { verified: true as const }
+    const selectedStatus = getSelectedCheckInStatus({
+      config: refreshedCheckIn,
+      siteType: account.site_type,
+      siteUrl: account.site_url,
+    })
+    const isCheckedInToday =
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+    const isNotCheckedInToday =
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+
+    const now = Date.now()
+    const today = formatLocalDayKey()
+    const allAccounts = await accountQueries.getAllAccounts()
+    const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
+    const accountName = accountDisplayNameById.get(account.id) ?? account.id
+    const selectedMethodId = resolveSelectedCheckInMethod({
+      config: refreshedCheckIn,
+      siteType: account.site_type,
+      siteUrl: account.site_url,
+    })
+
+    await autoCheckinStorage.updateStatus((current) => {
+      if (!current) return { patch: null }
+
+      const currentResult = current.perAccount?.[account.id]
+      let updatedResult: CheckinAccountResult | undefined
+
+      if (isCheckedInToday) {
+        updatedResult = {
+          accountId: account.id,
+          accountName,
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+          reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
+          methodId: selectedMethodId ?? currentResult?.methodId,
+          timestamp: now,
+        }
+      } else if (isNotCheckedInToday) {
+        const reasonCode =
+          currentResult?.reasonCode ??
+          AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
+        updatedResult = {
+          accountId: account.id,
+          accountName,
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode,
+          messageKey: currentResult?.reasonCode
+            ? currentResult.messageKey
+            : getAutoCheckinSkipReasonTranslationKey(
+                AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+              ),
+          rawMessage: currentResult?.rawMessage,
+          reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
+          retryable: canAutomaticallyRetryCheckinResult(
+            {
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              reasonCode,
+            },
+            selectedMethodId ?? currentResult?.methodId,
+          ),
+          methodId: selectedMethodId ?? currentResult?.methodId,
+          timestamp: now,
+        }
+      }
+
+      if (!updatedResult) {
+        return { patch: null }
+      }
+
+      const perAccount: Record<string, CheckinAccountResult> = {
+        ...(current.perAccount ?? {}),
+        [account.id]: updatedResult,
+      }
+      const summary = this.recalculateSummaryFromResults(
+        perAccount,
+        current.summary,
+      )
+
+      let retryState = current.retryState
+      if (isCheckedInToday && retryState?.day === today) {
+        const pendingAccountIds = retryState.pendingAccountIds.filter(
+          (id) => id !== account.id,
+        )
+        retryState = {
+          ...retryState,
+          pendingAccountIds,
+        }
+      }
+
+      const pendingRetry = Boolean(
+        retryState?.day === today && retryState.pendingAccountIds.length > 0,
+      )
+
+      return {
+        patch: {
+          lastRunResult: getAutoCheckinRunResultFromSummary(summary),
+          perAccount,
+          summary,
+          retryState,
+          pendingRetry,
+          accountsSnapshot: this.updateSnapshotWithResult(
+            current.accountsSnapshot,
+            updatedResult,
+          ),
+        },
+      }
+    })
+
+    if (isCheckedInToday) {
+      const prefs = await userPreferences.getPreferences()
+      const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+      await this.scheduleRetryAlarm(config)
+    }
+
+    const verifiedStatus = isCheckedInToday
+      ? ("checked" as const)
+      : isNotCheckedInToday
+        ? ("not_checked" as const)
+        : ("unknown" as const)
+
+    return {
+      outcome: "verified" as const,
+      verifiedStatus,
+    }
   }
 
   /**
@@ -3472,13 +3631,16 @@ export async function retryAutoCheckinAccount(
       error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     }
   }
-  await autoCheckinScheduler.retryAccount(
+  const outcome = await autoCheckinScheduler.retryAccount(
     accountId,
     verifiedTempWindowRequestSource ??
       normalizeTempWindowRequestSource(tempWindowRequestSource),
     protectionBypassExecution,
   )
-  return { success: true as const }
+  return {
+    success: true as const,
+    ...(outcome?.result ? { result: outcome.result } : {}),
+  }
 }
 
 /** Verify a selected method's current status without issuing a check-in POST. */
@@ -3486,8 +3648,19 @@ async function verifyAutoCheckinAccountStatus(accountId?: string) {
   if (!accountId) {
     return { success: false as const, error: "Missing accountId" }
   }
-  await autoCheckinScheduler.verifyAccountStatus(accountId)
-  return { success: true as const }
+  const result = await autoCheckinScheduler.verifyAccountStatus(accountId)
+  if (result.outcome === "verified") {
+    return {
+      success: true as const,
+      outcome: result.outcome,
+      verifiedStatus: result.verifiedStatus,
+    }
+  }
+  return {
+    success: false as const,
+    outcome: result.outcome,
+    error: result.error,
+  }
 }
 
 /**

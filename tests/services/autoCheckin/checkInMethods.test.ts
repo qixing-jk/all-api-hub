@@ -1255,7 +1255,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1289,7 +1289,7 @@ describe("check-in methods compatibility activation", () => {
       expect(result).toMatchObject({
         kind: "blocked",
         reason: expectedReason,
-        retryable: expectedReason !== "status_unavailable",
+        retryable: true,
       })
       expect(checkInRequest).not.toHaveBeenCalled()
     },
@@ -1313,7 +1313,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1340,7 +1340,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1436,7 +1436,7 @@ describe("check-in methods compatibility activation", () => {
     ).resolves.toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(mutate).not.toHaveBeenCalled()
   })
@@ -1639,8 +1639,11 @@ describe("check-in methods compatibility activation", () => {
 
       expect(result).toMatchObject({
         kind: "executed",
-        result: { status: "uncertain", reconciliation },
-        retryable: false,
+        result: {
+          status: reconciliation === "not_checked" ? "failed" : "uncertain",
+          reconciliation,
+        },
+        retryable: true,
       })
       expect(checkInRequest).toHaveBeenCalledOnce()
     },
@@ -1673,12 +1676,12 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "uncertain", reconciliation: "unavailable" },
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
-  it("executes a no-readback method but never retries its uncertain result", async () => {
+  it("retries an uncertain result from a method without status readback", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(
       "anyrouter:daily-checkin",
     )
@@ -1704,7 +1707,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "uncertain", reconciliation: "unavailable" },
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).toHaveBeenCalledOnce()
   })
@@ -1806,7 +1809,7 @@ describe("check-in methods compatibility activation", () => {
     },
   )
 
-  it("blocks an automatic retry when the method has no safe status readback", async () => {
+  it("posts a retry when the method has no status readback", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(
       "anyrouter:daily-checkin",
     )
@@ -1831,10 +1834,11 @@ describe("check-in methods compatibility activation", () => {
     })
 
     expect(result).toMatchObject({
-      kind: "skipped",
-      reason: "status_unavailable",
+      kind: "executed",
+      retryable: true,
+      result: { status: "failed" },
     })
-    expect(checkInRequest).not.toHaveBeenCalled()
+    expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
   it.each([

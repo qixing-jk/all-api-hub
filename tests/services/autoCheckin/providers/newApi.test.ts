@@ -578,7 +578,7 @@ describe("newApiProvider", () => {
         false,
       ],
       ["authenticate before check-in", "authentication_required", false],
-      ["permission denied for check-in", "authentication_required", false],
+      ["permission denied for check-in", "permission_denied", false],
       ["rate limit exceeded for check-in", "upstream_error", true],
       ["too many requests for check-in", "upstream_error", true],
     ])(
@@ -620,6 +620,7 @@ describe("newApiProvider", () => {
         status: "failed",
         reasonCode: "no_provider",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+        retryable: false,
       })
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
@@ -1594,6 +1595,7 @@ describe("newApiProvider", () => {
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
         reasonCode: "no_provider",
+        retryable: false,
       })
     })
 

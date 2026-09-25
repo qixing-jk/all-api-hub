@@ -352,6 +352,7 @@ describe("AutoCheckin ResultsTable", () => {
           {
             accountId: "uncertain-account",
             accountName: "Uncertain Account",
+            methodId: "new-api:daily-checkin",
             status: CHECKIN_RESULT_STATUS.UNCERTAIN,
             reconciliation: "unknown",
             timestamp: 1,
@@ -369,9 +370,7 @@ describe("AutoCheckin ResultsTable", () => {
       await screen.findByText("autoCheckin:execution.status.uncertain"),
     ).toBeVisible()
     expect(
-      screen.getByText(
-        "autoCheckin:providerFallback.resultPendingConfirmation",
-      ),
+      screen.getByText("autoCheckin:skipReasons.status_unavailable"),
     ).toBeVisible()
   })
 
@@ -414,7 +413,58 @@ describe("AutoCheckin ResultsTable", () => {
     ).toBeVisible()
   })
 
-  it("offers status verification for uncertain results without a retry", async () => {
+  it.each([
+    {
+      name: "a retryable cause the provider refused to flag",
+      result: {
+        accountId: "session-busy",
+        accountName: "Session Busy",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "session_busy",
+        retryable: false,
+        timestamp: 1,
+      },
+      offersRetry: true,
+    },
+    {
+      name: "a dead-end cause",
+      result: {
+        accountId: "auth-required",
+        accountName: "Auth Required",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "authentication_required",
+        retryable: true,
+        timestamp: 1,
+      },
+      offersRetry: false,
+    },
+  ] satisfies Array<{
+    name: string
+    result: CheckinAccountResult
+    offersRetry: boolean
+  }>)(
+    "matches the automatic retry decision for $name",
+    async ({ result, offersRetry }) => {
+      render(<ResultsTable results={[result]} onRetryAccount={vi.fn()} />, {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      })
+
+      await screen.findByRole("button", { name: "common:actions.more" })
+      const retryButton = screen.queryByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      })
+
+      if (offersRetry) {
+        expect(retryButton).toBeVisible()
+      } else {
+        expect(retryButton).not.toBeInTheDocument()
+      }
+    },
+  )
+
+  it("offers status verification for uncertain results that can read status", async () => {
     const user = userEvent.setup()
     const onVerifyAccountStatus = vi.fn()
     render(
@@ -423,6 +473,7 @@ describe("AutoCheckin ResultsTable", () => {
           {
             accountId: "uncertain-account",
             accountName: "Uncertain Account",
+            methodId: "new-api:daily-checkin",
             status: CHECKIN_RESULT_STATUS.UNCERTAIN,
             reconciliation: "unknown",
             timestamp: 1,
@@ -438,19 +489,16 @@ describe("AutoCheckin ResultsTable", () => {
       },
     )
 
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
     expect(
-      await screen.findByRole("button", {
-        name: "autoCheckin:execution.actions.verifyStatus",
-      }),
-    ).toBeVisible()
-    expect(
-      screen.queryByRole("button", {
+      screen.getByRole("menuitem", {
         name: "autoCheckin:execution.actions.retryAccount",
       }),
-    ).not.toBeInTheDocument()
-
+    ).toBeVisible()
     await user.click(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "autoCheckin:execution.actions.verifyStatus",
       }),
     )
@@ -466,6 +514,7 @@ describe("AutoCheckin ResultsTable", () => {
           {
             accountId: "uncertain-account",
             accountName: "Uncertain Account",
+            methodId: "new-api:daily-checkin",
             status: CHECKIN_RESULT_STATUS.UNCERTAIN,
             reconciliation: "unknown",
             timestamp: 1,
@@ -506,6 +555,7 @@ describe("AutoCheckin ResultsTable", () => {
           {
             accountId: "uncertain-account",
             accountName: "Uncertain Account",
+            methodId: "new-api:daily-checkin",
             status: CHECKIN_RESULT_STATUS.UNCERTAIN,
             reconciliation: "unknown",
             timestamp: 1,

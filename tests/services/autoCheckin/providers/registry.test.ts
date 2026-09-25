@@ -7,6 +7,7 @@ import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyr
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import {
+  AUTO_CHECKIN_METHOD_DEFINITIONS,
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
   createAutoCheckinMethodMetadata,
   createAutoCheckinMethodRegistry,
@@ -15,6 +16,7 @@ import {
   getAutoCheckinMethodSource,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
+  supportsCheckInStatusReadback,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   AutoCheckinMethodDefinition,
@@ -115,6 +117,21 @@ describe("autoCheckinMethodRegistry", () => {
     expect(sub2apiProProvider.detect).toBeTypeOf("function")
     expect(denxioProvider.getStatus).toBeTypeOf("function")
     expect(denxioProvider.detect).toBeTypeOf("function")
+  })
+
+  it("publishes readback metadata that matches the executable provider", () => {
+    for (const definition of Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)) {
+      const registration = autoCheckinMethodRegistry.resolveById(definition.id)
+      expect(registration).toBeTruthy()
+      expect(definition.supportsStatusReadback).toBe(
+        Boolean(registration?.provider.getStatus),
+      )
+      expect(supportsCheckInStatusReadback(definition.id)).toBe(
+        definition.supportsStatusReadback === true,
+      )
+    }
+    expect(supportsCheckInStatusReadback(undefined)).toBe(false)
+    expect(supportsCheckInStatusReadback("not-a-method")).toBe(false)
   })
 
   it("offers login check-in only on Agent Router without adding a site type", () => {

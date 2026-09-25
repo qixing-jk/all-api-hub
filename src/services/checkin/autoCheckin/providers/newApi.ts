@@ -34,6 +34,7 @@ import {
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
+  isPermissionFailureMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
@@ -987,6 +988,9 @@ function resolveDirectFailureReason(params: {
 }): AutoCheckinSkipReason {
   if (isEndpointUnsupportedFailure(params)) {
     return AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
+  }
+  if (isPermissionFailureMessage(params.message)) {
+    return AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED
   }
   if (isAuthOrPermissionFailureMessage(params.message)) {
     return AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED

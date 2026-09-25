@@ -116,6 +116,8 @@
       "retryFailed": "Thử lại thất bại: {{error}}",
       "runFailed": "Thực hiện điểm danh tự động thất bại: {{error}}",
       "statusVerificationFailed": "Không thể xác minh trạng thái điểm danh đã chọn. Hãy thử lại hoặc mở trang tài khoản.",
+      "statusVerificationNotSaved": "Đã đọc trạng thái điểm danh nhưng không lưu được",
+      "statusVerificationUnsupported": "Phương thức điểm danh này không đọc được trạng thái hôm nay",
       "uiOpenPretriggerDidNotStart": "Kích hoạt trước khi mở giao diện chưa bắt đầu: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Đánh giá kích hoạt trước khi mở giao diện thất bại: {{error}}",
       "uiOpenPretriggerIneligible": "Điều kiện kích hoạt trước khi mở giao diện không được đáp ứng: {{reason}}",
@@ -156,7 +158,6 @@
     "nativePageStatusUnconfirmed": "Đã bấm thao tác điểm danh trên trang, nhưng chưa xác nhận được trạng thái của tài khoản mục tiêu. Vui lòng mở trang điểm danh để kiểm tra thủ công: {{checkInUrl}}",
     "nativePageTargetNotFound": "Không tìm thấy nút điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
     "nativePageTriggerFailed": "Không thể kích hoạt thao tác điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
-    "resultPendingConfirmation": "Kết quả điểm danh đang chờ xác nhận",
     "sessionBusy": "Một quy trình đăng nhập khác đang diễn ra. Vui lòng thử lại sau.",
     "turnstileIncognitoAccessRequired": "Cần cho phép tiện ích mở rộng chạy ở chế độ ẩn danh để nhận Turnstile Token trên trang ẩn danh (kịch bản nhiều tài khoản). Vui lòng bật \"Cho phép chạy ở chế độ ẩn danh\" trong trang quản lý tiện ích mở rộng và thử lại; hoặc mở trang điểm danh theo cách thủ công để hoàn tất xác minh: {{checkInUrl}}",
     "turnstileManualRequired": "Cần hoàn tất xác minh Cloudflare Turnstile, vui lòng mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
@@ -178,7 +179,7 @@
     "notifyUiOnCompletionDesc": "Ngay lập tức làm mới dữ liệu của tài khoản điểm danh và các giao diện liên quan sau khi điểm danh tự động hoàn tất.",
     "pretriggerDailyOnUiOpen": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện",
     "pretriggerDailyOnUiOpenDesc": "Khi bạn mở giao diện tiện ích mở rộng trong khoảng thời gian của ngày hôm nay và kế hoạch hàng ngày của hôm nay chưa được thực hiện, hãy kích hoạt ngay một lần điểm danh tự động hàng ngày.",
-    "retryDesc": "Tự động thử lại các tài khoản thất bại trong cùng một ngày.",
+    "retryDesc": "Tự động thử lại trong ngày các kết quả thất bại hoặc chưa xác nhận, trừ khi đã rõ là không thể hoàn thành.",
     "retryInterval": "Khoảng thời gian thử lại (phút)",
     "retryIntervalDesc": "Thời gian chờ giữa mỗi lần thử lại.",
     "retryMaxAttempts": "Số lần thử tối đa hàng ngày",
@@ -223,7 +224,8 @@
     "source_unavailable": "Trang đích tạm thời không khả dụng. Hãy thử lại sau.",
     "status_unavailable": "Không thể xác nhận trạng thái điểm danh hiện tại nên hệ thống không thực hiện điểm danh",
     "timeout": "Kết nối đã hết thời gian chờ trước khi hoàn tất điểm danh. Hãy thử lại.",
-    "upstream_error": "Site trả về kết quả điểm danh không nhận diện được. Hãy thử lại sau."
+    "upstream_error": "Site trả về kết quả điểm danh không nhận diện được. Hãy thử lại sau.",
+    "upstream_rejected": "Trang web đã từ chối yêu cầu điểm danh này."
   },
   "snapshot": {
     "badges": {

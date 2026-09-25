@@ -116,6 +116,8 @@
       "retryFailed": "再試行に失敗しました: {{error}}",
       "runFailed": "自動チェックインの実行に失敗しました: {{error}}",
       "statusVerificationFailed": "選択したチェックイン状態を確認できませんでした。もう一度試すか、アカウントサイトを開いてください。",
+      "statusVerificationNotSaved": "チェックイン状態は読み取れましたが保存できませんでした",
+      "statusVerificationUnsupported": "このチェックイン方法は当日の状態を読み取れません",
       "uiOpenPretriggerDidNotStart": "UI 起動時の事前起動は開始されませんでした: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "UI 起動時の事前起動判定に失敗しました: {{error}}",
       "uiOpenPretriggerIneligible": "UI 起動時の事前起動対象ではありません: {{reason}}",
@@ -156,7 +158,6 @@
     "nativePageStatusUnconfirmed": "ページ上のチェックイン操作はクリックされましたが、対象アカウントの状態を確認できませんでした。チェックインページを開いて手動で確認してください: {{checkInUrl}}",
     "nativePageTargetNotFound": "ページ上でチェックインボタンが見つかりませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
     "nativePageTriggerFailed": "ページ上のチェックイン操作を実行できませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
-    "resultPendingConfirmation": "チェックイン結果を確認中",
     "sessionBusy": "別のログイン処理が進行中です。しばらくしてから再試行してください。",
     "turnstileIncognitoAccessRequired": "プライベート一時ウィンドウで Turnstile トークンを取得するには、拡張機能のシークレット / プライベートウィンドウ実行を許可する必要があります（複数アカウントの場面）。この拡張機能の「シークレットモードでの実行を許可」を有効にして再試行するか、チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile 認証が必要です。チェックインページを開いて認証を完了してください: {{checkInUrl}}",
@@ -178,7 +179,7 @@
     "notifyUiOnCompletionDesc": "自動チェックイン完了後、チェックイン対象アカウントのデータと関連 UI をすぐに更新します。",
     "pretriggerDailyOnUiOpen": "UI を開いた時に当日の実行を事前起動",
     "pretriggerDailyOnUiOpenDesc": "当日の時間帯内に拡張機能 UI を開き、まだ当日の実行が行われていない場合は、すぐに開始します。",
-    "retryDesc": "失敗したアカウントを同日中に数回自動再試行します。",
+    "retryDesc": "明確に完了できない場合を除き、失敗と確認待ちを当日中に自動再試行します。",
     "retryInterval": "再試行間隔（分）",
     "retryIntervalDesc": "次回再試行まで待機する時間です。",
     "retryMaxAttempts": "1 日あたりの最大試行回数",
@@ -223,7 +224,8 @@
     "source_unavailable": "対象サイトは一時的に利用できません。しばらくしてから再試行してください。",
     "status_unavailable": "現在のチェックイン状態を確認できなかったため、チェックインは実行されませんでした",
     "timeout": "接続がタイムアウトし、チェックインを完了できませんでした。再試行してください。",
-    "upstream_error": "対象サイトから判別できないチェックイン結果が返されました。しばらくして再試行してください。"
+    "upstream_error": "対象サイトから判別できないチェックイン結果が返されました。しばらくして再試行してください。",
+    "upstream_rejected": "サイトが今回のチェックインを拒否しました。"
   },
   "snapshot": {
     "badges": {

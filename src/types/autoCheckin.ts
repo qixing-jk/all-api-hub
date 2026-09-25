@@ -69,6 +69,8 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   CHECKIN_PAGE_UNAVAILABLE: "checkin_page_unavailable",
   SESSION_BUSY: "session_busy",
   UPSTREAM_ERROR: "upstream_error",
+  /** The site returned a determinate check-in refusal that is still safe to retry. */
+  UPSTREAM_REJECTED: "upstream_rejected",
   /** Another enabled account already owns this login method's browser context. */
   LOGIN_PROVIDER_IN_USE: "login_provider_in_use",
 } as const
@@ -154,6 +156,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
   [AUTO_CHECKIN_SKIP_REASON.TIMEOUT]: "autoCheckin:skipReasons.timeout",
   [AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR]:
     "autoCheckin:skipReasons.upstream_error",
+  [AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED]:
+    "autoCheckin:skipReasons.upstream_rejected",
 }
 
 /**
@@ -192,7 +196,16 @@ interface CheckinAccountResultBase {
   timestamp: number
 }
 
-/** One account outcome with only valid retry/certainty combinations. */
+/**
+ * One account outcome with only valid retry/certainty combinations.
+ *
+ * `retryable` stays optional because rows stored before the retry contract
+ * carry no flag. Newly produced rows always carry it: `executeSelectedCheckIn`
+ * requires the decision on its executed variant, and the scheduler persists it
+ * for every failed or uncertain row. `isRetryableCheckinResult` is the only
+ * reader, so the queue and the UI cannot disagree about a row this version
+ * produced.
+ */
 export type CheckinAccountResult = CheckinAccountResultBase &
   (
     | {
@@ -215,7 +228,6 @@ export type CheckinAccountResult = CheckinAccountResultBase &
       }
     | {
         status: typeof CHECKIN_RESULT_STATUS.UNCERTAIN
-        retryable?: never
         reconciliation: Exclude<
           CheckinReconciliationOutcome,
           typeof CHECKIN_RECONCILIATION_OUTCOME.CHECKED
@@ -340,12 +352,17 @@ export interface AutoCheckinAttemptsTracker {
 }
 
 /**
- * Account-level retry state for the current day.
+ * Account-level retry bookkeeping for the current day.
  *
  * Notes:
  * - `day` uses a local calendar day boundary (`YYYY-MM-DD`).
- * - `attemptsByAccount` tracks total attempts for that account on `day`
- *   (initial normal run + automatic retries).
+ * - `attemptsByAccount` is the day's ledger: it starts at 1 when an account is
+ *   first admitted and grows with every automatic retry, so the
+ *   `maxAttemptsPerDay` budget covers the whole day rather than one run.
+ * - `pendingAccountIds` is today's work list for the retry alarm. The ledger
+ *   outlives it: an account that spent the budget stays recorded while the list
+ *   is empty, and the whole state is dropped only when the day changes (or the
+ *   feature is switched off).
  */
 export interface AutoCheckinRetryState {
   day: string // local YYYY-MM-DD

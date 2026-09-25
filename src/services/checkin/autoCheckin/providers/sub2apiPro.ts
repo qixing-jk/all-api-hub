@@ -37,7 +37,6 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
 
 export const sub2apiProProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
-  retryAfterUncertainNotChecked: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 

@@ -118,6 +118,8 @@
       "retryFailed": "Retry failed: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",
       "statusVerificationFailed": "We couldn't verify the selected check-in status. Try again or open the account site.",
+      "statusVerificationNotSaved": "The check-in status was read but could not be saved",
+      "statusVerificationUnsupported": "This check-in method cannot read today's status",
       "uiOpenPretriggerDidNotStart": "UI-open pre-trigger did not start: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Failed to evaluate UI-open pre-trigger: {{error}}",
       "uiOpenPretriggerIneligible": "UI-open pre-trigger is not eligible: {{reason}}",
@@ -160,7 +162,6 @@
     "nativePageStatusUnconfirmed": "The page check-in action was clicked, but the target account status was not confirmed. Please open the check-in page and check manually: {{checkInUrl}}",
     "nativePageTargetNotFound": "The check-in button could not be found on the page. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
     "nativePageTriggerFailed": "The page check-in action could not be triggered. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
-    "resultPendingConfirmation": "Check-in result pending confirmation",
     "sessionBusy": "Another login is already in progress. Try again later.",
     "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
@@ -182,7 +183,7 @@
     "notifyUiOnCompletionDesc": "When automatic check-in is completed, immediately refresh the check-in account's data and relevant interfaces.",
     "pretriggerDailyOnUiOpen": "Pre-trigger daily run when UI opens",
     "pretriggerDailyOnUiOpenDesc": "When you open the extension UI during today's time window and the daily run has not executed yet, start it immediately.",
-    "retryDesc": "Automatically retry failed accounts a few times during the same day.",
+    "retryDesc": "Automatically retry failed and unconfirmed results later the same day, except clear dead ends.",
     "retryInterval": "Retry interval (minutes)",
     "retryIntervalDesc": "How long to wait before the next retry attempt.",
     "retryMaxAttempts": "Max attempts per day",
@@ -227,7 +228,8 @@
     "source_unavailable": "The source site is temporarily unavailable. Try again later.",
     "status_unavailable": "The current check-in status could not be confirmed, so no check-in was attempted",
     "timeout": "The connection timed out before check-in could complete. Try again.",
-    "upstream_error": "The site returned an unrecognized check-in result. Try again later."
+    "upstream_error": "The site returned an unrecognized check-in result. Try again later.",
+    "upstream_rejected": "The site refused this check-in request."
   },
   "snapshot": {
     "badges": {

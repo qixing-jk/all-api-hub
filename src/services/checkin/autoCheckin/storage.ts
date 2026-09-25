@@ -341,8 +341,12 @@ class AutoCheckinStorage {
             )
           : {}
 
+        // The day's counts outlive its work list: an account that spent the
+        // budget stays spent even when nothing is left to retry.
         retryState =
-          typeof retryState.day === "string" && pendingAccountIds.length > 0
+          typeof retryState.day === "string" &&
+          (pendingAccountIds.length > 0 ||
+            Object.keys(attemptsByAccount).length > 0)
             ? {
                 day: retryState.day,
                 pendingAccountIds,
@@ -495,7 +499,9 @@ class AutoCheckinStorage {
         const day = typeof dayValue === "string" ? dayValue : ""
 
         const nextRetryState =
-          day && pendingAccountIdsFiltered.length > 0
+          day &&
+          (pendingAccountIdsFiltered.length > 0 ||
+            attemptsByAccountEntries.length > 0)
             ? {
                 day,
                 pendingAccountIds: pendingAccountIdsFiltered,
@@ -526,8 +532,11 @@ class AutoCheckinStorage {
 
         if (pendingChanged || attemptsChanged || retryStateHadInvalidShapes) {
           next.retryState = nextRetryState
-          if (!nextRetryState) {
-            next.pendingRetry = false
+          // The day's ledger can survive with an empty work list, so the alarm
+          // fields follow the work list rather than the ledger's existence.
+          next.pendingRetry =
+            (nextRetryState?.pendingAccountIds.length ?? 0) > 0
+          if (!next.pendingRetry) {
             next.nextRetryScheduledAt = undefined
             next.retryAlarmTargetDay = undefined
           }

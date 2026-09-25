@@ -118,6 +118,8 @@
       "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
       "runFailed": "Fehler beim Ausführen des automatischen Check-ins: {{error}}",
       "statusVerificationFailed": "Der ausgewählte Check-in-Status konnte nicht verifiziert werden. Versuchen Sie es erneut oder öffnen Sie die Kontoseite.",
+      "statusVerificationNotSaved": "Der Check-in-Status wurde gelesen, aber nicht gespeichert",
+      "statusVerificationUnsupported": "Diese Check-in-Methode kann den Status von heute nicht lesen",
       "uiOpenPretriggerDidNotStart": "UI-Open-Pre-Trigger wurde nicht gestartet: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Fehler beim Auswerten des UI-Open-Pre-Triggers: {{error}}",
       "uiOpenPretriggerIneligible": "UI-Open-Pre-Trigger ist nicht berechtigt: {{reason}}",
@@ -160,7 +162,6 @@
     "nativePageStatusUnconfirmed": "Auf die Aktion zum Einchecken der Seite wurde geklickt, der Status des Zielkontos wurde jedoch nicht bestätigt. Bitte öffnen Sie die Check-in-Seite und überprüfen Sie manuell: {{checkInUrl}}",
     "nativePageTargetNotFound": "Der Check-in-Button konnte auf der Seite nicht gefunden werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
     "nativePageTriggerFailed": "Die Aktion zum Einchecken der Seite konnte nicht ausgelöst werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
-    "resultPendingConfirmation": "Das Check-in-Ergebnis muss noch bestätigt werden",
     "sessionBusy": "Eine andere Anmeldung läuft bereits. Bitte später erneut versuchen.",
     "turnstileIncognitoAccessRequired": "Die Erweiterung muss in Inkognito-/privaten Fenstern ausgeführt werden dürfen, um den Turnstile-Token in einem privaten temporären Fenster abzurufen (Szenario mit mehreren Konten). Bitte aktivieren Sie „Inkognito zulassen“ für diese Erweiterung und versuchen Sie es erneut oder öffnen Sie die Check-in-Seite, um die Überprüfung abzuschließen: {{checkInUrl}}",
     "turnstileManualRequired": "Eine Cloudflare-Turnstile-Verifizierung ist erforderlich. Bitte öffnen Sie die Check-in-Seite, um die Verifizierung abzuschließen: {{checkInUrl}}",
@@ -182,7 +183,7 @@
     "notifyUiOnCompletionDesc": "Wenn der automatische Check-in abgeschlossen ist, aktualisieren Sie sofort die Daten des Check-in-Kontos und relevante Schnittstellen.",
     "pretriggerDailyOnUiOpen": "Täglichen Lauf vorab auslösen, wenn die Benutzeroberfläche geöffnet wird",
     "pretriggerDailyOnUiOpenDesc": "Wenn Sie die Erweiterungsoberfläche im heutigen Zeitfenster öffnen und der tägliche Lauf noch nicht stattgefunden hat, wird er sofort gestartet.",
-    "retryDesc": "Versuchen Sie fehlgeschlagene Konten mehrmals am selben Tag automatisch erneut.",
+    "retryDesc": "Fehlgeschlagene und unbestätigte Ergebnisse werden am selben Tag automatisch erneut versucht, außer bei klaren Sackgassen.",
     "retryInterval": "Wiederholungsintervall (Minuten)",
     "retryIntervalDesc": "Wie lange soll bis zum nächsten Wiederholungsversuch gewartet werden?",
     "retryMaxAttempts": "Maximale Versuche pro Tag",
@@ -227,7 +228,8 @@
     "source_unavailable": "Die Zielwebsite ist vorübergehend nicht verfügbar. Versuchen Sie es später erneut.",
     "status_unavailable": "Der aktuelle Check-in-Status konnte nicht bestätigt werden, daher wurde kein Check-in versucht",
     "timeout": "Die Verbindung wurde vor Abschluss des Check-ins unterbrochen. Versuchen Sie es erneut.",
-    "upstream_error": "Die Website hat ein nicht erkennbares Check-in-Ergebnis zurückgegeben. Versuchen Sie es später erneut."
+    "upstream_error": "Die Website hat ein nicht erkennbares Check-in-Ergebnis zurückgegeben. Versuchen Sie es später erneut.",
+    "upstream_rejected": "Die Website hat diesen Check-in abgelehnt."
   },
   "snapshot": {
     "badges": {
