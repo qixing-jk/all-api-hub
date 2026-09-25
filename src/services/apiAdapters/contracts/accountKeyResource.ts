@@ -201,6 +201,11 @@ export type AccountKeyResourceFacts = {
     readonly modelAccess: AccountRuntimeKeyModelAccess
     readonly createdAt?: number
     readonly notes?: string
+    /**
+     * Client-facing address this key is used with, when the provider routes by
+     * credential rather than by the account origin.
+     */
+    readonly baseUrl?: string
     /** Compatibility for existing associations and exported provider identities. */
     readonly legacyTokenId?: number
   }

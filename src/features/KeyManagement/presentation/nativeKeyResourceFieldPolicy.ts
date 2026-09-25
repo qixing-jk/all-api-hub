@@ -192,6 +192,32 @@ export function getNativeKeyResourceEditorPresentation(
         issueLabelResolvers: issues,
       },
     ]
+  } else if (siteType === SITE_TYPES.RIGHT_CODE) {
+    getAutomaticName = groupAutomaticName("channel", true)
+    fields = [
+      name,
+      {
+        fieldId: "channel",
+        section: "basic",
+        order: 10,
+        renderer: "select",
+        resolveLabel: (t) => t("keyManagement:native.editor.channel"),
+        issueLabelResolvers: issues,
+      },
+      ...quota("quotaUsd", "unlimited_quota"),
+      expiry,
+      ...(mode === "edit" ? [enabled("is_active")] : []),
+      models("models"),
+      {
+        fieldId: "allow_wallet",
+        section: "spending",
+        order: 20,
+        renderer: "boolean",
+        resolveLabel: (t) => t("keyManagement:native.editor.allowWallet"),
+        resolveHelp: (t) => t("keyManagement:native.editor.allowWalletHelp"),
+        issueLabelResolvers: issues,
+      },
+    ]
   } else if (siteType === SITE_TYPES.AIHUBMIX) {
     fields = [
       name,

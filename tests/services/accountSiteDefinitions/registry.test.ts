@@ -14,6 +14,7 @@ import { getAccountSiteProductProfile } from "~/services/accounts/accountSitePro
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
+  ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
@@ -52,6 +53,7 @@ import {
   MANAGED_SITE_TYPE_ORDER,
   SITE_TYPE_DEFINITIONS,
 } from "~/services/accountSiteDefinitions/definitions"
+import { RIGHTCODE_HOSTNAMES } from "~/services/accountSiteDefinitions/identifiers"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { AuthTypeEnum } from "~/types"
@@ -82,6 +84,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.AIHUBMIX
   | typeof SITE_TYPES.SHAREDCHAT
+  | typeof SITE_TYPES.RIGHT_CODE
   | typeof SITE_TYPES.OPENROUTER
   | typeof SITE_TYPES.UNKNOWN
 
@@ -250,6 +253,47 @@ describe("account site definition registry", () => {
     }
   })
 
+  it("registers RightCode as an account-only site with its verified console routes", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.RIGHT_CODE)
+
+    expect(definition).toMatchObject({
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode,
+      onboarding: {
+        displayName: "RightCode",
+        detection: { hostnames: RIGHTCODE_HOSTNAMES },
+        routes: {
+          loginPath: "/login",
+          usagePath: "/use-logs",
+          adminCredentialsPath: "/api-keys",
+          siteAnnouncementsPath: "/dashboard",
+          pricingPath: "/models",
+          // Right Code runs no check-in flow and its activation-code
+          // redemption contract is unverified, so neither page is offered.
+          checkInPath: null,
+          redeemPath: null,
+          accessTokenPath: null,
+        },
+      },
+    })
+    // Keys arrive already prefixed with `sk-`, so the One/New API style
+    // optional-prefix rewriting must stay off.
+    expect(definition?.tokenKey).toBeUndefined()
+  })
+
+  it("keeps RightCode's token-only auth and plan for unaided manual adds", () => {
+    const profile = getAccountSiteProductProfile(SITE_TYPES.RIGHT_CODE)
+
+    expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
+    expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
+    expect(profile.identity.usernameRequired).toBe(true)
+    // The console never exposes the numeric account id.
+    expect(profile.identity.userIdRequired).toBe(false)
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+    )
+  })
+
   it("matches current product-profile behavior for overridden sites", () => {
     const anyrouterOverride = getAccountSiteProductProfileOverride(
       SITE_TYPES.ANYROUTER,
@@ -305,6 +349,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.SUB2API,
       SITE_TYPES.AIHUBMIX,
       SITE_TYPES.SHAREDCHAT,
+      SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.OPENROUTER,
       SITE_TYPES.UNKNOWN,
     ])

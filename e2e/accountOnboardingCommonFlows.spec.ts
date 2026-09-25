@@ -1,6 +1,7 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS,
@@ -48,7 +49,10 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
-import { expectAccountListItemVisibleBySite } from "~~/e2e/utils/realSite/accountAdd"
+import {
+  expectAccountListItemVisibleBySite,
+  waitForSavedAccount,
+} from "~~/e2e/utils/realSite/accountAdd"
 
 parallelizeShardableSpec()
 
@@ -60,6 +64,10 @@ const MANAGED_SITE_USER_ID = "1"
 const OPENROUTER_API_PATH = new URL(OPENROUTER_API_BASE_URL).pathname
 const OPENROUTER_MANAGEMENT_KEY = "sk-or-e2e-management-key"
 const OPENROUTER_CREATOR_USER_ID = "openrouter-user-placeholder"
+const RIGHTCODE_SITE_URL = "https://www.right.codes"
+const RIGHTCODE_ACCOUNT_ID = 4242
+const RIGHTCODE_ACCOUNT_USERNAME = "rightcode-user"
+const RIGHTCODE_ACCOUNT_TOKEN = "rightcode-e2e-account-token"
 
 type OpenRouterManagementKeyFixtureMode = "authenticated" | "logged_out"
 
@@ -457,6 +465,129 @@ async function stubAIHubMixRoutes(context: BrowserContext) {
       body: JSON.stringify({
         success: false,
         message: `Unhandled AIHubMix API route: ${method} ${url.pathname}`,
+      }),
+    })
+  })
+}
+
+/**
+ * Serves the RightCode console and the account endpoints detection reads.
+ *
+ * The console keeps its bearer token as plain page state, so the stub seeds
+ * `localStorage` the way the real console does; detection reads it through the
+ * content-session extractor rather than through a title or a login form.
+ */
+async function stubRightCodeRoutes(context: BrowserContext) {
+  await context.route(`${RIGHTCODE_SITE_URL}/**`, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const method = request.method()
+
+    if (method === "GET" && url.pathname === "/") {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: `<!doctype html>
+          <html>
+            <head><title>Right Code - 企业级 AI Agent 中转平台</title></head>
+            <body>
+              <script>
+                window.localStorage.setItem(${JSON.stringify(
+                  "userToken",
+                )}, ${JSON.stringify(RIGHTCODE_ACCOUNT_TOKEN)})
+                window.localStorage.setItem(${JSON.stringify(
+                  "auth-storage",
+                )}, JSON.stringify({
+                  state: {
+                    user: {
+                      id: ${RIGHTCODE_ACCOUNT_ID},
+                      username: ${JSON.stringify(RIGHTCODE_ACCOUNT_USERNAME)},
+                      email: ${JSON.stringify(
+                        `${RIGHTCODE_ACCOUNT_USERNAME}@example.invalid`,
+                      )},
+                    },
+                    token: ${JSON.stringify(RIGHTCODE_ACCOUNT_TOKEN)},
+                    isAuthenticated: true,
+                  },
+                  version: 0,
+                }))
+              </script>
+              Right Code
+            </body>
+          </html>`,
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/favicon.ico") {
+      await route.fulfill({ status: 204, body: "" })
+      return
+    }
+
+    const json = (body: unknown) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      })
+
+    if (method === "GET" && url.pathname === "/auth/me") {
+      await json({
+        id: RIGHTCODE_ACCOUNT_ID,
+        username: RIGHTCODE_ACCOUNT_USERNAME,
+        email: `${RIGHTCODE_ACCOUNT_USERNAME}@example.invalid`,
+        balance: 12.5,
+        user_token: RIGHTCODE_ACCOUNT_TOKEN,
+        invite_code: "rightcode-invite",
+      })
+      return
+    }
+
+    // The deployment's own CNY price for one site dollar.
+    if (method === "GET" && url.pathname === "/configs") {
+      await json({ "public.balance.price": "1.0" })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/use-log/stats") {
+      await json({
+        total_requests: 4,
+        total_tokens: 50,
+        total_cost: 0.4,
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/use-log/stats/overall") {
+      await json({
+        total_requests: 40,
+        total_tokens: 500,
+        total_cost: 3,
+        note: "统计范围为全部历史",
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/subscriptions/list") {
+      await json({ subscriptions: [], total: 0 })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/subscriptions/summary/total") {
+      await json({
+        total_quota: 0,
+        used_quota: 0,
+        remaining_quota: 0,
+        active_subscription_count: 0,
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        message: `Unhandled RightCode route: ${method} ${url.pathname}`,
       }),
     })
   })
@@ -1121,6 +1252,71 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
     .not.toBeNull()
 
   await sitePage.close()
+})
+
+test("adds a RightCode account from its logged-in console without a one-time key step", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    // This scenario enters its URL manually; avoid racing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+  await stubRightCodeRoutes(context)
+
+  const fixture = await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl: RIGHTCODE_SITE_URL,
+    siteType: SITE_TYPES.RIGHT_CODE,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      installExtensionPageGuards(sitePage)
+      await forceExtensionLanguage(sitePage, "en")
+      await sitePage.goto(RIGHTCODE_SITE_URL)
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async () => undefined,
+  })
+
+  // The whole point of the integration: this deployment is not a One/New API
+  // backend, so detection resolves it from the console session instead of
+  // reporting a payload that does not match any known site.
+  expect(fixture.siteType).toBe(SITE_TYPES.RIGHT_CODE)
+
+  // RightCode re-reveals keys on every read, so saving must not raise the
+  // created-secret dialog that warns the value would be lost.
+  await expect(
+    page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput),
+  ).toHaveCount(0)
+
+  const savedAccount = await waitForSavedAccount({
+    serviceWorker,
+    siteType: SITE_TYPES.RIGHT_CODE,
+    baseUrl: RIGHTCODE_SITE_URL,
+  })
+  expect(savedAccount.account_info.username).toBe(RIGHTCODE_ACCOUNT_USERNAME)
+  expect(savedAccount.account_info.id).toBe(String(RIGHTCODE_ACCOUNT_ID))
+  expect(savedAccount.account_info.access_token).toBe(RIGHTCODE_ACCOUNT_TOKEN)
+  // Saving reads the account through the same producer the refresh button uses:
+  // the stubbed wallet balance and today cost, converted into quota points.
+  expect(savedAccount.account_info.quota).toBe(12.5 * QUOTA_PER_USD)
+  expect(savedAccount.account_info.today_quota_consumption).toBe(
+    0.4 * QUOTA_PER_USD,
+  )
+  expect(savedAccount.account_info.today_requests_count).toBe(4)
+  // RightCode runs no check-in flow, so no method may be learned or selected.
+  expect(Object.keys(savedAccount.checkIn.methodKnowledge.methods)).toEqual([])
+  expect(savedAccount.checkIn.selection.methodId).toBeUndefined()
+
+  await fixture.cleanup()
 })
 
 for (const scenario of [

@@ -346,6 +346,9 @@
         "cancel": "取消",
         "save": "保存密钥"
       },
+      "allowWallet": "允许使用余额",
+      "allowWalletHelp": "套餐额度用完后，该密钥仍可从账户余额扣费继续使用。",
+      "channel": "渠道",
       "expiryDays": "有效期（天）",
       "feedback": {
         "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",

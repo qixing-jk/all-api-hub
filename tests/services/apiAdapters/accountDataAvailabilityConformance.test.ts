@@ -38,6 +38,9 @@ const collectedRequests = {
   sharedChatUsage: 0,
   voApiV2Stats: 0,
   openRouterCredits: 0,
+  rightCodeAccount: 0,
+  rightCodeTodayStats: 0,
+  rightCodeOverall: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -266,6 +269,68 @@ const producerFixturesByFamily = {
       expect(collectedRequests.openRouterCredits).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: {
+    baseUrl: "https://right-code.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://right-code.example.invalid/auth/me", () => {
+        collectedRequests.rightCodeAccount += 1
+        return HttpResponse.json({
+          id: 1,
+          username: "example-user",
+          user_token: "account-token",
+          balance: 1,
+        })
+      }),
+      http.get("https://right-code.example.invalid/use-log/stats", () => {
+        collectedRequests.rightCodeTodayStats += 1
+        return HttpResponse.json({
+          total_requests: 2,
+          total_tokens: 3,
+          total_cost: 0.5,
+          start_date: "2026-09-24T00:00",
+          end_date: "2026-09-24T00:00",
+        })
+      }),
+      http.get(
+        "https://right-code.example.invalid/use-log/stats/overall",
+        () => {
+          collectedRequests.rightCodeOverall += 1
+          return HttpResponse.json({
+            total_requests: 5,
+            total_tokens: 6,
+            total_cost: 0.25,
+            period_days: 0,
+            note: "统计范围为全部历史",
+          })
+        },
+      ),
+      http.get("https://right-code.example.invalid/subscriptions/list", () =>
+        HttpResponse.json({ subscriptions: [], total: 0 }),
+      ),
+      http.get(
+        "https://right-code.example.invalid/subscriptions/summary/total",
+        () =>
+          HttpResponse.json({
+            total_quota: 0,
+            used_quota: 0,
+            remaining_quota: 0,
+            active_subscription_count: 0,
+          }),
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.rightCodeAccount).toBe(snapshotCount)
+      expect(collectedRequests.rightCodeTodayStats).toBe(snapshotCount)
+      expect(collectedRequests.rightCodeOverall).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -302,6 +367,9 @@ describe("AccountData availability producer conformance", () => {
       sharedChatUsage: 0,
       voApiV2Stats: 0,
       openRouterCredits: 0,
+      rightCodeAccount: 0,
+      rightCodeTodayStats: 0,
+      rightCodeOverall: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

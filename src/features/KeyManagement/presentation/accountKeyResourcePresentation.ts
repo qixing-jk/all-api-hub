@@ -252,6 +252,7 @@ const nativeCardFamilies = new Set<string>([
   ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
   ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
   ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
+  ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode,
 ])
 
 /** Resolves presentation independently of whether a provider implements native CRUD. */

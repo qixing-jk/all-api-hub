@@ -346,6 +346,9 @@
         "cancel": "Hủy",
         "save": "Lưu khóa"
       },
+      "allowWallet": "Cho phép dùng số dư",
+      "allowWalletHelp": "Giữ cho khóa này tiếp tục hoạt động bằng số dư tài khoản sau khi hết hạn ngạch gói.",
+      "channel": "Kênh",
       "expiryDays": "Hết hạn sau (ngày)",
       "feedback": {
         "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",

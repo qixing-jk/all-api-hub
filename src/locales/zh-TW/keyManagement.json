@@ -346,6 +346,9 @@
         "cancel": "取消",
         "save": "儲存金鑰"
       },
+      "allowWallet": "允許使用餘額",
+      "allowWalletHelp": "套餐額度用完後，此金鑰仍可從帳戶餘額扣費繼續使用。",
+      "channel": "管道",
       "expiryDays": "有效期限（天）",
       "feedback": {
         "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",

@@ -346,6 +346,9 @@
         "cancel": "キャンセル",
         "save": "キーを保存"
       },
+      "allowWallet": "残高の使用を許可",
+      "allowWalletHelp": "プランのクォータを使い切った後も、このキーがアカウント残高から課金されて使い続けられます。",
+      "channel": "チャネル",
       "expiryDays": "有効期間（日）",
       "feedback": {
         "authenticationFailed": "再度ログインするか、このアカウントの認証情報を更新してから再試行してください。",
