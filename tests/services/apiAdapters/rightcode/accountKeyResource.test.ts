@@ -525,7 +525,10 @@ describe("rightCodeAccountKeyResources", () => {
         scopeKey: "account",
         resourceId: "11",
       }),
-    ).rejects.toBeDefined()
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+    expect(mockDeleteRightCodeKey).toHaveBeenCalledTimes(1)
   })
 
   it("resolves the account scope when no scope is requested", async () => {
@@ -533,6 +536,23 @@ describe("rightCodeAccountKeyResources", () => {
     await expect(session.resolveDefaultScope()).resolves.toMatchObject({
       scopeKey: "account",
       isDefault: true,
+    })
+  })
+
+  it("reports a key as unavailable when upstream reveals no secret", async () => {
+    const session = await openSession()
+    mockFetchRightCodeKey.mockResolvedValueOnce(key({ key: "   " }))
+
+    await expect(
+      session.runtimeKey!.resolve({
+        accountId: "account-example",
+        siteType: SITE_TYPES.RIGHT_CODE,
+        scopeKey: "account",
+        resourceId: "11",
+      }),
+    ).resolves.toEqual({
+      kind: "unavailable",
+      failure: { code: "unavailable" },
     })
   })
 
