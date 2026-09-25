@@ -12,6 +12,7 @@ const {
   clearMock,
   windowOpenMock,
   toastSuccessMock,
+  toastErrorMock,
   REMOTE_SURVEY_PAGE_URL,
   LOCAL_SURVEY_PAGE_URL,
   TARGET_STORAGE_KEY,
@@ -21,6 +22,7 @@ const {
   clearMock: vi.fn(),
   windowOpenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
   REMOTE_SURVEY_PAGE_URL: "https://all-api-hub.qixing1217.top/uninstall.html",
   LOCAL_SURVEY_PAGE_URL: "http://localhost:8080/uninstall.html",
   TARGET_STORAGE_KEY: "aah-dev:uninstall-survey-target",
@@ -38,7 +40,7 @@ vi.mock("~/services/uninstallSurvey/uninstallSurvey", () => ({
 vi.mock("~/lib/notify", () => {
   const toastMock = Object.assign(vi.fn(), {
     dismiss: vi.fn(),
-    error: vi.fn(),
+    error: toastErrorMock,
     loading: vi.fn(() => "toast-id"),
     success: toastSuccessMock,
   })
@@ -213,5 +215,133 @@ describe("uninstall survey dev section", () => {
 
     await waitFor(() => expect(compose).not.toHaveAttribute("aria-busy"))
     expect(register).toBeEnabled()
+  })
+
+  it("discards the composed URL and composes fresh against new target on preview", async () => {
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Compose URL preview" }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("row-composed-url")).toHaveTextContent(
+        COMPOSED_URL,
+      )
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Switch target to local" }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("row-composed-url")).toHaveTextContent(
+        "unavailable",
+      )
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Open survey page (no uid)" }),
+    )
+
+    await waitFor(() => {
+      expect(composeUrlMock).toHaveBeenLastCalledWith({
+        baseUrl: LOCAL_SURVEY_PAGE_URL,
+      })
+    })
+  })
+
+  it("handles failed compose URL gracefully", async () => {
+    composeUrlMock.mockResolvedValue(null)
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Compose URL preview" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Dev: failed to compose survey URL",
+      )
+    })
+  })
+
+  it("handles failed registration gracefully", async () => {
+    registerNowMock.mockResolvedValue(null)
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Register uninstall URL" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Dev: uninstall URL registration unavailable here",
+      )
+    })
+  })
+
+  it("handles failed clear gracefully", async () => {
+    clearMock.mockResolvedValue(false)
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Clear uninstall URL" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Dev: uninstall URL clearing unavailable here",
+      )
+    })
+  })
+
+  it("handles open preview failure when compose returns null", async () => {
+    composeUrlMock.mockResolvedValue(null)
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Open survey page (no uid)" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Dev: failed to compose survey URL",
+      )
+    })
+    expect(windowOpenMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to remote when stored target is unrecognized or storage throws", async () => {
+    window.localStorage.setItem(TARGET_STORAGE_KEY, "unknown-target")
+    renderDevPanelSection(useUninstallSurveyDevSection)
+
+    expect(screen.getByTestId("row-survey-target")).toHaveTextContent(
+      REMOTE_SURVEY_PAGE_URL,
+    )
+  })
+
+  it("survives localStorage read/write errors without crashing", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage error")
+    })
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded")
+    })
+
+    renderDevPanelSection(useUninstallSurveyDevSection)
+    expect(screen.getByTestId("row-survey-target")).toHaveTextContent(
+      REMOTE_SURVEY_PAGE_URL,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Switch target to local" }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("row-survey-target")).toHaveTextContent(
+        LOCAL_SURVEY_PAGE_URL,
+      )
+    })
   })
 })

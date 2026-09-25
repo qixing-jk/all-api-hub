@@ -14,6 +14,7 @@ const {
   trackActionStartedMock,
   trackMock,
   showUpdateToastMock,
+  uninstallSurveyRefreshMock,
 } = vi.hoisted(() => ({
   preferenceMocks: {
     isEnabled: vi.fn(),
@@ -22,6 +23,13 @@ const {
   trackActionStartedMock: vi.fn(),
   trackMock: vi.fn(),
   showUpdateToastMock: vi.fn(),
+  uninstallSurveyRefreshMock: vi.fn(),
+}))
+
+vi.mock("~/services/uninstallSurvey/uninstallSurvey", () => ({
+  uninstallSurveyService: {
+    refresh: uninstallSurveyRefreshMock,
+  },
 }))
 
 vi.mock("~/services/productAnalytics/preferences", async (importOriginal) => {
@@ -73,6 +81,7 @@ describe("ProductAnalyticsSettings", () => {
     vi.clearAllMocks()
     preferenceMocks.isEnabled.mockResolvedValue(true)
     preferenceMocks.setEnabled.mockResolvedValue(true)
+    uninstallSurveyRefreshMock.mockResolvedValue(true)
     trackActionStartedMock.mockResolvedValue(undefined)
     trackMock.mockResolvedValue({ success: true })
   })
@@ -98,6 +107,7 @@ describe("ProductAnalyticsSettings", () => {
     await waitFor(() => {
       expect(preferenceMocks.setEnabled).toHaveBeenCalledWith(false)
     })
+    expect(uninstallSurveyRefreshMock).toHaveBeenCalledTimes(1)
     expect(trackMock).not.toHaveBeenCalled()
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       true,
@@ -115,6 +125,7 @@ describe("ProductAnalyticsSettings", () => {
     await waitFor(() => {
       expect(preferenceMocks.setEnabled).toHaveBeenCalledWith(false)
     })
+    expect(uninstallSurveyRefreshMock).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(switchControl).toBeEnabled()
       expect(switchControl).toHaveAttribute("aria-checked", "true")

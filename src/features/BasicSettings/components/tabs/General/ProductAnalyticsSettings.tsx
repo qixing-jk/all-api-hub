@@ -16,6 +16,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
+import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
@@ -67,6 +68,7 @@ export default function ProductAnalyticsSettings() {
         return
       }
 
+      await uninstallSurveyService.refresh()
       showUpdateToast(true, t("productAnalytics.enableLabel"))
 
       if (nextEnabled) {

@@ -132,6 +132,7 @@ export function useUninstallSurveyDevSection(): DevPanelSection {
     // development, which would report every switch twice.
     const next: SurveyTarget = target === "local" ? "remote" : "local"
     setTarget(next)
+    setPreviewUrl(null)
     storeTarget(next)
     toast.success(
       `Dev: survey target switched to ${next}. Register again to apply it.`,

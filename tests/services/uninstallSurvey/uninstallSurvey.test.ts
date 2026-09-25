@@ -62,8 +62,13 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
+const i18nMock = vi.hoisted(() => ({
+  resolvedLanguage: "zh-CN" as string | undefined,
+  language: "zh-CN" as string | undefined,
+}))
+
 vi.mock("~/utils/i18n/core", () => ({
-  default: { resolvedLanguage: "zh-CN", language: "zh-CN" },
+  default: i18nMock,
 }))
 
 const mockedSetUninstallUrl = vi.mocked(setUninstallUrl)
@@ -88,6 +93,8 @@ describe("uninstallSurveyService", () => {
     mockedIsTestMode.mockReturnValue(false)
     mockedSetUninstallUrl.mockResolvedValue(true)
     mockedGetAnonymousId.mockResolvedValue("analytics-abc")
+    i18nMock.resolvedLanguage = "zh-CN"
+    i18nMock.language = "zh-CN"
   })
 
   afterEach(() => {
@@ -254,5 +261,35 @@ describe("uninstallSurveyService", () => {
     expect(atIndex(mockedSetUninstallUrl.mock.calls, 0)[0]).toContain(
       `${localUrl}?`,
     )
+  })
+
+  it("resolves UI language using i18n.language when resolvedLanguage is absent", async () => {
+    i18nMock.resolvedLanguage = undefined
+    i18nMock.language = "en-US"
+
+    const url = await uninstallSurveyService.composeUrl()
+    expect(url).toContain("lang=en-US")
+  })
+
+  it("resolves UI language using fallback when i18n has no language", async () => {
+    i18nMock.resolvedLanguage = undefined
+    i18nMock.language = undefined
+
+    const url = await uninstallSurveyService.composeUrl()
+    expect(url).toMatch(/lang=(?:[a-zA-Z-]+|unknown)/)
+  })
+
+  it("normalizes malformed stored state with non-finite firstSeenAt", async () => {
+    storageDouble.data.set(stateKey, { firstSeenAt: "not-a-number" })
+
+    const url = await uninstallSurveyService.composeUrl()
+    expect(url).toContain("d=0")
+  })
+
+  it("registerNow catches and logs when ensureFirstSeenAt throws", async () => {
+    storageDouble.failReads = true
+
+    const result = await uninstallSurveyService.registerNow()
+    expect(result).toBeNull()
   })
 })
