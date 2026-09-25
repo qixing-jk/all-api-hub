@@ -589,10 +589,10 @@ describe("rightcode apiService index", () => {
       )
 
       const result = await fetchAccountData(accountRequest)
-      expect(result.todayStatsAvailability.consumption.status).toBe(
+      expect(result.todayStatsAvailability?.consumption.status).toBe(
         "unavailable",
       )
-      expect(result.todayStatsAvailability.consumption.reason).toBe(
+      expect(result.todayStatsAvailability?.consumption.reason).toBe(
         ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
       )
     })
@@ -693,7 +693,8 @@ describe("rightcode apiService index", () => {
       vi.mocked(isRightCodeAuthFailureError).mockReturnValueOnce(true)
       vi.mocked(resyncRightCodeAuthToken).mockResolvedValueOnce({
         accessToken: "resynced-token",
-        userId: 42,
+        userId: "42",
+        source: "existing_tab",
       })
 
       const result = await refreshAccountData(accountRequest)
@@ -721,7 +722,8 @@ describe("rightcode apiService index", () => {
       vi.mocked(isRightCodeAuthFailureError).mockReturnValueOnce(true)
       vi.mocked(resyncRightCodeAuthToken).mockResolvedValueOnce({
         accessToken: "resynced-token",
-        userId: 42,
+        userId: "42",
+        source: "existing_tab",
       })
 
       const result = await refreshAccountData(accountRequest)

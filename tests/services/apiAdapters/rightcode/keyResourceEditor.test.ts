@@ -206,7 +206,7 @@ describe("rightCodeKeyEditor", () => {
       issues: [{ fieldId: "allow_wallet", code: "invalid_value" }],
     })
 
-    const options = await editor.loadOptions("unknown_field", {})
+    const options = await editor.loadOptions?.("unknown_field", {})
     expect(options).toEqual([])
   })
 })

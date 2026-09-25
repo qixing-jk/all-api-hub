@@ -375,11 +375,20 @@ describe("rightCodeAccountKeyResources", () => {
     expect(atIndex(page.items, 0).status).toBe("expired")
   })
 
-  it("rejects non-numeric or non-positive locator", async () => {
+  it("rejects non-numeric or non-positive locator before any request", async () => {
     const session = await openSession()
     const collection = await session.openCollection("account")
-    await expect(collection.get("0")).rejects.toBeDefined()
-    await expect(collection.get("abc")).rejects.toBeDefined()
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "0",
+    }
+    await expect(collection.get(ref)).rejects.toBeDefined()
+    await expect(
+      collection.get({ ...ref, resourceId: "abc" }),
+    ).rejects.toBeDefined()
+    expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
   })
 
   it("returns unavailable when runtime key lookup fails", async () => {
@@ -447,7 +456,11 @@ describe("rightCodeAccountKeyResources", () => {
   it("handles business rejection on update without uncertainty", async () => {
     const session = await openSession()
     const original = key({ id: 11, name: "Original" })
-    mockFetchRightCodeKey.mockResolvedValueOnce(original)
+    // The editor reads the detail on open and again on submit, so the write is
+    // only reached once both reads are satisfied.
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
     const denied = new ApiError(
       "denied",
       undefined,
@@ -464,7 +477,10 @@ describe("rightCodeAccountKeyResources", () => {
     })
     await expect(
       editor.submit({ ...editor.initialValues, name: "Renamed" }),
-    ).rejects.toBeDefined()
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+    expect(mockUpdateRightCodeKey).toHaveBeenCalledTimes(1)
   })
 
   it("surfaces uncertainty when readback does not reflect submitted update", async () => {
@@ -510,5 +526,63 @@ describe("rightCodeAccountKeyResources", () => {
         resourceId: "11",
       }),
     ).rejects.toBeDefined()
+  })
+
+  it("resolves the account scope when no scope is requested", async () => {
+    const session = await openSession()
+    await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+      scopeKey: "account",
+      isDefault: true,
+    })
+  })
+
+  it("reports an uncertain create when the expiry write fails", async () => {
+    const session = await openSession()
+    mockCreateRightCodeKey.mockResolvedValueOnce(key({ id: 23 }))
+    mockSetRightCodeKeyExpiry.mockRejectedValueOnce(
+      new Error("expiry write failed"),
+    )
+
+    const editor = await session.openCreateEditor("account")
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        name: "Expiring key",
+        channel: "1",
+        expires_at: new Date("2027-01-01T08:00:00").toISOString(),
+      }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+
+    // The key exists, so the failure must not read as a rejected create, and no
+    // readback is issued once the expiry write already reported uncertainty.
+    expect(mockCreateRightCodeKey).toHaveBeenCalledTimes(1)
+    expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
+  })
+
+  it("reports a concurrent edit instead of overwriting the newer value", async () => {
+    const session = await openSession()
+    const original = key({ id: 11, name: "Original" })
+    const changedElsewhere = key({ id: 11, name: "Renamed elsewhere" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(changedElsewhere)
+
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Renamed locally" }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
+    })
+    expect(mockUpdateRightCodeKey).not.toHaveBeenCalled()
   })
 })
