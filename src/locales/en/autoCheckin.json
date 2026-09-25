@@ -205,6 +205,7 @@
   "skipReasons": {
     "account_data_missing": "Required account details are missing. Re-detect the account in its Edit dialog.",
     "account_disabled": "This account is disabled; enable it again in its Edit dialog.",
+    "account_state_write_failed": "The updated account sign-in could not be saved. Check extension storage and retry manually.",
     "account_unavailable": "The account changed or became unavailable before check-in. Refresh the account and retry.",
     "already_checked_today": "Already checked today",
     "authentication_required": "Your sign-in has expired or is missing. Sign in to this site with this account, then retry.",
@@ -215,6 +216,7 @@
     "detection_disabled": "Check-in detection is off for this account.",
     "execution_context_invalid": "This run could not get a usable signed-in session. Start the check-in again.",
     "login_provider_in_use": "This login method is already used by another AgentRouter account. Pick another or adjust that account.",
+    "login_provider_required": "No login method is selected. Choose the method this account signs in with in its settings.",
     "manual_verification_required": "The site requires you to pass a human verification step first.",
     "method_disabled": "This site currently has check-in turned off.",
     "method_not_matched": "The check-in method no longer matches this site. Re-detect it.",

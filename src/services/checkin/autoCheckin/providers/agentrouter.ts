@@ -7,11 +7,7 @@ import {
 } from "~/constants/checkIn"
 import { loginAccount } from "~/services/accountLogin"
 import { resolveLoginCheckInProvider } from "~/services/accountLogin/providerClaims"
-import {
-  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
-  loginProviderEvidence,
-  type LoginProviderEvidenceOutcome,
-} from "~/services/accountLogin/providerEvidence"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import {
   isAgentRouterLoginUrl,
   isAgentRouterSystemName,
@@ -20,13 +16,19 @@ import {
   fetchAgentRouterPublicStatus,
   type AgentRouterPublicStatusEnvelope,
 } from "~/services/apiService/agentrouter/status"
-import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createTerminalFailureResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
 import { AuthTypeEnum } from "~/types/auth"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
-  getAutoCheckinSkipReasonTranslationKey,
 } from "~/types/autoCheckin"
+import {
+  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
+  type LoginProviderEvidenceOutcome,
+} from "~/types/loginProviderEvidence"
 import { isUnattendedRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
@@ -124,19 +126,20 @@ export function createAgentRouterProvider(
           status: CHECKIN_RESULT_STATUS.FAILED,
           reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
           messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-          retryable: false,
         }
       }
       // Never fall back to a default provider: signing in with GitHub for an
       // account that actually uses another provider would run the wrong OAuth
-      // identity. Fail visibly and let the user select the login method.
+      // identity. Fail visibly and let the user select the login method. The
+      // reason code is what keeps the account out of the retry queue: no run can
+      // succeed until the user picks one.
       const provider = resolveLoginCheckInProvider(account.checkIn)
       if (!provider) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_REQUIRED,
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.loginProviderRequired,
-          retryable: false,
         }
       }
 
@@ -175,7 +178,6 @@ export function createAgentRouterProvider(
               reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
               messageKey:
                 AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
-              retryable: false,
             }
       }
 
@@ -187,25 +189,18 @@ export function createAgentRouterProvider(
           status: CHECKIN_RESULT_STATUS.FAILED,
           reasonCode: AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY,
           messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.sessionBusy,
-          retryable: false,
         }
       }
 
       if (result.status === BROWSER_OAUTH_STATUS.InteractionRequired) {
-        return {
-          status: CHECKIN_RESULT_STATUS.FAILED,
-          messageKey: getAutoCheckinSkipReasonTranslationKey(
-            AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-          ),
+        return createTerminalFailureResult({
           reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-          retryable: false,
-        }
+        })
       }
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
         messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-        retryable: false,
       }
     },
   }

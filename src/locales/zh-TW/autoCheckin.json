@@ -201,6 +201,7 @@
   "skipReasons": {
     "account_data_missing": "帳號資料不完整，請在「編輯帳號」中重新識別。",
     "account_disabled": "帳號已禁用；可在「編輯帳號」中重新啟用。",
+    "account_state_write_failed": "帳號登入狀態未能儲存。請檢查擴充功能儲存空間後手動重試。",
     "account_unavailable": "簽到前帳號資訊已變更或無法使用，請重新整理後重試。",
     "already_checked_today": "今日已簽到",
     "authentication_required": "登入已失效或未登入，請在該站點登入這個帳號後重試。",
@@ -211,6 +212,7 @@
     "detection_disabled": "該帳號的簽到檢測已關閉。",
     "execution_context_invalid": "這次沒能取得可用的登入工作階段，請重新發起簽到。",
     "login_provider_in_use": "該登入方式已被另一個 AgentRouter 帳號佔用，請改選或調整。",
+    "login_provider_required": "尚未選擇登入方式。請在帳號設定中為該帳號選擇要使用的登入方式。",
     "manual_verification_required": "站點要求先手動完成人機驗證，請完成後再試。",
     "method_disabled": "該站點目前未開啟簽到功能。",
     "method_not_matched": "簽到方式與站點已不相符，請重新偵測。",

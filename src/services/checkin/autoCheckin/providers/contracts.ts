@@ -6,7 +6,7 @@ import type {
   ApiServiceRequest,
   ApiTransportRequestObserver,
 } from "~/services/apiTransport/type"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import type {
@@ -92,5 +92,5 @@ export interface AutoCheckinProvider {
   checkIn(
     account: SiteAccount | AnyrouterCheckInParams,
     context: AutoCheckinProviderContext,
-  ): Promise<AutoCheckinProviderResult>
+  ): Promise<AutoCheckinProviderOutcome>
 }

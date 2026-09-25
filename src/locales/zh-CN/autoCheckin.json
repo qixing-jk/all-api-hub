@@ -201,6 +201,7 @@
   "skipReasons": {
     "account_data_missing": "账号资料不完整，请在「编辑账号」中重新识别。",
     "account_disabled": "账号已禁用；可在「编辑账号」中重新启用。",
+    "account_state_write_failed": "账号登录状态未能保存。请检查扩展存储后手动重试。",
     "account_unavailable": "签到前账号信息已变化或不可用，请刷新后重试。",
     "already_checked_today": "今日已签到",
     "authentication_required": "登录已失效或未登录，请在该站点登录这个账号后重试。",
@@ -211,6 +212,7 @@
     "detection_disabled": "该账号的签到检测已关闭。",
     "execution_context_invalid": "这次没能取得可用的登录会话，请重新发起签到。",
     "login_provider_in_use": "该登录方式已被另一个 AgentRouter 账号占用，请改选或调整。",
+    "login_provider_required": "尚未选择登录方式。请在账号设置中为该账号选择要使用的登录方式。",
     "manual_verification_required": "站点要求先手动完成人机验证，请完成后再试。",
     "method_disabled": "该站点当前未开启签到功能。",
     "method_not_matched": "签到方式与站点已不匹配，请重新检测。",

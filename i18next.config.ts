@@ -19,6 +19,9 @@ export default defineConfig({
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
     preservePatterns: [
+      // Skip-reason labels are resolved from the reason-code map, so the
+      // extractor never sees them in a t() call.
+      "autoCheckin:skipReasons.*",
       // Search breadcrumbs still use this label after removing the sidebar footer.
       "ui:navigation.settings",
       // Search-only title; the provider link uses a separate interpolated label.

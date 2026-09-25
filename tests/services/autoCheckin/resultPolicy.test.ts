@@ -3,13 +3,17 @@ import { describe, expect, it } from "vitest"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
 import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  CHECKIN_SKIP_REASON_CATEGORIES,
+} from "~/services/checkin/autoCheckin/reasonCatalog"
+import {
   canAutomaticallyRetryCheckinResult,
   isRetryableCheckinResult,
 } from "~/services/checkin/autoCheckin/resultPolicy"
 import {
   AUTO_CHECKIN_SKIP_REASON,
+  AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
-  type AutoCheckinSkipReason,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
 import type { CheckInMethodId } from "~/types/checkIn"
@@ -78,187 +82,89 @@ describe("isRetryableCheckinResult", () => {
 })
 
 describe("canAutomaticallyRetryCheckinResult", () => {
-  // The policy is "retry unless the result is an obvious dead end", so every
-  // reason code carries its decision here instead of at the call sites.
-  it.each([
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: undefined,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-      expected: true,
-    },
-    // Turnstile and a busy shared login are worth another unattended attempt.
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-      reasonCode: undefined,
-      expected: true,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-      reasonCode: undefined,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      reasonCode: undefined,
-      expected: false,
-    },
-    {
-      status: CHECKIN_RESULT_STATUS.SKIPPED,
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
-      expected: false,
-    },
-  ] satisfies Array<{
-    status: CheckinAccountResult["status"]
-    reasonCode: AutoCheckinSkipReason | undefined
-    expected: boolean
-  }>)(
-    "classifies $status/$reasonCode as retryable=$expected",
-    ({ status, reasonCode, expected }) => {
+  it("retries exactly the reasons the product tells the user to wait on", () => {
+    // The decision is a projection of the semantic category, so the two cannot
+    // drift: this holds for every reason code, including ones added later.
+    for (const reasonCode of AUTO_CHECKIN_SKIP_REASONS) {
       expect(
-        canAutomaticallyRetryCheckinResult({ status, reasonCode }, undefined),
-      ).toBe(expected)
-    },
-  )
+        canAutomaticallyRetryCheckinResult({
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode,
+        }),
+      ).toBe(
+        CHECKIN_SKIP_REASON_CATEGORIES[reasonCode] ===
+          AUTO_CHECKIN_SKIP_CATEGORY.WAITING,
+      )
+    }
+  })
+
+  it.each([
+    // A person has to complete a sign-in or a verification before any run can
+    // succeed, so the queue must not spend the day's attempts on them.
+    AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+    AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_REQUIRED,
+    AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE,
+    // Missing account data is user work too.
+    AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
+    AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID,
+    AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+    AUTO_CHECKIN_SKIP_REASON.ACCOUNT_STATE_WRITE_FAILED,
+  ])("refuses to retry %s", (reasonCode) => {
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode,
+      }),
+    ).toBe(false)
+  })
+
+  it.each([
+    AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+    AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+    AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE,
+    AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+    AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY,
+    AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+    AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+  ])("retries %s later the same day", (reasonCode) => {
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode,
+      }),
+    ).toBe(true)
+  })
+
+  it.each([
+    CHECKIN_RESULT_STATUS.SUCCESS,
+    CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    CHECKIN_RESULT_STATUS.SKIPPED,
+  ])("never retries a %s result", (status) => {
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+      }),
+    ).toBe(false)
+  })
+
+  it("retries a result stored before reason codes were mandatory", () => {
+    // Its cause is unknown, and an upgrade must not silently retire a pending
+    // retry. New failures always carry a code, so this only covers stored data.
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+      }),
+    ).toBe(true)
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      }),
+    ).toBe(true)
+  })
 
   it("does not let a provider opinion override the reason-code policy", () => {
     expect(

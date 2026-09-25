@@ -53,8 +53,8 @@ import {
   setLoginProviderSelection,
   type LoginProviderClaimConflict,
 } from "~/services/accountLogin/providerClaims"
+import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
-import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
 import type { CheckInConfig } from "~/types"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"

@@ -1,6 +1,11 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getCheckinSkipReasonCategory,
+  type AutoCheckinSkipCategory,
+} from "~/services/checkin/autoCheckin/reasonCatalog"
+import {
   AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
   isSiteTypeRelatedSkipReason,
@@ -12,10 +17,7 @@ import {
 
 import {
   AUTO_CHECKIN_SKIP_CATEGORIES,
-  AUTO_CHECKIN_SKIP_CATEGORY,
-  getAutoCheckinSkipCategory,
   isAutoCheckinSkipReasonActionable,
-  type AutoCheckinSkipCategory,
 } from "./skipCategories"
 
 /**
@@ -199,7 +201,7 @@ export function countAutoCheckinResults(
 function resolveResultReasonCategory(
   result: CheckinAccountResult,
 ): AutoCheckinSkipCategory | null {
-  const category = getAutoCheckinSkipCategory(result.reasonCode)
+  const category = getCheckinSkipReasonCategory(result.reasonCode)
   if (category) return category
 
   if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
@@ -372,6 +374,11 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.account_disabled", messageParams)
     case "autoCheckin:skipReasons.account_data_missing":
       return t("autoCheckin:skipReasons.account_data_missing", messageParams)
+    case "autoCheckin:skipReasons.account_state_write_failed":
+      return t(
+        "autoCheckin:skipReasons.account_state_write_failed",
+        messageParams,
+      )
     case "autoCheckin:skipReasons.authentication_required":
       return t("autoCheckin:skipReasons.authentication_required", messageParams)
     case "autoCheckin:skipReasons.credentials_missing":

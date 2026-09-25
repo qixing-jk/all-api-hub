@@ -259,7 +259,7 @@ describe("Denxio daily check-in method Adapter", () => {
         }),
       ).resolves.toMatchObject({
         status,
-        ...(reasonCode ? { reasonCode, retryable: false } : {}),
+        ...(reasonCode ? { reasonCode } : {}),
       })
     },
   )
@@ -270,7 +270,10 @@ describe("Denxio daily check-in method Adapter", () => {
       "authentication_required",
     ],
     [SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING, "account_unavailable"],
-    [SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED, "status_unavailable"],
+    [
+      SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED,
+      "account_state_write_failed",
+    ],
   ] as const)(
     "stops after auth persistence result %s",
     async (persistenceStatus, reasonCode) => {
@@ -288,7 +291,11 @@ describe("Denxio daily check-in method Adapter", () => {
       ).resolves.toMatchObject({
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode,
-        retryable: false,
+        ...(persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED
+          ? {
+              messageKey: "autoCheckin:skipReasons.account_state_write_failed",
+            }
+          : {}),
       })
     },
   )
@@ -338,40 +345,34 @@ describe("Denxio daily check-in method Adapter", () => {
   })
 
   it.each([
-    [new ApiError("unauthorized", 401), "authentication_required", undefined],
+    [new ApiError("unauthorized", 401), "authentication_required"],
     [
       Object.assign(new Error("unauthorized"), { statusCode: 401 }),
       "authentication_required",
-      undefined,
     ],
-    [new ApiError("missing", 404), "method_unsupported", false],
-    [new ApiError("not allowed", 405), "method_unsupported", false],
-    [new ApiError("forbidden", 403), "permission_denied", undefined],
-    [new TypeError("Failed to fetch"), "network_error", undefined],
+    [new ApiError("missing", 404), "method_unsupported"],
+    [new ApiError("not allowed", 405), "method_unsupported"],
+    [new ApiError("forbidden", 403), "permission_denied"],
+    [new TypeError("Failed to fetch"), "network_error"],
     [
       Object.assign(new Error("timed out"), { name: "TimeoutError" }),
       "timeout",
-      undefined,
     ],
-    [new ApiError("unavailable", 503), "source_unavailable", undefined],
-    [new Error("unexpected"), "status_unavailable", undefined],
-  ] as const)(
-    "maps mutation failure to %s",
-    async (error, reasonCode, retryable) => {
-      vi.mocked(performDenxioDailyCheckIn).mockRejectedValue(error)
+    [new ApiError("unavailable", 503), "source_unavailable"],
+    [new Error("unexpected"), "status_unavailable"],
+  ] as const)("maps mutation failure to %s", async (error, reasonCode) => {
+    vi.mocked(performDenxioDailyCheckIn).mockRejectedValue(error)
 
-      await expect(
-        denxioProvider.checkIn(createAccount(), {
-          ...executionContext(),
-          statusProof: notCheckedStatus,
-        }),
-      ).resolves.toMatchObject({
-        status: CHECKIN_RESULT_STATUS.FAILED,
-        reasonCode,
-        ...(typeof retryable === "boolean" ? { retryable } : {}),
-      })
-    },
-  )
+    await expect(
+      denxioProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode,
+    })
+  })
 
   it.each([
     DENXIO_DAILY_CHECK_IN_ERROR_CODES.NoSponsor,
@@ -395,7 +396,6 @@ describe("Denxio daily check-in method Adapter", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: "status_unavailable",
-      retryable: false,
       rawMessage: "controlled session error",
     })
   })

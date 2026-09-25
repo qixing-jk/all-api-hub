@@ -10,11 +10,11 @@ import {
   resolveLoginProviderClaims,
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
+import { AuthTypeEnum } from "~/types"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
   type LoginProviderEvidenceMap,
-} from "~/services/accountLogin/providerEvidence"
-import { AuthTypeEnum } from "~/types"
+} from "~/types/loginProviderEvidence"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 

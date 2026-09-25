@@ -9,8 +9,8 @@ import {
   EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
-import { AUTO_CHECKIN_SKIP_CATEGORY } from "~/features/AutoCheckin/utils/skipCategories"
 import enAutoCheckin from "~/locales/en/autoCheckin.json"
+import { AUTO_CHECKIN_SKIP_CATEGORY } from "~/services/checkin/autoCheckin/reasonCatalog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

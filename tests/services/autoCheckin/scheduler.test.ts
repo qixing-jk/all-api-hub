@@ -8436,6 +8436,41 @@ describe("autoCheckinScheduler private helpers", () => {
     }
   })
 
+  it("uses the shared retry policy when batch account dispatch throws", async () => {
+    const account = {
+      id: "batch-network-failure",
+      site_name: "Batch Network Failure",
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://example.invalid",
+      disabled: false,
+      account_info: {},
+      checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+    } as any
+    const runAccountCheckin = vi.spyOn(
+      autoCheckinScheduler as any,
+      "runAccountCheckin",
+    )
+    runAccountCheckin.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    try {
+      const [outcome] = await (autoCheckinScheduler as any).runAccountCheckins({
+        accounts: [account],
+        accountDisplayNameById: new Map([[account.id, account.site_name]]),
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: SCHEDULED_EXECUTION,
+        loginProviderOwners: new Map(),
+      })
+      expect(outcome.result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        retryable: true,
+      })
+      expectRecordedRetryDecision(outcome.result)
+    } finally {
+      runAccountCheckin.mockRestore()
+    }
+  })
+
   it("marks accounts checked in for successful and already-checked outcomes", async () => {
     const successProvider = {
       getReadiness: vi.fn(() => ({ ready: true })),

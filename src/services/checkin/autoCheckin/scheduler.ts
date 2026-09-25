@@ -1427,16 +1427,25 @@ class AutoCheckinScheduler {
               error,
               mutationDispatched: false,
             })
+          const methodId = resolveSelectedCheckInMethod({
+            config: account.checkIn,
+            siteType: account.site_type,
+            siteUrl: account.site_url,
+          })
           return {
             result: {
               accountId: account.id,
               accountName,
               status: CHECKIN_RESULT_STATUS.FAILED,
+              ...(methodId ? { methodId } : {}),
               ...(reasonCode ? { reasonCode } : {}),
               ...(messageKey ? { messageKey } : {}),
               ...(messageParams ? { messageParams } : {}),
               rawMessage: getErrorMessage(error),
-              retryable: false,
+              retryable: canAutomaticallyRetryCheckinResult(
+                { status: CHECKIN_RESULT_STATUS.FAILED, reasonCode },
+                methodId ?? undefined,
+              ),
               timestamp: Date.now(),
             },
           }

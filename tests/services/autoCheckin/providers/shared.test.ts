@@ -69,7 +69,6 @@ describe("auto-checkin provider error normalization", () => {
       reasonCode: "upstream_error",
       rawMessage: "Invalid response",
       messageKey: undefined,
-      retryable: true,
     })
 
     const businessFailure = resolveProviderErrorResult({
@@ -110,7 +109,6 @@ describe("auto-checkin provider error normalization", () => {
         }),
       ).toMatchObject({
         reasonCode: "permission_denied",
-        retryable: false,
       })
     }
   })
@@ -126,7 +124,6 @@ describe("auto-checkin provider error normalization", () => {
         }),
       ).toMatchObject({
         reasonCode: "upstream_error",
-        retryable: true,
       })
     }
   })
@@ -225,7 +222,6 @@ describe("auto-checkin provider error normalization", () => {
         // The site's own copy wins over the generic failure label.
         rawMessage: error.message,
         messageKey: undefined,
-        retryable: true,
       })
     },
   )
@@ -246,7 +242,6 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({
       status: "failed",
       reasonCode: "upstream_rejected",
-      retryable: true,
     })
   })
 
@@ -272,7 +267,6 @@ describe("auto-checkin provider error normalization", () => {
         reasonCode: "upstream_error",
         rawMessage: `请求失败: ${statusCode}`,
         messageKey: undefined,
-        retryable: true,
       })
     },
   )
@@ -290,7 +284,6 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({
       status: "failed",
       reasonCode: "no_provider",
-      retryable: false,
     })
   })
 
@@ -314,7 +307,6 @@ describe("auto-checkin provider error normalization", () => {
         status: "uncertain",
         reasonCode: "upstream_error",
         rawMessage: message,
-        retryable: true,
       })
     },
   )
@@ -330,7 +322,6 @@ describe("auto-checkin provider error normalization", () => {
       status: "failed",
       reasonCode: "upstream_error",
       rawMessage: "未登录",
-      retryable: true,
     })
   })
 
@@ -347,7 +338,6 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({
       status: "failed",
       reasonCode: "permission_denied",
-      retryable: false,
     })
   })
 
@@ -359,7 +349,6 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({
       status: "failed",
       reasonCode: "method_disabled",
-      retryable: false,
     })
 
     expect(
@@ -373,7 +362,6 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({
       status: "failed",
       reasonCode: "method_disabled",
-      retryable: false,
     })
   })
 
@@ -386,7 +374,6 @@ describe("auto-checkin provider error normalization", () => {
       status: "failed",
       reasonCode: "upstream_error",
       rawMessage: "string failure message",
-      retryable: true,
     })
   })
 
@@ -400,7 +387,6 @@ describe("auto-checkin provider error normalization", () => {
       reasonCode: "upstream_rejected",
       rawMessage: undefined,
       messageKey: "autoCheckin:providerFallback.checkinFailed",
-      retryable: true,
     })
   })
 
@@ -414,7 +400,6 @@ describe("auto-checkin provider error normalization", () => {
       reasonCode: "upstream_error",
       rawMessage: undefined,
       messageKey: "autoCheckin:providerFallback.unknownError",
-      retryable: true,
     })
   })
 })

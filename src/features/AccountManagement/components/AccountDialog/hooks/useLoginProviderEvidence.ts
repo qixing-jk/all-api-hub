@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react"
 
-import {
-  loginProviderEvidence,
-  type LoginProviderEvidenceMap,
-} from "~/services/accountLogin/providerEvidence"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
+import type { LoginProviderEvidenceMap } from "~/types/loginProviderEvidence"
 
 const NO_EVIDENCE: LoginProviderEvidenceMap = {}
 

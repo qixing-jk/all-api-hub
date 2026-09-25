@@ -1,10 +1,10 @@
 import type { TFunction } from "i18next"
 
+import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
   AUTO_CHECKIN_SKIP_CATEGORY,
-  getAutoCheckinSkipCategory,
-} from "~/features/AutoCheckin/utils/skipCategories"
-import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
+  getCheckinSkipReasonCategory,
+} from "~/services/checkin/autoCheckin/reasonCatalog"
 import {
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
@@ -53,7 +53,7 @@ export function getAutoCheckinSnapshotReadinessCategory(
   snapshot: AutoCheckinAccountSnapshot,
 ): SnapshotReadinessFilter {
   const reason = snapshot.skipReason ?? snapshot.lastResult?.reasonCode
-  switch (getAutoCheckinSkipCategory(reason)) {
+  switch (getCheckinSkipReasonCategory(reason)) {
     case AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED:
       return SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED
     case AUTO_CHECKIN_SKIP_CATEGORY.WAITING:

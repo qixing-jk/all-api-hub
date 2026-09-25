@@ -38,7 +38,7 @@ import {
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -86,7 +86,7 @@ const NEW_API_MESSAGE_KEYS = {
  * - `messageKey` should be an i18n key (e.g. `autoCheckin:providerFallback.*`).
  * - `rawMessage` is kept when the backend returns a human readable message.
  */
-type CheckinResult = AutoCheckinProviderResult
+type CheckinResult = AutoCheckinProviderOutcome
 
 /** Build the authenticated request shared by New API check-in operations. */
 function createCheckInRequest(
@@ -554,7 +554,6 @@ function resolveNativePageFailureResult(params: {
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode:
       identityReasonCode ?? AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-    retryable: identityReasonCode === null,
     messageParams: { checkInUrl: params.checkInUrl },
     rawMessage: params.action.error || undefined,
     data: params.action,
@@ -608,7 +607,6 @@ async function resolveNativePageCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
     }
@@ -646,7 +644,6 @@ async function resolveNativePageCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      retryable: true,
       messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
       messageParams: { checkInUrl },
       rawMessage: errorMessage || undefined,
@@ -677,7 +674,6 @@ async function resolveNativePageCheckinResult(params: {
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-    retryable: true,
     messageKey: NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
     messageParams: { checkInUrl },
     rawMessage: action.error || undefined,
@@ -752,7 +748,6 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
     }
@@ -774,7 +769,6 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
       data: assisted ?? undefined,
@@ -877,7 +871,6 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-      retryable: true,
       rawMessage: assisted.error || params.responseMessage || undefined,
       messageKey: assisted.error
         ? undefined
@@ -930,7 +923,6 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
-    retryable: true,
     rawMessage: assistedMessage || undefined,
     messageKey: assistedMessage
       ? undefined
@@ -1090,7 +1082,6 @@ async function checkinNewApi(
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: directReason,
-      retryable: directReason === AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
       rawMessage: responseMessage || undefined,
       messageKey: responseMessage
         ? undefined

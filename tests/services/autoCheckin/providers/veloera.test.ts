@@ -259,7 +259,6 @@ describe("veloeraProvider", () => {
       expect(result).toEqual({
         status: "failed",
         reasonCode: "upstream_rejected",
-        retryable: true,
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: {
@@ -297,7 +296,6 @@ describe("veloeraProvider", () => {
       expect(result).toEqual({
         status: "failed",
         reasonCode: "upstream_error",
-        retryable: true,
         rawMessage: "Quota bucket 404 is unavailable",
         messageKey: undefined,
       })
@@ -312,7 +310,6 @@ describe("veloeraProvider", () => {
         status: "failed",
         messageKey: "autoCheckin:providerFallback.endpointNotSupported",
         reasonCode: "no_provider",
-        retryable: false,
       })
     })
 

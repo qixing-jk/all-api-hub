@@ -19,12 +19,16 @@ import {
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
-import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createTerminalFailureResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 
 import type {
@@ -47,13 +51,11 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
 }
 
 const failed = (
-  reasonCode: AutoCheckinProviderResult["reasonCode"],
-  retryable?: boolean,
+  reasonCode: AutoCheckinSkipReason,
   rawMessage?: string,
-): AutoCheckinProviderResult => ({
+): AutoCheckinProviderOutcome => ({
   status: CHECKIN_RESULT_STATUS.FAILED,
   reasonCode,
-  ...(typeof retryable === "boolean" ? { retryable } : {}),
   ...(rawMessage
     ? { rawMessage }
     : {
@@ -64,18 +66,20 @@ const failed = (
 const mapMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
-): AutoCheckinProviderResult => {
+): AutoCheckinProviderOutcome => {
   const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
   if (
     persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH
   ) {
-    return failed(AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED, false)
+    return failed(AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED)
   }
   if (persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING) {
-    return failed(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE, false)
+    return failed(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE)
   }
   if (persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED) {
-    return failed(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE, false)
+    return createTerminalFailureResult({
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_STATE_WRITE_FAILED,
+    })
   }
 
   if (error instanceof ApiError) {
@@ -90,7 +94,6 @@ const mapMutationError = (
     if (error.upstreamCode === DENXIO_DAILY_CHECK_IN_ERROR_CODES.Disabled) {
       return failed(
         AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-        false,
         getSafeErrorMessage(error),
       )
     }
@@ -98,7 +101,7 @@ const mapMutationError = (
       return failed(AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED)
     }
     if (error.statusCode === 404 || error.statusCode === 405) {
-      return failed(AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED, false)
+      return failed(AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED)
     }
     if (
       error.upstreamCode === DENXIO_DAILY_CHECK_IN_ERROR_CODES.NoSponsor ||
@@ -107,7 +110,6 @@ const mapMutationError = (
     ) {
       return failed(
         AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-        false,
         getSafeErrorMessage(error),
       )
     }
@@ -177,11 +179,11 @@ export const denxioProvider: AutoCheckinProvider = {
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
           }
         case DENXIO_DAILY_CHECK_IN_RESULT_KINDS.Disabled:
-          return failed(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED, false)
+          return failed(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED)
         case DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable:
-          return failed(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE, false)
+          return failed(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
         case DENXIO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed:
-          return failed(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE, false)
+          return failed(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE)
       }
     } catch (error) {
       return mapMutationError(error, context)

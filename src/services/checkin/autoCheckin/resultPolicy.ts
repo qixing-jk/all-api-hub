@@ -3,39 +3,15 @@ import {
   NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import {
-  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
-  type AutoCheckinSkipReason,
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
-const AUTOMATIC_RETRY_DENIED_REASONS: ReadonlySet<AutoCheckinSkipReason> =
-  new Set([
-    AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,
-    AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
-    AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
-    AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-    AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
-    AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
-    AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED,
-    AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID,
-    AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
-    AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
-    AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
-    AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
-  ])
-
-/** Returns whether a reason is already a clear dead end for automatic retry. */
-function isAutomaticCheckinRetryDeniedReason(
-  reason: AutoCheckinSkipReason | undefined,
-): boolean {
-  return reason != null && AUTOMATIC_RETRY_DENIED_REASONS.has(reason)
-}
+import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getCheckinSkipReasonCategory,
+} from "./reasonCatalog"
 
 /**
  * Decides whether one produced failed or uncertain result may be retried later
@@ -44,12 +20,18 @@ function isAutomaticCheckinRetryDeniedReason(
  * This is the single authority for the decision: providers, the execution path,
  * the crash fallback, the retry queue, and the UI all route through it, so a
  * provider cannot admit a dead end or refuse a retryable outcome by setting its
- * own flag. `isRetryableCheckinResult` later reads the flag this returns.
+ * own flag.
+ *
+ * The decision is a projection of the reason code's semantic category. That
+ * bucket is defined as the outcomes "the retry queue or a later run can
+ * resolve", so retrying them is what the product already tells the user, and a
+ * second hand-maintained list here only created room for the two to disagree.
+ * `isRetryableCheckinResult` later reads the flag this returns.
  */
 export function canAutomaticallyRetryCheckinResult(
   result: {
     status: CheckinResultStatus
-    reasonCode?: AutoCheckinSkipReason
+    reasonCode?: string
     /** Ignored on purpose: a provider's conservative opinion is not a veto. */
     retryable?: boolean
   },
@@ -68,7 +50,17 @@ export function canAutomaticallyRetryCheckinResult(
   ) {
     return false
   }
-  return !isAutomaticCheckinRetryDeniedReason(result.reasonCode)
+  // A result without a reason code has an unknown cause. The provider contract
+  // requires one for every failure, so this only covers results already in
+  // storage from before that contract: they keep their historical retry
+  // behaviour instead of being silently retired by an upgrade.
+  if (result.reasonCode == null) {
+    return true
+  }
+  return (
+    getCheckinSkipReasonCategory(result.reasonCode) ===
+    AUTO_CHECKIN_SKIP_CATEGORY.WAITING
+  )
 }
 
 /** Returns whether a persisted result may enter the ordinary retry queue. */

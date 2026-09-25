@@ -209,6 +209,7 @@
   "skipReasons": {
     "account_data_missing": "Faltam dados da conta. Detecte a conta novamente em \"Editar conta\".",
     "account_disabled": "Esta conta está desativada; reative em \"Editar conta\".",
+    "account_state_write_failed": "Não foi possível salvar o login da conta. Verifique o armazenamento da extensão e tente manualmente.",
     "account_unavailable": "A conta mudou ou ficou indisponível antes do check-in. Atualize a conta e tente novamente.",
     "already_checked_today": "Check-in já realizado hoje",
     "authentication_required": "Sua sessão expirou ou você não está conectado. Entre neste site com essa conta e tente novamente.",
@@ -219,6 +220,7 @@
     "detection_disabled": "A detecção de check-in está desligada para esta conta.",
     "execution_context_invalid": "Esta execução não conseguiu uma sessão de login utilizável. Inicie o check-in novamente.",
     "login_provider_in_use": "Outra conta AgentRouter já usa este método de login. Escolha outro ou ajuste naquela conta.",
+    "login_provider_required": "Nenhum método de login selecionado. Escolha nas configurações o método com que esta conta entra.",
     "manual_verification_required": "O site exige que você conclua a verificação humana na página.",
     "method_disabled": "Este site está com o check-in desligado no momento.",
     "method_not_matched": "O método de check-in não corresponde mais a este site. Detecte-o novamente.",

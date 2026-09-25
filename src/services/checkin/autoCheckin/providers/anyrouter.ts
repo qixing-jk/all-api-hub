@@ -9,7 +9,7 @@ import {
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -36,7 +36,7 @@ const isSiteAccount = (
 const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
   context: AutoCheckinProviderContext,
-): Promise<AutoCheckinProviderResult> => {
+): Promise<AutoCheckinProviderOutcome> => {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
     context.tempWindowRequestSource,
   )

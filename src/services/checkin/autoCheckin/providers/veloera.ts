@@ -22,7 +22,7 @@ import {
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -35,7 +35,7 @@ import type {
 } from "./contracts"
 import { detectWithStatusReadback } from "./detection"
 
-type CheckinResult = AutoCheckinProviderResult
+type CheckinResult = AutoCheckinProviderOutcome
 
 const ENDPOINT = "/api/user/check_in"
 

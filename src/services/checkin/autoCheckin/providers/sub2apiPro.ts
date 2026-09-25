@@ -83,12 +83,10 @@ export const sub2apiProProvider: AutoCheckinProvider = {
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable:
           return failedSub2ApiCheckIn(
             AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-            false,
           )
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed:
           return failedSub2ApiCheckIn(
             AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
-            false,
           )
       }
     } catch (error) {

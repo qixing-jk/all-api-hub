@@ -201,6 +201,7 @@
   "skipReasons": {
     "account_data_missing": "必須のアカウント情報が不足しています。アカウントを再検出してください。",
     "account_disabled": "アカウントが無効です。「アカウントを編集」で有効にできます。",
+    "account_state_write_failed": "アカウントのログイン状態を保存できませんでした。手動で再試行してください。",
     "account_unavailable": "チェックイン前にアカウントが変更または利用不可になりました。更新して再試行してください。",
     "already_checked_today": "本日はすでにチェック済みです",
     "authentication_required": "ログインが切れているか未ログインです。このサイトにログインしてから再試行してください。",
@@ -211,6 +212,7 @@
     "detection_disabled": "このアカウントのチェックイン検出はオフです。",
     "execution_context_invalid": "使用できるログインセッションを取得できませんでした。チェックインをやり直してください。",
     "login_provider_in_use": "このログイン方法は別の AgentRouter アカウントが使用中です。変更してください。",
+    "login_provider_required": "ログイン方法が未選択です。アカウント設定でログイン方法を選択してください。",
     "manual_verification_required": "サイトではページ上での手動認証が必要です。完了してから再試行してください。",
     "method_disabled": "このサイトは現在チェックイン機能がオフです。",
     "method_not_matched": "チェックイン方法がサイトと一致しなくなりました。再検出してください。",

@@ -60,7 +60,12 @@ import type {
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
 
-export { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery"
+/**
+ * A provider outcome plus the retry decision the policy derived from it. The
+ * decision deliberately lives outside the provider result: providers cannot set
+ * it, and the retry queue reads the persisted copy this produces.
+ */
+type DecidedCheckInResult = AutoCheckinProviderResult & { retryable: boolean }
 
 type ExecuteSelectedCheckInResult =
   | {
@@ -312,7 +317,7 @@ const createRecoveredMutationGuard = (input: {
 const withAutomaticRetry = (
   result: AutoCheckinProviderResult,
   methodId: AutoCheckinMethodRegistration["id"],
-): AutoCheckinProviderResult => ({
+): DecidedCheckInResult => ({
   ...result,
   retryable: canAutomaticallyRetryCheckinResult(result, methodId),
 })
@@ -322,7 +327,7 @@ const reconcileUncertainResult = async (input: {
   methodId: AutoCheckinMethodRegistration["id"]
   providerResult: AutoCheckinProviderResult
   getStatus?: NonNullable<AutoCheckinProvider["getStatus"]>
-}): Promise<AutoCheckinProviderResult> => {
+}): Promise<DecidedCheckInResult> => {
   if (!input.getStatus) {
     return withAutomaticRetry(
       {
@@ -778,7 +783,7 @@ export async function executeSelectedCheckIn(input: {
       return accountStateWriteFailure()
     }
   }
-  const result =
+  const result: DecidedCheckInResult =
     providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
       ? await reconcileUncertainResult({
           account: currentAccount,
@@ -794,15 +799,11 @@ export async function executeSelectedCheckIn(input: {
               registration.id,
             ),
           }
-        : providerResult
+        : { ...providerResult, retryable: false }
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
     methodId: registration.id,
     result,
-    retryable:
-      result.status === CHECKIN_RESULT_STATUS.FAILED ||
-      result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-        ? result.retryable === true
-        : false,
+    retryable: result.retryable,
   }
 }

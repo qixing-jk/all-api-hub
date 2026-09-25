@@ -56,6 +56,7 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   METHOD_NOT_MATCHED: "method_not_matched",
   METHOD_UNSUPPORTED: "method_unsupported",
   ACCOUNT_DATA_MISSING: "account_data_missing",
+  ACCOUNT_STATE_WRITE_FAILED: "account_state_write_failed",
   AUTHENTICATION_REQUIRED: "authentication_required",
   CREDENTIALS_MISSING: "credentials_missing",
   MANUAL_VERIFICATION_REQUIRED: "manual_verification_required",
@@ -73,6 +74,12 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   UPSTREAM_REJECTED: "upstream_rejected",
   /** Another enabled account already owns this login method's browser context. */
   LOGIN_PROVIDER_IN_USE: "login_provider_in_use",
+  /**
+   * This account has no login method selected, so there is no browser identity
+   * to sign in with. The flow cannot guess one: signing in with the wrong
+   * provider would drive another identity.
+   */
+  LOGIN_PROVIDER_REQUIRED: "login_provider_required",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
@@ -112,6 +119,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
     "autoCheckin:skipReasons.account_unavailable",
   [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING]:
     "autoCheckin:skipReasons.account_data_missing",
+  [AUTO_CHECKIN_SKIP_REASON.ACCOUNT_STATE_WRITE_FAILED]:
+    "autoCheckin:skipReasons.account_state_write_failed",
   [AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY]:
     "autoCheckin:skipReasons.already_checked_today",
   [AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED]:
@@ -128,6 +137,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
     "autoCheckin:skipReasons.checkin_unconfirmed",
   [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE]:
     "autoCheckin:skipReasons.login_provider_in_use",
+  [AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_REQUIRED]:
+    "autoCheckin:skipReasons.login_provider_required",
   [AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID]:
     "autoCheckin:skipReasons.execution_context_invalid",
   [AUTO_CHECKIN_SKIP_REASON.SESSION_BUSY]:

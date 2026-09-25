@@ -13,7 +13,7 @@ import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -42,7 +42,7 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
 export function createUpstreamFailureResult(params: {
   rawMessage?: string
   data?: unknown
-}): AutoCheckinProviderResult {
+}): AutoCheckinProviderOutcome {
   const rawMessage = params.rawMessage || undefined
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
@@ -52,7 +52,6 @@ export function createUpstreamFailureResult(params: {
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
     data: params.data ?? undefined,
-    retryable: true,
   }
 }
 
@@ -173,13 +172,12 @@ export function createTerminalFailureResult(params: {
   reasonCode: AutoCheckinSkipReason
   rawMessage?: string
   data?: unknown
-}): AutoCheckinProviderResult {
+}): AutoCheckinProviderOutcome {
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
     messageKey: getAutoCheckinSkipReasonTranslationKey(params.reasonCode),
     reasonCode: params.reasonCode,
     rawMessage: params.rawMessage || undefined,
-    retryable: false,
     ...(params.data !== undefined ? { data: params.data } : {}),
   }
 }
@@ -230,7 +228,7 @@ export function resolveProviderErrorResult(params: {
   isAlreadyChecked?: (message: string) => boolean
   /** The business mutation may have reached the remote handler. */
   mutationDispatched?: boolean
-}): AutoCheckinProviderResult {
+}): AutoCheckinProviderOutcome {
   const errorMessage = (() => {
     const error = params.error
     if (typeof error === "string") return error
@@ -302,7 +300,6 @@ export function resolveProviderErrorResult(params: {
       messageKey:
         AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.endpointNotSupported,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
-      retryable: false,
     }
   }
 
@@ -326,7 +323,6 @@ export function resolveProviderErrorResult(params: {
       messageKey: errorMessage
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      retryable: true,
     }
   }
 
@@ -338,7 +334,6 @@ export function resolveProviderErrorResult(params: {
       messageKey: errorMessage
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
-      retryable: true,
     }
   }
 
@@ -371,7 +366,6 @@ export function resolveProviderErrorResult(params: {
     messageKey: errorMessage
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
-    ...(mutationResultIsUncertain ? {} : { retryable: true }),
   }
 }
 

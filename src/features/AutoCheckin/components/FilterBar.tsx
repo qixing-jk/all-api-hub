@@ -40,10 +40,12 @@ import {
 import {
   AUTO_CHECKIN_SKIP_CATEGORIES,
   AUTO_CHECKIN_SKIP_CATEGORY_REASONS,
-  getAutoCheckinSkipCategory,
-  type AutoCheckinSkipCategory,
 } from "~/features/AutoCheckin/utils/skipCategories"
 import { cn } from "~/lib/utils"
+import {
+  getCheckinSkipReasonCategory,
+  type AutoCheckinSkipCategory,
+} from "~/services/checkin/autoCheckin/reasonCatalog"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -345,7 +347,7 @@ export default function FilterBar({
     const nextReasons = isSelected
       ? filter.reason.reasons
       : filter.reason.reasons.filter(
-          (reason) => getAutoCheckinSkipCategory(reason) !== category,
+          (reason) => getCheckinSkipReasonCategory(reason) !== category,
         )
 
     applyReasonSelection(nextCategories, nextReasons)
@@ -356,7 +358,7 @@ export default function FilterBar({
     const nextReasons = isSelected
       ? filter.reason.reasons.filter((value) => value !== reason)
       : [...filter.reason.reasons, reason]
-    const category = getAutoCheckinSkipCategory(reason)
+    const category = getCheckinSkipReasonCategory(reason)
 
     applyReasonSelection(
       isSelected

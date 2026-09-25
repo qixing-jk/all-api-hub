@@ -201,6 +201,7 @@
   "skipReasons": {
     "account_data_missing": "Thiếu thông tin tài khoản. Hãy phát hiện lại tài khoản trong \"Chỉnh sửa tài khoản\".",
     "account_disabled": "Tài khoản này đã bị vô hiệu hóa; hãy bật lại trong \"Chỉnh sửa tài khoản\".",
+    "account_state_write_failed": "Không thể lưu đăng nhập của tài khoản. Kiểm tra bộ nhớ tiện ích rồi thử lại thủ công.",
     "account_unavailable": "Tài khoản đã thay đổi hoặc không còn khả dụng trước khi điểm danh. Hãy làm mới tài khoản rồi thử lại.",
     "already_checked_today": "Hôm nay đã điểm danh",
     "authentication_required": "Phiên đăng nhập đã hết hạn hoặc chưa đăng nhập. Hãy đăng nhập site này bằng tài khoản đó rồi thử lại.",
@@ -211,6 +212,7 @@
     "detection_disabled": "Tính năng phát hiện điểm danh đang tắt cho tài khoản này.",
     "execution_context_invalid": "Lần chạy này không lấy được phiên đăng nhập dùng được. Hãy bắt đầu điểm danh lại.",
     "login_provider_in_use": "Phương thức đăng nhập này đã được một tài khoản AgentRouter khác dùng. Hãy chọn cách khác.",
+    "login_provider_required": "Chưa chọn phương thức đăng nhập. Hãy chọn trong phần cài đặt phương thức mà tài khoản này dùng để đăng nhập.",
     "manual_verification_required": "Site yêu cầu bạn tự hoàn tất xác minh thủ công trên trang.",
     "method_disabled": "Site này hiện đang tắt chức năng điểm danh.",
     "method_not_matched": "Phương thức điểm danh không còn khớp với site này. Hãy phát hiện lại.",

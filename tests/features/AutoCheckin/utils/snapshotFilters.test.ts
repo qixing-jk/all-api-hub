@@ -32,7 +32,12 @@ describe("auto-checkin snapshot readiness categories", () => {
     ["account_disabled", SNAPSHOT_READINESS_FILTER.DISABLED],
     ["method_disabled", SNAPSHOT_READINESS_FILTER.DISABLED],
     ["no_provider", SNAPSHOT_READINESS_FILTER.UNSUPPORTED],
-    ["account_unavailable", SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE],
+    // A missing account record or credentials, and a platform failure with its
+    // own user-facing remedy, are setup work rather than a transient wait.
+    ["account_unavailable", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
+    ["execution_context_invalid", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
+    ["login_provider_required", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
+    ["manual_verification_required", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
     ["network_error", SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE],
     ["source_unavailable", SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE],
     ["account_data_missing", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
