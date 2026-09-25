@@ -114,9 +114,13 @@ export function isPermissionFailureMessage(message: string): boolean {
   const normalized = message.toLowerCase()
   return (
     normalized.includes("forbidden") ||
-    normalized.includes("permission") ||
+    normalized.includes("permission denied") ||
+    normalized.includes("insufficient permission") ||
+    normalized.includes("no permission") ||
     message.includes("无权限") ||
-    message.includes("权限")
+    message.includes("没有权限") ||
+    message.includes("权限不足") ||
+    message.includes("权限被拒绝")
   )
 }
 

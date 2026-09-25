@@ -592,7 +592,10 @@ export default function AutoCheckin(props: {
           insights: getAutoCheckinStatusAnalyticsInsights(updatedStatus),
         })
       } else {
-        toast.error(t("messages.error.statusVerificationFailed"))
+        toast.error(
+          response.error?.trim() ||
+            t("messages.error.statusVerificationFailed"),
+        )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })

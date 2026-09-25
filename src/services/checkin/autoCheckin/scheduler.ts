@@ -3294,9 +3294,11 @@ class AutoCheckinScheduler {
       siteType: account.site_type,
       siteUrl: account.site_url,
     })
+    const prefs = await userPreferences.getPreferences()
+    const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
 
-    await autoCheckinStorage.updateStatus((current) => {
-      if (!current) return { patch: null }
+    const statusUpdate = await autoCheckinStorage.updateStatus((current) => {
+      if (!current) return { patch: null, result: false }
 
       const currentResult = current.perAccount?.[account.id]
       let updatedResult: CheckinAccountResult | undefined
@@ -3341,7 +3343,7 @@ class AutoCheckinScheduler {
       }
 
       if (!updatedResult) {
-        return { patch: null }
+        return { patch: null, result: false }
       }
 
       const perAccount: Record<string, CheckinAccountResult> = {
@@ -3362,6 +3364,17 @@ class AutoCheckinScheduler {
           ...retryState,
           pendingAccountIds,
         }
+      } else if (isNotCheckedInToday) {
+        retryState = mergeRunResults({
+          today,
+          enabled:
+            config.globalEnabled === true &&
+            config.retryStrategy?.enabled === true,
+          maxAttempts: config.retryStrategy?.maxAttemptsPerDay ?? 0,
+          current: retryState,
+          results: { [account.id]: updatedResult },
+          replacePendingWithResults: false,
+        })
       }
 
       const pendingRetry = Boolean(
@@ -3369,6 +3382,7 @@ class AutoCheckinScheduler {
       )
 
       return {
+        result: true,
         patch: {
           lastRunResult: getAutoCheckinRunResultFromSummary(summary),
           perAccount,
@@ -3383,9 +3397,17 @@ class AutoCheckinScheduler {
       }
     })
 
-    if (isCheckedInToday) {
-      const prefs = await userPreferences.getPreferences()
-      const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    if (
+      (isCheckedInToday || isNotCheckedInToday) &&
+      (!statusUpdate.ok || statusUpdate.result !== true)
+    ) {
+      return {
+        outcome: "not_saved" as const,
+        error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
+      }
+    }
+
+    if (isCheckedInToday || isNotCheckedInToday) {
       await this.scheduleRetryAlarm(config)
     }
 

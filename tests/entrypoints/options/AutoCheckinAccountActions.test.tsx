@@ -597,7 +597,7 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
-  it("reports a verification response failure without exposing its error text", async () => {
+  it("reports a verification response failure with its actionable detail", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
@@ -633,11 +633,8 @@ describe("AutoCheckin account actions", () => {
     )
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "autoCheckin:messages.error.statusVerificationFailed",
-      )
+      expect(toast.error).toHaveBeenCalledWith("backend detail")
     })
-    expect(toast.error).not.toHaveBeenCalledWith("backend detail")
   })
 
   it("reports a thrown verification request with the localized fallback", async () => {

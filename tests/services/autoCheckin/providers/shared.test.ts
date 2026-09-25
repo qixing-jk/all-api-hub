@@ -102,6 +102,22 @@ describe("auto-checkin provider error normalization", () => {
     ).toMatchObject({ reasonCode: "permission_denied" })
   })
 
+  it("does not treat a permission-service failure as an explicit denial", () => {
+    for (const message of [
+      "权限校验服务异常，请稍后重试",
+      "Permission service unavailable",
+    ]) {
+      expect(
+        resolveProviderErrorResult({
+          error: Object.assign(new Error(message), { statusCode: 403 }),
+        }),
+      ).toMatchObject({
+        reasonCode: "upstream_error",
+        retryable: true,
+      })
+    }
+  })
+
   it("classifies unsupported endpoints and invalid protected-context runs", () => {
     expect(
       resolveProviderErrorResult({

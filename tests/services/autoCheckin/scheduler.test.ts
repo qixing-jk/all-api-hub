@@ -5247,7 +5247,7 @@ describe("auto check-in operation helpers", () => {
     expect(updated?.pendingRetry).toBe(false)
   })
 
-  it("updates autoCheckinStorage when verified status is confirmed not checked", async () => {
+  it("queues a verified not-checked result that was not already pending", async () => {
     let storedStatus: any = {
       perAccount: {
         [verificationAccount.id]: {
@@ -5256,11 +5256,6 @@ describe("auto check-in operation helpers", () => {
           status: CHECKIN_RESULT_STATUS.UNCERTAIN,
           timestamp: 1,
         },
-      },
-      retryState: {
-        day: formatLocalDayKey(),
-        pendingAccountIds: [verificationAccount.id],
-        attemptsByAccount: { [verificationAccount.id]: 1 },
       },
     }
     mockedAutoCheckinStorage.getStatus.mockImplementation(
@@ -5278,6 +5273,17 @@ describe("auto check-in operation helpers", () => {
 
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
     mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
       verificationAccount,
     )
@@ -5306,6 +5312,12 @@ describe("auto check-in operation helpers", () => {
     expect(result?.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
     expect(result?.retryable).toBe(true)
     expectRecordedRetryDecision(result!)
+    expect(updated?.retryState).toEqual({
+      day: formatLocalDayKey(),
+      pendingAccountIds: [verificationAccount.id],
+      attemptsByAccount: { [verificationAccount.id]: 1 },
+    })
+    expect(updated?.pendingRetry).toBe(true)
   })
 
   it("marks verified not-checked results as non-retryable when the method is not repeat-safe", async () => {
@@ -5425,7 +5437,7 @@ describe("auto check-in operation helpers", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("does not report success when persistence fails", async () => {
+  it("does not report success when account-state persistence fails", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
       null,
@@ -5436,6 +5448,36 @@ describe("auto check-in operation helpers", () => {
         return config
       },
     )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toMatchObject({ outcome: "not_saved" })
+  })
+
+  it("does not report success when scheduler-status persistence fails", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      observedAt: Date.now(),
+    })
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
+    })
+    mockedAutoCheckinStorage.updateStatus.mockResolvedValueOnce({
+      ok: false,
+      result: null,
+    })
 
     await expect(
       autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
