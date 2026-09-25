@@ -637,6 +637,48 @@ describe("AutoCheckin account actions", () => {
     })
   })
 
+  it("falls back to localized verification copy when response detail is blank", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+                  reconciliation: "unknown",
+                  timestamp: 1700000000000,
+                },
+              },
+            },
+          }
+        }
+        if (message === AutoCheckinMessageTypes.VerifyAccountStatus) {
+          return { success: false, error: "   " }
+        }
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.verifyStatus",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.statusVerificationFailed",
+      )
+    })
+  })
+
   it("reports a thrown verification request with the localized fallback", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
