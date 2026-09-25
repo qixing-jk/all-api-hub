@@ -100,6 +100,19 @@ describe("auto-checkin provider error normalization", () => {
         error: Object.assign(new Error("Forbidden"), { statusCode: 403 }),
       }),
     ).toMatchObject({ reasonCode: "permission_denied" })
+    for (const message of [
+      "You do not have permission to check in",
+      "You don't have permission to check in",
+    ]) {
+      expect(
+        resolveProviderErrorResult({
+          error: Object.assign(new Error(message), { statusCode: 403 }),
+        }),
+      ).toMatchObject({
+        reasonCode: "permission_denied",
+        retryable: false,
+      })
+    }
   })
 
   it("does not treat a permission-service failure as an explicit denial", () => {

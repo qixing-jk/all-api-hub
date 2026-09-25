@@ -117,6 +117,8 @@ export function isPermissionFailureMessage(message: string): boolean {
     normalized.includes("permission denied") ||
     normalized.includes("insufficient permission") ||
     normalized.includes("no permission") ||
+    normalized.includes("do not have permission") ||
+    normalized.includes("don't have permission") ||
     message.includes("无权限") ||
     message.includes("没有权限") ||
     message.includes("权限不足") ||
