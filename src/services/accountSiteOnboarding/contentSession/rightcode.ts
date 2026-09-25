@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { RIGHTCODE_HOSTNAMES } from "~/services/accountSiteDefinitions/identifiers"
 
 import type { ContentSessionExtractor } from "../contracts"
 
@@ -55,11 +56,25 @@ const pickIdentityField = (
   return text || undefined
 }
 
+const isRightCodeOrigin = (url?: string): boolean => {
+  if (!url) return false
+
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    return RIGHTCODE_HOSTNAMES.some(
+      (allowedHostname) => allowedHostname === hostname,
+    )
+  } catch {
+    return false
+  }
+}
+
 export const rightCodeContentSessionExtractor: ContentSessionExtractor = {
   id: "right-code",
-  canExtract: () =>
-    readRightCodeBrowserToken() !== null ||
-    localStorage.getItem(RIGHTCODE_AUTH_STORAGE_KEY) !== null,
+  canExtract: (context) =>
+    isRightCodeOrigin(context?.url) &&
+    (readRightCodeBrowserToken() !== null ||
+      localStorage.getItem(RIGHTCODE_AUTH_STORAGE_KEY) !== null),
   async extract() {
     // A page that merely shares the generic `auth-storage` key must not be
     // claimed: without the console's own token there is nothing to hand over.

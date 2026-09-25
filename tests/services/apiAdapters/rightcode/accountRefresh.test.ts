@@ -16,10 +16,13 @@ vi.mock("~/services/apiService/rightcode/tokenResync", () => ({
 
 const baseUrl = "https://right-code.example.invalid"
 
-const createRequest = (accessToken = "stale-token") => ({
+const createRequest = (
+  accessToken = "stale-token",
+  userId: string | number = "7",
+) => ({
   baseUrl,
   accountId: "account-example",
-  auth: { authType: AuthTypeEnum.AccessToken, accessToken },
+  auth: { authType: AuthTypeEnum.AccessToken, accessToken, userId },
   checkIn: buildCheckInConfig(),
 })
 
@@ -120,6 +123,7 @@ describe("rightCodeAccountRefresh", () => {
 
     expect(mockResyncRightCodeAuthToken).toHaveBeenCalledWith(
       baseUrl,
+      "7",
       undefined,
       undefined,
     )
@@ -131,6 +135,63 @@ describe("rightCodeAccountRefresh", () => {
     })
     // The refreshed read used the recovered token, not the stale one.
     expect(servedToken).toBe("Bearer fresh-token")
+  })
+
+  it("rejects token resync when the recovered session belongs to a different user", async () => {
+    stubDeployment((_url, init) => {
+      const auth = (init?.headers as Record<string, string>)?.Authorization
+      if (auth === "Bearer stale-token") {
+        return jsonResponse(
+          { error: "Unauthorized", message: "Invalid userToken" },
+          401,
+        )
+      }
+      return jsonResponse(accountPayload)
+    })
+
+    mockResyncRightCodeAuthToken.mockResolvedValueOnce({
+      accessToken: "other-user-token",
+      userId: "99",
+      username: "other-user",
+      source: "existing_tab",
+    })
+
+    const result = await rightCodeAccountRefresh.refreshAccount(
+      createRequest("stale-token", "7"),
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.authUpdate).toBeUndefined()
+  })
+
+  it("rejects retry when the retry auth/me returns a different user than expected", async () => {
+    stubDeployment((url, init) => {
+      const auth = (init?.headers as Record<string, string>)?.Authorization
+      if (auth === "Bearer stale-token") {
+        return jsonResponse(
+          { error: "Unauthorized", message: "Invalid userToken" },
+          401,
+        )
+      }
+      if (url.endsWith(RIGHTCODE_ENDPOINTS.me)) {
+        return jsonResponse({ ...accountPayload, id: 99 })
+      }
+      return jsonResponse(accountPayload)
+    })
+
+    mockResyncRightCodeAuthToken.mockResolvedValueOnce({
+      accessToken: "spoofed-token",
+      userId: "7",
+      username: "spoofed-user",
+      source: "existing_tab",
+    })
+
+    const result = await rightCodeAccountRefresh.refreshAccount(
+      createRequest("stale-token", "7"),
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.authUpdate).toBeUndefined()
   })
 
   it("does not overwrite the stored token when the browser session has nothing new", async () => {

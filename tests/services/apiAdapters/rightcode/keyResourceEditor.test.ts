@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import type { RightCodeChannelInfo } from "~/services/apiAdapters/rightcode/channels"
-import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
+import {
+  createRightCodeKeyEditor,
+  toRightCodeKeySnapshot,
+} from "~/services/apiAdapters/rightcode/keyResourceEditor"
 import type { RightCodeApiKey } from "~/services/apiService/rightcode/type"
 
 const channels: RightCodeChannelInfo[] = [
@@ -137,5 +140,13 @@ describe("rightCodeKeyEditor", () => {
       quotaUsd: 12,
     })
     expect(capped.values.quotaLimit).toBe(12)
+  })
+
+  it("normalizes expired_at in toRightCodeKeySnapshot with the canonical format", () => {
+    const raw = key({
+      expired_at: "2027-01-01T08:30:15.000Z",
+    })
+    const snapshot = toRightCodeKeySnapshot(raw)
+    expect(snapshot.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
   })
 })

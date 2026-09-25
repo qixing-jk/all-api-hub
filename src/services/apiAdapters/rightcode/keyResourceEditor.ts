@@ -81,7 +81,7 @@ export const toRightCodeKeySnapshot = (
   name: key.name?.trim() ?? "",
   channelId: toOptionalFiniteNumber(key.bound_upstream_id) ?? null,
   quotaLimit: toOptionalFiniteNumber(key.quota_limit) ?? null,
-  expiresAt: key.expired_at?.trim() || null,
+  expiresAt: formatRightCodeExpiry(key.expired_at?.trim() || null),
   isActive: key.is_active !== false,
   allowedModels: toStringArray(key.allowed_models),
   allowWallet: key.allow_wallet !== false,

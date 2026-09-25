@@ -170,12 +170,28 @@ export function buildRightCodePricingResponse(
   const orderedUpstreams = [...upstreams].sort(compareUpstreamPriceRank)
   const modelsByName = new Map<string, ModelPricing>()
 
+  const effectiveCost = (pricing: ModelPricing): number => {
+    if (pricing.quota_type === 1) {
+      if (typeof pricing.model_price === "number") {
+        return pricing.model_price
+      }
+      return pricing.model_price?.input ?? Number.POSITIVE_INFINITY
+    }
+    return (
+      pricing.token_price_usd_per_million?.input ?? Number.POSITIVE_INFINITY
+    )
+  }
+
   for (const upstream of orderedUpstreams) {
     for (const model of upstream.models ?? []) {
       if (model?.is_available === false) continue
       const name = toOptionalString(model?.name)
-      if (!name || modelsByName.has(name)) continue
-      modelsByName.set(name, toModelPricing(model, upstream))
+      if (!name) continue
+      const candidate = toModelPricing(model, upstream)
+      const existing = modelsByName.get(name)
+      if (!existing || effectiveCost(candidate) < effectiveCost(existing)) {
+        modelsByName.set(name, candidate)
+      }
     }
   }
 

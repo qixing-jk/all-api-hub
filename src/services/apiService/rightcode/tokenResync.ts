@@ -35,8 +35,14 @@ const isRightCodeSession = (session: AccountBrowserSession): boolean =>
   session.siteType === SITE_TYPES.RIGHT_CODE ||
   session.siteTypeHint === SITE_TYPES.RIGHT_CODE
 
-const hasUsableToken = (session: AccountBrowserSession): boolean =>
-  isRightCodeSession(session) && normalizeString(session.accessToken).length > 0
+const hasUsableToken = (
+  session: AccountBrowserSession,
+  expectedUserId?: string | number,
+): boolean =>
+  isRightCodeSession(session) &&
+  normalizeString(session.accessToken).length > 0 &&
+  (!expectedUserId ||
+    normalizeString(session.userId) === normalizeString(expectedUserId))
 
 const resolveUsername = (session: AccountBrowserSession): string | undefined =>
   normalizeString(session.user?.username) ||
@@ -55,6 +61,7 @@ const resolveUsername = (session: AccountBrowserSession): string | undefined =>
  */
 export async function resyncRightCodeAuthToken(
   baseUrl: string,
+  expectedUserId?: string | number,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<RightCodeResyncedToken | null> {
@@ -66,11 +73,18 @@ export async function resyncRightCodeAuthToken(
     requestIdPrefix: "rightcode-token-resync",
     ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
     ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-    isUsableSession: hasUsableToken,
+    isUsableSession: (candidate) => hasUsableToken(candidate, expectedUserId),
   })
 
   const accessToken = normalizeString(session?.accessToken)
   if (!session || !accessToken) return null
+
+  if (
+    expectedUserId &&
+    normalizeString(session.userId) !== normalizeString(expectedUserId)
+  ) {
+    return null
+  }
 
   const username = resolveUsername(session)
 

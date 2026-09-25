@@ -191,6 +191,13 @@ it.each([
     "dialog.subnetLimits",
     "dialog.subnetPlaceholder",
   ],
+  [SITE_TYPES.RIGHT_CODE, "channel", "native.editor.channel", undefined],
+  [
+    SITE_TYPES.RIGHT_CODE,
+    "allow_wallet",
+    "native.editor.allowWallet",
+    undefined,
+  ],
   [
     SITE_TYPES.NEW_API,
     "model_limits",
@@ -215,3 +222,37 @@ it.each([
     }
   },
 )
+
+it("configures RightCode key editor fields and automatic naming", () => {
+  const createPresentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.RIGHT_CODE,
+    "create",
+  )
+  expect(
+    createPresentation.policy.fields.some((f) => f.fieldId === "channel"),
+  ).toBe(true)
+  expect(
+    createPresentation.policy.fields.some((f) => f.fieldId === "is_active"),
+  ).toBe(false)
+  const allowWallet = createPresentation.policy.fields.find(
+    (f) => f.fieldId === "allow_wallet",
+  )
+  const t = ((key: string) => key) as TFunction
+  expect(allowWallet?.resolveHelp?.(t)).toBe(
+    "keyManagement:native.editor.allowWalletHelp",
+  )
+
+  const autoName = createPresentation.getAutomaticName?.(
+    { channel: "1" },
+    { channel: [{ value: "1", displayLabel: "Codex" }] },
+  )
+  expect(autoName).toBe("Codex group (auto)")
+
+  const editPresentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.RIGHT_CODE,
+    "edit",
+  )
+  expect(
+    editPresentation.policy.fields.some((f) => f.fieldId === "is_active"),
+  ).toBe(true)
+})

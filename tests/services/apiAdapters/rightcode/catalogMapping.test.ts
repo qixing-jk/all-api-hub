@@ -205,4 +205,40 @@ describe("buildRightCodePricingResponse", () => {
 
     expect(snapshot.data).toEqual([])
   })
+
+  it("picks the cheapest model price across channels regardless of channel rate", () => {
+    const snapshot = buildRightCodePricingResponse([
+      upstream({
+        upstream_id: 1,
+        effective_upstream_rate: "0.1",
+        models: [
+          {
+            model_id: 10,
+            name: "gpt-4o",
+            is_available: true,
+            billing_mode: "token",
+            effective_price_config: { input_price: "5", output_price: "15" },
+          },
+        ],
+      }),
+      upstream({
+        upstream_id: 2,
+        effective_upstream_rate: "0.5",
+        models: [
+          {
+            model_id: 20,
+            name: "gpt-4o",
+            is_available: true,
+            billing_mode: "token",
+            effective_price_config: { input_price: "2.5", output_price: "10" },
+          },
+        ],
+      }),
+    ])
+
+    expect(snapshot.data).toHaveLength(1)
+    expect(atIndex(snapshot.data, 0).token_price_usd_per_million?.input).toBe(
+      2.5,
+    )
+  })
 })

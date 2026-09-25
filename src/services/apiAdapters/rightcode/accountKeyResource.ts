@@ -92,10 +92,15 @@ const toEntry = (
   key: RightCodeApiKey,
 ): RightCodeKeyEntry => {
   const channelId = toOptionalFiniteNumber(key.bound_upstream_id)
+  const legacyPrefix = key.allowed_prefixes
+    ?.find((prefix) => typeof prefix === "string" && prefix.trim())
+    ?.trim()
   const channel =
-    channelId === undefined
-      ? undefined
-      : channels.find((candidate) => candidate.id === channelId)
+    channelId !== undefined
+      ? channels.find((candidate) => candidate.id === channelId)
+      : legacyPrefix
+        ? channels.find((candidate) => candidate.prefix === legacyPrefix)
+        : undefined
   const baseUrl =
     resolveRightCodeKeyBaseUrl({ origin, key, boundChannel: channel }) ??
     undefined
@@ -382,7 +387,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       if (result.certainty === "not-applied") return result
     }
 
-    if (expiryChanged) {
+    if (expiryChanged && merged.expiresAt) {
       try {
         await setRightCodeKeyExpiry(request, detail.key.id, merged.expiresAt)
       } catch (error) {

@@ -138,12 +138,21 @@ describe("rightCodeAccountKeyResources", () => {
         allowed_prefixes: ["/claude"],
         name: "Legacy key",
       }),
+      key({
+        id: 14,
+        bound_upstream_id: null,
+        allowed_prefixes: ["/codex"],
+        name: "Legacy codex key",
+      }),
     ])
 
     const page = await (await session.openCollection("account")).list()
 
     expect(atIndex(page.items, 0).runtimeKey?.baseUrl).toBe(
       "https://console.example.invalid/claude",
+    )
+    expect(atIndex(page.items, 1).runtimeKey?.baseUrl).toBe(
+      "https://console.example.invalid/codex/v1",
     )
   })
 
@@ -283,6 +292,64 @@ describe("rightCodeAccountKeyResources", () => {
     await expect(collection.delete(ref)).rejects.toMatchObject({
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+      },
+    })
+  })
+
+  it("surfaces uncertainty when expiry update fails during edit", async () => {
+    const session = await openSession()
+    const original = key({
+      id: 11,
+      name: "Original",
+      expired_at: "2026-01-01T00:00:00",
+    })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+    mockSetRightCodeKeyExpiry.mockRejectedValueOnce(
+      new Error("expiry update failed"),
+    )
+
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        expires_at: "2026-12-31T23:59:59",
+      }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+  })
+
+  it("surfaces uncertainty when verification fails after edit", async () => {
+    const session = await openSession()
+    const original = key({ id: 11, name: "Original" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+      .mockRejectedValueOnce(new Error("verification read failed"))
+    mockUpdateRightCodeKey.mockResolvedValueOnce(original)
+
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "New Name" }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
     })
   })

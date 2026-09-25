@@ -1301,6 +1301,7 @@ test("adds a RightCode account from its logged-in console without a one-time key
     serviceWorker,
     siteType: SITE_TYPES.RIGHT_CODE,
     baseUrl: RIGHTCODE_SITE_URL,
+    predicate: (account) => account.account_info.quota > 0,
   })
   expect(savedAccount.account_info.username).toBe(RIGHTCODE_ACCOUNT_USERNAME)
   expect(savedAccount.account_info.id).toBe(String(RIGHTCODE_ACCOUNT_ID))

@@ -265,11 +265,15 @@ export async function updateRightCodeKey(
     : null
 }
 
-/** `null` clears the expiry and makes the key permanent. */
+/**
+ * Sets the key expiry. Accepts only `YYYY-MM-DDTHH:mm:ss` (no zone, no ms).
+ * The deployment does not clear an existing expiry once set; null or empty
+ * values leave the expiry unchanged.
+ */
 export async function setRightCodeKeyExpiry(
   request: ApiServiceRequest,
   id: number | string,
-  expiredAt: string | null,
+  expiredAt: string,
 ): Promise<void> {
   await fetchRightCodeData<unknown>(
     request,
@@ -460,8 +464,14 @@ export async function refreshAccountData(
     }
   } catch (error) {
     if (isRightCodeAuthFailureError(error)) {
+      const expectedUserId =
+        request.auth?.userId !== undefined && request.auth?.userId !== null
+          ? String(request.auth.userId).trim()
+          : ""
+
       const resynced = await resyncRightCodeAuthToken(
         request.baseUrl,
+        expectedUserId || undefined,
         request.tempWindowRequestSource,
         request.protectionBypassExecution,
       ).catch((resyncError) => {
@@ -474,11 +484,45 @@ export async function refreshAccountData(
           ? request.auth.accessToken.trim()
           : ""
       if (resynced && resynced.accessToken !== currentToken) {
+        if (
+          expectedUserId &&
+          resynced.userId &&
+          String(resynced.userId).trim() !== expectedUserId
+        ) {
+          logger.warn(
+            "Right Code token re-sync returned session for different user",
+            {
+              expected: expectedUserId,
+              actual: resynced.userId,
+            },
+          )
+          return { success: false, healthStatus: determineHealthStatus(error) }
+        }
+
         try {
-          const data = await fetchAccountData({
+          const retryRequest: ApiServiceAccountRequest = {
             ...request,
             auth: { ...request.auth, accessToken: resynced.accessToken },
-          })
+          }
+          const retryUser = await fetchRightCodeUserInfo(retryRequest)
+          if (
+            expectedUserId &&
+            String(retryUser.id).trim() !== expectedUserId
+          ) {
+            logger.warn(
+              "Right Code token re-sync authenticated a different user",
+              {
+                expected: expectedUserId,
+                actual: retryUser.id,
+              },
+            )
+            return {
+              success: false,
+              healthStatus: determineHealthStatus(error),
+            }
+          }
+
+          const data = await fetchAccountData(retryRequest)
           return {
             success: true,
             data,
