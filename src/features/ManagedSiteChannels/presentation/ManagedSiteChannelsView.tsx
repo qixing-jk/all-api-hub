@@ -286,7 +286,7 @@ export function ManagedSiteChannelsView({
             onRefresh={callbacks.onRefresh}
           />
 
-          <div className="border-border overflow-hidden rounded-xl border">
+          <div className="border-border overflow-hidden rounded-lg border">
             <div className="border-border bg-surface-subtle dark:bg-background/30 gap-y-density-3 py-density-3 flex flex-col gap-x-3 border-b px-3 md:flex-row md:flex-wrap md:items-center">
               <div className="relative w-full md:max-w-xs">
                 <Input

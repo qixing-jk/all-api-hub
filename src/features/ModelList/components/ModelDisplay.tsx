@@ -307,7 +307,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
           return (
             <section
               aria-labelledby={`${headingId} ${billingModeId}`}
-              className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
+              className="border-border bg-card overflow-hidden rounded-lg border shadow-sm"
             >
               <header className="dark:bg-background/45 border-border bg-surface-subtle/80 gap-y-density-2 py-density-2-5 flex min-w-0 flex-wrap items-center gap-x-3 border-b px-3 sm:px-4">
                 <div className="gap-y-density-2 flex w-full min-w-0 flex-wrap items-center gap-x-2 lg:w-auto lg:flex-1">

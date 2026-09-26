@@ -518,7 +518,7 @@ export function ApiCredentialProfilesList({
             aria-label={t("apiCredentialProfiles:grouping.selectedEndpoint", {
               baseUrl: group.baseUrl,
             })}
-            className="border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-xl border"
+            className="border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-lg border"
           >
             <EndpointHeader
               baseUrl={group.baseUrl}
@@ -550,7 +550,7 @@ export function ApiCredentialProfilesList({
     <div
       ref={panelRef}
       className={cn(
-        "border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-xl border",
+        "border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-lg border",
         useViewportCap && "[--api-credential-panel-max-height:min(70vh,48rem)]",
         useSidebar && "grid grid-cols-[15rem_minmax(0,1fr)]",
       )}
