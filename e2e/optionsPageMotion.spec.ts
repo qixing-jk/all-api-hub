@@ -16,6 +16,7 @@ import {
   seedStoredAccounts,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 type Frame = {
   page: "overview" | "other" | "loading"
@@ -70,127 +71,132 @@ async function captureTransition(page: Page, hash: string): Promise<Frame[]> {
   }, hash)
 }
 
-async function captureCardEntrance(
+type CardFrame = { opacity: number; x: number; y: number; native: boolean }
+
+async function captureCardMotion(
   page: Page,
   hash: string,
   selector: string,
-): Promise<Array<{ opacity: number; y: number }>> {
+  phase: "entrance" | "exit",
+  count = 1,
+): Promise<CardFrame[][]> {
+  await waitForExtensionRoot(page)
   return page.evaluate(
-    async ({ nextHash, targetSelector }) => {
-      const frames: Array<{ opacity: number; y: number }> = []
-      const deadline = performance.now() + 10_000
-      let motionStarted = false
-      window.location.hash = nextHash
+    async ({ nextHash, targetSelector, phase, count }) => {
+      const frames: CardFrame[][] = []
+      const captured = new Set<HTMLElement>()
+      // Keep outgoing targets, even after a different route becomes current.
+      const outgoing = [...document.querySelectorAll(targetSelector)].slice(
+        0,
+        count,
+      )
       await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          observer.disconnect()
+          reject(new Error(`No native ${phase} animation: ${targetSelector}`))
+        }, 10_000)
         const sample = () => {
-          const element = document.querySelector(targetSelector)
-          const target = element?.closest('[style*="opacity"]')
-          let moving = false
-          if (target instanceof HTMLElement) {
-            const style = getComputedStyle(target)
-            let visibleOpacity = 1
-            for (
-              let ancestor: HTMLElement | null = element as HTMLElement;
-              ancestor;
-              ancestor = ancestor.parentElement
-            ) {
-              visibleOpacity *= Number(getComputedStyle(ancestor).opacity)
-            }
-            moving = target
-              .getAnimations()
-              .some(
-                (animation) =>
-                  (animation.playState === "running" || animation.pending) &&
-                  animation.effect instanceof KeyframeEffect &&
-                  animation.effect
-                    .getKeyframes()
-                    .some((frame) => "transform" in frame),
-              )
-            motionStarted ||= moving
-            frames.push({
-              opacity: visibleOpacity,
-              y:
-                style.transform === "none"
-                  ? 0
-                  : new DOMMatrixReadOnly(style.transform).m42,
+          const elements =
+            phase === "exit"
+              ? outgoing
+              : [...document.querySelectorAll(targetSelector)].slice(0, count)
+          for (const element of elements) {
+            const styledAncestor = element.closest('[style*="opacity"]')
+            const pageContent = element.closest("[data-options-page-content]")
+            // A card initially below the viewport has no entrance styles yet.
+            const target =
+              styledAncestor === pageContent ? element : styledAncestor
+            if (!(target instanceof HTMLElement) || captured.has(target))
+              continue
+            const animations = target.getAnimations().filter((candidate) => {
+              if (!(candidate.effect instanceof KeyframeEffect)) return false
+              return candidate.effect
+                .getKeyframes()
+                .some((frame) => "transform" in frame || "opacity" in frame)
             })
+            const expectedOpacity = phase === "exit" ? 0 : 1
+            const opacityAnimation = animations.some(
+              (animation) =>
+                animation.effect instanceof KeyframeEffect &&
+                Number(animation.effect.getKeyframes().at(-1)?.opacity) ===
+                  expectedOpacity,
+            )
+            const nativeTransform = animations.some(
+              (animation) =>
+                animation.effect instanceof KeyframeEffect &&
+                animation.effect
+                  .getKeyframes()
+                  .some((frame) => "transform" in frame),
+            )
+            if (!opacityAnimation || !nativeTransform) continue
+            captured.add(target)
+            // Read the real browser interpolation at stable timeline phases.
+            // A busy CI main thread can miss an entire short GPU animation
+            // between requestAnimationFrame callbacks. Mini creates one native
+            // animation per property, so seek opacity and transform together.
+            animations.forEach((animation) => animation.pause())
+            const cardFrames: CardFrame[] = []
+            for (const progress of [
+              0, 0.05, 0.1, 0.15, 0.2, 0.35, 0.6, 0.8, 1,
+            ]) {
+              animations.forEach((animation) => {
+                const timing = animation.effect!.getComputedTiming()
+                animation.currentTime =
+                  Number(timing.delay) + Number(timing.duration) * progress
+              })
+              const style = getComputedStyle(target)
+              let opacity = 1
+              for (
+                let ancestor: HTMLElement | null = target;
+                ancestor;
+                ancestor = ancestor.parentElement
+              ) {
+                opacity *= Number(getComputedStyle(ancestor).opacity)
+              }
+              cardFrames.push({
+                opacity,
+                x: target.getBoundingClientRect().left,
+                y: new DOMMatrixReadOnly(style.transform).m42,
+                native: nativeTransform,
+              })
+            }
+            frames.push(cardFrames)
+            animations.forEach((animation) => animation.finish())
           }
-          // Loading is outside the observation window. Once native movement
-          // begins, capture through its final frame (or the outgoing unmount).
-          if (motionStarted && !moving) {
+          if (frames.length === count) {
+            observer.disconnect()
+            window.clearTimeout(timeout)
             resolve()
-          } else if (performance.now() >= deadline) {
-            reject(new Error(`No completed card animation: ${targetSelector}`))
-          } else {
-            requestAnimationFrame(sample)
           }
         }
-        sample()
+        const observer = new MutationObserver(sample)
+        observer.observe(document.body, {
+          subtree: true,
+          attributes: true,
+          childList: true,
+        })
+        window.location.hash = nextHash
       })
       return frames
     },
-    { nextHash: hash, targetSelector: selector },
+    { nextHash: hash, targetSelector: selector, phase, count },
   )
 }
 
-function expectEntranceWithoutFlash(
-  frames: Array<{ opacity: number; y: number }>,
-) {
+async function captureCardEntrance(page: Page, hash: string, selector: string) {
+  return (await captureCardMotion(page, hash, selector, "entrance"))[0]!
+}
+
+async function captureCardExit(page: Page, hash: string, selector: string) {
+  return (await captureCardMotion(page, hash, selector, "exit"))[0]!
+}
+
+function expectEntranceWithoutFlash(frames: CardFrame[]) {
   let highestOpacity = 0
   for (const frame of frames) {
     expect(highestOpacity - frame.opacity).toBeLessThan(0.25)
     highestOpacity = Math.max(highestOpacity, frame.opacity)
   }
-}
-
-async function captureCardExit(page: Page, hash: string, selector: string) {
-  return page.evaluate(
-    async ({ nextHash, targetSelector }) => {
-      const element = document.querySelector(targetSelector)
-      const styledAncestor = element?.closest('[style*="opacity"]')
-      const pageContent = document.querySelector("[data-options-page-content]")
-      // A card initially below the viewport has no entrance styles yet.
-      const target = styledAncestor === pageContent ? element : styledAncestor
-      if (!(target instanceof HTMLElement))
-        throw new Error("Missing exit target")
-      const frames: Array<{
-        opacity: number
-        x: number
-        y: number
-        native: boolean
-      }> = []
-      const start = performance.now()
-      window.location.hash = nextHash
-      await new Promise<void>((resolve) => {
-        const sample = () => {
-          if (!target.isConnected || performance.now() - start > 650) {
-            resolve()
-            return
-          }
-          const style = getComputedStyle(target)
-          const matrix = new DOMMatrixReadOnly(style.transform)
-          frames.push({
-            opacity: Number(style.opacity),
-            x: target.getBoundingClientRect().left,
-            y: matrix.m42,
-            native: target
-              .getAnimations()
-              .some(
-                (animation) =>
-                  animation.effect instanceof KeyframeEffect &&
-                  animation.effect
-                    .getKeyframes()
-                    .some((frame) => "transform" in frame),
-              ),
-          })
-          requestAnimationFrame(sample)
-        }
-        sample()
-      })
-      return frames
-    },
-    { nextHash: hash, targetSelector: selector },
-  )
 }
 
 extensionTest(
@@ -236,11 +242,7 @@ extensionTest(
       await page.goto(
         `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${scenario.from}`,
       )
-      await expect(page.locator("[data-options-page-content]")).toHaveCSS(
-        "opacity",
-        "1",
-      )
-      await page.waitForTimeout(650)
+      await waitForExtensionRoot(page)
       if (scenario.scroll) {
         await page.locator(scenario.selector).scrollIntoViewIfNeeded()
         await page.waitForTimeout(100)
@@ -330,39 +332,28 @@ extensionTest(
     await expect(
       page.locator('[data-testid="options-overview-page"]'),
     ).toBeVisible()
-    await page.waitForTimeout(900)
-
-    const downward = await captureTransition(page, "#about")
+    const header =
+      '[data-testid="options-content-card"] [data-page-motion-item]'
+    const downwardExit = await captureCardExit(page, "#about", header)
     expect(
-      downward.some(
-        (frame) =>
-          frame.page === "overview" && frame.opacity < 0.95 && frame.y < -1,
-      ),
-    ).toBe(true)
-    expect(
-      downward.some(
-        (frame) =>
-          frame.page === "other" && frame.opacity < 0.95 && frame.y > 1,
-      ),
+      downwardExit.some((frame) => frame.opacity < 0.95 && frame.y < -1),
     ).toBe(true)
 
-    const upward = await captureTransition(page, "#overview")
+    const upwardEntrance = await captureCardEntrance(page, "#overview", header)
     expect(
-      upward.some(
-        (frame) =>
-          frame.page === "other" && frame.opacity < 0.95 && frame.y > 1,
-      ),
+      upwardEntrance.some((frame) => frame.opacity < 0.95 && frame.y < -1),
     ).toBe(true)
-    expect(
-      upward.some(
-        (frame) =>
-          frame.page === "overview" && frame.opacity < 0.95 && frame.y < -1,
-      ),
-    ).toBe(true)
-    const overviewX = upward
-      .filter((frame) => frame.page === "overview")
-      .map((frame) => frame.x)
+    const overviewX = upwardEntrance.map((frame) => frame.x)
     expect(Math.max(...overviewX) - Math.min(...overviewX)).toBeLessThan(1)
+
+    const downwardEntrance = await captureCardEntrance(page, "#about", header)
+    expect(
+      downwardEntrance.some((frame) => frame.opacity < 0.95 && frame.y > 1),
+    ).toBe(true)
+    const upwardExit = await captureCardExit(page, "#overview", header)
+    expect(
+      upwardExit.some((frame) => frame.opacity < 0.95 && frame.y > 1),
+    ).toBe(true)
   },
 )
 
@@ -613,7 +604,7 @@ extensionTest(
     ).toBeGreaterThan(3)
     expectEntranceWithoutFlash(appearance)
 
-    const appearanceExit = await captureCardEntrance(
+    const appearanceExit = await captureCardExit(
       page,
       "#importExport",
       "#appearance",
@@ -740,35 +731,13 @@ extensionTest(
       "1",
     )
 
-    const entrance = await page.evaluate(async () => {
-      const frames: Array<{ opacity: number; y: number }>[] = [[], []]
-      const started = performance.now()
-      window.location.hash = "#siteAnnouncements"
-      await new Promise<void>((resolve) => {
-        const sample = () => {
-          const cards = document.querySelectorAll<HTMLElement>(
-            "[data-page-motion-list] [data-page-motion-item]",
-          )
-          for (let index = 0; index < Math.min(2, cards.length); index++) {
-            const style = getComputedStyle(cards[index]!)
-            frames[index]!.push({
-              opacity: Number(style.opacity),
-              y:
-                style.transform === "none"
-                  ? 0
-                  : new DOMMatrixReadOnly(style.transform).m42,
-            })
-          }
-          if (performance.now() - started < 1800) {
-            requestAnimationFrame(sample)
-          } else {
-            resolve()
-          }
-        }
-        sample()
-      })
-      return frames
-    })
+    const entrance = await captureCardMotion(
+      page,
+      "#siteAnnouncements",
+      "[data-page-motion-list] [data-page-motion-item]",
+      "entrance",
+      2,
+    )
 
     for (const card of entrance) {
       expect(

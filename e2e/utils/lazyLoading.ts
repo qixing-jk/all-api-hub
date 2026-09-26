@@ -94,7 +94,7 @@ export async function waitForExtensionRoot(page: Page) {
         )
         if (
           !content ||
-          content.closest('[aria-hidden="true"]') ||
+          content.parentElement?.getAttribute("aria-hidden") === "true" ||
           getComputedStyle(content).opacity !== "1" ||
           content.querySelector("[data-options-page-pending]")
         )
