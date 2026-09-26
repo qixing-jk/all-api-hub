@@ -620,7 +620,7 @@
   },
   "sourceLabels": {
     "personalizedCatalogBadge": "{{account}} · Catálogo de modelos personalizado",
-    "profileBadge": "Perfil: {{name}} · {{host}}",
+    "profileBadge": "Credencial: {{name}} · {{host}}",
     "profileOption": "Credencial de API: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Catálogo de modelos do provedor"
   },

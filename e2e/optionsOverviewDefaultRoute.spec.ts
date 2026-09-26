@@ -389,7 +389,7 @@ test("overview attention list surfaces missing sign-in data as a todo", async ({
   })
   await expect(automationFilter).toBeVisible()
   await automationFilter.click()
-  await expect(attention.getByText("No API profiles yet")).toHaveCount(0)
+  await expect(attention.getByText("No API credentials yet")).toHaveCount(0)
   await expect(attention.getByText(itemTitle)).toBeVisible()
 
   await attention

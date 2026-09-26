@@ -17,7 +17,7 @@
     },
     "actions": {
       "addAccount": "Thêm tài khoản",
-      "addProfile": "Thêm thông tin xác thực",
+      "addProfile": "Thêm thông tin xác thực API",
       "editAccount": "Chỉnh sửa tài khoản",
       "fixAccount": "Sửa tài khoản",
       "handleCheckIn": "Xử lý điểm danh",
@@ -35,8 +35,8 @@
       "title": "Chưa có tài khoản"
     },
     "addProfile": {
-      "description": "Thêm thông tin API để các công cụ và luồng xuất có thể dùng lại.",
-      "title": "Chưa có hồ sơ API"
+      "description": "Thư viện lưu API Key, coding plan Key và các loại key khác, đồng thời theo dõi số dư và mức sử dụng ở một nơi — kể cả hạn mức 5 giờ / 7 ngày / tháng của coding plan còn lại bao nhiêu.",
+      "title": "Chưa có thông tin xác thực API"
     },
     "autoCheckinGloballyDisabled": {
       "description_other": "{{count}} tài khoản đã bật điểm danh tự động nhưng sẽ không chạy khi công tắc toàn cục đang tắt. Hãy bật lại trong cài đặt điểm danh.",
@@ -202,12 +202,12 @@
       }
     },
     "credentialAssets": {
-      "description": "Hồ sơ API và key tài khoản đã sẵn sàng để sử dụng.",
+      "description": "Lưu trữ các Key, cùng việc theo dõi số dư, hạn mức và mức sử dụng.",
       "label": "Tài sản xác thực",
       "state": {
-        "disabled": "Hiện chưa có thông tin xác thực có thể dùng lại. Hãy kiểm tra thiết lập tài khoản hoặc hồ sơ API.",
-        "needs_setup": "Thêm hồ sơ API để các công cụ và luồng xuất có thể dùng lại trực tiếp.",
-        "not_applicable": "Môi trường này không cần quản lý hồ sơ API riêng."
+        "disabled": "Hiện chưa có thông tin xác thực có thể dùng lại. Hãy kiểm tra thiết lập tài khoản hoặc thông tin xác thực API.",
+        "needs_setup": "Lưu một thông tin xác thực API (Base URL + API Key) để theo dõi số dư, hạn mức và mức sử dụng ở một nơi.",
+        "not_applicable": "Môi trường này không cần quản lý thông tin xác thực API riêng."
       }
     },
     "dataHistory": {
@@ -231,7 +231,7 @@
     "subItems": {
       "accounts": "Quản lý tài khoản",
       "apiKeys": "API key",
-      "apiProfiles": "Hồ sơ API",
+      "apiProfiles": "Thông tin xác thực API",
       "autoCheckin": "Tự động điểm danh",
       "balanceHistory": "Lịch sử số dư",
       "managedSiteChannels": "Quản lý kênh",
@@ -276,7 +276,7 @@
       "label": "Cần xử lý"
     },
     "profiles": {
-      "label": "Hồ sơ"
+      "label": "Thông tin xác thực"
     },
     "todayUsage": {
       "label": "Hôm nay"

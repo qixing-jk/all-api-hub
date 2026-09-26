@@ -18,7 +18,7 @@
     },
     "actions": {
       "addAccount": "Konto hinzufügen",
-      "addProfile": "Anmeldedaten hinzufügen",
+      "addProfile": "API-Anmeldeinformation hinzufügen",
       "editAccount": "Konto bearbeiten",
       "fixAccount": "Konto reparieren",
       "handleCheckIn": "Check-in bearbeiten",
@@ -36,8 +36,8 @@
       "title": "Noch keine Konten"
     },
     "addProfile": {
-      "description": "Fügen Sie API-Anmeldeinformationen hinzu, damit Tools und Exportflüsse sie wiederverwenden können.",
-      "title": "Noch keine API-Profile"
+      "description": "Die Bibliothek speichert API-Keys, Coding-Plan-Keys und weitere Keys und überwacht Guthaben und Nutzung zentral – inklusive des restlichen 5-Stunden-/7-Tage-/Monats-Kontingents.",
+      "title": "Noch keine API-Anmeldeinformationen"
     },
     "autoCheckinGloballyDisabled": {
       "description_one": "{{count}} Konto hat den automatischen Check-in aktiviert, aber er läuft nicht, solange der globale Schalter aus ist. Aktivieren Sie ihn in den Check-in-Einstellungen erneut.",
@@ -211,12 +211,12 @@
       }
     },
     "credentialAssets": {
-      "description": "API-Profile und Kontoschlüssel zur Verwendung vorbereitet.",
+      "description": "Speicherung Ihrer Keys sowie Überwachung von Guthaben, Kontingent und Nutzung.",
       "label": "Berechtigungsnachweise",
       "state": {
-        "disabled": "Es gibt noch keine wiederverwendbaren Anmeldeinformationen. Überprüfen Sie die Einrichtung des Kontos oder API-Profils.",
-        "needs_setup": "Fügen Sie API-Profile hinzu, damit Tools und Exportflüsse sie direkt wiederverwenden können.",
-        "not_applicable": "Diese Umgebung benötigt keine separaten API-Profile."
+        "disabled": "Es gibt noch keine wiederverwendbaren Anmeldeinformationen. Überprüfen Sie die Einrichtung des Kontos oder der API-Anmeldeinformationen.",
+        "needs_setup": "Speichern Sie eine API-Anmeldeinformation (Base URL + API Key), um Guthaben, Kontingent und Nutzung an einer Stelle zu überwachen.",
+        "not_applicable": "Diese Umgebung benötigt keine separaten API-Anmeldeinformationen."
       }
     },
     "dataHistory": {
@@ -240,7 +240,7 @@
     "subItems": {
       "accounts": "Konten",
       "apiKeys": "API-Schlüssel",
-      "apiProfiles": "API-Profile",
+      "apiProfiles": "API-Anmeldeinformationen",
       "autoCheckin": "Automatischer Check-in",
       "balanceHistory": "Saldenverlauf",
       "managedSiteChannels": "Kanalverwaltung",
@@ -285,7 +285,7 @@
       "label": "Achtung"
     },
     "profiles": {
-      "label": "Profile"
+      "label": "Anmeldeinformationen"
     },
     "todayUsage": {
       "label": "Heute"

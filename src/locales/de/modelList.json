@@ -434,7 +434,7 @@
   "pricingNote": "Modellpreishinweis",
   "profileSourceNotice": {
     "description": "Gespeicherte API-Anmeldeinformationen ermöglichen nur die Modellerkennung und -überprüfung. Preise, Gruppenfilter, Kontozusammenfassungen und Schlüsselkompatibilität sind für diese Quelle nicht verfügbar.",
-    "title": "Profilgestützter Modellkatalog"
+    "title": "Modellkatalog aus Anmeldeinformationen"
   },
   "providerCatalogFallbackNotice": {
     "allAccountsDescription": "Der Modellzugriff für die folgenden Konten wurde nicht bestätigt. Die vollständigen Modellkataloge der Websites werden angezeigt; einige Modelle sind mit diesen Konten möglicherweise nicht aufrufbar. Prüfen Sie die Kontoberechtigungen und Verifizierungsergebnisse.",
@@ -609,7 +609,7 @@
   },
   "sourceLabels": {
     "personalizedCatalogBadge": "{{account}} · Personalisierter Modellkatalog",
-    "profileBadge": "Profil: {{name}} · {{host}}",
+    "profileBadge": "Anmeldeinformation: {{name}} · {{host}}",
     "profileOption": "API-Anmeldeinformationen: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Modellkatalog des Anbieters"
   },

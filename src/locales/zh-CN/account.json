@@ -241,7 +241,7 @@
   "sponsor": {
     "actions": {
       "continueAddAccount": "继续添加此账号",
-      "openApiCredentialProfilesFallback": "可将其 API 密钥添加为 API 凭证",
+      "openApiCredentialProfilesFallback": "可将其 API 密钥添加为 API 凭据",
       "openBookmarkManagerFallback": "暂不添加账号，先收藏服务商",
       "visitProvider": "访问服务商"
     },
@@ -251,9 +251,9 @@
     },
     "recommendedProviders": "推荐服务商",
     "supportStatus": {
-      "fallbackApiCredentialProfiles": "可加为凭证",
+      "fallbackApiCredentialProfiles": "可加为凭据",
       "fallbackBookmark": "可先收藏",
-      "fallbackBookmarkAndApi": "可先收藏 / 可加为凭证",
+      "fallbackBookmarkAndApi": "可先收藏 / 可加为凭据",
       "supported": "可直接添加",
       "unsupported": "可能需要手动设置"
     }

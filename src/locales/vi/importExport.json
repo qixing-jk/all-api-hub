@@ -193,7 +193,7 @@
     "showPassword": "Hiển thị mật khẩu",
     "syncData": {
       "accounts": "Tài khoản",
-      "apiCredentialProfiles": "Hồ sơ thông tin xác thực API",
+      "apiCredentialProfiles": "Thư viện thông tin xác thực API",
       "bookmarks": "Dấu trang",
       "preferences": "Cài đặt tùy chọn",
       "selectionRequired": "Vui lòng chọn ít nhất một loại dữ liệu để đồng bộ hóa",
