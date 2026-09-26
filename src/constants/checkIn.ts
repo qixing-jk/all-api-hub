@@ -12,6 +12,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
   GeniusProgrammerDailyCheckIn: "genius-programmer:daily-checkin",
   DenxioDailyCheckIn: "denxio:daily-checkin",
+  XiaobaiCodeDailyCheckIn: "xiaobai-code:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

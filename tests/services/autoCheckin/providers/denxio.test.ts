@@ -14,6 +14,10 @@ import {
   performDenxioDailyCheckIn,
 } from "~/services/apiService/sub2api/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+import {
+  probeXiaobaiCodeCheckInStatus,
+  XIAOBAI_CODE_STATUS_OUTCOMES,
+} from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
@@ -40,6 +44,15 @@ vi.mock(
   },
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/xiaobaiCodeCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/xiaobaiCodeCheckIn")
+    >()),
+    probeXiaobaiCodeCheckInStatus: vi.fn(),
+  }),
+)
 vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
   fetchSub2ApiProDailyCheckInStatus: vi.fn(),
@@ -91,6 +104,10 @@ const notCheckedStatus = {
 describe("Denxio daily check-in method Adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // A host that does not serve the app answers its SPA shell, not the app.
+    vi.mocked(probeXiaobaiCodeCheckInStatus).mockResolvedValue({
+      outcome: XIAOBAI_CODE_STATUS_OUTCOMES.Absent,
+    })
     vi.mocked(fetchGeniusProgrammerDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )

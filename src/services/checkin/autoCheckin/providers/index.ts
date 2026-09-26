@@ -15,6 +15,7 @@ import {
 } from "./registry"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
+import { xiaobaiCodeProvider } from "./xiaobaiCode"
 
 const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
@@ -27,6 +28,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]:
     geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,
+  [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: xiaobaiCodeProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

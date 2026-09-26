@@ -26,6 +26,7 @@ import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
+import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
 import type { CheckInMethodId } from "~/types/checkIn"
 
 const OFFICIAL_METHOD_SOURCE = {
@@ -55,7 +56,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(9)
+    expect(registrationContracts).toHaveLength(10)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -92,6 +93,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "denxio:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: denxioProvider,
+        },
+        {
+          id: "xiaobai-code:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: xiaobaiCodeProvider,
         },
       ]),
     )
@@ -260,9 +266,31 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
     ])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API, "https://any-deployment.example")
+        .map(({ id }) => id),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn)
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.SUB2API)).toEqual([])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+  })
+
+  it("reports the third-party source of the custom-page method", () => {
+    expect(
+      getAutoCheckinMethodSource(
+        AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
+      ),
+    ).toEqual({
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "小白Code",
+    })
+    expect(
+      supportsCheckInStatusReadback(
+        AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
+      ),
+    ).toBe(true)
   })
 
   it("rejects duplicate method IDs deterministically", () => {

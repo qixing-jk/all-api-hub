@@ -254,6 +254,17 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "小白Code",
+    },
+    supportsStatusReadback: true,
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
 
 /** Returns whether the selected method can verify today without posting. */
