@@ -116,6 +116,11 @@ function normalizeProviderPrefix(providerArg) {
     : `${providerPrefix}_WEBDAV`
 }
 
+/**
+ * Normalize a whitespace-separated label to Title Case.
+ * @param value Raw label.
+ * @returns The label in Title Case.
+ */
 function toTitleCase(value) {
   return value
     .toLowerCase()

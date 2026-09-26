@@ -77,6 +77,12 @@ function hasPlaywrightArg(args, name) {
   return args.some((arg) => arg === name || arg.startsWith(`${name}=`))
 }
 
+/**
+ * Build the environment for one matrix entry's Playwright run.
+ * @param entry Real-site E2E matrix entry.
+ * @param options Build options for this entry.
+ * @returns Environment variables for the spawned Playwright process.
+ */
 function buildEntryEnv(entry, options = {}) {
   const env = {
     ...process.env,
