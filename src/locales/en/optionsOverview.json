@@ -18,7 +18,7 @@
     },
     "actions": {
       "addAccount": "Add account",
-      "addProfile": "Add credential",
+      "addProfile": "Add API credential",
       "editAccount": "Edit account",
       "fixAccount": "Fix account",
       "handleCheckIn": "Handle check-in",
@@ -36,8 +36,8 @@
       "title": "No accounts yet"
     },
     "addProfile": {
-      "description": "Add API credentials so tools and export flows can reuse them.",
-      "title": "No API profiles yet"
+      "description": "The library stores API keys, coding-plan keys and other keys, and monitors balance and usage in one place — including how much of a coding plan's 5-hour / 7-day / monthly quota is left.",
+      "title": "No API credentials yet"
     },
     "autoCheckinGloballyDisabled": {
       "description_one": "{{count}} account has automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
@@ -211,12 +211,12 @@
       }
     },
     "credentialAssets": {
-      "description": "API profiles and account keys prepared for use.",
+      "description": "Storage for your keys, plus balance, quota and usage monitoring.",
       "label": "Credential assets",
       "state": {
-        "disabled": "There are no reusable credentials yet. Check account or API profile setup.",
-        "needs_setup": "Add API profiles so tools and export flows can reuse them directly.",
-        "not_applicable": "This environment does not need separate API profiles."
+        "disabled": "There are no reusable credentials yet. Check account or API credential setup.",
+        "needs_setup": "Save one API credential (Base URL + API Key) to monitor balance, quota and usage in one place.",
+        "not_applicable": "This environment does not need separate API credentials."
       }
     },
     "dataHistory": {
@@ -240,7 +240,7 @@
     "subItems": {
       "accounts": "Accounts",
       "apiKeys": "API keys",
-      "apiProfiles": "API profiles",
+      "apiProfiles": "API credentials",
       "autoCheckin": "Auto check-in",
       "balanceHistory": "Balance history",
       "managedSiteChannels": "Channel management",
@@ -285,7 +285,7 @@
       "label": "Attention"
     },
     "profiles": {
-      "label": "Profiles"
+      "label": "Credentials"
     },
     "todayUsage": {
       "label": "Today"

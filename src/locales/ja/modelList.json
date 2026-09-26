@@ -425,7 +425,7 @@
   "pricingNote": "モデル料金に関する注意",
   "profileSourceNotice": {
     "description": "保存済みの API 認証情報では、モデル検出と検証のみ利用できます。このソースでは、料金、グループフィルター、アカウント概要、キー互換性は利用できません。",
-    "title": "プロファイル由来のモデルカタログ"
+    "title": "認証情報のモデルカタログ"
   },
   "providerCatalogFallbackNotice": {
     "allAccountsDescription": "以下のアカウントで実際に利用できるモデルの範囲は未確認です。現在はサイトの全モデルを表示しています。一部のモデルはこれらのアカウントで呼び出せない場合があります。アカウントの権限と検証結果をご確認ください。",
@@ -599,7 +599,7 @@
   },
   "sourceLabels": {
     "personalizedCatalogBadge": "{{account}} · パーソナライズ済みモデルカタログ",
-    "profileBadge": "プロファイル: {{name}} · {{host}}",
+    "profileBadge": "認証情報: {{name}} · {{host}}",
     "profileOption": "API 認証情報: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · プロバイダーモデルカタログ"
   },

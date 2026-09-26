@@ -1,5 +1,5 @@
 import { Copy, Plus } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -83,6 +83,8 @@ interface EndpointProfileListProps {
 }
 
 const API_CREDENTIAL_ENDPOINT_SELECT_ID = "api-credential-endpoint-select"
+const DESKTOP_PANEL_BOTTOM_SPACE_PX = 24
+const DESKTOP_PANEL_MIN_HEIGHT_PX = 240
 
 /**
  * Groups the already-normalized persisted profiles by their canonical Base URL.
@@ -207,7 +209,7 @@ function DesktopEndpointNavigation({
     <nav
       aria-label={t("apiCredentialProfiles:grouping.navigationLabel")}
       data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigation}
-      className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2 border-r px-2"
+      className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2 max-h-(--api-credential-panel-max-height) overflow-y-auto overscroll-contain border-r px-2"
     >
       <div className="text-muted-foreground pt-density-1 pb-density-2 px-2 text-xs font-semibold tracking-wide uppercase">
         {t("apiCredentialProfiles:grouping.baseUrls")}
@@ -394,7 +396,11 @@ export function ApiCredentialProfilesList({
 }: ApiCredentialProfilesListProps) {
   const { t } = useTranslation(["apiCredentialProfiles"])
   const isDesktop = useIsDesktop()
+  const panelRef = useRef<HTMLDivElement>(null)
   const groups = useMemo(() => groupProfilesByBaseUrl(profiles), [profiles])
+  const useViewportCap =
+    variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options && isDesktop
+  const useSidebar = groups.length > 1 && useViewportCap && !isFiltering
   const [selectedBaseUrl, setSelectedBaseUrl] = useState(
     () => groups[0]?.baseUrl ?? "",
   )
@@ -419,6 +425,41 @@ export function ApiCredentialProfilesList({
   const handleAddCredential = (baseUrl: string) => {
     controller.openAddDialog({ baseUrl })
   }
+
+  useLayoutEffect(() => {
+    if (!useViewportCap || !panelRef.current) return
+
+    const panel = panelRef.current
+    const updateHeight = () => {
+      const visibleTop = Math.max(0, panel.getBoundingClientRect().top)
+      const available = Math.floor(
+        window.innerHeight - visibleTop - DESKTOP_PANEL_BOTTOM_SPACE_PX,
+      )
+      const height = `${Math.max(DESKTOP_PANEL_MIN_HEIGHT_PX, available)}px`
+      if (
+        panel.style.getPropertyValue("--api-credential-panel-max-height") !==
+        height
+      ) {
+        panel.style.setProperty("--api-credential-panel-max-height", height)
+      }
+    }
+
+    updateHeight()
+    window.addEventListener("resize", updateHeight)
+    window.addEventListener("scroll", updateHeight, true)
+    const page = panel.closest("[data-api-credential-page]")
+    const observer =
+      page && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateHeight)
+        : null
+    if (page) observer?.observe(page)
+
+    return () => {
+      window.removeEventListener("resize", updateHeight)
+      window.removeEventListener("scroll", updateHeight, true)
+      observer?.disconnect()
+    }
+  }, [groups.length, isFiltering, useViewportCap])
 
   useEffect(() => {
     if (
@@ -463,7 +504,14 @@ export function ApiCredentialProfilesList({
 
   if (isFiltering) {
     return (
-      <div className="space-y-density-4">
+      <div
+        ref={panelRef}
+        className={cn(
+          "space-y-density-4",
+          useViewportCap &&
+            "max-h-(--api-credential-panel-max-height) overflow-y-auto overscroll-contain [--api-credential-panel-max-height:min(70vh,48rem)]",
+        )}
+      >
         {groups.map((group) => (
           <section
             key={group.baseUrl}
@@ -498,15 +546,12 @@ export function ApiCredentialProfilesList({
   }
 
   const hasMultipleGroups = groups.length > 1
-  const useSidebar =
-    hasMultipleGroups &&
-    variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options &&
-    isDesktop
-
   return (
     <div
+      ref={panelRef}
       className={cn(
         "border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-xl border",
+        useViewportCap && "[--api-credential-panel-max-height:min(70vh,48rem)]",
         useSidebar && "grid grid-cols-[15rem_minmax(0,1fr)]",
       )}
     >
@@ -529,7 +574,11 @@ export function ApiCredentialProfilesList({
         aria-label={t("apiCredentialProfiles:grouping.selectedEndpoint", {
           baseUrl: selectedGroup.baseUrl,
         })}
-        className="py-density-3 sm:py-density-4 min-w-0 px-3 sm:px-4"
+        className={cn(
+          "py-density-3 sm:py-density-4 min-w-0 px-3 sm:px-4",
+          useViewportCap &&
+            "max-h-(--api-credential-panel-max-height) overflow-y-auto overscroll-contain",
+        )}
       >
         <EndpointHeader
           baseUrl={selectedGroup.baseUrl}

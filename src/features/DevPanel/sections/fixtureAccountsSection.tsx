@@ -1,6 +1,7 @@
 import { FlaskConical, Plus, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
 
 import {
@@ -75,6 +76,8 @@ export function useFixtureAccountsDevSection(
       title: "Fixture accounts",
       icon: FlaskConical,
       description: "Pure-local accounts for testing list and stats UIs.",
+      pages: [MENU_ITEM_IDS.ACCOUNT, MENU_ITEM_IDS.OVERVIEW],
+      surfaces: ["options"],
       actions: [
         {
           id: "add-five",

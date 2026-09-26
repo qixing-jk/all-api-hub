@@ -103,6 +103,136 @@ function createController() {
 }
 
 describe("ApiCredentialProfilesList endpoint navigation", () => {
+  it("uses the viewport space below the desktop list and updates on scroll and resize", async () => {
+    vi.stubGlobal("innerHeight", 800)
+    let top = 300
+    const measure = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => ({ top }) as DOMRect)
+
+    try {
+      render(
+        <div data-api-credential-page>
+          <ApiCredentialProfilesList
+            profiles={[
+              createProfile(
+                "first",
+                "First key",
+                "https://first.example.invalid",
+              ),
+              createProfile(
+                "second",
+                "Second key",
+                "https://second.example.invalid",
+              ),
+            ]}
+            controller={createController()}
+          />
+        </div>,
+      )
+
+      const navigation = await screen.findByRole("navigation", {
+        name: "apiCredentialProfiles:grouping.navigationLabel",
+      })
+      const panel = navigation.parentElement!
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("476px")
+
+      top = 100
+      panel
+        .closest("[data-api-credential-page]")
+        ?.dispatchEvent(new Event("scroll"))
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("676px")
+
+      top = 300
+      window.dispatchEvent(new Event("scroll"))
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("476px")
+
+      vi.stubGlobal("innerHeight", 600)
+      window.dispatchEvent(new Event("resize"))
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("276px")
+
+      vi.stubGlobal("innerHeight", 500)
+      window.dispatchEvent(new Event("resize"))
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("240px")
+    } finally {
+      measure.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("measures the desktop list when profiles arrive after an empty render", async () => {
+    const { rerender } = render(
+      <ApiCredentialProfilesList
+        profiles={[]}
+        controller={createController()}
+      />,
+    )
+
+    rerender(
+      <ApiCredentialProfilesList
+        profiles={[
+          createProfile("first", "First key", "https://first.example.invalid"),
+          createProfile(
+            "second",
+            "Second key",
+            "https://second.example.invalid",
+          ),
+        ]}
+        controller={createController()}
+      />,
+    )
+
+    const navigation = await screen.findByRole("navigation", {
+      name: "apiCredentialProfiles:grouping.navigationLabel",
+    })
+    expect(
+      navigation.parentElement?.style.getPropertyValue(
+        "--api-credential-panel-max-height",
+      ),
+    ).toMatch(/px$/)
+  })
+
+  it("keeps desktop endpoint navigation and credentials independently scrollable", async () => {
+    const firstBaseUrl = "https://gateway-a.example.invalid"
+    const secondBaseUrl = "https://gateway-b.example.invalid"
+
+    render(
+      <ApiCredentialProfilesList
+        profiles={[
+          createProfile("first", "First key", firstBaseUrl),
+          createProfile("second", "Second key", secondBaseUrl),
+        ]}
+        controller={createController()}
+      />,
+    )
+
+    const navigation = await screen.findByRole("navigation", {
+      name: "apiCredentialProfiles:grouping.navigationLabel",
+    })
+    const credentials = screen.getByRole("region", {
+      name: `apiCredentialProfiles:grouping.selectedEndpoint`,
+    })
+
+    expect(navigation).toHaveClass(
+      "max-h-(--api-credential-panel-max-height)",
+      "overflow-y-auto",
+    )
+    expect(credentials).toHaveClass(
+      "max-h-(--api-credential-panel-max-height)",
+      "overflow-y-auto",
+    )
+  })
+
   it("switches between Base URLs while keeping every credential action independent", async () => {
     const user = userEvent.setup()
     const controller = createController()
@@ -193,6 +323,13 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
 
     expect(await screen.findByText("First key")).toBeVisible()
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
+    const credentials = screen.getByRole("region", {
+      name: "apiCredentialProfiles:grouping.selectedEndpoint",
+    })
+    expect(credentials).toHaveClass(
+      "max-h-(--api-credential-panel-max-height)",
+      "overflow-y-auto",
+    )
     expect(screen.getByText("Second key")).toBeVisible()
     expect(screen.getByText(baseUrl)).toBeVisible()
 
@@ -230,6 +367,11 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
       name: "apiCredentialProfiles:grouping.baseUrlSelector",
     })
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("region", {
+        name: "apiCredentialProfiles:grouping.selectedEndpoint",
+      }),
+    ).not.toHaveClass("max-h-(--api-credential-panel-max-height)")
     expect(screen.getByText("Popup first")).toBeVisible()
     expect(screen.queryByText("Popup second")).not.toBeInTheDocument()
     await user.click(
@@ -422,6 +564,13 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
     expect(await screen.findByText("First matching key")).toBeVisible()
     expect(screen.getByText("Second matching key")).toBeVisible()
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
+    const firstGroup = screen.getAllByRole("region", {
+      name: "apiCredentialProfiles:grouping.selectedEndpoint",
+    })[0]!
+    expect(firstGroup.parentElement).toHaveClass(
+      "max-h-(--api-credential-panel-max-height)",
+      "overflow-y-auto",
+    )
     expect(
       screen.queryByRole("button", {
         name: "apiCredentialProfiles:grouping.addCredential",

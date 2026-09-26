@@ -241,19 +241,19 @@
   "sponsor": {
     "actions": {
       "continueAddAccount": "繼續新增此帳號",
-      "openApiCredentialProfilesFallback": "可將其 API 金鑰新增為 API 憑證",
+      "openApiCredentialProfilesFallback": "可將其 API 金鑰新增為 API 憑據",
       "openBookmarkManagerFallback": "暫不新增帳號，先收藏服務商",
       "visitProvider": "造訪服務商"
     },
     "newcomer": {
-      "description": "前往服務商網站註冊，再依照卡片提示新增帳號、儲存 API 憑證或收藏站點。",
+      "description": "前往服務商網站註冊，再依照卡片提示新增帳號、儲存 API 憑據或收藏站點。",
       "title": "探索可用服務商"
     },
     "recommendedProviders": "推薦服務商",
     "supportStatus": {
-      "fallbackApiCredentialProfiles": "可加為憑證",
+      "fallbackApiCredentialProfiles": "可加為憑據",
       "fallbackBookmark": "可先收藏",
-      "fallbackBookmarkAndApi": "可先收藏 / 可加為憑證",
+      "fallbackBookmarkAndApi": "可先收藏 / 可加為憑據",
       "supported": "可直接新增",
       "unsupported": "可能需要手動設定"
     }

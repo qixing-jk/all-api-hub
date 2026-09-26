@@ -37,7 +37,7 @@
       "title": "Tự động hóa tác vụ thường ngày"
     },
     "general": {
-      "description": "Tập hợp tài khoản, hồ sơ thông tin xác thực API và dấu trang để giảm chuyển đổi giữa các trang và sắp xếp lặp lại.",
+      "description": "Tập hợp tài khoản, thông tin xác thực API và dấu trang để giảm chuyển đổi giữa các trang và sắp xếp lặp lại.",
       "title": "Tập trung tài nguyên tài khoản"
     },
     "insights": {

@@ -444,7 +444,7 @@
   "pricingNote": "Nota sobre precios de modelos",
   "profileSourceNotice": {
     "description": "Las credenciales de API guardadas solo proporcionan descubrimiento y verificación de modelos. Los precios, filtros de grupo, resúmenes de cuenta y compatibilidad de claves no están disponibles para esta fuente.",
-    "title": "Catálogo de modelos respaldado por perfil"
+    "title": "Catálogo de modelos basado en credenciales"
   },
   "providerCatalogFallbackNotice": {
     "allAccountsDescription": "No se confirmó el acceso a los modelos de las siguientes cuentas. Se muestran los catálogos completos de sus sitios; es posible que algunos modelos no puedan usarse con estas cuentas. Consulta los permisos de las cuentas y los resultados de verificación.",
@@ -620,7 +620,7 @@
   },
   "sourceLabels": {
     "personalizedCatalogBadge": "{{account}} · Catálogo de modelos personalizado",
-    "profileBadge": "Perfil: {{name}} · {{host}}",
+    "profileBadge": "Credencial: {{name}} · {{host}}",
     "profileOption": "Credencial de API: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Catálogo de modelos del proveedor"
   },

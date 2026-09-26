@@ -434,7 +434,7 @@
   "pricingNote": "Model Pricing Note",
   "profileSourceNotice": {
     "description": "Saved API credentials only provide model discovery and verification. Pricing, group filters, account summaries, and key compatibility are unavailable for this source.",
-    "title": "Profile-backed model catalog"
+    "title": "Credential-backed model catalog"
   },
   "providerCatalogFallbackNotice": {
     "allAccountsDescription": "Model access has not been confirmed for the accounts below. Their full site catalogs are shown; some models may not be callable with these accounts. Check account permissions and verification results.",
@@ -609,7 +609,7 @@
   },
   "sourceLabels": {
     "personalizedCatalogBadge": "{{account}} · Personalized Model Catalog",
-    "profileBadge": "Profile: {{name}} · {{host}}",
+    "profileBadge": "Credential: {{name}} · {{host}}",
     "profileOption": "API Credential: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Provider Model Catalog"
   },

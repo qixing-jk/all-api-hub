@@ -19,7 +19,7 @@
     },
     "actions": {
       "addAccount": "Adicionar conta",
-      "addProfile": "Adicionar credencial",
+      "addProfile": "Adicionar credencial de API",
       "editAccount": "Editar conta",
       "fixAccount": "Corrigir conta",
       "handleCheckIn": "Resolver check-in",
@@ -37,8 +37,8 @@
       "title": "Ainda não há contas"
     },
     "addProfile": {
-      "description": "Adicione credenciais de API para que as ferramentas e fluxos de exportação possam reutilizá-las.",
-      "title": "Ainda não há perfis de API"
+      "description": "A biblioteca guarda API Keys, chaves de coding plan e outros tipos de chave, e monitora saldo e uso em um só lugar — incluindo quanto resta da cota de 5 horas / 7 dias / mês de um coding plan.",
+      "title": "Ainda não há credenciais de API"
     },
     "autoCheckinGloballyDisabled": {
       "description_one": "{{count}} conta tem o check-in automático ativado, mas nada será executado enquanto o interruptor global estiver desativado. Reative-o nas configurações de check-in.",
@@ -220,12 +220,12 @@
       }
     },
     "credentialAssets": {
-      "description": "Perfis de API e chaves de conta disponíveis para uso.",
+      "description": "Armazenamento das suas chaves, além do monitoramento de saldo, cota e uso.",
       "label": "Credenciais disponíveis",
       "state": {
-        "disabled": "Ainda não há credenciais reutilizáveis. Verifique a configuração da conta ou do perfil de API.",
-        "needs_setup": "Adicione perfis de API para que as ferramentas e fluxos de exportação possam reutilizá-los diretamente.",
-        "not_applicable": "Este ambiente não precisa de perfis de API separados."
+        "disabled": "Ainda não há credenciais reutilizáveis. Verifique a configuração da conta ou da credencial de API.",
+        "needs_setup": "Salve uma credencial de API (Base URL + API Key) para monitorar saldo, cota e uso em um só lugar.",
+        "not_applicable": "Este ambiente não precisa de credenciais de API separadas."
       }
     },
     "dataHistory": {
@@ -249,7 +249,7 @@
     "subItems": {
       "accounts": "Contas",
       "apiKeys": "Chaves de API",
-      "apiProfiles": "Perfis de API",
+      "apiProfiles": "Credenciais de API",
       "autoCheckin": "Check-in automático",
       "balanceHistory": "Histórico de saldo",
       "managedSiteChannels": "Gerenciamento de canais",
@@ -294,7 +294,7 @@
       "label": "Atenção"
     },
     "profiles": {
-      "label": "Perfis"
+      "label": "Credenciais"
     },
     "todayUsage": {
       "label": "Hoje"

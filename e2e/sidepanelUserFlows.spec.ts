@@ -350,7 +350,7 @@ test("sidepanel opens the model list for a saved API credential profile", async 
   await expect(modelsPage.getByText("gpt-sidepanel-pro")).toBeVisible()
   await expect(
     modelsPage
-      .getByText("Profile: Sidepanel Model Profile", { exact: false })
+      .getByText("Credential: Sidepanel Model Profile", { exact: false })
       .first(),
   ).toBeVisible()
 })

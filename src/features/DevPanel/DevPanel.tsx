@@ -3,6 +3,7 @@ import { useCallback, useState } from "react"
 
 import Tooltip from "~/components/Tooltip"
 import { Z_INDEX } from "~/constants/designTokens"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import { getDevIdentity } from "~/utils/browser/extensionIdentity"
@@ -18,6 +19,7 @@ import {
 } from "./DevPanelSectionsContext"
 import { useDialogDebugDevSection } from "./sections/dialogDebugSection"
 import { useFixtureAccountsDevSection } from "./sections/fixtureAccountsSection"
+import { useFixtureApiCredentialsDevSection } from "./sections/fixtureApiCredentialsSection"
 import { useInstanceIdentityDevSection } from "./sections/instanceIdentitySection"
 import {
   useBalanceHistoryDevSection,
@@ -112,15 +114,22 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
 /**
  * Renders one section's title, its facts and its action buttons.
  *
- * Collapsible sections keep their body mounted so a collapsed section still
- * reports live state, such as whether it is currently loading.
+ * Page-relevant sections start open; general tools start folded individually.
  */
-function DevPanelSectionView({ section }: { section: DevPanelSection }) {
+function DevPanelSectionView({
+  section,
+  isCurrentPage,
+}: {
+  section: DevPanelSection
+  isCurrentPage: boolean
+}) {
   const SectionIcon = section.icon
-  const [isExpanded, setIsExpanded] = useState(!section.defaultCollapsed)
-  // A section that asks for a collapsed default is collapsible by definition, so
-  // the two flags cannot disagree.
-  const isCollapsible = Boolean(section.collapsible || section.defaultCollapsed)
+  const [isExpanded, setIsExpanded] = useState(
+    isCurrentPage && !section.defaultCollapsed,
+  )
+  const isCollapsible = Boolean(
+    section.collapsible || section.defaultCollapsed || !isCurrentPage,
+  )
   const showsBody = !isCollapsible || isExpanded
 
   const header = (
@@ -212,14 +221,87 @@ function DevPanelSectionView({ section }: { section: DevPanelSection }) {
  * from their own features.
  */
 function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
+  const { surface, page } = useDevPanelSurface()
   useRegisterDevPanelSection(useInstanceIdentityDevSection())
   useRegisterDevPanelSection(useDialogDebugDevSection())
-  useRegisterDevPanelSection(useFixtureAccountsDevSection(isPanelOpen))
+  useRegisterDevPanelSection(
+    useFixtureAccountsDevSection(
+      isPanelOpen &&
+        surface === "options" &&
+        (page === MENU_ITEM_IDS.ACCOUNT || page === MENU_ITEM_IDS.OVERVIEW),
+    ),
+  )
+  useRegisterDevPanelSection(
+    useFixtureApiCredentialsDevSection(
+      isPanelOpen &&
+        surface === "options" &&
+        page === MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
+    ),
+  )
   useRegisterDevPanelSection(useBalanceHistoryDevSection())
   useRegisterDevPanelSection(useDevPagesSection())
   useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   useRegisterDevPanelSection(useUninstallSurveyDevSection())
   return null
+}
+
+/** Put actions for the active page first and fold each general tool separately. */
+function DevPanelSectionGroups({
+  sections,
+  page,
+}: {
+  sections: readonly DevPanelSection[]
+  page?: string
+}) {
+  const belongsToCurrentPage = (section: DevPanelSection) =>
+    Boolean(
+      page &&
+        (section.pages?.includes(page) ||
+          section.prominentPages?.includes(page)),
+    )
+  const currentSections = sections.filter(belongsToCurrentPage)
+  const otherSections = sections.filter(
+    (section) => !belongsToCurrentPage(section),
+  )
+
+  return (
+    <>
+      {currentSections.length > 0 ? (
+        <div
+          role="group"
+          aria-label="Current page"
+          className="flex flex-col gap-2"
+        >
+          <p className="text-muted-foreground px-1 text-xs font-semibold tracking-wide uppercase">
+            Current page
+          </p>
+          {currentSections.map((section) => (
+            <DevPanelSectionView
+              key={section.id}
+              section={section}
+              isCurrentPage
+            />
+          ))}
+        </div>
+      ) : null}
+      {otherSections.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {currentSections.length > 0 ? (
+            <p className="text-muted-foreground px-1 pt-2 text-xs font-semibold tracking-wide uppercase">
+              Other tools
+            </p>
+          ) : null}
+          {otherSections.map((section) => (
+            <DevPanelSectionView
+              key={section.id}
+              section={section}
+              isCurrentPage={false}
+            />
+          ))}
+        </div>
+      ) : null}
+    </>
+  )
 }
 
 /**
@@ -318,9 +400,11 @@ function DevPanelBall() {
                 No dev sections registered on this page.
               </p>
             ) : (
-              visibleSections.map((section) => (
-                <DevPanelSectionView key={section.id} section={section} />
-              ))
+              <DevPanelSectionGroups
+                key={`${surface}:${page ?? ""}`}
+                sections={visibleSections}
+                page={page}
+              />
             )}
           </div>
         </div>

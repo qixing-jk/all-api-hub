@@ -17,7 +17,7 @@
     },
     "actions": {
       "addAccount": "新增帳號",
-      "addProfile": "新增憑據",
+      "addProfile": "新增 API 憑據",
       "editAccount": "編輯帳號",
       "fixAccount": "修復帳號",
       "handleCheckIn": "處理簽到",
@@ -35,7 +35,7 @@
       "title": "還沒有帳戶"
     },
     "addProfile": {
-      "description": "新增 API 憑據後，可在工具和匯出流程中重複使用。",
+      "description": "憑據庫存放 API Key、coding plan Key 等各類 Key，並集中監控餘額與用量：coding plan 的 5 小時 / 7 天 / 每月額度還剩多少，一眼就能看到。",
       "title": "還沒有 API 憑據"
     },
     "autoCheckinGloballyDisabled": {
@@ -202,11 +202,11 @@
       }
     },
     "credentialAssets": {
-      "description": "API 憑據與帳戶金鑰是否已經準備好。",
+      "description": "各類 Key 的存放，以及餘額、額度和用量監控。",
       "label": "憑據資產",
       "state": {
         "disabled": "目前還沒有可重複使用的憑據，請先檢查帳戶或 API 憑據設定。",
-        "needs_setup": "新增 API 憑據後，就能在工具和匯出流程中直接重複使用。",
+        "needs_setup": "儲存一個 API 憑據（Base URL + API Key），就能集中監控餘額、額度和用量。",
         "not_applicable": "目前環境不需要單獨維護 API 憑據。"
       }
     },
@@ -317,7 +317,7 @@
     "overview": {
       "collapse": "收起",
       "completedDescription": "設定引導已完成。你可以隨時查看步驟或管理閘道渠道。",
-      "description": "將帳號 Key 或 API 憑證匯入自建閘道，透過同一個 API 位址呼叫。",
+      "description": "將帳號 Key 或 API 憑據匯入自建閘道，透過同一個 API 位址呼叫。",
       "progress": "設定進度 {{completed}}/{{total}}",
       "reopen": "設定指南",
       "resume": "繼續設定",
@@ -354,7 +354,7 @@
       }
     },
     "unavailable": {
-      "description": "帳號、憑證或閘道設定未能載入，目前不會因此判定為「沒有來源」。",
+      "description": "帳號、憑據或閘道設定未能載入，目前不會因此判定為「沒有來源」。",
       "retry": "重新檢查設定狀態",
       "title": "暫時無法確認設定進度"
     }

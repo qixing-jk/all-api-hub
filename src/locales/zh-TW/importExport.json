@@ -8,7 +8,7 @@
     "description": "將資料匯出為JSON檔案進行備份",
     "exportFailed": "匯出失敗，請重試",
     "fullBackup": "完整匯出",
-    "fullBackupDescription": "匯出帳號、書籤、標籤、API 憑證庫、渠道設定和使用者設定。",
+    "fullBackupDescription": "匯出帳號、書籤、標籤、API 憑據庫、渠道設定和使用者設定。",
     "sensitiveDataNotice": "帳號和完整匯出的 JSON 檔案包含明文憑證，請妥善保管。",
     "settingsExported": "使用者設定匯出成功",
     "title": "匯出資料",

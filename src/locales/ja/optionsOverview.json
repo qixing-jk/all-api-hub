@@ -17,7 +17,7 @@
     },
     "actions": {
       "addAccount": "アカウントを追加",
-      "addProfile": "認証情報を追加",
+      "addProfile": "API 認証情報を追加",
       "editAccount": "アカウントを編集",
       "fixAccount": "アカウントを修正",
       "handleCheckIn": "チェックインを処理",
@@ -35,7 +35,7 @@
       "title": "アカウントがありません"
     },
     "addProfile": {
-      "description": "API 認証情報を追加すると、ツールやエクスポートで再利用できます。",
+      "description": "認証情報庫は API Key や coding plan Key など各種 Key を保存し、残高と使用量を一元管理できます。coding plan の 5 時間 / 7 日 / 毎月の枠がどれだけ残っているかも一目でわかります。",
       "title": "API 認証情報がありません"
     },
     "autoCheckinGloballyDisabled": {
@@ -202,11 +202,11 @@
       }
     },
     "credentialAssets": {
-      "description": "API 認証情報とアカウントキーが利用可能かを示します。",
+      "description": "各種 Key の保存と、残高・枠・使用量の監視。",
       "label": "認証情報資産",
       "state": {
         "disabled": "まだ再利用できる認証情報がありません。アカウントまたは API 認証情報の設定を確認してください。",
-        "needs_setup": "API 認証情報を追加すると、ツールやエクスポートでそのまま再利用できます。",
+        "needs_setup": "API 認証情報（Base URL + API Key）を保存すると、残高・枠・使用量を一元管理できます。",
         "not_applicable": "この環境では API 認証情報を個別に管理する必要はありません。"
       }
     },

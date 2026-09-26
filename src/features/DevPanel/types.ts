@@ -65,6 +65,8 @@ export interface DevPanelSection {
   surfaces?: readonly DevPanelSurface[]
   /** Page ids where the section is shown; omit to show on every page. */
   pages?: readonly string[]
+  /** Pages where a globally available section belongs in the top group. */
+  prominentPages?: readonly string[]
   /** Higher values render lower in the panel; defaults to `0`. */
   order?: number
   actions: readonly DevPanelAction[]
