@@ -27,7 +27,7 @@ const LOADER_DELAY_MS = 700
 type AnimationControl = ReturnType<ReturnType<typeof useAnimate>[1]>
 
 /** Uses the same order as the sidebar for vertical navigation direction. */
-export function getOptionsPageDirection(from: string, to: string) {
+function getOptionsPageDirection(from: string, to: string) {
   const pageIds = getOptionsPageMenuIds()
   const fromIndex = pageIds.findIndex((id) => id === from)
   const toIndex = pageIds.findIndex((id) => id === to)
