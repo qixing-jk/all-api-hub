@@ -330,7 +330,7 @@ test("keeps account management controls reachable across constrained widths", as
     expect(
       await page.evaluate(
         () =>
-          document.documentElement.scrollWidth ===
+          document.documentElement.scrollWidth <=
           document.documentElement.clientWidth,
       ),
     ).toBe(true)

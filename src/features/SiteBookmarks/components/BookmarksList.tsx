@@ -117,6 +117,7 @@ export default function BookmarksList({
     orderedAccountIds,
     tags,
     tagStore,
+    isInitialLoad,
     isAccountPinned,
     togglePinAccount,
     handleBookmarkReorder,
@@ -377,7 +378,10 @@ export default function BookmarksList({
 
   if (resolvedBookmarks.length === 0) {
     return (
-      <div data-testid={SITE_BOOKMARKS_TEST_IDS.listView}>
+      <div
+        data-testid={SITE_BOOKMARKS_TEST_IDS.listView}
+        data-options-page-pending={isInitialLoad ? "" : undefined}
+      >
         <ProductAnalyticsScope
           entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}

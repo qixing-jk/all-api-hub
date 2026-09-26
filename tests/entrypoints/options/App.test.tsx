@@ -1,7 +1,7 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { lazy } from "react"
+import { lazy, Suspense } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -19,6 +19,7 @@ const {
   mockedOptionsSearchDialog,
   mockedUseProductAnalyticsPageView,
   mockedUseSearchHotkeys,
+  mockedPreloadOptionsPage,
   mockUseHashNavigationState,
   mockedUpdateAppearance,
 } = vi.hoisted(() => ({
@@ -27,6 +28,7 @@ const {
   mockedOptionsSearchDialog: vi.fn(),
   mockedUseProductAnalyticsPageView: vi.fn(),
   mockedUseSearchHotkeys: vi.fn(),
+  mockedPreloadOptionsPage: vi.fn(),
   mockUseHashNavigationState: {
     activeMenuItem: "overview",
     routeParams: { source: "test" },
@@ -36,6 +38,16 @@ const {
 
 vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => children,
+}))
+
+vi.mock("~/features/OptionsMenu/OptionsPageTransition", () => ({
+  OptionsPageTransition: ({
+    children,
+    fallback,
+  }: {
+    children: ReactNode
+    fallback: ReactNode
+  }) => <Suspense fallback={fallback}>{children}</Suspense>,
 }))
 
 vi.mock("~/contexts/FeatureGuidanceContext", () => ({
@@ -166,6 +178,7 @@ vi.mock("~/features/OptionsSearch/OptionsSearchDialog", () => ({
 }))
 
 vi.mock("~/entrypoints/options/constants", () => ({
+  preloadOptionsPage: mockedPreloadOptionsPage,
   menuItems: Object.values(MENU_ITEM_IDS).map((id) => {
     const MockPage = ({
       routeParams,
@@ -196,6 +209,7 @@ describe("options App", () => {
     mockedOptionsSearchDialog.mockReset()
     mockedUseProductAnalyticsPageView.mockReset()
     mockedUseSearchHotkeys.mockReset()
+    mockedPreloadOptionsPage.mockReset().mockResolvedValue(undefined)
     mockedUpdateAppearance.mockReset().mockResolvedValue({ ok: true })
     mockUseHashNavigationState.activeMenuItem = "overview"
     mockUseHashNavigationState.routeParams = { source: "test" }
@@ -283,6 +297,51 @@ describe("options App", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument()
   })
 
+  it("preloads the active page and ignores a failed preload", async () => {
+    mockUseHashNavigationState.activeMenuItem = MENU_ITEM_IDS.ACCOUNT
+    mockedPreloadOptionsPage.mockRejectedValueOnce(
+      new Error("account page chunk unavailable"),
+    )
+
+    render(<App />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(mockedPreloadOptionsPage).toHaveBeenCalledExactlyOnceWith(
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId(OPTIONS_TEST_IDS.app)).toBeInTheDocument(),
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("preloads a clicked page and ignores a failed preload", async () => {
+    const user = userEvent.setup()
+
+    render(<App />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    mockedPreloadOptionsPage.mockClear()
+    mockedPreloadOptionsPage.mockRejectedValueOnce(
+      new Error("account page chunk unavailable"),
+    )
+
+    await user.click(screen.getByRole("button", { name: "sidebar account" }))
+
+    expect(mockedPreloadOptionsPage).toHaveBeenCalledExactlyOnceWith(
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    expect(mockedHandleMenuItemChange).toHaveBeenCalledWith(
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
   it.each([
     [MENU_ITEM_IDS.OVERVIEW, PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview],
     [
@@ -342,6 +401,9 @@ describe("options App", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         pageId,
       })
+      if (activeMenuItem === "unknown-menu-id") {
+        expect(mockedPreloadOptionsPage).not.toHaveBeenCalled()
+      }
     },
   )
 })

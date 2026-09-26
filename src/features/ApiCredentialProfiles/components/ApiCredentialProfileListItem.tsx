@@ -363,6 +363,7 @@ export function ApiCredentialProfileListItem({
     >
       <Card
         ref={cardRef}
+        data-page-motion-ready-item
         id={rowTargetId}
         data-testid={getApiCredentialProfileRowTestId(profile.id)}
         tabIndex={-1}

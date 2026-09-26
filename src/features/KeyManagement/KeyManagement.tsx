@@ -140,6 +140,13 @@ const nativeStatusOptions = (t: TFunction) => [
   },
 ]
 
+/** Ignore in-place URL sync from a page still mounted for its exit animation. */
+function replaceActiveKeysRoute(params?: Record<string, string | undefined>) {
+  const currentPage = window.location.hash.slice(1).split("?")[0]
+  if (currentPage && currentPage !== MENU_ITEM_IDS.KEYS) return
+  replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, params)
+}
+
 const getRouteSignature = (params?: Record<string, string | undefined>) =>
   JSON.stringify(
     Object.entries(params ?? {})
@@ -394,7 +401,7 @@ export default function KeyManagement(props: {
         acknowledgedNativeRouteTransitionIdRef.current = null
         setPendingNativeRoute(null)
       }
-      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, nextParams)
+      replaceActiveKeysRoute(nextParams)
     },
   })
 
@@ -486,7 +493,7 @@ export default function KeyManagement(props: {
     setAllAccountsFilterAccountIds([])
     setSelectedAccount(accountId)
     if (getRouteSignature(nextParams) !== routeSignature) {
-      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, nextParams)
+      replaceActiveKeysRoute(nextParams)
     }
   }, [
     associationTarget,
@@ -560,8 +567,7 @@ export default function KeyManagement(props: {
   const handleAccountSummaryClick = (accountId: string) => {
     associationNavigationActiveRef.current = false
     if (routeAssociationId) {
-      replaceWithinOptionsPage(
-        `#${MENU_ITEM_IDS.KEYS}`,
+      replaceActiveKeysRoute(
         selectedAccount ? { accountId: selectedAccount } : undefined,
       )
     }
@@ -586,18 +592,14 @@ export default function KeyManagement(props: {
       setSelectedAccount(accountId)
       acknowledgedNativeRouteTransitionIdRef.current = null
       setPendingNativeRoute(null)
-      replaceWithinOptionsPage(
-        `#${MENU_ITEM_IDS.KEYS}`,
-        accountId ? { accountId } : undefined,
-      )
+      replaceActiveKeysRoute(accountId ? { accountId } : undefined)
     },
     [setSelectedAccount],
   )
 
   const clearAssociationTarget = useCallback(() => {
     associationNavigationActiveRef.current = false
-    replaceWithinOptionsPage(
-      `#${MENU_ITEM_IDS.KEYS}`,
+    replaceActiveKeysRoute(
       selectedAccount ? { accountId: selectedAccount } : undefined,
     )
   }, [selectedAccount])

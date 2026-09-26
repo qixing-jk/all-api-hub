@@ -13,16 +13,8 @@ import {
 } from "~/constants/optionsMenuIds"
 import { isDevelopmentMode } from "~/utils/core/environment"
 
+import { createLazyMenuComponent } from "./createLazyMenuComponent"
 import BasicSettings from "./pages/BasicSettings"
-
-/**
- * Wrap a lazily imported options page so the menu config can treat it like a normal component.
- */
-function createLazyMenuComponent(
-  loader: () => Promise<{ default: ComponentType<any> }>,
-): ComponentType<any> {
-  return lazy(loader) as ComponentType<any>
-}
 
 const About = createLazyMenuComponent(() => import("./pages/About"))
 const OptionsOverview = createLazyMenuComponent(
@@ -86,6 +78,18 @@ const BASE_MENU_COMPONENTS = {
   [MENU_ITEM_IDS.BASIC]: BasicSettings,
   [MENU_ITEM_IDS.IMPORT_EXPORT]: ImportExport,
   [MENU_ITEM_IDS.ABOUT]: About,
+}
+
+/** Starts a page chunk before navigation; React.lazy reuses the same promise. */
+export function preloadOptionsPage(
+  id: OptionsPageMenuItemId,
+): Promise<unknown> {
+  const component = (
+    BASE_MENU_COMPONENTS as Partial<
+      Record<OptionsPageMenuItemId, { preload?: () => Promise<unknown> }>
+    >
+  )[id]
+  return component?.preload?.() ?? Promise.resolve()
 }
 
 const BASE_MENU_ITEMS: MenuItem[] = BASE_OPTIONS_MENU_DEFINITIONS.map(

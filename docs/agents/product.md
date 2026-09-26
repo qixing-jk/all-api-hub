@@ -11,6 +11,16 @@ Read the section that matches the change.
 - Use the configured shadcn CLI as the baseline for a new supported primitive (`pnpm shadcn add <component> --yes`), then adapt aliases, exports, design tokens, floating layers, i18n, and project lint requirements. Overwrite an existing baseline only when replacement is in scope.
 - Preserve needed generated dependencies; lockfile noise alone is not a reason to reimplement the component.
 
+## Options page motion
+
+- Sidebar pages already share `src/features/OptionsMenu/OptionsPageTransition.tsx`. Reuse that boundary instead of adding entrance/exit animations to each page. Direction follows the sidebar order; timing, reduced motion, and loading transitions stay centralized.
+- Direct page blocks are selected automatically. Shared `PageHeader` and `Card` containers remain whole visual units. For nested layouts, mark a wrapper with `data-page-motion-group` to expose its immediate blocks; mark a major block with `data-page-motion-item` to keep its contents together. Group traversal is bounded to avoid animating deep control trees.
+- For independently animated list cards, use `data-page-motion-list` on the list and `data-page-motion-item` on each row. Only rows intersecting the viewport participate; a long list must not create animations for every record.
+- During initial data/layout loading, expose `data-options-page-pending` and remove it when the content is ready. The shared transition waits before entering, shows the loader only after 700 ms, and fades it out before entry. Later data updates do not replay the page entrance.
+- If loaded data precedes deferred row rendering, set `data-page-motion-wait-for` to a descendant selector (existing lists use `[data-page-motion-ready-item]`). Keep it absent for empty lists. This render wait is bounded and complements the data-loading marker.
+- Keep the native `framer-motion/mini` playback path: it preserves final styles before clearing keyframes. Avoid another animation or CSS transition controlling the same container's transform/opacity concurrently; animate a separate outer container when needed.
+- When changing this contract, use the focused browser checks in `e2e/optionsPageMotion.spec.ts`, including fast navigation, refresh, data-heavy cards, scrolled exits, and reduced motion.
+
 ## Analytics
 
 - For new or materially changed product behavior, decide whether adoption or outcome measurement needs existing telemetry, a new action/result, or a settings snapshot. No new event is needed when existing evidence is adequate; report only material decisions or gaps.

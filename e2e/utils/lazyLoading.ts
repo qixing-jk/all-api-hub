@@ -82,10 +82,36 @@ export function shouldAssertLazyLoading(): boolean {
 }
 
 /**
- * Wait until the extension page renders its stable app shell instead of the outer Suspense fallback.
+ * Wait for the app shell and, on Options, its resolved content and finite animations.
  */
 export async function waitForExtensionRoot(page: Page) {
   await page.waitForSelector(resolveAppShellSelector(page), { timeout: 30_000 })
+  if (new URL(page.url()).pathname.endsWith(`/${OPTIONS_PAGE_PATH}`)) {
+    await page.waitForFunction(
+      () => {
+        const content = document.querySelector<HTMLElement>(
+          "[data-options-page-content]",
+        )
+        if (
+          !content ||
+          content.parentElement?.getAttribute("aria-hidden") === "true" ||
+          getComputedStyle(content).opacity !== "1" ||
+          content.querySelector("[data-options-page-pending]")
+        )
+          return false
+        return !content.getAnimations({ subtree: true }).some((animation) => {
+          const iterations = animation.effect?.getComputedTiming().iterations
+          return (
+            iterations !== Infinity &&
+            (animation.playState === "running" || animation.pending)
+          )
+        })
+      },
+      undefined,
+      { timeout: 30_000 },
+    )
+    return
+  }
   await page.waitForTimeout(300)
 }
 

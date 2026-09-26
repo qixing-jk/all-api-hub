@@ -735,6 +735,41 @@ describe("KeyManagement native page integration", () => {
     )
   })
 
+  it.each(["#account", "#balanceHistory"])(
+    "does not let an exiting keys page replace the selected %s route",
+    async (nextHash) => {
+      const originalUrl = window.location.href
+      try {
+        window.history.replaceState(null, "", "#keys")
+        legacyHarnessConfig = {
+          accounts: [],
+          initialSelectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        }
+        render(<KeyManagement />)
+        await waitFor(() =>
+          expect(accountKeyResourceControllerOptionsSpy).toHaveBeenCalled(),
+        )
+        const replaceRoute =
+          accountKeyResourceControllerOptionsSpy.mock.calls.at(-1)![0]
+            .replaceRoute
+        const params = { accountId: "late-account", workspace: "account" }
+        act(() => replaceRoute(params))
+        expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith(
+          "#keys",
+          params,
+        )
+        replaceWithinOptionsPageMock.mockClear()
+
+        window.history.replaceState(null, "", nextHash)
+        act(() => replaceRoute(params))
+        expect(replaceWithinOptionsPageMock).not.toHaveBeenCalled()
+        expect(window.location.hash).toBe(nextHash)
+      } finally {
+        window.history.replaceState(null, "", originalUrl)
+      }
+    },
+  )
+
   it.each([
     SITE_TYPES.NEW_API,
     SITE_TYPES.SUB2API,

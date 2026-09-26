@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AppLayout } from "~/components/AppLayout"
@@ -9,6 +9,7 @@ import { THEME_CONTENT_WIDTH } from "~/constants/theme"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAppearanceSave } from "~/features/Appearance/useAppearanceSave"
 import { DevPanel, DevPanelProvider } from "~/features/DevPanel"
+import { OptionsPageTransition } from "~/features/OptionsMenu/OptionsPageTransition"
 import { hasOptionalPermissions } from "~/features/OptionsSearch/basicSettingsMeta"
 import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
 import { useOptionsSearchContext } from "~/features/OptionsSearch/useOptionsSearch"
@@ -31,7 +32,7 @@ import { normalizeAppearance } from "~/types/theme"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
-import { menuItems } from "./constants"
+import { menuItems, preloadOptionsPage } from "./constants"
 import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"
 import { OPTIONS_TEST_IDS } from "./testIds"
@@ -123,6 +124,11 @@ function OptionsPage() {
     menuItems.find((item) => item.id === activeMenuItem)?.component ||
     BasicSettings
 
+  useEffect(() => {
+    const selected = menuItems.find((item) => item.id === activeMenuItem)
+    if (selected) void preloadOptionsPage(selected.id).catch(() => undefined)
+  }, [activeMenuItem])
+
   const searchContext = useOptionsSearchContext({
     autoCheckinEnabled: preferences?.autoCheckin?.globalEnabled ?? true,
     hasOptionalPermissions,
@@ -141,6 +147,8 @@ function OptionsPage() {
   }
 
   const handleMenuItemClick = (itemId: string) => {
+    const selected = menuItems.find((item) => item.id === itemId)
+    if (selected) void preloadOptionsPage(selected.id).catch(() => undefined)
     handleMenuItemChange(itemId)
     setIsMobileSidebarOpen(false) // 移动端选择后关闭侧边栏
   }
@@ -207,12 +215,15 @@ function OptionsPage() {
                       PRODUCT_TOUR_TARGETS.Content,
                   }}
                 >
-                  <Suspense fallback={<OptionsPageContentFallback />}>
+                  <OptionsPageTransition
+                    pageId={activeMenuItem}
+                    fallback={<OptionsPageContentFallback />}
+                  >
                     <ActiveComponent
                       routeParams={routeParams}
                       refreshKey={refreshKey}
                     />
-                  </Suspense>
+                  </OptionsPageTransition>
                 </div>
               </div>
             </main>

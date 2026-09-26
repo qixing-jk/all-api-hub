@@ -293,7 +293,14 @@ export function ApiCredentialProfilesListView({
       API_CREDENTIAL_PROFILE_ASSOCIATION_UNAVAILABLE_REASONS.Error
 
   return (
-    <div className={cn("space-y-density-4", className)}>
+    <div
+      className={cn("space-y-density-4", className)}
+      data-page-motion-wait-for={
+        filteredProfiles.length > 0
+          ? "[data-page-motion-ready-item]"
+          : undefined
+      }
+    >
       <ApiCredentialProfilesDialogs controller={controller} />
 
       {hasAssociationAvailabilityError ? (
@@ -408,7 +415,10 @@ export function ApiCredentialProfilesListView({
       ) : null}
 
       {isInitialLoading ? (
-        <div className="gap-y-density-2 py-density-6 flex items-center gap-x-2">
+        <div
+          className="gap-y-density-2 py-density-6 flex items-center gap-x-2"
+          data-options-page-pending
+        >
           <Spinner size="sm" />
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.loading")}

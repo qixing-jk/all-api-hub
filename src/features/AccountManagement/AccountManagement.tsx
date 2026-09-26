@@ -362,7 +362,12 @@ function AccountManagementContent({
   }, [handleRefreshDisabledAccounts, t])
 
   return (
-    <div className="py-density-4 sm:py-density-6 flex flex-col px-4 sm:px-6">
+    <div
+      className="py-density-4 sm:py-density-6 flex flex-col px-4 sm:px-6"
+      data-page-motion-wait-for={
+        displayData.length > 0 ? "[data-page-motion-ready-item]" : undefined
+      }
+    >
       <PageHeader
         icon={UserRound}
         title={t("account:title")}

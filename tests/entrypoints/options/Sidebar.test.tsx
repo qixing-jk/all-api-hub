@@ -11,24 +11,42 @@ import {
 } from "~/features/ProductTour/constants"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
-const { useUserPreferencesContextMock } = vi.hoisted(() => ({
-  useUserPreferencesContextMock: vi.fn(),
-}))
+const { useUserPreferencesContextMock, mockedPreloadOptionsPage } = vi.hoisted(
+  () => ({
+    useUserPreferencesContextMock: vi.fn(),
+    mockedPreloadOptionsPage: vi.fn(),
+  }),
+)
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    aside: ({
-      children,
-      animate: _animate,
-      initial: _initial,
-      ...props
-    }: React.ComponentPropsWithoutRef<"aside"> & {
-      animate?: unknown
-      children: ReactNode
-      initial?: unknown
-    }) => <aside {...props}>{children}</aside>,
-  },
-}))
+vi.mock("~/entrypoints/options/constants", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/entrypoints/options/constants")>()
+
+  return {
+    ...actual,
+    preloadOptionsPage: mockedPreloadOptionsPage,
+  }
+})
+
+vi.mock("framer-motion", () => {
+  return {
+    motion: {
+      aside: ({
+        children,
+        animate: _animate,
+        initial: _initial,
+        transition: _transition,
+        ...props
+      }: React.ComponentPropsWithoutRef<"aside"> & {
+        animate?: unknown
+        children: ReactNode
+        initial?: unknown
+        transition?: unknown
+      }) => <aside {...props}>{children}</aside>,
+    },
+    useReducedMotion: () => true,
+  }
+})
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -45,6 +63,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 describe("Options Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedPreloadOptionsPage.mockReset().mockResolvedValue(undefined)
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: {
@@ -170,6 +189,37 @@ describe("Options Sidebar", () => {
         name: "ui:navigation.expandSidebar",
       }),
     ).toHaveLength(1)
+  })
+
+  it("preloads a page on pointer or keyboard intent and ignores preload failures", () => {
+    mockedPreloadOptionsPage.mockRejectedValue(
+      new Error("account page chunk unavailable"),
+    )
+
+    render(
+      <Sidebar
+        activeMenuItem={MENU_ITEM_IDS.BASIC}
+        onMenuItemClick={vi.fn()}
+        isCollapsed={false}
+        onCollapseToggle={vi.fn()}
+      />,
+    )
+    const accountButton = screen.getByRole("button", {
+      name: "ui:navigation.account",
+    })
+
+    fireEvent.pointerEnter(accountButton)
+    accountButton.focus()
+
+    expect(mockedPreloadOptionsPage).toHaveBeenCalledTimes(2)
+    expect(mockedPreloadOptionsPage).toHaveBeenNthCalledWith(
+      1,
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    expect(mockedPreloadOptionsPage).toHaveBeenNthCalledWith(
+      2,
+      MENU_ITEM_IDS.ACCOUNT,
+    )
   })
 
   it("keeps the pending desktop toggle focusable and blocks repeated activation until saving completes", async () => {

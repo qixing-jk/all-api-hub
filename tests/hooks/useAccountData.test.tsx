@@ -72,6 +72,18 @@ const createOverviewSnapshot = (
 })
 
 describe("useAccountData enabled slices", () => {
+  it("finishes the initial load state when the account snapshot read fails", async () => {
+    mockGetAccountOverviewSnapshot.mockRejectedValueOnce(
+      new Error("read failed"),
+    )
+
+    const { result } = renderHook(() => useAccountData())
+
+    await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+    expect(result.current.accounts).toEqual([])
+    expect(result.current.displayData).toEqual([])
+  })
+
   it("retains the previous successful snapshot for animation across reload and refresh", async () => {
     const first = createOverviewSnapshot({
       displayAccounts: [

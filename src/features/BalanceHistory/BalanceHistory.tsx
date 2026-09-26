@@ -1050,7 +1050,10 @@ export default function BalanceHistory() {
   const shouldShowEnableBalanceHistoryHint = !enabled && !isInitialLoading
 
   return (
-    <div className="space-y-density-6 py-density-6 px-6">
+    <div
+      className="space-y-density-6 py-density-6 px-6"
+      data-options-page-pending={isInitialLoading ? "" : undefined}
+    >
       <PageHeader
         icon={LineChart}
         title={t("title")}

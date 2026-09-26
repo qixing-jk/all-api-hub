@@ -1,10 +1,11 @@
+import { motion, useReducedMotion } from "framer-motion"
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react"
-import { useLayoutEffect, type ReactNode } from "react"
+import { useId, useLayoutEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
+import { COLORS, CORNERS } from "~/constants/designTokens"
 import type { CountedModelVendorCatalogEntry } from "~/features/ModelList/modelFiltering"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
@@ -36,6 +37,7 @@ interface ProviderTabsProps {
 interface ProviderTabListProps {
   vendorCatalog: CountedModelVendorCatalogEntry[]
   selectedIndex: number
+  selectedVendor: ModelVendorFilterValue
   allVendorsFilteredCount: number
   unclassifiedVendorCount: number
 }
@@ -60,7 +62,8 @@ export function getProviderFilterAnalyticsResultCount(
   )
 }
 
-const providerTabClassName = `shrink-0 rounded-lg px-4 py-density-2-5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-card data-[state=active]:bg-card data-[state=active]:text-theme-700 data-[state=active]:shadow data-[state=active]:dark:text-theme-400 text-secondary-foreground hover:bg-card/60 hover:text-foreground`
+const providerTabClassName =
+  "relative isolate shrink-0 rounded-lg px-4 py-density-2-5 text-sm leading-5 font-medium transition-colors duration-150 ease-out motion-reduce:transition-none data-[state=active]:text-theme-700 data-[state=active]:dark:text-theme-400 text-secondary-foreground hover:bg-card/60 hover:text-foreground"
 
 /**
  * Renders the provider tab list.
@@ -68,10 +71,22 @@ const providerTabClassName = `shrink-0 rounded-lg px-4 py-density-2-5 text-sm le
 function ProviderTabList({
   vendorCatalog,
   selectedIndex,
+  selectedVendor,
   allVendorsFilteredCount,
   unclassifiedVendorCount,
 }: ProviderTabListProps) {
   const { t } = useTranslation("modelList")
+  const shouldReduceMotion = useReducedMotion()
+  const indicatorId = useId()
+  const selectionIndicator = (value: ModelVendorFilterValue) =>
+    selectedVendor === value ? (
+      <motion.span
+        aria-hidden="true"
+        layoutId={indicatorId}
+        className="bg-card absolute inset-0 -z-10 rounded-lg shadow"
+        transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: "easeOut" }}
+      />
+    ) : null
   const {
     scrollRef: tabListRef,
     canScrollLeft,
@@ -114,6 +129,7 @@ function ProviderTabList({
           value={MODEL_VENDOR_FILTER_VALUES.All}
           className={providerTabClassName}
         >
+          {selectionIndicator(MODEL_VENDOR_FILTER_VALUES.All)}
           <div className="flex items-center justify-center space-x-2">
             <LayoutGrid
               aria-hidden={true}
@@ -130,6 +146,7 @@ function ProviderTabList({
             value={vendor.key}
             className={providerTabClassName}
           >
+            {selectionIndicator(vendor.key)}
             <div className="flex items-center justify-center space-x-2">
               <ModelVendorMark vendor={vendor} variant="compact" />
               <span>
@@ -144,6 +161,7 @@ function ProviderTabList({
             className={providerTabClassName}
             title={t("providerTabs.unclassifiedDescription")}
           >
+            {selectionIndicator(MODEL_VENDOR_FILTER_VALUES.Unclassified)}
             <div className="flex items-center justify-center space-x-2">
               <ModelVendorMark
                 vendor={{ state: "unknown" }}
@@ -232,6 +250,7 @@ export function ProviderTabs({
       <ProviderTabList
         vendorCatalog={vendorCatalog}
         selectedIndex={selectedIndex}
+        selectedVendor={effectiveSelectedVendor}
         allVendorsFilteredCount={allVendorsFilteredCount}
         unclassifiedVendorCount={unclassifiedVendorCount}
       />

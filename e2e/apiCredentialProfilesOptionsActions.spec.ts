@@ -897,8 +897,12 @@ test("imports an API credential profile into Claude Code Router", async ({
   const modelsInput = dialog.getByPlaceholder("Type to add models")
   await expect(modelsInput).toBeVisible()
   await expect.poll(() => sourceModelsRequested).toBe(true)
+  await expect(
+    dialog.getByRole("button", { name: "Select all", exact: true }),
+  ).toBeEnabled()
   await modelsInput.fill("gpt-claude-router-profile")
-  await page.keyboard.press("Enter")
+  await expect(modelsInput).toHaveValue("gpt-claude-router-profile")
+  await modelsInput.press("Enter")
   await expect(
     dialog.getByRole("button", {
       name: "Copy gpt-claude-router-profile",

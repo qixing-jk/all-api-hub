@@ -168,7 +168,7 @@ interface TokenListProps {
  */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-density-3">
+    <div className="space-y-density-3" data-options-page-pending>
       {[...Array(3)].map((_, i) => (
         <Card key={i} padding="sm" className="animate-pulse">
           <div className="bg-secondary mb-density-2 h-4 w-1/4 rounded"></div>

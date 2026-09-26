@@ -1200,7 +1200,7 @@ export default function AutoCheckin(props: {
         spacing="compact"
       />
 
-      <div className="space-y-density-4">
+      <div className="space-y-density-4" data-page-motion-group>
         {status ? (
           <StatusCard
             status={status}

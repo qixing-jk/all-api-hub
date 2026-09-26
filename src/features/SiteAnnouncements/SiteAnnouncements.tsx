@@ -458,7 +458,10 @@ export default function SiteAnnouncementsPage({
   }, [])
 
   return (
-    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
+    <div
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-options-page-pending={isLoading ? "" : undefined}
+    >
       <PageHeader
         icon={Megaphone}
         title={t("title")}

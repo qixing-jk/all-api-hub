@@ -71,10 +71,12 @@ function getCanonicalPage(page: string) {
  * Exposes current page, params, a handler to change pages, and refreshKey bumps.
  */
 export function useHashNavigation() {
-  const [activeMenuItem, setActiveMenuItem] = useState<string>(
-    MENU_ITEM_IDS.OVERVIEW,
+  const [activeMenuItem, setActiveMenuItem] = useState<string>(() =>
+    getCanonicalPage(parseHash().page),
   )
-  const [routeParams, setRouteParams] = useState<Record<string, string>>({})
+  const [routeParams, setRouteParams] = useState<Record<string, string>>(
+    () => parseHash().params,
+  )
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 初始化路由

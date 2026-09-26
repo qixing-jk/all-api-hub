@@ -368,6 +368,7 @@
 /* Keep anchor navigation and search targets below the sticky options header. */
 html.options-page {
   scroll-padding-top: calc(var(--options-header-height) + 1rem);
+  scrollbar-gutter: stable;
 }
 
 html {
@@ -382,6 +383,17 @@ html {
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Palette changes are atomic; ordinary hover/selection transitions resume as

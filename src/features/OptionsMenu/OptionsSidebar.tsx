@@ -1,4 +1,4 @@
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useEffect, type ComponentType } from "react"
 import { useTranslation } from "react-i18next"
@@ -30,6 +30,7 @@ export interface SidebarProps {
   isCollapsePending?: boolean
   activeMenuItem: string
   onMenuItemClick: (itemId: string) => void
+  onMenuItemPreload?: (itemId: OptionsPageMenuItemId) => void
   isMobileOpen?: boolean
   onMobileClose?: () => void
   isCollapsed?: boolean
@@ -48,6 +49,7 @@ const MOBILE_WIDTH = 256
  * @param props.isCollapsePending Whether the desktop layout preference is saving.
  * @param props.activeMenuItem Currently selected menu id.
  * @param props.onMenuItemClick Callback fired when user picks another menu item.
+ * @param props.onMenuItemPreload Starts loading a page before it is selected.
  * @param props.isMobileOpen Whether the drawer is visible on mobile screens.
  * @param props.onMobileClose Close handler for the mobile drawer mask.
  * @param props.isCollapsed Whether the sidebar is collapsed on desktop.
@@ -58,6 +60,7 @@ function OptionsSidebar({
   isCollapsePending = false,
   activeMenuItem,
   onMenuItemClick,
+  onMenuItemPreload,
   isMobileOpen,
   onMobileClose,
   isCollapsed = false,
@@ -65,6 +68,7 @@ function OptionsSidebar({
 }: SidebarProps) {
   const { t } = useTranslation("ui")
   const { preferences } = useUserPreferencesContext()
+  const shouldReduceMotion = useReducedMotion()
   const shouldShowCollapsedState = isCollapsed && !isMobileOpen
 
   const menuGroups = menuItems.reduce<
@@ -140,7 +144,8 @@ function OptionsSidebar({
       <motion.aside
         initial={false}
         animate={{ width: targetWidth }}
-        style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: "easeOut" }}
+        style={{ height: sidebarHeight, top: sidebarTop }}
         className={cn(
           "shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
           Z_INDEX.sidebar,
@@ -253,6 +258,10 @@ function OptionsSidebar({
                           <li key={item.id}>
                             <button
                               onClick={() => onMenuItemClick(item.id)}
+                              onPointerEnter={() =>
+                                onMenuItemPreload?.(item.id)
+                              }
+                              onFocus={() => onMenuItemPreload?.(item.id)}
                               aria-current={isActive ? "page" : undefined}
                               title={
                                 shouldShowCollapsedState ? label : undefined
