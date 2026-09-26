@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { useAnimate } from "framer-motion/mini"
 import {
   Suspense,
@@ -11,10 +11,6 @@ import {
 } from "react"
 
 import { getOptionsPageMenuIds } from "~/constants/optionsMenuDefinitions"
-import {
-  PAGE_MOTION_OFFSET,
-  usePageEntranceMotion,
-} from "~/hooks/usePageEntranceMotion"
 
 interface OptionsPageTransitionProps {
   pageId: string
@@ -24,6 +20,7 @@ interface OptionsPageTransitionProps {
 
 const ENTER_DURATION = 0.3
 const EXIT_DURATION = 0.17
+const PAGE_MOTION_OFFSET = 14
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const
 const EXIT_EASE = [0.4, 0, 1, 1] as const
 const LOADER_DELAY_MS = 700
@@ -125,7 +122,7 @@ function AnimatedOptionsPage({
   const [scope, animate] = useAnimate<HTMLDivElement>()
   const onExitCompleteRef = useRef(onExitComplete)
   onExitCompleteRef.current = onExitComplete
-  const { shouldReduceMotion } = usePageEntranceMotion()
+  const shouldReduceMotion = useReducedMotion()
   const content = useRef<HTMLDivElement>(null)
   const started = useRef(false)
   const prepared = useRef(false)
@@ -375,10 +372,7 @@ function getPageMotionTargets(scope: HTMLElement): HTMLElement[] {
 
   return blocks
     .flatMap((block) => expandMotionGroup(block))
-    .filter((block) => {
-      const rect = block.getBoundingClientRect()
-      return rect.bottom > -20 && rect.top < window.innerHeight + 20
-    })
+    .filter(isInMotionViewport)
     .sort((a, b) => {
       const aRect = a.getBoundingClientRect()
       const bRect = b.getBoundingClientRect()
