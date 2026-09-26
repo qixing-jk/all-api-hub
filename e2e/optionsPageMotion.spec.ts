@@ -74,17 +74,18 @@ async function captureCardEntrance(
   page: Page,
   hash: string,
   selector: string,
-  duration = 2500,
 ): Promise<Array<{ opacity: number; y: number }>> {
   return page.evaluate(
-    async ({ nextHash, targetSelector, sampleDuration }) => {
+    async ({ nextHash, targetSelector }) => {
       const frames: Array<{ opacity: number; y: number }> = []
-      const started = performance.now()
+      const deadline = performance.now() + 10_000
+      let motionStarted = false
       window.location.hash = nextHash
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         const sample = () => {
           const element = document.querySelector(targetSelector)
           const target = element?.closest('[style*="opacity"]')
+          let moving = false
           if (target instanceof HTMLElement) {
             const style = getComputedStyle(target)
             let visibleOpacity = 1
@@ -93,9 +94,19 @@ async function captureCardEntrance(
               ancestor;
               ancestor = ancestor.parentElement
             ) {
-              const opacity = getComputedStyle(ancestor).opacity
-              visibleOpacity *= Number(opacity)
+              visibleOpacity *= Number(getComputedStyle(ancestor).opacity)
             }
+            moving = target
+              .getAnimations()
+              .some(
+                (animation) =>
+                  (animation.playState === "running" || animation.pending) &&
+                  animation.effect instanceof KeyframeEffect &&
+                  animation.effect
+                    .getKeyframes()
+                    .some((frame) => "transform" in frame),
+              )
+            motionStarted ||= moving
             frames.push({
               opacity: visibleOpacity,
               y:
@@ -104,17 +115,21 @@ async function captureCardEntrance(
                   : new DOMMatrixReadOnly(style.transform).m42,
             })
           }
-          if (performance.now() - started < sampleDuration) {
-            requestAnimationFrame(sample)
-          } else {
+          // Loading is outside the observation window. Once native movement
+          // begins, capture through its final frame (or the outgoing unmount).
+          if (motionStarted && !moving) {
             resolve()
+          } else if (performance.now() >= deadline) {
+            reject(new Error(`No completed card animation: ${targetSelector}`))
+          } else {
+            requestAnimationFrame(sample)
           }
         }
         sample()
       })
       return frames
     },
-    { nextHash: hash, targetSelector: selector, sampleDuration: duration },
+    { nextHash: hash, targetSelector: selector },
   )
 }
 
@@ -635,7 +650,6 @@ extensionTest(
       page,
       "#apiCredentialProfiles",
       '[data-testid="api-credential-profile-row-motion-profile-0"]',
-      5000,
     )
     expect(
       entrance.filter((frame) => frame.opacity < 0.95 && frame.y > 1).length,
