@@ -8,8 +8,8 @@ import { BodySmall, Heading3 } from "./Typography"
 const cardEdgePaddingClasses = {
   none: "",
   sm: "px-4 py-density-3",
-  default: "px-6 py-density-4",
-  lg: "px-8 py-density-6",
+  default: "px-4 py-density-4 sm:px-6",
+  lg: "px-6 py-density-6 sm:px-8",
 } as const
 
 const cardVariants = cva(

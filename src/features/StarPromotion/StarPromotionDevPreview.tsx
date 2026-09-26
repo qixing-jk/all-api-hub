@@ -196,7 +196,7 @@ export default function StarPromotionDevPreview() {
 
   return (
     <div
-      className="py-density-6 px-6"
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={STAR_PROMOTION_DEV_PREVIEW_TEST_IDS.page}
     >
       <PageHeader

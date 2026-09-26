@@ -54,7 +54,7 @@ function BookmarkManagementContent({
   }, [createPrefill, openAddBookmark])
 
   return (
-    <div className="py-density-6 flex flex-col px-6">
+    <div className="py-density-4 sm:py-density-6 flex flex-col px-4 sm:px-6">
       <ProductAnalyticsScope
         entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}

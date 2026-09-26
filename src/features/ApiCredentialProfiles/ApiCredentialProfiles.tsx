@@ -240,7 +240,7 @@ export default function ApiCredentialProfiles({
     >
       <div
         data-api-credential-page
-        className="space-y-density-6 py-density-6 px-6"
+        className="space-y-density-6 py-density-4 sm:py-density-6 px-4 sm:px-6"
         data-options-page-pending={
           controller.isLoading ||
           (areProfileLinksLoading && !associatedKeyStateByProfileId)

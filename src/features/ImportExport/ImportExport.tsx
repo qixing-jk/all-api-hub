@@ -79,7 +79,7 @@ export default function ImportExport() {
   }, [])
 
   return (
-    <div className="space-y-density-6 py-density-6 px-6">
+    <div className="space-y-density-6 py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
         icon={ArrowLeftRight}
         title={t("title")}

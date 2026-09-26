@@ -166,7 +166,7 @@ export default function OptionsOverview() {
 
   return (
     <div
-      className="space-y-density-6 py-density-6 px-6"
+      className="space-y-density-6 py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={OPTIONS_OVERVIEW_TEST_IDS.page}
       data-options-page-pending={isLoading && !viewModel ? "" : undefined}
     >

@@ -562,7 +562,7 @@ export default function UsageAnalytics() {
 
   return (
     <div
-      className="space-y-density-6 py-density-6 px-6"
+      className="space-y-density-6 py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={USAGE_ANALYTICS_TEST_IDS.page}
       data-options-page-pending={
         (isLoading && !store) ||

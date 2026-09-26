@@ -1179,7 +1179,7 @@ export default function AutoCheckin(props: {
   )
 
   return (
-    <div className="py-density-6 px-6">
+    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
         icon={CalendarCheck2}
         title={

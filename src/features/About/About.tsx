@@ -93,7 +93,7 @@ export default function About() {
   ]
 
   return (
-    <div className="py-density-6 px-6">
+    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
         icon={Info}
         title={t("title")}

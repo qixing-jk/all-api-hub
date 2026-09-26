@@ -5,7 +5,10 @@ import { Card } from "~/components/ui"
  */
 export default function LoadingSkeleton() {
   return (
-    <div className="py-density-6 px-6" data-options-page-pending>
+    <div
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-options-page-pending
+    >
       <div className="mb-density-6 animate-pulse">
         <div className="bg-secondary mb-density-2 h-8 w-1/3 rounded"></div>
         <div className="bg-secondary h-4 w-2/3 rounded"></div>

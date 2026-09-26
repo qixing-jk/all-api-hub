@@ -1141,7 +1141,7 @@ export default function KeyManagement(props: {
     associationRouteState !== KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found
 
   return (
-    <div className="py-density-6 px-6">
+    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <Header
         onAddToken={handleRequestAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
