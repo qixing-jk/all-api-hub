@@ -446,6 +446,7 @@ export function ApiCredentialProfilesList({
 
     updateHeight()
     window.addEventListener("resize", updateHeight)
+    window.addEventListener("scroll", updateHeight, true)
     const page = panel.closest("[data-api-credential-page]")
     const observer =
       page && typeof ResizeObserver !== "undefined"
@@ -455,6 +456,7 @@ export function ApiCredentialProfilesList({
 
     return () => {
       window.removeEventListener("resize", updateHeight)
+      window.removeEventListener("scroll", updateHeight, true)
       observer?.disconnect()
     }
   }, [groups.length, isFiltering, useViewportCap])

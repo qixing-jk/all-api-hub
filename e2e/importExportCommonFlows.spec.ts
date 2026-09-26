@@ -925,7 +925,9 @@ test("refreshes an already-open popup API credentials tab after backup import", 
   await expect(
     popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.popupView),
   ).toBeVisible()
-  await expect(popupPage.getByText("No API keys saved yet")).toBeVisible()
+  await expect(
+    popupPage.getByText("No API credentials saved yet"),
+  ).toBeVisible()
   await expect(
     popupPage.getByRole("heading", { name: "Live Refresh Profile" }),
   ).toHaveCount(0)
@@ -959,7 +961,9 @@ test("refreshes an already-open popup API credentials tab after backup import", 
   await expect(
     popupPage.getByRole("heading", { name: "Live Refresh Profile" }),
   ).toBeVisible()
-  await expect(popupPage.getByText("No API keys saved yet")).toHaveCount(0)
+  await expect(popupPage.getByText("No API credentials saved yet")).toHaveCount(
+    0,
+  )
 })
 
 test("restores a full backup and keeps common popup workflows available", async ({

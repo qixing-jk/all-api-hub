@@ -134,7 +134,7 @@ test("creates an API credential profile from the options page and persists it", 
   )
   await expect(profileDialog).toBeVisible()
   await expect(
-    profileDialog.getByRole("heading", { name: "Save API key" }),
+    profileDialog.getByRole("heading", { name: "Save API credential" }),
   ).toBeVisible()
 
   await page.locator("#api-credential-profile-name").fill("Options Profile")

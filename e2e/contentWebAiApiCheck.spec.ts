@@ -359,7 +359,7 @@ test("turns selected web API credentials into a verified profile and model catal
   await expect(modelsPage.getByText("gpt-4o-mini")).toBeVisible()
   await expect(
     modelsPage
-      .getByText("Profile: api-console.example.test", { exact: false })
+      .getByText("Credential: api-console.example.test", { exact: false })
       .first(),
   ).toBeVisible()
 })

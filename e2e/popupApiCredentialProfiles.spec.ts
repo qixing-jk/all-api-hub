@@ -166,7 +166,7 @@ test("creates a popup API credential profile, verifies it, and uses it in Model 
   await expect(targetPage.getByText("gpt-4.1-mini")).toBeVisible()
   await expect(
     targetPage
-      .getByText("Profile: Popup Journey Profile", { exact: false })
+      .getByText("Credential: Popup Journey Profile", { exact: false })
       .first(),
   ).toBeVisible()
 })
@@ -246,7 +246,7 @@ test("opens Model Management for a stored popup API credential profile and loads
   await expect(targetPage.getByText("gpt-4o-mini")).toBeVisible()
   await expect(targetPage.getByText("gpt-4.1-mini")).toBeVisible()
   await expect(
-    targetPage.getByText("Profile: Model Profile", { exact: false }).first(),
+    targetPage.getByText("Credential: Model Profile", { exact: false }).first(),
   ).toBeVisible()
   await expect(
     targetPage.getByRole("button", { name: "Key for this model" }),

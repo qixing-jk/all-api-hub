@@ -854,7 +854,7 @@ test("creates an API profile from the empty model list and loads models from it"
   )
   await expect(profileDialog).toBeVisible()
   await expect(
-    profileDialog.getByRole("heading", { name: "Save API key" }),
+    profileDialog.getByRole("heading", { name: "Save API credential" }),
   ).toBeVisible()
 
   await page.locator("#api-credential-profile-name").fill("First Model Profile")
@@ -928,6 +928,6 @@ test("creates an API profile from the empty model list and loads models from it"
     page.getByRole("heading", { name: "gpt-first-profile-pro" }),
   ).toBeVisible()
   await expect(
-    page.getByText("Profile: First Model Profile", { exact: false }).first(),
+    page.getByText("Credential: First Model Profile", { exact: false }).first(),
   ).toBeVisible()
 })

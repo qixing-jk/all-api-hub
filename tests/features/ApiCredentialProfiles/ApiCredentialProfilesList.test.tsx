@@ -103,29 +103,32 @@ function createController() {
 }
 
 describe("ApiCredentialProfilesList endpoint navigation", () => {
-  it("uses the viewport space below the desktop list and updates on resize", async () => {
+  it("uses the viewport space below the desktop list and updates on scroll and resize", async () => {
     vi.stubGlobal("innerHeight", 800)
+    let top = 300
     const measure = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockReturnValue({ top: 300 } as DOMRect)
+      .mockImplementation(() => ({ top }) as DOMRect)
 
     try {
       render(
-        <ApiCredentialProfilesList
-          profiles={[
-            createProfile(
-              "first",
-              "First key",
-              "https://first.example.invalid",
-            ),
-            createProfile(
-              "second",
-              "Second key",
-              "https://second.example.invalid",
-            ),
-          ]}
-          controller={createController()}
-        />,
+        <div data-api-credential-page>
+          <ApiCredentialProfilesList
+            profiles={[
+              createProfile(
+                "first",
+                "First key",
+                "https://first.example.invalid",
+              ),
+              createProfile(
+                "second",
+                "Second key",
+                "https://second.example.invalid",
+              ),
+            ]}
+            controller={createController()}
+          />
+        </div>,
       )
 
       const navigation = await screen.findByRole("navigation", {
@@ -136,8 +139,16 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
         panel.style.getPropertyValue("--api-credential-panel-max-height"),
       ).toBe("476px")
 
-      vi.stubGlobal("scrollY", 400)
-      window.dispatchEvent(new Event("resize"))
+      top = 100
+      panel
+        .closest("[data-api-credential-page]")
+        ?.dispatchEvent(new Event("scroll"))
+      expect(
+        panel.style.getPropertyValue("--api-credential-panel-max-height"),
+      ).toBe("676px")
+
+      top = 300
+      window.dispatchEvent(new Event("scroll"))
       expect(
         panel.style.getPropertyValue("--api-credential-panel-max-height"),
       ).toBe("476px")
