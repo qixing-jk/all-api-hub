@@ -501,7 +501,7 @@ export function MultiSelect({
               {selectedOptions.map((option) => (
                 <span
                   key={option.value}
-                  className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 gap-density-1 inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  className="bg-primary-soft text-primary-soft-foreground gap-density-1 inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                   title={option.label}
                 >
                   <span className="max-w-[200px] truncate">{option.label}</span>
@@ -509,7 +509,7 @@ export function MultiSelect({
                     <button
                       type="button"
                       onClick={() => handleRemove(option.value)}
-                      className="text-theme-400 hover:bg-theme-200 hover:text-theme-500 focus:bg-theme-500 focus:text-primary-foreground dark:hover:bg-theme-800 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full focus:outline-none"
+                      className="text-primary-soft-foreground hover:bg-primary-soft-hover focus-visible:ring-ring inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                       aria-label={t("multiSelect.removeValue", {
                         value: option.label,
                       })}

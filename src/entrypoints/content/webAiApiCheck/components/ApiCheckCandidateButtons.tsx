@@ -56,7 +56,7 @@ export function ApiCheckCandidateButtons({
             className={cn(
               "py-density-1 min-h-(--density-control-xs) max-w-full truncate rounded-md border px-2 text-xs sm:max-w-64",
               currentValue === candidate.value
-                ? "border-theme-500 bg-theme-50 text-theme-700 dark:bg-theme-950/40 dark:text-theme-200"
+                ? "border-primary-soft-border bg-primary-soft text-primary-soft-foreground"
                 : "border-border text-muted-foreground hover:bg-muted",
             )}
             title={kind === "baseUrl" ? candidate.value : undefined}

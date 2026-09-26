@@ -214,8 +214,7 @@ export function AccountListHeader({
           <div
             className={cn(
               "bg-muted/70 dark:bg-foreground/5 flex min-h-(--density-control-tight) shrink-0 items-center rounded-md transition-colors",
-              hasActiveSort &&
-                "bg-theme-50/70 text-theme-700 dark:bg-theme-950/40 dark:text-theme-300",
+              hasActiveSort && "bg-primary-soft text-primary-soft-foreground",
             )}
           >
             <DropdownMenu>

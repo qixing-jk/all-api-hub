@@ -118,7 +118,7 @@ export function AccountBulkToolbar({
               size="sm"
               className={cn(
                 controlClass,
-                "border-theme-200 bg-theme-50 text-theme-700 hover:bg-theme-100 dark:border-theme-800 dark:bg-theme-950/40 dark:text-theme-200 dark:hover:bg-theme-900/40",
+                "border-primary-soft-border bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft-hover",
               )}
               onClick={() => setIsReviewOpen(true)}
               ref={reviewButtonRef}

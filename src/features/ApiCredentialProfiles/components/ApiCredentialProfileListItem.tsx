@@ -556,7 +556,7 @@ export function ApiCredentialProfileListItem({
               </div>
 
               {profile.notes?.trim() ? (
-                <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground py-density-2 border-l-2 px-3 text-xs">
+                <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground py-density-2 border-l-2 px-3 text-xs">
                   <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-2xs font-medium tracking-wide">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>

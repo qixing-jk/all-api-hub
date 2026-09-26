@@ -533,7 +533,7 @@ export function ApiCredentialProfileDialog({
           </FormField>
 
           {!isEditMode && addPrefill?.apiKeyCreateUrl ? (
-            <div className="dark:border-border dark:bg-secondary/40 border-theme-100 bg-theme-50/70 dark:border-theme-900/50 py-density-3 rounded-md border px-3 text-sm">
+            <div className="border-primary-soft-border bg-primary-soft py-density-3 rounded-md border px-3 text-sm">
               <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-theme-800 dark:text-theme-200">
                   {addPrefill.apiKeyCreateHint ??

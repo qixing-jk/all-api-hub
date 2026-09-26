@@ -130,7 +130,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
           {dialog.intent.source === "repair-created" &&
           dialog.intent.verification === "trusted-new" ? (
-            <div className="border-theme-200 bg-theme-50/60 dark:border-theme-900/40 dark:bg-theme-950/20 space-y-density-2 py-density-3 rounded-md border px-3 text-sm">
+            <div className="border-primary-soft-border bg-primary-soft space-y-density-2 py-density-3 rounded-md border px-3 text-sm">
               <div>
                 {t(
                   "keyManagement:batchManagedSiteExport.repairTrusted.description",

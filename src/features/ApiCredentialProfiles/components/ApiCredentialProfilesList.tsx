@@ -223,7 +223,7 @@ function DesktopEndpointNavigation({
               className={cn(
                 "flex min-w-0 items-center rounded-lg border transition-colors",
                 selected
-                  ? "border-theme-300 bg-theme-50 text-theme-950 dark:border-theme-700 dark:bg-theme-950/40 dark:text-theme-100"
+                  ? "border-primary-soft-border bg-primary-soft text-primary-soft-foreground"
                   : "text-secondary-foreground hover:bg-card dark:hover:bg-background border-transparent",
               )}
             >

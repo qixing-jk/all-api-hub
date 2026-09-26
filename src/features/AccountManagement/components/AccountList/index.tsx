@@ -1030,7 +1030,7 @@ export default function AccountList({
       >
         <div className="gap-y-density-4 flex flex-col gap-x-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="gap-y-density-3 flex items-start gap-x-3">
-            <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/40 dark:text-theme-300 py-density-2 shrink-0 rounded-md px-2">
+            <div className="bg-primary-soft text-primary-soft-foreground py-density-2 shrink-0 rounded-md px-2">
               <Inbox className="h-5 w-5" />
             </div>
             <div className="space-y-density-1">
@@ -1088,9 +1088,9 @@ export default function AccountList({
         "bg-surface-subtle/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-overlay/10",
       isBulkMode &&
         selectedIdSet.has(result.account.id) &&
-        "bg-theme-50/80 opacity-100 hover:bg-theme-100/60 focus-within:bg-theme-100/60 dark:bg-theme-950/35 dark:hover:bg-theme-900/30 dark:focus-within:bg-theme-900/30",
+        "bg-primary-soft opacity-100 hover:bg-primary-soft-hover focus-within:bg-primary-soft-hover",
       detectedAccount?.id === result.account.id &&
-        "border-l-4 border-l-theme-500 bg-theme-50/70 dark:border-l-theme-400 dark:bg-theme-900/30",
+        "border-l-4 border-l-primary bg-primary-soft",
     )
     const rowProps = {
       site: result.account,
@@ -1165,7 +1165,7 @@ export default function AccountList({
                 <SlidersHorizontal aria-hidden="true" className="size-3.5" />
                 {t("account:filter.toggle")}
                 {activeStatusFilterCount > 0 && (
-                  <span className="bg-theme-50 text-theme-700 dark:bg-theme-950 dark:text-theme-300 rounded px-1">
+                  <span className="bg-primary-soft text-primary-soft-foreground rounded px-1">
                     {activeStatusFilterCount}
                   </span>
                 )}
@@ -1301,7 +1301,7 @@ export default function AccountList({
 
         {showGroupReorderHint ? (
           <div
-            className="dark:border-border border-theme-100 bg-theme-50/80 text-theme-800 dark:bg-theme-950/40 dark:text-theme-200 gap-y-density-2 py-density-1-5 flex items-center gap-x-2 border-b px-3 text-xs leading-5"
+            className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-1-5 flex items-center gap-x-2 border-b px-3 text-xs leading-5"
             role="note"
           >
             <Info

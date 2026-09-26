@@ -249,7 +249,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           />
         )}
         {canUseSub2ApiRefreshToken && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 gap-y-density-2 py-density-2 flex w-full items-start gap-x-2 rounded-md px-2 text-xs">
+          <div className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex w-full items-start gap-x-2 rounded-md px-2 text-xs">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
@@ -279,7 +279,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         )}
         {!isDetected && onUseCurrentTab && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
+          <div className="bg-primary-soft text-primary-soft-foreground py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
             <div className="flex items-center">
               <Info className="h-4 w-4" />
               <span className="ml-1">{t("siteInfo.currentSite")}:</span>

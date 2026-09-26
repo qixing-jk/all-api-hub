@@ -122,7 +122,7 @@ export default function BookmarkAccountImportDialog({
 
   const header = (
     <div className="gap-y-density-3 flex min-w-0 items-start gap-x-3 pr-8">
-      <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/30 dark:text-theme-200 py-density-2 mt-0.5 rounded-lg px-2">
+      <div className="bg-primary-soft text-primary-soft-foreground py-density-2 mt-0.5 rounded-lg px-2">
         <BookmarkPlus className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="space-y-density-1 min-w-0">
@@ -227,7 +227,7 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "scanning" && (
-        <div className="border-theme-100 bg-theme-50 text-theme-800 dark:border-theme-800 dark:bg-theme-900/30 dark:text-theme-100 gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
+        <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>{t("ui:dialog.bookmarkAccountImport.scanning")}</span>
         </div>
@@ -344,7 +344,7 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "importing" && (
-        <div className="border-theme-100 bg-theme-50 text-theme-800 dark:border-theme-800 dark:bg-theme-900/30 dark:text-theme-100 gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
+        <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-3 py-density-4 flex items-center gap-x-3 rounded-lg border px-4 text-sm">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>
             {t("ui:dialog.bookmarkAccountImport.importing", {

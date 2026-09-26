@@ -251,7 +251,7 @@ function BookmarkTreeNode({
       style={style}
       className={cn(
         "group gap-y-density-2 flex min-w-0 items-center gap-x-2 rounded-md py-0.5 pr-2 text-sm",
-        node.isFocused && "bg-theme-50 dark:bg-theme-950/30",
+        node.isFocused && "bg-primary-soft",
       )}
       title={node.data.url}
     >

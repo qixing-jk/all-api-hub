@@ -309,7 +309,7 @@ export default function BookmarkDialog({
         }
       >
         {mode === "add" && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 py-density-3 rounded-md px-3 text-xs">
+          <div className="bg-primary-soft text-primary-soft-foreground py-density-3 rounded-md px-3 text-xs">
             <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
               <div className="min-w-0 flex-1">
                 <div className="gap-y-density-1 flex items-center gap-x-1 font-medium">

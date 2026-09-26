@@ -343,7 +343,7 @@ export function NewApiManagedVerificationDialog(
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="border-theme-200 bg-theme-50 text-theme-700 dark:border-theme-900/60 dark:bg-theme-950/40 dark:text-theme-200 py-density-2 rounded-lg border px-3 text-sm"
+            className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground py-density-2 rounded-lg border px-3 text-sm"
           >
             {props.busyMessage || t("dialog.messages.starting")}
           </div>

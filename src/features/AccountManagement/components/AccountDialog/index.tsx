@@ -381,7 +381,7 @@ export default function AccountDialog({
               ) : null}
               {selectedSponsorPostClickNote ? (
                 <div
-                  className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
+                  className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
                   data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
                 >
                   <Info

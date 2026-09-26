@@ -1186,7 +1186,7 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     expect(
-      screen.getByText("Enabled Alpha").closest(".border-l-theme-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-primary"),
     ).toBeInTheDocument()
 
     await user.click(
@@ -1195,7 +1195,7 @@ describe("AccountList", () => {
     await screen.findByTestId(TEST_IDS.dndContext)
 
     expect(
-      screen.getByText("Enabled Alpha").closest(".border-l-theme-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-primary"),
     ).toBeInTheDocument()
   })
 

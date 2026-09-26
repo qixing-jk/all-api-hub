@@ -32,7 +32,7 @@ export function UnifiedApiGuidanceStepper({
             key={step.id}
             className={`py-density-2-5 min-w-0 rounded-md border px-3 ${
               isCurrent
-                ? "border-theme-300 bg-theme-50/70 dark:border-theme-800 dark:bg-theme-950/20"
+                ? "border-primary-soft-border bg-primary-soft"
                 : "border-border/70 bg-card/50 dark:border-foreground/10 dark:bg-foreground/[0.025]"
             }`}
           >
