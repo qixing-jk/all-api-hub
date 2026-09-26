@@ -316,12 +316,15 @@ export function CursorPlusExportDialog({
       </FormField>
 
       {isLoading ? (
-        <div role="status" className="text-muted-foreground text-sm">
+        <div
+          role="status"
+          className="dark:text-secondary-foreground text-muted-foreground text-sm"
+        >
           {t("ui:dialog.cursorPlus.status.loading")}
         </div>
       ) : null}
       {!isLoading && !isError && !isEmpty ? (
-        <div className="text-muted-foreground text-sm">
+        <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("ui:dialog.cursorPlus.status.loaded", {
             count: inventory.modelIds.length,
           })}
