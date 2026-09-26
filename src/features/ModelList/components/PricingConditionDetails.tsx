@@ -135,7 +135,7 @@ export function PricingConditionDetails({
         <li>
           <button
             type="button"
-            className="text-primary cursor-pointer underline underline-offset-2"
+            className="text-link cursor-pointer underline underline-offset-2"
             onClick={() => navigation.configure(targets)}
           >
             {t("scenario.configure")}

@@ -20,7 +20,7 @@ const typographyVariants = cva("", {
       muted: "text-xs text-faint-foreground",
       label: "text-sm font-medium text-secondary-foreground",
       "label-small": "text-xs font-medium text-muted-foreground",
-      link: "text-theme-600 dark:text-theme-400 hover:text-theme-700 dark:hover:text-theme-300 underline-offset-4 hover:underline",
+      link: "text-link underline-offset-4 hover:underline",
       code: "font-mono text-sm bg-muted dark:bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground dark:text-foreground",
     },
     align: {

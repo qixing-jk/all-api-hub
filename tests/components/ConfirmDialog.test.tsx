@@ -164,7 +164,7 @@ describe("ConfirmDialog", () => {
       name: "Import selected keys",
     })
     expect(dialog.querySelector(".lucide-send-to-back")).toHaveClass(
-      "text-primary",
+      "text-link",
     )
     expect(screen.getByRole("button", { name: "Import" })).toHaveAttribute(
       "data-variant",

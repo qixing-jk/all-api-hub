@@ -76,7 +76,7 @@ interface ConfirmDialogProps {
 const intentPresentation = {
   confirm: {
     icon: CircleHelp,
-    iconClassName: "text-primary",
+    iconClassName: "text-link",
     confirmVariant: "default",
   },
   warning: {

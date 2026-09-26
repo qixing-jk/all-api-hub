@@ -254,7 +254,7 @@ export const RedemptionAccountSelectToast: React.FC<
                           href={checkInUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary underline underline-offset-2"
+                          className="text-link underline underline-offset-2"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {t("accountSelect.openSiteManual")}

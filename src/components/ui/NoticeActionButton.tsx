@@ -14,7 +14,7 @@ export function NoticeActionButton({
     <button
       type={type}
       className={cn(
-        "text-theme-700 focus-visible:ring-ring dark:text-theme-200 rounded-xs font-medium underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        "text-link focus-visible:ring-ring rounded-xs font-medium underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         className,
       )}
       {...props}

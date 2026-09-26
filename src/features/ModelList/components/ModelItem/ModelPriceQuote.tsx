@@ -280,7 +280,7 @@ export function ModelPriceQuote({
             conditionTargets.length ? conditionTargets : conditionTarget,
           )
         }
-        className="text-primary max-w-full cursor-pointer text-xs font-medium underline underline-offset-2"
+        className="text-link max-w-full cursor-pointer text-xs font-medium underline underline-offset-2"
       >
         {t("scenario.configure")}
         {conditionLabel && ` · ${conditionLabel}`}
@@ -348,7 +348,7 @@ export function ModelPriceQuote({
           )}
           <button
             type="button"
-            className="text-primary cursor-pointer underline underline-offset-2"
+            className="text-link cursor-pointer underline underline-offset-2"
             aria-expanded={onShowDetails ? undefined : showCalculation}
             aria-controls={onShowDetails ? undefined : calculationId}
             onClick={() =>

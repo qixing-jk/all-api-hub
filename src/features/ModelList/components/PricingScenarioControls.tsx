@@ -426,7 +426,7 @@ export function PricingScenarioControls({
                     <button
                       key={edge}
                       type="button"
-                      className="text-primary text-xs underline underline-offset-2"
+                      className="text-link text-xs underline underline-offset-2"
                       onClick={() =>
                         onChange({
                           ...settings,
