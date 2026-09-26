@@ -534,11 +534,9 @@ extensionTest(
       page.locator('[data-testid="options-overview-page"]'),
     ).toBeVisible()
     const frames = await captureTransition(page, "#about")
-    expect(
-      frames
-        .filter((frame) => frame.page !== "loading")
-        .every((frame) => Math.abs(frame.y) < 1),
-    ).toBe(true)
+    const settledFrames = frames.filter((frame) => frame.page !== "loading")
+    expect(settledFrames.some((frame) => frame.page === "other")).toBe(true)
+    expect(settledFrames.every((frame) => Math.abs(frame.y) < 1)).toBe(true)
   },
 )
 
