@@ -1,6 +1,11 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getCheckinSkipReasonCategory,
+  type AutoCheckinSkipCategory,
+} from "~/services/checkin/autoCheckin/reasonCatalog"
+import {
   AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
   isSiteTypeRelatedSkipReason,
@@ -12,10 +17,7 @@ import {
 
 import {
   AUTO_CHECKIN_SKIP_CATEGORIES,
-  AUTO_CHECKIN_SKIP_CATEGORY,
-  getAutoCheckinSkipCategory,
   isAutoCheckinSkipReasonActionable,
-  type AutoCheckinSkipCategory,
 } from "./skipCategories"
 
 /**
@@ -199,7 +201,7 @@ export function countAutoCheckinResults(
 function resolveResultReasonCategory(
   result: CheckinAccountResult,
 ): AutoCheckinSkipCategory | null {
-  const category = getAutoCheckinSkipCategory(result.reasonCode)
+  const category = getCheckinSkipReasonCategory(result.reasonCode)
   if (category) return category
 
   if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
@@ -372,6 +374,11 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.account_disabled", messageParams)
     case "autoCheckin:skipReasons.account_data_missing":
       return t("autoCheckin:skipReasons.account_data_missing", messageParams)
+    case "autoCheckin:skipReasons.account_state_write_failed":
+      return t(
+        "autoCheckin:skipReasons.account_state_write_failed",
+        messageParams,
+      )
     case "autoCheckin:skipReasons.authentication_required":
       return t("autoCheckin:skipReasons.authentication_required", messageParams)
     case "autoCheckin:skipReasons.credentials_missing":
@@ -423,6 +430,8 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.status_unavailable", messageParams)
     case "autoCheckin:skipReasons.upstream_error":
       return t("autoCheckin:skipReasons.upstream_error", messageParams)
+    case "autoCheckin:skipReasons.upstream_rejected":
+      return t("autoCheckin:skipReasons.upstream_rejected", messageParams)
     case "autoCheckin:skipReasons.no_provider":
       return t("autoCheckin:skipReasons.no_provider", messageParams)
     case "autoCheckin:skipReasons.account_unavailable":
@@ -433,6 +442,13 @@ export function translateAutoCheckinMessageKey(
       return messageKey
   }
 }
+
+const RECONCILIATION_MESSAGE_KEYS = {
+  checked: "autoCheckin:providerFallback.alreadyCheckedToday",
+  not_checked: "autoCheckin:skipReasons.checkin_unconfirmed",
+  unknown: "autoCheckin:skipReasons.status_unavailable",
+  unavailable: "autoCheckin:skipReasons.source_unavailable",
+} as const
 
 /**
  * Resolves the user-facing message for one persisted execution result.
@@ -446,11 +462,9 @@ export function getAutoCheckinResultMessage<
     | "messageParams"
     | "rawMessage"
     | "message"
+    | "reconciliation"
   >,
 >(t: TFunction, result: T): string {
-  if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
-    return t("autoCheckin:providerFallback.resultPendingConfirmation")
-  }
   if (result.messageKey) {
     return translateAutoCheckinMessageKey(
       t,
@@ -458,10 +472,13 @@ export function getAutoCheckinResultMessage<
       result.messageParams,
     )
   }
+  if (result.rawMessage) return result.rawMessage
   if (result.reasonCode) {
     return translateAutoCheckinSkipReason(t, result.reasonCode)
   }
-  if (result.rawMessage) return result.rawMessage
+  if (result.reconciliation) {
+    return t(RECONCILIATION_MESSAGE_KEYS[result.reconciliation])
+  }
   if (result.message) return result.message
   return t("autoCheckin:providerFallback.unknownError")
 }
@@ -591,7 +608,10 @@ export function resolveAutoCheckinTroubleshootingHintKey(params: {
     return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.siteTypeCheckinUnsupported
   }
 
-  if (params.status !== CHECKIN_RESULT_STATUS.FAILED) {
+  if (
+    params.status !== CHECKIN_RESULT_STATUS.FAILED &&
+    params.status !== CHECKIN_RESULT_STATUS.UNCERTAIN
+  ) {
     return null
   }
 

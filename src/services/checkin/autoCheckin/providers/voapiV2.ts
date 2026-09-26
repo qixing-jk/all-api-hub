@@ -25,7 +25,7 @@ import {
   createUpstreamFailureResult,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -81,7 +81,7 @@ const updateAccountAuthFromResync = async (
 
 const runCheckIn = async (
   request: ApiServiceRequest,
-): Promise<AutoCheckinProviderResult> => {
+): Promise<AutoCheckinProviderOutcome> => {
   const submitResult = await submitVoApiV2CheckIn(request)
   const stats = await fetchVoApiV2CheckInStats(request)
   const signed = stats.todaySigned === true
@@ -162,7 +162,7 @@ export const voApiV2Provider: AutoCheckinProvider = {
   async checkIn(
     account,
     context: AutoCheckinProviderContext,
-  ): Promise<AutoCheckinProviderResult> {
+  ): Promise<AutoCheckinProviderOutcome> {
     const tempWindowRequestSource = normalizeTempWindowRequestSource(
       context.tempWindowRequestSource,
     )

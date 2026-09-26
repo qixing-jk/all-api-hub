@@ -52,6 +52,12 @@ describe("optional check-in clue scan", () => {
         "https://agentrouter.org",
       ),
     ).toEqual([{ path: "/api/status", public: true }])
+    expect(
+      getCheckInFeedbackStatusRoutes(
+        SITE_TYPES.NEW_API,
+        "https://ps.air-outer.com",
+      ),
+    ).toEqual([{ path: "/api/status", public: true }])
     expect(getCheckInFeedbackStatusRoutes(SITE_TYPES.NEW_API, baseUrl)).toEqual(
       expect.arrayContaining([{ path: "/api/user/check_in_status" }]),
     )

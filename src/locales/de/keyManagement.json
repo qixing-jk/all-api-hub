@@ -356,6 +356,9 @@
         "cancel": "Abbrechen",
         "save": "Schlüssel speichern"
       },
+      "allowWallet": "Guthaben zulassen",
+      "allowWalletHelp": "Lässt diesen Schlüssel nach Ausschöpfen des Kontingents weiter über das Kontoguthaben laufen.",
+      "channel": "Kanal",
       "expiryDays": "Gültigkeitsdauer (Tage)",
       "feedback": {
         "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",

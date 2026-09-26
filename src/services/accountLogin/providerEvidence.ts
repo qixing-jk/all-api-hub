@@ -22,13 +22,6 @@ const STORAGE_KEY = LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS.EVIDENCE
 const LOGIN_PROVIDER_EVIDENCE_STORAGE_LOCK =
   "all-api-hub:login-provider-evidence" as const
 
-export {
-  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
-  type LoginProviderEvidence,
-  type LoginProviderEvidenceMap,
-  type LoginProviderEvidenceOutcome,
-} from "~/types/loginProviderEvidence"
-
 const EMPTY_EVIDENCE: LoginProviderEvidenceMap = {}
 
 /** Narrows one persisted entry, dropping anything written by an older shape. */

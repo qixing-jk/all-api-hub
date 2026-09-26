@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
-import {
-  LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
-  loginProviderEvidence,
-} from "~/services/accountLogin/providerEvidence"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
+import { LOGIN_PROVIDER_EVIDENCE_OUTCOMES } from "~/types/loginProviderEvidence"
 
 const { storageState } = vi.hoisted(() => ({
   storageState: { value: undefined as unknown, fail: false },

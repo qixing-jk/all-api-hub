@@ -1,5 +1,8 @@
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
-import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
+import {
+  isAgentRouterLoginUrl,
+  isAgentRouterSystemName,
+} from "~/services/accountLogin/providers/agentrouter/config"
 import { getErrorMessage } from "~/utils/core/error"
 
 type SendResponse = (response: unknown) => void
@@ -125,7 +128,7 @@ export function handlePrepareAgentRouterOAuth(
       typeof provider?.clientId === "string" ? provider.clientId.trim() : ""
     if (
       !provider?.available ||
-      status?.system_name !== "Agent Router" ||
+      !isAgentRouterSystemName(status?.system_name) ||
       !clientId ||
       !/^[A-Za-z0-9_-]+$/.test(clientId)
     ) {

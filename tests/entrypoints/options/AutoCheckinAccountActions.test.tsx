@@ -480,6 +480,63 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
+  it.each([CHECKIN_RESULT_STATUS.FAILED, CHECKIN_RESULT_STATUS.UNCERTAIN])(
+    "shows an error toast when retry settles with %s result",
+    async (resultStatus) => {
+      const user = userEvent.setup()
+      const browserApi = await import("~/utils/browser/browserApi")
+
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: unknown) => {
+          if (message === AutoCheckinMessageTypes.GetStatus) {
+            return {
+              success: true,
+              data: {
+                perAccount: {
+                  alpha: {
+                    accountId: "alpha",
+                    accountName: "Alpha",
+                    status: CHECKIN_RESULT_STATUS.FAILED,
+                    timestamp: 1700000000000,
+                    message: "needs retry",
+                  },
+                },
+              },
+            }
+          }
+
+          if (message === AutoCheckinMessageTypes.RetryAccount) {
+            return {
+              success: true,
+              result: {
+                accountId: "alpha",
+                accountName: "Alpha",
+                status: resultStatus,
+                rawMessage: "retry failed with error",
+                timestamp: 1700000001000,
+              },
+            }
+          }
+
+          return { success: true }
+        },
+      )
+
+      render(<AutoCheckin routeParams={{}} />)
+
+      const retryButton = await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      })
+      await user.click(retryButton)
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "autoCheckin:messages.error.retryFailed",
+        )
+      })
+    },
+  )
+
   it("keeps verification successful when the follow-up account refresh fails", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
@@ -540,7 +597,7 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
-  it("reports a verification response failure without exposing its error text", async () => {
+  it("reports a verification response failure with its actionable detail", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
@@ -576,11 +633,50 @@ describe("AutoCheckin account actions", () => {
     )
 
     await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("backend detail")
+    })
+  })
+
+  it("falls back to localized verification copy when response detail is blank", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+                  reconciliation: "unknown",
+                  timestamp: 1700000000000,
+                },
+              },
+            },
+          }
+        }
+        if (message === AutoCheckinMessageTypes.VerifyAccountStatus) {
+          return { success: false, error: "   " }
+        }
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.verifyStatus",
+      }),
+    )
+
+    await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
         "autoCheckin:messages.error.statusVerificationFailed",
       )
     })
-    expect(toast.error).not.toHaveBeenCalledWith("backend detail")
   })
 
   it("reports a thrown verification request with the localized fallback", async () => {

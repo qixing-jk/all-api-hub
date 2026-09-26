@@ -11,6 +11,7 @@ import type {
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/browserIdentity"
+import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
@@ -18,6 +19,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
+import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import { vApiContentSessionExtractor } from "./contentSession/vApi"
@@ -45,6 +47,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: voApiV2ContentSessionExtractor,
     identity: voApiV2BrowserIdentity,
+  },
+  {
+    sessionExtractor: rightCodeContentSessionExtractor,
+    identity: rightCodeBrowserIdentity,
   },
   { sessionExtractor: vApiContentSessionExtractor },
   { sessionExtractor: apiyiContentSessionExtractor },

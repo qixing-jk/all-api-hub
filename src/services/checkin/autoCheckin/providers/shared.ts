@@ -5,12 +5,15 @@
  * magic strings (message keys, message parsing heuristics) across backends.
  */
 
-import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import {
+  API_ERROR_CODES,
+  hasUnattributedMessage,
+} from "~/services/apiTransport/errors"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -39,17 +42,16 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
 export function createUpstreamFailureResult(params: {
   rawMessage?: string
   data?: unknown
-}): AutoCheckinProviderResult {
+}): AutoCheckinProviderOutcome {
   const rawMessage = params.rawMessage || undefined
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
-    reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
     rawMessage,
     messageKey: rawMessage
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
     data: params.data ?? undefined,
-    retryable: true,
   }
 }
 
@@ -82,6 +84,102 @@ export function isAlreadyCheckedMessage(message: string): boolean {
   return DEFAULT_ALREADY_CHECKED_MESSAGE_SNIPPETS.some((snippet) =>
     normalized.includes(snippet.toLowerCase()),
   )
+}
+
+/** Clear login-failure copy. A bare HTTP status is not enough. */
+function isAuthenticationFailureMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  const invalidAccessToken =
+    normalized.includes("access token") &&
+    ["无效", "失效", "过期", "invalid", "expired"].some((hint) =>
+      normalized.includes(hint),
+    )
+  return (
+    invalidAccessToken ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("unauthenticated") ||
+    normalized.includes("authentication") ||
+    normalized.includes("authenticate") ||
+    normalized.includes("auth required") ||
+    normalized.includes("invalid auth") ||
+    normalized.includes("not logged") ||
+    normalized.includes("login required") ||
+    message.includes("未登录")
+  )
+}
+
+/** Clear permission-failure copy. A bare HTTP 403 is not enough. */
+export function isPermissionFailureMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("forbidden") ||
+    normalized.includes("permission denied") ||
+    normalized.includes("insufficient permission") ||
+    normalized.includes("no permission") ||
+    normalized.includes("do not have permission") ||
+    normalized.includes("don't have permission") ||
+    message.includes("无权限") ||
+    message.includes("没有权限") ||
+    message.includes("权限不足") ||
+    message.includes("权限被拒绝")
+  )
+}
+
+/** Clear method-disabled copy. A bare HTTP status is not enough. */
+function isMethodDisabledMessage(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("checkin disabled") ||
+    normalized.includes("check-in disabled") ||
+    normalized.includes("checkin is disabled") ||
+    normalized.includes("check-in is disabled") ||
+    normalized.includes("checkin closed") ||
+    normalized.includes("check-in closed") ||
+    normalized.includes("check-in unavailable") ||
+    normalized.includes("checkin unavailable") ||
+    message.includes("签到已关闭") ||
+    message.includes("签到未开放") ||
+    message.includes("暂未开放签到") ||
+    message.includes("未开启签到") ||
+    message.includes("签到功能已停用") ||
+    message.includes("签到功能已关闭")
+  )
+}
+
+/**
+ * Detects whether a message is an unambiguous terminal failure reason
+ * (authentication required, permission denied, or method disabled).
+ */
+export function matchTerminalFailureReason(
+  message: string,
+): AutoCheckinSkipReason | null {
+  if (isAuthenticationFailureMessage(message)) {
+    return AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+  }
+  if (isPermissionFailureMessage(message)) {
+    return AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED
+  }
+  if (isMethodDisabledMessage(message)) {
+    return AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED
+  }
+  return null
+}
+
+/**
+ * Creates a terminal failure result with standard error translation key and non-retryable status.
+ */
+export function createTerminalFailureResult(params: {
+  reasonCode: AutoCheckinSkipReason
+  rawMessage?: string
+  data?: unknown
+}): AutoCheckinProviderOutcome {
+  return {
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    messageKey: getAutoCheckinSkipReasonTranslationKey(params.reasonCode),
+    reasonCode: params.reasonCode,
+    rawMessage: params.rawMessage || undefined,
+    ...(params.data !== undefined ? { data: params.data } : {}),
+  }
 }
 
 /** Platform-level failures that already have a user-facing remedy. */
@@ -130,7 +228,7 @@ export function resolveProviderErrorResult(params: {
   isAlreadyChecked?: (message: string) => boolean
   /** The business mutation may have reached the remote handler. */
   mutationDispatched?: boolean
-}): AutoCheckinProviderResult {
+}): AutoCheckinProviderOutcome {
   const errorMessage = (() => {
     const error = params.error
     if (typeof error === "string") return error
@@ -151,11 +249,28 @@ export function resolveProviderErrorResult(params: {
   })()
   const isAlreadyCheckedDetector =
     params.isAlreadyChecked ?? isAlreadyCheckedMessage
+  // These three verdicts rest on what the site said. Text the transport
+  // recovered from a body that is not the site's JSON answer is still worth
+  // showing, but an interceptor page must not decide a dead end, so it only
+  // reaches the status-based classification below.
+  const verdictMessage = hasUnattributedMessage(params.error)
+    ? ""
+    : errorMessage
 
-  if (errorMessage && isAlreadyCheckedDetector(errorMessage)) {
+  if (verdictMessage && isAlreadyCheckedDetector(verdictMessage)) {
     return {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       rawMessage: errorMessage,
+    }
+  }
+
+  if (verdictMessage) {
+    const terminalReason = matchTerminalFailureReason(verdictMessage)
+    if (terminalReason) {
+      return createTerminalFailureResult({
+        reasonCode: terminalReason,
+        rawMessage: errorMessage,
+      })
     }
   }
 
@@ -188,6 +303,40 @@ export function resolveProviderErrorResult(params: {
     }
   }
 
+  const errorCode =
+    params.error && typeof params.error === "object"
+      ? (params.error as { code?: unknown }).code
+      : undefined
+  const isDeterminateRejection =
+    errorCode === API_ERROR_CODES.BUSINESS_ERROR ||
+    (typeof statusCode === "number" &&
+      statusCode >= 400 &&
+      statusCode < 500 &&
+      statusCode !== 401 &&
+      statusCode !== 403 &&
+      statusCode !== 408)
+  if (isDeterminateRejection) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+      rawMessage: errorMessage || undefined,
+      messageKey: errorMessage
+        ? undefined
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+    }
+  }
+
+  if (statusCode === 401 || statusCode === 403) {
+    return {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+      rawMessage: errorMessage || undefined,
+      messageKey: errorMessage
+        ? undefined
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+    }
+  }
+
   const normalizedReasonCode = getFailureReasonCode(
     classifyAutoCheckinError(params.error),
   )
@@ -217,7 +366,6 @@ export function resolveProviderErrorResult(params: {
     messageKey: errorMessage
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
-    ...(mutationResultIsUncertain ? {} : { retryable: true }),
   }
 }
 

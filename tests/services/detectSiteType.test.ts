@@ -267,6 +267,61 @@ describe("detectSiteType", () => {
         expect(titleFetched).toBe(false)
       })
 
+      it("detects RightCode from the console hostname without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://www.right.codes", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://www.right.codes/dashboard"),
+        ).resolves.toBe(SITE_TYPES.RIGHT_CODE)
+        expect(titleFetched).toBe(false)
+      })
+
+      it("detects RightCode on every equivalent delivery domain", async () => {
+        await expect(getAccountSiteType("https://right.codes/")).resolves.toBe(
+          SITE_TYPES.RIGHT_CODE,
+        )
+        await expect(
+          getAccountSiteType("https://rightapi.ai/api-keys"),
+        ).resolves.toBe(SITE_TYPES.RIGHT_CODE)
+      })
+
+      it("does not generalize RightCode detection to sibling hostnames", async () => {
+        server.use(
+          http.get("https://api.right.codes", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://api.right.codes/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+          http.get("https://api.right.codes/api/v1/auth/me", () => {
+            return HttpResponse.json({ message: "not found" }, { status: 404 })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://api.right.codes"),
+        ).resolves.toBe(SITE_TYPES.UNKNOWN)
+      })
+
       it("does not generalize SharedChat detection to sibling hostnames", async () => {
         server.use(
           http.get("https://api.sharedchat.cc", () => {

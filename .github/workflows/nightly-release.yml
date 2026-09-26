@@ -10,6 +10,7 @@ on:
       - "plugins/**"
       - "package.json"
       - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - "tsconfig.json"
       - "postcss.config.js"
       - "tailwind.config.js"

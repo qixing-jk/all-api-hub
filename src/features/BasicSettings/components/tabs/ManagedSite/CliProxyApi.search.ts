@@ -15,7 +15,7 @@ export const cliProxyApiSearchSections: OptionsSearchItemDefinition[] = [
     360,
     {
       keywordKeys: ["common:actions.reset"],
-      keywords: ["cli", "cliproxy", "cliproxyapi"],
+      keywords: ["cli", "cliproxy", "cliproxyapi", "cli-proxy-api", "cpa"],
       isVisible: (context) =>
         context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
@@ -36,7 +36,7 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:cliProxyApi.title",
       ],
-      keywords: ["cli", "proxy", "base url"],
+      keywords: ["cli", "proxy", "cliproxy", "cliproxyapi", "cpa", "base url"],
       isVisible: (context) =>
         context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
@@ -54,7 +54,15 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:cliProxyApi.title",
       ],
-      keywords: ["cli", "proxy", "key", "management key"],
+      keywords: [
+        "cli",
+        "proxy",
+        "cliproxy",
+        "cliproxyapi",
+        "cpa",
+        "key",
+        "management key",
+      ],
       isVisible: (context) =>
         context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
@@ -72,7 +80,15 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:cliProxyApi.title",
       ],
-      keywords: ["cli", "proxy", "check connection", "verify"],
+      keywords: [
+        "cli",
+        "proxy",
+        "cliproxy",
+        "cliproxyapi",
+        "cpa",
+        "check connection",
+        "verify",
+      ],
       isVisible: (context) =>
         context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },

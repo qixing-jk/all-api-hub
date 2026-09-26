@@ -8,6 +8,7 @@ import type {
   AutoCheckinRunResult,
   AutoCheckinRunSummary,
   AutoCheckinStatus,
+  CheckinAccountResult,
 } from "~/types/autoCheckin"
 
 export interface AutoCheckinRunNowRequest {
@@ -79,6 +80,7 @@ export type AutoCheckinBasicResponse =
       summary?: AutoCheckinRunSummary
       lastRunResult?: AutoCheckinRunResult
       pendingRetry?: boolean
+      result?: CheckinAccountResult
     }
   | { success: false; error: string }
 
@@ -93,6 +95,23 @@ type AutoCheckinGetAccountInfoResponse =
 type AutoCheckinGetStatusResponse =
   | { success: true; data: AutoCheckinStatus | null }
   | { success: false; error: string }
+
+type AutoCheckinVerifyAccountStatusResponse =
+  | {
+      success: true
+      outcome: "verified"
+      verifiedStatus?: "checked" | "not_checked"
+    }
+  | {
+      success: false
+      error: string
+      outcome?:
+        | "unsupported"
+        | "unavailable"
+        | "not_saved"
+        | "account_not_found"
+        | "unknown"
+    }
 
 interface AutoCheckinProtocolMap {
   [AutoCheckinMessageTypes.RunNow](
@@ -112,7 +131,7 @@ interface AutoCheckinProtocolMap {
   ): AutoCheckinBasicResponse
   [AutoCheckinMessageTypes.VerifyAccountStatus](
     data: AutoCheckinVerifyAccountStatusRequest,
-  ): AutoCheckinBasicResponse
+  ): AutoCheckinVerifyAccountStatusResponse
   [AutoCheckinMessageTypes.GetAccountInfo](
     data: AutoCheckinGetAccountInfoRequest,
   ): AutoCheckinGetAccountInfoResponse

@@ -1,5 +1,6 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -46,7 +47,13 @@ interface AutoCheckinMethodDefinitionBase {
   readonly origins?: readonly string[]
   readonly excludedOrigins?: readonly string[]
   readonly source: AutoCheckinMethodSource
+  /** True only when the executable provider implements getStatus. */
+  readonly supportsStatusReadback?: boolean
 }
+
+/** Methods whose same-day check-in must not be replayed. Empty until observed. */
+export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
+  new Set()
 
 /**
  * Candidate support and pre-registry compatibility are separate decisions.
@@ -166,8 +173,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],
-    origins: ["https://agentrouter.org"],
+    origins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: false,
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -175,6 +183,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
     siteTypes: [SITE_TYPES.ANYROUTER],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: false,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -182,6 +191,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
     siteTypes: [SITE_TYPES.VELOERA],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -189,6 +199,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn,
     siteTypes: [SITE_TYPES.WONG_GONGYI],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -196,8 +207,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
     // Agent Router uses login check-in instead of this deployment's protocol.
-    excludedOrigins: ["https://agentrouter.org"],
+    excludedOrigins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -205,6 +217,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     id: AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
     siteTypes: [SITE_TYPES.VO_API_V2],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -215,6 +228,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "Sub2API Pro",
     },
+    supportsStatusReadback: true,
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -225,6 +239,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "天才程序员中转站",
     },
+    supportsStatusReadback: true,
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -235,10 +250,21 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "登仙公益站",
     },
+    supportsStatusReadback: true,
     legacy: false,
     newAccountCompatibility: false,
   },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
+
+/** Returns whether the selected method can verify today without posting. */
+export function supportsCheckInStatusReadback(
+  methodId: string | undefined,
+): boolean {
+  if (!isCheckInMethodId(methodId)) return false
+  return (
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId].supportsStatusReadback === true
+  )
+}
 
 /** Returns the product source used to present a registered method. */
 export function getAutoCheckinMethodSource(

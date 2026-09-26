@@ -19,6 +19,7 @@ The following are the most common and suitable types of sites for unified manage
 | VoAPI | Only legacy compatible deployments are supported; newer VoAPI versions are outside the extension's current compatibility scope. | [GitHub](https://github.com/VoAPI/VoAPI) |
 | done-hub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 | AIHubMix | Independent AI API aggregation site. The extension supports its balance, key, and model APIs through a dedicated account type. | [Official Website](https://aihubmix.com/?aff=W3DN) / [API Documentation](https://docs.aihubmix.com/cn/api/Cli) / [Setup Guide](./sponsor-guides/aihubmix.md) |
+| RightCode | Commercial AI agent relay; right.codes and rightapi.ai are the same service. The extension supports balance and plans, API key management, and model pricing. | [Website](https://www.right.codes/) / [Documentation](https://docs.rightapi.ai/) |
 | Super-API | Super-Api brand new AI model interface management and distribution system, for personal learning use only, please do not use for any commercial purposes. This project is based on NewAPI. | [Official Website](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | v-api | A powerful intermediate platform based on the secondary development of one-api. | No data available |
 | WONG Public Welfare Site | No stable public official description available. | No stable public official link available |

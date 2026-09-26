@@ -16,12 +16,16 @@ import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
-import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createTerminalFailureResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -81,12 +85,10 @@ export const toSub2ApiCheckInStatus = (
 }
 
 export const failedSub2ApiCheckIn = (
-  reasonCode: AutoCheckinProviderResult["reasonCode"],
-  retryable?: boolean,
-): AutoCheckinProviderResult => ({
+  reasonCode: AutoCheckinSkipReason,
+): AutoCheckinProviderOutcome => ({
   status: CHECKIN_RESULT_STATUS.FAILED,
   reasonCode,
-  ...(typeof retryable === "boolean" ? { retryable } : {}),
   messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
 })
 
@@ -94,27 +96,22 @@ export const failedSub2ApiCheckIn = (
 export const mapSub2ApiCheckInMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
-): AutoCheckinProviderResult => {
+): AutoCheckinProviderOutcome => {
   const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
   if (
     persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH
   ) {
     return failedSub2ApiCheckIn(
       AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-      false,
     )
   }
   if (persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING) {
-    return failedSub2ApiCheckIn(
-      AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
-      false,
-    )
+    return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE)
   }
   if (persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED) {
-    return failedSub2ApiCheckIn(
-      AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-      false,
-    )
+    return createTerminalFailureResult({
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_STATE_WRITE_FAILED,
+    })
   }
 
   const statusCode = error instanceof ApiError ? error.statusCode : undefined

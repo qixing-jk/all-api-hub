@@ -366,6 +366,9 @@
         "cancel": "Cancelar",
         "save": "Guardar clave"
       },
+      "allowWallet": "Permitir uso del saldo",
+      "allowWalletHelp": "Permite que esta clave siga funcionando con el saldo de la cuenta cuando se agote la cuota del plan.",
+      "channel": "Canal",
       "expiryDays": "Vence en (días)",
       "feedback": {
         "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",

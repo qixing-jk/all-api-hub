@@ -93,6 +93,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Định dạng dữ liệu phản hồi không hợp lệ",
+      "nonJsonContent": "trả về {{contentType}} thay vì JSON (HTTP {{status}})",
       "onlyJsonSupported": "Chỉ hỗ trợ dữ liệu phản hồi JSON",
       "requestFailed": "Yêu cầu thất bại: {{status}}"
     },

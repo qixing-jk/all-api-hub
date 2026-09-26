@@ -12,6 +12,10 @@ import {
 } from "~/constants/checkIn"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import {
+  getSub2ApiAuthPersistenceStatus,
+  SUB2API_AUTH_PERSISTENCE_STATUSES,
+} from "~/services/apiService/sub2api/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
@@ -34,6 +38,7 @@ import {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
 import {
   isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,
@@ -45,7 +50,6 @@ import {
   CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
   getAutoCheckinSkipReasonTranslationKey,
-  type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 import type {
   CheckInConfig,
@@ -56,7 +60,12 @@ import type {
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
 
-export { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery"
+/**
+ * A provider outcome plus the retry decision the policy derived from it. The
+ * decision deliberately lives outside the provider result: providers cannot set
+ * it, and the retry queue reads the persisted copy this produces.
+ */
+type DecidedCheckInResult = AutoCheckinProviderResult & { retryable: boolean }
 
 type ExecuteSelectedCheckInResult =
   | {
@@ -110,6 +119,18 @@ const toStatusReadSkipReason = (
   error: unknown,
   classifyStatusError?: AutoCheckinProvider["classifyStatusError"],
 ): CheckInExecutionSkipReason => {
+  const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
+  if (
+    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH
+  ) {
+    return CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired
+  }
+  if (
+    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING ||
+    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED
+  ) {
+    return CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable
+  }
   if (
     error instanceof ApiError &&
     (error.statusCode === 404 || error.statusCode === 405)
@@ -135,32 +156,13 @@ const toStatusReadSkipReason = (
   }
 }
 
-const NON_RETRYABLE_PROVIDER_FAILURE_REASONS: ReadonlySet<AutoCheckinSkipReason> =
-  new Set([
-    AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-    AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
-    AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
-  ])
-
-const canSafelyRetryProviderResult = (
-  result: AutoCheckinProviderResult,
-  hasStatusReadback: boolean,
-): boolean =>
-  result.status === CHECKIN_RESULT_STATUS.FAILED &&
-  hasStatusReadback &&
-  result.retryable !== false &&
-  !(
-    result.reasonCode &&
-    NON_RETRYABLE_PROVIDER_FAILURE_REASONS.has(result.reasonCode)
-  )
-
 const canRetryStatusConfirmationFailure = (
   reason: CheckInExecutionSkipReason,
 ): boolean =>
   reason === CHECK_IN_EXECUTION_SKIP_REASONS.NetworkError ||
   reason === CHECK_IN_EXECUTION_SKIP_REASONS.Timeout ||
-  reason === CHECK_IN_EXECUTION_SKIP_REASONS.SourceUnavailable
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.SourceUnavailable ||
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable
 
 const statusReadFailure = (
   reason: CheckInExecutionSkipReason,
@@ -312,18 +314,28 @@ const createRecoveredMutationGuard = (input: {
   }
 }
 
+const withAutomaticRetry = (
+  result: AutoCheckinProviderResult,
+  methodId: AutoCheckinMethodRegistration["id"],
+): DecidedCheckInResult => ({
+  ...result,
+  retryable: canAutomaticallyRetryCheckinResult(result, methodId),
+})
+
 const reconcileUncertainResult = async (input: {
   account: SiteAccount
+  methodId: AutoCheckinMethodRegistration["id"]
   providerResult: AutoCheckinProviderResult
   getStatus?: NonNullable<AutoCheckinProvider["getStatus"]>
-  retryAfterNotChecked: boolean
-}): Promise<AutoCheckinProviderResult> => {
+}): Promise<DecidedCheckInResult> => {
   if (!input.getStatus) {
-    return {
-      ...input.providerResult,
-      retryable: false,
-      reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-    }
+    return withAutomaticRetry(
+      {
+        ...input.providerResult,
+        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+      },
+      input.methodId,
+    )
   }
 
   try {
@@ -332,13 +344,15 @@ const reconcileUncertainResult = async (input: {
       observedAt: Date.now(),
     })
     if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-      return {
-        ...input.providerResult,
-        retryable: false,
-        reconciliation: status
-          ? CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN
-          : CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-      }
+      return withAutomaticRetry(
+        {
+          ...input.providerResult,
+          reconciliation: status
+            ? CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN
+            : CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+        },
+        input.methodId,
+      )
     }
     if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked) {
       return {
@@ -350,34 +364,52 @@ const reconcileUncertainResult = async (input: {
         reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
       }
     }
-    if (status.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked) {
+    if (status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled) {
       return {
         ...input.providerResult,
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+        messageKey: getAutoCheckinSkipReasonTranslationKey(
+          AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+        ),
         retryable: false,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN,
+        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
       }
     }
-    return {
-      ...input.providerResult,
-      ...(input.retryAfterNotChecked &&
-      status.availability === CHECK_IN_METHOD_AVAILABILITIES.Enabled
-        ? {
-            status: CHECKIN_RESULT_STATUS.FAILED,
-            reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-            messageKey: getAutoCheckinSkipReasonTranslationKey(
-              AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-            ),
-            retryable: true,
-          }
-        : { retryable: false }),
-      reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
+    if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked) {
+      const reasonCode =
+        input.providerResult.reasonCode ??
+        AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
+      return withAutomaticRetry(
+        {
+          ...input.providerResult,
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode,
+          messageKey: input.providerResult.reasonCode
+            ? input.providerResult.messageKey
+            : getAutoCheckinSkipReasonTranslationKey(
+                AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+              ),
+          reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
+        },
+        input.methodId,
+      )
     }
+    return withAutomaticRetry(
+      {
+        ...input.providerResult,
+        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN,
+      },
+      input.methodId,
+    )
   } catch {
-    return {
-      ...input.providerResult,
-      retryable: false,
-      reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-    }
+    return withAutomaticRetry(
+      {
+        ...input.providerResult,
+        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+      },
+      input.methodId,
+    )
   }
 }
 
@@ -542,9 +574,10 @@ export async function executeSelectedCheckIn(input: {
    */
   loginProviderClaimedByAnother?: boolean
   /**
-   * Retry safety guard: a provider with readback must confirm current status
-   * before another mutation. Providers may also require this for initial
-   * daily/manual runs through requiresAuthoritativeStatusBeforeMutation.
+   * Retry safety guard: a method with readback must confirm current status
+   * before another mutation. A method without readback is not blocked by it and
+   * submits directly; providers may also require this for initial runs through
+   * `requiresAuthoritativeStatusBeforeMutation`.
    */
   requireStatusConfirmationBeforeMutation?: boolean
 }): Promise<ExecuteSelectedCheckInResult> {
@@ -596,13 +629,6 @@ export async function executeSelectedCheckIn(input: {
   const requiresAuthoritativeStatus =
     input.requireStatusConfirmationBeforeMutation === true ||
     registration.provider.requiresAuthoritativeStatusBeforeMutation === true
-  if (requiresAuthoritativeStatus && !registration.provider.getStatus) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable,
-    }
-  }
-
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
   if (registration.provider.getStatus) {
@@ -757,31 +783,27 @@ export async function executeSelectedCheckIn(input: {
       return accountStateWriteFailure()
     }
   }
-  const result =
+  const result: DecidedCheckInResult =
     providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
       ? await reconcileUncertainResult({
           account: currentAccount,
+          methodId: registration.id,
           providerResult,
           getStatus: registration.provider.getStatus,
-          retryAfterNotChecked:
-            registration.provider.retryAfterUncertainNotChecked === true,
         })
       : providerResult.status === CHECKIN_RESULT_STATUS.FAILED
         ? {
             ...providerResult,
-            retryable: canSafelyRetryProviderResult(
+            retryable: canAutomaticallyRetryCheckinResult(
               providerResult,
-              Boolean(registration.provider.getStatus),
+              registration.id,
             ),
           }
-        : providerResult
+        : { ...providerResult, retryable: false }
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
     methodId: registration.id,
     result,
-    retryable:
-      result.status === CHECKIN_RESULT_STATUS.FAILED
-        ? result.retryable === true
-        : false,
+    retryable: result.retryable,
   }
 }

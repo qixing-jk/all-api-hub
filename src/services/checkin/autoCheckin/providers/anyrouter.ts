@@ -2,12 +2,14 @@ import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createTerminalFailureResult,
   createUpstreamFailureResult,
   isAlreadyCheckedMessage,
+  matchTerminalFailureReason,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -34,7 +36,7 @@ const isSiteAccount = (
 const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
   context: AutoCheckinProviderContext,
-): Promise<AutoCheckinProviderResult> => {
+): Promise<AutoCheckinProviderOutcome> => {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
     context.tempWindowRequestSource,
   )
@@ -45,37 +47,36 @@ const checkinAnyRouter = async (
     : account.cookieAuthSessionCookie
 
   try {
-    const response =
-      await newApiFamilyRequests.payload<AnyrouterCheckInResponse>(
-        {
-          baseUrl: site_url,
-          ...(account.id ? { accountId: account.id } : {}),
-          ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            userId: account_info.id,
-          },
-          tempWindowRequestSource,
-          // AnyRouter's sign-in POST relies on browser-established WAF cookies;
-          // see https://github.com/millylee/anyrouter-check-in.
-          // Keep it in one protected context instead of replaying a mutating request.
-          forceTempWindow: true,
-          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-          ...(context.mutationLifecycle
-            ? { observer: context.mutationLifecycle }
-            : {}),
+    const response = (await newApiFamilyRequests.envelope(
+      {
+        baseUrl: site_url,
+        ...(account.id ? { accountId: account.id } : {}),
+        ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: account_info.id,
         },
-        {
-          endpoint: "/api/user/sign_in",
-          options: {
-            method: "POST",
-            body: "{}",
-            headers: {
-              "X-Requested-With": "XMLHttpRequest",
-            },
+        tempWindowRequestSource,
+        // AnyRouter's sign-in POST relies on browser-established WAF cookies;
+        // see https://github.com/millylee/anyrouter-check-in.
+        // Keep it in one protected context instead of replaying a mutating request.
+        forceTempWindow: true,
+        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+        ...(context.mutationLifecycle
+          ? { observer: context.mutationLifecycle }
+          : {}),
+      },
+      {
+        endpoint: "/api/user/sign_in",
+        options: {
+          method: "POST",
+          body: "{}",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
           },
         },
-      )
+      },
+    )) as AnyrouterCheckInResponse
 
     const rawResponseMessage = normalizeCheckinMessage(
       response.message ?? response.msg,
@@ -103,6 +104,15 @@ const checkinAnyRouter = async (
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         data: response,
       }
+    }
+
+    const terminalReason = matchTerminalFailureReason(rawResponseMessage)
+    if (terminalReason) {
+      return createTerminalFailureResult({
+        reasonCode: terminalReason,
+        rawMessage: rawResponseMessage,
+        data: response,
+      })
     }
 
     return createUpstreamFailureResult({

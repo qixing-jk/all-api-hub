@@ -80,6 +80,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
 import { useAutoCheckinDevSection } from "./useAutoCheckinDevSection"
+import { getAutoCheckinResultMessage } from "./utils/autoCheckin"
 
 /**
  * Unified logger scoped to the Auto Check-in options page.
@@ -518,7 +519,19 @@ export default function AutoCheckin(props: {
       )
 
       if (response.success) {
-        toast.success(t("messages.success.retryCompleted"))
+        const retryResult = response.result
+        if (
+          retryResult &&
+          (retryResult.status === CHECKIN_RESULT_STATUS.FAILED ||
+            retryResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN)
+        ) {
+          const failureMessage = getAutoCheckinResultMessage(t, retryResult)
+          toast.error(
+            t("messages.error.retryFailed", { error: failureMessage }),
+          )
+        } else {
+          toast.success(t("messages.success.retryCompleted"))
+        }
         const updatedStatus = await loadStatus()
         const responseSummary = response.success ? response.summary : undefined
         tracker.complete(getRetryAnalyticsResult(response), {
@@ -579,7 +592,10 @@ export default function AutoCheckin(props: {
           insights: getAutoCheckinStatusAnalyticsInsights(updatedStatus),
         })
       } else {
-        toast.error(t("messages.error.statusVerificationFailed"))
+        toast.error(
+          response.error?.trim() ||
+            t("messages.error.statusVerificationFailed"),
+        )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })

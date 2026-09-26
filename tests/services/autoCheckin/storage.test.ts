@@ -556,6 +556,49 @@ describe("autoCheckinStorage", () => {
     )
   })
 
+  it("preserves retry state attempts ledger when pruning leaves pending accounts empty", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        keep: {
+          accountId: "keep",
+          accountName: "Keep",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1700000003000,
+        },
+        drop: {
+          accountId: "drop",
+          accountName: "Drop",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
+      },
+      accountsSnapshot: [{ accountId: "keep" }, { accountId: "drop" }],
+      retryState: {
+        day: "2026-03-28",
+        pendingAccountIds: ["drop"],
+        attemptsByAccount: { drop: 2, keep: 1 },
+      },
+      pendingRetry: true,
+      nextRetryScheduledAt: "2026-03-28T01:00:00.000Z",
+      retryAlarmTargetDay: "2026-03-28",
+    })
+
+    const ok = await autoCheckinStorage.pruneStatusForDeletedAccounts(["drop"])
+
+    expect(ok).toBe(true)
+    expect(set).toHaveBeenCalledWith(
+      "autoCheckin_status",
+      expect.objectContaining({
+        retryState: {
+          day: "2026-03-28",
+          pendingAccountIds: [],
+          attemptsByAccount: { keep: 1 },
+        },
+      }),
+    )
+  })
+
   it("clears malformed retry queue fields when disabling a queued account", async () => {
     const { get, set } = (Storage as any).__mocks as any
     get.mockResolvedValueOnce({

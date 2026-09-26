@@ -6,7 +6,7 @@
 
 - **Check-in status detection**: Adding or refreshing an account automatically detects whether its site has a check-in entry point. There is no manual "check-in detection" switch.
 - **Custom check-in entry point**: If the page is not at the standard path, enter an External Check-in Site URL under the account's Check-in Settings.
-- **Automatic scheduling**: Uses browser background scheduling for a regular **once-per-day** automatic check-in and optional same-day retries for **accounts that failed the daily run**.
+- **Automatic scheduling**: Uses browser background scheduling for a regular **once-per-day** automatic check-in and optional same-day retries for failed or unconfirmed results that are not clear dead ends.
 - **Execution result**: Saves the latest result with success, failure, skip reasons, last run time, and next schedule. This is not a multi-day history log.
 
 ## Requirements
@@ -42,7 +42,7 @@ Under **Settings → Check-in & Redemption → Automatic Check-in**:
 | **Window Start / End** | Allowed local-time range for the daily schedule. It can cross midnight. |
 | **Schedule Mode** | Selects a random time within the window, or choose Fixed Time. |
 | **Fixed Time** | Used only in Fixed Time mode. |
-| **Retry Strategy** | Enabled by default. Only eligible failures from the daily schedule are retried that day; manual Run Now does not create an automatic retry queue. |
+| **Retry Strategy** | Enabled by default. Failures and pending results from daily or manual runs enter the same-day queue unless they are a clear dead end. |
 | **Retry Interval (minutes)** | Used only when retries are enabled. |
 | **Maximum Daily Attempts** | **Includes the initial daily run**, rather than counting only additional retries. |
 | **View Check-in History / Open Records** | Opens the Automatic Check-in results page. It stores latest status, not a multi-day archive. |
@@ -57,7 +57,7 @@ Settings take effect after saving, without restarting the extension. Upgrades pr
 - Click **Run Now** to run eligible accounts once, regardless of the global automatic check-in switch. Accounts must still be enabled and meet check-in requirements. To process one account, use **Quick Check-in** in its menu.
 - The Quick Check-in calendar icon at the top of the popup or side panel opens the check-in page and starts a manual batch.
 - Failed rows can offer Retry, Manual Check-in, External Check-in, or Open Site. Manual Check-in requires you to finish the action on the site.
-- For "Pending Confirmation" results, the **Verify Status** action is available. It only reads today's status and updates the account configuration; it does not resubmit the check-in. If login or authentication repair is required, open the site to complete sign-in first, then verify again.
+- "Pending confirmation" offers **Verify Status** only when the method can read today's status. Methods without that read offer **Try Again** instead of a verification action that cannot succeed. When a retry strategy is enabled, failures and pending results are retried automatically later the same day unless the result is already a clear dead end: sign-in required, permission denied, the method is disabled, the execution context is invalid, or an account, credential, or login-method precondition is missing.
 - To report a problem, choose check-in feedback or a support request in the account menu or result row. Review the report before copying it or opening it on GitHub to submit.
 
 ### 4. Handle Detection and Execution States
@@ -72,22 +72,22 @@ The account's check-in configuration retains your manual method choice and custo
 | Not Supported | No available built-in method was confirmed | Use an external check-in URL, check in manually, or request support |
 | Disabled | The site explicitly disabled this method | Keep the method, disable automatic check-in, or switch to manual |
 | Status Unreadable | The method still exists, but today's status cannot be read temporarily | Keep the selection and auto check-in switch, retry later or confirm manually |
-| Pending Confirmation | The request result cannot be reliably confirmed | Click Verify Status; if authentication is required, open the site to log in, and do not blindly retry |
+| Pending Confirmation | The request result cannot be reliably confirmed | Verify status when a readback exists; otherwise try again or wait for the same-day automatic retry |
 
 ## How It Works
 
 1. **Save configuration**: Saving local preferences immediately tells the background process to reschedule.
 2. **Initialize scheduling**: Extension startup registers browser alarm listeners:
    - **Daily alarm**: Regular automatic check-in, at most once per day.
-   - **Retry alarm**: Created only when the regular daily run has failed accounts; retries only those accounts.
+   - **Retry alarm**: Created when today's queue has accounts to retry, including results from a manual run.
 3. **Execute**:
    - The daily task first checks automatic selection for enabled accounts. When re-detection is needed and the cooldown has elapsed, it detects and saves the result before checking the selected method, credentials, and today's status. It does not arbitrarily pick a method when none applies, several remain possible, or detection is incomplete.
    - Keep using an existing method while it remains supported. If the read-only check before execution confirms that it is unsupported, discovery may select a unique replacement when the cooldown allows. If a check-in request has already been sent and its result is uncertain, verify the result instead of submitting through another method.
    - Call the site's built-in provider and record success, failure, pending confirmation, or a skip reason.
    - Both "success" and "already checked in today" count as success. A newly successful check-in also refreshes account data.
-   - Only safely retryable failures enter the same-day queue when retries are enabled. Authentication failures, permission failures, and sites without check-in status readback are not retried automatically.
-   - Before an automatic retry submits another check-in, it confirms today's status. If status is temporarily unavailable, that attempt does not submit anything but remains eligible for another bounded retry up to Maximum Daily Attempts.
-4. **Reschedule**: After the regular daily run, schedule the **next day's** daily alarm. When same-day failures exist and retries are enabled, schedule a retry alarm.
+   - When retries are enabled, failures and pending results enter the same-day queue unless they are a clear dead end: sign-in required, permission denied, the method is unavailable, the execution context is invalid, or an account, credential, or login-method precondition is missing. Missing status readback does not block retry.
+   - An automatic retry reads today's status first when the method supports it: already checked skips the submit, not checked submits. Methods without readback submit directly. The same execution never submits twice.
+4. **Reschedule**: After the regular daily run, schedule the **next day's** daily alarm. When retries are enabled and today's queue has results to retry, schedule a retry alarm.
 
 ## Supported Sites and Authentication
 
@@ -102,7 +102,7 @@ The following sites have supported check-in methods. Availability still depends 
 | `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
 | `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
 | `sub2api` | Yes | Valid login credentials for the detected Sub2API Pro or Denxio check-in method |
-| AgentRouter (`agentrouter.org`) | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
+| AgentRouter | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
 
 ### AgentRouter login check-in limits
 
@@ -132,13 +132,13 @@ If no available method is detected for another site, use an external check-in UR
 | Result | Meaning | Automatic retry |
 |------|------|:---:|
 | Success / Already checked in today | The run confirmed a completed check-in, or the site confirmed today's check-in was already done | No |
-| Failed | API, authentication, verification, network, or site response failed | Only for the daily schedule when retries are enabled and the failure is safe to retry |
-| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably. The extension performs one read-only status check and does not directly resend the check-in | No, use Verify Status or open the site to fix authentication |
+| Failed | API, authentication, verification, network, or site response failed | Yes, later the same day when retries are enabled and the result is not a clear dead end |
+| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably | Yes, later the same day when retries are enabled and the result is not a clear dead end. Verify status first when a readback exists |
 | Skipped | Account disabled, not detected, account-level setting off, no provider, or insufficient credentials | No |
 
 | Problem | Troubleshooting |
 |------|----------|
-| "Not Scheduled / Disabled / No Pending Retries" | "Disabled": the global switch is off.<br/>"Retries Disabled": Retry Strategy is off.<br/>"No Pending Retries": retries are on, but no account currently failed.<br/>"Not Scheduled": enabled, but background scheduling is unsupported or the alarm has not been created/was cleared; save the settings again. |
+| "Not Scheduled / Disabled / No Pending Retries" | "Disabled": the global switch is off.<br/>"Retries Disabled": Retry Strategy is off.<br/>"No Pending Retries": retries are on, but nothing is currently waiting to retry.<br/>"Not Scheduled": enabled, but background scheduling is unsupported or the alarm has not been created/was cleared; save the settings again. |
 | An account fails every day or shows Skipped | Check its provider and skip reason under Account Detection Status. Confirm the account is enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and has usable credentials. |
 | Access Token is invalid | Usually the Access Token expired or was revoked. Sign in to the site, then open Account Management → Edit Account and run Auto Detect / refresh the Access Token. If the site disables Tokens or no Token can be obtained, use Cookie authentication or disable automatic check-in for that account and use manual check-in. |
 | Execution result says the site type does not match | After a failed check-in the extension inferred, from the site's own signals, a type other than the one the account carries, and the hint names the type to switch to (for example: this site matches Veloera, while the account is set to new-api). Fix: in Account Management → Edit Account, set the Site Type to the named type, then run once more. The hint stops applying once the account's Site Type changes, or once a later reading finds the site agreeing with the stored type. |

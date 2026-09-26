@@ -40,7 +40,59 @@ If you encounter unexplained issues during use, you can use the browser's built-
 
 ---
 
+## Verifying the Uninstall Survey Locally
+
+The uninstall feedback survey page lives in `docs/docs/.vuepress/public/uninstall.html` and is published verbatim by the documentation site. By default, a locally built extension registers no uninstall page address, so uninstalling it locally opens nothing; use the steps below to enable it temporarily for local verification.
+
+### 1. Preview the Survey Page Locally
+
+The survey page is fully static and opens without any injected configuration:
+
+```bash
+# Open the file directly
+start docs/docs/.vuepress/public/uninstall.html   # Windows
+open docs/docs/.vuepress/public/uninstall.html    # macOS
+
+# Or through the documentation site's dev server (same path as production)
+pnpm --dir docs docs:dev
+# Then visit http://localhost:8080/uninstall.html
+```
+
+You can append parameters by hand to simulate a real uninstall:
+
+```text
+uninstall.html?uid=analytics-test&v=4.0.0&d=42&lang=zh-CN
+```
+
+`d` is the number of days between installation and uninstall. Without PostHog configuration the page sends no network request and only prints what it would send to the browser console (`[uninstall-survey] not sent`), so a local preview produces no analytics.
+
+### 2. Run a Real Uninstall Flow in a Local Build
+
+Development and test builds skip registration by default. In development mode, open the **Dev panel** (the floating ball icon at the bottom right of the options page) and use the "Uninstall survey" section:
+
+- **Survey target**: shows the current target address and switches between the local documentation site (`http://localhost:8080/uninstall.html`) and the deployed page. The choice is remembered. Switching takes effect only after you register again.
+- **Compose URL preview**: composes and shows the address without registering it; the parameters can be copied.
+- **Register uninstall URL**: registers the current target address with the browser immediately; then **remove** the extension on `chrome://extensions` and the browser should open that page. Registration is an explicit action and is not affected by the default dev/test skip.
+- **Open survey page**: opens the survey page directly as a preview; the `uid` parameter is removed automatically, so the preview is not counted as a real uninstall.
+- **Clear uninstall URL**: clears the registered address.
+
+Note that the browser opens this page only after an **uninstall**; disabling the extension does not trigger it. The background Service Worker console logs `Uninstall survey URL registered` with the parameters listed separately (the logger redacts the query string of URLs).
+
+For scripted automated testing, environment variables can also register the address automatically on every background startup:
+
+```bash
+VITE_PUBLIC_UNINSTALL_SURVEY_DEV=1 \
+VITE_PUBLIC_UNINSTALL_SURVEY_URL=http://localhost:8080/uninstall.html \
+pnpm dev
+```
+
+- `VITE_PUBLIC_UNINSTALL_SURVEY_DEV=1` is the key switch: without it, dev/test builds always skip automatic registration.
+- `VITE_PUBLIC_UNINSTALL_SURVEY_URL` points the address at a local page or your own test page so it never reaches the production survey page. When omitted, the production address is used.
+
+---
+
 ## Related Documentation
 
 - [Share Snapshot](./share-snapshot.md)
+- [Privacy Policy](./privacy.md)
 - [FAQ](./faq.md)

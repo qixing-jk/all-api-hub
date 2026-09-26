@@ -3,11 +3,12 @@
   "displayName": "All API Hub - 你的全能 AI 资产管家",
   "private": true,
   "type": "module",
-  "version": "4.0.0",
+  "version": "4.1.0",
+  "packageManager": "pnpm@12.6.0",
   "description": "一站式聚合管理所有AI中转站账号的余额、模型和密钥，告别繁琐登录。",
   "engines": {
     "node": ">=24",
-    "pnpm": ">=10"
+    "pnpm": ">=12 <13"
   },
   "scripts": {
     "dev": "wxt",
@@ -187,10 +188,5 @@
     "web-ext": "^9.4.0",
     "whatwg-fetch": "^3.6.20",
     "wxt": "^0.21.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron"
-    ]
   }
 }

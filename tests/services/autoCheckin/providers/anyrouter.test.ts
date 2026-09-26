@@ -1,10 +1,19 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
+import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import type { AnyrouterCheckInParams } from "~/services/checkin/autoCheckin/providers/contracts"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
@@ -12,9 +21,11 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   newApiFamilyRequests: {
-    payload: vi.fn(),
+    envelope: vi.fn(),
   },
 }))
+
+const mockEnvelope = newApiFamilyRequests.envelope as unknown as Mock
 
 const mockAccount: SiteAccount = {
   id: "test-id",
@@ -90,16 +101,12 @@ describe("anyrouterProvider", () => {
   })
 
   describe("checkIn", () => {
+    beforeEach(() => {
+      mockEnvelope.mockReset()
+    })
+
     it("propagates the popup source on a successful check-in", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 1,
         success: true,
@@ -114,7 +121,7 @@ describe("anyrouterProvider", () => {
         protectionBypassExecution,
       })
       expect(result.status).toBe("success")
-      expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
+      expect(mockEnvelope.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         forceTempWindow: true,
@@ -123,15 +130,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("passes lightweight AnyRouter account context to the provider request", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 1,
         success: true,
@@ -150,7 +149,7 @@ describe("anyrouterProvider", () => {
       const result = await checkInForTest(account)
 
       const latestRequest =
-        mockedFetchApi.mock.calls[mockedFetchApi.mock.calls.length - 1]?.[0]
+        mockEnvelope.mock.calls[mockEnvelope.mock.calls.length - 1]?.[0]
       expect(result.status).toBe("success")
       expect(latestRequest).toMatchObject({
         baseUrl: "https://anyrouter.top",
@@ -166,15 +165,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns success for English success messages", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 1,
         success: true,
@@ -197,10 +188,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns success when success is true and optional result fields are omitted", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         success: true,
         message: "",
       })
@@ -212,15 +200,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("does not treat an empty message as already checked", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: true,
@@ -232,15 +212,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when response is success and message indicates a prior check-in", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: true,
@@ -256,16 +228,24 @@ describe("anyrouterProvider", () => {
       })
     })
 
+    it("returns terminal failure result when response is unsuccessful and message indicates a terminal condition", async () => {
+      mockEnvelope.mockResolvedValueOnce({
+        code: -1,
+        ret: 0,
+        success: false,
+        message: "签到功能已关闭",
+      })
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+      })
+    })
+
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: false,
@@ -276,8 +256,7 @@ describe("anyrouterProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
-        reasonCode: "upstream_error",
-        retryable: true,
+        reasonCode: "upstream_rejected",
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: {
@@ -293,15 +272,7 @@ describe("anyrouterProvider", () => {
       ["ret", { ret: 1, message: "queued" }],
       ["code", { code: 0, message: "queued" }],
     ])("accepts %s as an independent success signal", async (_, response) => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce(response)
+      mockEnvelope.mockResolvedValueOnce(response)
 
       const result = await checkInForTest(mockAccount)
 
@@ -310,10 +281,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("does not infer already checked from a zero ret value", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: true,
@@ -327,15 +295,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("recognizes an explicit already-checked message on a negative response", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: false,
@@ -347,10 +307,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("recognizes the msg field used by compatible deployments", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
+      mockEnvelope.mockResolvedValueOnce({
         ret: 0,
         msg: "already checked today",
       })
@@ -366,7 +323,7 @@ describe("anyrouterProvider", () => {
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
+        newApiFamilyRequests.envelope as unknown as (
           ...args: any[]
         ) => Promise<any>,
       )
@@ -382,15 +339,7 @@ describe("anyrouterProvider", () => {
     })
 
     it("maps 404 errors to endpoint-not-supported", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockRejectedValueOnce({
+      mockEnvelope.mockRejectedValueOnce({
         statusCode: 404,
         message: "Not found",
       })
@@ -405,27 +354,14 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when request throws and error message indicates already checked", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockRejectedValueOnce(new Error("已签到"))
+      mockEnvelope.mockRejectedValueOnce(new Error("已签到"))
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
     it("does not treat an empty thrown message as already checked", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      vi.mocked(newApiFamilyRequests.payload).mockRejectedValueOnce(
-        new Error(""),
-      )
+      mockEnvelope.mockRejectedValueOnce(new Error(""))
 
       await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
         status: "failed",
@@ -433,31 +369,18 @@ describe("anyrouterProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
-      const mockedFetchApi = vi.mocked(
-        newApiFamilyRequests.payload as unknown as (
-          ...args: any[]
-        ) => Promise<any>,
-      )
-      mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
+      mockEnvelope.mockRejectedValueOnce(new Error("Network error"))
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
 
     it("returns uncertain when the response is lost after dispatch", async () => {
-      const { newApiFamilyRequests } = await import(
-        "~/services/apiService/newApiFamily/request"
-      )
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
-      vi.mocked(newApiFamilyRequests.payload).mockImplementationOnce(
-        async (request) => {
-          request.observer?.onDispatch()
-          throw new TypeError("Failed to fetch")
-        },
-      )
+      mockEnvelope.mockImplementationOnce(async (request: any) => {
+        request.observer?.onDispatch()
+        throw new TypeError("Failed to fetch")
+      })
 
       await expect(
         checkInForTest(mockAccount, {
@@ -467,6 +390,143 @@ describe("anyrouterProvider", () => {
       ).resolves.toMatchObject({
         status: "uncertain",
         reasonCode: "network_error",
+      })
+    })
+
+    describe("a refused check-in POST", () => {
+      // The real transport error for one refused POST, built by the same
+      // compatibility layer the request module uses, so the wording, status, and
+      // attribution below are the ones production sees.
+      const transportFailure = (response: {
+        ok: boolean
+        status: number
+        contentType: string
+        body: unknown
+      }) => {
+        try {
+          mapCompatibilityResponse(
+            {
+              ok: response.ok,
+              status: response.status,
+              headers: { "content-type": response.contentType },
+              body: response.body,
+            },
+            {
+              endpoint: "/api/user/sign_in",
+              responseType: "json",
+              onlyData: false,
+              decodeApplicationError: false,
+              errorResponseDecoder: decodeNewApiResponseError,
+            },
+          )
+        } catch (error) {
+          return error
+        }
+        throw new Error("expected the transport to reject this response")
+      }
+
+      const rejectDispatched = async (error: unknown) => {
+        const mutationLifecycle = createAutoCheckinMutationLifecycle()
+        mockEnvelope.mockImplementationOnce(async (request: any) => {
+          request.observer?.onDispatch()
+          throw error
+        })
+
+        return await checkInForTest(mockAccount, {
+          ...DEFAULT_PROVIDER_CONTEXT,
+          mutationLifecycle,
+        })
+      }
+
+      it.each([
+        {
+          name: "an HTML interceptor page",
+          response: {
+            ok: false,
+            status: 403,
+            contentType: "text/html; charset=utf-8",
+            body: "<html><body>403 Forbidden - permission denied</body></html>",
+          },
+          expectedReasonCode: "upstream_error",
+        },
+        {
+          name: "a proxy JSON refusal",
+          response: {
+            ok: false,
+            status: 403,
+            contentType: "application/json",
+            body: {
+              error: "Forbidden",
+              detail: "permission denied by proxy",
+            },
+          },
+          expectedReasonCode: "upstream_error",
+        },
+      ])(
+        "keeps $name eligible for a same-day retry",
+        async ({ response, expectedReasonCode }) => {
+          // Nothing in these bodies is the site's own answer, so neither may
+          // decide a permission dead end. Content type does not separate them:
+          // the proxy answered in JSON too.
+          const result = await rejectDispatched(transportFailure(response))
+
+          expect(result).toMatchObject({
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reasonCode: expectedReasonCode,
+          })
+          expect(
+            canAutomaticallyRetryCheckinResult(
+              result,
+              AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+            ),
+          ).toBe(true)
+        },
+      )
+
+      it("treats the site's own envelope refusal as a dead end", async () => {
+        const result = await rejectDispatched(
+          transportFailure({
+            ok: false,
+            status: 403,
+            contentType: "application/json",
+            body: { success: false, message: "无权限", data: null },
+          }),
+        )
+
+        expect(result).toMatchObject({
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
+          rawMessage: "无权限",
+        })
+        expect(
+          canAutomaticallyRetryCheckinResult(
+            result,
+            AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+          ),
+        ).toBe(false)
+      })
+
+      it("names a JSON request that came back as a page", async () => {
+        const result = await rejectDispatched(
+          transportFailure({
+            ok: true,
+            status: 200,
+            contentType: "text/html",
+            body: "<html><body>Just a moment...</body></html>",
+          }),
+        )
+
+        expect(result).toMatchObject({
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+          rawMessage: "messages:errors.api.nonJsonContent",
+        })
+        expect(
+          canAutomaticallyRetryCheckinResult(
+            result,
+            AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+          ),
+        ).toBe(true)
       })
     })
   })

@@ -6,6 +6,10 @@ import {
   buildAgentRouterGithubAuthorizeUrl,
   buildAgentRouterLinuxDoAuthorizeUrl,
 } from "~/services/accountLogin/providers/agentrouter/browserOAuth"
+import {
+  isAgentRouterLoginUrl,
+  isAgentRouterSystemName,
+} from "~/services/accountLogin/providers/agentrouter/config"
 
 describe("AgentRouter GitHub OAuth adapter", () => {
   it.each([undefined, false])(
@@ -90,6 +94,12 @@ describe("AgentRouter GitHub OAuth adapter", () => {
         "https://agentrouter.org",
       ),
     ).toBe(false)
+    expect(
+      agentRouterGithubOAuthFlow.isCompletionUrl(
+        new URL("https://ps.air-outer.com/console/token"),
+        "https://ps.air-outer.com",
+      ),
+    ).toBe(true)
   })
 
   it("builds Linux DO authorization with the signed login state", () => {
@@ -187,5 +197,40 @@ describe("AgentRouter GitHub OAuth adapter", () => {
         "https://agentrouter.org",
       ),
     ).toBe(false)
+  })
+})
+
+describe("AgentRouter config", () => {
+  it.each([
+    ["Agent Router", true],
+    ["agent router", true],
+    ["AgentRouter", true],
+    ["AGENT ROUTER", true],
+    ["Agent Router Pro", true],
+    ["New API", false],
+    ["One API", false],
+    ["Router", false],
+    ["Agent", false],
+    ["", false],
+    [null, false],
+    [undefined, false],
+    [123, false],
+  ])("recognizes system_name %s as AgentRouter -> %s", (name, expected) => {
+    expect(isAgentRouterSystemName(name)).toBe(expected)
+  })
+
+  it.each([
+    ["https://agentrouter.org", true],
+    ["https://agentrouter.org/login", true],
+    ["https://ps.air-outer.com", true],
+    ["https://ps.air-outer.com/console/token", true],
+    ["http://agentrouter.org", false],
+    ["https://attacker.example.org", false],
+    ["https://agentrouter.org.attacker.com", false],
+    ["not a url", false],
+    [null, false],
+    [undefined, false],
+  ])("validates login url %s -> %s", (url, expected) => {
+    expect(isAgentRouterLoginUrl(url)).toBe(expected)
   })
 })

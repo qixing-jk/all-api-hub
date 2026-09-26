@@ -1397,7 +1397,8 @@ test("runs auto-checkin retries when its MV3 alarm fires", async ({
     serviceWorker,
     AUTO_CHECKIN_STATUS_STORAGE_KEY,
   )
-  expect(statusAfterRetry?.retryState).toBeUndefined()
+  expect(statusAfterRetry?.pendingRetry).toBe(false)
+  expect(statusAfterRetry?.retryState?.pendingAccountIds).toEqual([])
   expect(checkinRequests).toBe(1)
 })
 

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
@@ -15,10 +19,15 @@ import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
+import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
   refreshSelectedStatus,
 } from "~/services/checkin/autoCheckin/refresh"
+import {
+  canAutomaticallyRetryCheckinResult,
+  isRetryableCheckinResult,
+} from "~/services/checkin/autoCheckin/resultPolicy"
 import {
   autoCheckinScheduler,
   getAutoCheckinAccountInfo,
@@ -61,7 +70,12 @@ import {
   type ProtectionBypassExecution,
   type ProtectionBypassSurface,
 } from "~/services/protectionBypass/contracts"
-import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_RUN_TYPE,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   clearAlarm,
@@ -132,6 +146,18 @@ const runnableCheckIn = (
 
 const noSelectedCheckIn = () =>
   buildCheckInConfig({ automaticExecutionEnabled: true })
+
+/**
+ * One authority check: a row this version produced must record the retry
+ * decision the queue reads, and that decision must be the shared policy's.
+ */
+const expectRecordedRetryDecision = (result: CheckinAccountResult) => {
+  expect(typeof result.retryable).toBe("boolean")
+  expect(isRetryableCheckinResult(result)).toBe(result.retryable)
+  expect(canAutomaticallyRetryCheckinResult(result, result.methodId)).toBe(
+    result.retryable,
+  )
+}
 
 const runCheckinsForTest = (
   options: Omit<
@@ -2073,8 +2099,67 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       failedCount: 1,
       needsRetry: true,
     })
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
+
+    vi.useRealTimers()
+  })
+
+  it("does not hand a fresh budget to a manual run after the day's attempts are spent", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 11, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const account: any = {
+      id: "spent",
+      disabled: false,
+      site_name: "Spent Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "user" },
+      checkIn: runnableCheckIn(),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    const provider = {
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "failed", rawMessage: "boom" })),
+    }
+    resolveProviderForTest.mockReturnValue(provider)
+
+    // Today's scheduled run and its retries already used all three attempts.
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: [],
+        attemptsByAccount: { spent: 3 },
+      },
+      pendingRetry: false,
+    } as any
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.MANUAL })
+
+    // The user asked for this run, so it happens once. It just does not arm an
+    // automatic retry the day's budget no longer covers.
+    expect(provider.checkIn).toHaveBeenCalledTimes(1)
+    expect(storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: [],
+      attemptsByAccount: { spent: 3 },
+    })
+    expect(storedStatus.pendingRetry).toBe(false)
+    expect(storedStatus.lastDailyRunDay).toBe("2024-01-01")
 
     vi.useRealTimers()
   })
@@ -2151,7 +2236,8 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         requireStatusConfirmationBeforeMutation: true,
       }),
     )
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(alarmStore.autoCheckinRetry).toBeUndefined()
 
@@ -2161,7 +2247,9 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
   it.each([
     { reason: "network_error", retryable: true },
     { reason: "account_unavailable", retryable: false },
-    { reason: "status_unavailable", retryable: false },
+    // A status read that failed for any reason but authentication or
+    // permission is worth another pass, so it keeps its place in the queue.
+    { reason: "status_unavailable", retryable: true },
   ])(
     "persists blocked $reason as a failure with explicit retry policy",
     async ({ reason, retryable }) => {
@@ -2197,6 +2285,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         retryable,
       })
       await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      expectRecordedRetryDecision(storedStatus.perAccount[account.id])
       expect(storedStatus.perAccount[account.id]).toMatchObject({
         status: "failed",
         reasonCode: reason,
@@ -2209,6 +2298,80 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       vi.useRealTimers()
     },
   )
+
+  it.each([
+    {
+      name: "a retryable cause the provider refused to flag",
+      // What the execution layer decides for `session_busy` today.
+      execution: {
+        status: "failed",
+        reasonCode: "session_busy",
+        retryable: true,
+      },
+      queued: true,
+    },
+    {
+      name: "a dead end the provider tried to flag as retryable",
+      execution: {
+        status: "failed",
+        reasonCode: "authentication_required",
+        retryable: false,
+      },
+      queued: false,
+    },
+    {
+      name: "an uncertain outcome",
+      execution: {
+        status: "uncertain",
+        reconciliation: "unavailable",
+        retryable: true,
+      },
+      queued: true,
+    },
+  ])("stores one retry decision for $name", async ({ execution, queued }) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const account = {
+      id: "decided-account",
+      disabled: false,
+      site_name: "Decided Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "decided-user" },
+      checkIn: runnableCheckIn(),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+      result: execution,
+      retryable: execution.retryable,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    const stored = storedStatus.perAccount[account.id]
+    expectRecordedRetryDecision(stored)
+    expect(stored.retryable).toBe(execution.retryable)
+    expect(storedStatus.retryState?.pendingAccountIds ?? []).toEqual(
+      queued ? [account.id] : [],
+    )
+    vi.useRealTimers()
+  })
 
   it("keeps a bounded retry queued when authoritative status is temporarily unavailable", async () => {
     vi.useFakeTimers()
@@ -3074,7 +3237,10 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(storedStatus.retryState).toEqual({
       day: "2024-01-01",
       pendingAccountIds: ["failed"],
+      // A skipped account spends nothing and is not recorded; a settled one
+      // keeps what it spent, because the ledger is the day, not the queue.
       attemptsByAccount: {
+        success: 2,
         failed: 2,
       },
     })
@@ -3165,7 +3331,8 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     })
     expect(storedStatus.perAccount.already.status).toBe("already_checked")
     expect(storedStatus.perAccount.uncertain.status).toBe("uncertain")
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     vi.useRealTimers()
   })
 
@@ -3290,7 +3457,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
-  it("clears retry state when every queued account is already at max attempts before execution", async () => {
+  it("keeps the day's counts when every queued account is already out of budget", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
 
@@ -3354,7 +3521,8 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
 
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
     expect(resolveProviderForTest).not.toHaveBeenCalled()
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.lastRunResult).toBe("failed")
     expect(storedStatus.summary).toMatchObject({
@@ -3455,6 +3623,27 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(storedStatus.pendingRetry).toBe(false)
   })
 
+  it("clears retry alarm and retains ledger when maxAttempts is omitted", async () => {
+    storedStatus = {
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    }
+
+    await (autoCheckinScheduler as any).clearRetryAlarm()
+
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
+    expect(storedStatus.pendingRetry).toBe(false)
+    expect(storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: ["a"],
+      attemptsByAccount: { a: 1 },
+    })
+  })
+
   it("syncs a preserved same-day retry alarm back into stored state", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
@@ -3497,7 +3686,8 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(storedStatus.retryAlarmTargetDay).toBe("2024-01-01")
     expect(storedStatus.pendingRetry).toBe(true)
     expect(storedStatus.retryState.pendingAccountIds).toEqual(["a"])
-    expect(storedStatus.retryState.attemptsByAccount).toEqual({ a: 1 })
+    // b is out of the work list, out of budget, and still remembered.
+    expect(storedStatus.retryState.attemptsByAccount).toEqual({ a: 1, b: 3 })
 
     vi.useRealTimers()
   })
@@ -3669,7 +3859,8 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(storedStatus.retryAlarmTargetDay).toBe("2024-01-01")
     expect(storedStatus.pendingRetry).toBe(true)
     expect(storedStatus.retryState.pendingAccountIds).toEqual(["a"])
-    expect(storedStatus.retryState.attemptsByAccount).toEqual({ a: 1 })
+    // b is out of the work list, out of budget, and still remembered.
+    expect(storedStatus.retryState.attemptsByAccount).toEqual({ a: 1, b: 3 })
 
     vi.useRealTimers()
   })
@@ -3781,7 +3972,42 @@ describe("autoCheckinScheduler retry scheduling", () => {
     vi.useRealTimers()
   })
 
-  it("clears retry state when today's normal run has not happened", async () => {
+  it("clears retry state and skips retry when retryState is from a different day", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 2, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    storedStatus = {
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    } as any
+
+    await (autoCheckinScheduler as any).runRetryCheckins()
+
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
+    expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
+
+    vi.useRealTimers()
+  })
+
+  it("retries a same-day queue that was not created by the daily run", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
@@ -3807,18 +4033,32 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     } as any
 
+    mockedAccountStorage.getAccountById.mockResolvedValue({
+      id: "a",
+      disabled: false,
+      site_name: "Manual Queue",
+      site_type: SITE_TYPES.ANYROUTER,
+      account_info: { username: "user-a" },
+      checkIn: runnableCheckIn(),
+    })
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    })
+
     await (autoCheckinScheduler as any).runRetryCheckins()
 
-    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
-    expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
-    expect(resolveProviderForTest).not.toHaveBeenCalled()
-    expect(storedStatus.retryState).toBeUndefined()
-    expect(storedStatus.pendingRetry).toBe(false)
+    expect(mockedBrowserApi.clearAlarm).not.toHaveBeenCalledWith(
+      "autoCheckinRetry",
+    )
+    expect(mockedAccountStorage.getAccountById).toHaveBeenCalled()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
 
     vi.useRealTimers()
   })
 
-  it("clears retry state when there are no pending accounts left", async () => {
+  it("clears the retry alarm when there are no pending accounts left", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
@@ -3919,6 +4159,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       skippedCount: 1,
       needsRetry: false,
     })
+    // This run attempted nothing, so the day has nothing left to remember.
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
@@ -4019,6 +4260,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       skippedCount: 1,
       needsRetry: false,
     })
+    // This run attempted nothing, so the day has nothing left to remember.
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
@@ -4033,7 +4275,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
     vi.useRealTimers()
   })
 
-  it("clears exhausted retry queues instead of scheduling another retry alarm", async () => {
+  it("stops scheduling a queue whose accounts spent the budget", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
@@ -4058,9 +4300,75 @@ describe("autoCheckinScheduler retry scheduling", () => {
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(mockedBrowserApi.createAlarm).not.toHaveBeenCalled()
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list empties; the attempts it cost stay on the day's ledger so
+    // the next run cannot hand the account a fresh budget.
+    expect(storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: [],
+      attemptsByAccount: { a: 3 },
+    })
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.nextRetryScheduledAt).toBeUndefined()
+
+    vi.useRealTimers()
+  })
+
+  it("keeps an account that a manual retry queued while the run was executing", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    } as any
+
+    mockedAccountStorage.getAccountById.mockResolvedValue({
+      id: "a",
+      disabled: false,
+      site_name: "Race Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "user-a" },
+      checkIn: runnableCheckIn(),
+    })
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => {
+        // A manual single-account retry lands in the queue while this run is
+        // between its snapshot read and its write.
+        storedStatus = {
+          ...storedStatus,
+          retryState: {
+            day: "2024-01-01",
+            pendingAccountIds: ["a", "b"],
+            attemptsByAccount: { a: 1, b: 1 },
+          },
+        }
+        return { status: "success" }
+      }),
+    })
+
+    await (autoCheckinScheduler as any).runRetryCheckins()
+
+    // a is settled; b was never this run's business and must survive the write.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual(["b"])
+    expect(storedStatus.retryState?.attemptsByAccount).toEqual({ a: 2, b: 1 })
 
     vi.useRealTimers()
   })
@@ -4393,7 +4701,8 @@ describe("autoCheckinScheduler targeting support", () => {
     expect(storedStatus.perAccount.target).toMatchObject({
       status: "success",
     })
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.summary).toMatchObject({
       totalEligible: 1,
@@ -4856,7 +5165,7 @@ describe("auto check-in operation helpers", () => {
 
     await expect(
       autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
-    ).resolves.toEqual({ verified: true })
+    ).resolves.toMatchObject({ outcome: "verified" })
 
     expect(
       mockedAccountStorage.prepareAccountForSelectedCheckIn,
@@ -4864,12 +5173,230 @@ describe("auto check-in operation helpers", () => {
     expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
   })
 
+  it("updates autoCheckinStorage when verified status is confirmed checked", async () => {
+    let storedStatus: any = {
+      perAccount: {
+        [verificationAccount.id]: {
+          accountId: verificationAccount.id,
+          accountName: "Verify Account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          timestamp: 1,
+        },
+      },
+      retryState: {
+        day: formatLocalDayKey(),
+        pendingAccountIds: [verificationAccount.id],
+        attemptsByAccount: { [verificationAccount.id]: 1 },
+      },
+    }
+    mockedAutoCheckinStorage.getStatus.mockImplementation(
+      async () => storedStatus,
+    )
+    mockedAutoCheckinStorage.updateStatus.mockImplementation(
+      async (updater: any) => {
+        const applied = updater(storedStatus)
+        if (applied.patch) {
+          storedStatus = { ...storedStatus, ...applied.patch }
+        }
+        return { ok: true, result: applied.result ?? null }
+      },
+    )
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      observedAt: Date.now(),
+    })
+
+    const outcome = await autoCheckinScheduler.verifyAccountStatus(
+      verificationAccount.id,
+    )
+    expect(outcome).toMatchObject({
+      outcome: "verified",
+      verifiedStatus: "checked",
+    })
+
+    const updated = await autoCheckinStorage.getStatus()
+    expect(updated?.perAccount?.[verificationAccount.id]?.status).toBe(
+      CHECKIN_RESULT_STATUS.SUCCESS,
+    )
+    expect(updated?.retryState?.pendingAccountIds).not.toContain(
+      verificationAccount.id,
+    )
+    expect(updated?.pendingRetry).toBe(false)
+  })
+
+  it("queues a verified not-checked result that was not already pending", async () => {
+    let storedStatus: any = {
+      perAccount: {
+        [verificationAccount.id]: {
+          accountId: verificationAccount.id,
+          accountName: "Verify Account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          timestamp: 1,
+        },
+      },
+    }
+    mockedAutoCheckinStorage.getStatus.mockImplementation(
+      async () => storedStatus,
+    )
+    mockedAutoCheckinStorage.updateStatus.mockImplementation(
+      async (updater: any) => {
+        const applied = updater(storedStatus)
+        if (applied.patch) {
+          storedStatus = { ...storedStatus, ...applied.patch }
+        }
+        return { ok: true, result: applied.result ?? null }
+      },
+    )
+
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      observedAt: Date.now(),
+    })
+
+    const outcome = await autoCheckinScheduler.verifyAccountStatus(
+      verificationAccount.id,
+    )
+    expect(outcome).toMatchObject({
+      outcome: "verified",
+      verifiedStatus: "not_checked",
+    })
+
+    const updated = await autoCheckinStorage.getStatus()
+    const result = updated?.perAccount?.[verificationAccount.id]
+    expect(result?.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
+    expect(result?.retryable).toBe(true)
+    expectRecordedRetryDecision(result!)
+    expect(updated?.retryState).toEqual({
+      day: formatLocalDayKey(),
+      pendingAccountIds: [verificationAccount.id],
+      attemptsByAccount: { [verificationAccount.id]: 1 },
+    })
+    expect(updated?.pendingRetry).toBe(true)
+  })
+
+  it("marks verified not-checked results as non-retryable when the method is not repeat-safe", async () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    const repeatUnsafeAccount = {
+      ...verificationAccount,
+      checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+    }
+    let storedStatus: any = {
+      perAccount: {
+        [verificationAccount.id]: {
+          accountId: verificationAccount.id,
+          accountName: "Verify Account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+          messageKey: "autoCheckin:skipReasons.upstream_error",
+          methodId,
+          timestamp: 1,
+        },
+      },
+    }
+    mockedAutoCheckinStorage.getStatus.mockImplementation(
+      async () => storedStatus,
+    )
+    mockedAutoCheckinStorage.updateStatus.mockImplementation(
+      async (updater: any) => {
+        const applied = updater(storedStatus)
+        if (applied.patch) {
+          storedStatus = { ...storedStatus, ...applied.patch }
+        }
+        return { ok: true, result: applied.result ?? null }
+      },
+    )
+
+    mockedAccountStorage.getAccountById.mockResolvedValue(repeatUnsafeAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([repeatUnsafeAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      repeatUnsafeAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      observedAt: Date.now(),
+    })
+
+    const mutableSet = NON_REPEAT_SAFE_CHECKIN_METHOD_IDS as Set<string>
+    mutableSet.add(methodId)
+
+    try {
+      const outcome = await autoCheckinScheduler.verifyAccountStatus(
+        verificationAccount.id,
+      )
+      expect(outcome).toMatchObject({
+        outcome: "verified",
+        verifiedStatus: "not_checked",
+      })
+
+      const updated = await autoCheckinStorage.getStatus()
+      const result = updated?.perAccount?.[verificationAccount.id]
+      expect(result?.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
+      expect(result?.retryable).toBe(false)
+      expectRecordedRetryDecision(result!)
+    } finally {
+      mutableSet.delete(methodId)
+    }
+  })
+
   it("rejects status verification when the account no longer exists", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(null)
 
     await expect(
       autoCheckinScheduler.verifyAccountStatus("missing-account"),
-    ).rejects.toThrow("messages:storage.accountNotFound")
+    ).resolves.toMatchObject({ outcome: "account_not_found" })
     expect(mockedRefreshSelectedStatus).not.toHaveBeenCalled()
   })
 
@@ -4884,13 +5411,33 @@ describe("auto check-in operation helpers", () => {
 
     await expect(
       autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
-    ).rejects.toThrow("status could not be verified")
+    ).resolves.toMatchObject({ outcome: "unavailable" })
     expect(
       mockedAccountStorage.prepareAccountForSelectedCheckIn,
     ).not.toHaveBeenCalled()
   })
 
-  it("does not report success when persistence fails", async () => {
+  it("reports unsupported when status readback is unsupported by the provider", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unsupported)
+        return config
+      },
+    )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toMatchObject({
+      outcome: "unsupported",
+      error: "autoCheckin:messages.error.statusVerificationUnsupported",
+    })
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("does not report success when account-state persistence fails", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
       null,
@@ -4904,7 +5451,89 @@ describe("auto check-in operation helpers", () => {
 
     await expect(
       autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
-    ).rejects.toThrow("status could not be saved")
+    ).resolves.toMatchObject({ outcome: "not_saved" })
+  })
+
+  it("does not report success when scheduler-status persistence fails", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      observedAt: Date.now(),
+    })
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
+    })
+    mockedAutoCheckinStorage.updateStatus.mockResolvedValueOnce({
+      ok: false,
+      result: null,
+    })
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toMatchObject({ outcome: "not_saved" })
+  })
+
+  it("does not update stored status when verified status is unknown", async () => {
+    let storedStatus: any = {
+      perAccount: {
+        [verificationAccount.id]: {
+          accountId: verificationAccount.id,
+          accountName: "Verify Account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          timestamp: 1,
+        },
+      },
+    }
+    mockedAutoCheckinStorage.getStatus.mockImplementation(
+      async () => storedStatus,
+    )
+    mockedAutoCheckinStorage.updateStatus.mockImplementation(
+      async (updater: any) => {
+        const applied = updater(storedStatus)
+        if (applied.patch) {
+          storedStatus = { ...storedStatus, ...applied.patch }
+        }
+        return { ok: true, result: applied.result ?? null }
+      },
+    )
+
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+      observedAt: Date.now(),
+    })
+
+    const outcome = await autoCheckinScheduler.verifyAccountStatus(
+      verificationAccount.id,
+    )
+    expect(outcome).toMatchObject({
+      outcome: "verified",
+      verifiedStatus: "unknown",
+    })
+    expect(storedStatus.perAccount[verificationAccount.id].status).toBe(
+      CHECKIN_RESULT_STATUS.UNCERTAIN,
+    )
   })
 
   it("should run checkins on autoCheckin:runNow", async () => {
@@ -5587,7 +6216,8 @@ describe("autoCheckinScheduler.retryAccount", () => {
     expect(result.result.reasonCode).toBe("account_disabled")
     expect(result.pendingRetry).toBe(false)
     expect(storedStatus.lastRunResult).toBe("skipped")
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.summary).toMatchObject({
       successCount: 0,
@@ -5673,7 +6303,8 @@ describe("autoCheckinScheduler.retryAccount", () => {
     expect(result.result.status).toBe("success")
     expect(result.pendingRetry).toBe(false)
     expect(storedStatus.lastRunResult).toBe("success")
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.summary).toMatchObject({
       successCount: 1,
@@ -5771,7 +6402,8 @@ describe("autoCheckinScheduler.retryAccount", () => {
     )
 
     expect(storedStatus.lastRunResult).toBe("success")
-    expect(storedStatus.retryState).toBeUndefined()
+    // The work list is empty; the day's spent attempts are not forgotten.
+    expect(storedStatus.retryState?.pendingAccountIds).toEqual([])
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.summary).toMatchObject({
       successCount: 1,
@@ -7426,6 +8058,60 @@ describe("autoCheckinScheduler private helpers", () => {
     })
   })
 
+  it.each([
+    {
+      name: "network loss",
+      error: new TypeError("Failed to fetch"),
+      expected: {
+        status: "failed",
+        reasonCode: "network_error",
+        methodId: "new-api:daily-checkin",
+        retryable: true,
+      },
+    },
+    {
+      name: "a bare HTTP 403",
+      error: Object.assign(new Error("Request failed: 403"), {
+        statusCode: 403,
+      }),
+      expected: {
+        status: "uncertain",
+        reasonCode: "upstream_error",
+        methodId: "new-api:daily-checkin",
+        retryable: true,
+      },
+    },
+    {
+      name: "an expired credential",
+      error: Object.assign(new Error("Unauthorized"), { statusCode: 401 }),
+      expected: {
+        status: "failed",
+        reasonCode: "authentication_required",
+        methodId: "new-api:daily-checkin",
+        retryable: false,
+      },
+    },
+  ])(
+    "keeps a crashed execution from $name on the shared retry policy",
+    async ({ error, expected }) => {
+      mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(error)
+
+      await expect(
+        (autoCheckinScheduler as any).runAccountCheckin(
+          {
+            id: "crashed-execution",
+            site_name: "Crashed Execution",
+            site_type: SITE_TYPES.NEW_API,
+            disabled: false,
+            account_info: {},
+            checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+          },
+          "Crashed Execution",
+        ),
+      ).resolves.toMatchObject({ result: expected })
+    },
+  )
+
   it("revalidates the selected method through the account check-in owner", async () => {
     const account = {
       id: "revalidate-owner",
@@ -7747,6 +8433,41 @@ describe("autoCheckinScheduler private helpers", () => {
       expect(call[1]).toEqual({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
+    }
+  })
+
+  it("uses the shared retry policy when batch account dispatch throws", async () => {
+    const account = {
+      id: "batch-network-failure",
+      site_name: "Batch Network Failure",
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://example.invalid",
+      disabled: false,
+      account_info: {},
+      checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+    } as any
+    const runAccountCheckin = vi.spyOn(
+      autoCheckinScheduler as any,
+      "runAccountCheckin",
+    )
+    runAccountCheckin.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    try {
+      const [outcome] = await (autoCheckinScheduler as any).runAccountCheckins({
+        accounts: [account],
+        accountDisplayNameById: new Map([[account.id, account.site_name]]),
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: SCHEDULED_EXECUTION,
+        loginProviderOwners: new Map(),
+      })
+      expect(outcome.result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        retryable: true,
+      })
+      expectRecordedRetryDecision(outcome.result)
+    } finally {
+      runAccountCheckin.mockRestore()
     }
   })
 

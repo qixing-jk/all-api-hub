@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { useDevPagesSection } from "~/features/DevPanel/sections/miscSections"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
-import { render } from "~~/tests/test-utils/render"
+import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 
 const { navigateWithinOptionsPageMock } = vi.hoisted(() => ({
   navigateWithinOptionsPageMock: vi.fn(),
@@ -19,26 +19,6 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
-function SectionHarness() {
-  const section = useDevPagesSection()
-
-  return (
-    <div>
-      {section.actions.map((action) => (
-        <button key={action.id} type="button" onClick={() => void action.run()}>
-          {action.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-const RENDER_OPTIONS = {
-  withReleaseUpdateStatusProvider: false,
-  withUserPreferencesProvider: false,
-  withThemeProvider: false,
-} as const
-
 describe("dev pages section", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -46,7 +26,7 @@ describe("dev pages section", () => {
   })
 
   it("navigates to the mesh gradient lab route", async () => {
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useDevPagesSection)
 
     fireEvent.click(
       screen.getByRole("button", { name: "Open Mesh Gradient Lab" }),
@@ -60,7 +40,7 @@ describe("dev pages section", () => {
   })
 
   it("navigates to the unified API guidance preview route", async () => {
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(useDevPagesSection)
 
     fireEvent.click(
       screen.getByRole("button", {

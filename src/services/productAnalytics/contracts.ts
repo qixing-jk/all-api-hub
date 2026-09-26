@@ -1054,6 +1054,7 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   MethodNotMatched: "method_not_matched",
   MethodUnsupported: "method_unsupported",
   AccountDataMissing: "account_data_missing",
+  AccountStateWriteFailed: "account_state_write_failed",
   AuthenticationRequired: "authentication_required",
   CredentialsMissing: "credentials_missing",
   ManualVerificationRequired: "manual_verification_required",
@@ -1067,7 +1068,9 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   CheckinPageUnavailable: "checkin_page_unavailable",
   SessionBusy: "session_busy",
   UpstreamError: "upstream_error",
+  UpstreamRejected: "upstream_rejected",
   LoginProviderInUse: "login_provider_in_use",
+  LoginProviderRequired: "login_provider_required",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =

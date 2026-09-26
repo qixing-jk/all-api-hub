@@ -28,6 +28,7 @@ import {
   triggerStartupSponsorRecommendationsDailySummary,
 } from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
 import { shouldAutoOpenChangelogForUpdate } from "~/services/updates/changelogIndex"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
@@ -243,4 +244,6 @@ async function main() {
   triggerStartupSettingsSnapshot()
   triggerStartupShieldBypassDailySummary()
   triggerStartupSponsorRecommendationsDailySummary()
+  // Runs after i18n initialization so the survey URL carries the active UI language.
+  void uninstallSurveyService.refresh()
 }

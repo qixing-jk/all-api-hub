@@ -7,6 +7,7 @@ import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyr
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import {
+  AUTO_CHECKIN_METHOD_DEFINITIONS,
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
   createAutoCheckinMethodMetadata,
   createAutoCheckinMethodRegistry,
@@ -15,6 +16,7 @@ import {
   getAutoCheckinMethodSource,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
+  supportsCheckInStatusReadback,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   AutoCheckinMethodDefinition,
@@ -117,10 +119,30 @@ describe("autoCheckinMethodRegistry", () => {
     expect(denxioProvider.detect).toBeTypeOf("function")
   })
 
+  it("publishes readback metadata that matches the executable provider", () => {
+    for (const definition of Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)) {
+      const registration = autoCheckinMethodRegistry.resolveById(definition.id)
+      expect(registration).toBeTruthy()
+      expect(definition.supportsStatusReadback).toBe(
+        Boolean(registration?.provider.getStatus),
+      )
+      expect(supportsCheckInStatusReadback(definition.id)).toBe(
+        definition.supportsStatusReadback === true,
+      )
+    }
+    expect(supportsCheckInStatusReadback(undefined)).toBe(false)
+    expect(supportsCheckInStatusReadback("not-a-method")).toBe(false)
+  })
+
   it("offers login check-in only on Agent Router without adding a site type", () => {
     expect(
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.NEW_API, "https://agentrouter.org")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://ps.air-outer.com")
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
     expect(
@@ -131,6 +153,11 @@ describe("autoCheckinMethodRegistry", () => {
     expect(
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.UNKNOWN, "https://ps.air-outer.com")
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.UNKNOWN)).toEqual([])

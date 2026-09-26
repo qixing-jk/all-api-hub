@@ -369,6 +369,8 @@ export const buildAccountKeyResourceRuntimeKey = (
     ref: AccountKeyResourceRef
     label: string
     secret: string
+    /** Client-facing address for credential-routed providers; defaults to the account origin. */
+    baseUrl?: string
     modelAccess?: AccountRuntimeKeyModelAccess
     status?: AccountRuntimeKeyStatus
     createdAt?: number
@@ -382,6 +384,7 @@ export const buildAccountKeyResourceRuntimeKey = (
       id: buildAccountKeyResourceRuntimeKeyId(resource.ref),
       label: resource.label,
       secret: resource.secret,
+      ...(resource.baseUrl ? { baseUrl: resource.baseUrl } : {}),
       modelAccess: resource.modelAccess,
       createdAt: resource.createdAt,
       notes: resource.notes,

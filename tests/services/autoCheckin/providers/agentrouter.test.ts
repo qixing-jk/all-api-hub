@@ -5,11 +5,13 @@ import {
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   agentRouterProvider,
   createAgentRouterProvider,
 } from "~/services/checkin/autoCheckin/providers/agentrouter"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -80,6 +82,7 @@ describe("AgentRouter login check-in", () => {
         account: saved,
         provider: "github",
         requestId: "checkin-request",
+        attended: false,
       })
     },
   )
@@ -91,7 +94,23 @@ describe("AgentRouter login check-in", () => {
       account: saved,
       provider: "linuxdo",
       requestId: "checkin-request",
+      attended: false,
     })
+  })
+
+  it.each([
+    TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    TEMP_WINDOW_REQUEST_SOURCES.Options,
+    TEMP_WINDOW_REQUEST_SOURCES.Sidepanel,
+  ])("waits for a person when the run came from %s", async (source) => {
+    const { provider, authenticate } = setup()
+    await provider.checkIn(account(), {
+      ...context,
+      tempWindowRequestSource: source,
+    })
+    expect(authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({ attended: true }),
+    )
   })
   it("records the provider identity a successful login proved", async () => {
     const { provider, recordLoginProviderEvidence } = setup()
@@ -155,11 +174,27 @@ describe("AgentRouter login check-in", () => {
       provider.checkIn(account(null), context),
     ).resolves.toMatchObject({
       status: "failed",
+      reasonCode: "login_provider_required",
       messageKey: "autoCheckin:providerFallback.loginProviderRequired",
-      retryable: false,
     })
     expect(authenticate).not.toHaveBeenCalled()
   })
+
+  it("keeps a missing login method out of the automatic retry queue", async () => {
+    const { provider } = setup()
+
+    const result = await provider.checkIn(account(null), context)
+
+    // No run can succeed until the user picks a login method, so the retry
+    // queue has to treat this as a dead end.
+    expect(
+      canAutomaticallyRetryCheckinResult(
+        result,
+        AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+      ),
+    ).toBe(false)
+  })
+
   it("rejects an unknown persisted provider without a login attempt", async () => {
     const { provider, authenticate } = setup()
     const saved = account()
@@ -180,7 +215,7 @@ describe("AgentRouter login check-in", () => {
         evidence: { checkedIn },
       })
       await expect(provider.checkIn(account(), context)).resolves.toMatchObject(
-        { status: "uncertain", retryable: false },
+        { status: "uncertain", reasonCode: "checkin_unconfirmed" },
       )
     },
   )
@@ -188,13 +223,12 @@ describe("AgentRouter login check-in", () => {
     BROWSER_OAUTH_STATUS.IdentityMismatch,
     BROWSER_OAUTH_STATUS.Failed,
     BROWSER_OAUTH_STATUS.Cancelled,
-  ])("does not retry %s", async (status) => {
+  ])("reports %s as an upstream failure", async (status) => {
     const { provider, authenticate } = setup()
     authenticate.mockResolvedValue({ status })
     await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
       status: "failed",
       reasonCode: "upstream_error",
-      retryable: false,
     })
   })
   it("reports required browser interaction", async () => {
@@ -205,7 +239,6 @@ describe("AgentRouter login check-in", () => {
     await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
       status: "failed",
       reasonCode: "authentication_required",
-      retryable: false,
     })
   })
 
@@ -219,25 +252,56 @@ describe("AgentRouter login check-in", () => {
       status: "failed",
       reasonCode: "session_busy",
       messageKey: "autoCheckin:providerFallback.sessionBusy",
-      retryable: false,
     })
   })
 
-  it("discovers the canonical deployment using either supported login provider", async () => {
+  it.each(["Agent Router", "agent router", "AgentRouter", "Agent Router Pro"])(
+    "discovers the deployment with system_name %s without requiring OAuth flags",
+    async (system_name) => {
+      const { provider, fetchStatus } = setup()
+      fetchStatus.mockResolvedValue({
+        success: true,
+        data: { system_name },
+      })
+      await expect(
+        provider.detect!({ account: account(), observedAt: 123 }),
+      ).resolves.toMatchObject({ outcome: "matched" })
+    },
+  )
+
+  it.each(["New API", "One API", "Router", "Agent", "", undefined])(
+    "rejects discovery when system_name is %s",
+    async (system_name) => {
+      const { provider, fetchStatus } = setup()
+      fetchStatus.mockResolvedValue({
+        success: true,
+        data: { system_name },
+      })
+      await expect(
+        provider.detect!({ account: account(), observedAt: 123 }),
+      ).resolves.toMatchObject({ outcome: "unsupported" })
+    },
+  )
+
+  it("rejects discovery when status request fails", async () => {
     const { provider, fetchStatus } = setup()
     fetchStatus.mockResolvedValue({
-      success: true,
-      data: { system_name: "Agent Router", linuxdo_oauth: true },
+      success: false,
+      data: { system_name: "Agent Router" },
     })
     await expect(
       provider.detect!({ account: account(), observedAt: 123 }),
-    ).resolves.toMatchObject({ outcome: "matched" })
+    ).resolves.toMatchObject({ outcome: "unsupported" })
   })
+
   it.each([
     "https://other.example",
     "http://agentrouter.org",
     "https://agentrouter.org.attacker.example",
     "https://agentrouter.org:444",
+    "http://ps.air-outer.com",
+    "https://ps.air-outer.com.attacker.example",
+    "https://ps.air-outer.com:444",
   ])("rejects %s before requests or login", async (site_url) => {
     const { provider, authenticate, fetchStatus } = setup()
     const saved = { ...account(), site_url }
@@ -249,6 +313,22 @@ describe("AgentRouter login check-in", () => {
     })
     expect(authenticate).not.toHaveBeenCalled()
     expect(fetchStatus).not.toHaveBeenCalled()
+  })
+  it("accepts known mirror ps.air-outer.com for detection and check-in", async () => {
+    const { provider, authenticate, fetchStatus } = setup()
+    const saved = { ...account(), site_url: "https://ps.air-outer.com" }
+    await expect(
+      provider.detect!({ account: saved, observedAt: 123 }),
+    ).resolves.toMatchObject({ outcome: "matched" })
+    await expect(provider.checkIn(saved, context)).resolves.toMatchObject({
+      status: "success",
+    })
+    expect(fetchStatus).toHaveBeenCalled()
+    expect(authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: saved,
+      }),
+    )
   })
   it("requires an account identity", async () => {
     const { provider, authenticate } = setup()

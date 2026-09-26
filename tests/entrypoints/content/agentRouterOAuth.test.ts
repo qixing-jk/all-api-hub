@@ -124,6 +124,36 @@ describe("AgentRouter OAuth content seam", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("accepts known mirror ps.air-outer.com origin", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: { id: "user-1" },
+      }),
+    )
+    vi.stubGlobal("location", {
+      origin: "https://ps.air-outer.com",
+      href: "https://ps.air-outer.com/console/token",
+      pathname: "/console/token",
+    })
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: "user-1", checked_in: true }),
+    )
+
+    await expect(runHandler(handleCompleteAgentRouterOAuth)).resolves.toEqual({
+      success: true,
+      userId: "user-1",
+      checkedIn: true,
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/user/self",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "New-Api-User": "user-1" }),
+      }),
+    )
+  })
+
   it("clears rejected callback evidence without making a request", async () => {
     localStorage.setItem(
       "user",
@@ -512,5 +542,53 @@ describe("AgentRouter OAuth content seam", () => {
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith("/api/status", expect.any(Object))
+  })
+
+  it("accepts system_name variations matching Agent Router pattern", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          success: true,
+          data: {
+            system_name: "AgentRouter",
+            github_oauth: true,
+            github_client_id: "client",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ success: true }))
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: "signed-state" }),
+      )
+    await expect(
+      runRequestHandler(handlePrepareAgentRouterOAuth, {
+        loginProvider: "github",
+      }),
+    ).resolves.toEqual({
+      success: true,
+      clientId: "client",
+      state: "signed-state",
+    })
+  })
+
+  it("rejects prepare when system_name does not match Agent Router pattern", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          system_name: "New API",
+          github_oauth: true,
+          github_client_id: "client",
+        },
+      }),
+    )
+    await expect(
+      runRequestHandler(handlePrepareAgentRouterOAuth, {
+        loginProvider: "github",
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      reason: "request_failed",
+    })
   })
 })

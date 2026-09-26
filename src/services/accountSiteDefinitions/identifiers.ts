@@ -21,6 +21,7 @@ export const SITE_TYPES = {
   CLI_PROXY_API: "cli-proxy-api",
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
+  RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
   UNKNOWN: "unknown",
 } as const
@@ -48,6 +49,19 @@ export const AIHUBMIX_HOSTNAMES = [
 
 export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
 export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
+
+/**
+ * Right Code is served on three equivalent domains that share one account
+ * database; the account is stored against whichever host it was detected on.
+ * https://www.right.codes, https://right.codes and https://rightapi.ai
+ */
+export const RIGHTCODE_HOSTNAMES = [
+  "right.codes",
+  "www.right.codes",
+  "rightapi.ai",
+] as const
+export const RIGHTCODE_DISPLAY_NAME = "RightCode"
+export const RIGHTCODE_LOGIN_PATH = "/login"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 export const OPENROUTER_DISPLAY_NAME = "OpenRouter"

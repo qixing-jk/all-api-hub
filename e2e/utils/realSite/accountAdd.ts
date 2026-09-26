@@ -92,6 +92,7 @@ export async function waitForSavedAccount(params: {
   siteType: AccountSiteType
   baseUrl: string
   timeoutMs?: number
+  predicate?: (account: SiteAccount) => boolean
 }) {
   let savedAccount: SiteAccount | null = null
 
@@ -103,6 +104,8 @@ export async function waitForSavedAccount(params: {
           params.siteType,
           params.baseUrl,
         )
+        if (!savedAccount) return null
+        if (params.predicate && !params.predicate(savedAccount)) return null
         return savedAccount
       },
       {

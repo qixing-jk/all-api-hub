@@ -9,8 +9,8 @@ import {
   EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
-import { AUTO_CHECKIN_SKIP_CATEGORY } from "~/features/AutoCheckin/utils/skipCategories"
 import enAutoCheckin from "~/locales/en/autoCheckin.json"
+import { AUTO_CHECKIN_SKIP_CATEGORY } from "~/services/checkin/autoCheckin/reasonCatalog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -375,17 +375,17 @@ describe("AutoCheckin FilterBar", () => {
     // Multi-reason categories list their precise reasons underneath.
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Auto check-in disabled 1$/,
+        name: /^Auto check-in is off.*1$/,
       }),
     ).toBeVisible()
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Detection disabled 1$/,
+        name: /^Check-in detection is off.*1$/,
       }),
     ).toBeVisible()
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Sign-in has expired or is required.*2$/,
+        name: /^Your sign-in has expired or is missing.*2$/,
       }),
     ).toBeVisible()
   })
@@ -480,7 +480,7 @@ describe("AutoCheckin FilterBar", () => {
     await user.click(reasonTrigger())
     await user.click(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Saved credentials are missing.*1$/,
+        name: /^Sign-in credentials are missing.*1$/,
       }),
     )
 
@@ -490,7 +490,7 @@ describe("AutoCheckin FilterBar", () => {
     expect(wholeCategory).toHaveAttribute("aria-checked", "false")
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Saved credentials are missing.*1$/,
+        name: /^Sign-in credentials are missing.*1$/,
       }),
     ).toHaveAttribute("aria-checked", "true")
 
@@ -498,7 +498,7 @@ describe("AutoCheckin FilterBar", () => {
     expect(wholeCategory).toHaveAttribute("aria-checked", "true")
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Saved credentials are missing.*1$/,
+        name: /^Sign-in credentials are missing.*1$/,
       }),
     ).toHaveAttribute("aria-checked", "false")
   })
@@ -517,7 +517,7 @@ describe("AutoCheckin FilterBar", () => {
     expect(wholeCategory).toHaveAttribute("aria-checked", "false")
     expect(
       screen.getByRole("menuitemcheckbox", {
-        name: /^Saved credentials are missing.*1$/,
+        name: /^Sign-in credentials are missing.*1$/,
       }),
     ).toHaveAttribute("aria-checked", "false")
 
@@ -538,7 +538,7 @@ describe("AutoCheckin FilterBar", () => {
     await user.click(reasonTrigger())
 
     const preciseReason = screen.getByRole("menuitemcheckbox", {
-      name: /^Saved credentials are missing.*1$/,
+      name: /^Sign-in credentials are missing.*1$/,
     })
     await user.click(preciseReason)
     expect(preciseReason).toHaveAttribute("aria-checked", "true")

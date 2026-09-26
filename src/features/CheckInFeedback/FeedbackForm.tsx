@@ -15,6 +15,7 @@ import {
   getFeedbackOrigin,
   type CheckInFeedbackSnapshot,
 } from "~/services/checkin/feedback/report"
+import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import pkg from "~~/package.json"
 
@@ -37,6 +38,16 @@ export function FeedbackForm({
   const id = useId()
   const executionMessage = (() => {
     if (!snapshot.execution) return ""
+    if (
+      snapshot.execution.reasonCode &&
+      snapshot.execution.reasonCode !==
+        AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED &&
+      snapshot.execution.reasonCode !==
+        AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR &&
+      !snapshot.execution.messageKey
+    ) {
+      return ""
+    }
     let text = getAutoCheckinResultMessage(t, snapshot.execution)
     for (const secret of [
       auth?.accessToken,

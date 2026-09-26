@@ -32,6 +32,7 @@ When working on a site type:
 - **Sub2API (`sub2api`)** is both an account site and a managed site. It has dedicated authentication-session, account, model-catalog, key-resource, and managed-resource integrations; it is not a New API-family alias.
 - **AIHubMix (`AIHubMix`)** is account-only and uses dedicated capabilities under `src/services/apiAdapters/aihubmix/`. Always use `https://aihubmix.com` as the API origin, including accounts imported from `console.aihubmix.com`. Auto-detect may use logged-in web endpoints (`/call/usr/self`, `/call/usr/tkn`) to obtain the account access token, but saved accounts operate as access-token accounts. Token-authenticated requests send raw `Authorization: <access_token>` without a `Bearer` prefix. Full API keys are one-time secrets; saved key responses may be masked and must not fall back to New API-family secret-resolution behavior.
 - **SharedChat (`sharedchat`)** is an account-only integration for the canonical `new.sharedchat.cc` deployment. It uses dedicated cookie-authenticated account, service-credential, invite, and model-catalog capabilities. Treat its observed deployment API as provider-specific; no verified public upstream source repository is currently recorded.
+- **RightCode (`RightCode`)** is account-only and not a One API / New API derivative: it runs a provider-owned REST console served on three equivalent domains (`www.right.codes`, `right.codes`, `rightapi.ai`) behind a bearer account token. It covers account balance/plans, native key management, model list and pricing. The deployment has **no check-in flow**, and activation-code redemption is deliberately not integrated because its success payload is unverified. The account token is the API credential itself and expires on the account's own rotation schedule, so access is recovered by re-reading the logged-in browser session rather than by a refresh-token flow.
 - **OpenRouter (`openrouter`)** is an account-only platform integration, not a managed/self-hosted backend. It uses Management Keys for account access and provides native API-key resources plus provider-owned model catalogs.
 
 ## Default Upstream References
@@ -53,6 +54,7 @@ When the user names a backend without a deployment URL or fork, treat these as t
 - Sub2API: `https://github.com/Wei-Shaw/sub2api`
 - AIHubMix API docs: `https://docs.aihubmix.com/en/api/Cli` and `https://docs.aihubmix.com/en/api/Models-API`
 - SharedChat canonical deployment: `https://new.sharedchat.cc`; no verified public upstream source repository is currently recorded
+- RightCode console: `https://www.right.codes` (equivalent aliases `https://right.codes`, `https://rightapi.ai`); docs: `https://docs.rightapi.ai/`; no public upstream source repository (provider-owned REST backend)
 - OpenRouter: `https://openrouter.ai/`; docs: `https://openrouter.ai/docs`; OpenAPI source: `https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml`
 
 If the reported behavior differs from upstream, distinguish the target deployment from the default reference before concluding the repo is wrong.

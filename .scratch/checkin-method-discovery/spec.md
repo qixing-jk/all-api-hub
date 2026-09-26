@@ -1015,3 +1015,9 @@ Across two rounds, six independent agents reviewed the requirement journey, acco
 - With these decisions, the current proposal passes requirements and architecture review and has an actionable English implementation plan.
 
 The design branch was refreshed onto `origin/main` at `1c6f72543c8feb12a8562eb15199969656045979`. The additional #1280 change only decouples real-site E2E account saves from model probes and does not change this design's product contracts. Fetch and re-check the base again immediately before product implementation if main advances further.
+
+## Amendment — uncertain check-in recovery
+
+Superseded for execution retry by `.scratch/uncertain-checkin-recovery/spec.md`.
+
+A same-day automatic retry no longer requires a verified idempotency policy or a status readback. The accepted assumption is that replaying a daily check-in is safe enough unless the result is an already clear dead end (authentication, permission, unavailable method, invalid execution context, or a skipped precondition). Readback remains a pre-check when it exists, not an admission requirement. `NON_REPEAT_SAFE_CHECKIN_METHOD_IDS` stays empty until a method is observed applying one check-in twice in a day.

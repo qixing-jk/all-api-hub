@@ -36,6 +36,16 @@ In other words, anonymous product analytics do not collect API Keys, access toke
 
 These restrictions can be reviewed through the open-source code. The relevant filtering logic is located in `src/services/productAnalytics/privacy.ts`, with corresponding tests in `tests/services/productAnalytics/privacy.test.ts`.
 
+### Uninstall Feedback Survey
+
+When you uninstall this extension, the browser opens a survey page hosted by us (`https://all-api-hub.qixing1217.top/uninstall.html`) to learn why you left. That page follows the same boundaries as anonymous product analytics:
+
+*   The page address carries the anonymous analytics ID only while anonymous product analytics is enabled, so this uninstall can be linked to how the features were used before it. With analytics disabled the page still opens, but the address contains no such ID and no event is sent when the page loads.
+*   The address also carries the extension version, the number of days between installation and uninstall, and the interface language, to tell cases like "uninstalled shortly after installing" apart from "uninstalled after long-term use".
+*   The uninstall reason is sent only after you pick one on the page and click submit. The explanation text is sent only when you write it yourself and submit it; it is never collected automatically.
+*   Survey responses and anonymous product analytics are stored in the same PostHog project.
+*   Even with anonymous product analytics disabled, clicking submit still sends your feedback to the developer — it is simply not linked to any anonymous analytics ID.
+
 ### How Data is Stored
 
 Apart from the anonymous product analytics described above, account data and user management data are **stored on your local device by default**, including:

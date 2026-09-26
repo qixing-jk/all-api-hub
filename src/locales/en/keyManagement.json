@@ -356,6 +356,9 @@
         "cancel": "Cancel",
         "save": "Save key"
       },
+      "allowWallet": "Allow using balance",
+      "allowWalletHelp": "Keeps this key working from the account balance after its plan quota runs out.",
+      "channel": "Channel",
       "expiryDays": "Expires in (days)",
       "feedback": {
         "authenticationFailed": "Sign in again or update this account's credentials, then retry.",

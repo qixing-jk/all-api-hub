@@ -7,6 +7,7 @@ import {
   filterRealSiteE2eMatrix,
   normalizeRealSiteE2eCategory,
 } from "./real-site-e2e-matrix.mjs"
+import { resolvePnpmInvocation } from "./utils/run-pnpm.mjs"
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const firstArg = process.argv[2]
@@ -76,6 +77,12 @@ function hasPlaywrightArg(args, name) {
   return args.some((arg) => arg === name || arg.startsWith(`${name}=`))
 }
 
+/**
+ * Build the environment for one matrix entry's Playwright run.
+ * @param entry Real-site E2E matrix entry.
+ * @param options Build options for this entry.
+ * @returns Environment variables for the spawned Playwright process.
+ */
 function buildEntryEnv(entry, options = {}) {
   const env = {
     ...process.env,
@@ -99,19 +106,18 @@ function buildEntryEnv(entry, options = {}) {
   return env
 }
 
+/**
+ * Run pnpm with fixed, repository-owned arguments, propagating failures.
+ * @param args pnpm arguments, never user input or Git paths.
+ * @param env Environment for the spawned process.
+ */
 function runPnpm(args, env) {
-  const result =
-    typeof process.env.npm_execpath === "string" && process.env.npm_execpath
-      ? spawnSync(process.execPath, [process.env.npm_execpath, ...args], {
-          cwd: rootDir,
-          env,
-          stdio: "inherit",
-        })
-      : spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, {
-          cwd: rootDir,
-          env,
-          stdio: "inherit",
-        })
+  const invocation = resolvePnpmInvocation(args)
+  const result = spawnSync(invocation.command, invocation.args, {
+    cwd: rootDir,
+    env,
+    stdio: "inherit",
+  })
 
   if (result.status !== 0) {
     if (result.error) {

@@ -22,7 +22,10 @@ import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub
 import { mergeRefreshedCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
@@ -387,7 +390,6 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     })
     expect(result).toMatchObject({
       kind: "executed",
-      retryable: false,
       result: { reasonCode: "method_unsupported" },
     })
     expect(account.checkIn.selection).toEqual({
@@ -424,7 +426,6 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       ).resolves.toMatchObject({
         kind: "blocked",
         reason: "network_error",
-        retryable: true,
       })
       expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
     },
@@ -509,7 +510,6 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       ).resolves.toMatchObject({
         kind: "blocked",
         reason: "account_unavailable",
-        retryable: false,
       })
     },
   )
@@ -533,7 +533,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         globalAutomaticExecutionEnabled: true,
         context: executionContext(),
       }),
-    ).resolves.toMatchObject({ kind: "executed", retryable: false })
+    ).resolves.toMatchObject({ kind: "executed" })
     expect(getStatus).toHaveBeenCalledOnce()
     expect(checkIn).toHaveBeenCalledOnce()
   })
@@ -708,7 +708,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       globalAutomaticExecutionEnabled: true,
       context: executionContext(),
     })
-    expect(result).toMatchObject({ kind: "executed", retryable: false })
+    expect(result).toMatchObject({ kind: "executed" })
     expect(performSub2ApiProDailyCheckIn).toHaveBeenCalledOnce()
   })
 
@@ -723,7 +723,10 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       })
     const checkIn = vi
       .spyOn(registration.provider, "checkIn")
-      .mockResolvedValue({ status: CHECKIN_RESULT_STATUS.UNCERTAIN })
+      .mockResolvedValue({
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      })
 
     await expect(
       executeSelectedCheckIn({
@@ -735,10 +738,8 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       kind: "executed",
       result: {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        retryable: true,
         reconciliation: "not_checked",
       },
-      retryable: true,
     })
     expect(checkIn).toHaveBeenCalledOnce()
   })
@@ -756,7 +757,10 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     vi.spyOn(registration.provider, "checkIn")
       .mockImplementationOnce(async () => {
         order.push("POST")
-        return { status: CHECKIN_RESULT_STATUS.UNCERTAIN }
+        return {
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        }
       })
       .mockImplementationOnce(async () => {
         order.push("POST")
@@ -772,7 +776,6 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       kind: "executed",
       result: {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        retryable: true,
       },
     })
     expect(order).toEqual(["GET", "POST", "GET"])
@@ -815,7 +818,10 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
       "authentication_required",
     ],
-    [SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED, "status_unavailable"],
+    [
+      SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED,
+      "account_state_write_failed",
+    ],
     [SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING, "account_unavailable"],
   ] as const)(
     "stops a recovered mutation on auth-session result %s",
@@ -834,6 +840,11 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       ).resolves.toMatchObject({
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode,
+        ...(status === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED
+          ? {
+              messageKey: "autoCheckin:skipReasons.account_state_write_failed",
+            }
+          : {}),
       })
     },
   )
@@ -853,7 +864,12 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         statusProof: notCheckedStatus,
         mutationLifecycle,
       }),
-    ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.UNCERTAIN })
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      // A dispatched mutation whose response was lost cannot read its own status
+      // back, which is the reason this provider reports for that state.
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    })
   })
 
   it("resets lifecycle evidence before classifying a recovered pre-dispatch failure", async () => {
@@ -929,9 +945,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       result: {
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode: "network_error",
-        retryable: true,
       },
-      retryable: true,
     })
   })
 })

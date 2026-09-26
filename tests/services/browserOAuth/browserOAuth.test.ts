@@ -335,9 +335,7 @@ describe("browser OAuth context", () => {
     })
   })
   it("joins concurrent logins for the same expected account onto one browser flow", async () => {
-    // A manual check-in and a scheduled run can ask for the same account at the
-    // same time; the second request must observe the first flow, not open a
-    // second popup or fail with a misleading login error.
+    // Requests with the same interaction budget share the same browser flow.
     let resolveWindow: ((value: unknown) => void) | undefined
     browserApi.createWindow.mockImplementationOnce(
       () =>
@@ -388,6 +386,44 @@ describe("browser OAuth context", () => {
     ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
     expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
   })
+
+  it.each([false, true])(
+    "keeps a differently attended login out of the first flow when attended=%s",
+    async (firstAttended) => {
+      let resolveWindow: ((value: unknown) => void) | undefined
+      browserApi.createWindow.mockImplementationOnce(
+        () =>
+          new Promise<unknown>((resolve) => {
+            resolveWindow = resolve
+          }),
+      )
+
+      const first = browserOAuthContext.authenticate({
+        expectedIdentity: "user-1",
+        origin,
+        requestId: "first-budget",
+        attended: firstAttended,
+      })
+      await vi.waitFor(() =>
+        expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+      )
+      const second = browserOAuthContext.authenticate({
+        expectedIdentity: "user-1",
+        origin,
+        requestId: "second-budget",
+        attended: !firstAttended,
+      })
+
+      resolveWindow?.(null)
+      await expect(first).resolves.toMatchObject({
+        status: BROWSER_OAUTH_STATUS.Failed,
+      })
+      await expect(second).resolves.toMatchObject({
+        status: BROWSER_OAUTH_STATUS.Authenticated,
+      })
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it("keeps concurrent first-time logins apart when no identity is expected", async () => {
     let resolveWindow: ((value: unknown) => void) | undefined
@@ -477,6 +513,151 @@ describe("browser OAuth context", () => {
       }),
     ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
     expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * Leaves one login waiting on the authorization page and reports how much fake
+   * time had passed when it gave up.
+   *
+   * The advanced window outlives every candidate bound, so the shared queue is
+   * always released and a wrong bound shows up as a wrong elapsed value instead
+   * of a wedged suite.
+   */
+  const timeOutLogin = async (input: { attended?: boolean }) => {
+    vi.useFakeTimers()
+    browserApi.getTab.mockImplementation(async () =>
+      browserApi.updateTab.mock.calls.length
+        ? { ...loginTab, url: authorizationUrl }
+        : loginTab,
+    )
+    const result = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "timeout",
+      ...input,
+    })
+    let settledAfterMs: number | null = null
+    let elapsed = 0
+    void result.then(() => {
+      settledAfterMs = elapsed
+    })
+
+    for (let step = 0; step < 10; step += 1) {
+      elapsed += 30_000
+      await vi.advanceTimersByTimeAsync(30_000)
+    }
+
+    const settledMs = settledAfterMs
+    if (settledMs === null) {
+      throw new Error(
+        "The login flow never settled inside the advanced window.",
+      )
+    }
+    return { settledAfterMs: settledMs, result }
+  }
+
+  it("bounds an unattended login with the short interactive budget", async () => {
+    // A run no one can complete must not hold the shared session for a whole
+    // interactive budget, or the login behind it never gets its turn.
+    const { settledAfterMs, result } = await timeOutLogin({ attended: false })
+
+    expect(settledAfterMs).toBeGreaterThan(30_000)
+    expect(settledAfterMs).toBeLessThanOrEqual(60_000)
+    await expect(result).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.InteractionRequired,
+    })
+  })
+
+  it("gives an attended login the longer interactive budget", async () => {
+    const { settledAfterMs, result } = await timeOutLogin({})
+
+    expect(settledAfterMs).toBeGreaterThan(60_000)
+    expect(settledAfterMs).toBeLessThanOrEqual(120_000)
+    await expect(result).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.InteractionRequired,
+    })
+  })
+
+  it("keeps a queued login waiting while the holder spends its interactive budget", async () => {
+    vi.useFakeTimers()
+    const queuedContext = createBrowserOAuthContext({
+      ...testFlow,
+      id: "example-oauth-queued",
+    })
+    let resolveWindow: ((value: unknown) => void) | undefined
+    browserApi.createWindow.mockImplementationOnce(
+      () =>
+        new Promise<unknown>((resolve) => {
+          resolveWindow = resolve
+        }),
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+
+    const holderPromise = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "holder",
+    })
+    let holderSettled = false
+    const holder = holderPromise.then((value) => {
+      holderSettled = true
+      return value
+    })
+    // Startup needs real ticks, so wait for the popup before freezing the clock.
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+    )
+    vi.useFakeTimers()
+
+    const queuedPromise = queuedContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "queued",
+    })
+    let queuedSettled = false
+    const queued = queuedPromise.then((value) => {
+      queuedSettled = true
+      return value
+    })
+
+    try {
+      // The holder spends its own page load and interactive budget before it can
+      // release the shared session.
+      await vi.advanceTimersByTimeAsync(30_000 + 120_000)
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1)
+
+      resolveWindow?.({ id: 7, tabs: [loginTab] })
+      for (
+        let step = 0;
+        step < 100 && !(holderSettled && queuedSettled);
+        step += 1
+      ) {
+        await vi.advanceTimersByTimeAsync(50)
+      }
+
+      await expect(queued).resolves.toMatchObject({
+        status: BROWSER_OAUTH_STATUS.Authenticated,
+      })
+      await expect(holder).resolves.toMatchObject({
+        status: BROWSER_OAUTH_STATUS.Authenticated,
+      })
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+    } finally {
+      resolveWindow?.({ id: 7, tabs: [loginTab] })
+    }
   })
 
   afterEach(() => {

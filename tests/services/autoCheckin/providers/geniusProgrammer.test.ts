@@ -250,9 +250,6 @@ describe("Genius Programmer check-in integration", () => {
         mutationLifecycle,
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.UNCERTAIN })
-    expect(geniusProgrammerProvider.retryAfterUncertainNotChecked).not.toBe(
-      true,
-    )
   })
   it.each([true, false])(
     "reconciles a lost response without replay (checked=%s)",
@@ -271,7 +268,10 @@ describe("Genius Programmer check-in integration", () => {
         globalAutomaticExecutionEnabled: true,
         context: executionContext(),
       })
-      expect(result).toMatchObject({ kind: "executed", retryable: false })
+      expect(result).toMatchObject({
+        kind: "executed",
+        retryable: !checkedInToday,
+      })
       expect(performGeniusProgrammerDailyCheckIn).toHaveBeenCalledOnce()
       expect(
         vi.mocked(fetchGeniusProgrammerDailyCheckInStatus).mock.calls.length,

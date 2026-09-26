@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useFixtureAccountsDevSection } from "~/features/DevPanel/sections/fixtureAccountsSection"
 import toast from "~/lib/notify"
-import { render } from "~~/tests/test-utils/render"
+import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 
 const {
   addDevFixtureAccountsMock,
@@ -31,32 +31,6 @@ vi.mock("~/lib/notify", () => {
   return { default: toastMock }
 })
 
-function SectionHarness() {
-  const section = useFixtureAccountsDevSection(true)
-
-  return (
-    <div>
-      {section.actions.map((action) => (
-        <button
-          key={action.id}
-          type="button"
-          onClick={() => void action.run()}
-          disabled={action.disabled}
-          aria-busy={action.loading || undefined}
-        >
-          {action.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-const RENDER_OPTIONS = {
-  withReleaseUpdateStatusProvider: false,
-  withUserPreferencesProvider: false,
-  withThemeProvider: false,
-} as const
-
 describe("fixture accounts dev section", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -66,7 +40,7 @@ describe("fixture accounts dev section", () => {
   })
 
   it("adds fixtures, reports the count, and refreshes the label", async () => {
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -87,7 +61,7 @@ describe("fixture accounts dev section", () => {
   it("adds a single fixture account", async () => {
     addDevFixtureAccountsMock.mockResolvedValue(1)
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
     fireEvent.click(
       await screen.findByRole("button", {
         name: "Dev: Add 1 fixture account",
@@ -102,7 +76,7 @@ describe("fixture accounts dev section", () => {
   it("reports the error message when adding fixtures fails", async () => {
     addDevFixtureAccountsMock.mockRejectedValue(new Error("storage full"))
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
     fireEvent.click(
       await screen.findByRole("button", {
         name: "Dev: Add 5 fixture accounts",
@@ -119,7 +93,7 @@ describe("fixture accounts dev section", () => {
   it("reports non-Error rejections when adding fixtures fails", async () => {
     addDevFixtureAccountsMock.mockRejectedValue("plain failure")
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
     fireEvent.click(
       await screen.findByRole("button", {
         name: "Dev: Add 5 fixture accounts",
@@ -137,7 +111,7 @@ describe("fixture accounts dev section", () => {
     countDevFixtureAccountsMock.mockResolvedValue(3)
     clearDevFixtureAccountsMock.mockResolvedValue(3)
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
 
     const clearButton = await screen.findByRole("button", {
       name: /^Dev: Clear fixture accounts/,
@@ -157,7 +131,7 @@ describe("fixture accounts dev section", () => {
     countDevFixtureAccountsMock.mockResolvedValue(2)
     clearDevFixtureAccountsMock.mockRejectedValue(new Error("locked"))
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
 
     const clearButton = await screen.findByRole("button", {
       name: /^Dev: Clear fixture accounts/,
@@ -176,7 +150,7 @@ describe("fixture accounts dev section", () => {
     countDevFixtureAccountsMock.mockResolvedValue(2)
     clearDevFixtureAccountsMock.mockRejectedValue("plain failure")
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
 
     const clearButton = await screen.findByRole("button", {
       name: /^Dev: Clear fixture accounts/,
@@ -194,7 +168,7 @@ describe("fixture accounts dev section", () => {
   it("disables clearing while no fixtures exist", async () => {
     countDevFixtureAccountsMock.mockResolvedValue(0)
 
-    render(<SectionHarness />, RENDER_OPTIONS)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
 
     await waitFor(() => {
       expect(

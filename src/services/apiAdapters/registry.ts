@@ -22,6 +22,7 @@ import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { openRouterCapabilities } from "./openrouter"
+import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
@@ -75,6 +76,7 @@ export function getSiteTypeCapabilities(
   if (siteType === SITE_TYPES.VO_API_V2) return voApiV2Capabilities
   if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
+  if (siteType === SITE_TYPES.RIGHT_CODE) return rightCodeCapabilities
   if (siteType === SITE_TYPES.OPENROUTER) return openRouterCapabilities
 
   if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {

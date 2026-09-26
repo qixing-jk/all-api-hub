@@ -155,7 +155,7 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        /The current check-in status could not be confirmed, so no check-in was attempted/,
+        /Today's check-in status could not be read, so nothing ran to avoid a duplicate/,
       ),
     ).toBeInTheDocument()
   })

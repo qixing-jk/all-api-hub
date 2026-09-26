@@ -10,11 +10,11 @@ import {
   resolveLoginProviderClaims,
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
+import { AuthTypeEnum } from "~/types"
 import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
   type LoginProviderEvidenceMap,
-} from "~/services/accountLogin/providerEvidence"
-import { AuthTypeEnum } from "~/types"
+} from "~/types/loginProviderEvidence"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
@@ -58,6 +58,17 @@ describe("AgentRouter login provider claims", () => {
     expect(
       getLoginProviderClaim(
         agentRouterAccount("a", {
+          provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
+        }),
+      ),
+    ).toBe(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
+  })
+
+  it("claims the provider of an enabled automatic mirror account", () => {
+    expect(
+      getLoginProviderClaim(
+        agentRouterAccount("a", {
+          siteUrl: "https://ps.air-outer.com",
           provider: ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
         }),
       ),

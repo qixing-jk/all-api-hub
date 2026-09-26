@@ -93,6 +93,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "響應資料格式錯誤",
+      "nonJsonContent": "回傳了 {{contentType}} 而不是 JSON（HTTP {{status}}）",
       "onlyJsonSupported": "僅支援 JSON 響應資料",
       "requestFailed": "請求失敗：{{status}}"
     },

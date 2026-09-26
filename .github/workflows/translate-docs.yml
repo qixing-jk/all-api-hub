@@ -226,7 +226,7 @@ jobs:
         if: steps.generated-changes.outputs.has_changes == 'true'
         uses: pnpm/action-setup@v5
         with:
-          version: 10
+          package_json_file: docs/package.json
           run_install: false
 
       - name: Setup Node.js for docs check

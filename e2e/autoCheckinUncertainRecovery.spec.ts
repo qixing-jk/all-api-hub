@@ -232,7 +232,8 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
     )
 
   const finalStatus = await readAutoCheckinStatus(serviceWorker)
-  expect(finalStatus).not.toHaveProperty("retryState")
+  expect(finalStatus?.pendingRetry).toBe(false)
+  expect(finalStatus?.retryState?.pendingAccountIds).toEqual([])
   expect(statusReadCount).toBeGreaterThan(0)
   expect(mutationPostCount).toBe(0)
   expect(protocolRequestMethods[0]).toBe("GET")

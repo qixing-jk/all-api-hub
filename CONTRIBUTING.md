@@ -16,7 +16,11 @@ You represent that you have the right to submit the contribution and that it doe
 ### Prerequisites
 
 - Node.js from `.nvmrc`, satisfying `package.json` engines
-- pnpm satisfying `package.json` engines
+- Corepack (`corepack pnpm` uses the pnpm version declared in each `package.json`)
+
+Enable Corepack once with `corepack enable`. It selects the pnpm version declared
+by the nearest `package.json` when you run `pnpm`. If an older global pnpm still
+takes precedence on your PATH, use `corepack pnpm` explicitly.
 
 ## Tech Stack
 

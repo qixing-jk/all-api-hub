@@ -38,6 +38,7 @@ import {
 } from "~/services/checkin/autoCheckin/state"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -1255,7 +1256,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1289,7 +1290,7 @@ describe("check-in methods compatibility activation", () => {
       expect(result).toMatchObject({
         kind: "blocked",
         reason: expectedReason,
-        retryable: expectedReason !== "status_unavailable",
+        retryable: true,
       })
       expect(checkInRequest).not.toHaveBeenCalled()
     },
@@ -1313,7 +1314,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1340,7 +1341,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -1436,7 +1437,7 @@ describe("check-in methods compatibility activation", () => {
     ).resolves.toMatchObject({
       kind: "blocked",
       reason: "status_unavailable",
-      retryable: false,
+      retryable: true,
     })
     expect(mutate).not.toHaveBeenCalled()
   })
@@ -1476,6 +1477,7 @@ describe("check-in methods compatibility activation", () => {
     })
     vi.spyOn(registration.provider, "checkIn").mockResolvedValue({
       status: "failed",
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
       rawMessage: "Example deployment failure",
     })
 
@@ -1519,7 +1521,10 @@ describe("check-in methods compatibility activation", () => {
       })
     vi.spyOn(registration.provider, "checkIn").mockImplementation(async () => {
       requestOrder.push("mutation")
-      return { status: "uncertain" }
+      return {
+        status: "uncertain",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      }
     })
 
     const result = await executeSelectedCheckIn({
@@ -1629,7 +1634,10 @@ describe("check-in methods compatibility activation", () => {
         .mockResolvedValueOnce(status)
       const checkInRequest = vi
         .spyOn(registration.provider, "checkIn")
-        .mockResolvedValue({ status: "uncertain" })
+        .mockResolvedValue({
+          status: "uncertain",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        })
 
       const result = await executeSelectedCheckIn({
         account,
@@ -1639,8 +1647,11 @@ describe("check-in methods compatibility activation", () => {
 
       expect(result).toMatchObject({
         kind: "executed",
-        result: { status: "uncertain", reconciliation },
-        retryable: false,
+        result: {
+          status: reconciliation === "not_checked" ? "failed" : "uncertain",
+          reconciliation,
+        },
+        retryable: true,
       })
       expect(checkInRequest).toHaveBeenCalledOnce()
     },
@@ -1662,7 +1673,10 @@ describe("check-in methods compatibility activation", () => {
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
     const checkInRequest = vi
       .spyOn(registration.provider, "checkIn")
-      .mockResolvedValue({ status: "uncertain" })
+      .mockResolvedValue({
+        status: "uncertain",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      })
 
     const result = await executeSelectedCheckIn({
       account,
@@ -1673,12 +1687,12 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "uncertain", reconciliation: "unavailable" },
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
-  it("executes a no-readback method but never retries its uncertain result", async () => {
+  it("retries an uncertain result from a method without status readback", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(
       "anyrouter:daily-checkin",
     )
@@ -1693,7 +1707,10 @@ describe("check-in methods compatibility activation", () => {
     })
     const checkInRequest = vi
       .spyOn(registration.provider, "checkIn")
-      .mockResolvedValue({ status: "uncertain" })
+      .mockResolvedValue({
+        status: "uncertain",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      })
 
     const result = await executeSelectedCheckIn({
       account,
@@ -1704,7 +1721,7 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "uncertain", reconciliation: "unavailable" },
-      retryable: false,
+      retryable: true,
     })
     expect(checkInRequest).toHaveBeenCalledOnce()
   })
@@ -1750,7 +1767,10 @@ describe("check-in methods compatibility activation", () => {
       .spyOn(registration.provider, "checkIn")
       .mockImplementation(async () => {
         requestOrder.push("mutation")
-        return { status: "uncertain" }
+        return {
+          status: "uncertain",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        }
       })
 
     await executeSelectedCheckIn({
@@ -1806,7 +1826,7 @@ describe("check-in methods compatibility activation", () => {
     },
   )
 
-  it("blocks an automatic retry when the method has no safe status readback", async () => {
+  it("posts a retry when the method has no status readback", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(
       "anyrouter:daily-checkin",
     )
@@ -1821,7 +1841,11 @@ describe("check-in methods compatibility activation", () => {
     })
     const checkInRequest = vi
       .spyOn(registration.provider, "checkIn")
-      .mockResolvedValue({ status: "failed", rawMessage: "Example failure" })
+      .mockResolvedValue({
+        status: "failed",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+        rawMessage: "Example failure",
+      })
 
     const result = await executeSelectedCheckIn({
       account,
@@ -1831,10 +1855,11 @@ describe("check-in methods compatibility activation", () => {
     })
 
     expect(result).toMatchObject({
-      kind: "skipped",
-      reason: "status_unavailable",
+      kind: "executed",
+      retryable: true,
+      result: { status: "failed" },
     })
-    expect(checkInRequest).not.toHaveBeenCalled()
+    expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
   it.each([
@@ -1935,7 +1960,10 @@ describe("check-in methods compatibility activation", () => {
     isAutomaticExecutionEnabled.mockResolvedValueOnce(true)
     checkInRequest.mockImplementation(async (_account, context) => {
       expect(await context.beforeRecoveredMutation?.()).toBe(false)
-      return { status: "failed", retryable: false }
+      return {
+        status: "failed",
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+      }
     })
     expect(await executeSelectedCheckIn(input)).toMatchObject({
       kind: "executed",

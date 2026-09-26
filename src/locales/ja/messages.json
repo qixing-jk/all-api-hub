@@ -93,6 +93,7 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "無効な応答形式です",
+      "nonJsonContent": "JSON ではなく {{contentType}} が返されました（HTTP {{status}}）",
       "onlyJsonSupported": "JSON 応答のみサポートしています",
       "requestFailed": "リクエストに失敗しました: {{status}}"
     },

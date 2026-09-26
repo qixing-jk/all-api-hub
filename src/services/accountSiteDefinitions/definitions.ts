@@ -66,6 +66,9 @@ import {
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
+  RIGHTCODE_DISPLAY_NAME,
+  RIGHTCODE_HOSTNAMES,
+  RIGHTCODE_LOGIN_PATH,
   SHAREDCHAT_HOSTNAMES,
   SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
@@ -134,6 +137,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.SUB2API,
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
+  SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.UNKNOWN,
 ] as const
@@ -451,6 +455,63 @@ const ACCOUNT_SITE_DEFINITIONS = [
         recognizedHostnames: SHAREDCHAT_HOSTNAMES,
         storageOrigin: SHAREDCHAT_WEB_ORIGIN,
         duplicateOrigin: SHAREDCHAT_WEB_ORIGIN,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.RIGHT_CODE,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode,
+    onboarding: {
+      displayName: RIGHTCODE_DISPLAY_NAME,
+      detection: {
+        hostnames: RIGHTCODE_HOSTNAMES,
+      },
+      // Console routes verified against the deployment's own router table; the
+      // deployment serves the same console on right.codes, www.right.codes and
+      // rightapi.ai. https://docs.rightapi.ai/docs/rc_quick_start/models.html
+      routes: {
+        loginPath: RIGHTCODE_LOGIN_PATH,
+        usagePath: "/use-logs",
+        adminCredentialsPath: "/api-keys",
+        siteAnnouncementsPath: "/dashboard",
+        pricingPath: "/models",
+        // Right Code has no check-in flow, and its activation-code redemption
+        // contract is not verified yet, so neither page is offered.
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: true,
+        // The console never shows the numeric account id, and the token alone
+        // authenticates every call, so manual adds must not demand it.
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      tokenForm: {
+        // Keys carry no network restrictions; only channel, models and quota.
+        networkLimitPolicy:
+          ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
+      },
+      // The three delivery domains are equivalent; accounts keep whichever host
+      // they were detected on instead of being rewritten to a canonical origin.
+      urls: {
+        recognizedHostnames: RIGHTCODE_HOSTNAMES,
+        inferFromHostname: true,
       },
     },
   },

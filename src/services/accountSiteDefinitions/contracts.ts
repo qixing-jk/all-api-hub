@@ -40,6 +40,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   VoApiV2: "voapiV2",
   Aihubmix: "aihubmix",
   SharedChat: "sharedchat",
+  RightCode: "rightcode",
   OpenRouter: "openrouter",
   Unsupported: "unsupported",
 } as const
