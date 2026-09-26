@@ -253,6 +253,7 @@ function AnimatedOptionsPage({
   }, [isPresent])
 
   useLayoutEffect(() => {
+    const transforms = baseTransforms.current
     return () => {
       if (readyItemTimeout.current !== null) {
         window.clearTimeout(readyItemTimeout.current)
@@ -265,6 +266,17 @@ function AnimatedOptionsPage({
         entranceFrame.current = null
       }
       entrance.current.forEach(({ control }) => control.cancel())
+      entrance.current = []
+      transforms.forEach((transform, target) => {
+        target.style.transform = transform
+        target.style.opacity = "1"
+      })
+      transforms.clear()
+      // Strict Mode replays mount effects with the same refs. Let the replayed
+      // ReadyPage callback prepare a fresh entrance instead of leaving it hidden.
+      ready.current = false
+      started.current = false
+      prepared.current = false
     }
   }, [])
 

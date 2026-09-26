@@ -272,9 +272,11 @@ extensionTest(
         await new Promise<void>((resolve, reject) => {
           const deadline = performance.now() + 10_000
           const interrupt = () => {
-            const block = document.querySelector<HTMLElement>(
-              "[data-options-page-content] [data-page-motion-item]",
-            )
+            const block = document
+              .querySelector<HTMLElement>(
+                "[data-options-page-content] [data-page-motion-item]",
+              )
+              ?.closest<HTMLElement>('[style*="opacity"]')
             if (block?.getAnimations().some((a) => a.playState === "running")) {
               if (change === "hide") block.style.display = "none"
               else block.remove()
