@@ -25,7 +25,7 @@ export default function TableFilterToolbar({
   controlsClassName,
 }: TableFilterToolbarProps) {
   return (
-    <div className="border-border dark:border-border-subtle py-density-4 border-b px-4">
+    <div className="border-border py-density-4 border-b px-4">
       <div className="gap-y-density-3 flex flex-col gap-x-3 xl:flex-row xl:items-center xl:justify-between">
         <div className={cn("min-w-0 flex-1", controlsClassName)}>
           {children}
