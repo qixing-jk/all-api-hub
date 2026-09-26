@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.2.0](https://github.com/qixing-jk/all-api-hub/compare/v4.1.0...v4.2.0) (2026-09-26)
+
+
+### Features
+
+* **credentials:** improve library guidance and desktop browsing ([#1547](https://github.com/qixing-jk/all-api-hub/issues/1547)) ([07a5aec](https://github.com/qixing-jk/all-api-hub/commit/07a5aec7fd04b03fda25aef81b807e74f3134966))
+* **uninstall-survey:** add post-uninstall feedback survey and dev controls ([#1542](https://github.com/qixing-jk/all-api-hub/issues/1542)) ([9e521d3](https://github.com/qixing-jk/all-api-hub/commit/9e521d35b445441302c474a785d66d53799c6810))
+
+
+### Bug Fixes
+
+* **checkin:** align retry reasons and login wait budgets ([#1543](https://github.com/qixing-jk/all-api-hub/issues/1543)) ([b3f0a39](https://github.com/qixing-jk/all-api-hub/commit/b3f0a39f98de9654f1a2c363ba52ac2f406f1d9c))
+
 ## [4.1.0](https://github.com/qixing-jk/all-api-hub/compare/v4.0.0...v4.1.0) (2026-09-25)
 
 
