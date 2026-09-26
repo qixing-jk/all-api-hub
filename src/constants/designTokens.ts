@@ -7,7 +7,7 @@
 export const COLORS = {
   // Background colors
   background: {
-    primary: "bg-card dark:bg-background",
+    primary: "bg-background",
     secondary: "bg-surface-subtle dark:bg-card",
     tertiary: "bg-muted dark:bg-secondary",
     elevated: "bg-card",

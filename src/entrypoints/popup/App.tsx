@@ -133,7 +133,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
         ref={setScrollParent}
         data-testid={POPUP_TEST_IDS.scrollContainer}
         className={cn(
-          "dark:bg-background bg-card flex flex-col overflow-y-auto",
+          "bg-background flex flex-col overflow-y-auto",
           popupWidthClass,
           popupHeightClass,
         )}
