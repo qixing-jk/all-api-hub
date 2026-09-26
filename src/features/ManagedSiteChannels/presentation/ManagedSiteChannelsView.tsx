@@ -151,7 +151,10 @@ export function ManagedSiteChannelsView({
   }
 
   return (
-    <div className="space-y-density-4 py-density-4 sm:py-density-6 px-4 sm:px-6">
+    <div
+      className="space-y-density-4 py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-options-page-pending={isInitialLoading ? "" : undefined}
+    >
       <PageHeader
         spacing="compact"
         className="mb-density-4"

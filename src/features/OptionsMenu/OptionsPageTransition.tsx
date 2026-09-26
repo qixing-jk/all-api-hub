@@ -1,10 +1,5 @@
-import {
-  AnimatePresence,
-  motion,
-  useAnimate,
-  usePresence,
-  usePresenceData,
-} from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
+import { useAnimate } from "framer-motion/mini"
 import {
   Suspense,
   useCallback,
@@ -43,30 +38,57 @@ export function getOptionsPageDirection(from: string, to: string) {
   return fromIndex >= 0 && toIndex >= 0 && toIndex < fromIndex ? -1 : 1
 }
 
-/** Keeps the old page mounted until its content has left the main area. */
+/** Finishes the current exit, then mounts the latest requested page. */
 export function OptionsPageTransition({
   pageId,
   fallback,
   children,
 }: OptionsPageTransitionProps) {
-  const previousPageId = useRef(pageId)
-  const direction = useRef(1)
-
-  if (previousPageId.current !== pageId) {
-    direction.current = getOptionsPageDirection(previousPageId.current, pageId)
-    previousPageId.current = pageId
+  const [displayed, setDisplayed] = useState({
+    pageId,
+    sequence: 0,
+    direction: 1,
+  })
+  const [isExiting, setIsExiting] = useState(false)
+  const [exitDirection, setExitDirection] = useState(1)
+  const latestPage = useRef({ pageId, fallback, children })
+  const displayedPage = useRef({ pageId, fallback, children })
+  latestPage.current = { pageId, fallback, children }
+  if (!isExiting && pageId === displayed.pageId) {
+    displayedPage.current = latestPage.current
   }
 
+  useLayoutEffect(() => {
+    if (isExiting || pageId === displayed.pageId) return
+    setExitDirection(getOptionsPageDirection(displayed.pageId, pageId))
+    setIsExiting(true)
+  }, [displayed.pageId, isExiting, pageId])
+
+  const finishExit = useCallback(() => {
+    const nextPageId = latestPage.current.pageId
+    setDisplayed((previous) => ({
+      pageId: nextPageId,
+      sequence: previous.sequence + 1,
+      direction: getOptionsPageDirection(previous.pageId, nextPageId),
+    }))
+    setIsExiting(false)
+  }, [])
+
+  const page =
+    !isExiting && pageId === displayed.pageId
+      ? latestPage.current
+      : displayedPage.current
+
   return (
-    <AnimatePresence mode="wait" initial={false} custom={direction.current}>
-      <AnimatedOptionsPage
-        key={pageId}
-        direction={direction.current}
-        fallback={fallback}
-      >
-        {children}
-      </AnimatedOptionsPage>
-    </AnimatePresence>
+    <AnimatedOptionsPage
+      key={`${displayed.pageId}:${displayed.sequence}`}
+      direction={isExiting ? exitDirection : displayed.direction}
+      fallback={page.fallback}
+      isPresent={!isExiting}
+      onExitComplete={finishExit}
+    >
+      {page.children}
+    </AnimatedOptionsPage>
   )
 }
 
@@ -90,24 +112,32 @@ function ReadyPage({
 function AnimatedOptionsPage({
   direction,
   fallback,
+  isPresent,
+  onExitComplete,
   children,
 }: {
   direction: number
   fallback: ReactNode
+  isPresent: boolean
+  onExitComplete: () => void
   children: ReactNode
 }) {
   const [scope, animate] = useAnimate<HTMLDivElement>()
-  const [isPresent, safeToRemove] = usePresence()
-  const exitDirection = usePresenceData() as number | undefined
+  const onExitCompleteRef = useRef(onExitComplete)
+  onExitCompleteRef.current = onExitComplete
   const { shouldReduceMotion } = usePageEntranceMotion()
   const content = useRef<HTMLDivElement>(null)
   const started = useRef(false)
+  const prepared = useRef(false)
+  const entranceFrame = useRef<number | null>(null)
   const ready = useRef(false)
   const loaderMounted = useRef(false)
   const [showLoader, setShowLoader] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
   const entrance = useRef<AnimationControl[]>([])
+  const baseTransforms = useRef(new Map<HTMLElement, string>())
   const pendingObserver = useRef<MutationObserver | null>(null)
+  const readyItemTimeout = useRef<number | null>(null)
 
   const startEntrance = useCallback(() => {
     if (started.current || !isPresent || !content.current) return
@@ -118,31 +148,75 @@ function AnimatedOptionsPage({
       return
     }
 
-    const targets = getPageMotionTargets(content.current)
-    const interval = staggerInterval(targets.length, 0.06, 0.24)
-    const ordered = direction > 0 ? targets : [...targets].reverse()
+    // Let the resolved page commit and lay out before the first motion frame.
+    entranceFrame.current = window.requestAnimationFrame(() => {
+      if (!content.current) return
+      const targets = getPageMotionTargets(content.current)
+      const interval = staggerInterval(targets.length, 0.06, 0.24)
+      const ordered = direction > 0 ? targets : [...targets].reverse()
 
-    targets.forEach((target) => {
-      target.style.opacity = "0"
+      // Read the original transforms together before writing hidden styles.
+      targets.forEach((target) => {
+        baseTransforms.current.set(target, getComputedStyle(target).transform)
+      })
+      targets.forEach((target) => {
+        target.style.opacity = "0"
+      })
+      prepared.current = true
+
+      // Paint the prepared content separately from the data-heavy React commit.
+      entranceFrame.current = window.requestAnimationFrame(() => {
+        if (!content.current) return
+        entranceFrame.current = null
+        entrance.current = ordered.map((target, index) => {
+          const base = baseTransforms.current.get(target) ?? "none"
+          return animate(
+            target,
+            {
+              opacity: [0, 1],
+              transform: [
+                translatedTransform(base, direction * PAGE_MOTION_OFFSET),
+                base,
+              ],
+            },
+            {
+              duration: ENTER_DURATION,
+              ease: ENTER_EASE,
+              delay: index * interval,
+            },
+          )
+        })
+        // Mini creates native keyframes synchronously with fill: both and
+        // commits the final styles before removing them, including on exit.
+        content.current.style.opacity = "1"
+        setContentVisible(true)
+      })
     })
-    content.current.style.opacity = "1"
-    setContentVisible(true)
-    entrance.current = ordered.map((target, index) =>
-      animate(
-        target,
-        { opacity: [0, 1], y: [direction * PAGE_MOTION_OFFSET, 0] },
-        {
-          duration: ENTER_DURATION,
-          ease: ENTER_EASE,
-          delay: index * interval,
-        },
-      ),
-    )
   }, [animate, direction, isPresent, shouldReduceMotion])
+
+  const finishPageReady = useCallback(() => {
+    if (ready.current || !isPresent) return
+    pendingObserver.current?.disconnect()
+    pendingObserver.current = null
+    ready.current = true
+    setShowLoader(false)
+    if (!loaderMounted.current || shouldReduceMotion) startEntrance()
+  }, [isPresent, shouldReduceMotion, startEntrance])
 
   const onPageReady = useCallback(() => {
     if (!isPresent || !content.current || ready.current) return
-    if (content.current.querySelector("[data-options-page-pending]")) {
+    const pendingData = content.current.querySelector(
+      "[data-options-page-pending]",
+    )
+    const waitingForVisibleItem = Array.from(
+      content.current.querySelectorAll<HTMLElement>(
+        "[data-page-motion-wait-for]",
+      ),
+    ).some((group) => {
+      const selector = group.dataset.pageMotionWaitFor
+      return selector && !group.querySelector(selector)
+    })
+    if (pendingData || waitingForVisibleItem) {
       if (!pendingObserver.current) {
         pendingObserver.current = new MutationObserver(onPageReady)
         pendingObserver.current.observe(content.current, {
@@ -152,14 +226,24 @@ function AnimatedOptionsPage({
           subtree: true,
         })
       }
+      if (
+        !pendingData &&
+        waitingForVisibleItem &&
+        readyItemTimeout.current === null
+      ) {
+        readyItemTimeout.current = window.setTimeout(() => {
+          readyItemTimeout.current = null
+          finishPageReady()
+        }, 450)
+      }
       return
     }
-    pendingObserver.current?.disconnect()
-    pendingObserver.current = null
-    ready.current = true
-    setShowLoader(false)
-    if (!loaderMounted.current || shouldReduceMotion) startEntrance()
-  }, [isPresent, shouldReduceMotion, startEntrance])
+    if (readyItemTimeout.current !== null) {
+      window.clearTimeout(readyItemTimeout.current)
+      readyItemTimeout.current = null
+    }
+    finishPageReady()
+  }, [finishPageReady, isPresent])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -169,45 +253,68 @@ function AnimatedOptionsPage({
   }, [isPresent])
 
   useLayoutEffect(() => {
-    if (isPresent || !safeToRemove) return
+    if (isPresent) return
+    if (readyItemTimeout.current !== null) {
+      window.clearTimeout(readyItemTimeout.current)
+      readyItemTimeout.current = null
+    }
     pendingObserver.current?.disconnect()
     pendingObserver.current = null
+    if (entranceFrame.current !== null) {
+      window.cancelAnimationFrame(entranceFrame.current)
+      entranceFrame.current = null
+    }
     entrance.current.forEach((control) => control.stop())
-    if (!started.current || shouldReduceMotion || !content.current) {
-      safeToRemove()
+    if (!prepared.current || shouldReduceMotion || !content.current) {
+      onExitCompleteRef.current()
       return
     }
 
     const targets = getPageMotionTargets(content.current)
     if (targets.length === 0) {
-      safeToRemove()
+      onExitCompleteRef.current()
       return
     }
 
-    const movingDown = (exitDirection ?? direction) > 0
+    const movingDown = direction > 0
     const ordered = movingDown ? targets : [...targets].reverse()
     const interval = staggerInterval(ordered.length, 0.03, 0.09)
+    const departureFrames = ordered.map((target) => {
+      const style = getComputedStyle(target)
+      return {
+        opacity: [Number(style.opacity), 0],
+        transform: [
+          style.transform,
+          translatedTransform(
+            baseTransforms.current.get(target) ?? style.transform,
+            movingDown ? -PAGE_MOTION_OFFSET : PAGE_MOTION_OFFSET,
+          ),
+        ],
+      }
+    })
     const departure = ordered.map((target, index) =>
-      animate(
-        target,
-        {
-          opacity: 0,
-          y: movingDown ? -PAGE_MOTION_OFFSET : PAGE_MOTION_OFFSET,
-        },
-        { duration: EXIT_DURATION, ease: EXIT_EASE, delay: index * interval },
-      ),
+      animate(target, departureFrames[index]!, {
+        duration: EXIT_DURATION,
+        ease: EXIT_EASE,
+        delay: index * interval,
+      }),
     )
-    void Promise.all(departure).then(safeToRemove)
+    let completed = false
+    let canceled = false
+    const finishExit = () => {
+      if (completed || canceled) return
+      completed = true
+      onExitCompleteRef.current()
+    }
+    const timeout = window.setTimeout(finishExit, 350)
+    void Promise.all(departure).then(finishExit)
 
-    return () => departure.forEach((control) => control.stop())
-  }, [
-    animate,
-    direction,
-    exitDirection,
-    isPresent,
-    safeToRemove,
-    shouldReduceMotion,
-  ])
+    return () => {
+      canceled = true
+      window.clearTimeout(timeout)
+      departure.forEach((control) => control.stop())
+    }
+  }, [animate, direction, isPresent, shouldReduceMotion])
 
   return (
     <div ref={scope} className="relative min-w-0" aria-hidden={!isPresent}>
@@ -241,6 +348,11 @@ function AnimatedOptionsPage({
       </AnimatePresence>
     </div>
   )
+}
+
+/** Adds viewport-axis movement without changing the block's original transform. */
+function translatedTransform(base: string, offset: number): string {
+  return `translate3d(0, ${offset}px, 0)${base === "none" ? "" : ` ${base}`}`
 }
 
 /** Keeps the stagger visible without extending a busy page transition. */
@@ -279,6 +391,11 @@ function getPageMotionTargets(scope: HTMLElement): HTMLElement[] {
 /** Expands only declared page groups, keeping controls inside each card together. */
 function expandMotionGroup(block: HTMLElement, depth = 0): HTMLElement[] {
   if (depth > 3 || isAtomicBlock(block)) return [block]
+  if (block.dataset.pageMotionList !== undefined) {
+    return Array.from(
+      block.querySelectorAll<HTMLElement>("[data-page-motion-item]"),
+    ).filter(isInMotionViewport)
+  }
   const children = visibleChildren(block)
   if (block.dataset.pageMotionGroup !== undefined) {
     return children.flatMap((child) => expandMotionGroup(child, depth + 1))
@@ -289,6 +406,12 @@ function expandMotionGroup(block: HTMLElement, depth = 0): HTMLElement[] {
     )
     ? children
     : [block]
+}
+
+/** Skips offscreen list rows so a long archive never animates all records. */
+function isInMotionViewport(block: HTMLElement) {
+  const rect = block.getBoundingClientRect()
+  return rect.bottom > -20 && rect.top < window.innerHeight + 20
 }
 
 /** Treats a page header or card as one visual unit. */

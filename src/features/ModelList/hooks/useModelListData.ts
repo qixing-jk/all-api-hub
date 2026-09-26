@@ -60,7 +60,8 @@ function resolveRouteAccountSourceValue(
 export function useModelListData(routeParams?: Record<string, string>) {
   const isRouteControlled = routeParams !== undefined
   // Single source of account data
-  const { enabledDisplayData } = useAccountData()
+  const { enabledDisplayData, isInitialLoad: accountsLoading } =
+    useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
   const { profiles, isLoading: profilesLoading } = useApiCredentialProfiles()
 
@@ -406,6 +407,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
   return {
     accounts,
     profiles,
+    isSourceLoading: accountsLoading || profilesLoading,
     selectedSource,
     currentAccount,
     currentProfile,

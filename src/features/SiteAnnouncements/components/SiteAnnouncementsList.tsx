@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import { useCallback, useState } from "react"
 import { Virtuoso } from "react-virtuoso"
 
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
@@ -32,6 +32,10 @@ export function SiteAnnouncementsList({
   onToggleExpanded,
   onMarkRead,
 }: SiteAnnouncementsListProps) {
+  const [hasRenderedVirtualItems, setHasRenderedVirtualItems] = useState(false)
+  const handleItemsRendered = useCallback((items: unknown[]) => {
+    if (items.length > 0) setHasRenderedVirtualItems(true)
+  }, [])
   const renderCard = (record: SiteAnnouncementRecord) => (
     <SiteAnnouncementCard
       record={record}
@@ -52,24 +56,34 @@ export function SiteAnnouncementsList({
     hasNavigationTarget
   ) {
     return (
-      <div className="space-y-density-4">
+      <div className="space-y-density-4" data-page-motion-list>
         {records.map((record) => (
-          <Fragment key={record.id}>{renderCard(record)}</Fragment>
+          <div key={record.id} data-page-motion-item>
+            {renderCard(record)}
+          </div>
         ))}
       </div>
     )
   }
 
   return (
-    <Virtuoso
-      data={records}
-      computeItemKey={(_, record) => record.id}
-      defaultItemHeight={ESTIMATED_CARD_HEIGHT}
-      increaseViewportBy={240}
-      useWindowScroll
-      itemContent={(_, record) => (
-        <div className="pb-density-4">{renderCard(record)}</div>
-      )}
-    />
+    <div
+      data-page-motion-list
+      data-options-page-pending={hasRenderedVirtualItems ? undefined : ""}
+    >
+      <Virtuoso
+        data={records}
+        computeItemKey={(_, record) => record.id}
+        defaultItemHeight={ESTIMATED_CARD_HEIGHT}
+        increaseViewportBy={240}
+        itemsRendered={handleItemsRendered}
+        useWindowScroll
+        itemContent={(_, record) => (
+          <div className="pb-density-4" data-page-motion-item>
+            {renderCard(record)}
+          </div>
+        )}
+      />
+    </div>
   )
 }

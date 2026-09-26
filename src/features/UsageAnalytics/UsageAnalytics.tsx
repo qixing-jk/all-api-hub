@@ -564,6 +564,12 @@ export default function UsageAnalytics() {
     <div
       className="space-y-density-6 py-density-6 px-6"
       data-testid={USAGE_ANALYTICS_TEST_IDS.page}
+      data-options-page-pending={
+        (isLoading && !store) ||
+        (availableDayKeys.length > 0 && (!startDay || !endDay))
+          ? ""
+          : undefined
+      }
     >
       <PageHeader
         icon={BarChart3}

@@ -110,6 +110,7 @@ export default function ModelList(props: {
   const {
     accounts,
     profiles,
+    isSourceLoading,
     selectedSource,
     currentAccount,
     sourceCapabilities,
@@ -572,6 +573,11 @@ export default function ModelList(props: {
     <div
       className="py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={MODEL_LIST_TEST_IDS.page}
+      data-options-page-pending={
+        isSourceLoading || (selectedSource && isLoading && !hasModelData)
+          ? ""
+          : undefined
+      }
     >
       <PageHeader
         icon={Cpu}

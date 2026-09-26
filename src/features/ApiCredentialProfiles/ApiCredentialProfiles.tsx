@@ -238,7 +238,15 @@ export default function ApiCredentialProfiles({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage}
     >
-      <div className="space-y-density-6 py-density-6 px-6">
+      <div
+        className="space-y-density-6 py-density-6 px-6"
+        data-options-page-pending={
+          controller.isLoading ||
+          (areProfileLinksLoading && !associatedKeyStateByProfileId)
+            ? ""
+            : undefined
+        }
+      >
         <PageHeader
           icon={ApiCredentialLibraryIcon}
           title={t("title")}
