@@ -16,7 +16,7 @@ const iconButtonVariants = cva(
         destructive:
           "bg-(--button-destructive-bg) text-(--button-destructive-foreground) hover:bg-(--button-destructive-bg-hover) focus-visible:ring-(--button-destructive-ring)",
         destructiveGhost:
-          "bg-transparent text-destructive-text hover:bg-destructive/10 focus:ring-destructive/30 dark:hover:bg-destructive/20",
+          "bg-transparent text-destructive-text hover:bg-destructive-soft focus:ring-destructive/30",
         outline:
           "border border-border-strong dark:border-border bg-transparent hover:bg-surface-subtle dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
         secondary:
