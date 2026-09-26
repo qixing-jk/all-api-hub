@@ -116,7 +116,7 @@ export function CompactTagFilter({
             chipClassName,
             "focus-visible:outline-ring focus-visible:outline-2",
             value.length === 0
-              ? "bg-theme-50 text-theme-700 dark:bg-theme-950/50 dark:text-theme-300"
+              ? "bg-primary-soft text-primary-soft-foreground"
               : "text-muted-foreground hover:bg-muted dark:text-secondary-foreground dark:hover:bg-foreground/5",
           )}
         >
@@ -134,7 +134,7 @@ export function CompactTagFilter({
               chipClassName,
               "focus-visible:outline-ring focus-visible:outline-2 disabled:opacity-50",
               selected.has(option.value)
-                ? "bg-theme-50 text-theme-700 dark:bg-theme-950/50 dark:text-theme-300"
+                ? "bg-primary-soft text-primary-soft-foreground"
                 : "text-muted-foreground hover:bg-muted dark:text-secondary-foreground dark:hover:bg-foreground/5",
             )}
           >

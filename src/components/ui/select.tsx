@@ -304,7 +304,7 @@ const SelectItem = React.forwardRef<
   >
     <span className="absolute right-2 flex size-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <CheckIcon className="text-theme-500 dark:text-theme-400 size-4" />
+        <CheckIcon className="text-primary size-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

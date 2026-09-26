@@ -54,7 +54,7 @@ const ToggleButton = React.forwardRef<HTMLButtonElement, ToggleButtonProps>(
       leftIcon,
       rightIcon,
       showActiveIndicator = false,
-      activeIndicatorColor = "bg-theme-500 dark:bg-theme-400",
+      activeIndicatorColor = "bg-primary",
       children,
       ...props
     },
