@@ -1,6 +1,7 @@
 import { ListPlus, ListX, Plus, TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { DevPanelInfoRow, DevPanelSection } from "~/features/DevPanel"
 import toast from "~/lib/notify"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -131,6 +132,7 @@ export function useSiteAnnouncementsDevSection({
     return {
       id: "site-announcements-fixtures",
       title: "Site announcements",
+      pages: [MENU_ITEM_IDS.SITE_ANNOUNCEMENTS],
       icon: ListPlus,
       description: `Fixtures are cached as ${SITE_ANNOUNCEMENT_DEV_FIXTURE_SITE_KEY_PREFIX} sites, spread over 3 sites because the store caps ${SITE_ANNOUNCEMENTS_LIMITS.recordsPerSite} records per site.`,
       collapsible: true,

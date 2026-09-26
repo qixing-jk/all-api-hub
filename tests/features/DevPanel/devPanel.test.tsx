@@ -10,6 +10,10 @@ import {
   DevPanelProvider,
   useRegisterDevPanelSection,
 } from "~/features/DevPanel/DevPanelSectionsContext"
+import {
+  addDevFixtureApiCredentials,
+  countDevFixtureApiCredentials,
+} from "~/features/DevPanel/fixtureApiCredentials"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"
@@ -94,6 +98,12 @@ vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   clearDevFixtureAccounts: vi.fn(async () => 0),
 }))
 
+vi.mock("~/features/DevPanel/fixtureApiCredentials", () => ({
+  countDevFixtureApiCredentials: vi.fn(async () => 0),
+  addDevFixtureApiCredentials: vi.fn(async () => 5),
+  clearDevFixtureApiCredentials: vi.fn(async () => 0),
+}))
+
 const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
 const mockedGetExtensionVersion = vi.mocked(getExtensionVersion)
 const mockedOpenPermissionsOnboardingPage = vi.mocked(
@@ -112,6 +122,133 @@ async function openDevPanel() {
 }
 
 describe("DevPanel", () => {
+  it("offers credential fixtures on the credential page and refreshes their count", async () => {
+    render(
+      <DevPanelProvider
+        surface="options"
+        page={MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}
+      >
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    const add = await screen.findByRole("button", {
+      name: "Dev: Add 5 fixture credentials",
+    })
+    fireEvent.click(add)
+    await waitFor(() =>
+      expect(addDevFixtureApiCredentials).toHaveBeenCalledWith(5),
+    )
+    expect(countDevFixtureApiCredentials).toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Dialogs" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    )
+  })
+
+  it("shows page actions first and folds unrelated sections individually", async () => {
+    function PageSection() {
+      useRegisterDevPanelSection({
+        id: "page-task",
+        title: "Page task",
+        pages: [MENU_ITEM_IDS.AUTO_CHECKIN],
+        actions: [
+          { id: "run-page-task", label: "Run page task", run: () => {} },
+        ],
+      })
+      return null
+    }
+
+    render(
+      <DevPanelProvider surface="options" page={MENU_ITEM_IDS.AUTO_CHECKIN}>
+        <PageSection />
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    expect(screen.getByRole("button", { name: "Run page task" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: /Other tools/ }),
+    ).not.toBeInTheDocument()
+    const dialogs = screen.getByRole("button", { name: "Dialogs" })
+    const devPages = screen.getByRole("button", { name: "Dev pages" })
+    expect(dialogs).toHaveAttribute("aria-expanded", "false")
+    expect(devPages).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.getByRole("button", { name: "Uninstall survey" }),
+    ).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.getByRole("button", { name: /^Star promotion/ }),
+    ).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("button", { name: /^This build/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    )
+    expect(
+      screen.queryByRole("button", { name: "Dev: Trigger update log" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen
+        .getByRole("button", { name: "Run page task" })
+        .compareDocumentPosition(dialogs) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    fireEvent.click(dialogs)
+    expect(
+      screen.getByRole("button", { name: "Dev: Trigger update log" }),
+    ).toBeVisible()
+    expect(devPages).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Fixture accounts")).not.toBeInTheDocument()
+  })
+
+  it("shows account fixtures on account pages but not on the credential page", async () => {
+    const { unmount } = render(
+      <DevPanelProvider surface="options" page={MENU_ITEM_IDS.ACCOUNT}>
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+    await openDevPanel()
+    expect(
+      screen.getByRole("button", { name: "Dev: Add 5 fixture accounts" }),
+    ).toBeVisible()
+
+    unmount()
+    render(
+      <DevPanelProvider
+        surface="options"
+        page={MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}
+      >
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+    await openDevPanel()
+    expect(screen.queryByText("Fixture accounts")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Dev: Add 5 fixture credentials" }),
+    ).toBeVisible()
+  })
+
   beforeEach(() => {
     vi.stubEnv("MODE", "development")
     mockedUseUpdateLogDialogContext.mockReset()
@@ -181,6 +318,7 @@ describe("DevPanel", () => {
     )
 
     await openDevPanel()
+    fireEvent.click(screen.getByRole("button", { name: "Dialogs" }))
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Dev: Trigger update log" }),
@@ -214,6 +352,7 @@ describe("DevPanel", () => {
     )
 
     await openDevPanel()
+    fireEvent.click(screen.getByRole("button", { name: "Dialogs" }))
     fireEvent.click(
       await screen.findByRole("button", {
         name: "Dev: Queue popup interruption hint",
@@ -558,6 +697,7 @@ describe("DevPanel", () => {
     )
 
     await openDevPanel()
+    fireEvent.click(screen.getByRole("button", { name: "Pending section" }))
     fireEvent.click(await screen.findByRole("button", { name: "Slow action" }))
 
     await waitFor(() => {
@@ -593,6 +733,7 @@ describe("DevPanel", () => {
       )
 
       await openDevPanel()
+      fireEvent.click(screen.getByRole("button", { name: "Dialogs" }))
       fireEvent.click(
         await screen.findByRole("button", {
           name: "Dev: Trigger translation crash",

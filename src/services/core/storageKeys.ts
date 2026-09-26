@@ -110,6 +110,8 @@ export const STORAGE_LOCKS = {
    * development-only fixture account id registry.
    */
   DEV_FIXTURE_ACCOUNTS: "all-api-hub:dev-fixture-accounts",
+  /** Exclusive lock for the development-only fixture credential id registry. */
+  DEV_FIXTURE_API_CREDENTIALS: "all-api-hub:dev-fixture-api-credentials",
   /**
    * Exclusive lock used for read-modify-write sequences touching the auto
    * check-in status blob.
@@ -263,6 +265,8 @@ export const STORAGE_KEYS = {
    * generator, so cleanup never has to match editable account fields.
    */
   DEV_FIXTURE_ACCOUNT_IDS: "devFixtureAccountIds_v1",
+  /** IDs of credentials created by the dev panel, used for safe cleanup. */
+  DEV_FIXTURE_API_CREDENTIAL_IDS: "devFixtureApiCredentialIds_v1",
   ...ACCOUNT_STORAGE_KEYS,
   ...ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS,
   ...LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS,

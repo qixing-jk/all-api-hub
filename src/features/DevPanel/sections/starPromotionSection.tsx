@@ -2,6 +2,7 @@ import { FlaskConical, RefreshCw, RotateCcw, Star, Zap } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -141,6 +142,7 @@ export function useStarPromotionDevSection(
     return {
       id: "star-promotion",
       title: "Star promotion",
+      prominentPages: [MENU_ITEM_IDS.OVERVIEW],
       icon: Star,
       description: `Initial thresholds: ${STAR_PROMOTION_INITIAL_THRESHOLD} check-ins or ${STAR_PROMOTION_INITIAL_ACCOUNT_THRESHOLD} accounts since the baseline. State changes apply the next time Overview loads, so reload after seeding.`,
       collapsible: true,
