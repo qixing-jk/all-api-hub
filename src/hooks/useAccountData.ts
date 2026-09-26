@@ -134,15 +134,15 @@ export const useAccountData = (): UseAccountDataResult => {
         }
       }
 
-      // 标记为非初始加载
-      setIsInitialLoad(false)
-
       logger.debug("账号数据加载完成", {
         accountCount: allAccounts.length,
         stats: accountStats,
       })
     } catch (error) {
       logger.error("加载账号数据失败", error)
+    } finally {
+      // 结束首次加载，无论读取成功或失败都让页面退出 pending 状态。
+      setIsInitialLoad(false)
     }
   }, [])
 

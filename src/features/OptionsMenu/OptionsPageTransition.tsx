@@ -131,7 +131,9 @@ function AnimatedOptionsPage({
   const loaderMounted = useRef(false)
   const [showLoader, setShowLoader] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
-  const entrance = useRef<AnimationControl[]>([])
+  const entrance = useRef<
+    Array<{ target: HTMLElement; control: AnimationControl }>
+  >([])
   const baseTransforms = useRef(new Map<HTMLElement, string>())
   const pendingObserver = useRef<MutationObserver | null>(null)
   const readyItemTimeout = useRef<number | null>(null)
@@ -167,7 +169,7 @@ function AnimatedOptionsPage({
         entranceFrame.current = null
         entrance.current = ordered.map((target, index) => {
           const base = baseTransforms.current.get(target) ?? "none"
-          return animate(
+          const control = animate(
             target,
             {
               opacity: [0, 1],
@@ -182,6 +184,7 @@ function AnimatedOptionsPage({
               delay: index * interval,
             },
           )
+          return { target, control }
         })
         // Mini creates native keyframes synchronously with fill: both and
         // commits the final styles before removing them, including on exit.
@@ -250,6 +253,22 @@ function AnimatedOptionsPage({
   }, [isPresent])
 
   useLayoutEffect(() => {
+    return () => {
+      if (readyItemTimeout.current !== null) {
+        window.clearTimeout(readyItemTimeout.current)
+        readyItemTimeout.current = null
+      }
+      pendingObserver.current?.disconnect()
+      pendingObserver.current = null
+      if (entranceFrame.current !== null) {
+        window.cancelAnimationFrame(entranceFrame.current)
+        entranceFrame.current = null
+      }
+      entrance.current.forEach(({ control }) => control.cancel())
+    }
+  }, [])
+
+  useLayoutEffect(() => {
     if (isPresent) return
     if (readyItemTimeout.current !== null) {
       window.clearTimeout(readyItemTimeout.current)
@@ -261,7 +280,15 @@ function AnimatedOptionsPage({
       window.cancelAnimationFrame(entranceFrame.current)
       entranceFrame.current = null
     }
-    entrance.current.forEach((control) => control.stop())
+    entrance.current.forEach(({ target, control }) => {
+      // stop() commits the current styles, which requires a rendered target.
+      // Settings tabs and conditional cards may disappear during entrance.
+      if (target.isConnected && target.getClientRects().length > 0) {
+        control.stop()
+      } else {
+        control.cancel()
+      }
+    })
     if (!prepared.current || shouldReduceMotion || !content.current) {
       onExitCompleteRef.current()
       return
@@ -309,13 +336,17 @@ function AnimatedOptionsPage({
     return () => {
       canceled = true
       window.clearTimeout(timeout)
-      departure.forEach((control) => control.stop())
+      departure.forEach((control) => control.cancel())
     }
   }, [animate, direction, isPresent, shouldReduceMotion])
 
   return (
     <div ref={scope} className="relative min-w-0" aria-hidden={!isPresent}>
-      <div ref={content} style={{ opacity: contentVisible ? 1 : 0 }}>
+      <div
+        ref={content}
+        data-options-page-content
+        style={{ opacity: contentVisible ? 1 : 0 }}
+      >
         <Suspense fallback={null}>
           <ReadyPage onReady={onPageReady}>{children}</ReadyPage>
         </Suspense>

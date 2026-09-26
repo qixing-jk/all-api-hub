@@ -13,18 +13,8 @@ import {
 } from "~/constants/optionsMenuIds"
 import { isDevelopmentMode } from "~/utils/core/environment"
 
+import { createLazyMenuComponent } from "./createLazyMenuComponent"
 import BasicSettings from "./pages/BasicSettings"
-
-/**
- * Wrap a lazily imported options page so the menu config can treat it like a normal component.
- */
-function createLazyMenuComponent(
-  loader: () => Promise<{ default: ComponentType<any> }>,
-): ComponentType<any> & { preload: typeof loader } {
-  let loading: ReturnType<typeof loader> | undefined
-  const preload = () => (loading ??= loader())
-  return Object.assign(lazy(preload), { preload })
-}
 
 const About = createLazyMenuComponent(() => import("./pages/About"))
 const OptionsOverview = createLazyMenuComponent(

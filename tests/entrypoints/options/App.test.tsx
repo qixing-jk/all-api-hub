@@ -1,7 +1,7 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { lazy } from "react"
+import { lazy, Suspense } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -36,6 +36,16 @@ const {
 
 vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => children,
+}))
+
+vi.mock("~/features/OptionsMenu/OptionsPageTransition", () => ({
+  OptionsPageTransition: ({
+    children,
+    fallback,
+  }: {
+    children: ReactNode
+    fallback: ReactNode
+  }) => <Suspense fallback={fallback}>{children}</Suspense>,
 }))
 
 vi.mock("~/contexts/FeatureGuidanceContext", () => ({
@@ -166,6 +176,7 @@ vi.mock("~/features/OptionsSearch/OptionsSearchDialog", () => ({
 }))
 
 vi.mock("~/entrypoints/options/constants", () => ({
+  preloadOptionsPage: vi.fn(async () => undefined),
   menuItems: Object.values(MENU_ITEM_IDS).map((id) => {
     const MockPage = ({
       routeParams,

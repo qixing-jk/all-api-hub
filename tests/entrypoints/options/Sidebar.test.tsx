@@ -15,20 +15,25 @@ const { useUserPreferencesContextMock } = vi.hoisted(() => ({
   useUserPreferencesContextMock: vi.fn(),
 }))
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    aside: ({
-      children,
-      animate: _animate,
-      initial: _initial,
-      ...props
-    }: React.ComponentPropsWithoutRef<"aside"> & {
-      animate?: unknown
-      children: ReactNode
-      initial?: unknown
-    }) => <aside {...props}>{children}</aside>,
-  },
-}))
+vi.mock("framer-motion", () => {
+  return {
+    motion: {
+      aside: ({
+        children,
+        animate: _animate,
+        initial: _initial,
+        transition: _transition,
+        ...props
+      }: React.ComponentPropsWithoutRef<"aside"> & {
+        animate?: unknown
+        children: ReactNode
+        initial?: unknown
+        transition?: unknown
+      }) => <aside {...props}>{children}</aside>,
+    },
+    useReducedMotion: () => true,
+  }
+})
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =

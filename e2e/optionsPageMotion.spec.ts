@@ -133,9 +133,7 @@ async function captureCardExit(page: Page, hash: string, selector: string) {
     async ({ nextHash, targetSelector }) => {
       const element = document.querySelector(targetSelector)
       const styledAncestor = element?.closest('[style*="opacity"]')
-      const pageContent = document.querySelector(
-        '[data-testid="options-content-card"] > div > div',
-      )
+      const pageContent = document.querySelector("[data-options-page-content]")
       // A card initially below the viewport has no entrance styles yet.
       const target = styledAncestor === pageContent ? element : styledAncestor
       if (!(target instanceof HTMLElement))
@@ -223,9 +221,10 @@ extensionTest(
       await page.goto(
         `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${scenario.from}`,
       )
-      await expect(
-        page.locator('[data-testid="options-content-card"] > div > div'),
-      ).toHaveCSS("opacity", "1")
+      await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+        "opacity",
+        "1",
+      )
       await page.waitForTimeout(650)
       if (scenario.scroll) {
         await page.locator(scenario.selector).scrollIntoViewIfNeeded()
@@ -255,6 +254,52 @@ extensionTest(
         ).toBeLessThan(0.2)
       }
     }
+  },
+)
+
+extensionTest(
+  "navigation survives cards hidden or removed during entrance",
+  async ({ extensionId, page }) => {
+    const errors: string[] = []
+    page.on("pageerror", (error) => errors.push(error.message))
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+
+    for (const mutation of ["hide", "remove"] as const) {
+      await page.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#overview`,
+      )
+      await page.evaluate(async (change) => {
+        await new Promise<void>((resolve, reject) => {
+          const deadline = performance.now() + 10_000
+          const interrupt = () => {
+            const block = document.querySelector<HTMLElement>(
+              "[data-options-page-content] [data-page-motion-item]",
+            )
+            if (block?.getAnimations().some((a) => a.playState === "running")) {
+              if (change === "hide") block.style.display = "none"
+              else block.remove()
+              window.location.hash = "#about"
+              resolve()
+              return
+            }
+            if (performance.now() > deadline) {
+              reject(new Error("No entering card found"))
+              return
+            }
+            requestAnimationFrame(interrupt)
+          }
+          interrupt()
+        })
+      }, mutation)
+      await expect(
+        page.getByRole("heading", { name: "About", exact: true }),
+      ).toBeVisible()
+      await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+        "opacity",
+        "1",
+      )
+    }
+    expect(errors).toEqual([])
   },
 )
 
@@ -415,15 +460,16 @@ extensionTest(
           '[data-testid="options-content-card"] [data-options-page-pending]',
         ),
       ).toHaveCount(0)
-      await expect(
-        page.locator('[data-testid="options-content-card"] > div > div'),
-      ).toHaveAttribute("style", /opacity: 1/)
+      await expect(page.locator("[data-options-page-content]")).toHaveAttribute(
+        "style",
+        /opacity: 1/,
+      )
       const text = await page
         .locator('[data-testid="options-content-card"]')
         .innerText()
       expect(text.length, pageId).toBeGreaterThan(10)
       const uncoveredCards = await page
-        .locator('[data-testid="options-content-card"] > div > div')
+        .locator("[data-options-page-content]")
         .evaluate((content) =>
           Array.from(content.querySelectorAll('[data-slot="card"]'))
             .filter((card) => {
@@ -495,9 +541,7 @@ extensionTest(
       await page.goto(
         `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${pageId}`,
       )
-      const content = page.locator(
-        '[data-testid="options-content-card"] > div > div',
-      )
+      const content = page.locator("[data-options-page-content]")
       await expect(content).toHaveCSS("opacity", "1")
       await page.reload()
       await expect(content).toHaveCSS("opacity", "1")
@@ -523,9 +567,10 @@ extensionTest(
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#overview`,
     )
-    await expect(
-      page.locator('[data-testid="options-content-card"] > div > div'),
-    ).toHaveCSS("opacity", "1")
+    await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+      "opacity",
+      "1",
+    )
 
     const account = await captureCardEntrance(
       page,
@@ -579,9 +624,10 @@ extensionTest(
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#overview`,
     )
-    await expect(
-      page.locator('[data-testid="options-content-card"] > div > div'),
-    ).toHaveCSS("opacity", "1")
+    await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+      "opacity",
+      "1",
+    )
 
     const entrance = await captureCardEntrance(
       page,
@@ -613,9 +659,10 @@ extensionTest(
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#overview`,
     )
-    await expect(
-      page.locator('[data-testid="options-content-card"] > div > div'),
-    ).toHaveCSS("opacity", "1")
+    await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+      "opacity",
+      "1",
+    )
 
     const entrance = await captureCardEntrance(
       page,
@@ -672,9 +719,10 @@ extensionTest(
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#overview`,
     )
-    await expect(
-      page.locator('[data-testid="options-content-card"] > div > div'),
-    ).toHaveCSS("opacity", "1")
+    await expect(page.locator("[data-options-page-content]")).toHaveCSS(
+      "opacity",
+      "1",
+    )
 
     const entrance = await page.evaluate(async () => {
       const frames: Array<{ opacity: number; y: number }>[] = [[], []]
