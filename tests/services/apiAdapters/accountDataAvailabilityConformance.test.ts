@@ -469,7 +469,7 @@ describe("AccountData availability producer conformance", () => {
     expectClassifiedAvailability(data)
   })
 
-  it("uses income content only for absent quota and classifies invalid rows as partial", async () => {
+  it("uses content for absent or zero quota, prefers nonzero quota, and classifies invalid rows as partial", async () => {
     server.use(
       http.get(
         "https://new-api-family.example.invalid/api/log/self",
@@ -483,10 +483,11 @@ describe("AccountData availability producer conformance", () => {
                 ? {
                     items: [
                       { quota: 0, content: "$50" },
+                      { quota: 5, content: "$20" },
                       { quota: "5", content: "$20" },
                       { content: "$2" },
                     ],
-                    total: 3,
+                    total: 4,
                   }
                 : { items: [], total: 0 },
           })
@@ -499,7 +500,7 @@ describe("AccountData availability producer conformance", () => {
       createRequest(SITE_TYPES.NEW_API),
     )
 
-    expect(data.today_income).toBe(QUOTA_PER_USD * 2)
+    expect(data.today_income).toBe(QUOTA_PER_USD * 52 + 5)
     expect(data.todayStatsAvailability?.income).toEqual(
       partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
     )

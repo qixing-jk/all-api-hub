@@ -556,7 +556,8 @@ export async function fetchTodayIncome(
 
   const exchangeRate =
     typeof request.exchangeRate === "number" &&
-    Number.isFinite(request.exchangeRate)
+    Number.isFinite(request.exchangeRate) &&
+    request.exchangeRate > 0
       ? request.exchangeRate
       : DEFAULT_USD_TO_CNY_RATE
   const incomeCoverageBySource = new Map<LogType, MetricAggregationCoverage>()

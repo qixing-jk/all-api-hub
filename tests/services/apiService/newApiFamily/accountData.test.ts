@@ -689,6 +689,36 @@ describe("newApiFamily accountData", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(3)
   })
 
+  it.each([
+    ["negative", -7, 100],
+    ["zero", 0, 100],
+    ["NaN", Number.NaN, 100],
+    ["infinite", Number.POSITIVE_INFINITY, 100],
+    ["missing", undefined, 100],
+    ["positive", 14, 50],
+  ])(
+    "normalizes a %s request exchange rate before parsing zero-quota CNY income",
+    async (_label, exchangeRate, expectedIncome) => {
+      const { aggregateIncomeData } = await vi.importActual<
+        typeof import("~/services/apiService/newApiFamily/default/accountDataUtils")
+      >("~/services/apiService/newApiFamily/default/accountDataUtils")
+      mockAggregateIncomeData.mockImplementation(aggregateIncomeData)
+      mockFetchApiData
+        .mockResolvedValueOnce({
+          items: [{ quota: 0, content: "充值 ¥7.00 额度" }],
+          total: 1,
+        })
+        .mockResolvedValueOnce({ items: [], total: 0 })
+
+      await expect(
+        fetchTodayIncome({ ...baseRequest, exchangeRate }),
+      ).resolves.toEqual({
+        today_income: expectedIncome,
+        todayStatsAvailability: { income: complete },
+      })
+    },
+  )
+
   it("fetchTodayIncome uses the default exchange rate when the request has no exchange rate", async () => {
     mockExtractAmount.mockReturnValueOnce({ amount: 2 })
     mockFetchApiData
