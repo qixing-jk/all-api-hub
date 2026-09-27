@@ -1195,7 +1195,7 @@ export function KiloCodeExportDialog({
               {siteName}
             </div>
             <div
-              className="dark:text-secondary-foreground text-muted-foregroundtruncate text-xs"
+              className="dark:text-secondary-foreground text-muted-foreground truncate text-xs"
               title={site.baseUrl}
             >
               {site.baseUrl}
@@ -1224,13 +1224,13 @@ export function KiloCodeExportDialog({
         )}
 
         {(isTokenInventoryIdle || isLoadingTokens) && (
-          <div className="dark:text-secondary-foreground text-muted-foregroundtext-sm">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("ui:dialog.kiloCode.messages.loadingTokens")}
           </div>
         )}
 
         {isTokenInventoryLoaded && inventory.tokens.length === 0 && (
-          <div className="dark:text-secondary-foreground text-muted-foregroundtext-sm">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("ui:dialog.kiloCode.messages.noTokensDescription")}
           </div>
         )}
@@ -1507,7 +1507,7 @@ export function KiloCodeExportDialog({
                           )}
 
                           {showV7ManualRecovery && isKiloV7Export && (
-                            <div className="dark:text-secondary-foreground text-muted-foregroundtext-sm">
+                            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                               {t(
                                 "ui:dialog.kiloCode.messages.v7ProviderModelsRequired",
                               )}
@@ -1559,7 +1559,7 @@ export function KiloCodeExportDialog({
             <div className="text-foreground text-base font-semibold">
               {t("ui:dialog.kiloCode.title")}
             </div>
-            <p className="dark:text-secondary-foreground text-muted-foregroundtext-sm">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.kiloCode.description")}
             </p>
           </div>
@@ -1567,7 +1567,7 @@ export function KiloCodeExportDialog({
         footer={
           <ActionGroup>
             {selectedSiteIds.length > 0 && (
-              <div className="dark:text-secondary-foreground text-muted-foregroundmr-auto text-xs">
+              <div className="dark:text-secondary-foreground text-muted-foreground mr-auto text-xs">
                 {selectionSummary}
               </div>
             )}
