@@ -53,6 +53,7 @@ import {
 } from "./cookieInterceptor"
 import { applyDevActionBranding } from "./devActionBranding"
 import { initializeServices } from "./servicesInit"
+import { reclaimOrphanedTempPages } from "./tempContextReclamation"
 
 /**
  * Unified logger scoped to the background entrypoint and lifecycle hooks.
@@ -246,4 +247,9 @@ async function main() {
   triggerStartupSponsorRecommendationsDailySummary()
   // Runs after i18n initialization so the survey URL carries the active UI language.
   void uninstallSurveyService.refresh()
+  // Runs on every worker activation, which is the recovery point for temp-window
+  // closes lost to the previous worker's death. Never blocks startup.
+  void reclaimOrphanedTempPages().catch((error) => {
+    logger.warn("Failed to reclaim orphaned temporary pages", error)
+  })
 }

@@ -131,6 +131,12 @@ describe("background onInstalled changelog opening", () => {
       cleanupTempContextsOnSuspend: vi.fn().mockResolvedValue(undefined),
       setupTempWindowListeners: vi.fn(),
     }))
+    vi.doMock("~/entrypoints/background/tempContextReclamation", () => ({
+      reclaimOrphanedTempPages: vi.fn().mockResolvedValue({
+        outcomes: [],
+        reclaimedCount: 0,
+      }),
+    }))
     vi.doMock("~/entrypoints/background/contextMenus", () => ({
       setupContextMenus: vi.fn(),
     }))

@@ -1534,7 +1534,7 @@ describe("tempWindowPool window fallback", () => {
     )
   })
 
-  it("finalizes a popup context after one failed removal so the next request creates a fresh context", async () => {
+  it("removes the popup's tab when its window cannot be closed, so the next request creates a fresh context", async () => {
     tempContextMode = "window"
     createWindowMock
       .mockResolvedValueOnce({ id: 111 })
@@ -1575,10 +1575,16 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeWindowMock).toHaveBeenCalledWith(111)
     expect(removeWindowMock).toHaveBeenCalledTimes(1)
-    expect(removeTabMock).not.toHaveBeenCalledWith(112)
+    // The window survived its close attempt, so its only tab is removed instead
+    // of leaving a popup behind for the next reclamation sweep.
+    expect(removeTabMock).toHaveBeenCalledWith(112)
     expect(loggerWarnMock).toHaveBeenCalledWith(
-      "Failed to remove temp context",
-      expect.any(Error),
+      "Failed to close temp window; removing its tab instead",
+      {
+        windowId: 111,
+        tabId: 112,
+        error: "transient close failure",
+      },
     )
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(

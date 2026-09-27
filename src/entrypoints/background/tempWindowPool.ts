@@ -14,6 +14,7 @@ import {
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
 import {
+  INTERNAL_TAB_WINDOW_SCOPES,
   registerInternalTab,
   unregisterInternalTab,
 } from "~/services/browsingContext/internalTabsBackground"
@@ -96,6 +97,7 @@ import {
   applyFirefoxTempWindowDownloadBlockRule,
   removeFirefoxTempWindowDownloadBlockRule,
 } from "~/utils/browser/firefoxTempWindowDownloadBlocker"
+import { removeTabOwningWindow } from "~/utils/browser/ownedTabRemoval"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { resolveTempWindowRequestPolicy } from "~/utils/browser/tempWindowRequestSource"
@@ -809,7 +811,7 @@ type TempContextOwnership =
 type TempContext = TempContextSharedFields & TempContextOwnership
 
 type TempWindowHandle =
-  | { kind: typeof TEMP_CONTEXT_MODES.Window; windowId: number }
+  | { kind: typeof TEMP_CONTEXT_MODES.Window; windowId: number; tabId: number }
   | { kind: typeof TEMP_CONTEXT_MODES.Tab; tabId: number }
   | {
       kind: typeof TEMP_CONTEXT_MODES.Composite
@@ -1179,7 +1181,9 @@ async function removeCompositeTabLocked(windowId: number, tabId: number) {
 async function removeTempWindowHandle(handle: TempWindowHandle) {
   switch (handle.kind) {
     case TEMP_CONTEXT_MODES.Window:
-      await removeWindow(handle.windowId)
+      // A window-owned popup that cannot be closed still loses its tab, so the
+      // leftover is never left to the next reclamation sweep by default.
+      await removeTabOwningWindow(handle.tabId, handle.windowId)
       return
     case TEMP_CONTEXT_MODES.Composite:
       await removeCompositeTab(handle.windowId, handle.tabId)
@@ -1202,6 +1206,7 @@ function getTempContextHandle(
       return {
         kind: TEMP_CONTEXT_MODES.Window,
         windowId: source.ownerWindowId,
+        tabId: source.tabId,
       }
     case TEMP_CONTEXT_MODES.Composite:
       return {
@@ -2758,7 +2763,17 @@ async function createTempContextInstance(
         { requestId, origin, tabId: opened.tabId },
       )
     }
-    if (!(await registerInternalTab(opened.tabId))) {
+    if (
+      !(await registerInternalTab(opened.tabId, {
+        // A window-backed temp context owns its window; composite and plain tab
+        // contexts only borrow one, so reclamation must never close that window.
+        windowScope:
+          opened.mode === TEMP_CONTEXT_MODES.Window
+            ? INTERNAL_TAB_WINDOW_SCOPES.Owned
+            : INTERNAL_TAB_WINDOW_SCOPES.Shared,
+        createdAt: Date.now(),
+      }))
+    ) {
       throw new Error("Unable to persist internal tab ownership")
     }
     await updateTab(opened.tabId, { url })

@@ -14,6 +14,7 @@ const {
   loggerErrorMock,
   loggerWarnMock,
   migrateAccountsConfigMock,
+  reclaimOrphanedTempPagesMock,
   setupActionClickBehaviorListenerMock,
   triggerStartupSettingsSnapshotMock,
   triggerStartupShieldBypassDailySummaryMock,
@@ -31,6 +32,7 @@ const {
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   migrateAccountsConfigMock: vi.fn(),
+  reclaimOrphanedTempPagesMock: vi.fn(),
   setupActionClickBehaviorListenerMock: vi.fn(),
   triggerStartupSettingsSnapshotMock: vi.fn(),
   triggerStartupShieldBypassDailySummaryMock: vi.fn(),
@@ -69,6 +71,9 @@ describe("background onSuspend temp-context cleanup", () => {
     initializeServicesMock.mockReset().mockResolvedValue(undefined)
     loggerErrorMock.mockReset()
     loggerWarnMock.mockReset()
+    reclaimOrphanedTempPagesMock
+      .mockReset()
+      .mockResolvedValue({ outcomes: [], reclaimedCount: 0 })
     setupActionClickBehaviorListenerMock.mockReset()
     triggerStartupSettingsSnapshotMock.mockReset()
     triggerStartupShieldBypassDailySummaryMock.mockReset()
@@ -105,6 +110,9 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
       cleanupTempContextsOnSuspend: cleanupTempContextsOnSuspendMock,
       setupTempWindowListeners: vi.fn(),
+    }))
+    vi.doMock("~/entrypoints/background/tempContextReclamation", () => ({
+      reclaimOrphanedTempPages: reclaimOrphanedTempPagesMock,
     }))
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
@@ -192,6 +200,7 @@ describe("background onSuspend temp-context cleanup", () => {
 
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/entrypoints/background/tempWindowPool")
+    vi.doUnmock("~/entrypoints/background/tempContextReclamation")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
     vi.doUnmock("~/entrypoints/background/contextMenus")
     vi.doUnmock("~/entrypoints/background/cookieInterceptor")
@@ -222,6 +231,30 @@ describe("background onSuspend temp-context cleanup", () => {
     onSuspendListener?.()
 
     expect(cleanupTempContextsOnSuspendMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("reclaims temporary pages left behind by the previous worker on every start", async () => {
+    await import("~/entrypoints/background/index")
+
+    await vi.waitFor(() => {
+      expect(reclaimOrphanedTempPagesMock).toHaveBeenCalledTimes(1)
+    })
+    expect(initializeCookieInterceptorsMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps background startup alive when reclamation fails", async () => {
+    const reclamationError = new Error("reclamation failed")
+    reclaimOrphanedTempPagesMock.mockRejectedValueOnce(reclamationError)
+
+    await import("~/entrypoints/background/index")
+
+    await vi.waitFor(() => {
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        "Failed to reclaim orphaned temporary pages",
+        reclamationError,
+      )
+    })
+    expect(initializeCookieInterceptorsMock).toHaveBeenCalledTimes(1)
   })
 
   it("preserves the full account envelope while installing migrated accounts", async () => {

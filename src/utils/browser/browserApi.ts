@@ -167,6 +167,14 @@ export async function removeWindow(windowId: number): Promise<void> {
 }
 
 /**
+ * Retrieves every browser window when the windows API is available.
+ */
+export async function getAllWindows(): Promise<browser.windows.Window[]> {
+  if (!hasWindowsAPI()) return []
+  return (await browser.windows.getAll()) ?? []
+}
+
+/**
  * 创建新窗口（如果支持）
  * 返回窗口对象，如果不支持则返回 null
  * @param createData 用于创建窗口的配置数据。

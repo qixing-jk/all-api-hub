@@ -265,7 +265,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     const { registerInternalTab, unregisterInternalTab } = await import(
       "~/services/browsingContext/internalTabsBackground"
     )
-    await registerInternalTab(901)
+    await registerInternalTab(901, { windowScope: "shared", createdAt: 1 })
     setupRuntimeMessageListeners()
     const response = new Promise<{ tabIds: number[] }>((resolve) => {
       expect(
@@ -333,7 +333,7 @@ describe("setupRuntimeMessageListeners routing", () => {
       const { registerInternalTab, unregisterInternalTab } = await import(
         "~/services/browsingContext/internalTabsBackground"
       )
-      await registerInternalTab(951)
+      await registerInternalTab(951, { windowScope: "shared", createdAt: 1 })
       setupRuntimeMessageListeners()
       try {
         const response = await new Promise((resolve) =>
