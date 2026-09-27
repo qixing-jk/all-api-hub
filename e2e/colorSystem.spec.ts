@@ -14,6 +14,10 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import {
+  readVisualThemeRoleColor,
+  setVisualDarkMode,
+} from "~~/e2e/utils/visualTheme"
 
 test("custom color roles reach page content, controls and portals in both modes", async ({
   context,
@@ -138,5 +142,43 @@ test("custom color roles reach page content, controls and portals in both modes"
     await expect(
       page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`),
     ).toBeVisible()
+  }
+})
+
+test("the active sidebar item keeps one selected-control surface in both modes", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await seedUserPreferences(await getServiceWorker(context), {
+    themeMode: THEME_MODE.LIGHT,
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+
+  // The sidebar owns the only nav on the overview route.
+  const nav = page.locator("nav").first()
+  const active = nav.locator('[aria-current="page"]')
+  const inactive = nav.locator('button:not([aria-current="page"])').first()
+  await expect(active).toHaveCount(1)
+  await expect(inactive).toBeVisible()
+
+  const background = (locator: typeof active) =>
+    locator.evaluate((element) => getComputedStyle(element).backgroundColor)
+
+  for (const dark of [false, true]) {
+    await setVisualDarkMode(page, dark)
+    // One role for the selected state, resolved by the document itself rather
+    // than by a pinned channel value.
+    await expect(active).toHaveCSS(
+      "background-color",
+      await readVisualThemeRoleColor(page, "--primary-soft"),
+    )
+    // Selecting must still read differently from hovering a neighbouring item.
+    await inactive.hover()
+    expect(await background(active)).not.toBe(await background(inactive))
   }
 })

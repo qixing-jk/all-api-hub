@@ -274,7 +274,7 @@ function OptionsSidebar({
                                 shouldShowCollapsedState &&
                                   "justify-center px-0",
                                 isActive
-                                  ? "bg-surface-subtle text-primary-soft-foreground dark:bg-primary-soft"
+                                  ? "bg-primary-soft text-primary-soft-foreground"
                                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                               )}
                             >
@@ -282,7 +282,7 @@ function OptionsSidebar({
                                 className={cn(
                                   "size-4 shrink-0",
                                   isActive
-                                    ? "text-primary"
+                                    ? "text-primary-soft-foreground"
                                     : "text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground",
                                 )}
                               />
