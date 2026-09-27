@@ -67,6 +67,10 @@ import {
   markTempWindowOpenRouterManagementKeyDispatched,
 } from "./openrouter/managementKeyAction"
 import { protectionBypassCoordinator } from "./protectionBypassCoordinator"
+import {
+  handleTempContextDebugMessage,
+  isTempContextDebugAction,
+} from "./tempContextDebug"
 import { handleCloseTempWindow } from "./tempWindowPool"
 
 /**
@@ -433,6 +437,11 @@ export function setupRuntimeMessageListeners() {
         RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
       ) {
         handleDailyBalanceHistoryMessage(request, sendResponse)
+        return true
+      }
+
+      if (isTempContextDebugAction(request.action)) {
+        void handleTempContextDebugMessage(request, sendResponse)
         return true
       }
 

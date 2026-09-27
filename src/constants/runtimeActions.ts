@@ -21,6 +21,7 @@ export const RuntimeActionPrefixes = {
   OpenSettings: "openSettings:",
   Permissions: "permissions:",
   RedemptionAssist: "redemptionAssist:",
+  TempContextDebug: "tempContextDebug:",
 } as const
 
 type RuntimeActionPrefix =
@@ -135,6 +136,23 @@ export const RuntimeActionIds = {
   BalanceHistoryDebugSeedEstimateSnapshots: composeRuntimeAction(
     RuntimeActionPrefixes.BalanceHistory,
     "debugSeedEstimateSnapshots",
+  ),
+
+  TempContextDebugCreateOrphan: composeRuntimeAction(
+    RuntimeActionPrefixes.TempContextDebug,
+    "createOrphan",
+  ),
+  TempContextDebugCreateTrackedContext: composeRuntimeAction(
+    RuntimeActionPrefixes.TempContextDebug,
+    "createTrackedContext",
+  ),
+  TempContextDebugListMarkers: composeRuntimeAction(
+    RuntimeActionPrefixes.TempContextDebug,
+    "listMarkers",
+  ),
+  TempContextDebugReclaimNow: composeRuntimeAction(
+    RuntimeActionPrefixes.TempContextDebug,
+    "reclaimNow",
   ),
 
   ContentGetLocalStorage: "getLocalStorage",

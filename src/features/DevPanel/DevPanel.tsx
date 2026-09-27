@@ -26,6 +26,7 @@ import {
   useDevPagesSection,
 } from "./sections/miscSections"
 import { useStarPromotionDevSection } from "./sections/starPromotionSection"
+import { useTempContextDevSection } from "./sections/tempContextSection"
 import { useUninstallSurveyDevSection } from "./sections/uninstallSurveySection"
 import {
   isDevPanelSectionVisible,
@@ -242,6 +243,7 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
   useRegisterDevPanelSection(useDevPagesSection())
   useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   useRegisterDevPanelSection(useUninstallSurveyDevSection())
+  useRegisterDevPanelSection(useTempContextDevSection())
   return null
 }
 

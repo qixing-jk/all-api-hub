@@ -27,12 +27,20 @@ Two consequences:
 ## Decisions
 
 1. **Reclaim on ownership, never on URL.** The marker is the identifier; a blank or new-tab-shaped leftover is reclaimed exactly like a site-shaped one.
-2. **Task-level orphan is defined against the live worker.** At worker start the in-memory pool is empty, so every surviving marker belongs to a dead idea of ownership. A marker is an orphan when the live pool does not track its tab, and the pool is asked per tab (`isTempContextTabTracked`) rather than handed over as a snapshot, so a context created while a sweep is already running is never mistaken for a leftover.
+2. **Live ownership has one source, and it is claimed before the marker.** A marker is an orphan when this worker no longer holds its tab, and “holds” is the internal-tab ownership set (`isInternalTabOwned`) — the same set the browsing-context filter reads, so “hidden from related pages” and “kept by reclamation” can never disagree. `registerInternalTab` claims the tab *before* it writes the marker, so a sweep can never see a marker for a context that is still being created. The predicate is consulted per tab, not handed over as a snapshot, so a tab claimed while a sweep is already running is not mistaken for a leftover.
+   - Found by the E2E (ticket 06): with the pool as the source, a temp context is not registered in the pool until after its navigation and readiness wait, while its marker exists from the start — a sweep running in that window closed the tab under its own creation (`No tab with id: …`). A worker start can run concurrently with a flow that the same activation began, so this was reachable outside tests too.
 3. **The sweep runs at background start**, i.e. at every service-worker activation (alarm wakes included), fire-and-forget after `initializeServices()`. No periodic alarm: worker wakes are frequent and every leak listed above is only observable after a wake. A sweep with no markers must do no browser work beyond the storage read.
 4. **Ownership record instead of a boolean.** Store `{ windowScope, createdAt }` per tab, where `windowScope` says whether the tab owns its window (`owned`) or only occupies a shared window (`shared`, i.e. composite and plain-tab contexts), so reclamation restores the close semantics of `removeTempWindowHandle`. Registration is the only writer and states the scope at the call site. Reads stay tolerant of the legacy `true` marker, which is treated as shared ownership.
 5. **Never close a tab the user is looking at.** An orphan that is the active tab of a focused window is skipped and left for a later sweep. The extension does hand temp windows to the user on purpose, and a leftover is indistinguishable from one of those by ownership alone; being on screen is the fact that separates them, which a URL- or age-based rule could not see.
 6. **Window-owned orphans close their window, with a tab fallback.** One shared helper (`~/utils/browser/ownedTabRemoval.ts`) removes window-owned tabs: `windows.remove` first, `tabs.remove` when that is unavailable or fails. It serves both reclamation and the live `removeTempWindowHandle` path, so a popup can no longer outlive its only tab. Window-owned handles now carry their tab id for that fallback.
 7. **Markers are cleared only after the close succeeded**, so a failed reclamation stays visible to the next sweep instead of leaking silently.
+
+## Reproduction surface
+
+Reclamation runs at a worker start, which a human cannot ask for, so the mechanism is observable through a dev-only surface instead of guesswork:
+
+- Background debug actions (`RuntimeActionIds.TempContextDebug*`, refused unless the build mode is development or test, so production never exposes them): leave an orphan in each shape users report (owned popup window, shared background tab, visible tab), open a real temp context that is left tracked, list current markers with their live ownership plus this worker's recent runs, and run reclamation on demand.
+- A dev panel section (`Temporary pages`, options surface) drives those actions, shows the markers with the recent runs, and offers "restart background worker" (`reloadRuntime()`) — the honest repro: the leftover survives the worker, and the next start reclaims it.
 
 ## Boundaries
 
@@ -43,12 +51,14 @@ Two consequences:
 
 ## Validation
 
-- `tests/services/browsingContext/`: marker records round-trip, legacy `true` markers stay owned, record enumeration returns only own keys.
-- `tests/services/browsingContext/internalTabReclamation.test.ts`: window-owned orphan closes its window (even when its tab is active in an unfocused window); shared-window orphan closes only the tab; window removal failure falls back to the tab; focused-window active tab is skipped; live-tracked tab is left alone; marker cleared only on success and after a failed close; no browser work without markers.
+- `tests/services/browsingContext/`: marker records round-trip, legacy `true` markers stay owned, record enumeration returns only own keys, ownership is claimed before the marker is written, and a persisted-only marker does not claim live ownership.
+- `tests/services/browsingContext/internalTabReclamation.test.ts`: window-owned orphan closes its window (even when its tab is active in an unfocused window); shared-window orphan closes only the tab; window removal failure falls back to the tab; focused-window active tab is skipped; live-owned tab is left alone; marker cleared only on success and after a failed close; no browser work without markers.
 - `tests/entrypoints/background/backgroundSuspendCleanup.test.ts`: the background entrypoint runs the sweep once per start and only logs its failure.
+- `tests/entrypoints/background/tempContextDebug.test.ts`: the debug surface is refused outside development/test builds, each fixture writes the marker it claims, and on-demand reclamation returns its summary.
+- `e2e/tempWindowOrphanReclamation.spec.ts` (real Chromium, build + 4 cases, three consecutive green runs): a leaked background tab is closed, the popup window a leaked context owns is closed with its window, a temp page the live worker still owns is left alone, and the tab the user is looking at is left alone.
 - Existing `tests/entrypoints/background/tempWindowPool*` and `tests/services/browsingContext/internalTabs.test.ts` stay green (registration call site and tolerant reads).
-- `tsc --noEmit`, eslint, prettier, knip; `tests/entrypoints/background`, `tests/services/browsingContext`, `tests/features/AccountManagement`, `tests/utils/browserApi.test.ts`.
-- Not covered: a real-browser E2E that kills the service worker mid-close. The wiring is covered by the entrypoint test and the decisions by the service test.
+- Local: `tsc --noEmit`, eslint, prettier, knip; `tests/entrypoints/background`, `tests/services/browsingContext`, `tests/features/AccountManagement`, `tests/utils/browserApi.test.ts` (1788 tests).
+- Not automated: restarting the worker inside the Playwright run. `chrome.runtime.reload()` leaves the unpacked extension unserviceable for the rest of the harness run (`ERR_BLOCKED_BY_CLIENT` on its own pages), so that step stays the dev panel's restart action or terminating the service worker from `chrome://extensions`.
 
 ## Tickets
 
@@ -56,3 +66,5 @@ Two consequences:
 - `issues/02-orphan-reclamation.md`
 - `issues/03-startup-sweep-wiring.md`
 - `issues/04-window-close-fallback.md`
+- `issues/05-dev-panel-reproduction.md`
+- `issues/06-e2e-reclamation.md`
