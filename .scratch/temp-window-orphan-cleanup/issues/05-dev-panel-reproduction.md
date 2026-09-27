@@ -13,9 +13,9 @@ A human can reproduce a leftover and watch reclamation work in the real browser,
 - Dev-only runtime actions (`RuntimeActionPrefixes.TempContextDebug`, gated by `isDevelopmentMode()` like the balance-history debug action):
   - create an orphan fixture in the shapes users actually see — an owned popup window, a shared background tab, and an active tab — each writing a real ownership marker without registering a temp context;
   - create a real tracked temp context through the pool and never release it (the "live worker still owns it" case, and the raw material for the restart repro);
-  - list current markers with their scope, age, and whether the live pool tracks them, plus the last reclamation summary of this worker;
+  - list current markers with their scope, age, whether this worker still owns them, and which browser session wrote them, plus this worker's recent runs;
   - run reclamation now and return its summary.
-- Dev panel section (`src/features/DevPanel/sections/`), options surface: those actions plus "Dev: Restart background worker" (`reloadRuntime()`), which is the honest repro — the leftover survives the worker, and the next start reclaims it.
+- Dev panel section (`src/features/DevPanel/sections/`), options surface: those actions plus "Dev: Restart background worker" (`reloadRuntime()`), which is the honest repro — since markers became durable (ticket 07) the leftover survives the reload, and the next worker start reclaims it.
 
 ## Validation
 

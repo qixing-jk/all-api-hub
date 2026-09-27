@@ -286,7 +286,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     )
     setupRuntimeMessageListeners()
     const read = vi
-      .spyOn(browser.storage.session, "get")
+      .spyOn(browser.storage.local, "get")
       .mockRejectedValue(new Error("storage unavailable"))
     try {
       const response = await new Promise((resolve) =>
@@ -360,7 +360,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     )
     setupRuntimeMessageListeners()
     const read = vi
-      .spyOn(browser.storage.session, "get")
+      .spyOn(browser.storage.local, "get")
       .mockRejectedValue(new Error("unavailable"))
     try {
       const response = await new Promise((resolve) =>

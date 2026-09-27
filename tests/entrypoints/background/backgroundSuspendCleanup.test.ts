@@ -15,6 +15,7 @@ const {
   loggerWarnMock,
   migrateAccountsConfigMock,
   reclaimOrphanedTempPagesMock,
+  rotateTempPageBrowserSessionMock,
   setupActionClickBehaviorListenerMock,
   triggerStartupSettingsSnapshotMock,
   triggerStartupShieldBypassDailySummaryMock,
@@ -33,6 +34,7 @@ const {
   loggerWarnMock: vi.fn(),
   migrateAccountsConfigMock: vi.fn(),
   reclaimOrphanedTempPagesMock: vi.fn(),
+  rotateTempPageBrowserSessionMock: vi.fn(),
   setupActionClickBehaviorListenerMock: vi.fn(),
   triggerStartupSettingsSnapshotMock: vi.fn(),
   triggerStartupShieldBypassDailySummaryMock: vi.fn(),
@@ -46,11 +48,13 @@ describe("background onSuspend temp-context cleanup", () => {
   let onInstalledListener:
     | ((details: { reason: string }) => void | Promise<void>)
     | undefined
+  let onStartupListener: (() => void | Promise<void>) | undefined
   let onSuspendListener: (() => void | Promise<void>) | undefined
   let cleanupTempContextsOnSuspendMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     onInstalledListener = undefined
+    onStartupListener = undefined
     onSuspendListener = undefined
     cleanupTempContextsOnSuspendMock = vi.fn().mockResolvedValue(undefined)
     applyActionClickBehaviorMock.mockReset().mockResolvedValue(undefined)
@@ -74,6 +78,9 @@ describe("background onSuspend temp-context cleanup", () => {
     reclaimOrphanedTempPagesMock
       .mockReset()
       .mockResolvedValue({ outcomes: [], reclaimedCount: 0 })
+    rotateTempPageBrowserSessionMock
+      .mockReset()
+      .mockResolvedValue("browser-session-1")
     setupActionClickBehaviorListenerMock.mockReset()
     triggerStartupSettingsSnapshotMock.mockReset()
     triggerStartupShieldBypassDailySummaryMock.mockReset()
@@ -100,7 +107,9 @@ describe("background onSuspend temp-context cleanup", () => {
             onInstalledListener = listener
           },
         ),
-        onStartup: vi.fn(),
+        onStartup: vi.fn((listener: () => void | Promise<void>) => {
+          onStartupListener = listener
+        }),
         onSuspend: vi.fn((listener: () => void | Promise<void>) => {
           onSuspendListener = listener
         }),
@@ -113,6 +122,7 @@ describe("background onSuspend temp-context cleanup", () => {
     }))
     vi.doMock("~/entrypoints/background/tempContextReclamation", () => ({
       reclaimOrphanedTempPages: reclaimOrphanedTempPagesMock,
+      rotateTempPageBrowserSession: rotateTempPageBrowserSessionMock,
     }))
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
@@ -231,6 +241,15 @@ describe("background onSuspend temp-context cleanup", () => {
     onSuspendListener?.()
 
     expect(cleanupTempContextsOnSuspendMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("starts a new temp-page browser session on browser startup", async () => {
+    await import("~/entrypoints/background/index")
+
+    expect(onStartupListener).toBeTypeOf("function")
+    await onStartupListener?.()
+
+    expect(rotateTempPageBrowserSessionMock).toHaveBeenCalledTimes(1)
   })
 
   it("reclaims temporary pages left behind by the previous worker on every start", async () => {

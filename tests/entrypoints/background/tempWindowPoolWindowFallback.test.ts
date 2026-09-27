@@ -1619,7 +1619,7 @@ describe("tempWindowPool window fallback", () => {
       createTabMock.mockResolvedValueOnce({ id: 615 })
       applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_615)
       if (failure === "rejected") {
-        vi.spyOn(browser.storage.session, "set").mockRejectedValueOnce(
+        vi.spyOn(browser.storage.local, "set").mockRejectedValue(
           new Error("write failed"),
         )
       } else {

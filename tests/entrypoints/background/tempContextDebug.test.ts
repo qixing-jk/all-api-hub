@@ -154,6 +154,7 @@ describe("temp-context debug actions", () => {
         tabId: FIXTURE_WINDOW_TAB_ID,
         windowScope: "owned",
         createdAt: expect.any(Number),
+        browserSession: expect.any(String),
       },
     ])
   })
@@ -171,6 +172,7 @@ describe("temp-context debug actions", () => {
         tabId: FIXTURE_TAB_ID,
         windowScope: "shared",
         createdAt: expect.any(Number),
+        browserSession: expect.any(String),
       },
     ])
   })
@@ -269,6 +271,7 @@ describe("temp-context debug actions", () => {
         tabId,
         windowScope: "shared",
         createdAt: expect.any(Number),
+        browserSession: expect.any(String),
         tracked: true,
       },
     ])
@@ -290,7 +293,7 @@ describe("temp-context debug actions", () => {
 
     expect(response).toEqual({
       success: true,
-      data: { markers: [], runs: [] },
+      data: { browserSession: expect.any(String), markers: [], runs: [] },
     })
   })
 

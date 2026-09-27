@@ -11,6 +11,7 @@ import { createLogger } from "~/utils/core/logger"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
   listInternalTabRecords,
+  readInternalTabBrowserSession,
   unregisterInternalTab,
   type InternalTabWindowScope,
 } from "./internalTabsBackground"
@@ -24,6 +25,7 @@ export const INTERNAL_TAB_RECLAMATION_OUTCOMES = {
   SkippedTracked: "skipped-tracked",
   SkippedVisible: "skipped-visible",
   SkippedMissing: "skipped-missing",
+  SkippedStaleSession: "skipped-stale-session",
   Failed: "failed",
 } as const
 
@@ -96,10 +98,14 @@ async function closeOrphan(
  * often still sitting on the initial `about:blank`, so nothing about their URL
  * identifies them. Ownership is the only reliable identifier.
  *
- * A tab is left alone when the live pool still tracks it, or when it is the
+ * A tab is left alone when the live worker still owns it, or when it is the
  * active tab of a focused window: a temp window deliberately handed to the user
  * must not disappear under their hands. Markers survive a failed close so the
  * next sweep retries.
+ *
+ * A marker written by another browser session is only cleared: tab ids do not
+ * carry over between sessions, so closing what it names could close an
+ * unrelated tab.
  */
 export async function reclaimOrphanedInternalTabs(options: {
   /** Consulted per tab, so a context created mid-sweep is never reclaimed. */
@@ -115,11 +121,22 @@ export async function reclaimOrphanedInternalTabs(options: {
     if (typeof tab.id === "number") tabsById.set(tab.id, tab)
   }
 
+  const browserSession = await readInternalTabBrowserSession()
   const focusedWindowIds = await readFocusedWindowIds()
   const outcomes: InternalTabReclamationOutcome[] = []
 
   for (const record of records) {
     const { tabId } = record
+
+    if (record.browserSession !== browserSession) {
+      await unregisterInternalTab(tabId)
+      outcomes.push({
+        kind: INTERNAL_TAB_RECLAMATION_OUTCOMES.SkippedStaleSession,
+        tabId,
+      })
+      continue
+    }
+
     const tab = tabsById.get(tabId)
 
     if (!tab) {
@@ -142,6 +159,17 @@ export async function reclaimOrphanedInternalTabs(options: {
     if (isTabOnScreen(tab, focusedWindowIds)) {
       outcomes.push({
         kind: INTERNAL_TAB_RECLAMATION_OUTCOMES.SkippedVisible,
+        tabId,
+      })
+      continue
+    }
+
+    // Re-read before acting: if the session rotated while this sweep was
+    // deciding, the ids read at the start belong to a session that has ended.
+    if ((await readInternalTabBrowserSession()) !== browserSession) {
+      await unregisterInternalTab(tabId)
+      outcomes.push({
+        kind: INTERNAL_TAB_RECLAMATION_OUTCOMES.SkippedStaleSession,
         tabId,
       })
       continue

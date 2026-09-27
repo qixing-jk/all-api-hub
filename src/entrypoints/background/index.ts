@@ -53,7 +53,10 @@ import {
 } from "./cookieInterceptor"
 import { applyDevActionBranding } from "./devActionBranding"
 import { initializeServices } from "./servicesInit"
-import { reclaimOrphanedTempPages } from "./tempContextReclamation"
+import {
+  reclaimOrphanedTempPages,
+  rotateTempPageBrowserSession,
+} from "./tempContextReclamation"
 
 /**
  * Unified logger scoped to the background entrypoint and lifecycle hooks.
@@ -201,6 +204,11 @@ export default defineBackground(() => {
    */
   onStartup(async () => {
     logger.info("浏览器启动，恢复后台服务与 alarms 调度")
+    // A browser start begins a new session for temp-page ownership; tab ids do
+    // not carry over, so markers from the previous one only get cleared.
+    await rotateTempPageBrowserSession().catch((error) => {
+      logger.warn("Failed to start a new temp-page browser session", error)
+    })
     try {
       await initializeServices()
     } catch (error) {

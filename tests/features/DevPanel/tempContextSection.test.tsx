@@ -32,12 +32,34 @@ vi.mock("~/lib/notify", () => ({ default: toastMock }))
 
 const LIST_MARKERS = { action: RuntimeActionIds.TempContextDebugListMarkers }
 
+const CURRENT_SESSION = "browser-session-current"
+
 const MARKED_STATE = {
   success: true,
   data: {
+    browserSession: CURRENT_SESSION,
     markers: [
-      { tabId: 11, windowScope: "owned", createdAt: 1, tracked: true },
-      { tabId: 12, windowScope: "shared", createdAt: 1, tracked: false },
+      {
+        tabId: 11,
+        windowScope: "owned",
+        createdAt: 1,
+        browserSession: CURRENT_SESSION,
+        tracked: true,
+      },
+      {
+        tabId: 12,
+        windowScope: "shared",
+        createdAt: 1,
+        browserSession: CURRENT_SESSION,
+        tracked: false,
+      },
+      {
+        tabId: 13,
+        windowScope: "owned",
+        createdAt: 1,
+        browserSession: "browser-session-previous",
+        tracked: false,
+      },
     ],
     runs: [
       {
@@ -67,19 +89,23 @@ describe("temp context dev section", () => {
     const { result } = renderHook(() => useTempContextDevSection())
 
     await waitFor(() =>
-      expect(result.current.rows?.[0]?.value).toBe("2 (1 orphan)"),
+      expect(result.current.rows?.[0]?.value).toBe("3 (2 orphan)"),
     )
     const rows = result.current.rows ?? []
     expect(rows[0]).toMatchObject({
       id: "markers",
       label: "Marked temp pages",
-      value: "2 (1 orphan)",
+      value: "3 (2 orphan)",
       tone: "runtime",
     })
     // The hint names each marker and the decision recorded for it, which the
     // panel harness does not render.
     expect(rows[0]?.hint).toContain("tab 11 · owned · tracked")
     expect(rows[0]?.hint).toContain("tab 12 · shared · orphan")
+    // A marker from a finished browser session is called out, because it will
+    // only be cleared.
+    expect(rows[0]?.hint).toContain("tab 13 · owned · orphan")
+    expect(rows[0]?.hint).toContain("other session")
 
     expect(rows[1]).toMatchObject({
       id: "last-run",
@@ -169,7 +195,7 @@ describe("temp context dev section", () => {
     )
 
     expect(toastMock.info).toHaveBeenCalledWith(
-      expect.stringContaining("Restarting the background worker"),
+      expect.stringContaining("Reloading the extension"),
     )
     expect(reloadRuntimeMock).toHaveBeenCalledTimes(1)
   })
@@ -189,7 +215,7 @@ describe("temp context dev section", () => {
         id: "toast-id",
       }),
     )
-    expect(screen.getByTestId("row-markers")).toHaveTextContent("2 (1 orphan)")
+    expect(screen.getByTestId("row-markers")).toHaveTextContent("3 (2 orphan)")
   })
 
   it("disables the other actions while one is running", async () => {

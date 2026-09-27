@@ -1,14 +1,27 @@
+import { INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY } from "~/services/core/storageKeys"
 import {
-  getSessionStorageValues,
-  removeSessionStorageValues,
-  setSessionStorageValues,
+  getLocalStorage,
+  removeLocalStorage,
+  setLocalStorage,
 } from "~/utils/browser/browserApi"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 
 const KEY_PREFIX = "internalBrowsingTab:"
 const internalTabIds = new Set<number>()
 const logger = createLogger("InternalBrowsingTabs")
+
+/**
+ * Browser session of this worker, minted on first use and rotated when the
+ * browser starts.
+ *
+ * Markers carry it because they live in `storage.local` — that store survives
+ * the extension reloads and updates that clear `storage.session`, which is what
+ * makes a leftover reclaimable after them — while tab ids only mean something
+ * inside one browser session.
+ */
+let browserSession: string | undefined
 
 /**
  * How the flagged tab relates to its window, so a later worker can close it the
@@ -24,7 +37,7 @@ export const INTERNAL_TAB_WINDOW_SCOPES = {
 export type InternalTabWindowScope =
   (typeof INTERNAL_TAB_WINDOW_SCOPES)[keyof typeof INTERNAL_TAB_WINDOW_SCOPES]
 
-/** Persisted ownership facts for one extension-owned browsing tab. */
+/** Persisted ownership facts one caller states about an extension-owned tab. */
 export type InternalTabRecord = {
   windowScope: InternalTabWindowScope
   createdAt: number
@@ -36,6 +49,8 @@ export type InternalTabOwnership = {
   windowScope: InternalTabWindowScope
   /** `null` for markers written before ownership records existed. */
   createdAt: number | null
+  /** `null` for markers written before browser sessions were recorded. */
+  browserSession: string | null
 }
 
 /**
@@ -43,13 +58,16 @@ export type InternalTabOwnership = {
  * ownership, so an unusable value only narrows the facts we know: an unknown
  * scope stays shared, which never closes a window the extension does not own.
  */
-function parseMarker(
-  value: unknown,
-): { windowScope: InternalTabWindowScope; createdAt: number | null } | null {
+function parseMarker(value: unknown): {
+  windowScope: InternalTabWindowScope
+  createdAt: number | null
+  browserSession: string | null
+} | null {
   if (value === true) {
     return {
       windowScope: INTERNAL_TAB_WINDOW_SCOPES.Shared,
       createdAt: null,
+      browserSession: null,
     }
   }
 
@@ -66,6 +84,10 @@ function parseMarker(
       value.createdAt > 0
         ? value.createdAt
         : null,
+    browserSession:
+      typeof value.browserSession === "string" && value.browserSession.trim()
+        ? value.browserSession
+        : null,
   }
 }
 
@@ -75,6 +97,52 @@ function parseMarkerTabId(key: string): number | null {
 
   const tabId = Number(key.slice(KEY_PREFIX.length))
   return Number.isSafeInteger(tabId) && tabId >= 0 ? tabId : null
+}
+
+/** Mints a session id and persists it, keeping it in memory either way. */
+async function writeNewBrowserSession(): Promise<string> {
+  const minted = safeRandomUUID("internal-browsing-session")
+  try {
+    await setLocalStorage({
+      [INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]: minted,
+    })
+  } catch (error) {
+    logger.warn("Unable to persist the temp-page browser session", error)
+  }
+  return minted
+}
+
+/**
+ * Browser session this worker stamps markers with, minting one when the profile
+ * has none yet. A failed write still returns the value, so ownership stays
+ * consistent inside this worker.
+ */
+export async function readInternalTabBrowserSession(): Promise<string> {
+  if (browserSession) return browserSession
+
+  let stored: string | null = null
+  try {
+    const values = await getLocalStorage(
+      INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
+    )
+    const candidate = values[INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]
+    stored =
+      typeof candidate === "string" && candidate.trim() ? candidate : null
+  } catch (error) {
+    logger.warn("Unable to read the temp-page browser session", error)
+  }
+
+  browserSession = stored ?? (await writeNewBrowserSession())
+  return browserSession
+}
+
+/**
+ * Starts a new browser session, which makes every marker written before it
+ * foreign. Called on browser startup, not on an extension reload or update.
+ */
+export async function rotateInternalTabBrowserSession(): Promise<string> {
+  browserSession = await writeNewBrowserSession()
+  return browserSession
 }
 
 /**
@@ -87,7 +155,17 @@ export async function persistInternalTabMarker(
   tabId: number,
   record: InternalTabRecord,
 ): Promise<boolean> {
-  return setSessionStorageValues({ [`${KEY_PREFIX}${tabId}`]: record })
+  const marker = {
+    ...record,
+    browserSession: await readInternalTabBrowserSession(),
+  }
+
+  try {
+    await setLocalStorage({ [`${KEY_PREFIX}${tabId}`]: marker })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Register before navigation; only persisted ownership survives worker restarts. */
@@ -99,25 +177,25 @@ export async function registerInternalTab(
   return await persistInternalTabMarker(tabId, record)
 }
 
-/**
- * Whether this worker is still holding the tab.
- *
- * Ownership claimed here is claimed before the marker is written, so anything a
- * sweep can see in storage already has a live owner if it has one at all. That
- * is what keeps a temp context that is still being created out of a sweep.
- */
-export function isInternalTabOwned(tabId: number): boolean {
-  return internalTabIds.has(tabId)
-}
-
 /** Remove ownership only after the browser reports that the tab was removed. */
 export async function unregisterInternalTab(tabId: number): Promise<void> {
   internalTabIds.delete(tabId)
   try {
-    await removeSessionStorageValues(`${KEY_PREFIX}${tabId}`)
+    await removeLocalStorage(`${KEY_PREFIX}${tabId}`)
   } catch (error) {
     logger.warn("Unable to clear internal tab ownership", error)
   }
+}
+
+/**
+ * Whether this worker is still holding the tab.
+ *
+ * Ownership is claimed before the marker is written, so anything a sweep can
+ * see in storage already has a live owner if it has one at all. That is what
+ * keeps a temp context that is still being created out of a sweep.
+ */
+export function isInternalTabOwned(tabId: number): boolean {
+  return internalTabIds.has(tabId)
 }
 
 /** Reads only candidate markers; never caches negative ownership across navigations. */
@@ -126,9 +204,7 @@ export async function getInternalTabIds(tabIds: number[]): Promise<number[]> {
   const unknownIds = candidates.filter((id) => !internalTabIds.has(id))
   const values =
     unknownIds.length > 0
-      ? await getSessionStorageValues(
-          unknownIds.map((id) => `${KEY_PREFIX}${id}`),
-        )
+      ? await getLocalStorage(unknownIds.map((id) => `${KEY_PREFIX}${id}`))
       : {}
   return candidates.filter(
     (id) =>
@@ -141,16 +217,16 @@ export async function getInternalTabIds(tabIds: number[]): Promise<number[]> {
  * Enumerates every persisted ownership marker so a worker that inherited no
  * pool can find the tabs it is still responsible for.
  *
- * The scan reads the session area in full because tab ids cannot be guessed,
- * and it exposes only keys shaped like ownership markers: values stored under
- * any other key are discarded unread. A failed read rejects instead of
- * reporting "no owned tabs", because reclamation must not treat unknown state
- * as clean state.
+ * The scan reads the stored area in full because tab ids cannot be guessed, and
+ * it exposes only keys shaped like ownership markers: values stored under any
+ * other key are discarded unread. A failed read rejects instead of reporting
+ * "no owned tabs", because reclamation must not treat unknown state as clean
+ * state.
  */
 export async function listInternalTabRecords(): Promise<
   InternalTabOwnership[]
 > {
-  const values = await getSessionStorageValues(null)
+  const values = await getLocalStorage(null)
 
   const records: InternalTabOwnership[] = []
   for (const [key, value] of Object.entries(values)) {

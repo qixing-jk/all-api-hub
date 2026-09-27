@@ -5,6 +5,7 @@ import {
   INTERNAL_TAB_WINDOW_SCOPES,
   listInternalTabRecords,
   registerInternalTab,
+  rotateInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
 
 /** Creates a window that is not focused, like a temp window waiting to be reclaimed. */
@@ -89,7 +90,12 @@ describe("orphaned internal tab reclamation", () => {
     expect(summary.reclaimedCount).toBe(0)
     expect(await listWindowIds()).toContain(windowId)
     expect(await listInternalTabRecords()).toEqual([
-      { tabId, windowScope: "owned", createdAt: expect.any(Number) },
+      {
+        tabId,
+        windowScope: "owned",
+        createdAt: expect.any(Number),
+        browserSession: expect.any(String),
+      },
     ])
   })
 
@@ -108,6 +114,59 @@ describe("orphaned internal tab reclamation", () => {
     expect(summary.outcomes).toEqual([{ kind: "skipped-visible", tabId }])
     expect(await listWindowIds()).toContain(windowId)
     expect(await listInternalTabRecords()).toHaveLength(1)
+  })
+
+  it("reports a marker from another browser session as stale and closes nothing", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Owned,
+      createdAt: Date.now(),
+    })
+    // The browser session that owned this tab is over, so its tab id means
+    // nothing now: the marker is cleared, the page is left alone.
+    await rotateInternalTabBrowserSession()
+
+    const summary = await reclaimOrphanedInternalTabs({
+      isTabTracked: () => false,
+    })
+
+    expect(summary.outcomes).toEqual([{ kind: "skipped-stale-session", tabId }])
+    expect(summary.reclaimedCount).toBe(0)
+    expect(await listInternalTabRecords()).toEqual([])
+    expect(await listTabIds()).toContain(tabId)
+    expect(await listWindowIds()).toContain(windowId)
+  })
+
+  it("stops acting when the browser session ends mid-sweep", async () => {
+    const windowId = await createWindow()
+    const firstTabId = await createTab(windowId)
+    const secondTabId = await createTab(windowId)
+    for (const tabId of [firstTabId, secondTabId]) {
+      await registerInternalTab(tabId, {
+        windowScope: INTERNAL_TAB_WINDOW_SCOPES.Shared,
+        createdAt: Date.now(),
+      })
+    }
+
+    const removeTab = browser.tabs.remove.bind(browser.tabs)
+    vi.spyOn(browser.tabs, "remove").mockImplementation(
+      async (tabIds: number | number[]) => {
+        // The browser starts a new session while the sweep is still closing.
+        await rotateInternalTabBrowserSession()
+        await removeTab(tabIds)
+      },
+    )
+
+    const summary = await reclaimOrphanedInternalTabs({
+      isTabTracked: () => false,
+    })
+
+    expect(summary.outcomes).toEqual([
+      { kind: "closed-tab", tabId: firstTabId },
+      { kind: "skipped-stale-session", tabId: secondTabId },
+    ])
+    expect(await listTabIds()).toContain(secondTabId)
   })
 
   it("forgets ownership of tabs that no longer exist", async () => {

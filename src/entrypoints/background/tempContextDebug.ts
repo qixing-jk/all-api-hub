@@ -4,6 +4,7 @@ import {
   isInternalTabOwned,
   listInternalTabRecords,
   persistInternalTabMarker,
+  readInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
 import { createTab, createWindow, queryTabs } from "~/utils/browser/browserApi"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
@@ -194,10 +195,12 @@ export async function handleTempContextDebugMessage(
         sendResponse({
           success: true,
           data: {
+            browserSession: await readInternalTabBrowserSession(),
             markers: records.map((record) => ({
               tabId: record.tabId,
               windowScope: record.windowScope,
               createdAt: record.createdAt,
+              browserSession: record.browserSession,
               tracked: isInternalTabOwned(record.tabId),
             })),
             // Newest first: a worker start reclaims before anything can ask, so

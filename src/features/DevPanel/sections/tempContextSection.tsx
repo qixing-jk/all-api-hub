@@ -30,6 +30,7 @@ type TempContextMarkerRow = {
   tabId: number
   windowScope: string
   createdAt: number | null
+  browserSession: string | null
   tracked: boolean
 }
 
@@ -43,6 +44,7 @@ type TempContextReclamationRun = {
 }
 
 type TempContextDebugData = {
+  browserSession?: string
   markers?: TempContextMarkerRow[]
   /** Recent runs of the worker answering the read, newest first. */
   runs?: TempContextReclamationRun[]
@@ -64,12 +66,14 @@ type TempContextDebugResponse = {
 
 /** Last read of the background state, with the instant the ages are relative to. */
 type TempContextSnapshot = {
+  browserSession: string | null
   markers: TempContextMarkerRow[]
   runs: TempContextReclamationRun[]
   readAt: number
 }
 
 const EMPTY_SNAPSHOT: TempContextSnapshot = {
+  browserSession: null,
   markers: [],
   runs: [],
   readAt: 0,
@@ -87,17 +91,22 @@ function formatAge(createdAt: number | null, now: number): string {
 function formatMarkerHint(
   markers: readonly TempContextMarkerRow[],
   now: number,
+  browserSession: string | null,
 ): string {
   if (markers.length === 0) return "No temp page is currently marked"
 
-  const shown = markers
-    .slice(0, 5)
-    .map(
-      (marker) =>
-        `tab ${marker.tabId} · ${marker.windowScope} · ${
-          marker.tracked ? "tracked" : "orphan"
-        } · ${formatAge(marker.createdAt, now)}`,
-    )
+  const shown = markers.slice(0, 5).map(
+    (marker) =>
+      `tab ${marker.tabId} · ${marker.windowScope} · ${
+        marker.tracked ? "tracked" : "orphan"
+      } · ${formatAge(marker.createdAt, now)}${
+        // A marker from another browser session is only cleared, never acted
+        // on: its tab id means nothing here.
+        browserSession && marker.browserSession !== browserSession
+          ? " · other session"
+          : ""
+      }`,
+  )
   const hiddenCount = markers.length - shown.length
 
   return [...shown, ...(hiddenCount > 0 ? [`+${hiddenCount} more`] : [])].join(
@@ -138,6 +147,7 @@ export function useTempContextDevSection(): DevPanelSection {
       throw new Error(response?.error ?? "Temp page state unavailable")
     }
     setSnapshot({
+      browserSession: response.data?.browserSession ?? null,
       markers: response.data?.markers ?? [],
       runs: response.data?.runs ?? [],
       readAt: Date.now(),
@@ -236,13 +246,13 @@ export function useTempContextDevSection(): DevPanelSection {
 
   const restartWorker = useCallback(() => {
     toast.info(
-      "Restarting the background worker. Reopen this page to see whether the next start reclaimed the leak.",
+      "Reloading the extension (temp-page markers survive it). Reopen this page to see whether the next worker start reclaimed the leak.",
     )
     reloadRuntime()
   }, [])
 
   const rows = useMemo<DevPanelInfoRow[]>(() => {
-    const { markers, runs, readAt } = snapshot
+    const { browserSession, markers, runs, readAt } = snapshot
     const lastRun = runs[0] ?? null
 
     return [
@@ -252,7 +262,7 @@ export function useTempContextDevSection(): DevPanelSection {
         value: `${markers.length} (${
           markers.filter((marker) => !marker.tracked).length
         } orphan)`,
-        hint: formatMarkerHint(markers, readAt),
+        hint: formatMarkerHint(markers, readAt, browserSession),
         tone: "runtime",
       },
       {
@@ -282,7 +292,7 @@ export function useTempContextDevSection(): DevPanelSection {
       title: "Temporary pages",
       icon: Trash2,
       description:
-        "Reproduce a temp window/tab left behind, restart the worker, then reclaim it.",
+        "Reproduce a temp window/tab left behind, reload the extension or terminate its service worker, then reopen this page: the next worker start reclaims it. A marker from an earlier browser session is only cleared.",
       rows,
       surfaces: ["options"],
       actions: [

@@ -2,7 +2,10 @@ import {
   reclaimOrphanedInternalTabs,
   type InternalTabReclamationSummary,
 } from "~/services/browsingContext/internalTabReclamation"
-import { isInternalTabOwned } from "~/services/browsingContext/internalTabsBackground"
+import {
+  isInternalTabOwned,
+  rotateInternalTabBrowserSession,
+} from "~/services/browsingContext/internalTabsBackground"
 
 /** One reclamation run of this worker, kept for the dev reproduction panel. */
 export type TempPageReclamationRun = {
@@ -40,4 +43,14 @@ export async function reclaimOrphanedTempPages() {
 /** Recent reclamations of this worker, newest first. */
 export function readTempPageReclamationHistory(): TempPageReclamationRun[] {
   return [...history]
+}
+
+/**
+ * Starts a new browser session for temp-page ownership.
+ *
+ * Called when the browser starts, which is not the same as an extension reload
+ * or update: those keep the markers, so their leftovers stay reclaimable.
+ */
+export function rotateTempPageBrowserSession() {
+  return rotateInternalTabBrowserSession()
 }

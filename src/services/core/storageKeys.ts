@@ -10,6 +10,15 @@
  */
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
+/**
+ * Browser session that currently owns the extension's temporary pages.
+ *
+ * Markers carry it so a leftover can be reclaimed after an extension reload or
+ * update, while markers from an earlier browser session (where tab ids mean
+ * nothing) are only cleared.
+ */
+export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
+  "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
   /** Serializes the shared cooldown for passive browser identity requests. */
