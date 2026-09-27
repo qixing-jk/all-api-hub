@@ -38,6 +38,7 @@ const MARKED_STATE = {
   success: true,
   data: {
     browserSession: CURRENT_SESSION,
+    retryArmed: true,
     markers: [
       {
         tabId: 11,
@@ -108,12 +109,20 @@ describe("temp context dev section", () => {
     expect(rows[0]?.hint).toContain("other session")
 
     expect(rows[1]).toMatchObject({
+      id: "retry",
+      label: "Reclamation retry",
+      value: "armed (about a minute)",
+      tone: "runtime",
+    })
+    expect(rows[1]?.hint).toContain("A close was rejected")
+
+    expect(rows[2]).toMatchObject({
       id: "last-run",
       label: "Recent reclamations (this worker)",
       value: "1 reclaimed",
       tone: "best-effort",
     })
-    expect(rows[1]?.hint).toMatch(/old: tab 9 · closed-window/)
+    expect(rows[2]?.hint).toMatch(/old: tab 9 · closed-window/)
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith(LIST_MARKERS)
   })
 

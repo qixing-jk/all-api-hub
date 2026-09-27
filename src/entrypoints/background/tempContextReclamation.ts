@@ -1,11 +1,13 @@
 import {
   reclaimOrphanedInternalTabs,
+  TEMP_PAGE_RECLAIM_RETRY_ALARM,
   type InternalTabReclamationSummary,
 } from "~/services/browsingContext/internalTabReclamation"
 import {
   isInternalTabOwned,
   rotateInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
+import { getAlarm, onAlarm } from "~/utils/browser/browserApi"
 
 /** One reclamation run of this worker, kept for the dev reproduction panel. */
 export type TempPageReclamationRun = {
@@ -53,4 +55,24 @@ export function readTempPageReclamationHistory(): TempPageReclamationRun[] {
  */
 export function rotateTempPageBrowserSession() {
   return rotateInternalTabBrowserSession()
+}
+
+/** Whether a reclamation retry is waiting, for the dev reproduction panel. */
+export async function readTempPageReclaimRetryArmed(): Promise<boolean> {
+  return Boolean(await getAlarm(TEMP_PAGE_RECLAIM_RETRY_ALARM))
+}
+
+/**
+ * Runs a pending reclamation retry.
+ *
+ * Registered at background startup, before the first await, so an alarm that
+ * wakes the worker is handled in the same activation. The sweep decides again
+ * from the markers, so a retry that finds nothing is a no-op.
+ */
+export function setupTempPageReclaimRetryListener(): void {
+  onAlarm(async (alarm) => {
+    if (alarm.name !== TEMP_PAGE_RECLAIM_RETRY_ALARM) return
+
+    await reclaimOrphanedTempPages()
+  })
 }

@@ -1,4 +1,6 @@
 import {
+  createAlarm,
+  getAlarm,
   getAllTabs,
   getAllWindows,
   hasWindowsAPI,
@@ -17,6 +19,51 @@ import {
 } from "./internalTabsBackground"
 
 const logger = createLogger("InternalTabReclamation")
+
+/** One-shot alarm that retries a reclamation whose close was rejected. */
+export const TEMP_PAGE_RECLAIM_RETRY_ALARM = "tempPageReclaimRetry"
+
+/**
+ * One minute: comfortably above Chrome's 30-second floor for alarms, and late
+ * enough that a retry never races the close it is retrying.
+ */
+const TEMP_PAGE_RECLAIM_RETRY_DELAY_MINUTES = 1
+
+/**
+ * How long a still-held temp page keeps the retry armed.
+ *
+ * A live request means the risky window (its delayed close) has not passed yet,
+ * so the alarm stays pending; a context older than this is treated as something
+ * that will not finish on its own, and the heartbeat stops rather than waking
+ * the worker every minute forever.
+ */
+const TEMP_PAGE_RECLAIM_RETRY_TRACKED_MAX_AGE_MS = 10 * 60 * 1000
+
+/**
+ * Arms the retry alarm unless it is already armed.
+ *
+ * Nothing else persists the retry: an alarm that never fires (the browser closed
+ * first) costs nothing, because the markers it would have acted on are still
+ * there for the next start to sweep.
+ */
+export async function scheduleTempPageReclaimRetry(): Promise<boolean> {
+  try {
+    if (await getAlarm(TEMP_PAGE_RECLAIM_RETRY_ALARM)) return false
+
+    await createAlarm(TEMP_PAGE_RECLAIM_RETRY_ALARM, {
+      delayInMinutes: TEMP_PAGE_RECLAIM_RETRY_DELAY_MINUTES,
+    })
+    logger.info("Armed a temp-page reclamation retry", {
+      delayInMinutes: TEMP_PAGE_RECLAIM_RETRY_DELAY_MINUTES,
+    })
+    return true
+  } catch (error) {
+    logger.warn("Unable to arm a temp-page reclamation retry", {
+      error: getErrorMessage(error),
+    })
+    return false
+  }
+}
 
 /** What reclamation did with one persisted ownership marker. */
 export const INTERNAL_TAB_RECLAMATION_OUTCOMES = {
@@ -72,6 +119,13 @@ function isTabOnScreen(
   return typeof tab.windowId === "number" && focusedWindowIds.has(tab.windowId)
 }
 
+/** Whether a marker was written recently enough to belong to a live request. */
+function isRecentMarker(createdAt: number | null, now: number): boolean {
+  if (createdAt === null) return false
+
+  return now - createdAt <= TEMP_PAGE_RECLAIM_RETRY_TRACKED_MAX_AGE_MS
+}
+
 /** Closes one orphan, restoring the close semantics of its ownership record. */
 async function closeOrphan(
   tab: browser.tabs.Tab,
@@ -123,7 +177,9 @@ export async function reclaimOrphanedInternalTabs(options: {
 
   const browserSession = await readInternalTabBrowserSession()
   const focusedWindowIds = await readFocusedWindowIds()
+  const now = Date.now()
   const outcomes: InternalTabReclamationOutcome[] = []
+  let holdsLiveTempPage = false
 
   for (const record of records) {
     const { tabId } = record
@@ -149,6 +205,9 @@ export async function reclaimOrphanedInternalTabs(options: {
     }
 
     if (options.isTabTracked(tabId)) {
+      // Its delayed close has not happened yet, which is exactly the window a
+      // dying worker never completes.
+      holdsLiveTempPage ||= isRecentMarker(record.createdAt, now)
       outcomes.push({
         kind: INTERNAL_TAB_RECLAMATION_OUTCOMES.SkippedTracked,
         tabId,
@@ -193,8 +252,18 @@ export async function reclaimOrphanedInternalTabs(options: {
       outcome.kind === INTERNAL_TAB_RECLAMATION_OUTCOMES.ClosedTab ||
       outcome.kind === INTERNAL_TAB_RECLAMATION_OUTCOMES.ClosedWindow,
   ).length
+  const failureCount = outcomes.filter(
+    (outcome) => outcome.kind === INTERNAL_TAB_RECLAMATION_OUTCOMES.Failed,
+  ).length
 
-  logReclamation(outcomes, reclaimedCount)
+  logReclamation(outcomes, reclaimedCount, failureCount)
+
+  // Come back on the next minute for a close the browser refused, and keep
+  // coming back while a live request still holds a temp page: its close has not
+  // run yet, and nothing else would retry it if this worker died first.
+  if (failureCount > 0 || holdsLiveTempPage) {
+    await scheduleTempPageReclaimRetry()
+  }
 
   return { outcomes, reclaimedCount }
 }
@@ -203,11 +272,8 @@ export async function reclaimOrphanedInternalTabs(options: {
 function logReclamation(
   outcomes: InternalTabReclamationOutcome[],
   reclaimedCount: number,
+  failureCount: number,
 ) {
-  const failureCount = outcomes.filter(
-    (outcome) => outcome.kind === INTERNAL_TAB_RECLAMATION_OUTCOMES.Failed,
-  ).length
-
   if (reclaimedCount > 0) {
     logger.info("Reclaimed orphaned temporary pages", {
       reclaimedCount,

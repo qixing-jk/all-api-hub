@@ -45,6 +45,7 @@ type TempContextReclamationRun = {
 
 type TempContextDebugData = {
   browserSession?: string
+  retryArmed?: boolean
   markers?: TempContextMarkerRow[]
   /** Recent runs of the worker answering the read, newest first. */
   runs?: TempContextReclamationRun[]
@@ -67,6 +68,7 @@ type TempContextDebugResponse = {
 /** Last read of the background state, with the instant the ages are relative to. */
 type TempContextSnapshot = {
   browserSession: string | null
+  retryArmed: boolean
   markers: TempContextMarkerRow[]
   runs: TempContextReclamationRun[]
   readAt: number
@@ -74,6 +76,7 @@ type TempContextSnapshot = {
 
 const EMPTY_SNAPSHOT: TempContextSnapshot = {
   browserSession: null,
+  retryArmed: false,
   markers: [],
   runs: [],
   readAt: 0,
@@ -148,6 +151,7 @@ export function useTempContextDevSection(): DevPanelSection {
     }
     setSnapshot({
       browserSession: response.data?.browserSession ?? null,
+      retryArmed: Boolean(response.data?.retryArmed),
       markers: response.data?.markers ?? [],
       runs: response.data?.runs ?? [],
       readAt: Date.now(),
@@ -252,7 +256,7 @@ export function useTempContextDevSection(): DevPanelSection {
   }, [])
 
   const rows = useMemo<DevPanelInfoRow[]>(() => {
-    const { browserSession, markers, runs, readAt } = snapshot
+    const { browserSession, markers, retryArmed, runs, readAt } = snapshot
     const lastRun = runs[0] ?? null
 
     return [
@@ -263,6 +267,15 @@ export function useTempContextDevSection(): DevPanelSection {
           markers.filter((marker) => !marker.tracked).length
         } orphan)`,
         hint: formatMarkerHint(markers, readAt, browserSession),
+        tone: "runtime",
+      },
+      {
+        id: "retry",
+        label: "Reclamation retry",
+        value: retryArmed ? "armed (about a minute)" : "not armed",
+        hint: retryArmed
+          ? "A close was rejected; the sweep comes back for it."
+          : "Armed only after a close the browser refused.",
         tone: "runtime",
       },
       {

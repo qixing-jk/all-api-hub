@@ -56,6 +56,7 @@ import { initializeServices } from "./servicesInit"
 import {
   reclaimOrphanedTempPages,
   rotateTempPageBrowserSession,
+  setupTempPageReclaimRetryListener,
 } from "./tempContextReclamation"
 
 /**
@@ -85,6 +86,9 @@ export default defineBackground(() => {
    */
   setupRuntimeMessageListeners()
   setupTempWindowListeners()
+  // Registered before the first await so an alarm wake is handled in this
+  // activation rather than the next one.
+  setupTempPageReclaimRetryListener()
   setupCookieInterceptorListeners()
   setupContextMenus()
   setupProductAnalyticsAccountChangeListener()

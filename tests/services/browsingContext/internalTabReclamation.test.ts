@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { reclaimOrphanedInternalTabs } from "~/services/browsingContext/internalTabReclamation"
+import {
+  reclaimOrphanedInternalTabs,
+  TEMP_PAGE_RECLAIM_RETRY_ALARM,
+} from "~/services/browsingContext/internalTabReclamation"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
   listInternalTabRecords,
   registerInternalTab,
   rotateInternalTabBrowserSession,
+  unregisterInternalTab,
 } from "~/services/browsingContext/internalTabsBackground"
 
 /** Creates a window that is not focused, like a temp window waiting to be reclaimed. */
@@ -227,6 +231,97 @@ describe("orphaned internal tab reclamation", () => {
     expect(summary.reclaimedCount).toBe(0)
     expect(await listTabIds()).toContain(tabId)
     expect(await listInternalTabRecords()).toHaveLength(1)
+  })
+
+  it("arms a one-shot retry when a close fails", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Shared,
+      createdAt: Date.now(),
+    })
+    vi.spyOn(browser.tabs, "remove").mockRejectedValue(
+      new Error("tab removal failed"),
+    )
+
+    await reclaimOrphanedInternalTabs({ isTabTracked: () => false })
+
+    expect(
+      (await browser.alarms.get(TEMP_PAGE_RECLAIM_RETRY_ALARM))?.name,
+    ).toBe(TEMP_PAGE_RECLAIM_RETRY_ALARM)
+  })
+
+  it("keeps an already armed retry instead of pushing it back", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Shared,
+      createdAt: Date.now(),
+    })
+    vi.spyOn(browser.tabs, "remove").mockRejectedValue(
+      new Error("tab removal failed"),
+    )
+    const createAlarm = vi.spyOn(browser.alarms, "create")
+
+    await reclaimOrphanedInternalTabs({ isTabTracked: () => false })
+    await reclaimOrphanedInternalTabs({ isTabTracked: () => false })
+
+    expect(createAlarm).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the retry armed while a live request holds a temp page", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Owned,
+      createdAt: Date.now(),
+    })
+
+    const summary = await reclaimOrphanedInternalTabs({
+      isTabTracked: (id) => id === tabId,
+    })
+
+    // Its delayed close has not run yet, so a worker that dies now would leave
+    // this page behind with nothing else to retry it.
+    expect(summary.outcomes).toEqual([{ kind: "skipped-tracked", tabId }])
+    expect(
+      (await browser.alarms.get(TEMP_PAGE_RECLAIM_RETRY_ALARM))?.name,
+    ).toBe(TEMP_PAGE_RECLAIM_RETRY_ALARM)
+
+    await unregisterInternalTab(tabId)
+  })
+
+  it("stops the heartbeat once the held temp page is old", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Owned,
+      createdAt: Date.now() - 11 * 60 * 1000,
+    })
+
+    await reclaimOrphanedInternalTabs({ isTabTracked: (id) => id === tabId })
+
+    // Nothing has closed this page for eleven minutes, so it is not a flow that
+    // will finish on its own: stop paying a wake every minute for it.
+    expect(await browser.alarms.get(TEMP_PAGE_RECLAIM_RETRY_ALARM)).toBeFalsy()
+
+    await unregisterInternalTab(tabId)
+  })
+
+  it("does not arm a retry when nothing failed", async () => {
+    const windowId = await createWindow()
+    const tabId = await createTab(windowId)
+    await registerInternalTab(tabId, {
+      windowScope: INTERNAL_TAB_WINDOW_SCOPES.Shared,
+      createdAt: Date.now(),
+    })
+
+    const summary = await reclaimOrphanedInternalTabs({
+      isTabTracked: () => false,
+    })
+
+    expect(summary.outcomes).toEqual([{ kind: "closed-tab", tabId }])
+    expect(await browser.alarms.get(TEMP_PAGE_RECLAIM_RETRY_ALARM)).toBeFalsy()
   })
 
   it("does not inspect the browser when no tab is marked", async () => {

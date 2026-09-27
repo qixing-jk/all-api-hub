@@ -12,6 +12,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import {
+  readTempPageReclaimRetryArmed,
   readTempPageReclamationHistory,
   reclaimOrphanedTempPages,
 } from "./tempContextReclamation"
@@ -196,6 +197,7 @@ export async function handleTempContextDebugMessage(
           success: true,
           data: {
             browserSession: await readInternalTabBrowserSession(),
+            retryArmed: await readTempPageReclaimRetryArmed(),
             markers: records.map((record) => ({
               tabId: record.tabId,
               windowScope: record.windowScope,

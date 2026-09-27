@@ -40,6 +40,8 @@ type ReclamationRun = {
 }
 
 type DebugData = {
+  browserSession?: string
+  retryArmed?: boolean
   markers?: TempContextMarkerRow[]
   runs?: ReclamationRun[]
   tabId?: number
@@ -220,6 +222,10 @@ test("leaves a temp page the live worker still owns", async ({
 
   // `skipped-tracked` is only decided after the tab was found in the browser's
   // own tab list, so this also proves the temp page was still open.
+  const listing = await runDebugAction(page, {
+    action: RuntimeActionIds.TempContextDebugListMarkers,
+  })
+  expect(listing.retryArmed).toBe(true)
 
   // Leave nothing behind: closing through the normal request path releases the
   // context this spec kept open on purpose. The close may already have nothing

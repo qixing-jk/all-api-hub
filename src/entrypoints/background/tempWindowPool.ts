@@ -13,6 +13,7 @@ import {
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
+import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
   registerInternalTab,
@@ -2329,6 +2330,12 @@ async function acquireTempContext(
       }
     })
 
+    // The context is about to be used and its close will be timer-based, so
+    // make sure a worker that dies before that close still gets replaced by one
+    // that sweeps. Armed before the risk, which is what makes it survive the
+    // death it insures against.
+    void scheduleTempPageReclaimRetry()
+
     if (finalDecision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed) {
       reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
         kind: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
@@ -2844,6 +2851,7 @@ async function createTempContextInstance(
           "Failed to cleanup temp context after creation error",
           cleanupError,
         )
+        void scheduleTempPageReclaimRetry()
       }
     }
     await removeInstalledDownloadBlockRules(
@@ -3256,6 +3264,8 @@ async function destroyContext(
       await removeTempWindowHandle(getTempContextHandle(context))
     } catch (error) {
       logger.warn("Failed to remove temp context", error)
+      // The handle is already gone, so nothing else will retry this close.
+      void scheduleTempPageReclaimRetry()
     }
   }
 }

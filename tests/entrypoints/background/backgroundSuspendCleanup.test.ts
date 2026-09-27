@@ -17,6 +17,7 @@ const {
   reclaimOrphanedTempPagesMock,
   rotateTempPageBrowserSessionMock,
   setupActionClickBehaviorListenerMock,
+  setupTempPageReclaimRetryListenerMock,
   triggerStartupSettingsSnapshotMock,
   triggerStartupShieldBypassDailySummaryMock,
   triggerStartupSiteEcosystemSnapshotMock,
@@ -36,6 +37,7 @@ const {
   reclaimOrphanedTempPagesMock: vi.fn(),
   rotateTempPageBrowserSessionMock: vi.fn(),
   setupActionClickBehaviorListenerMock: vi.fn(),
+  setupTempPageReclaimRetryListenerMock: vi.fn(),
   triggerStartupSettingsSnapshotMock: vi.fn(),
   triggerStartupShieldBypassDailySummaryMock: vi.fn(),
   triggerStartupSiteEcosystemSnapshotMock: vi.fn(),
@@ -82,6 +84,7 @@ describe("background onSuspend temp-context cleanup", () => {
       .mockReset()
       .mockResolvedValue("browser-session-1")
     setupActionClickBehaviorListenerMock.mockReset()
+    setupTempPageReclaimRetryListenerMock.mockReset()
     triggerStartupSettingsSnapshotMock.mockReset()
     triggerStartupShieldBypassDailySummaryMock.mockReset()
     triggerStartupSiteEcosystemSnapshotMock.mockReset()
@@ -123,6 +126,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doMock("~/entrypoints/background/tempContextReclamation", () => ({
       reclaimOrphanedTempPages: reclaimOrphanedTempPagesMock,
       rotateTempPageBrowserSession: rotateTempPageBrowserSessionMock,
+      setupTempPageReclaimRetryListener: setupTempPageReclaimRetryListenerMock,
     }))
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
@@ -241,6 +245,14 @@ describe("background onSuspend temp-context cleanup", () => {
     onSuspendListener?.()
 
     expect(cleanupTempContextsOnSuspendMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("registers the reclamation retry listener during background startup", async () => {
+    await import("~/entrypoints/background/index")
+
+    // Registered synchronously, before any await, so an alarm that woke this
+    // worker is handled in the same activation.
+    expect(setupTempPageReclaimRetryListenerMock).toHaveBeenCalledTimes(1)
   })
 
   it("starts a new temp-page browser session on browser startup", async () => {

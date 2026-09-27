@@ -18,6 +18,7 @@ const {
   createTabMock,
   createWindowMock,
   queryTabsMock,
+  readTempPageReclaimRetryArmedMock,
   readTempPageReclamationHistoryMock,
   reclaimOrphanedTempPagesMock,
 } = vi.hoisted(() => ({
@@ -29,6 +30,9 @@ const {
     () => [],
   ),
   reclaimOrphanedTempPagesMock: vi.fn(),
+  readTempPageReclaimRetryArmedMock: vi.fn<() => Promise<boolean>>(
+    async () => false,
+  ),
 }))
 
 // Fixture windows and tabs are asserted through these seams: the fake browser
@@ -53,8 +57,9 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
 }))
 
 vi.mock("~/entrypoints/background/tempContextReclamation", () => ({
-  reclaimOrphanedTempPages: reclaimOrphanedTempPagesMock,
+  readTempPageReclaimRetryArmed: readTempPageReclaimRetryArmedMock,
   readTempPageReclamationHistory: readTempPageReclamationHistoryMock,
+  reclaimOrphanedTempPages: reclaimOrphanedTempPagesMock,
 }))
 
 const FIXTURE_WINDOW_ID = 900
@@ -76,6 +81,7 @@ beforeEach(() => {
   envFlags.dev = true
   envFlags.test = true
   readTempPageReclamationHistoryMock.mockReset().mockReturnValue([])
+  readTempPageReclaimRetryArmedMock.mockReset().mockResolvedValue(false)
   reclaimOrphanedTempPagesMock
     .mockReset()
     .mockResolvedValue({ outcomes: [], reclaimedCount: 0 })
@@ -293,7 +299,12 @@ describe("temp-context debug actions", () => {
 
     expect(response).toEqual({
       success: true,
-      data: { browserSession: expect.any(String), markers: [], runs: [] },
+      data: {
+        browserSession: expect.any(String),
+        retryArmed: false,
+        markers: [],
+        runs: [],
+      },
     })
   })
 

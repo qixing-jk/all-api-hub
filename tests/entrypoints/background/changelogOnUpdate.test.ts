@@ -136,6 +136,8 @@ describe("background onInstalled changelog opening", () => {
         outcomes: [],
         reclaimedCount: 0,
       }),
+      rotateTempPageBrowserSession: vi.fn(),
+      setupTempPageReclaimRetryListener: vi.fn(),
     }))
     vi.doMock("~/entrypoints/background/contextMenus", () => ({
       setupContextMenus: vi.fn(),
