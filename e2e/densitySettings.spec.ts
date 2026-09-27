@@ -184,12 +184,16 @@ for (const width of [1280, 390, 320]) {
           for (const [index, target] of targets.entries()) {
             // Shared actions retain at least 24px. Existing inline text actions
             // keep their default hit area; density must not make them smaller.
+            // A fixed-height control can measure a fraction under its baseline
+            // (15.99997 against 16) because its rect follows fractional layout,
+            // which is rounding rather than a smaller hit area.
+            const rounding = 0.5
             const baseline = atIndex(atIndex(defaultTargets, route), index)
             expect(target.height).toBeGreaterThanOrEqual(
-              Math.min(24, baseline.height),
+              Math.min(24, baseline.height) - rounding,
             )
             expect(target.width).toBeGreaterThanOrEqual(
-              Math.min(24, baseline.width),
+              Math.min(24, baseline.width) - rounding,
             )
           }
         }
