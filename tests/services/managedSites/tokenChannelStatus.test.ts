@@ -1294,7 +1294,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
         userId: "1",
       },
       matchingResourceRef(43, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
-      sessionResyncOptions,
+      expect.objectContaining(sessionResyncOptions),
     )
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,

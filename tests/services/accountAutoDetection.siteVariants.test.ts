@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -51,9 +51,8 @@ vi.mock(
 
 const {
   mockAutoDetectSmart,
-  mockExtractDefaultExchangeRate,
   mockFetchSharedChatUserInfo,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
@@ -88,11 +87,10 @@ describe("accountAutoDetection", () => {
       },
     })
 
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Example Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Example Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://sub2.example.com",
@@ -105,10 +103,10 @@ describe("accountAutoDetection", () => {
     expect(result.data?.username).toBe("")
     expect(result.data?.siteName).toBe("Example Portal")
     expect(result.data?.accessToken).toBe("jwt-token")
-    expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
-    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+    expect(result.data?.exchangeRate).toBe(DEFAULT_USD_TO_CNY_RATE)
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledTimes(1)
     expect(
-      mockFetchSiteStatus.mock.calls[0]?.[0].protectionBypassExecution,
+      mockLoadBootstrapFacts.mock.calls[0]?.[0].protectionBypassExecution,
     ).toEqual(protectionBypassExecution)
   })
 
@@ -124,8 +122,7 @@ describe("accountAutoDetection", () => {
         fetchContext: currentTabFetchContext("https://sub2.example.com"),
       },
     })
-    mockFetchSiteStatus.mockResolvedValueOnce(null)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+    mockLoadBootstrapFacts.mockResolvedValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://sub2.example.com",
@@ -138,7 +135,7 @@ describe("accountAutoDetection", () => {
       siteType: SITE_TYPES.SUB2API,
       username: "alice",
       accessToken: "jwt-token",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
     })
   })
 
@@ -181,7 +178,7 @@ describe("accountAutoDetection", () => {
       accessToken: "shared-user-token",
       userId: "shared-user-id",
       authType: AuthTypeEnum.Cookie,
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       checkIn: {
         automaticExecutionEnabled: false,
         methodKnowledge: { methods: {} },
@@ -221,11 +218,10 @@ describe("accountAutoDetection", () => {
       username: "rc22-user",
       access_token: "management-pat",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "rc22 portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "rc22 portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://panel.example.invalid",
@@ -254,12 +250,12 @@ describe("accountAutoDetection", () => {
       username: "cookie-user",
       access_token: "",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      defaultExchangeRate: 6.6,
       billing_mode: "quota",
-      system_name: "Cookie Portal",
+      displayName: "Cookie Portal",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
     const result = await autoDetectAccount(
       "https://cookie.example.com",
@@ -286,7 +282,7 @@ describe("accountAutoDetection", () => {
       },
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledTimes(1)
   })
 
   it("passes current-tab context through AnyRouter auto-detect completion", async () => {
@@ -303,11 +299,10 @@ describe("accountAutoDetection", () => {
       username: "anyrouter-user",
       access_token: "anyrouter-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AnyRouter Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AnyRouter Portal",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://anyrouter.example.com",
@@ -334,13 +329,16 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://anyrouter.example.com",
-      fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
-      auth: {
-        authType: AuthTypeEnum.None,
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://anyrouter.example.com",
+        fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
       },
-    })
+      { displayName: "AnyRouter Portal" },
+    )
   })
 
   it("passes current-tab context through WONG auto-detect completion", async () => {
@@ -357,11 +355,10 @@ describe("accountAutoDetection", () => {
       username: "wong-user",
       access_token: "wong-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "WONG公益站",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "WONG公益站",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://wong.example.com",
@@ -380,13 +377,16 @@ describe("accountAutoDetection", () => {
         }),
       }),
     })
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://wong.example.com",
-      fetchContext: currentTabFetchContext("https://wong.example.com"),
-      auth: {
-        authType: AuthTypeEnum.None,
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://wong.example.com",
+        fetchContext: currentTabFetchContext("https://wong.example.com"),
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
       },
-    })
+      { displayName: "WONG公益站" },
+    )
   })
 
   it("uses the AIHubMix access token returned by auto-detect without an options-page cookie fallback", async () => {
@@ -401,12 +401,11 @@ describe("accountAutoDetection", () => {
         fetchContext: currentTabFetchContext("https://aihubmix.com"),
       },
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://aihubmix.com",
@@ -422,7 +421,7 @@ describe("accountAutoDetection", () => {
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       fetchContext: currentTabFetchContext("https://aihubmix.com"),
       auth: {

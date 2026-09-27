@@ -1,3 +1,5 @@
+import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { formatDevTitleSuffix } from "~/utils/core/devBranding"
 import { createLogger } from "~/utils/core/logger"
 import i18n from "~/utils/i18n"
 
@@ -33,27 +35,16 @@ function getDocumentTitle(pageType: DocumentPageType): string {
 }
 
 /**
- * Initializes the document title and sets up a listener for language changes
- * @param pageType - The type of page ('options', 'popup', or 'sidepanel')
- */
-export function initializeDocumentTitle(pageType: DocumentPageType): void {
-  // Set initial title
-  setDocumentTitle(pageType)
-
-  // Update title when language changes
-  i18n.on("languageChanged", () => {
-    setDocumentTitle(pageType)
-  })
-}
-
-/**
  * Simple function to set document title based on page type
  * This can be called before i18n is fully initialized
  * @param pageType - The type of page ('options', 'popup', or 'sidepanel')
  */
 export function setDocumentTitle(pageType: DocumentPageType): void {
   try {
-    document.title = getDocumentTitle(pageType)
+    // Development builds append their source path so tabs, side panel titles and
+    // windows opened by the extension identify which checkout they belong to.
+    const identitySuffix = formatDevTitleSuffix(getDevIdentity())
+    document.title = `${getDocumentTitle(pageType)}${identitySuffix}`
   } catch (error) {
     logger.warn("Failed to set document title", error)
   }

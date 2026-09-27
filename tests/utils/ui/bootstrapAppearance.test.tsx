@@ -27,10 +27,32 @@ const saved = {
     color: THEME_COLOR.VIOLET,
     radius: THEME_RADIUS.LARGE,
     density: "compact" as const,
+    textSize: "extra-large" as const,
+    fontFamily: "default" as const,
   },
 }
 
 describe("popup appearance bootstrap", () => {
+  it.each([
+    ["default", "default", "sans"],
+    ["anthropic", "default", "serif"],
+    ["anthropic", "sans", "sans"],
+    ["default", "serif", "serif"],
+    ["anthropic", "unknown", "serif"],
+  ])(
+    "restores %s with font %s as %s before rendering",
+    async (preset, font, resolved) => {
+      getStorage.mockResolvedValue({
+        [key]: JSON.stringify({ appearance: { preset, fontFamily: font } }),
+      })
+      await bootstrapAppearance()
+      expect(document.documentElement).toHaveAttribute(
+        "data-theme-font",
+        resolved,
+      )
+    },
+  )
+
   beforeEach(() => {
     vi.restoreAllMocks()
     getStorage.mockReset()
@@ -59,12 +81,20 @@ describe("popup appearance bootstrap", () => {
     const ready = bootstrapAppearance()
     expect(document.documentElement).toHaveClass(THEME_MODE.DARK)
     expect(document.documentElement).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(document.documentElement).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
       THEME_PRESET.ANTHROPIC,
     )
     pending.resolve({ [key]: JSON.stringify({ themeMode: THEME_MODE.LIGHT }) })
     await ready
     expect(document.documentElement).not.toHaveClass(THEME_MODE.DARK)
+    expect(document.documentElement).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "default",
+    )
     expect(document.documentElement).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
       THEME_PRESET.DEFAULT,
@@ -76,6 +106,10 @@ describe("popup appearance bootstrap", () => {
     async (stored) => {
       getStorage.mockResolvedValue({ [key]: stored })
       await bootstrapAppearance()
+      expect(document.documentElement).toHaveAttribute(
+        THEME_ATTRIBUTES.TEXT_SIZE,
+        "extra-large",
+      )
       expect(document.documentElement).toHaveClass(THEME_MODE.DARK)
       expect(document.documentElement).toHaveAttribute(
         THEME_ATTRIBUTES.PRESET,
@@ -87,7 +121,14 @@ describe("popup appearance bootstrap", () => {
       )
       expect(
         JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
-      ).toEqual(saved)
+      ).toEqual({
+        ...saved,
+        appearance: {
+          ...saved.appearance,
+          contentWidth: "centered",
+          sidebarCollapsed: false,
+        },
+      })
       expect(document.documentElement).toHaveAttribute(
         THEME_ATTRIBUTES.DENSITY,
         "compact",
@@ -204,10 +245,14 @@ describe("popup appearance bootstrap", () => {
     ).toEqual({
       themeMode: "system",
       appearance: {
+        contentWidth: "centered",
+        sidebarCollapsed: false,
         preset: "default",
         color: "green",
         radius: "default",
         density: "default",
+        textSize: "default",
+        fontFamily: "default",
       },
     })
   })

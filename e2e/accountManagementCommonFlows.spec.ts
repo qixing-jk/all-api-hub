@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import {
@@ -283,20 +284,26 @@ test("keeps account management controls reachable across constrained widths", as
         const headerActionGroupBox = await headerActionGroup.boundingBox()
         const boxes = await readElementBounds(headerActions)
 
-        const rowRightEdges = new Map<number, number>()
+        const rowEdges = new Map<number, number>()
+        const alignsRight = await headerActionGroup.evaluate(
+          (element) => getComputedStyle(element).justifyContent === "flex-end",
+        )
         for (const box of boxes) {
           const rowCenter = Math.round(box.y + box.height / 2)
-          rowRightEdges.set(
+          rowEdges.set(
             rowCenter,
-            Math.max(rowRightEdges.get(rowCenter) ?? 0, box.right),
+            alignsRight
+              ? Math.max(rowEdges.get(rowCenter) ?? 0, box.right)
+              : Math.min(rowEdges.get(rowCenter) ?? Infinity, box.x),
           )
         }
-        const actionGroupRight = headerActionGroupBox
-          ? headerActionGroupBox.x + headerActionGroupBox.width
+        const actionGroupEdge = headerActionGroupBox
+          ? headerActionGroupBox.x +
+            (alignsRight ? headerActionGroupBox.width : 0)
           : 0
         const rowAlignmentError = Math.max(
-          ...Array.from(rowRightEdges.values()).map((rightEdge) =>
-            Math.abs(rightEdge - actionGroupRight),
+          ...Array.from(rowEdges.values()).map((edge) =>
+            Math.abs(edge - actionGroupEdge),
           ),
         )
 
@@ -308,15 +315,15 @@ test("keeps account management controls reachable across constrained widths", as
                 isHorizontallyContained(box, contentCardBox),
               ),
           ),
-          actionsWrapped: rowRightEdges.size > 1,
-          rowsRightAligned: rowAlignmentError <= 1,
+          actionsWrapped: rowEdges.size > 1,
+          rowsAligned: rowAlignmentError <= 1,
         }
       })
       .toEqual({
         hasLayout: true,
         actionsContained: true,
         actionsWrapped: true,
-        rowsRightAligned: true,
+        rowsAligned: true,
       })
 
     expect(
@@ -1169,4 +1176,155 @@ test("explains open-tab priority and restores field order when disabled", async 
     getAccountManagementListItemTestId("context-normal"),
   )
   await siteTab.close()
+})
+
+test("excludes recovered internal tabs while preserving ordinary same-site browsing priority", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    ...ISOLATED_ACCOUNT_PREFERENCES,
+    refreshOnOpen: false,
+    sortField: "name",
+    sortOrder: "asc",
+  })
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "context-normal",
+      site_name: "Alpha Account",
+      site_url: "https://alpha-account.example.com",
+    }),
+    createStoredAccount({
+      id: "context-owned",
+      site_name: "Zulu Internal Match",
+      site_url: "https://internal-browsing.example.com",
+    }),
+  ])
+  const siteUrl = "https://internal-browsing.example.com/"
+  await context.route(`${siteUrl}**`, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<title>Internal browsing fixture</title><p>Fixture page</p>",
+    }),
+  )
+  await context.route(`${siteUrl}api/user/self`, (route) =>
+    route.fulfill({
+      json: { success: true, data: { id: 1, username: "browser-user" } },
+    }),
+  )
+  // Seed only the browser-session marker, as after a worker restart. The live
+  // background memory set deliberately has no ownership entry for this tab.
+  const temporaryId = await worker.evaluate(async (url) => {
+    const tab = await chrome.tabs.create({ url: "about:blank", active: false })
+    if (tab.id == null) throw new Error("Missing fixture tab ID")
+    await chrome.storage.session.set({
+      [`internalBrowsingTab:${tab.id}`]: true,
+    })
+    await chrome.tabs.update(tab.id, { url })
+    return tab.id
+  }, siteUrl)
+  await openAccountManagement(page, extensionId)
+  const rows = page.getByTestId(/^account-management-account-list-item-/)
+  const ownedRow = page.getByTestId(
+    getAccountManagementListItemTestId("context-owned"),
+  )
+  const badge = ownedRow.getByText("Related page open", { exact: true })
+  await expect(ownedRow).toBeVisible()
+  expect(
+    await page.evaluate(
+      async ({ action, tabId }) =>
+        chrome.runtime.sendMessage({ action, tabIds: [tabId] }),
+      {
+        action: RuntimeActionIds.GetInternalTabIds,
+        tabId: temporaryId,
+      },
+    ),
+  ).toEqual({ success: true, tabIds: [temporaryId] })
+  // Bypass the options-side filter and exercise the actual content fallback.
+  const readContentIdentity = (tabId: number, forBrowsingContext: boolean) =>
+    page.evaluate(
+      async ({ tabId, forBrowsingContext, action, url }) => {
+        try {
+          return await chrome.tabs.sendMessage(
+            tabId,
+            {
+              action,
+              url,
+              siteType: "new-api",
+              verifyIdentity: true,
+              candidateUserIds: ["1"],
+              forBrowsingContext,
+            },
+            { frameId: 0 },
+          )
+        } catch {
+          return null
+        } // Content may still be loading; the assertion retries.
+      },
+      {
+        tabId,
+        forBrowsingContext,
+        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+        url: siteUrl,
+      },
+    )
+  await expect
+    .poll(() => readContentIdentity(temporaryId, true))
+    .toEqual({
+      success: false,
+      pageContext: "internal",
+    })
+  await expect
+    .poll(() => readContentIdentity(temporaryId, false))
+    .toEqual({
+      success: true,
+      data: { userId: "1", identityVerified: true },
+    })
+  await expect(badge).toHaveCount(0)
+  await expect(rows.first()).toHaveAttribute(
+    "data-testid",
+    getAccountManagementListItemTestId("context-normal"),
+  )
+
+  const ordinary = await context.newPage()
+  await ordinary.goto(siteUrl)
+  const ordinaryId = await worker.evaluate(
+    async ({ url, temporaryId }) => {
+      const tabs = await chrome.tabs.query({ url })
+      return tabs.find((tab) => tab.id !== temporaryId)?.id
+    },
+    { url: siteUrl, temporaryId },
+  )
+  expect(ordinaryId).toBeDefined()
+  await expect
+    .poll(() => readContentIdentity(ordinaryId!, true))
+    .toEqual({
+      success: true,
+      pageContext: "ordinary",
+      data: { userId: "1", identityVerified: true },
+    })
+  await page.bringToFront()
+  await expect(badge).toBeVisible()
+  await expect(rows.first()).toHaveAttribute(
+    "data-testid",
+    getAccountManagementListItemTestId("context-owned"),
+  )
+  await ordinary.close()
+  await expect(badge).toHaveCount(0)
+  await expect(rows.first()).toHaveAttribute(
+    "data-testid",
+    getAccountManagementListItemTestId("context-normal"),
+  )
+
+  await worker.evaluate(async (tabId) => chrome.tabs.remove(tabId), temporaryId)
+  await expect
+    .poll(() =>
+      worker.evaluate(async (tabId) => {
+        const key = `internalBrowsingTab:${tabId}`
+        return (await chrome.storage.session.get(key))[key] ?? null
+      }, temporaryId),
+    )
+    .toBeNull()
 })

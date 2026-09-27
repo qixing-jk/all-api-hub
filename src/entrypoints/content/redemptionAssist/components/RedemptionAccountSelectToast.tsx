@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
@@ -239,13 +239,13 @@ export const RedemptionAccountSelectToast: React.FC<
                       </span>
                     </span>
                     {checkInUrl && (
-                      <div className="text-muted-foreground truncate pl-5 text-[11px]">
+                      <div className="text-muted-foreground text-2xs truncate pl-5">
                         {checkInUrl}
                       </div>
                     )}
                   </label>
                   {!isSupported && (
-                    <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-2 pl-5 text-[11px]">
+                    <div className="text-muted-foreground gap-y-density-1 text-2xs flex flex-wrap items-center gap-x-2 pl-5">
                       <span id={unsupportedReasonId}>
                         {t("accountSelect.unsupported")}
                       </span>
@@ -268,7 +268,7 @@ export const RedemptionAccountSelectToast: React.FC<
           )}
         </div>
 
-        <div className="mt-density-2 gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup className="mt-density-2">
           <Button
             variant="secondary"
             analyticsAction={
@@ -287,7 +287,7 @@ export const RedemptionAccountSelectToast: React.FC<
           >
             {t("accountSelect.confirm")}
           </Button>
-        </div>
+        </ActionGroup>
       </div>
     </ProductAnalyticsScope>
   )

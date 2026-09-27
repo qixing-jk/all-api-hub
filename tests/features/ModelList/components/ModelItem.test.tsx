@@ -5,13 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import {
-  createAccountTokenModelListSourceIdentity,
-  createPersonalizedCatalogModelListSourceIdentity,
-  createProviderCatalogModelListSourceIdentity,
-} from "~/features/ModelList/modelManagementSources"
 import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  createPersonalizedCatalogModelListSourceIdentity,
+  createProviderCatalogModelListSourceIdentity,
+} from "~/services/modelCatalog/sourceIdentity"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
   MODEL_DISPLAY_FACT_LABELS,
@@ -26,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { createTab } from "~/utils/browser/browserApi"
+import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
@@ -258,6 +258,22 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("marks a full-site fallback catalog on its model row", () => {
+    const props = createDefaultProps()
+    props.source.capabilities.supportsPricing = false
+    props.source.capabilities.supportsGroupFiltering = false
+    const { rerender } = render(
+      <ModelItem {...props} isProviderCatalogFallback />,
+    )
+    expect(
+      screen.getByText("providerCatalogFallbackNotice.badge"),
+    ).toBeInTheDocument()
+    rerender(<ModelItem {...props} />)
+    expect(
+      screen.queryByText("providerCatalogFallbackNotice.badge"),
+    ).not.toBeInTheDocument()
+  })
+
   it("expands and focuses calculation details from the price summary", async () => {
     const user = userEvent.setup()
     render(<ModelItem {...createDefaultProps()} />)
@@ -373,7 +389,7 @@ describe("ModelItem", () => {
     render(
       <ModelItem
         {...createDefaultProps()}
-        sourceIdentity={createAccountTokenModelListSourceIdentity({
+        sourceIdentity={createLegacyAccountTokenSourceIdentity({
           accountId: "account-1",
           tokenId: 41,
           tokenName: "VIP runtime key",

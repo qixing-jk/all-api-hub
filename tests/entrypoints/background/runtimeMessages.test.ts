@@ -258,6 +258,124 @@ describe("setupRuntimeMessageListeners routing", () => {
     })
   })
 
+  it("exposes internal tab ownership to account browsing-context consumers", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    const { registerInternalTab, unregisterInternalTab } = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    await registerInternalTab(901)
+    setupRuntimeMessageListeners()
+    const response = new Promise<{ tabIds: number[] }>((resolve) => {
+      expect(
+        runtimeMessageListener?.(
+          { action: RuntimeActionIds.GetInternalTabIds, tabIds: [901, 902] },
+          {},
+          resolve,
+        ),
+      ).toBe(true)
+    })
+    expect((await response).tabIds).toContain(901)
+    await unregisterInternalTab(901)
+  })
+
+  it("reports ownership lookup failure instead of an empty confirmed result", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const read = vi
+      .spyOn(browser.storage.session, "get")
+      .mockRejectedValue(new Error("storage unavailable"))
+    try {
+      const response = await new Promise((resolve) =>
+        runtimeMessageListener?.(
+          { action: RuntimeActionIds.GetInternalTabIds, tabIds: [999] },
+          {},
+          resolve,
+        ),
+      )
+      expect(response).toEqual({ success: false })
+    } finally {
+      read.mockRestore()
+    }
+  })
+
+  it.each([undefined, ["901"], [-1], [1.5]])(
+    "rejects invalid ownership candidates: %j",
+    async (tabIds) => {
+      const { setupRuntimeMessageListeners } = await import(
+        "~/entrypoints/background/runtimeMessages"
+      )
+      setupRuntimeMessageListeners()
+      const response = await new Promise((resolve) =>
+        runtimeMessageListener?.(
+          { action: RuntimeActionIds.GetInternalTabIds, tabIds },
+          {},
+          resolve,
+        ),
+      )
+      expect(response).toEqual({ success: false })
+    },
+  )
+
+  it.each([
+    [{ tab: { id: 951 } }, "internal", true],
+    [{ tab: { id: 952 } }, "ordinary", true],
+    [{}, "unknown", false],
+  ])(
+    "classifies content using the actual sender, ignoring claimed tab IDs: %j",
+    async (sender, pageContext, success) => {
+      const { setupRuntimeMessageListeners } = await import(
+        "~/entrypoints/background/runtimeMessages"
+      )
+      const { registerInternalTab, unregisterInternalTab } = await import(
+        "~/services/browsingContext/internalTabsBackground"
+      )
+      await registerInternalTab(951)
+      setupRuntimeMessageListeners()
+      try {
+        const response = await new Promise((resolve) =>
+          runtimeMessageListener?.(
+            {
+              action: RuntimeActionIds.GetSenderPageContext,
+              tabId: 952,
+              tabIds: [952],
+            },
+            sender,
+            resolve,
+          ),
+        )
+        expect(response).toEqual({ success, pageContext })
+      } finally {
+        await unregisterInternalTab(951)
+      }
+    },
+  )
+
+  it("reports unknown sender context when ownership storage cannot be read", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const read = vi
+      .spyOn(browser.storage.session, "get")
+      .mockRejectedValue(new Error("unavailable"))
+    try {
+      const response = await new Promise((resolve) =>
+        runtimeMessageListener?.(
+          { action: RuntimeActionIds.GetSenderPageContext },
+          { tab: { id: 959 } },
+          resolve,
+        ),
+      )
+      expect(response).toEqual({ success: false, pageContext: "unknown" })
+    } finally {
+      read.mockRestore()
+    }
+  })
+
   it("sets up typed preferences messaging listeners", async () => {
     const { setupRuntimeMessageListeners } = await import(
       "~/entrypoints/background/runtimeMessages"

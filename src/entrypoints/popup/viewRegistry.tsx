@@ -156,7 +156,7 @@ export function usePopupViewRegistry({
       onPrimaryAction: openAddBookmark,
       primaryAnalyticsAction: {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
       },
       content: (
         <Suspense fallback={<PopupContentFallback />}>

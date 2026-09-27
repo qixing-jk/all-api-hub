@@ -13,9 +13,9 @@
     "unread": "未读"
   },
   "description": {
-    "disabledSummary": "自动抓取当前已关闭；你仍可手动触发一次检查。",
-    "enabledInterval": "当前间隔：每 {{intervalMinutes}} 分钟。",
-    "enabledSummary": "自动抓取当前已开启；你可以查看抓取到的网站公告、处理未读状态，并手动触发一次检查。",
+    "disabledSummary": "查看站点公告、管理未读状态，自动检查已关闭，仍可手动检查。",
+    "enabledInterval": "每 {{intervalMinutes}} 分钟检查一次。",
+    "enabledSummary": "查看站点公告、管理未读状态，自动检查已开启。",
     "pollingSettingsLink": "配置自动抓取"
   },
   "empty": {

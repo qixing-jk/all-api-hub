@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, ConfirmDialog, Modal } from "~/components/ui"
+import {
+  ActionGroup,
+  Alert,
+  Button,
+  ConfirmDialog,
+  Modal,
+} from "~/components/ui"
 import {
   NativeResourceEditorBody,
   type ResourceEditorControlledOptionState,
@@ -243,7 +249,7 @@ export function AccountKeyResourceEditorDialog({
       header={<h2 className="text-base font-semibold">{title}</h2>}
       footer={
         isOpening ? (
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button
               type="button"
               variant="outline"
@@ -267,7 +273,7 @@ export function AccountKeyResourceEditorDialog({
                 {t("keyManagement:native.editor.opening.retry")}
               </Button>
             ) : null}
-          </div>
+          </ActionGroup>
         ) : activeEditor && !activeEditor.terminalClose ? (
           <div ref={setEditorFooterHost} className="contents" />
         ) : undefined
@@ -554,7 +560,7 @@ function AccountKeyResourceEditorDialogSession({
       {/* Keep the keyed session state local while using Modal's fixed footer. */}
       {footerHost
         ? createPortal(
-            <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+            <ActionGroup>
               <Button
                 type="button"
                 variant="outline"
@@ -572,7 +578,7 @@ function AccountKeyResourceEditorDialogSession({
               >
                 {t("keyManagement:native.editor.actions.save")}
               </Button>
-            </div>,
+            </ActionGroup>,
             footerHost,
           )
         : null}

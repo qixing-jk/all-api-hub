@@ -23,8 +23,12 @@ import {
 } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
 import {
+  countActiveResultFilterDimensions,
+  EMPTY_AUTO_CHECKIN_RESULT_FILTER,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
+  isAutoCheckinReasonFilterActive,
+  type AutoCheckinResultFilter,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
@@ -76,9 +80,9 @@ export default function ResultsTable({
   const { t } = useTranslation(["autoCheckin", "account"])
   const forceShowActions = Boolean(actionProps.showDevActions)
   const [keyword, setKeyword] = useState("")
-  const [selectedStatuses, setSelectedStatuses] = useState<
-    CheckinResultStatus[]
-  >([])
+  const [filter, setFilter] = useState<AutoCheckinResultFilter>(
+    EMPTY_AUTO_CHECKIN_RESULT_FILTER,
+  )
   const [sorting, setSorting] = useState<SortingState>([
     { id: "status", desc: false },
   ])
@@ -107,7 +111,7 @@ export default function ResultsTable({
             right.original.timestamp - left.original.timestamp
           )
         },
-        filterFn: ((row, _columnId, value: CheckinResultStatus[]) =>
+        filterFn: ((row, _columnId, value: AutoCheckinResultFilter) =>
           filterAutoCheckinResults([row.original], value, "", t).length >
           0) as FilterFn<CheckinAccountResult>,
       },
@@ -136,16 +140,21 @@ export default function ResultsTable({
 
   const globalFilterFn = useMemo<FilterFn<CheckinAccountResult>>(
     () => (row, _columnId, value) =>
-      filterAutoCheckinResults([row.original], [], String(value), t).length > 0,
+      filterAutoCheckinResults(
+        [row.original],
+        EMPTY_AUTO_CHECKIN_RESULT_FILTER,
+        String(value),
+        t,
+      ).length > 0,
     [t],
   )
 
   const columnFilters = useMemo<ColumnFiltersState>(
     () =>
-      selectedStatuses.length === 0
+      filter.statuses.length === 0 && !isAutoCheckinReasonFilterActive(filter)
         ? []
-        : [{ id: "status", value: selectedStatuses }],
-    [selectedStatuses],
+        : [{ id: "status", value: filter }],
+    [filter],
   )
 
   const table = useReactTable({
@@ -168,8 +177,8 @@ export default function ResultsTable({
   const filteredCount = table.getFilteredRowModel().rows.length
   useClampedTablePagination(table)
 
-  const setStatusFilters = (nextStatuses: CheckinResultStatus[]) => {
-    setSelectedStatuses(nextStatuses)
+  const setResultFilter = (nextFilter: AutoCheckinResultFilter) => {
+    setFilter(nextFilter)
     table.setPageIndex(0)
   }
 
@@ -188,10 +197,7 @@ export default function ResultsTable({
       insights: {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode: PRODUCT_ANALYTICS_MODE_IDS.SortFilter,
-        filterCount:
-          (selectedStatuses.length === 0 ? 0 : 1) +
-          (keyword.trim() ? 1 : 0) +
-          1,
+        filterCount: countActiveResultFilterDimensions(filter, keyword) + 1,
         resultCount: filteredCount,
       },
     })
@@ -220,9 +226,9 @@ export default function ResultsTable({
     <Card padding="none">
       <FilterBar
         accountResults={results}
-        selectedStatuses={selectedStatuses}
+        filter={filter}
         keyword={keyword}
-        onSelectedStatusesChange={setStatusFilters}
+        onFilterChange={setResultFilter}
         onKeywordChange={setSearchKeyword}
       />
       {forceShowActions && (
@@ -236,7 +242,7 @@ export default function ResultsTable({
           description={t("execution.empty.noResultsDesc")}
           clearLabel={t("execution.filters.clearAll")}
           onClearFilters={() => {
-            setStatusFilters([])
+            setResultFilter(EMPTY_AUTO_CHECKIN_RESULT_FILTER)
             setSearchKeyword("")
           }}
         />

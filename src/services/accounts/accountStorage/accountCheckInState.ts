@@ -16,17 +16,20 @@ import {
   mergeRefreshedCheckInStatus,
   mergeUserOwnedCheckInDraft,
 } from "~/services/checkin/autoCheckin/state"
+import {
+  AccountWriteRejectedError,
+  type AccountWriteGuard,
+} from "~/services/core/accountWriteGuard"
 import type { SiteAccount } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { DeepPartial } from "~/types/utils"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { accountConfigStore } from "./accountConfigStore"
 
 const logger = createLogger("AccountCheckInState")
-
-const getUtcDayKey = (): string => new Date().toISOString().split("T")[0]
 
 const hasSameCheckInIdentity = (account: SiteAccount, snapshot: SiteAccount) =>
   account.id === snapshot.id &&
@@ -169,49 +172,59 @@ class AccountCheckInState {
       selectionChanged?: boolean
       discoveryBaseSelection?: CheckInMethodSelection
       refreshed?: SiteAccount["checkIn"]
+      /** Runs inside the account storage lock; throwing aborts the update. */
+      guard?: AccountWriteGuard
     },
   ): Promise<boolean> {
+    const { guard, ...mutationOptions } = options
     try {
-      return await accountConfigStore.mutateAccount(id, (account) => {
-        const effectiveSiteType = isAccountSiteType(updates.site_type)
-          ? updates.site_type
-          : account.site_type
-        const mergedUserDraft = options.discoveryBaseSelection
-          ? mergeDiscoveredCheckInDraft({
-              latest: account.checkIn,
-              draft,
-              candidateMethodIds: getAutoCheckinCandidateMethodIds(
-                effectiveSiteType,
-                updates.site_url ?? account.site_url,
+      return await accountConfigStore.mutateAccount(
+        id,
+        (account) => {
+          const effectiveSiteType = isAccountSiteType(updates.site_type)
+            ? updates.site_type
+            : account.site_type
+          const mergedUserDraft = mutationOptions.discoveryBaseSelection
+            ? mergeDiscoveredCheckInDraft({
+                latest: account.checkIn,
                 draft,
-              ),
-              discoveryBaseSelection: options.discoveryBaseSelection,
-              selectionChanged: options.selectionChanged,
-            })
-          : mergeUserOwnedCheckInDraft({
-              latest: account.checkIn,
-              draft,
-              selectionChanged: options.selectionChanged,
-            })
-        const checkIn = options.refreshed
-          ? mergeRefreshedCheckInStatus({
-              latest: mergedUserDraft,
-              refreshed: options.refreshed,
-            })
-          : mergedUserDraft
+                candidateMethodIds: getAutoCheckinCandidateMethodIds(
+                  effectiveSiteType,
+                  updates.site_url ?? account.site_url,
+                  draft,
+                ),
+                discoveryBaseSelection: mutationOptions.discoveryBaseSelection,
+                selectionChanged: mutationOptions.selectionChanged,
+              })
+            : mergeUserOwnedCheckInDraft({
+                latest: account.checkIn,
+                draft,
+                selectionChanged: mutationOptions.selectionChanged,
+              })
+          const checkIn = mutationOptions.refreshed
+            ? mergeRefreshedCheckInStatus({
+                latest: mergedUserDraft,
+                refreshed: mutationOptions.refreshed,
+              })
+            : mergedUserDraft
 
-        return {
-          nextAccount: applySiteAccountUpdates({
-            account,
-            updates: { ...updates, checkIn },
-            now: Date.now(),
-            userTimestampMode: options.userTimestampMode,
-          }),
-          result: true,
-          changed: true,
-        }
-      })
+          return {
+            nextAccount: applySiteAccountUpdates({
+              account,
+              updates: { ...updates, checkIn },
+              now: Date.now(),
+              userTimestampMode: mutationOptions.userTimestampMode,
+            }),
+            result: true,
+            changed: true,
+          }
+        },
+        { guard },
+      )
     } catch (error) {
+      // A rejected guard is a decided outcome, not a storage failure: the caller
+      // reports why the update was refused instead of a generic save error.
+      if (error instanceof AccountWriteRejectedError) throw error
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
     }
@@ -248,7 +261,7 @@ class AccountCheckInState {
           })
         }
 
-        const today = getUtcDayKey()
+        const today = formatLocalDayKey()
         if (
           refreshedCheckIn &&
           checkIn.customCheckIn?.url &&
@@ -375,7 +388,7 @@ class AccountCheckInState {
           customCheckIn: {
             ...customCheckIn,
             isCheckedInToday: true,
-            lastCheckInDate: getUtcDayKey(),
+            lastCheckInDate: formatLocalDayKey(),
           },
         }
         return {
@@ -397,7 +410,7 @@ class AccountCheckInState {
 
   async resetExpiredCheckIns(): Promise<void> {
     try {
-      const today = getUtcDayKey()
+      const today = formatLocalDayKey()
       const didReset = await accountConfigStore.mutate((config) => {
         let changed = false
         for (const account of config.accounts) {

@@ -3,6 +3,8 @@ import React, { useId } from "react"
 
 import { cn } from "~/lib/utils"
 
+import { ActionGroup } from "./ActionGroup"
+
 // General guidance follows the theme; explicit status tones keep their meaning.
 type NoticeTone = "default" | "info" | "warning" | "success" | "destructive"
 
@@ -103,26 +105,23 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
           ) : null}
           <div className="min-w-0 flex-1">
             {title ? (
-              <div
-                id={titleId}
-                className="text-foreground text-sm leading-5 font-medium"
-              >
+              <div id={titleId} className="text-foreground text-sm font-medium">
                 {title}
               </div>
             ) : null}
             {description ? (
               <p
                 id={descriptionId}
-                className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs leading-5"
+                className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs leading-[max(1.25rem,var(--font-size-xs--line-height))]"
               >
                 {description}
               </p>
             ) : null}
             {children}
             {actions ? (
-              <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="mt-density-2 items-stretch justify-start">
                 {actions}
-              </div>
+              </ActionGroup>
             ) : null}
           </div>
         </div>

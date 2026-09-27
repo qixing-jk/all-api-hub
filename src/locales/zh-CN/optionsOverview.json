@@ -3,9 +3,32 @@
     "open": "打开"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "已禁用账号不会参与刷新、签到等自动化，请按需重新启用。",
+      "title": "{{count}} 个账号均已禁用"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} 需要检查浏览器设置"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} 状态异常"
+    },
+    "actions": {
+      "addAccount": "添加账号",
+      "addProfile": "添加凭据",
+      "editAccount": "编辑账号",
+      "fixAccount": "修复账号",
+      "handleCheckIn": "处理签到",
+      "manageAccounts": "管理账号",
+      "openSettings": "打开设置",
+      "refreshAccounts": "刷新账号",
+      "signInAgain": "去重新登录",
+      "viewAccount": "查看账号",
+      "viewAnnouncements": "查看公告",
+      "viewCheckIn": "查看签到",
+      "viewCheckInResults": "查看结果"
     },
     "addAccount": {
       "description": "先添加账号，才能汇总余额、用量和自动任务状态。",
@@ -14,6 +37,53 @@
     "addProfile": {
       "description": "添加 API 凭据后，可在工具和导出流程中复用。",
       "title": "还没有 API 凭据"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description": "{{count}} 个账号已开启自动签到，但全局开关关闭后不会执行。请在签到设置中重新开启。",
+      "title": "自动签到已全局关闭"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "最近一次运行中有失败或结果待确认。前往自动签到查看原因并重试。",
+      "title": "{{count}} 个账号的自动签到未完成"
+    },
+    "categories": {
+      "accounts": "账号",
+      "automation": "自动化",
+      "credentials": "凭据",
+      "data": "数据"
+    },
+    "categoryFilterLabel": "类别",
+    "checkInAccountDataMissing": {
+      "description": "保存的凭据或账号数据不完整，请在账号管理中重新识别后再签到。",
+      "title": "{{count}} 个账号缺少登录数据"
+    },
+    "checkInMethodUnresolved": {
+      "description": "自动签到已开启，但当前还没有可用的签到方式。请在账号管理中重新检测或选择签到方式后再运行。",
+      "title": "{{name}} 的签到方式待确认"
+    },
+    "checkInPermissionDenied": {
+      "description": "站点拒绝了签到请求，请重新登录或检查账号权限后重试。",
+      "title": "{{count}} 个账号的签到请求被拒绝"
+    },
+    "checkInReloginRequired": {
+      "description": "最近一次运行因登录状态失效跳过了这些账号。请在站点重新登录后再签到。",
+      "title": "{{count}} 个账号需要重新登录"
+    },
+    "filterAll": "全部",
+    "severityFilterLabel": "严重度",
+    "siteTypeUnknown": {
+      "description": "自动签到暂时无法确定该站点的协议。请编辑账号并选择正确的站点类型，或重新自动识别。",
+      "title": "{{name}} 的站点类型未知"
+    },
+    "sortHint": "按影响程度排序",
+    "summary": "{{count}} 项待处理",
+    "unreadSiteAnnouncements": {
+      "description": "查看站点公告后可标记为已读，避免遗漏站点维护或风险通知。",
+      "title": "{{count}} 条站点公告未读"
+    },
+    "usageRefreshPending": {
+      "description": "刷新账号后即可补齐今日请求、Token 和消耗统计。",
+      "title": "{{count}} 个账号的今日统计待刷新"
     }
   },
   "autoCheckin": {
@@ -174,7 +244,7 @@
     "needs_setup": "待设置",
     "not_applicable": "不适用"
   },
-  "description": "查看账号、密钥、用量和自动任务的当前状态。",
+  "description": "查看账号、密钥与用量概况，跟进自动任务和待处理事项。",
   "sections": {
     "automationOverview": "自动化执行",
     "configurationOverview": "配置概览",
@@ -189,6 +259,7 @@
   },
   "states": {
     "allClear": "当前没有需要处理的事项。",
+    "allClearDescription": "账号异常、签到方式缺失和待刷新统计会自动出现在这里。",
     "loadDetailUnavailable": "部分总览信息暂时不可用，请重试加载。",
     "loadedWithError": "部分信息加载失败，已显示可用数据。",
     "loading": "正在加载总览..."

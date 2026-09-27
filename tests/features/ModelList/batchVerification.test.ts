@@ -13,16 +13,14 @@ import {
   type ModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
-import {
-  createAccountSource,
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-} from "~/features/ModelList/modelManagementSources"
+import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import {
   buildAccountKeyResourceRuntimeKey,
   buildAccountRuntimeKeyAccount,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"

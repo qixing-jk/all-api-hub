@@ -79,9 +79,9 @@ const SECOND_ACCOUNT: DisplaySiteData = {
 
 const SETTLED_PRICING_DATA = {
   data: [],
-  group_ratio: {},
+  groupRatios: {},
   success: true,
-  usable_group: {},
+  groupAccess: { kind: "authoritative", usableGroups: [] },
 }
 
 const PROFILE = {
@@ -139,8 +139,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {},
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {},
       singleSourceGroupRatios: {},
       availableGroups: [],
       availableAccountGroupsByAccountId: {},
@@ -527,9 +527,9 @@ describe("useModelListData", () => {
     mockUseModelData.mockReturnValue({
       pricingData: {
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
       },
       pricingContexts: [],
       isLoading: false,
@@ -593,9 +593,9 @@ describe("useModelListData", () => {
       mockUseModelData.mockReturnValue({
         pricingData: {
           data: [],
-          group_ratio: {},
+          groupRatios: {},
           success: true,
-          usable_group: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
           model_list_source: buildAIHubMixModelListSource(
             MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           ),
@@ -649,9 +649,9 @@ describe("useModelListData", () => {
     mockUseModelData.mockReturnValue({
       pricingData: {
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
         model_list_source: buildAIHubMixModelListSource(
           MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
         ),
@@ -695,9 +695,9 @@ describe("useModelListData", () => {
     mockUseModelData.mockReturnValue({
       pricingData: {
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
           provider: SITE_TYPES.SUB2API,
@@ -750,12 +750,13 @@ describe("useModelListData", () => {
     mockUseModelData.mockReturnValue({
       pricingData: {
         data: [],
-        group_ratio: {
+        groupRatios: {
           default: 1,
         },
         success: true,
-        usable_group: {
-          default: "default",
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["default"],
         },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
@@ -834,9 +835,12 @@ describe("useModelListData", () => {
           account: aihubmixAccount,
           pricing: {
             data: [],
-            group_ratio: {},
+            groupRatios: {},
             success: true,
-            usable_group: {},
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: [],
+            },
             model_list_source: buildAIHubMixModelListSource(
               MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
             ),
@@ -846,9 +850,12 @@ describe("useModelListData", () => {
           account: normalAccount,
           pricing: {
             data: [],
-            group_ratio: {},
+            groupRatios: {},
             success: true,
-            usable_group: {},
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: [],
+            },
           },
         },
       ],
@@ -898,9 +905,12 @@ describe("useModelListData", () => {
           account: openRouterAccount,
           pricing: {
             data: [],
-            group_ratio: {},
+            groupRatios: {},
             success: true,
-            usable_group: {},
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: [],
+            },
             model_list_source: {
               kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
               provider: SITE_TYPES.OPENROUTER,
@@ -1142,8 +1152,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: true,
-      authoritativeGroupAccessByAccountId: {},
+      canRepairGroupSelection: true,
+      canRepairGroupSelectionByAccountId: {},
       singleSourceGroupRatios: {},
       availableGroups: ["default"],
       availableAccountGroupsByAccountId: {},
@@ -1204,8 +1214,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {},
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {},
       singleSourceGroupRatios: {},
       availableGroups: [],
       availableAccountGroupsByAccountId: {},
@@ -1243,8 +1253,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {},
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {},
       singleSourceGroupRatios: {},
       availableGroups: ["default"],
       availableAccountGroupsByAccountId: {},
@@ -1288,8 +1298,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: { "acc-1": true },
       singleSourceGroupRatios: {},
       availableGroups: [],
       availableAccountGroupsByAccountId: { "acc-1": ["default"] },
@@ -1375,8 +1385,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {
         "acc-1": false,
         "acc-2": true,
       },
@@ -1443,8 +1453,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {
         "acc-1": true,
       },
       singleSourceGroupRatios: {},
@@ -1504,8 +1514,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: { "acc-1": true },
       singleSourceGroupRatios: {},
       availableGroups: [],
       availableAccountGroupsByAccountId: { "acc-1": ["default"] },
@@ -1593,8 +1603,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: {
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: {
         "acc-1": true,
         "acc-2": true,
       },
@@ -1679,8 +1689,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: true,
-      authoritativeGroupAccessByAccountId: {},
+      canRepairGroupSelection: true,
+      canRepairGroupSelectionByAccountId: {},
       singleSourceGroupRatios: {},
       availableGroups: ["vip"],
       availableAccountGroupsByAccountId: {},
@@ -1723,8 +1733,8 @@ describe("useModelListData", () => {
       filteredModels: [],
       baseFilteredModels: [],
       getProviderFilteredCount: vi.fn(() => 0),
-      isGroupAccessAuthoritative: false,
-      authoritativeGroupAccessByAccountId: { "acc-1": true },
+      canRepairGroupSelection: false,
+      canRepairGroupSelectionByAccountId: { "acc-1": true },
       singleSourceGroupRatios: {},
       availableGroups: ["default"],
       availableAccountGroupsByAccountId: { "acc-1": ["default"] },
@@ -1775,9 +1785,9 @@ describe("useModelListData", () => {
     mockUseModelData.mockReturnValue({
       pricingData: {
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
       },
       pricingContexts: [],
       isLoading: false,

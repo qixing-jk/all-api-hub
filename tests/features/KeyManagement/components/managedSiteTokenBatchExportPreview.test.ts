@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  applyModelsToPreviewItem,
+  applyNormalizedModelsToPreviewItem,
   applyResolvedChannelKeyToPreviewItem,
   canEditItemModels,
   countPreviewItems,
@@ -128,11 +128,10 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
 
   it("updates editable preview item models and normalizes duplicate values", () => {
     expect(
-      applyModelsToPreviewItem(buildPreviewItem(), [
-        " gpt-4o-mini ",
-        "",
-        "gpt-4o-mini",
-      ]),
+      applyNormalizedModelsToPreviewItem(
+        buildPreviewItem(),
+        normalizeModels([" gpt-4o-mini ", "", "gpt-4o-mini"]),
+      ),
     ).toMatchObject({
       draft: {
         models: ["gpt-4o-mini"],
@@ -146,7 +145,7 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       draft: null,
     })
 
-    expect(applyModelsToPreviewItem(item, ["gpt-4o-mini"])).toBe(item)
+    expect(applyNormalizedModelsToPreviewItem(item, ["gpt-4o-mini"])).toBe(item)
   })
 
   it("moves models-required blocked rows between blocked and warning states as models change", () => {
@@ -161,7 +160,7 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       },
     })
 
-    const unblocked = applyModelsToPreviewItem(item, ["gpt-4o-mini"])
+    const unblocked = applyNormalizedModelsToPreviewItem(item, ["gpt-4o-mini"])
     expect(unblocked).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
       blockingReasonCode: undefined,
@@ -171,7 +170,7 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       },
     })
 
-    expect(applyModelsToPreviewItem(unblocked, [])).toMatchObject({
+    expect(applyNormalizedModelsToPreviewItem(unblocked, [])).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
@@ -190,7 +189,7 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
       blockingMessage: "previous configuration detail",
     })
 
-    expect(applyModelsToPreviewItem(item, [])).toMatchObject({
+    expect(applyNormalizedModelsToPreviewItem(item, [])).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,

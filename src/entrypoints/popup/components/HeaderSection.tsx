@@ -3,7 +3,6 @@ import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
-import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { FeedbackDropdownMenu } from "~/components/FeedbackDropdownMenu"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, IconButton } from "~/components/ui"
@@ -11,7 +10,7 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import CompactThemeToggle from "~/features/Appearance/CompactThemeToggle"
+import HeaderThemeSwitcher from "~/features/Appearance/HeaderThemeSwitcher"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import toast from "~/lib/notify"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
@@ -46,7 +45,7 @@ import type { PopupViewType } from "./PopupViewSwitchTabs"
 const logger = createLogger("PopupHeaderSection")
 
 /**
- * Popup header with app identity (including version), theme toggle, and navigation controls.
+ * Popup header with app identity (including version), theme selection, and navigation controls.
  * Provides refresh, open-full-page, settings, and side panel shortcuts, while
  * hiding side-panel entry points on runtimes that report unsupported behavior.
  */
@@ -193,13 +192,14 @@ export default function HeaderSection({
       className={`py-density-2 sm:py-density-3 flex items-center justify-between px-3 sm:px-5 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
     >
       {/* Logo and Title Section */}
-      <div className="gap-y-density-2-5 sm:gap-y-density-3 flex min-w-0 flex-1 items-center gap-x-2.5 sm:gap-x-3">
+      <div className="gap-y-density-2-5 sm:gap-y-density-3 @container flex min-w-7 flex-1 items-center gap-x-2.5 sm:min-w-8 sm:gap-x-3">
         <img
           src={iconImage}
           alt={t("ui:app.name")}
-          className="h-7 w-7 shrink-0 rounded-lg shadow-sm sm:h-8 sm:w-8"
+          title={t("ui:app.name")}
+          className="h-7 w-7 shrink-0 rounded-lg object-contain shadow-sm sm:h-8 sm:w-8"
         />
-        <div className="min-w-0 flex-1">
+        <div className="hidden min-w-0 flex-1 @min-[8rem]:block">
           <div className="flex min-w-0 flex-col gap-0.5">
             <BodySmall weight="semibold" className="truncate leading-tight">
               {t("ui:app.name")}
@@ -207,7 +207,7 @@ export default function HeaderSection({
             {/* Current extension version (links to the changelog). */}
             <VersionBadge
               size="sm"
-              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[0.65rem] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
+              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[length:calc(0.65rem+var(--text-size-increment))] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
             />
           </div>
         </div>
@@ -216,82 +216,89 @@ export default function HeaderSection({
       {/* Action Buttons Section */}
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
         <div className="gap-y-density-1 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1 sm:gap-x-2">
-          <ProductAnnouncementButton surface="popup-header" onlyWhenRisk />
-          <CompactThemeToggle />
-          <FeedbackDropdownMenu language={i18n.language} />
-
-          <ProductAnalyticsScope
-            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
-          >
-            {showRefresh && (
-              <Tooltip content={t("common:actions.refresh")}>
+          {showRefresh && (
+            <div className="flex items-center gap-x-1 sm:gap-x-2">
+              <ProductAnalyticsScope
+                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
+              >
+                <Tooltip content={t("common:actions.refresh")}>
+                  <IconButton
+                    onClick={handleGlobalRefresh}
+                    loading={isManualRefreshPending}
+                    disabled={isRefreshing}
+                    variant="outline"
+                    size="sm"
+                    aria-label={t("common:actions.refresh")}
+                    className="touch-manipulation"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+              </ProductAnalyticsScope>
+            </div>
+          )}
+          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+            <ProductAnnouncementButton surface="popup-header" onlyWhenRisk />
+            <FeedbackDropdownMenu language={i18n.language} />
+          </div>
+          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+            <HeaderThemeSwitcher />
+            <ProductAnalyticsScope
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings}
+            >
+              <Tooltip content={t("common:labels.settings")}>
                 <IconButton
-                  onClick={handleGlobalRefresh}
-                  loading={isManualRefreshPending}
-                  disabled={isRefreshing}
+                  onClick={handleOpenSetting}
                   variant="outline"
                   size="sm"
-                  aria-label={t("common:actions.refresh")}
+                  aria-label={t("common:labels.settings")}
                   className="touch-manipulation"
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupSettingsPage
+                  }
                 >
-                  <RefreshCw className="h-4 w-4" />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            <ProductAnalyticsScope featureId={openFullPageFeatureId}>
-              <Tooltip content={openFullPageLabel}>
-                <IconButton
-                  onClick={handleOpenFullPage}
-                  variant="outline"
-                  size="sm"
-                  aria-label={openFullPageLabel}
-                  data-testid={openFullPageTestId}
-                  className="touch-manipulation"
-                  analyticsAction={openFullPageActionId}
-                >
-                  <Maximize2 className="h-4 w-4" />
+                  <Settings className="h-4 w-4" />
                 </IconButton>
               </Tooltip>
             </ProductAnalyticsScope>
+          </div>
+          <div className="border-border flex items-center gap-x-1 sm:gap-x-2 sm:border-s sm:ps-2">
+            <ProductAnalyticsScope
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
+            >
+              <ProductAnalyticsScope featureId={openFullPageFeatureId}>
+                <Tooltip content={openFullPageLabel}>
+                  <IconButton
+                    onClick={handleOpenFullPage}
+                    variant="outline"
+                    size="sm"
+                    aria-label={openFullPageLabel}
+                    data-testid={openFullPageTestId}
+                    className="touch-manipulation"
+                    analyticsAction={openFullPageActionId}
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+              </ProductAnalyticsScope>
 
-            {!inSidePanel && sidePanelSupported && (
-              <Tooltip content={t("common:actions.openSidePanel")}>
-                <IconButton
-                  aria-label={t("common:actions.openSidePanel")}
-                  size="sm"
-                  variant="outline"
-                  onClick={handleOpenSidePanel}
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromPopup
-                  }
-                >
-                  <PanelRightClose className="h-4 w-4" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </ProductAnalyticsScope>
-
-          <ProductAnalyticsScope
-            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings}
-          >
-            <Tooltip content={t("common:labels.settings")}>
-              <IconButton
-                onClick={handleOpenSetting}
-                variant="outline"
-                size="sm"
-                aria-label={t("common:labels.settings")}
-                className="touch-manipulation"
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupSettingsPage
-                }
-              >
-                <Settings className="h-4 w-4" />
-              </IconButton>
-            </Tooltip>
-          </ProductAnalyticsScope>
-
-          <DevDialogDebugMenu />
+              {!inSidePanel && sidePanelSupported && (
+                <Tooltip content={t("common:actions.openSidePanel")}>
+                  <IconButton
+                    aria-label={t("common:actions.openSidePanel")}
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenSidePanel}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromPopup
+                    }
+                  >
+                    <PanelRightClose className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </ProductAnalyticsScope>
+          </div>
         </div>
       </ProductAnalyticsScope>
     </header>

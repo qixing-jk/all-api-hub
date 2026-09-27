@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import {
   createBrowserOAuthContext,
   type BrowserOAuthFlow,
@@ -144,7 +145,7 @@ describe("browser OAuth context", () => {
         requestId: "request-1",
       }),
     ).resolves.toEqual({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
       identity: "user-1",
       evidence: { completed: true },
     })
@@ -162,7 +163,7 @@ describe("browser OAuth context", () => {
         requestId: "request-1",
       }),
     ).resolves.toMatchObject({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
       identity: "user-1",
     })
   })
@@ -220,7 +221,7 @@ describe("browser OAuth context", () => {
     completionListener?.(11, {}, completedTab)
 
     await expect(authentication).resolves.toMatchObject({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
       identity: "user-1",
     })
   })
@@ -244,7 +245,7 @@ describe("browser OAuth context", () => {
         origin,
         requestId: "request-1",
       }),
-    ).resolves.toMatchObject({ status: "identity_mismatch" })
+    ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.IdentityMismatch })
     expect(browserApi.setBrowserCookie).not.toHaveBeenCalled()
     expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledWith(
       11,
@@ -253,12 +254,19 @@ describe("browser OAuth context", () => {
     )
   })
 
-  it("allows only one browser login flow at a time", async () => {
-    let resolveWindow: ((value: null) => void) | undefined
+  it("serializes browser login flows that share a concurrency key", async () => {
+    // GitHub and Linux DO AgentRouter logins use separate contexts that share
+    // one concurrency key because they authenticate the same site session.
+    const siblingContext = createBrowserOAuthContext({
+      ...testFlow,
+      id: "example-oauth-sibling",
+      displayName: "Example Account (Linux DO)",
+    })
+    let resolveFirstWindow: ((value: null) => void) | undefined
     browserApi.createWindow.mockImplementationOnce(
       () =>
         new Promise<null>((resolve) => {
-          resolveWindow = resolve
+          resolveFirstWindow = resolve
         }),
     )
 
@@ -269,17 +277,208 @@ describe("browser OAuth context", () => {
     })
     await vi.waitFor(() => expect(browserApi.createWindow).toHaveBeenCalled())
 
+    const second = siblingContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-2",
+    })
+    await Promise.resolve()
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(1)
+
+    resolveFirstWindow?.(null)
+    await expect(first).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
+    await expect(second).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps flows with different concurrency keys independent", async () => {
+    const otherContext = createBrowserOAuthContext({
+      ...testFlow,
+      id: "example-oauth-other",
+      concurrencyKey: "example-session-other",
+    })
+    let resolveFirstWindow: ((value: null) => void) | undefined
+    browserApi.createWindow.mockImplementationOnce(
+      () =>
+        new Promise<null>((resolve) => {
+          resolveFirstWindow = resolve
+        }),
+    )
+
+    const first = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-1",
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+    )
+
+    const second = otherContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-2",
+    })
+
+    await expect(second).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+
+    resolveFirstWindow?.(null)
+    await expect(first).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
+  })
+  it("joins concurrent logins for the same expected account onto one browser flow", async () => {
+    // A manual check-in and a scheduled run can ask for the same account at the
+    // same time; the second request must observe the first flow, not open a
+    // second popup or fail with a misleading login error.
+    let resolveWindow: ((value: unknown) => void) | undefined
+    browserApi.createWindow.mockImplementationOnce(
+      () =>
+        new Promise<unknown>((resolve) => {
+          resolveWindow = resolve
+        }),
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+
+    const first = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-1",
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+    )
+    const second = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-2",
+    })
+
+    resolveWindow?.({ id: 7, tabs: [loginTab] })
+
+    await expect(first).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    await expect(second).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(1)
+    expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledTimes(2)
+
+    // Joining only covers the in-flight flow: the next request logs in again.
     await expect(
       browserOAuthContext.authenticate({
         expectedIdentity: "user-1",
         origin,
-        requestId: "request-2",
+        requestId: "request-3",
       }),
-    ).resolves.toMatchObject({ status: "interaction_required" })
+    ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps concurrent first-time logins apart when no identity is expected", async () => {
+    let resolveWindow: ((value: unknown) => void) | undefined
+    browserApi.createWindow.mockImplementationOnce(
+      () =>
+        new Promise<unknown>((resolve) => {
+          resolveWindow = resolve
+        }),
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+
+    const first = browserOAuthContext.authenticate({
+      origin,
+      requestId: "request-1",
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+    )
+    const second = browserOAuthContext.authenticate({
+      origin,
+      requestId: "request-2",
+    })
+
+    resolveWindow?.({ id: 7, tabs: [loginTab] })
+
+    await expect(first).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    await expect(second).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+    expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledTimes(4)
+  })
+
+  it("reports a busy session when a queued login outlives its wait bound", async () => {
+    let resolveWindow: ((value: unknown) => void) | undefined
+    browserApi.createWindow.mockImplementationOnce(
+      () =>
+        new Promise<unknown>((resolve) => {
+          resolveWindow = resolve
+        }),
+    )
+    const boundedContext = createBrowserOAuthContext(
+      { ...testFlow, id: "example-oauth-bounded" },
+      { sessionWaitTimeoutMs: 25 },
+    )
+
+    const holding = browserOAuthContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-1",
+    })
+    await vi.waitFor(() =>
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(1),
+    )
+
+    const queued = await boundedContext.authenticate({
+      expectedIdentity: "user-1",
+      origin,
+      requestId: "request-2",
+    })
+
+    expect(queued).toMatchObject({
+      status: BROWSER_OAUTH_STATUS.SessionBusy,
+      message: expect.stringContaining("in progress"),
+    })
 
     resolveWindow?.(null)
-    await expect(first).resolves.toMatchObject({ status: "failed" })
+    await expect(holding).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
+
+    // The expired waiter never opened its own popup, and the shared session is
+    // free again once the holder released it.
+    await expect(
+      browserOAuthContext.authenticate({
+        expectedIdentity: "user-1",
+        origin,
+        requestId: "request-3",
+      }),
+    ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
+    expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
   })
+
   afterEach(() => {
     vi.useRealTimers()
   })
@@ -298,7 +497,7 @@ describe("browser OAuth context", () => {
     })
     await expect(
       context.authenticate({ origin, requestId: "invalid-path" }),
-    ).resolves.toMatchObject({ status: "failed" })
+    ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Failed })
     expect(browserApi.createWindow).not.toHaveBeenCalled()
   })
 
@@ -306,7 +505,7 @@ describe("browser OAuth context", () => {
     browserApi.createWindow.mockResolvedValue({ id: 7 })
     browserApi.queryTabs.mockResolvedValue([loginTab])
     await expect(authenticate()).resolves.toMatchObject({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
     })
     expect(browserApi.queryTabs).toHaveBeenCalledWith({ windowId: 7 })
   })
@@ -314,13 +513,17 @@ describe("browser OAuth context", () => {
   it("cleans up a popup that has no usable tab", async () => {
     browserApi.createWindow.mockResolvedValue({ id: 7 })
     browserApi.queryTabs.mockResolvedValue([])
-    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    await expect(authenticate()).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
     expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
   })
 
   it("fails without querying unrelated tabs when the popup has no identifiers", async () => {
     browserApi.createWindow.mockResolvedValue({})
-    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    await expect(authenticate()).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
     expect(browserApi.queryTabs).not.toHaveBeenCalled()
     expect(browserApi.removeWindow).not.toHaveBeenCalled()
     expect(browserApi.removeTab).not.toHaveBeenCalled()
@@ -329,7 +532,7 @@ describe("browser OAuth context", () => {
   it("closes by tab ID when the window ID is unavailable", async () => {
     browserApi.createWindow.mockResolvedValue({ tabs: [loginTab] })
     await expect(authenticate()).resolves.toMatchObject({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
     })
     expect(browserApi.removeTab).toHaveBeenCalledWith(11)
   })
@@ -337,7 +540,7 @@ describe("browser OAuth context", () => {
   it("keeps verified success when the popup was already closed during cleanup", async () => {
     browserApi.removeWindow.mockRejectedValue(new Error("Already closed"))
     await expect(authenticate()).resolves.toMatchObject({
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
     })
   })
 
@@ -371,7 +574,9 @@ describe("browser OAuth context", () => {
     browserApi.getTab
       .mockResolvedValueOnce(loginTab)
       .mockResolvedValue({ ...loginTab, url: "https://other.invalid" })
-    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    await expect(authenticate()).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Failed,
+    })
     expect(browserApi.sendTabMessageWithRetry).not.toHaveBeenCalled()
   })
 
@@ -382,13 +587,17 @@ describe("browser OAuth context", () => {
       const result = authenticate()
       await vi.waitFor(() => expect(browserApi.onTabRemoved).toHaveBeenCalled())
       removalListeners[kind]?.(kind === "tab" ? 11 : 7)
-      await expect(result).resolves.toMatchObject({ status: "cancelled" })
+      await expect(result).resolves.toMatchObject({
+        status: BROWSER_OAUTH_STATUS.Cancelled,
+      })
     },
   )
 
   it("handles a vanished initial tab", async () => {
     browserApi.getTab.mockRejectedValue(new Error("No tab"))
-    await expect(authenticate()).resolves.toMatchObject({ status: "cancelled" })
+    await expect(authenticate()).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Cancelled,
+    })
   })
 
   it("times out without treating an incomplete initial page as a login", async () => {
@@ -397,7 +606,7 @@ describe("browser OAuth context", () => {
     const result = authenticate()
     await vi.advanceTimersByTimeAsync(30_000)
     await expect(result).resolves.toMatchObject({
-      status: "interaction_required",
+      status: BROWSER_OAUTH_STATUS.InteractionRequired,
     })
     expect(browserApi.updateTab).not.toHaveBeenCalled()
   })
@@ -413,7 +622,9 @@ describe("browser OAuth context", () => {
     await vi.advanceTimersByTimeAsync(1)
     browserApi.getTab.mockResolvedValue(completedTab)
     await vi.advanceTimersByTimeAsync(20_000)
-    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    await expect(result).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
   })
 
   it("cancels if the tab disappears during callback polling", async () => {
@@ -423,7 +634,9 @@ describe("browser OAuth context", () => {
     await vi.advanceTimersByTimeAsync(1)
     browserApi.getTab.mockRejectedValue(new Error("No tab"))
     await vi.advanceTimersByTimeAsync(20_000)
-    await expect(result).resolves.toMatchObject({ status: "cancelled" })
+    await expect(result).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Cancelled,
+    })
   })
 
   it("retries failed authorization delivery while ignoring intermediate URLs", async () => {
@@ -464,6 +677,8 @@ describe("browser OAuth context", () => {
     expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledTimes(3)
     browserApi.getTab.mockResolvedValue(completedTab)
     await vi.advanceTimersByTimeAsync(20_000)
-    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    await expect(result).resolves.toMatchObject({
+      status: BROWSER_OAUTH_STATUS.Authenticated,
+    })
   })
 })

@@ -1203,10 +1203,3 @@ export async function deleteAxonHubChannel(
   }
   return data.deleteChannel
 }
-
-/**
- * Return no groups because AxonHub does not expose New API group semantics.
- */
-export async function fetchSiteUserGroups(): Promise<string[]> {
-  return []
-}

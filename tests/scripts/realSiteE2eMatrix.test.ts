@@ -148,15 +148,16 @@ describe("GitHub real-site E2E matrix selection", () => {
     expect(idsForResourceGroup("new-api-account")).toEqual([
       "new-api-account",
       "new-api-managed-site",
+      "veloera-managed-site",
+      "done-hub-managed-site",
       "octopus-managed-site",
+      "axonhub-managed-site",
+      "claude-code-hub-managed-site",
     ])
     expect(idsForResourceGroup("sub2api-account")).toEqual([
       "sub2api-account",
       "sub2api-managed-site",
     ])
-    expect(
-      matrix.include.find((entry) => entry.id === "veloera-managed-site"),
-    ).not.toHaveProperty("resource_group")
   })
 
   it("emits disjoint parallel and provider-serialized matrices", () => {

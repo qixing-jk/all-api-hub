@@ -1,12 +1,12 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import { fetchAccountAvailableModels } from "~/services/apiAdapters/aihubmix/catalog"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { fetchAccountAvailableModels } from "~/services/apiService/aihubmix"
 import type {
   AIHubMixKey,
   AIHubMixKeyWrite,
@@ -22,7 +22,7 @@ const AIHUBMIX_KEY_FIELD_IDS = {
   Subnet: "subnet",
 } as const
 const field = AIHUBMIX_KEY_FIELD_IDS
-const quotaPerUsd = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+const quotaPerUsd = QUOTA_PER_USD
 export type AIHubMixKeyEditCommand = {
   baseline: AIHubMixKeyWrite
   values: AIHubMixKeyWrite

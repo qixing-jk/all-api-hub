@@ -18,6 +18,7 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockFetchAccountTokens,
+  mockFetchTokenById,
   mockFetchOneHubAccountTokens,
   mockFetchCurrentUserGroup,
   mockFetchUserGroups,
@@ -28,6 +29,7 @@ const {
   mockResolveWongApiTokenKey,
 } = vi.hoisted(() => ({
   mockFetchAccountTokens: vi.fn(),
+  mockFetchTokenById: vi.fn(),
   mockFetchOneHubAccountTokens: vi.fn(),
   mockFetchCurrentUserGroup: vi.fn(),
   mockFetchUserGroups: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock(
         resolveApiTokenKey: mockResolveApiTokenKey,
       },
       fetchAccountTokens: mockFetchAccountTokens,
+      fetchTokenById: mockFetchTokenById,
       fetchCurrentUserGroup: mockFetchCurrentUserGroup,
       fetchUserGroups: mockFetchUserGroups,
       createApiToken: mockCreateApiToken,
@@ -115,6 +118,7 @@ describe("New API account key resources", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetchAccountTokens.mockReset()
+    mockFetchTokenById.mockReset()
     mockFetchOneHubAccountTokens.mockReset()
     mockFetchCurrentUserGroup.mockReset()
     mockFetchUserGroups.mockReset()
@@ -978,11 +982,36 @@ describe("New API account key resources", () => {
     expect(mockCreateApiToken).toHaveBeenCalledTimes(1)
   })
 
+  it("resolves listed keys without reading the full inventory again", async () => {
+    const tokens = [token({ id: 8 }), token({ id: 9 })]
+    mockFetchAccountTokens.mockResolvedValue(tokens)
+    mockFetchTokenById.mockImplementation(async (_request, id) =>
+      tokens.find((item) => item.id === id),
+    )
+    mockResolveApiTokenKey.mockImplementation(
+      async (_request, item) => `secret-${item.id}`,
+    )
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const page = await collection.list()
+    for (const item of page.items) {
+      await expect(
+        session.runtimeKey!.resolve(item.ref),
+      ).resolves.toMatchObject({
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: `secret-${item.ref.resourceId}`,
+      })
+    }
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
+  })
+
   it("resolves the exact referenced token through the site-type reveal transport", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([
-      token({ id: 8 }),
-      token({ id: 9, key: "masked-9" }),
-    ])
+    mockFetchTokenById.mockResolvedValueOnce(token({ id: 9, key: "masked-9" }))
     mockResolveWongApiTokenKey.mockResolvedValueOnce("sk-wong-revealed")
 
     const capability = createNewApiAccountKeyResources(SITE_TYPES.WONG_GONGYI)
@@ -1007,6 +1036,8 @@ describe("New API account key resources", () => {
       expect.objectContaining({ id: 9, key: "masked-9" }),
     )
     expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+    expect(mockFetchTokenById).toHaveBeenCalledWith(request, 9)
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
   })
 
   it("rejects a runtime ref from another scope before token inventory access", async () => {
@@ -1030,8 +1061,31 @@ describe("New API account key resources", () => {
     expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
   })
 
+  it("rejects a mismatched detail instead of revealing another token", async () => {
+    mockFetchTokenById.mockResolvedValueOnce(token({ id: 8 }))
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    await expect(
+      session.runtimeKey!.resolve({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).resolves.toMatchObject({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+  })
+
   it("reports an unavailable runtime key when the exact ref no longer exists", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 8 })])
+    mockFetchTokenById.mockRejectedValueOnce({ status: 404 })
 
     const capability = createNewApiAccountKeyResources(SITE_TYPES.NEW_API)
     const session = await capability.open({
@@ -1054,7 +1108,7 @@ describe("New API account key resources", () => {
   })
 
   it("reports an unavailable runtime key when provider reveal fails", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 9 })])
+    mockFetchTokenById.mockResolvedValueOnce(token({ id: 9 }))
     mockResolveApiTokenKey.mockRejectedValueOnce(
       new Error("reveal unavailable"),
     )
@@ -1296,10 +1350,8 @@ describe("New API account key resources", () => {
     })
   })
 
-  it("reports inventory failure before runtime secret reveal", async () => {
-    mockFetchAccountTokens.mockRejectedValueOnce(
-      new Error("inventory unavailable"),
-    )
+  it("reports detail failure before runtime secret reveal", async () => {
+    mockFetchTokenById.mockRejectedValueOnce(new Error("detail unavailable"))
     const session = await createNewApiAccountKeyResources(
       SITE_TYPES.NEW_API,
     ).open({
@@ -1318,7 +1370,7 @@ describe("New API account key resources", () => {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-        message: "inventory unavailable",
+        message: "detail unavailable",
       },
     })
     expect(mockResolveApiTokenKey).not.toHaveBeenCalled()

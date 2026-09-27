@@ -48,7 +48,6 @@
 - [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)：注册并充值时填写 `all-api-hub` 优惠码可享 9 折。[使用教程](./sponsor-guides/packycode.md)
 - [星辰AI](https://ai.centos.hk)：充值比例 1:1，可开发票；Claude 低至 4 折。[使用教程](./sponsor-guides/xingchen.md)
 - [玄枢API](https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB)：面向企业、技术团队和个人开发者的新一代 AI 模型路由网关，提供企业级稳定性的全球顶级模型（Claude, GPT, Grok等）一站式 API 接入。模型一折到六折，通过此链接注册，充值额外加赠，首充送更多！企业支持对公转账和开票。[使用教程](./service-guides/xuanshuapi.md)
-- [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：一个 AI API 访问 300+ 精选视频、图像和 LLM 模型，新 Coding Plan 提供更高性价比的 API 访问。[使用教程](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8)：提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，通过此链接注册可享首充 8 折，企业客户最高可享 7.5 折。
 - [随想AI中转站](https://sui-xiang.com/)：提供 Claude、Codex、Gemini 等 API 中继服务，按量付费，支持每日签到测试额度、多线路冗余和自动故障切换。[使用教程](./service-guides/suixiang.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub)：专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张；图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码，按量付费、无月费。

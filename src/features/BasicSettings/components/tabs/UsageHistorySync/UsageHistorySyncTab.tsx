@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
@@ -11,7 +11,10 @@ import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messagi
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { SiteAccount } from "~/types"
-import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
+import {
+  DEFAULT_USAGE_HISTORY_PREFERENCES,
+  USAGE_HISTORY_SCHEDULE_MODE,
+} from "~/types/usageHistory"
 import type {
   UsageHistoryScheduleMode,
   UsageHistoryStore,
@@ -20,6 +23,7 @@ import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
 import UsageHistorySyncStateTable, {
@@ -65,30 +69,43 @@ export default function UsageHistorySyncTab() {
   const [accountSearch, setAccountSearch] = useState("")
 
   const [enabled, setEnabled] = useState<boolean>(
-    preferences.usageHistory?.enabled ?? false,
+    preferences.usageHistory?.enabled ??
+      DEFAULT_USAGE_HISTORY_PREFERENCES.enabled,
   )
   const [retentionDays, setRetentionDays] = useState<number>(
-    preferences.usageHistory?.retentionDays ?? 30,
+    preferences.usageHistory?.retentionDays ??
+      DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
   )
   const [scheduleMode, setScheduleMode] = useState<UsageHistoryScheduleMode>(
     preferences.usageHistory?.scheduleMode ??
-      USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
+      DEFAULT_USAGE_HISTORY_PREFERENCES.scheduleMode,
   )
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState<number>(
-    preferences.usageHistory?.syncIntervalMinutes ?? 6 * 60,
+    preferences.usageHistory?.syncIntervalMinutes ??
+      DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes,
   )
 
   useEffect(() => {
-    setEnabled(preferences.usageHistory?.enabled ?? false)
-    setRetentionDays(preferences.usageHistory?.retentionDays ?? 30)
+    setEnabled(
+      preferences.usageHistory?.enabled ??
+        DEFAULT_USAGE_HISTORY_PREFERENCES.enabled,
+    )
     setScheduleMode(
       preferences.usageHistory?.scheduleMode ??
-        USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
+        DEFAULT_USAGE_HISTORY_PREFERENCES.scheduleMode,
     )
     setSyncIntervalMinutes(
-      preferences.usageHistory?.syncIntervalMinutes ?? 6 * 60,
+      preferences.usageHistory?.syncIntervalMinutes ??
+        DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes,
     )
   }, [preferences.usageHistory])
+
+  useEffect(() => {
+    setRetentionDays(
+      preferences.usageHistory?.retentionDays ??
+        DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
+    )
+  }, [preferences.usageHistory?.retentionDays])
 
   const loadData = useCallback(async () => {
     try {
@@ -150,52 +167,56 @@ export default function UsageHistorySyncTab() {
     })
   }, [accountLabelById, filteredAccounts, store, t])
 
-  const handleApplySettings = useCallback(async () => {
-    try {
-      const response = await sendUsageHistoryMessage(
-        UsageHistoryMessageTypes.UpdateSettings,
-        {
-          settings: {
-            enabled,
-            retentionDays,
-            scheduleMode,
-            syncIntervalMinutes,
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const saveSettings = useCallback(
+    async (settings: {
+      enabled?: boolean
+      retentionDays?: number
+      scheduleMode?: UsageHistoryScheduleMode
+      syncIntervalMinutes?: number
+    }) => {
+      setIsSavingSettings(true)
+      try {
+        const response = await sendUsageHistoryMessage(
+          UsageHistoryMessageTypes.UpdateSettings,
+          {
+            settings,
           },
-        },
-      )
+        )
 
-      if (!response?.success) {
-        throw new Error(response?.error || "Unknown error")
-      }
+        if (!response?.success) {
+          throw new Error(response?.error || "Unknown error")
+        }
 
-      if (response?.data?.warning) {
-        toast.warning(
-          t("messages.warning.scheduleFallback", {
-            warning: response.data.warning,
+        if (response?.data?.warning) {
+          toast.warning(
+            t("messages.warning.scheduleFallback", {
+              warning: response.data.warning,
+            }),
+          )
+        } else {
+          toast.success(t("messages.success.settingsSaved"))
+        }
+
+        await loadPreferences()
+        await loadData()
+        return {
+          ok: true,
+          scheduleFallback: Boolean(response.data?.warning),
+        } as const
+      } catch (error) {
+        toast.error(
+          t("messages.error.settingsSaveFailed", {
+            error: getErrorMessage(error),
           }),
         )
-      } else {
-        toast.success(t("messages.success.settingsSaved"))
+        return { ok: false } as const
+      } finally {
+        setIsSavingSettings(false)
       }
-
-      await loadPreferences()
-      await loadData()
-    } catch (error) {
-      toast.error(
-        t("messages.error.settingsSaveFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    }
-  }, [
-    enabled,
-    loadData,
-    loadPreferences,
-    retentionDays,
-    scheduleMode,
-    syncIntervalMinutes,
-    t,
-  ])
+    },
+    [loadData, loadPreferences, t],
+  )
 
   /**
    * Trigger a forced manual sync for all accounts, or for an explicit subset.
@@ -297,23 +318,76 @@ export default function UsageHistorySyncTab() {
   return (
     <div className="space-y-density-6">
       <UsageHistorySyncSettingsSection
+        reset={{
+          resetDisabled:
+            isSavingSettings ||
+            (matchesDefaultSettings(
+              preferences.usageHistory,
+              DEFAULT_USAGE_HISTORY_PREFERENCES,
+            ) &&
+              retentionDays ===
+                DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays),
+          resetRequiresConfirmation:
+            (preferences.usageHistory?.retentionDays ??
+              DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays) >
+            DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
+          onReset: async () => {
+            const defaults = DEFAULT_USAGE_HISTORY_PREFERENCES
+            const result = await saveSettings({
+              enabled: defaults.enabled,
+              retentionDays: defaults.retentionDays,
+              scheduleMode: defaults.scheduleMode,
+              syncIntervalMinutes: defaults.syncIntervalMinutes,
+            })
+            if (result.ok) {
+              setEnabled(defaults.enabled)
+              setRetentionDays(defaults.retentionDays)
+              setScheduleMode(defaults.scheduleMode)
+              setSyncIntervalMinutes(defaults.syncIntervalMinutes)
+            }
+            return result
+          },
+        }}
         enabled={enabled}
-        onEnabledChange={setEnabled}
+        onEnabledChange={(value) => {
+          void saveSettings({ enabled: value }).then((result) => {
+            if (result.ok) setEnabled(value)
+          })
+        }}
         retentionDays={retentionDays}
         onRetentionDaysChange={setRetentionDays}
         scheduleMode={scheduleMode}
-        onScheduleModeChange={setScheduleMode}
+        onScheduleModeChange={(value) => {
+          void saveSettings({ scheduleMode: value }).then((result) => {
+            if (result.ok)
+              setScheduleMode(
+                result.scheduleFallback
+                  ? USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH
+                  : value,
+              )
+          })
+        }}
         syncIntervalMinutes={syncIntervalMinutes}
         onSyncIntervalMinutesChange={setSyncIntervalMinutes}
         alarmsSupported={alarmsSupported}
         isLoading={isLoading}
         isSyncingAll={isSyncingAll}
-        onApplySettings={handleApplySettings}
+        onApplySettings={() =>
+          saveSettings({ retentionDays }).then(() => undefined)
+        }
+        isSavingSettings={isSavingSettings}
+        onSyncIntervalMinutesCommit={(value) =>
+          saveSettings({ syncIntervalMinutes: value }).then((result) => {
+            if (result.ok) setSyncIntervalMinutes(value)
+            return result.ok
+          })
+        }
         onSyncNow={handleSyncNow}
         onRefreshStatus={loadData}
       />
 
       <SettingSection
+        resetNotApplicable="runtime-status"
         id={USAGE_HISTORY_STATE_SECTION_ID}
         title={t("syncTab.stateTitle")}
         description={t("syncTab.stateDescription")}

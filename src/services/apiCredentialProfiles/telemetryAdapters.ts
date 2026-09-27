@@ -38,6 +38,7 @@ import {
   API_CREDENTIAL_TELEMETRY_MODES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 
 export type AdapterSuccess = {
   source: ApiCredentialTelemetrySource
@@ -90,7 +91,7 @@ async function queryOpenAiBilling(
   const now = new Date()
   // Both range bounds derive from UTC so the year boundary cannot disagree
   // with the ISO end date around New Year in positive UTC offsets.
-  const end = now.toISOString().slice(0, 10)
+  const end = formatUtcDayKey(now)
   const start = `${end.slice(0, 4)}-01-01`
   const usageEndpoint = createOpenAiBillingUsageEndpoint(start, end)
   const usage = await fetchTelemetryJson({

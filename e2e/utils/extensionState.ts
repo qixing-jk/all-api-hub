@@ -29,33 +29,55 @@ export async function getServiceWorker(
 
 /**
  * Persist a Plasmo-backed local-storage value from inside the service worker.
+ *
+ * Pass `options.lock` to write under the same Web Lock the background services
+ * use for their read-modify-write cycles on this key (see
+ * `withExtensionStorageWriteLock`). A plain write bypasses that lock, so a
+ * cycle that read the value before the write can land after it and silently
+ * discard it. Seeding under the lock keeps the seed ordered with those cycles.
  */
 export async function setPlasmoStorageValue(
   serviceWorker: Worker,
   key: string,
   value: unknown,
+  options?: { lock?: string },
 ) {
   const serialized = JSON.stringify(value)
   await serviceWorker.evaluate(
-    async ({ storageKey, storageValue }) => {
+    async ({ storageKey, storageValue, storageLockName }) => {
       const chromeApi = (globalThis as any).chrome
-      await new Promise<void>((resolve, reject) => {
-        chromeApi.storage.local.set(
-          {
-            [storageKey]: storageValue,
-          },
-          () => {
-            const error = chromeApi.runtime?.lastError
-            if (error) {
-              reject(new Error(error.message))
-              return
-            }
-            resolve()
-          },
-        )
-      })
+      const lockManager = (globalThis as any).navigator?.locks
+
+      const write = async () => {
+        await new Promise<void>((resolve, reject) => {
+          chromeApi.storage.local.set(
+            {
+              [storageKey]: storageValue,
+            },
+            () => {
+              const error = chromeApi.runtime?.lastError
+              if (error) {
+                reject(new Error(error.message))
+                return
+              }
+              resolve()
+            },
+          )
+        })
+      }
+
+      if (storageLockName && typeof lockManager?.request === "function") {
+        await lockManager.request(storageLockName, { mode: "exclusive" }, write)
+        return
+      }
+
+      await write()
     },
-    { storageKey: key, storageValue: serialized },
+    {
+      storageKey: key,
+      storageValue: serialized,
+      storageLockName: options?.lock,
+    },
   )
 }
 

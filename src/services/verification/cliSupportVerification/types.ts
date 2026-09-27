@@ -42,13 +42,3 @@ export type CliSupportResult = Omit<ApiVerificationProbeResult, "id"> & {
    */
   probeId: ApiVerificationProbeId
 }
-
-/**
- * Full simulation report for a single run (across tools).
- */
-export type CliSupportReport = {
-  baseUrl: string
-  startedAt: number
-  finishedAt: number
-  results: CliSupportResult[]
-}

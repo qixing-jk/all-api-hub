@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -28,8 +28,7 @@ function createAccountDialogCheckInDiscoveryContext(params: {
       site_name: draft.siteName.trim(),
       site_url: params.url,
       site_type: draft.siteType,
-      exchange_rate:
-        Number(draft.exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchange_rate: Number(draft.exchangeRate) || DEFAULT_USD_TO_CNY_RATE,
       account_info: {
         id: draft.userId.trim(),
         access_token: draft.accessToken.trim(),

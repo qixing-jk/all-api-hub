@@ -1,3 +1,5 @@
+import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
+import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import {
   createWindow,
   getTab,
@@ -18,7 +20,15 @@ const AUTH_TIMEOUT_MS = 4 * 60 * 1000
 const INITIAL_PAGE_TIMEOUT_MS = 30 * 1000
 const KEEPALIVE_INTERVAL_MS = 20 * 1000
 
-const activeAuthenticationRequests = new Map<string, string>()
+// Browser flows that share a concurrency key act on the same site session, so
+// they cannot run at the same time. Queue the later request instead of rejecting
+// it, otherwise batch logins (for example one Linux DO and one GitHub account)
+// fail with a misleading "login required" result.
+const authenticationQueue = createKeyedTaskQueue()
+
+// Concurrent logins for the same provider account share one browser flow
+// instead of opening a second popup for the same identity.
+const inFlightAuthentications = new Map<string, Promise<unknown>>()
 
 interface OpenedAuthContext {
   tabId: number
@@ -32,24 +42,34 @@ interface BrowserOAuthInput {
 }
 
 export type BrowserOAuthFailureStatus =
-  | "cancelled"
-  | "failed"
-  | "identity_mismatch"
-  | "interaction_required"
+  | typeof BROWSER_OAUTH_STATUS.Cancelled
+  | typeof BROWSER_OAUTH_STATUS.Failed
+  | typeof BROWSER_OAUTH_STATUS.IdentityMismatch
+  | typeof BROWSER_OAUTH_STATUS.InteractionRequired
+  | typeof BROWSER_OAUTH_STATUS.SessionBusy
 
 export type BrowserOAuthResult<Evidence> =
   | {
-      status: "authenticated"
+      status: typeof BROWSER_OAUTH_STATUS.Authenticated
       evidence: Evidence
       identity: string
     }
   | {
-      status: BrowserOAuthFailureStatus | "uncertain"
+      status: BrowserOAuthFailureStatus | typeof BROWSER_OAUTH_STATUS.Uncertain
       message?: string
     }
 
 interface BrowserOAuthContext<Evidence> {
   authenticate(input: BrowserOAuthInput): Promise<BrowserOAuthResult<Evidence>>
+}
+
+export interface BrowserOAuthContextOptions {
+  /**
+   * How long a queued login waits for the shared session before it reports
+   * `BROWSER_OAUTH_STATUS.SessionBusy` instead of opening another popup.
+   * Defaults to one interactive login budget.
+   */
+  sessionWaitTimeoutMs?: number
 }
 
 export interface BrowserOAuthPreparation {
@@ -58,7 +78,7 @@ export interface BrowserOAuthPreparation {
 
 export type BrowserOAuthCompletion<Evidence> =
   | { status: "verified"; identity: string; evidence: Evidence }
-  | { status: "identity_mismatch" }
+  | { status: typeof BROWSER_OAUTH_STATUS.IdentityMismatch }
   | { status: "invalid"; message?: string }
 
 export interface BrowserOAuthFlow<Evidence> {
@@ -324,8 +344,8 @@ async function authenticateBrowserOAuth<Evidence>(
       input.requestId,
     )
     const completed = flow.parseCompletion(completionResponse)
-    if (completed.status === "identity_mismatch") {
-      return { status: "identity_mismatch" }
+    if (completed.status === BROWSER_OAUTH_STATUS.IdentityMismatch) {
+      return { status: BROWSER_OAUTH_STATUS.IdentityMismatch }
     }
     if (completed.status === "invalid") {
       throw new Error(
@@ -337,30 +357,36 @@ async function authenticateBrowserOAuth<Evidence>(
       completed.identity !== input.expectedIdentity
     ) {
       return {
-        status: "identity_mismatch",
+        status: BROWSER_OAUTH_STATUS.IdentityMismatch,
         message: `The OAuth login belongs to a different ${flow.displayName} account.`,
       }
     }
 
     authenticated = true
     return {
-      status: "authenticated",
+      status: BROWSER_OAUTH_STATUS.Authenticated,
       evidence: completed.evidence,
       identity: completed.identity,
     }
   } catch (error) {
     if (error instanceof AuthCancelledError) {
-      return { status: "cancelled", message: error.message }
+      return { status: BROWSER_OAUTH_STATUS.Cancelled, message: error.message }
     }
     if (error instanceof AuthTimeoutError) {
-      return { status: "interaction_required", message: error.message }
+      return {
+        status: BROWSER_OAUTH_STATUS.InteractionRequired,
+        message: error.message,
+      }
     }
     logger.warn(`${flow.displayName} OAuth authentication failed`, {
       error: getErrorMessage(error),
       flowId: flow.id,
       requestId: input.requestId,
     })
-    return { status: "failed", message: getErrorMessage(error) }
+    return {
+      status: BROWSER_OAUTH_STATUS.Failed,
+      message: getErrorMessage(error),
+    }
   } finally {
     if (!authenticated) {
       if (context) {
@@ -380,30 +406,82 @@ async function authenticateBrowserOAuth<Evidence>(
   }
 }
 
+/** Signals that a queued login never got the shared session in time. */
+const SESSION_WAIT_EXPIRED = Symbol("session-wait-expired")
+
+/**
+ * Waits for the shared session, then either runs the flow or reports it busy.
+ *
+ * The wait bound only covers queueing: once the session is granted the bound is
+ * cleared and the flow relies on its own interactive timeout.
+ */
+async function authenticateWithinSessionWait<Evidence>(
+  flow: BrowserOAuthFlow<Evidence>,
+  input: BrowserOAuthInput,
+  sessionWaitTimeoutMs: number,
+): Promise<BrowserOAuthResult<Evidence>> {
+  let waitExpired = false
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined
+  const waitBound = new Promise<typeof SESSION_WAIT_EXPIRED>((resolve) => {
+    timeoutId = globalThis.setTimeout(() => {
+      waitExpired = true
+      resolve(SESSION_WAIT_EXPIRED)
+    }, sessionWaitTimeoutMs)
+  })
+
+  const queued = authenticationQueue.run(flow.concurrencyKey, async () => {
+    globalThis.clearTimeout(timeoutId)
+    if (waitExpired) return SESSION_WAIT_EXPIRED
+    return await authenticateBrowserOAuth(flow, input)
+  })
+
+  const outcome = await Promise.race([queued, waitBound])
+  if (outcome === SESSION_WAIT_EXPIRED) {
+    return {
+      status: BROWSER_OAUTH_STATUS.SessionBusy,
+      message: `${flow.displayName} is waiting for another login that is already in progress.`,
+    }
+  }
+  return outcome
+}
+
+/** Identifies concurrent logins that target one provider account. */
+function buildJoinKey<Evidence>(
+  flow: BrowserOAuthFlow<Evidence>,
+  input: BrowserOAuthInput,
+): string | null {
+  if (!input.expectedIdentity) return null
+  return `${flow.id}\u0000${input.origin}\u0000${input.expectedIdentity}`
+}
+
 /** Creates a reusable browser OAuth context for one browser flow. */
 export function createBrowserOAuthContext<Evidence>(
   flow: BrowserOAuthFlow<Evidence>,
+  options: BrowserOAuthContextOptions = {},
 ): BrowserOAuthContext<Evidence> {
+  const sessionWaitTimeoutMs = options.sessionWaitTimeoutMs ?? AUTH_TIMEOUT_MS
+
   return {
     async authenticate(input) {
-      if (activeAuthenticationRequests.has(flow.concurrencyKey)) {
-        return {
-          status: "interaction_required",
-          message: `Another ${flow.displayName} OAuth login is already in progress.`,
-        }
-      }
+      const joinKey = buildJoinKey(flow, input)
+      const joined = joinKey ? inFlightAuthentications.get(joinKey) : undefined
+      if (joined) return (await joined) as BrowserOAuthResult<Evidence>
 
-      activeAuthenticationRequests.set(flow.concurrencyKey, input.requestId)
-      try {
-        return await authenticateBrowserOAuth(flow, input)
-      } finally {
-        if (
-          activeAuthenticationRequests.get(flow.concurrencyKey) ===
-          input.requestId
-        ) {
-          activeAuthenticationRequests.delete(flow.concurrencyKey)
+      const started = authenticateWithinSessionWait(
+        flow,
+        input,
+        sessionWaitTimeoutMs,
+      )
+      if (joinKey) {
+        inFlightAuthentications.set(joinKey, started)
+        const releaseJoin = () => {
+          if (inFlightAuthentications.get(joinKey) === started) {
+            inFlightAuthentications.delete(joinKey)
+          }
         }
+        void started.then(releaseJoin, releaseJoin)
       }
+      return await started
     },
   }
 }

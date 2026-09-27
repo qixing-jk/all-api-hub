@@ -1844,7 +1844,7 @@ describe("managed-site token batch export", () => {
           userId: "1",
         }),
         matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
-        sessionResyncOptions,
+        expect.objectContaining(sessionResyncOptions),
       )
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,

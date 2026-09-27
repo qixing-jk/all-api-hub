@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_OWNER,
   THEME_PRESET,
@@ -77,6 +78,7 @@ describe("ThemeContext", () => {
     const root = document.documentElement
     root.classList.add(THEME_MODE.DARK)
     root.setAttribute(THEME_ATTRIBUTES.PRESET, THEME_PRESET.ANTHROPIC)
+    root.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, "extra-large")
     root.setAttribute(THEME_ATTRIBUTES.OWNER, THEME_OWNER.BOOTSTRAP)
     window.localStorage.setItem(THEME_BOOTSTRAP_CACHE_KEY, "cached-theme")
     mockPreferencesContext.current.isLoading = true
@@ -97,6 +99,7 @@ describe("ThemeContext", () => {
     expect(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)).toBe(
       "cached-theme",
     )
+    expect(root).toHaveAttribute(THEME_ATTRIBUTES.TEXT_SIZE, "extra-large")
 
     mockPreferencesContext.current = {
       ...mockPreferencesContext.current,
@@ -104,10 +107,14 @@ describe("ThemeContext", () => {
       themeMode: THEME_MODE.LIGHT,
       preferences: {
         appearance: {
+          contentWidth: THEME_CONTENT_WIDTH.CENTERED,
+          sidebarCollapsed: false,
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
           density: "default",
+          textSize: "large",
+          fontFamily: "default",
         },
       },
     }
@@ -120,15 +127,20 @@ describe("ThemeContext", () => {
     expect(root).toHaveAttribute(THEME_ATTRIBUTES.COLOR, THEME_COLOR.ROSE)
     expect(root).toHaveAttribute(THEME_ATTRIBUTES.PRESET, THEME_PRESET.DEFAULT)
     expect(root).toHaveAttribute(THEME_ATTRIBUTES.OWNER, THEME_OWNER.REACT)
+    expect(root).toHaveAttribute(THEME_ATTRIBUTES.TEXT_SIZE, "large")
     expect(
       JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
     ).toEqual({
       themeMode: "light",
       appearance: {
+        contentWidth: "centered",
+        sidebarCollapsed: false,
         preset: "default",
         color: "rose",
         radius: "small",
         density: "default",
+        textSize: "large",
+        fontFamily: "default",
       },
     })
   })

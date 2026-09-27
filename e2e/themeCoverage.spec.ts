@@ -60,10 +60,11 @@ test("gateway guidance follows the selected palette in light and dark modes", as
       await page.goto(
         `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
       )
-      const badge = page.locator('[data-slot="badge"]').filter({
-        hasText:
-          preset === THEME_PRESET.ANTHROPIC ? "Anthropic" : "Default theme",
-      })
+      // The removed appearance preview carried the preset badge; the selected
+      // preset's own badge covers the same tinted-surface contrast check.
+      const badge = page.locator(
+        `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="${preset}"]) span.bg-primary.text-primary-foreground`,
+      )
       await expect(badge).toBeVisible()
       expect((await readColorContrast(badge)).ratio).toBeGreaterThanOrEqual(
         MIN_CONTRAST_RATIO.TEXT,

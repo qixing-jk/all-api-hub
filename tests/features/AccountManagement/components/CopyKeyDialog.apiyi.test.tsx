@@ -43,6 +43,9 @@ describe("CopyKeyDialog APIyi family defaults", () => {
             data: page === "0" ? [token] : [],
           })
         }),
+        http.get(`${account.baseUrl}/api/token/${token.id}`, () =>
+          HttpResponse.json({ success: true, data: token }),
+        ),
         http.post(`${account.baseUrl}/api/token/${token.id}/key`, () => {
           revealRequests += 1
           return HttpResponse.json({
@@ -77,8 +80,9 @@ describe("CopyKeyDialog APIyi family defaults", () => {
         expect(writeText).toHaveBeenCalledWith("sk-apiyi-existing-test-key"),
       )
       expect(revealRequests).toBe(reveals)
-      // Native facts omit plaintext; copying resolves the key from a fresh inventory.
-      expect(inventoryPages).toEqual(["0", "1", "0", "1"])
+      // Native facts omit plaintext; copying fetches the single token by id
+      // instead of scanning the full inventory again.
+      expect(inventoryPages).toEqual(["0", "1"])
     },
   )
 })

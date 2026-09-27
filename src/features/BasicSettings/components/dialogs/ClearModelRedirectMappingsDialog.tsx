@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Badge,
   Button,
   Checkbox,
@@ -300,8 +301,8 @@ export function ClearModelRedirectMappingsDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
-            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          <div className="gap-y-density-3 flex flex-col items-stretch justify-between gap-x-3 sm:flex-row sm:items-center">
+            <div className="dark:text-secondary-foreground text-muted-foreground min-w-0 text-sm break-words">
               {t("bulkClear.preview.selectedCount", {
                 selected: selectedCount,
                 total: totalCount,
@@ -315,7 +316,7 @@ export function ClearModelRedirectMappingsDialog({
                 </span>
               )}
             </div>
-            <div className="gap-y-density-2 flex items-center gap-x-2">
+            <ActionGroup>
               <Button
                 type="button"
                 variant="outline"
@@ -335,7 +336,7 @@ export function ClearModelRedirectMappingsDialog({
               >
                 {t("bulkClear.actions.continue")}
               </Button>
-            </div>
+            </ActionGroup>
           </div>
         }
       >

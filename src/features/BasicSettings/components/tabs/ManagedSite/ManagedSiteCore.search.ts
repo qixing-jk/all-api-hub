@@ -43,6 +43,7 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
     "managed-site-selector",
     "settings:managedSite.title",
     340,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:managed-site-model-sync",
@@ -51,6 +52,7 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
     "managedSiteModelSync:settings.title",
     347,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: SHARED_MODEL_SYNC_KEYWORDS,
     },
   ),
@@ -60,7 +62,9 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
     "managed-site-model-redirect",
     "modelRedirect:title",
     348,
-    {},
+    {
+      keywordKeys: ["common:actions.reset"],
+    },
   ),
 ]
 

@@ -5,22 +5,39 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { EMPTY_DEV_IDENTITY } from "~/utils/core/devIdentity"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import {
+  buildDevIdentity,
+  DEV_IDENTITY_FIXTURE_PATH,
+  DEV_IDENTITY_FIXTURE_PATH_TAIL,
+} from "~~/tests/test-utils/devIdentityFixtures"
 import { createMatchMediaController } from "~~/tests/test-utils/matchMedia"
 
-const { getPreferencesMock, loggerWarnMock, watchMock, unwatchMock } =
-  vi.hoisted(() => ({
-    getPreferencesMock: vi.fn(),
-    loggerWarnMock: vi.fn(),
-    watchMock: vi.fn(),
-    unwatchMock: vi.fn(),
-  }))
+const {
+  getPreferencesMock,
+  loggerWarnMock,
+  watchMock,
+  unwatchMock,
+  getDevIdentityMock,
+} = vi.hoisted(() => ({
+  getPreferencesMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  watchMock: vi.fn(),
+  unwatchMock: vi.fn(),
+  getDevIdentityMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/extensionIdentity", () => ({
+  getDevIdentity: (...args: unknown[]) => getDevIdentityMock(...args),
+}))
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
@@ -30,7 +47,7 @@ vi.mock("@plasmohq/storage", () => ({
 }))
 
 vi.mock("~/utils/i18n", () => ({}))
-vi.mock("~/styles/style.css", () => ({}))
+vi.mock("~/styles/content.css", () => ({}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -64,18 +81,51 @@ describe("ContentReactRoot", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.resetAllMocks()
+    // Release builds carry no instance color, so the dev marker stays hidden.
+    getDevIdentityMock.mockReturnValue(EMPTY_DEV_IDENTITY)
+  })
+
+  it("waits for initial appearance before mounting interactive UI", async () => {
+    const pending = createDeferred<Partial<UserPreferences>>()
+    getPreferencesMock.mockReturnValue(pending.promise)
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+    const { container } = render(<ContentReactRoot />)
+    expect(container.firstChild).not.toBeVisible()
+    expect(screen.queryByTestId("api-check-modal-host")).not.toBeInTheDocument()
+    await act(async () => {
+      pending.resolve({
+        themeMode: THEME_MODE.LIGHT,
+        appearance: { textSize: "extra-large" },
+      } as Partial<UserPreferences>)
+      await pending.promise
+    })
+    expect(container.firstChild).toBeVisible()
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(screen.getByTestId("api-check-modal-host")).toBeVisible()
   })
 
   it("applies live accent preferences inside its scope without modifying the host document", async () => {
     getPreferencesMock.mockResolvedValue({
       themeMode: THEME_MODE.LIGHT,
-      appearance: { color: THEME_COLOR.ROSE, density: "compact" },
+      appearance: {
+        color: THEME_COLOR.ROSE,
+        density: "compact",
+        textSize: "large",
+      },
     })
     const { ContentReactRoot } = await import(
       "~/entrypoints/content/shared/ContentReactRoot"
     )
     const originalHostTheme = document.documentElement.getAttribute(
       THEME_ATTRIBUTES.COLOR,
+    )
+    const originalHostTextSize = document.documentElement.getAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
     )
     const { container, unmount } = render(<ContentReactRoot />)
     await waitFor(() =>
@@ -86,7 +136,12 @@ describe("ContentReactRoot", () => {
     )
     getPreferencesMock.mockResolvedValue({
       themeMode: THEME_MODE.DARK,
-      appearance: { color: THEME_COLOR.GREEN, preset: THEME_PRESET.ANTHROPIC },
+      appearance: {
+        color: THEME_COLOR.GREEN,
+        preset: THEME_PRESET.ANTHROPIC,
+        textSize: "extra-large",
+        density: "compact",
+      },
     })
     act(() => {
       watchMock.mock.calls[0][0][
@@ -100,6 +155,17 @@ describe("ContentReactRoot", () => {
       ),
     )
     expect(container.firstChild).toHaveClass(THEME_MODE.DARK)
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.DENSITY,
+      "compact",
+    )
+    expect(
+      document.documentElement.getAttribute(THEME_ATTRIBUTES.TEXT_SIZE),
+    ).toBe(originalHostTextSize)
     expect(container.firstChild).toHaveAttribute(THEME_ATTRIBUTES.COLOR_SCOPE)
     expect(container.firstChild).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
@@ -143,10 +209,14 @@ describe("ContentReactRoot", () => {
       initial.resolve({
         themeMode: THEME_MODE.SYSTEM,
         appearance: {
+          contentWidth: THEME_CONTENT_WIDTH.CENTERED,
+          sidebarCollapsed: false,
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
           density: "default",
+          textSize: "default",
+          fontFamily: "default",
         },
       })
       await initial.promise
@@ -196,7 +266,9 @@ describe("ContentReactRoot", () => {
 
     const { container, unmount } = render(<ContentReactRoot />)
 
-    expect(screen.getByTestId("api-check-modal-host")).toBeInTheDocument()
+    expect(
+      await screen.findByTestId("api-check-modal-host"),
+    ).toBeInTheDocument()
     expect(screen.getByTestId("redemption-toaster")).toBeInTheDocument()
 
     await waitFor(() => {
@@ -296,9 +368,9 @@ describe("ContentReactRoot", () => {
 
     render(<ContentReactRoot />)
 
-    const input = screen.getByRole("textbox", {
+    const input = (await screen.findByRole("textbox", {
       name: "API credential",
-    }) as HTMLInputElement
+    })) as HTMLInputElement
 
     input.focus()
     await user.keyboard("a")
@@ -309,5 +381,36 @@ describe("ContentReactRoot", () => {
 
     window.removeEventListener("keydown", hostPageKeyDown)
     window.removeEventListener("keyup", hostPageKeyUp)
+  })
+
+  it("stays unmarked when the build carries no instance color", async () => {
+    getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
+
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+
+    render(<ContentReactRoot />)
+
+    await screen.findByTestId("redemption-toaster")
+    expect(screen.queryByTestId("dev-identity-tag")).not.toBeInTheDocument()
+  })
+
+  it("marks injected UI with the build's identity while it is on the page", async () => {
+    getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
+    getDevIdentityMock.mockReturnValue(buildDevIdentity())
+
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+
+    render(<ContentReactRoot />)
+
+    const tag = await screen.findByTestId("dev-identity-tag")
+
+    expect(tag).toHaveTextContent(DEV_IDENTITY_FIXTURE_PATH_TAIL)
+    expect(tag).toHaveAttribute("title", DEV_IDENTITY_FIXTURE_PATH)
+    // The tag must never take clicks away from the page or from the toasts.
+    expect(tag).toHaveClass("pointer-events-none")
   })
 })

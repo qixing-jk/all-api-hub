@@ -10,6 +10,37 @@ import { protectionBypassHistoryStorage } from "~/services/protectionBypass/hist
 describe("protection bypass history", () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it("retains an explicit page request as distinct from an API fallback", async () => {
+    const id = await protectionBypassHistoryStorage.start({
+      execution: {
+        version: 2,
+        kind: "user_command",
+        command: "retry_checkin_account",
+        surface: "options",
+      },
+      task: {
+        kind: "explicit_page_fetch",
+        params: {
+          originUrl: "https://anyrouter.top",
+          fetchUrl: "https://anyrouter.top/api/user/sign_in",
+          fetchOptions: { method: "POST", body: "{}" },
+        },
+      },
+    })
+    await protectionBypassHistoryStorage.finish(id, {
+      response: { success: true, status: 200 },
+    })
+    const entry = (await protectionBypassHistoryStorage.list()).find(
+      (item) => item.id === id,
+    )
+    expect(entry).toMatchObject({
+      taskKind: "explicit_page_fetch",
+      method: "POST",
+      status: "completed",
+    })
+    expect(entry?.fallbackDiagnostic).toBeUndefined()
+  })
+
   it("evicts old entries and cannot resurrect them on completion", async () => {
     const request = {
       execution: createAutomaticProtectionBypassExecution(

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Button,
   Modal,
   Notice,
@@ -145,7 +146,7 @@ export function AssociateApiCredentialProfileDialog({
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex w-full items-center justify-end gap-x-2">
+        <ActionGroup className="w-full">
           <Button
             type="button"
             variant="outline"
@@ -165,7 +166,7 @@ export function AssociateApiCredentialProfileDialog({
             {isWorking ? <Spinner size="sm" /> : null}
             {t("apiCredentialProfiles:association.linkExisting")}
           </Button>
-        </div>
+        </ActionGroup>
       }
       panelTestId={KEY_MANAGEMENT_TEST_IDS.associateCredentialDialog}
     >

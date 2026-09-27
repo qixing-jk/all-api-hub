@@ -3,19 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import {
   deleteApiToken,
-  extractDefaultExchangeRate,
   fetchAccountData,
-  fetchCheckInStatus,
   fetchCurrentUser,
   fetchInviteLink,
-  fetchSiteStatus,
   fetchSub2ApiAnnouncements,
   fetchSub2ApiPricingCatalogs,
   fetchSub2ApiRuntimeModels,
   fetchSupportCheckIn,
-  fetchTodayIncome,
   fetchTodayUsage,
   fetchUserInfo,
   getOrCreateAccessToken,
@@ -329,7 +326,6 @@ describe("apiService sub2api parsing", () => {
     } as any)
 
     await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
-    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
     await expect(fetchTodayUsage(request as any)).resolves.toEqual({
       today_quota_consumption: 125000,
       today_prompt_tokens: 12,
@@ -339,15 +335,6 @@ describe("apiService sub2api parsing", () => {
         consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
         requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
         tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-      },
-    })
-    await expect(fetchTodayIncome(request as any)).resolves.toEqual({
-      today_income: 0,
-      todayStatsAvailability: {
-        income: {
-          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-        },
       },
     })
   })
@@ -360,11 +347,22 @@ describe("apiService sub2api parsing", () => {
         accessToken: "account-token",
       },
     } as ApiServiceAccountRequest
-    const first = await fetchTodayIncome(request)
+    vi.mocked(fetchApi).mockResolvedValue({
+      code: 0,
+      message: "ok",
+      data: { id: 1, username: "alice", balance: 2 },
+    } as any)
+    const first = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.SUB2API),
+    })
     first.todayStatsAvailability!.income.status =
       ACCOUNT_TODAY_METRIC_STATUSES.Complete
 
-    const second = await fetchTodayIncome(request)
+    const second = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.SUB2API),
+    })
 
     expect(second.todayStatsAvailability!.income).toEqual({
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -2533,16 +2531,18 @@ describe("apiService sub2api exported operations", () => {
     })
   })
 
-  it("maps the public Sub2API site name into the account status contract", async () => {
+  it("maps the public Sub2API site name into the bootstrap facts", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
       message: "ok",
       data: { site_name: "  Example Portal  " },
     } as any)
 
-    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
-      system_name: "Example Portal",
-      checkin_enabled: false,
+    await expect(
+      sub2ApiAccountBootstrap.loadBootstrapFacts(baseRequest as any),
+    ).resolves.toEqual({
+      displayName: "Example Portal",
+      checkInSupported: false,
     })
 
     expect(vi.mocked(fetchApi)).toHaveBeenCalledWith(
@@ -2558,38 +2558,30 @@ describe("apiService sub2api exported operations", () => {
     )
   })
 
-  it("keeps synthetic status when public settings have no site name", async () => {
+  it("keeps bootstrap defaults when public settings have no site name", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
       message: "ok",
       data: { site_name: null },
     } as any)
 
-    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
-      checkin_enabled: false,
+    await expect(
+      sub2ApiAccountBootstrap.loadBootstrapFacts(baseRequest as any),
+    ).resolves.toEqual({
+      checkInSupported: false,
     })
   })
 
-  it("keeps synthetic Sub2API status when the optional public name lookup fails", async () => {
+  it("keeps Sub2API defaults when the optional public name lookup fails", async () => {
     vi.mocked(fetchApi).mockRejectedValueOnce(
       new Error("public settings unavailable"),
     )
 
-    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
-      checkin_enabled: false,
+    await expect(
+      sub2ApiAccountBootstrap.loadBootstrapFacts(baseRequest as any),
+    ).resolves.toEqual({
+      checkInSupported: false,
     })
-  })
-
-  it("reuses the common exchange-rate extraction contract for status payloads", () => {
-    expect(
-      extractDefaultExchangeRate({
-        checkin_enabled: false,
-        price: 7.2,
-      } as any),
-    ).toBe(7.2)
-    expect(extractDefaultExchangeRate({ checkin_enabled: false } as any)).toBe(
-      null,
-    )
   })
 
   it("deletes tokens through the allow-missing-data success path", async () => {

@@ -50,6 +50,51 @@ class MockResizeObserver {
 }
 
 describe("EChart", () => {
+  it("updates chart fonts with appearance without replacing the chart or resetting interactions", async () => {
+    const instance = createInstance()
+    echartsInitMock.mockReturnValueOnce(instance)
+    const { container, unmount } = render(
+      <EChart
+        option={{
+          xAxis: {},
+          tooltip: {},
+          legend: {},
+          series: [{ type: "line", data: [1, 2] }],
+        }}
+      />,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledOnce())
+    const chart = container.firstElementChild as HTMLElement
+    chart.style.fontFamily = "Georgia, serif"
+    document.documentElement.setAttribute("data-theme-font", "serif")
+    await waitFor(() =>
+      expect(instance.setOption).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          textStyle: expect.objectContaining({ fontFamily: "Georgia, serif" }),
+          xAxis: expect.objectContaining({
+            axisLabel: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+          tooltip: expect.objectContaining({
+            textStyle: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+          legend: expect.objectContaining({
+            textStyle: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+        }),
+        expect.objectContaining({ notMerge: false }),
+      ),
+    )
+    expect(echartsInitMock).toHaveBeenCalledOnce()
+    unmount()
+    document.documentElement.removeAttribute("data-theme-font")
+  })
+
   beforeEach(() => {
     echartsInitMock.mockReset()
     MockResizeObserver.reset()
@@ -62,6 +107,37 @@ describe("EChart", () => {
     dispose: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
+  })
+
+  it("updates text size live and resets without accumulating increments", async () => {
+    const instance = createInstance()
+    echartsInitMock.mockReturnValueOnce(instance)
+    const { container, unmount } = render(
+      <EChart option={{ xAxis: { type: "category" } }} />,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledOnce())
+    const chart = container.firstElementChild as HTMLElement
+    for (const [size, increment, fontSize] of [
+      ["large", "0.125rem", 14],
+      ["extra-large", "0.25rem", 16],
+      ["default", "0rem", 12],
+    ] as const) {
+      chart.style.setProperty("--text-size-increment", increment)
+      document.documentElement.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, size)
+      await waitFor(() =>
+        expect(instance.setOption).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            xAxis: expect.objectContaining({
+              axisLabel: expect.objectContaining({ fontSize }),
+            }),
+          }),
+          expect.objectContaining({ notMerge: false }),
+        ),
+      )
+    }
+    expect(echartsInitMock).toHaveBeenCalledTimes(1)
+    unmount()
+    document.documentElement.removeAttribute(THEME_ATTRIBUTES.TEXT_SIZE)
   })
 
   it("recolors on root changes without replacing the chart or resetting interactions", async () => {

@@ -27,6 +27,8 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
+import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
+import type { VerificationOwnerReconcileInput } from "~/services/verification/verificationResultHistory"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
@@ -407,11 +409,33 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
 
 /**
  * Coerces stored profile config into the supported shape.
+ *
+ * Read-path entry point: it reports no remap, because normalizing on read must
+ * not cause a write. Callers that persist the result use
+ * {@link coerceApiCredentialProfilesConfigWithRemap} so de-duplication can be
+ * propagated to data keyed by profile id.
  */
 export function coerceApiCredentialProfilesConfig(
   raw: unknown,
   options?: { now?: number },
 ): ApiCredentialProfilesConfig {
+  return coerceApiCredentialProfilesConfigWithRemap(raw, options).config
+}
+
+/**
+ * Coerces stored profile config and reports which profile ids de-duplication
+ * dropped.
+ *
+ * When two stored profiles share an identity (apiType + baseUrl + apiKey) only
+ * the newest survives; `profileIdRemap` maps every input id to its surviving id.
+ */
+export function coerceApiCredentialProfilesConfigWithRemap(
+  raw: unknown,
+  options?: { now?: number },
+): {
+  config: ApiCredentialProfilesConfig
+  profileIdRemap: Map<string, string>
+} {
   const now = typeof options?.now === "number" ? options.now : Date.now()
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
@@ -487,22 +511,43 @@ export function coerceApiCredentialProfilesConfig(
   )
 
   return {
-    version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
-    profiles: deduped,
-    links,
-    linkTombstones,
-    lastUpdated: lastUpdated || now,
+    config: {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: deduped,
+      links,
+      linkTombstones,
+      lastUpdated: lastUpdated || now,
+    },
+    profileIdRemap,
   }
 }
 
 /**
  * Merges local and remote profile configs.
+ *
+ * Read-path entry point; see {@link mergeApiCredentialProfilesConfigsWithRemap}
+ * for the variant that also reports merged-away profile ids.
  */
 export function mergeApiCredentialProfilesConfigs(params: {
   local: unknown
   incoming: unknown
   now?: number
 }): ApiCredentialProfilesConfig {
+  return mergeApiCredentialProfilesConfigsWithRemap(params).config
+}
+
+/**
+ * Merges local and remote profile configs and reports which profile ids
+ * de-duplication dropped.
+ */
+export function mergeApiCredentialProfilesConfigsWithRemap(params: {
+  local: unknown
+  incoming: unknown
+  now?: number
+}): {
+  config: ApiCredentialProfilesConfig
+  profileIdRemap: Map<string, string>
+} {
   const now = typeof params.now === "number" ? params.now : Date.now()
   assertSupportedApiCredentialProfilesConfigVersion(params.incoming)
   const local = coerceApiCredentialProfilesConfig(params.local, { now })
@@ -527,11 +572,14 @@ export function mergeApiCredentialProfilesConfigs(params: {
   )
 
   return {
-    version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
-    profiles,
-    links,
-    linkTombstones,
-    lastUpdated: now,
+    config: {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles,
+      links,
+      linkTombstones,
+      lastUpdated: now,
+    },
+    profileIdRemap,
   }
 }
 
@@ -642,6 +690,43 @@ const createProfileLink = (params: {
   }
 }
 
+/**
+ * Propagates profile owner changes to persisted verification results.
+ *
+ * Called after the profile config is committed, never inside its lock: the
+ * verification store takes its own write lock, and nesting the two would widen
+ * the critical section (and deadlock if the order ever reversed).
+ *
+ * Removal and remapping are handed over in one call so the verification store
+ * applies them in its own fixed order. Splitting them into two calls would leave
+ * the order to whichever promise settled first.
+ */
+async function reconcileVerificationOwners(
+  reconcile: VerificationOwnerReconcileInput,
+): Promise<void> {
+  const remapProfileIds = new Map<string, string>()
+  for (const [from, to] of reconcile.remapProfileIds ?? []) {
+    if (from !== to) remapProfileIds.set(from, to)
+  }
+  const removeProfileIds = Array.from(reconcile.removeProfileIds ?? [])
+
+  if (removeProfileIds.length === 0 && remapProfileIds.size === 0) return
+
+  try {
+    await verificationResultHistoryStorage.reconcileOwners({
+      removeProfileIds,
+      remapProfileIds,
+    })
+  } catch (error) {
+    logger.error(
+      "Failed to reconcile verification results for profile change",
+      {
+        error,
+      },
+    )
+  }
+}
+
 class ApiCredentialProfilesStorageService {
   private storage: Storage
 
@@ -661,6 +746,19 @@ class ApiCredentialProfilesStorageService {
       API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
     )
     return coerceApiCredentialProfilesConfig(raw)
+  }
+
+  /**
+   * List the ids of profiles that currently exist, propagating read failures.
+   *
+   * Deliberately not built on {@link getConfig}, which folds a failed read into
+   * an empty default: a caller that reaps data keyed by profile id would read
+   * "no profiles exist" and delete everything. Callers that must distinguish
+   * "unreadable" from "empty" use this instead of {@link listProfiles}.
+   */
+  async listProfileIdsOrThrow(): Promise<string[]> {
+    const config = await this.readConfig()
+    return config.profiles.map((profile) => profile.id)
   }
 
   private async saveConfig(next: ApiCredentialProfilesConfig): Promise<void> {
@@ -695,36 +793,52 @@ class ApiCredentialProfilesStorageService {
    * The payload is coerced, normalized, and de-duped before persisting.
    */
   async importConfig(raw: unknown): Promise<ApiCredentialProfilesConfig> {
-    return this.withStorageWriteLock(async () => {
-      const now = Date.now()
-      const coerced = coerceApiCredentialProfilesConfig(raw, { now })
-      const next: ApiCredentialProfilesConfig = {
-        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
-        profiles: coerced.profiles,
-        links: coerced.links,
-        linkTombstones: coerced.linkTombstones,
-        lastUpdated: now,
-      }
-      await this.saveConfig(next)
-      return next
-    })
+    const { config, profileIdRemap } = await this.withStorageWriteLock(
+      async () => {
+        const now = Date.now()
+        // A replace-import de-dupes the incoming payload, so ids dropped here are
+        // merges rather than removals; the remap keeps their results reachable.
+        const { config: coerced, profileIdRemap } =
+          coerceApiCredentialProfilesConfigWithRemap(raw, { now })
+        const next: ApiCredentialProfilesConfig = {
+          version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+          profiles: coerced.profiles,
+          links: coerced.links,
+          linkTombstones: coerced.linkTombstones,
+          lastUpdated: now,
+        }
+        await this.saveConfig(next)
+        return { config: next, profileIdRemap }
+      },
+    )
+
+    await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
+
+    return config
   }
 
   /**
    * Merge an imported payload into the existing config using identity de-dupe.
    */
   async mergeConfig(raw: unknown): Promise<ApiCredentialProfilesConfig> {
-    return this.withStorageWriteLock(async () => {
-      const now = Date.now()
-      const merged = mergeApiCredentialProfilesConfigs({
-        local: await this.readConfig(),
-        incoming: raw,
-        now,
-      })
+    const { config, profileIdRemap } = await this.withStorageWriteLock(
+      async () => {
+        const now = Date.now()
+        const { config: merged, profileIdRemap } =
+          mergeApiCredentialProfilesConfigsWithRemap({
+            local: await this.readConfig(),
+            incoming: raw,
+            now,
+          })
 
-      await this.saveConfig(merged)
-      return merged
-    })
+        await this.saveConfig(merged)
+        return { config: merged, profileIdRemap }
+      },
+    )
+
+    await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
+
+    return config
   }
 
   /**
@@ -999,31 +1113,39 @@ class ApiCredentialProfilesStorageService {
     const now = Date.now()
     const nextProfile = createNormalizedProfile(input, now)
 
-    return this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
+    const { created, profileIdRemap } = await this.withStorageWriteLock(
+      async () => {
+        const config = cloneConfig(await this.readConfig())
 
-      const identityKey = getIdentityKey(nextProfile)
-      const existing = config.profiles.find(
-        (p) => getIdentityKey(p) === identityKey,
-      )
-      if (existing) {
-        return existing
-      }
+        const identityKey = getIdentityKey(nextProfile)
+        const existing = config.profiles.find(
+          (p) => getIdentityKey(p) === identityKey,
+        )
+        if (existing) {
+          return { created: existing, profileIdRemap: null }
+        }
 
-      const { profiles: dedupedProfiles } = dedupeProfiles([
-        ...(Array.isArray(config.profiles) ? config.profiles : []),
-        nextProfile,
-      ])
+        const { profiles: dedupedProfiles, profileIdRemap } = dedupeProfiles([
+          ...(Array.isArray(config.profiles) ? config.profiles : []),
+          nextProfile,
+        ])
 
-      const nextConfig = createNextConfig({
-        current: config,
-        profiles: dedupedProfiles,
-        now,
-      })
+        const nextConfig = createNextConfig({
+          current: config,
+          profiles: dedupedProfiles,
+          now,
+        })
 
-      await this.saveConfig(nextConfig)
-      return nextProfile
-    })
+        await this.saveConfig(nextConfig)
+        return { created: nextProfile, profileIdRemap }
+      },
+    )
+
+    if (profileIdRemap) {
+      await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
+    }
+
+    return created
   }
 
   /**
@@ -1037,133 +1159,157 @@ class ApiCredentialProfilesStorageService {
     id: string,
     updates: ApiCredentialProfileUpdateInput,
   ): Promise<ApiCredentialProfile> {
-    return this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
-      const profiles = Array.isArray(config.profiles) ? config.profiles : []
-      const index = profiles.findIndex((p) => p.id === id)
-      if (index === -1) {
-        throw new Error("Profile not found.")
-      }
+    const { profile, hasCredentialIdentityChanged, profileIdRemap } =
+      await this.withStorageWriteLock(async () => {
+        const config = cloneConfig(await this.readConfig())
+        const profiles = Array.isArray(config.profiles) ? config.profiles : []
+        const index = profiles.findIndex((p) => p.id === id)
+        if (index === -1) {
+          throw new Error("Profile not found.")
+        }
 
-      const current = profiles[index]
-      const nextName =
-        typeof updates.name === "string" ? updates.name.trim() : current.name
-      if (!nextName) {
-        throw new Error("Profile name cannot be empty.")
-      }
+        const current = profiles[index]
+        const nextName =
+          typeof updates.name === "string" ? updates.name.trim() : current.name
+        if (!nextName) {
+          throw new Error("Profile name cannot be empty.")
+        }
 
-      const nextApiKey =
-        typeof updates.apiKey === "string"
-          ? updates.apiKey.trim()
-          : current.apiKey
-      if (!nextApiKey) {
-        throw new Error("API key cannot be empty.")
-      }
+        const nextApiKey =
+          typeof updates.apiKey === "string"
+            ? updates.apiKey.trim()
+            : current.apiKey
+        if (!nextApiKey) {
+          throw new Error("API key cannot be empty.")
+        }
 
-      const nextApiType =
-        typeof updates.apiType === "string" ? updates.apiType : current.apiType
+        const nextApiType =
+          typeof updates.apiType === "string"
+            ? updates.apiType
+            : current.apiType
 
-      const rawBaseUrl =
-        typeof updates.baseUrl === "string" ? updates.baseUrl : current.baseUrl
-      const nextBaseUrl = normalizeProfileBaseUrl(nextApiType, rawBaseUrl)
-      if (!nextBaseUrl) {
-        throw new Error("Base URL is invalid.")
-      }
+        const rawBaseUrl =
+          typeof updates.baseUrl === "string"
+            ? updates.baseUrl
+            : current.baseUrl
+        const nextBaseUrl = normalizeProfileBaseUrl(nextApiType, rawBaseUrl)
+        if (!nextBaseUrl) {
+          throw new Error("Base URL is invalid.")
+        }
 
-      const shouldReCoerceTelemetryConfig =
-        updates.telemetryConfig !== undefined ||
-        nextApiType !== current.apiType ||
-        nextBaseUrl !== current.baseUrl
-      const currentTelemetryConfig = coerceApiCredentialTelemetryConfig(
-        current.telemetryConfig,
-        { baseUrl: current.baseUrl },
-      )
-      const nextTelemetryConfig = shouldReCoerceTelemetryConfig
-        ? coerceApiCredentialTelemetryConfig(
-            updates.telemetryConfig !== undefined
-              ? updates.telemetryConfig
-              : current.telemetryConfig,
-            { baseUrl: nextBaseUrl },
-          )
-        : currentTelemetryConfig
-      const hasTelemetryConfigChanged = !isSameTelemetryConfig(
-        nextTelemetryConfig,
-        currentTelemetryConfig,
-      )
-      const nextExpiresAt =
-        updates.expiresAt !== undefined
-          ? coerceOptionalTimestamp(updates.expiresAt)
-          : current.expiresAt
-      const { expiresAt: _currentExpiresAt, ...currentWithoutExpiresAt } =
-        current
+        const shouldReCoerceTelemetryConfig =
+          updates.telemetryConfig !== undefined ||
+          nextApiType !== current.apiType ||
+          nextBaseUrl !== current.baseUrl
+        const currentTelemetryConfig = coerceApiCredentialTelemetryConfig(
+          current.telemetryConfig,
+          { baseUrl: current.baseUrl },
+        )
+        const nextTelemetryConfig = shouldReCoerceTelemetryConfig
+          ? coerceApiCredentialTelemetryConfig(
+              updates.telemetryConfig !== undefined
+                ? updates.telemetryConfig
+                : current.telemetryConfig,
+              { baseUrl: nextBaseUrl },
+            )
+          : currentTelemetryConfig
+        const hasTelemetryConfigChanged = !isSameTelemetryConfig(
+          nextTelemetryConfig,
+          currentTelemetryConfig,
+        )
+        const nextExpiresAt =
+          updates.expiresAt !== undefined
+            ? coerceOptionalTimestamp(updates.expiresAt)
+            : current.expiresAt
+        const { expiresAt: _currentExpiresAt, ...currentWithoutExpiresAt } =
+          current
 
-      const next: ApiCredentialProfile = {
-        ...currentWithoutExpiresAt,
-        name: nextName,
-        apiType: nextApiType,
-        baseUrl: nextBaseUrl,
-        apiKey: nextApiKey,
-        tagIds:
-          updates.tagIds !== undefined
-            ? normalizeTagIdList(updates.tagIds)
-            : current.tagIds,
-        notes:
-          typeof updates.notes === "string"
-            ? updates.notes.trim()
-            : current.notes,
-        ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
-        telemetryConfig: nextTelemetryConfig,
-        telemetrySnapshot:
+        const next: ApiCredentialProfile = {
+          ...currentWithoutExpiresAt,
+          name: nextName,
+          apiType: nextApiType,
+          baseUrl: nextBaseUrl,
+          apiKey: nextApiKey,
+          tagIds:
+            updates.tagIds !== undefined
+              ? normalizeTagIdList(updates.tagIds)
+              : current.tagIds,
+          notes:
+            typeof updates.notes === "string"
+              ? updates.notes.trim()
+              : current.notes,
+          ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
+          telemetryConfig: nextTelemetryConfig,
+          telemetrySnapshot:
+            nextApiType !== current.apiType ||
+            nextBaseUrl !== current.baseUrl ||
+            nextApiKey !== current.apiKey ||
+            hasTelemetryConfigChanged
+              ? undefined
+              : current.telemetrySnapshot,
+          updatedAt: Date.now(),
+        }
+
+        const merged = profiles.map((p) => (p.id === id ? next : p))
+        const { profiles: dedupedProfiles, profileIdRemap } =
+          dedupeProfiles(merged)
+        const hasCredentialIdentityChanged =
           nextApiType !== current.apiType ||
           nextBaseUrl !== current.baseUrl ||
-          nextApiKey !== current.apiKey ||
-          hasTelemetryConfigChanged
-            ? undefined
-            : current.telemetrySnapshot,
-        updatedAt: Date.now(),
-      }
+          nextApiKey !== current.apiKey
+        const links = config.links.map((link) => ({
+          ...link,
+          profileId: profileIdRemap.get(link.profileId) ?? link.profileId,
+          state:
+            hasCredentialIdentityChanged && link.profileId === id
+              ? API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation
+              : link.state,
+        }))
+        const nextConfig = createNextConfig({
+          current: config,
+          profiles: dedupedProfiles,
+          links,
+          now: Date.now(),
+        })
 
-      const merged = profiles.map((p) => (p.id === id ? next : p))
-      const { profiles: dedupedProfiles, profileIdRemap } =
-        dedupeProfiles(merged)
-      const hasCredentialIdentityChanged =
-        nextApiType !== current.apiType ||
-        nextBaseUrl !== current.baseUrl ||
-        nextApiKey !== current.apiKey
-      const links = config.links.map((link) => ({
-        ...link,
-        profileId: profileIdRemap.get(link.profileId) ?? link.profileId,
-        state:
-          hasCredentialIdentityChanged && link.profileId === id
-            ? API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation
-            : link.state,
-      }))
-      const nextConfig = createNextConfig({
-        current: config,
-        profiles: dedupedProfiles,
-        links,
-        now: Date.now(),
+        await this.saveConfig(nextConfig)
+
+        const resolveSaved = (): ApiCredentialProfile => {
+          const saved = dedupedProfiles.find((p) => p.id === id)
+          if (saved) {
+            return saved
+          }
+
+          // If dedupe merged this profile into another identity twin, return the
+          // newest profile for that identity.
+          const identityKey = getIdentityKey(next)
+          const winner = dedupedProfiles.find(
+            (p) => getIdentityKey(p) === identityKey,
+          )
+          if (winner) {
+            return winner
+          }
+
+          return next
+        }
+
+        return {
+          profile: resolveSaved(),
+          hasCredentialIdentityChanged,
+          profileIdRemap,
+        }
       })
 
-      await this.saveConfig(nextConfig)
-
-      const saved = dedupedProfiles.find((p) => p.id === id)
-      if (saved) {
-        return saved
-      }
-
-      // If dedupe merged this profile into another identity twin, return the
-      // newest profile for that identity.
-      const identityKey = getIdentityKey(next)
-      const winner = dedupedProfiles.find(
-        (p) => getIdentityKey(p) === identityKey,
-      )
-      if (winner) {
-        return winner
-      }
-
-      return next
+    // A credential edit invalidates this profile's own results, while any twin
+    // merged into it was measured with the new credentials and must survive. Both
+    // are handed over in one call so the verification store removes before it
+    // remaps; doing it in two calls would lose the twin's results.
+    await reconcileVerificationOwners({
+      removeProfileIds: hasCredentialIdentityChanged ? [id] : [],
+      remapProfileIds: profileIdRemap,
     })
+
+    return profile
   }
 
   /**
@@ -1221,57 +1367,65 @@ class ApiCredentialProfilesStorageService {
       return { updatedProfiles: 0 }
     }
 
-    return this.withStorageWriteLock(async () => {
-      const now = Date.now()
-      const config = cloneConfig(await this.readConfig())
-      const profiles = Array.isArray(config.profiles) ? config.profiles : []
+    const { result, profileIdRemap } = await this.withStorageWriteLock(
+      async () => {
+        const now = Date.now()
+        const config = cloneConfig(await this.readConfig())
+        const profiles = Array.isArray(config.profiles) ? config.profiles : []
 
-      let updatedProfiles = 0
-      const nextProfiles = profiles.map((profile) => {
-        if (!Array.isArray(profile.tagIds) || profile.tagIds.length === 0) {
-          return profile
+        let updatedProfiles = 0
+        const nextProfiles = profiles.map((profile) => {
+          if (!Array.isArray(profile.tagIds) || profile.tagIds.length === 0) {
+            return profile
+          }
+          if (!profile.tagIds.includes(normalizedTagId)) {
+            return profile
+          }
+
+          updatedProfiles++
+          return {
+            ...profile,
+            tagIds: profile.tagIds.filter((id) => id !== normalizedTagId),
+            updatedAt: now,
+          }
+        })
+
+        if (updatedProfiles === 0) {
+          return { result: { updatedProfiles: 0 }, profileIdRemap: null }
         }
-        if (!profile.tagIds.includes(normalizedTagId)) {
-          return profile
-        }
 
-        updatedProfiles++
-        return {
-          ...profile,
-          tagIds: profile.tagIds.filter((id) => id !== normalizedTagId),
-          updatedAt: now,
-        }
-      })
+        const { profiles: dedupedProfiles, profileIdRemap } =
+          dedupeProfiles(nextProfiles)
+        const links = config.links.map((link) => ({
+          ...link,
+          profileId: profileIdRemap.get(link.profileId) ?? link.profileId,
+        }))
 
-      if (updatedProfiles === 0) {
-        return { updatedProfiles: 0 }
-      }
+        await this.saveConfig(
+          createNextConfig({
+            current: config,
+            profiles: dedupedProfiles,
+            links,
+            now,
+          }),
+        )
 
-      const { profiles: dedupedProfiles, profileIdRemap } =
-        dedupeProfiles(nextProfiles)
-      const links = config.links.map((link) => ({
-        ...link,
-        profileId: profileIdRemap.get(link.profileId) ?? link.profileId,
-      }))
+        return { result: { updatedProfiles }, profileIdRemap }
+      },
+    )
 
-      await this.saveConfig(
-        createNextConfig({
-          current: config,
-          profiles: dedupedProfiles,
-          links,
-          now,
-        }),
-      )
+    if (profileIdRemap) {
+      await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
+    }
 
-      return { updatedProfiles }
-    })
+    return result
   }
 
   /**
    * Delete a profile by id.
    */
   async deleteProfile(id: string): Promise<boolean> {
-    return this.withStorageWriteLock(async () => {
+    const deleted = await this.withStorageWriteLock(async () => {
       const config = cloneConfig(await this.readConfig())
       const profiles = Array.isArray(config.profiles) ? config.profiles : []
       const filtered = profiles.filter((p) => p.id !== id)
@@ -1295,6 +1449,12 @@ class ApiCredentialProfilesStorageService {
       )
       return true
     })
+
+    if (deleted) {
+      await reconcileVerificationOwners({ removeProfileIds: [id] })
+    }
+
+    return deleted
   }
 
   /**

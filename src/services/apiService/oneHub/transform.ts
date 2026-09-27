@@ -4,12 +4,12 @@ import type {
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
 } from "~/services/apiService/oneHub/type"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import {
   MODEL_VENDOR_EVIDENCE_KINDS,
@@ -30,7 +30,7 @@ export function transformModelPricing(
   modelPricing: OneHubModelPricing,
   userGroupMap: OneHubUserGroupMap = {},
   isDoneHub = false,
-): PricingResponse {
+): ModelCatalogSnapshot {
   const data: ModelPricing[] = Object.entries(modelPricing).map(
     ([modelName, model]) => {
       const enableGroups = model.groups.length > 0 ? model.groups : ["default"]
@@ -124,9 +124,12 @@ export function transformModelPricing(
 
   return {
     data,
-    group_ratio,
+    groupRatios: group_ratio,
     success: true,
-    usable_group,
+    groupAccess: {
+      kind: "authoritative",
+      usableGroups: Object.keys(usable_group),
+    },
   }
 }
 

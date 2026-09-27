@@ -1,12 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
 import {
   buildServiceCredentialKeyManagementEntry,
   formatKey,
-  formatQuota,
   isAccountKeyResourceLocatorMatch,
   isAccountRuntimeKeyLocatorMatch,
 } from "~/features/KeyManagement/utils"
@@ -150,24 +148,6 @@ describe("KeyManagement utils", () => {
           key.length - 4,
         )}`,
       )
-    })
-  })
-
-  describe("formatQuota", () => {
-    it("uses the unlimited label when the token has unlimited quota", () => {
-      expect(formatQuota(1000, true)).toBe(
-        "keyManagement:dialog.unlimitedQuota",
-      )
-    })
-
-    it("uses the unlimited label when the remaining quota is negative", () => {
-      expect(formatQuota(-1, false)).toBe("keyManagement:dialog.unlimitedQuota")
-    })
-
-    it("formats finite quota values as USD with two decimals", () => {
-      const quota = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR * 1.25
-
-      expect(formatQuota(quota, false)).toBe("$1.25")
     })
   })
 })

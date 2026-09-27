@@ -36,6 +36,7 @@ import {
 import { usageHistoryStorage } from "./storage"
 import {
   syncUsageHistoryForAccount,
+  USAGE_HISTORY_SYNC_TRIGGERS,
   type UsageHistorySyncTrigger,
 } from "./sync"
 
@@ -77,7 +78,7 @@ class UsageHistoryScheduler {
 
       // Await to keep the MV3 service worker alive while the sync runs.
       const result = await this.runSync({
-        trigger: "alarm",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Alarm,
       })
       if (!result) {
         return
@@ -176,11 +177,17 @@ class UsageHistoryScheduler {
   }
 
   async runAfterRefreshSync() {
-    return await this.runSync({ trigger: "afterRefresh" })
+    return await this.runSync({
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh,
+    })
   }
 
   async runManualSync(accountIds?: string[]) {
-    return await this.runSync({ trigger: "manual", accountIds, force: true })
+    return await this.runSync({
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+      accountIds,
+      force: true,
+    })
   }
 
   private async runSync(params: {
@@ -206,7 +213,7 @@ class UsageHistoryScheduler {
       }
 
       if (
-        params.trigger === "afterRefresh" &&
+        params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh &&
         config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH &&
         !params.force
       ) {
@@ -217,7 +224,7 @@ class UsageHistoryScheduler {
       }
 
       if (
-        params.trigger === "alarm" &&
+        params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm &&
         config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.ALARM &&
         !params.force
       ) {
@@ -269,7 +276,7 @@ class UsageHistoryScheduler {
       return { totals, perAccount }
     } catch (error) {
       logger.error("Sync run failed", error)
-      if (params.trigger === "alarm") {
+      if (params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm) {
         await notifyTaskResult({
           task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
           status: TASK_NOTIFICATION_STATUSES.Failure,

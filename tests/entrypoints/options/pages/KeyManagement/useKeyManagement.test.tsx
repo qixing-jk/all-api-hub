@@ -245,6 +245,8 @@ describe("useKeyManagement singleton credentials and selection", () => {
       ),
     ).toMatchObject({
       count: null,
+      hasData: false,
+      isLoading: false,
       errorType: "load-failed",
     })
     await act(async () => {

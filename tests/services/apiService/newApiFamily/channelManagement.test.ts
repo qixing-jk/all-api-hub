@@ -31,10 +31,6 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("~/constants/ui", () => ({
-  UI_CONSTANTS: {},
-}))
-
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   newApiFamilyRequests: {
     data: mockFetchApiData,

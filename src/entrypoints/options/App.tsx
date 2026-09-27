@@ -5,7 +5,10 @@ import { AppLayout } from "~/components/AppLayout"
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
 import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { THEME_CONTENT_WIDTH } from "~/constants/theme"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAppearanceSave } from "~/features/Appearance/useAppearanceSave"
+import { DevPanel, DevPanelProvider } from "~/features/DevPanel"
 import { hasOptionalPermissions } from "~/features/OptionsSearch/basicSettingsMeta"
 import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
 import { useOptionsSearchContext } from "~/features/OptionsSearch/useOptionsSearch"
@@ -16,12 +19,15 @@ import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
 } from "~/features/ProductTour/constants"
+import { StarPromotionCard } from "~/features/StarPromotion"
 import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
+import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/contracts"
+import { normalizeAppearance } from "~/types/theme"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
@@ -89,13 +95,23 @@ function OptionsPageContentFallback() {
  * Handles hash navigation, mobile sidebar toggles, and collapse state.
  */
 function OptionsPage() {
+  const { t } = useTranslation("settings")
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
     useHashNavigation()
   const { managedSiteType, preferences, showTodayCashflow } =
     useUserPreferencesContext()
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const appearance = normalizeAppearance(preferences?.appearance)
+  const isSidebarCollapsed = appearance.sidebarCollapsed
+  const {
+    save: saveAppearance,
+    saving: savingAppearance,
+    failed: appearanceSaveFailed,
+  } = useAppearanceSave()
+  const setIsSidebarCollapsed = (sidebarCollapsed: boolean) => {
+    void saveAppearance({ sidebarCollapsed })
+  }
 
   useProductAnalyticsPageView({
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -136,63 +152,85 @@ function OptionsPage() {
       isMobileSidebarOpen={isMobileSidebarOpen}
       onMobileSidebarOpenChange={setIsMobileSidebarOpen}
     >
-      <div
-        className="dark:bg-background bg-surface-subtle flex min-h-screen flex-col"
-        data-testid={OPTIONS_TEST_IDS.app}
-      >
-        <Header
-          onSearchOpen={() => setIsSearchOpen(true)}
-          onTitleClick={handleTitleClick}
-          onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          isMobileSidebarOpen={isMobileSidebarOpen}
-        />
-
-        <div className="dark:bg-background bg-surface-subtle flex flex-1 flex-col md:flex-row">
-          <Sidebar
-            activeMenuItem={activeMenuItem}
-            onMenuItemClick={handleMenuItemClick}
-            isMobileOpen={isMobileSidebarOpen}
-            onMobileClose={() => setIsMobileSidebarOpen(false)}
-            isCollapsed={isSidebarCollapsed}
-            onCollapseToggle={() => setIsSidebarCollapsed((prev) => !prev)}
+      <DevPanelProvider surface="options" page={activeMenuItem}>
+        <div
+          className="bg-workspace flex min-h-screen flex-col"
+          data-testid={OPTIONS_TEST_IDS.app}
+        >
+          <Header
+            onSearchOpen={() => setIsSearchOpen(true)}
+            onTitleClick={handleTitleClick}
+            onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            isMobileSidebarOpen={isMobileSidebarOpen}
           />
 
-          {/* 右侧内容区域 */}
-          <main
-            className="min-w-0 flex-1 focus:outline-none"
-            tabIndex={-1}
-            {...{ [PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE]: true }}
-          >
-            <div className="py-density-3 sm:py-density-5 md:py-density-6 mx-auto w-full max-w-7xl px-2 sm:px-4 md:px-6">
-              <PopupInterruptionHintBanner className="mb-density-3 sm:mb-density-4" />
-              <div
-                className="bg-background border-border overflow-hidden rounded-2xl border shadow-sm"
-                data-testid={OPTIONS_TEST_IDS.contentCard}
-                {...{
-                  [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,
-                }}
-              >
-                <Suspense fallback={<OptionsPageContentFallback />}>
-                  <ActiveComponent
-                    routeParams={routeParams}
-                    refreshKey={refreshKey}
-                  />
-                </Suspense>
-              </div>
-            </div>
-          </main>
-        </div>
+          <div className="flex flex-1 flex-col md:flex-row">
+            <Sidebar
+              activeMenuItem={activeMenuItem}
+              onMenuItemClick={handleMenuItemClick}
+              isMobileOpen={isMobileSidebarOpen}
+              onMobileClose={() => setIsMobileSidebarOpen(false)}
+              isCollapsed={isSidebarCollapsed}
+              onCollapseToggle={() =>
+                setIsSidebarCollapsed(!isSidebarCollapsed)
+              }
+              isCollapsePending={savingAppearance}
+            />
 
-        <OptionsSearchDialog
-          open={isSearchOpen}
-          onOpenChange={setIsSearchOpen}
-          onPageNavigate={(pageId, params) => {
-            handleMenuItemChange(pageId, params)
-            setIsMobileSidebarOpen(false)
-          }}
-          context={searchContext}
-        />
-      </div>
+            {/* 右侧内容区域 */}
+            <main
+              className="min-w-0 flex-1 focus:outline-none"
+              tabIndex={-1}
+              {...{ [PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE]: true }}
+            >
+              <div
+                className={cn(
+                  "mx-auto w-full",
+                  appearance.contentWidth === THEME_CONTENT_WIDTH.CENTERED &&
+                    "max-w-7xl",
+                )}
+              >
+                <PopupInterruptionHintBanner className="mt-density-4 mx-4 sm:mx-6" />
+                {appearanceSaveFailed && (
+                  <p
+                    role="alert"
+                    className="text-destructive-text mt-density-4 mx-4 text-sm sm:mx-6"
+                  >
+                    {t("settings:appearance.saveFailed")}
+                  </p>
+                )}
+                <div
+                  className="min-w-0"
+                  data-testid={OPTIONS_TEST_IDS.contentCard}
+                  {...{
+                    [PRODUCT_TOUR_TARGET_ATTRIBUTE]:
+                      PRODUCT_TOUR_TARGETS.Content,
+                  }}
+                >
+                  <Suspense fallback={<OptionsPageContentFallback />}>
+                    <ActiveComponent
+                      routeParams={routeParams}
+                      refreshKey={refreshKey}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            </main>
+          </div>
+
+          <OptionsSearchDialog
+            open={isSearchOpen}
+            onOpenChange={setIsSearchOpen}
+            onPageNavigate={(pageId, params) => {
+              handleMenuItemChange(pageId, params)
+              setIsMobileSidebarOpen(false)
+            }}
+            context={searchContext}
+          />
+          <DevPanel />
+          <StarPromotionCard />
+        </div>
+      </DevPanelProvider>
     </ProductTourProvider>
   )
 }

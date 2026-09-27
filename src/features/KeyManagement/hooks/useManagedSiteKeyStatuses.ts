@@ -11,6 +11,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
@@ -144,6 +145,12 @@ export function useManagedSiteKeyStatuses(
   const check = useCallback(
     async (ids: readonly string[], options: CheckOptions = {}) => {
       if (!supported) return {}
+      // One operation context per scan: every key in it reuses the channel search
+      // and candidate-secret reads that an earlier key's base URL already resolved.
+      // Each scan is also fresh, so it never joins a search that predates its start.
+      const operationContext = createManagedSiteOperationContext({
+        freshChannelSearches: true,
+      })
       const queue = ids.flatMap((id) => {
         const target = targetsRef.current.get(id)
         if (
@@ -156,7 +163,15 @@ export function useManagedSiteKeyStatuses(
         if (options.force) channelKeysRef.current.delete(id)
         const controller = new AbortController()
         controllersRef.current.set(id, controller)
-        return [{ ...target, id, controller, runId: ++nextRunRef.current }]
+        return [
+          {
+            ...target,
+            id,
+            controller,
+            runId: ++nextRunRef.current,
+            operationContext,
+          },
+        ]
       })
       if (!queue.length) return {}
       update({
@@ -191,9 +206,11 @@ export function useManagedSiteKeyStatuses(
                 runtimeKey: target.key,
                 signal: target.controller.signal,
                 requestScheduling: {
-                  priority: options.force ? "foreground" : "background",
+                  priority: options.force
+                    ? REQUEST_SCHEDULING_PRIORITIES.Foreground
+                    : REQUEST_SCHEDULING_PRIORITIES.Background,
                 },
-                operationContext: createManagedSiteOperationContext(),
+                operationContext: target.operationContext,
                 resolvedChannelKeysByResourceKey:
                   options.resolvedChannelKeysByResourceKey ??
                   channelKeysRef.current.get(target.id),

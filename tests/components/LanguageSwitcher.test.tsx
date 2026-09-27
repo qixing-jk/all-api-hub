@@ -118,20 +118,6 @@ vi.mock("~/components/ui", () => ({
     </button>
   ),
   SelectValue: () => <span>value</span>,
-  ToggleButton: ({
-    children,
-    isActive,
-    showActiveIndicator,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    isActive?: boolean
-    showActiveIndicator?: boolean
-  }) => (
-    <button type="button" data-active={String(Boolean(isActive))} {...props}>
-      {showActiveIndicator ? <span data-testid="active-indicator" /> : null}
-      {children}
-    </button>
-  ),
 }))
 
 vi.mock("~/components/ui/dropdown-menu", () => ({

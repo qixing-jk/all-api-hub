@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -137,7 +138,7 @@ export default function BookmarkAccountImportDialog({
 
   const footer =
     dialog.stage === "review" ? (
-      <div className="gap-y-density-2 flex flex-col-reverse gap-x-2 sm:flex-row sm:justify-between">
+      <ActionGroup layout="stack-on-narrow" className="sm:justify-between">
         <Button
           type="button"
           variant="secondary"
@@ -156,7 +157,7 @@ export default function BookmarkAccountImportDialog({
         >
           {translateImportCount(t, importCount)}
         </Button>
-      </div>
+      </ActionGroup>
     ) : null
 
   return (

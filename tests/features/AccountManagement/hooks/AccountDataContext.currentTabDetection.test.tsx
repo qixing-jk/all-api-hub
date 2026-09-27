@@ -1,7 +1,7 @@
 import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -212,6 +212,13 @@ function prepareAccountSnapshot(accounts: ReturnType<typeof createAccount>[]) {
 }
 
 describe("AccountDataContext current tab detection", () => {
+  beforeEach(() => {
+    vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue({
+      success: true,
+      pageContext: "ordinary",
+      tabIds: [],
+    })
+  })
   afterEach(() => {
     vi.restoreAllMocks()
     activeTabs = []
@@ -252,6 +259,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockImplementation(async (_tabId, message) => ({
         success: true,
+        pageContext: "ordinary",
         data: (message as { verifyIdentity?: boolean }).verifyIdentity
           ? { userId: "2", identityVerified: true }
           : { userId: "1", user: { id: 1 } },
@@ -306,6 +314,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: {
           identityVerified: true,
           userId: "aihubmix-user",
@@ -368,6 +377,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: {
           identityVerified: true,
           userId: " aihubmix-user ",
@@ -441,6 +451,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: {
           identityVerified: true,
           userId: "aihubmix-user",
@@ -511,6 +522,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: {
           identityVerified: true,
           userId: "aihubmix-stable-id",
@@ -573,6 +585,7 @@ describe("AccountDataContext current tab detection", () => {
 
     vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
       success: true,
+      pageContext: "ordinary",
       data: { identityVerified: true, userId: "999", user: { id: 999 } },
     } as any)
 
@@ -626,6 +639,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { identityVerified: true, userId: "2", user: { id: 2 } },
       })
 
@@ -646,6 +660,7 @@ describe("AccountDataContext current tab detection", () => {
 
     sendMessageSpy.mockResolvedValue({
       success: true,
+      pageContext: "ordinary",
       data: { identityVerified: true, userId: "1", user: { id: 1 } },
     })
     await act(async () => {
@@ -713,6 +728,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "2", identityVerified: true },
       })
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -740,6 +756,7 @@ describe("AccountDataContext current tab detection", () => {
     await act(async () => {
       pending.resolve({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "1", identityVerified: true },
       })
       await pending.promise
@@ -800,6 +817,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "1", identityVerified: true },
       })
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -847,6 +865,7 @@ describe("AccountDataContext current tab detection", () => {
       .mockReturnValueOnce(pending.promise)
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "2", identityVerified: true },
       })
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -863,6 +882,7 @@ describe("AccountDataContext current tab detection", () => {
         await listener(303, { status: "loading" }, activeTabs[0])
       pending.resolve({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "1", identityVerified: true },
       })
       await pending.promise
@@ -913,6 +933,7 @@ describe("AccountDataContext current tab detection", () => {
     await act(async () => {
       pendingVerification.resolve({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "2", identityVerified: true },
       })
       await pendingVerification.promise
@@ -925,7 +946,11 @@ describe("AccountDataContext current tab detection", () => {
 
   it.each([
     { success: false },
-    { success: true, data: { userId: "2", user: { id: 2 } } },
+    {
+      success: true,
+      pageContext: "ordinary",
+      data: { userId: "2", user: { id: 2 } },
+    },
   ])(
     "removes the current-account sort when rechecking no longer verifies the login: %j",
     async (unverifiedResponse) => {
@@ -946,6 +971,7 @@ describe("AccountDataContext current tab detection", () => {
         .spyOn(browser.tabs, "sendMessage")
         .mockResolvedValue({
           success: true,
+          pageContext: "ordinary",
           data: { userId: "2", identityVerified: true },
         })
       let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -997,6 +1023,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "1", identityVerified: true },
       })
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -1014,6 +1041,7 @@ describe("AccountDataContext current tab detection", () => {
     now += 2000
     sendMessageSpy.mockResolvedValue({
       success: true,
+      pageContext: "ordinary",
       data: { userId: "2", identityVerified: true },
     })
     await act(async () => {
@@ -1046,6 +1074,7 @@ describe("AccountDataContext current tab detection", () => {
       .mockReturnValueOnce(pending.promise)
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "2", identityVerified: true },
       })
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -1071,6 +1100,7 @@ describe("AccountDataContext current tab detection", () => {
     await act(async () => {
       pending.resolve({
         success: true,
+        pageContext: "ordinary",
         data: { userId: "1", identityVerified: true },
       })
       await pending.promise
@@ -1114,6 +1144,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { identityVerified: true, userId: "2", user: { id: 2 } },
       } as any)
 
@@ -1175,6 +1206,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
+        pageContext: "ordinary",
         data: { identityVerified: true, userId: "2" },
       } as any)
 
@@ -1255,6 +1287,7 @@ describe("AccountDataContext current tab detection", () => {
     await act(async () => {
       firstUserResponse.resolve({
         success: true,
+        pageContext: "ordinary",
         data: {
           identityVerified: true,
           userId: "aihubmix-user",

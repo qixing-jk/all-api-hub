@@ -593,11 +593,100 @@ class SiteAnnouncementStorage {
   }
 
   async markRead(recordId: string): Promise<boolean> {
+    return (await this.markRecordsRead([recordId])) > 0
+  }
+
+  /**
+   * Marks discovered identities read even when their cached records were
+   * evicted by per-site retention before the caller classified the batch.
+   */
+  async markRecordIdentitiesRead(
+    records: ReadonlyArray<
+      Pick<
+        SiteAnnouncementRecord,
+        "siteKey" | "fingerprint" | "firstSeenAt" | "lastSeenAt"
+      >
+    >,
+  ): Promise<number> {
+    if (records.length === 0) {
+      return 0
+    }
+
+    const identities = await Promise.all(
+      records.map(async (record) => ({
+        ...record,
+        digest: await digestAnnouncementFingerprint(record.fingerprint),
+      })),
+    )
+
+    return await this.mutateStore((store) => {
+      const now = Date.now()
+      let markedCount = 0
+      let recordSyncChanged = false
+      const identitiesBySite = new Map<string, Map<string, string>>()
+
+      for (const identity of identities) {
+        const markers = (store.identityLedger[identity.siteKey] ??= {})
+        const marker = (markers[identity.digest] ??= {
+          firstSeenAt: identity.firstSeenAt,
+          lastSeenAt: identity.lastSeenAt,
+        })
+        if (marker.readAt === undefined) {
+          marker.readAt = now
+          markedCount += 1
+        }
+
+        const identitiesByFingerprint =
+          identitiesBySite.get(identity.siteKey) ?? new Map<string, string>()
+        identitiesByFingerprint.set(identity.fingerprint, identity.digest)
+        identitiesBySite.set(identity.siteKey, identitiesByFingerprint)
+      }
+
+      for (const [siteKey, identitiesByFingerprint] of identitiesBySite) {
+        const site = store.sites[siteKey]
+        if (!site) continue
+
+        for (const record of site.records) {
+          const digest = identitiesByFingerprint.get(record.fingerprint)
+          if (!digest) continue
+
+          const readAt = store.identityLedger[siteKey]?.[digest]?.readAt
+          if (readAt === undefined) continue
+
+          recordSyncChanged ||= !record.read || record.readAt !== readAt
+          record.read = true
+          record.readAt = readAt
+        }
+      }
+
+      return {
+        changed: markedCount > 0 || recordSyncChanged,
+        result: markedCount,
+      }
+    })
+  }
+
+  /**
+   * Marks several records as read in one write, for batches that were stored as
+   * history rather than as news.
+   */
+  async markRecordsRead(recordIds: string[]): Promise<number> {
+    if (recordIds.length === 0) {
+      return 0
+    }
+
+    const recordIdSet = new Set(recordIds)
+
     return await this.mutateStore(async (store) => {
+      const now = Date.now()
+      let markedCount = 0
+
       for (const site of Object.values(store.sites)) {
-        const record = site.records.find((item) => item.id === recordId)
-        if (record && !record.read) {
-          const now = Date.now()
+        for (const record of site.records) {
+          if (!recordIdSet.has(record.id) || record.read) {
+            continue
+          }
+
           const digest = await digestAnnouncementFingerprint(record.fingerprint)
           const markers = (store.identityLedger[site.siteKey] ??= {})
           const marker = (markers[digest] ??= {
@@ -607,10 +696,11 @@ class SiteAnnouncementStorage {
           marker.readAt = now
           record.read = true
           record.readAt = now
-          return { changed: true, result: true }
+          markedCount += 1
         }
       }
-      return { changed: false, result: false }
+
+      return { changed: markedCount > 0, result: markedCount }
     })
   }
 

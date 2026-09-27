@@ -7,7 +7,6 @@ import {
   type ManagedSiteType,
 } from "~/services/accountSiteDefinitions/siteTypes"
 import {
-  getAccountSiteDomainRuleMetadata,
   getAccountSiteRouteMetadata,
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
@@ -16,6 +15,7 @@ export { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions
 export {
   ACCOUNT_SITE_TYPES,
   ACCOUNT_SITE_TYPE_VALUES,
+  isUnknownAccountSiteType,
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
@@ -51,8 +51,6 @@ export function isManagedSiteType(value: unknown): value is ManagedSiteType {
 
 // 定义网站类型及匹配规则
 export const ACCOUNT_SITE_TITLE_RULES = getAccountSiteTitleRuleMetadata()
-
-export const ACCOUNT_SITE_DOMAIN_RULES = getAccountSiteDomainRuleMetadata()
 
 /**
  * 获取站点显式声明的页面路径（null 表示未提供页面导航）

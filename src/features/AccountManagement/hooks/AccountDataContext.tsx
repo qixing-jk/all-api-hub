@@ -36,7 +36,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
-import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   buildEstimatedTodayIncomeMoneyTotals,
@@ -82,6 +82,7 @@ import {
   onTabUpdated,
 } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -279,7 +280,7 @@ export const AccountDataProvider = ({
       currentTagStore: TagStore
       balanceHistoryStore: Awaited<
         ReturnType<typeof dailyBalanceHistoryStorage.getStore>
-      >
+      > | null
       todayKey: string
     }) => {
       const estimatedByAccountId = new Map<string, CurrencyAmount | null>()
@@ -346,7 +347,7 @@ export const AccountDataProvider = ({
     try {
       // Look up the currently active tab. We need both the URL (for origin matching) and the
       // tab ID (for messaging + deduping repeated checks for the same tab).
-      const tabs = await getActiveTabs()
+      const tabs = await excludeInternalTabs(await getActiveTabs())
       const tab = tabs?.[0]
       const tabUrl = typeof tab?.url === "string" ? tab.url : null
       const tabId = typeof tab?.id === "number" ? tab.id : null
@@ -501,7 +502,9 @@ export const AccountDataProvider = ({
         await Promise.all([
           accountReadModels.getAccountManagementSnapshot(),
           tagStorage.getTagStore(),
-          dailyBalanceHistoryStorage.getStore(),
+          estimatedTodayIncomeEnabled
+            ? dailyBalanceHistoryStorage.getStore()
+            : null,
         ])
       const {
         accounts: allAccounts,
@@ -860,15 +863,24 @@ export const AccountDataProvider = ({
             reloadGeneration
         }
 
-        const reloadedAccounts = await Promise.all(
-          uniqueIds.map(async (accountId) => {
-            const account = await accountQueries.getAccountById(accountId)
-            if (!account) {
-              throw new Error(`Account not found: ${accountId}`)
-            }
-            return account
-          }),
+        // Each single-account query reads the complete storage envelope. Read
+        // batches once to avoid repeating that work for every updated account.
+        const storedAccounts =
+          uniqueIds.length === 1
+            ? [await accountQueries.getAccountById(uniqueIds[0])]
+            : await accountQueries.getAllAccounts()
+        const storedById = new Map(
+          storedAccounts
+            .filter((account): account is SiteAccount => account !== null)
+            .map((account) => [account.id, account]),
         )
+        const reloadedAccounts = uniqueIds.map((accountId) => {
+          const account = storedById.get(accountId)
+          if (!account) {
+            throw new Error(`Account not found: ${accountId}`)
+          }
+          return account
+        })
         const activeReloadedAccounts = reloadedAccounts.filter(
           (account) =>
             targetedReloadGenerationByAccountIdRef.current[account.id] ===
@@ -894,7 +906,9 @@ export const AccountDataProvider = ({
 
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
-        const balanceHistoryStore = await dailyBalanceHistoryStorage.getStore()
+        const balanceHistoryStore = estimatedTodayIncomeEnabled
+          ? await dailyBalanceHistoryStorage.getStore()
+          : null
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         const latestActiveReloadedAccounts = activeReloadedAccounts.filter(
           (account) =>
@@ -1200,10 +1214,13 @@ export const AccountDataProvider = ({
   const [matchedAccountScores, setMatchedAccountScores] = useState<
     Record<string, number>
   >({})
+  const openTabsCheckSeqRef = useRef(0)
   // Check and match open tabs with accounts
   const checkOpenTabs = useCallback(async () => {
+    const seq = (openTabsCheckSeqRef.current += 1)
     try {
-      const tabs = await getAllTabs()
+      const tabs = await excludeInternalTabs(await getAllTabs())
+      if (seq !== openTabsCheckSeqRef.current) return
       if (!tabs || tabs.length === 0 || displayData.length === 0) {
         setMatchedAccountScores({})
         return
@@ -1220,10 +1237,14 @@ export const AccountDataProvider = ({
 
       setMatchedAccountScores(scores)
     } catch (error) {
+      if (seq !== openTabsCheckSeqRef.current) return
       logger.error("Error matching open tabs", error)
       setMatchedAccountScores({})
     } finally {
-      if (!hasResolvedInitialOpenTabsRef.current) {
+      if (
+        seq === openTabsCheckSeqRef.current &&
+        !hasResolvedInitialOpenTabsRef.current
+      ) {
         setHasResolvedInitialOpenTabs(true)
       }
     }
@@ -1260,6 +1281,8 @@ export const AccountDataProvider = ({
     })
 
     return () => {
+      // Invalidate scans from the previous account snapshot or an unmounted UI.
+      openTabsCheckSeqRef.current += 1
       cleanupActivated()
       cleanupUpdated()
       cleanupRemoved()

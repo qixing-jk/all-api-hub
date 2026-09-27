@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
 
@@ -17,9 +17,9 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let siteStatus = null
+    let bootstrapFacts = null
     try {
-      siteStatus = await sub2ApiAccountBootstrap.fetchSiteStatus(
+      bootstrapFacts = await sub2ApiAccountBootstrap.loadBootstrapFacts(
         helpers.createServiceRequest({
           baseUrl: url,
           context,
@@ -36,10 +36,9 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
     }
 
     const exchangeRate =
-      sub2ApiAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
     helpers.captureRecoveryData({ exchangeRate })
-    const siteName = await helpers.fetchSiteName(siteStatus)
+    const siteName = await helpers.fetchSiteName(bootstrapFacts)
     helpers.captureRecoveryData({ siteName })
 
     return {

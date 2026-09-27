@@ -37,7 +37,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
-import { SiteHealthStatus } from "~/types"
 import {
   API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_SOURCES,
@@ -49,6 +48,10 @@ import {
   formatLocaleDateTime,
   maskSecretForDisplay,
 } from "~/utils/core/formatters"
+import {
+  getHealthStatusDisplay,
+  getStatusIndicatorColor,
+} from "~/utils/healthStatus"
 
 import {
   type ApiCredentialProfileAssociatedKeyState,
@@ -95,16 +98,6 @@ interface ApiCredentialProfileListItemProps {
   onOpenAssociatedKey?: (associationId: string) => void
   onConfirmAssociatedKey?: (associationId: string) => void
   onUnlinkAssociatedKey?: (associationId: string) => void
-}
-
-/**
- * Maps telemetry health to the small status indicator color.
- */
-function getHealthIndicatorColor(status: SiteHealthStatus | undefined): string {
-  if (status === SiteHealthStatus.Healthy) return "bg-success"
-  if (status === SiteHealthStatus.Warning) return "bg-warning"
-  if (status === SiteHealthStatus.Error) return "bg-destructive"
-  return "bg-surface-inverse-muted"
 }
 
 const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -188,21 +181,6 @@ function getTelemetrySourceLabel(
     return t("apiCredentialProfiles:telemetry.source.customReadOnlyEndpoint")
   }
   return source
-}
-
-/**
- * Returns a localized label for telemetry health states.
- */
-function getHealthStatusLabel(
-  t: TFunction,
-  status: SiteHealthStatus | undefined,
-): string {
-  if (status === SiteHealthStatus.Healthy)
-    return t("account:healthStatus.healthy")
-  if (status === SiteHealthStatus.Warning)
-    return t("account:healthStatus.warning")
-  if (status === SiteHealthStatus.Error) return t("account:healthStatus.error")
-  return t("account:healthStatus.unknown")
 }
 
 /** Localizes known product-owned health reasons while preserving unknown diagnostics. */
@@ -309,7 +287,7 @@ export function ApiCredentialProfileListItem({
   const health = telemetry?.health
   const healthTitle = [
     t("apiCredentialProfiles:telemetry.health"),
-    getHealthStatusLabel(t, health?.status),
+    getHealthStatusDisplay(health?.status, t).text,
     getTelemetryHealthReason(t, health?.reason) || telemetry?.lastError || "",
   ]
     .filter(Boolean)
@@ -448,7 +426,7 @@ export function ApiCredentialProfileListItem({
                     {t("apiCredentialProfiles:list.apiKey")}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 min-w-0 flex-1 truncate rounded px-2 font-mono text-[10px] sm:text-xs">
+                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 text-3xs min-w-0 flex-1 truncate rounded px-2 font-mono sm:text-xs">
                       {visibleKeys.has(profile.id)
                         ? profile.apiKey
                         : maskSecretForDisplay(profile.apiKey)}
@@ -485,7 +463,9 @@ export function ApiCredentialProfileListItem({
                       }
                       aria-label={t("apiCredentialProfiles:actions.copyApiKey")}
                       className="shrink-0"
-                      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKey
+                      }
                     >
                       <Copy className="h-4 w-4" />
                     </IconButton>
@@ -522,7 +502,7 @@ export function ApiCredentialProfileListItem({
                         }
                       >
                         <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusIndicatorColor(
                             health?.status,
                           )}`}
                           title={healthTitle}
@@ -554,7 +534,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 h-auto min-h-0 shrink-0 px-1.5 text-[11px]"
+                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 text-2xs h-auto min-h-0 shrink-0 px-1.5"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
@@ -576,7 +556,7 @@ export function ApiCredentialProfileListItem({
 
               {profile.notes?.trim() ? (
                 <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground py-density-2 border-l-2 px-3 text-xs">
-                  <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-[11px] font-medium tracking-wide">
+                  <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-2xs font-medium tracking-wide">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>
                   <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">

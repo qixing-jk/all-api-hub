@@ -562,6 +562,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           return {
             accountId: account.id,
             name: account.name,
+            hasData: hasEntry,
+            isLoading:
+              supported &&
+              (!state || state.status === KEY_MANAGEMENT_LOAD_STATUSES.Loading),
             count: hasEntry
               ? Number(
                   state!

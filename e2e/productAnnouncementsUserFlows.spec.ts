@@ -213,8 +213,8 @@ test("persists product announcement seen, dismiss, and restore state across opti
   await waitForExtensionRoot(popupPage)
 
   await expect(
-    popupPage.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.reservedSlot),
-  ).toBeVisible()
+    popupPage.getByTestId("product-announcement-reserved-slot"),
+  ).toHaveCount(0)
   await expect(
     popupPage.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.button),
   ).toHaveCount(0)

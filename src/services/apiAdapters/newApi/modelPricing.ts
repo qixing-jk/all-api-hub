@@ -9,6 +9,8 @@ import * as modelPricing from "~/services/apiService/newApiFamily/default/modelP
 import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 
+import { applyFamilyGroupEvidence } from "./groupEvidence"
+
 /**
  * Create account model-pricing operations bound to the New API-family site type.
  */
@@ -17,8 +19,13 @@ export function createNewApiModelPricing(
 ): ModelPricingCapability {
   if (siteType === SITE_TYPES.ONE_HUB || siteType === SITE_TYPES.DONE_HUB) {
     return {
-      fetchPricing: (request) =>
-        oneHub.fetchModelPricing(request, siteType === SITE_TYPES.DONE_HUB),
+      fetchPricing: async (request) =>
+        applyFamilyGroupEvidence(
+          await oneHub.fetchModelPricing(
+            request,
+            siteType === SITE_TYPES.DONE_HUB,
+          ),
+        ),
     }
   }
 
@@ -26,7 +33,9 @@ export function createNewApiModelPricing(
     return {
       fetchPricing: async (request) => {
         const { pricing, status } = await apiyi.fetchModelPricing(request)
-        return normalizeApiYiModelPricingResponse(pricing, status)
+        return applyFamilyGroupEvidence(
+          normalizeApiYiModelPricingResponse(pricing, status),
+        )
       },
     }
   }

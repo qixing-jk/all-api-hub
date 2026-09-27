@@ -1,5 +1,5 @@
 {
-  "description": "All API Hub-Daten sichern, migrieren oder synchronisieren.",
+  "description": "Erweiterungsdaten über lokale Dateien oder die Cloud sichern, wiederherstellen und übertragen.",
   "export": {
     "accountData": "Kontodaten",
     "accountDataDescription": "Nur Konten, Lesezeichen und Tags exportieren.",

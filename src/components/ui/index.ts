@@ -77,10 +77,15 @@ export { Progress, type ProgressProps } from "./progress"
 export { FormField } from "./FormField"
 export { ToggleButton, toggleButtonVariants } from "./ToggleButton"
 export {
-  ResponsiveButtonGroup,
-  ResponsiveToggleGroup,
-  type ResponsiveToggleGroupOption,
-} from "../ResponsiveButtonGroup"
+  ActionGroup,
+  actionGroupClassName,
+  type ActionGroupLayout,
+  type ActionGroupProps,
+} from "./ActionGroup"
+export {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from "../SegmentedControl"
 export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"

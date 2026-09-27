@@ -2,12 +2,9 @@ import { AppWindow, Layers2, PanelTop, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
-  ResponsiveButtonGroup,
-  responsiveButtonGroupItemClassName,
-} from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
-import {
+  ActionGroup,
   Alert,
   BodySmall,
   Button,
@@ -24,10 +21,12 @@ import {
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { cn } from "~/lib/utils"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
@@ -38,6 +37,7 @@ import {
 } from "~/utils/browser/protectionBypass"
 import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { ProtectionBypassDevTrigger } from "./ProtectionBypassDevTrigger"
 import ProtectionBypassHistory from "./ProtectionBypassHistory"
@@ -158,11 +158,31 @@ export default function ShieldSettings() {
   )
 
   const mode = normalizedPreferences.tempContextMode
-  const methodHints = [
-    [TEMP_CONTEXT_PREFERENCE_MODES.Auto, t("refresh.shieldMethodHintAuto")],
-    [TEMP_CONTEXT_MODES.Tab, t("refresh.shieldMethodHintTab")],
-    [TEMP_CONTEXT_MODES.Composite, t("refresh.shieldMethodHintComposite")],
-    [TEMP_CONTEXT_MODES.Window, t("refresh.shieldMethodHintWindow")],
+  const methods = [
+    {
+      value: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      label: t("refresh.shieldMethodAuto"),
+      hint: t("refresh.shieldMethodHintAuto"),
+      icon: Sparkles,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Tab,
+      label: t("refresh.shieldMethodTab"),
+      hint: t("refresh.shieldMethodHintTab"),
+      icon: PanelTop,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Composite,
+      label: t("refresh.shieldMethodComposite"),
+      hint: t("refresh.shieldMethodHintComposite"),
+      icon: AppWindow,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Window,
+      label: t("refresh.shieldMethodWindow"),
+      hint: t("refresh.shieldMethodHintWindow"),
+      icon: Layers2,
+    },
   ] as const
   const automaticFeatures = SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
     ({ feature, titleKey }) => [feature, t(titleKey)] as const,
@@ -170,6 +190,14 @@ export default function ShieldSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation={false}
+      resetDisabled={matchesDefaultSettings(
+        normalizedPreferences,
+        DEFAULT_PREFERENCES.tempWindowFallback,
+      )}
+      onReset={() =>
+        updateTempWindowFallback(DEFAULT_PREFERENCES.tempWindowFallback!)
+      }
       id={SHIELD_SETTINGS_TARGET_IDS.root}
       title={t("refresh.shieldTitle")}
       description={shieldDescription}
@@ -181,7 +209,7 @@ export default function ShieldSettings() {
           title={t("refresh.shieldPermissionWarningTitle")}
           description={t("refresh.shieldPermissionWarningDesc")}
         >
-          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="mt-density-3 items-stretch justify-start">
             <WorkflowTransitionButton
               size="sm"
               onClick={() =>
@@ -197,7 +225,7 @@ export default function ShieldSettings() {
             >
               {t("permissions.actions.refresh")}
             </Button>
-          </div>
+          </ActionGroup>
         </Alert>
       )}
       <Card padding="none">
@@ -220,77 +248,46 @@ export default function ShieldSettings() {
             rightContentClassName="[@container(min-width:42rem)]:flex-1"
             rightContent={
               <div className="space-y-density-2 flex flex-col items-stretch text-left">
-                <ResponsiveButtonGroup
-                  variant="plain"
+                <SegmentedControl
                   aria-label={t("refresh.shieldMethodTitle")}
-                  className="max-w-full justify-end [@container(min-width:42rem)]:w-full"
-                >
-                  {(
-                    [
-                      [
-                        TEMP_CONTEXT_PREFERENCE_MODES.Auto,
-                        t("refresh.shieldMethodAuto"),
-                        <Sparkles aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Tab,
-                        t("refresh.shieldMethodTab"),
-                        <PanelTop aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Composite,
-                        t("refresh.shieldMethodComposite"),
-                        <AppWindow aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Window,
-                        t("refresh.shieldMethodWindow"),
-                        <Layers2 aria-hidden="true" className="size-4" />,
-                      ],
-                    ] as const
-                  ).map(([nextMode, label, modeIcon]) => (
-                    <Button
-                      key={nextMode}
-                      aria-pressed={mode === nextMode}
-                      size="sm"
-                      variant={mode === nextMode ? "default" : "outline"}
-                      onClick={() =>
-                        updateTempWindowFallback({ tempContextMode: nextMode })
-                      }
-                      className={responsiveButtonGroupItemClassName}
-                      leftIcon={modeIcon}
-                      rightIcon={
-                        nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto ? (
-                          <Star
-                            aria-hidden="true"
-                            className={
-                              mode === nextMode
-                                ? "size-3.5 fill-current text-current"
-                                : "text-warning-text size-3.5 fill-current"
-                            }
-                          />
-                        ) : undefined
-                      }
-                    >
-                      {label}
-                      {nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto && (
-                        <>
-                          {" "}
-                          <span className="sr-only">
-                            {t("refresh.shieldMethodRecommended")}
-                          </span>
-                        </>
-                      )}
-                    </Button>
-                  ))}
-                </ResponsiveButtonGroup>
+                  size="sm"
+                  layout="fill"
+                  value={mode}
+                  onValueChange={(tempContextMode) =>
+                    updateTempWindowFallback({ tempContextMode })
+                  }
+                  options={methods.map(({ value, label, icon: Icon }) => ({
+                    value,
+                    label: (
+                      <>
+                        {label}
+                        {value === TEMP_CONTEXT_PREFERENCE_MODES.Auto && (
+                          <>
+                            {" "}
+                            <span className="sr-only">
+                              {t("refresh.shieldMethodRecommended")}
+                            </span>
+                          </>
+                        )}
+                      </>
+                    ),
+                    leftIcon: <Icon aria-hidden="true" className="size-4" />,
+                    rightIcon:
+                      value === TEMP_CONTEXT_PREFERENCE_MODES.Auto ? (
+                        <Star
+                          aria-hidden="true"
+                          className="size-3.5 fill-current"
+                        />
+                      ) : undefined,
+                  }))}
+                />
                 <div className="grid w-0 min-w-full">
-                  {methodHints.map(([hintMode, hint]) => {
-                    const isSelected = mode === hintMode
+                  {methods.map(({ value, hint }) => {
+                    const isSelected = mode === value
 
                     return (
                       <Muted
-                        key={hintMode}
+                        key={value}
                         aria-hidden={isSelected ? undefined : true}
                         className={cn(
                           "col-start-1 row-start-1",

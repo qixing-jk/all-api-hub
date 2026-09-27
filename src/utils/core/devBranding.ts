@@ -1,72 +1,76 @@
-// noinspection ES6PreferShortImport wxt config file dependency, can't parse any alias like
-import { APP_SHORT_NAME } from "../../constants/branding"
+import { APP_SHORT_NAME } from "~/constants/branding"
 
-type DevBuildInfo = {
-  /**
-   * Git branch name, for example: `feat/account-disable`.
-   * This value is expected to be injected by the build tooling in dev mode.
-   */
-  branch: string
-  /**
-   * Short git commit SHA, for example: `a1b2c3d`.
-   */
-  sha: string
-  /**
-   * Whether the working tree contains uncommitted changes.
-   */
-  dirty: boolean
-}
+import {
+  DEV_BUILD_MARKER,
+  truncateDevLabel,
+  type DevIdentity,
+} from "./devIdentity"
 
 /**
- * Formats a human-friendly dev build label used in extension metadata.
- * Kept short because it appears in browser extension UIs.
+ * Longest instance label kept inside a dev-only menu entry. Context menu items
+ * have no tooltip, so the label has to stay readable on its own.
  */
-export function formatDevVersionName(info: DevBuildInfo): string {
-  const branch = info.branch?.trim() || "unknown"
-  const sha = info.sha?.trim() || "unknown"
-  const dirtySuffix = info.dirty ? "+dirty" : ""
-  return `dev ${branch}@${sha}${dirtySuffix}`
-}
-
-/**
- * Appends dev build info to a manifest `name` string.
- * This is only intended for development builds (WXT `serve`).
- */
-export function formatDevManifestName(baseName: string, versionName: string) {
-  const safeBase = baseName?.trim() || APP_SHORT_NAME
-  const safeVersion = versionName?.trim() || "dev"
-  return `${safeBase} [${safeVersion}]`
-}
-
-/**
- * Appends dev build info to a manifest `description` string.
- * Prefer a separator over newlines to keep extension stores/browser UIs happy.
- */
-export function formatDevManifestDescription(
-  baseDescription: string,
-  versionName: string,
-) {
-  const safeBase = baseDescription?.trim() || ""
-  const safeVersion = versionName?.trim() || "dev"
-  return safeBase ? `${safeBase} | ${safeVersion}` : safeVersion
-}
-
-/**
- * Dev-only badge text used to visually differentiate local builds.
- * Keep it <= 4 chars for good compatibility across browsers.
- */
-export function getDevBadgeText() {
-  return "DEV"
-}
+const DEV_MENU_LABEL_MAX_LENGTH = 32
 
 /**
  * Creates a dev-only tooltip title for the toolbar action.
+ *
+ * The full source path is included because the toolbar tooltip is the only place
+ * that answers "which checkout is this?" without opening an extension page.
  */
-export function formatDevActionTitle(baseTitle: string, versionName?: string) {
+export function formatDevActionTitle(
+  baseTitle: string,
+  versionName?: string,
+  path?: string | null,
+) {
   const safeBase = baseTitle?.trim() || APP_SHORT_NAME
   const safeVersion = versionName?.trim() || ""
-  if (!safeVersion) return `${safeBase} (dev)`
-  return safeBase.includes(safeVersion)
-    ? safeBase
-    : `${safeBase} (${safeVersion})`
+  const safePath = path?.trim() || ""
+
+  let titled = safeBase
+  if (safeVersion) {
+    if (!titled.includes(safeVersion)) titled = `${titled} (${safeVersion})`
+  } else if (!titled.includes(DEV_BUILD_MARKER)) {
+    // Development manifest names already carry the marker, so only add it when
+    // the title comes from somewhere else, such as the localized manifest name.
+    titled = `${titled} ${DEV_BUILD_MARKER}`
+  }
+
+  return safePath && !titled.includes(safePath)
+    ? `${titled} · ${safePath}`
+    : titled
+}
+
+/**
+ * The identity label for surfaces that are not forced to be short: the shortened
+ * source path when the build baked one, and the badge code only when it did not.
+ */
+export function formatDevInstanceLabel(
+  identity: DevIdentity,
+  maxLength?: number,
+) {
+  const label = identity.pathTail ?? identity.badgeText
+
+  return maxLength ? truncateDevLabel(label, maxLength) : label
+}
+
+/**
+ * Prefix that marks dev instances in text-only surfaces such as context menus,
+ * where colors are unavailable and the path has to carry the identity alone.
+ *
+ * Returns an empty string outside development mode, which the identity signals
+ * by having no palette color, so release surfaces stay untouched.
+ */
+export function formatDevInstancePrefix(
+  identity: DevIdentity,
+  maxLength = DEV_MENU_LABEL_MAX_LENGTH,
+) {
+  if (!identity.color) return ""
+
+  return `[${formatDevInstanceLabel(identity, maxLength)}] `
+}
+
+/** Suffix that ties an extension page title back to the toolbar icon. */
+export function formatDevTitleSuffix(identity: DevIdentity) {
+  return identity.pathTail ? ` · ${identity.pathTail}` : ""
 }

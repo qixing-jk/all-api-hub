@@ -32,12 +32,19 @@ import {
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
 import {
-  isBlockedManagedSiteTokenBatchExportItemInput,
   isResolvedManagedSiteTokenBatchExportItemInput,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
+  type BlockedManagedSiteTokenBatchExportItemInput,
+  type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+
+const isBlockedManagedSiteTokenBatchExportItemInput = (
+  input: ManagedSiteTokenBatchExportItemInput,
+): input is BlockedManagedSiteTokenBatchExportItemInput =>
+  input.kind === MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
 
 const mocks = vi.hoisted(() => ({
   createDisplayAccountApiContext: vi.fn(),

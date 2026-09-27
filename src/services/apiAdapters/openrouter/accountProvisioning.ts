@@ -1,3 +1,4 @@
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import {
   createOpenRouterBootstrapLabel,
   OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
@@ -6,7 +7,6 @@ import {
   type OpenRouterBootstrapNotDispatchedAttemptOutcome,
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { validateManagementKey } from "~/services/apiService/openrouter"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
@@ -180,7 +180,7 @@ export async function provisionOpenRouterAccount(
           siteName: OPENROUTER_DISPLAY_NAME,
           accessToken: created.accessToken,
           userId: identity.userId,
-          exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+          exchangeRate: DEFAULT_USD_TO_CNY_RATE,
           authType: AuthTypeEnum.AccessToken,
           checkIn: createInitialCheckInConfig(),
         },

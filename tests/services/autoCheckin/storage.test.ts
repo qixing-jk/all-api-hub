@@ -66,24 +66,98 @@ describe("autoCheckinStorage", () => {
     expect(result).toBeNull()
   })
 
-  it("saveStatus should store status and return true", async () => {
-    const { set } = (Storage as any).__mocks as any
+  it("updateStatus should merge the patch into the stored status", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      lastRunResult: "success",
+      perAccount: { a: 1 },
+    })
     set.mockResolvedValueOnce(undefined)
 
-    const status = { lastRunResult: "success" } as any
-    const ok = await autoCheckinStorage.saveStatus(status)
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
 
-    expect(set).toHaveBeenCalledWith("autoCheckin_status", status)
-    expect(ok).toBe(true)
+    expect(set).toHaveBeenCalledWith("autoCheckin_status", {
+      lastRunResult: "failed",
+      perAccount: { a: 1 },
+    })
+    expect(result).toEqual({ ok: true, result: null })
   })
 
-  it("saveStatus should return false on error", async () => {
-    const { set } = (Storage as any).__mocks as any
+  it("updateStatus should skip the write when the patch is null", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
+
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: null,
+    }))
+
+    expect(set).not.toHaveBeenCalled()
+    expect(result).toEqual({ ok: true, result: null })
+  })
+
+  it("updateStatus should hand the derived value back to the caller", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
+    set.mockResolvedValueOnce(undefined)
+
+    const result = await autoCheckinStorage.updateStatus((current) => ({
+      result: `was:${current?.lastRunResult}`,
+      patch: { lastRunResult: "failed" },
+    }))
+
+    expect(result).toEqual({ ok: true, result: "was:success" })
+  })
+
+  it("updateStatus should read the stored status, not a caller snapshot", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ perAccount: { a: 1 } })
+    set.mockResolvedValueOnce(undefined)
+
+    const seen: unknown[] = []
+    await autoCheckinStorage.updateStatus((current) => {
+      seen.push(current)
+      return { patch: { lastRunResult: "failed" } }
+    })
+
+    expect(seen).toEqual([{ perAccount: { a: 1 } }])
+  })
+
+  it("updateStatus should not write when the read fails", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockRejectedValueOnce(new Error("read error"))
+
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
+
+    expect(set).not.toHaveBeenCalled()
+    expect(result).toEqual({ ok: false, result: null })
+  })
+
+  it("updateStatus should report failure on write error", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
     set.mockRejectedValueOnce(new Error("write error"))
 
-    const ok = await autoCheckinStorage.saveStatus({} as any)
+    const result = await autoCheckinStorage.updateStatus(() => ({
+      patch: { lastRunResult: "failed" },
+    }))
 
-    expect(ok).toBe(false)
+    expect(result.ok).toBe(false)
+  })
+
+  it("updateStatus should not write when deriving the patch throws", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({ lastRunResult: "success" })
+
+    const result = await autoCheckinStorage.updateStatus(() => {
+      throw new Error("cannot derive patch")
+    })
+
+    expect(set).not.toHaveBeenCalled()
+    expect(result).toEqual({ ok: false, result: null })
   })
 
   it("clearStatus should remove key and return true", async () => {
@@ -230,6 +304,17 @@ describe("autoCheckinStorage", () => {
       autoCheckinStorage.pruneStatusForDeletedAccounts([]),
     ).resolves.toBe(true)
     expect(get).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns true without persisting when there is no stored status to prune", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce(null)
+
+    await expect(
+      autoCheckinStorage.pruneStatusForDeletedAccounts(["missing"]),
+    ).resolves.toBe(true)
+
+    expect(set).not.toHaveBeenCalled()
   })
 
   it("marks a disabled account as skipped and removes it from retry state", async () => {
@@ -408,6 +493,100 @@ describe("autoCheckinStorage", () => {
     )
   })
 
+  it("preserves the remaining retry schedule and resolves disabled account names", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        drop: {
+          accountId: "drop",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
+        "id-only": {
+          accountId: "id-only",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000002000,
+        },
+        keep: {
+          accountId: "keep",
+          accountName: "Keep",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000003000,
+        },
+      },
+      accountsSnapshot: [
+        {
+          accountId: "drop",
+          accountName: "Snapshot Drop",
+        },
+      ],
+      retryState: {
+        day: "2026-03-28",
+        pendingAccountIds: ["drop", "keep"],
+        attemptsByAccount: { drop: 2, keep: 1 },
+      },
+      pendingRetry: true,
+      nextRetryScheduledAt: "2026-03-28T01:00:00.000Z",
+      retryAlarmTargetDay: "2026-03-28",
+    })
+
+    await expect(
+      autoCheckinStorage.markAccountsDisabledInStatus([
+        { accountId: "drop" },
+        { accountId: "id-only" },
+      ]),
+    ).resolves.toBe(true)
+
+    expect(set).toHaveBeenCalledWith(
+      "autoCheckin_status",
+      expect.objectContaining({
+        pendingRetry: true,
+        nextRetryScheduledAt: "2026-03-28T01:00:00.000Z",
+        retryAlarmTargetDay: "2026-03-28",
+        retryState: {
+          day: "2026-03-28",
+          pendingAccountIds: ["keep"],
+          attemptsByAccount: { keep: 1 },
+        },
+        perAccount: expect.objectContaining({
+          drop: expect.objectContaining({ accountName: "Snapshot Drop" }),
+          "id-only": expect.objectContaining({ accountName: "id-only" }),
+        }),
+      }),
+    )
+  })
+
+  it("clears malformed retry queue fields when disabling a queued account", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        drop: {
+          accountId: "drop",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
+      },
+      retryState: {
+        day: "2026-03-28",
+        pendingAccountIds: "broken",
+        attemptsByAccount: [],
+      },
+      pendingRetry: true,
+    })
+
+    await expect(
+      autoCheckinStorage.markAccountDisabledInStatus("drop"),
+    ).resolves.toBe(true)
+
+    expect(set).toHaveBeenCalledWith(
+      "autoCheckin_status",
+      expect.objectContaining({
+        retryState: undefined,
+        pendingRetry: false,
+      }),
+    )
+  })
+
   it("returns true without persisting when disabled-account marking receives no usable ids or status", async () => {
     const { get, set } = (Storage as any).__mocks as any
 
@@ -458,5 +637,50 @@ describe("autoCheckinStorage", () => {
         { accountId: "failed" },
       ]),
     ).resolves.toBe(false)
+  })
+
+  it("clears malformed retry state when pruning the last stored account", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        drop: {
+          accountId: "drop",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
+      },
+      retryState: "broken",
+      pendingRetry: true,
+      nextRetryScheduledAt: "2026-03-28T01:00:00.000Z",
+      retryAlarmTargetDay: "2026-03-28",
+    })
+
+    await expect(
+      autoCheckinStorage.pruneStatusForDeletedAccounts(["drop"]),
+    ).resolves.toBe(true)
+
+    expect(set).toHaveBeenCalledWith(
+      "autoCheckin_status",
+      expect.objectContaining({
+        perAccount: undefined,
+        summary: undefined,
+        lastRunResult: undefined,
+        retryState: undefined,
+        pendingRetry: false,
+        nextRetryScheduledAt: undefined,
+        retryAlarmTargetDay: undefined,
+      }),
+    )
+  })
+
+  it("reports pruning failure without writing when status cannot be read", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockRejectedValueOnce(new Error("read failed"))
+
+    await expect(
+      autoCheckinStorage.pruneStatusForDeletedAccounts(["drop"]),
+    ).resolves.toBe(false)
+
+    expect(set).not.toHaveBeenCalled()
   })
 })

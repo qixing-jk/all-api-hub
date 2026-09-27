@@ -239,9 +239,7 @@ test("introduces options modules without navigating or performing actions", asyn
   await expect(
     compactTooltip.getByRole("heading", { name: "All features within reach" }),
   ).toBeVisible()
-  await expect
-    .poll(async () => (await navigationTarget.boundingBox())?.x)
-    .toBeLessThanOrEqual(-250)
+  await expect(navigationTarget).not.toBeInViewport()
 
   await compactTooltip.getByRole("button", { name: "Next" }).click()
   await compactTooltip.getByRole("button", { name: "Next" }).click()
@@ -250,9 +248,7 @@ test("introduces options modules without navigating or performing actions", asyn
       name: "Finish each task in one place",
     }),
   ).toBeVisible()
-  await expect
-    .poll(async () => (await navigationTarget.boundingBox())?.x)
-    .toBeLessThanOrEqual(-250)
+  await expect(navigationTarget).not.toBeInViewport()
 
   const contentTarget = page.locator(
     `[${PRODUCT_TOUR_TARGET_ATTRIBUTE}="${PRODUCT_TOUR_TARGETS.Content}"]`,
@@ -270,7 +266,5 @@ test("introduces options modules without navigating or performing actions", asyn
   await expect(
     page.getByRole("button", { name: "View tour again" }),
   ).toBeFocused()
-  await expect
-    .poll(async () => (await navigationTarget.boundingBox())?.x)
-    .toBeLessThanOrEqual(-250)
+  await expect(navigationTarget).not.toBeInViewport()
 })

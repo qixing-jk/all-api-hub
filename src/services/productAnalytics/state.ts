@@ -5,6 +5,7 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
 import { PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS } from "./contracts"
@@ -29,6 +30,8 @@ export type ProductAnalyticsShieldBypassSummaryState = {
   tempWindowFetchFailureCount?: number
   tempWindowTurnstileFetchSuccessCount?: number
   tempWindowTurnstileFetchFailureCount?: number
+  tempWindowFetchFailureCategoryCounts?: ProductAnalyticsProtectionBypassCounter<"tempWindowFetchFailureCategoryCounts">
+  tempWindowTurnstileFetchFailureCategoryCounts?: ProductAnalyticsProtectionBypassCounter<"tempWindowTurnstileFetchFailureCategoryCounts">
   featureCounts?: ProductAnalyticsProtectionBypassCounter<"featureCounts">
   invocationKindCounts?: ProductAnalyticsProtectionBypassCounter<"invocationKindCounts">
   automaticTriggerCounts?: ProductAnalyticsProtectionBypassCounter<"automaticTriggerCounts">
@@ -336,7 +339,7 @@ class ProductAnalyticsStateService {
     try {
       await this.withStorageWriteLock(async () => {
         const state = await this.getState()
-        const today = new Date().toISOString().slice(0, 10)
+        const today = formatUtcDayKey()
         const current =
           state.shieldBypassSummary?.day === today
             ? state.shieldBypassSummary
@@ -423,7 +426,7 @@ class ProductAnalyticsStateService {
     try {
       await this.withStorageWriteLock(async () => {
         const state = await this.getState()
-        const today = new Date().toISOString().slice(0, 10)
+        const today = formatUtcDayKey()
         const current =
           state.sponsorRecommendationsSummary?.day === today
             ? state.sponsorRecommendationsSummary

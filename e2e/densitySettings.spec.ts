@@ -25,6 +25,9 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+
+parallelizeShardableSpec()
 
 const dimensions = (locator: Locator) =>
   locator.evaluate((el) => {
@@ -250,8 +253,7 @@ for (const width of [1280, 390, 320]) {
     ).toBeChecked()
     // The drawer and settings page use the same density control. Arrow keys
     // remain usable even though native radio inputs are visually hidden.
-    await page.getByRole("button", { name: /^Current:/ }).click()
-    await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+    await page.getByRole("button", { name: "Appearance settings" }).click()
     const drawer = page.getByRole("dialog", { name: "Appearance settings" })
     await expect(drawer.locator('[data-slot="sheet-header"]')).toHaveCSS(
       "padding-top",

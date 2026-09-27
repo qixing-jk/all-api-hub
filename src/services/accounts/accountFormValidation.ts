@@ -1,9 +1,9 @@
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
@@ -21,7 +21,7 @@ export function parseManualQuotaFromUsd(
   const amount = Number(trimmed)
   if (!Number.isFinite(amount) || amount < 0) return undefined
 
-  return Math.round(amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)
+  return Math.round(amount * QUOTA_PER_USD)
 }
 
 /** Checks the account form's required fields against the selected site profile. */
@@ -76,7 +76,7 @@ function parsePositiveExchangeRate(input: string): number | undefined {
 
 /** Resolves an invalid or empty exchange rate to the product default. */
 export function resolveExchangeRate(input: string): number {
-  return parsePositiveExchangeRate(input) ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+  return parsePositiveExchangeRate(input) ?? DEFAULT_USD_TO_CNY_RATE
 }
 
 /** Checks whether the supplied exchange rate is a positive finite number. */

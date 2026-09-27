@@ -6,7 +6,9 @@ import {
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
+import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/modelCatalog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   loadAccountRuntimeKeyFallbackPricingResponse,
@@ -16,7 +18,6 @@ import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
@@ -140,6 +141,7 @@ const createSub2ApiModelCatalogAdapter = (
   account: {
     keyResourceManagement: {},
     modelCatalog: {
+      ...sub2ApiModelCatalog,
       fetchModels,
     },
   },
@@ -335,10 +337,10 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("loads AIHubMix account-key fallback models without revealing masked keys", async () => {
-    const aihubmixPricing: PricingResponse = {
+    const aihubmixPricing: ModelCatalogSnapshot = {
       success: true,
-      group_ratio: {},
-      usable_group: {},
+      groupRatios: {},
+      groupAccess: { kind: "authoritative", usableGroups: [] },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         provider: SITE_TYPES.AIHUBMIX,
@@ -590,6 +592,36 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         model_name: "gpt-5.4-mini",
       }),
     ])
+  })
+
+  it("keeps service-credential Sub2API models unpriced without account-key group lookup", async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(ACCOUNT, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "service-secret",
+      isAuthenticated: true,
+      baseUrl: ACCOUNT.baseUrl,
+    })
+    const result = await sub2ApiModelCatalog.enrichPricing!({
+      accountRequest: {
+        baseUrl: ACCOUNT.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: ACCOUNT.token,
+        },
+      },
+      runtimeKey,
+      models: [{ id: "claude-sonnet-4" }],
+    })
+    expect(result.data.map((model) => model.model_name)).toEqual([
+      "claude-sonnet-4",
+    ])
+    expect(result.data[0].price_metadata?.precision).toBe(
+      MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+    )
+    expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
+    expect(fetchSub2ApiKeysMock).not.toHaveBeenCalled()
   })
 
   it("loads runtime catalog from a service-credential runtime key without token secret resolution", async () => {
@@ -985,9 +1017,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     const abortController = new AbortController()
     const fetchPricingMock = vi.fn().mockResolvedValue({
       data: [],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "authoritative", usableGroups: [] },
     })
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,

@@ -4,7 +4,10 @@ import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { MODEL_LIST_BATCH_VERIFY_CONCURRENCY } from "~/features/ModelList/batchVerification"
+import {
+  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
+} from "~/features/ModelList/batchVerification"
 import {
   BatchVerifyModelsDialog,
   deriveBatchVerifyRowStatus,
@@ -44,6 +47,7 @@ const {
   mockCompleteTrackedProductAnalyticsAction,
   mockTotalListHeightChanged,
   mockTrackProductAnalyticsActionStarted,
+  mockUpsertLatestSummaries,
   mockUpsertLatestSummary,
 } = vi.hoisted(() => ({
   mockFetchDisplayAccountRuntimeKeys: vi.fn(),
@@ -59,6 +63,7 @@ const {
     current: undefined as undefined | ((height: number) => void),
   },
   mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockUpsertLatestSummaries: vi.fn(),
   mockUpsertLatestSummary: vi.fn(),
 }))
 
@@ -191,8 +196,17 @@ vi.mock(
       ...actual,
       verificationResultHistoryStorage: {
         ...actual.verificationResultHistoryStorage,
-        upsertLatestSummary: (...args: any[]) =>
-          mockUpsertLatestSummary(...args),
+        // Records one entry per persisted summary so assertions describe what
+        // was stored, and exposes the batch call itself so the flush cadence can
+        // be asserted separately.
+        upsertLatestSummaries: async (summaries: any[]) => {
+          mockUpsertLatestSummaries(summaries)
+          const stored = []
+          for (const summary of summaries) {
+            stored.push(await mockUpsertLatestSummary(summary))
+          }
+          return stored
+        },
       },
     }
   },
@@ -236,6 +250,7 @@ describe("BatchVerifyModelsDialog", () => {
     })
     mockUpsertLatestSummary.mockReset()
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
+    mockUpsertLatestSummaries.mockReset()
   })
 
   it("applies the selected mode to every model and labels the batch results", async () => {
@@ -698,6 +713,63 @@ describe("BatchVerifyModelsDialog", () => {
       expect.objectContaining({ id: "text-generation", status: "pass" }),
       expect.objectContaining({ id: "tool-calling", status: "pass" }),
     ])
+  })
+
+  it("writes one storage batch per flush window instead of once per model", async () => {
+    const modelCount = MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE + 1
+    mockNewApiInventory.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 5,
+      summary: "Available",
+    })
+
+    renderDialog(
+      Array.from({ length: modelCount }, (_, index) => ({
+        key: `account:acc-1:model:bulk-${index}`,
+        modelId: `bulk-${index}`,
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      })),
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(modelCount)
+    })
+
+    // One write per full flush window plus the trailing partial batch, instead of
+    // one whole-store rewrite per model.
+    expect(
+      mockUpsertLatestSummaries.mock.calls.map(([batch]) => batch.length),
+    ).toEqual([MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE, 1])
   })
 
   it("stops before the next probe and skips persisting partial model results", async () => {

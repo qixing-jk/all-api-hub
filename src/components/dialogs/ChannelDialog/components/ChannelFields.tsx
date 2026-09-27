@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
+  ActionGroup,
   Alert,
   Button,
   CompactMultiSelect,
@@ -323,9 +324,9 @@ export function ChannelSecretField({
         </ChannelFieldMessage>
       ) : null}
       {actions ? (
-        <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
+        <ActionGroup className="mt-density-2 items-stretch justify-start">
           {actions}
-        </div>
+        </ActionGroup>
       ) : null}
     </div>
   )
@@ -419,7 +420,7 @@ export function ChannelModelsField({
           {t("channelDialog:fields.models.label")}
         </ResourceFieldLabel>
         {showBulkActions || actions ? (
-          <div className="gap-y-density-2 ml-auto flex max-w-[65%] shrink-0 flex-wrap items-center justify-end gap-x-2">
+          <ActionGroup className="ml-auto max-w-[65%] shrink-0">
             {showBulkActions ? (
               <>
                 <Button
@@ -452,7 +453,7 @@ export function ChannelModelsField({
               </>
             ) : null}
             {actions}
-          </div>
+          </ActionGroup>
         ) : null}
       </div>
       {showPrefillWarning ? (

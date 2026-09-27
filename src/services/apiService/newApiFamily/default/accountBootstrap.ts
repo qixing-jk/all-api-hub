@@ -1,7 +1,11 @@
+import {
+  ACCOUNT_LOGIN_PROVIDERS,
+  isAccountLoginProvider,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type {
   AccessTokenInfo,
-  SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
@@ -12,6 +16,22 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamilyAccountBootstrap")
+
+interface SiteStatusInfo {
+  price?: number | string
+  stripe_unit_price?: number | string
+  PaymentUSDRate?: number | string
+  system_name?: string
+  theme?: string
+  /**
+   * 是否启用签到功能
+   */
+  checkin_enabled?: boolean
+  /**
+   * Veloera public status uses a distinct snake-case field.
+   */
+  check_in_enabled?: boolean
+}
 
 interface AccountBootstrapImplementation {
   fetchUserInfo: typeof fetchUserInfo
@@ -59,19 +79,60 @@ export const extractDefaultExchangeRate = (
     return null
   }
 
-  if (statusInfo.price && statusInfo.price > 0) {
-    return statusInfo.price
-  }
-
-  if (statusInfo.stripe_unit_price && statusInfo.stripe_unit_price > 0) {
-    return statusInfo.stripe_unit_price
-  }
-
-  if (statusInfo.PaymentUSDRate && statusInfo.PaymentUSDRate > 0) {
-    return statusInfo.PaymentUSDRate
+  for (const rate of [
+    statusInfo.price,
+    statusInfo.stripe_unit_price,
+    statusInfo.PaymentUSDRate,
+  ]) {
+    // Accept numeric strings without allowing other payload types to coerce
+    // into rates. Keep the existing field precedence and positive-value rule.
+    if (typeof rate !== "number" && typeof rate !== "string") continue
+    const numericRate = Number(rate)
+    if (numericRate > 0) {
+      return numericRate
+    }
   }
 
   return null
+}
+
+/** A bound provider id is a non-empty string or a finite number; empty means unbound. */
+function isBoundProviderId(value: unknown): boolean {
+  return (
+    (typeof value === "string" && value.trim().length > 0) ||
+    (typeof value === "number" && Number.isFinite(value))
+  )
+}
+
+/**
+ * Reads the browser login identities an account is bound to.
+ *
+ * `/api/user/self` returns the provider account ids (`github_id`,
+ * `linux_do_id`) that New API writes when a user registers or binds through
+ * OAuth, so they are the deployment's own statement of how the account signs
+ * in. They are empty when unbound, and `linux_do_id` is absent on deployments
+ * older than New API v0.9.0 - a missing field stays "no evidence" rather than
+ * being treated as a negative answer.
+ *
+ * Upstream: https://github.com/QuantumNous/new-api/blob/v0.9.0/controller/user.go
+ * (`buildSelfUserData`) and `model/user.go` (`GitHubId`/`LinuxDOId`).
+ */
+function extractLoginProviders(
+  userData: unknown,
+): readonly AccountLoginProvider[] {
+  if (!userData || typeof userData !== "object" || Array.isArray(userData)) {
+    return []
+  }
+
+  const user = userData as Record<string, unknown>
+  const providers: AccountLoginProvider[] = []
+  if (isBoundProviderId(user.github_id)) {
+    providers.push(ACCOUNT_LOGIN_PROVIDERS.Github)
+  }
+  if (isBoundProviderId(user.linux_do_id)) {
+    providers.push(ACCOUNT_LOGIN_PROVIDERS.LinuxDo)
+  }
+  return providers.filter(isAccountLoginProvider)
 }
 
 /**
@@ -84,6 +145,7 @@ export async function fetchUserInfo(
   id: string
   username: string
   access_token: string
+  loginProviders?: readonly AccountLoginProvider[]
   user: UserInfo
 }> {
   const userData = await newApiFamilyRequests.data<UserInfo>(request, {
@@ -111,10 +173,13 @@ export async function fetchUserInfo(
     )
   }
 
+  const loginProviders = extractLoginProviders(userData)
+
   return {
     id: userId,
     username: userData.username,
     access_token: userData.access_token || "",
+    ...(loginProviders.length > 0 ? { loginProviders } : {}),
     user: userData,
   }
 }
@@ -182,18 +247,26 @@ export async function getOrCreateAccessToken(
   return {
     username: userInfo.username,
     access_token: accessToken,
+    ...(userInfo.loginProviders?.length
+      ? { loginProviders: userInfo.loginProviders }
+      : {}),
   }
 }
 
-/**
- * Check default New API-family check-in support from public site status.
- */
+/** Read the New API-family switch from an already-loaded public status. */
+export function extractCheckInSupport(
+  siteStatus: SiteStatusInfo | null,
+): boolean | undefined {
+  return siteStatus?.checkin_enabled
+}
+
+/** Check default New API-family check-in support from public site status. */
 export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
   signal?: AbortSignal,
 ): Promise<boolean | undefined> {
   const siteStatus = await fetchSiteStatus(request, signal)
-  return siteStatus?.checkin_enabled
+  return extractCheckInSupport(siteStatus)
 }
 
 export const defaultAccountBootstrapImplementation: AccountBootstrapImplementation =

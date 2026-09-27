@@ -1,5 +1,5 @@
 {
-  "description": "在每天的指定時間視窗內，自動為符合條件的帳號執行簽到；下方結果列表顯示已執行的簽到記錄，不是待簽到佇列。",
+  "description": "依排程為符合條件的帳號簽到，查看已執行紀錄並重試失敗任務。",
   "execution": {
     "actions": {
       "devModeHint": "開發模式：為便於測試，操作按鈕將始終顯示。",
@@ -36,13 +36,24 @@
       "all": "全部",
       "alreadyChecked": "已簽到",
       "clearAll": "清除篩選",
+      "clearReasons": "清除原因",
       "countFiltered": "顯示 {{filtered}} / {{total}} 筆",
       "countTotal": "共 {{total}} 筆",
       "failed": "失敗",
       "needsAttention": "需要處理",
+      "reasonAll": "全部原因",
+      "reasonLabel": "依原因篩選",
       "searchLabel": "搜尋執行結果",
       "searchPlaceholder": "搜尋帳號名稱、ID 或結果訊息...",
+      "selectedReasons_other": "已選 {{count}} 個原因",
       "selectedStatuses_other": "已選 {{count}} 類",
+      "skipCategoryAccountDisabled": "帳號已禁用",
+      "skipCategoryActionRequired": "需要你處理",
+      "skipCategoryDisabled": "已停用",
+      "skipCategoryExpected": "無需處理",
+      "skipCategoryUnclassified": "未分類",
+      "skipCategoryUnsupported": "暫不支援",
+      "skipCategoryWaiting": "稍後自動重試",
       "skipped": "未執行",
       "statusLabel": "依執行狀態篩選",
       "success": "本次簽到成功",
@@ -84,7 +95,7 @@
     },
     "title": "自動簽到"
   },
-  "manualDescription": "可以為符合條件的帳號執行批量簽到；下方結果列表顯示已執行的簽到記錄，不是待簽到佇列。",
+  "manualDescription": "手動為符合條件的帳號批次簽到，查看已執行紀錄並重試失敗任務。",
   "messages": {
     "error": {
       "accountDisabled": "帳號已禁用",
@@ -144,12 +155,14 @@
     "checkinFailed": "簽到失敗",
     "checkinSuccessful": "簽到成功",
     "endpointNotSupported": "不支援該簽到介面，請檢查帳號的站點型別與實際站點是否相同",
+    "loginProviderRequired": "請先選擇簽到登入方式，再執行該帳號的簽到。",
     "nativePageIdentityMismatch": "臨時簽到頁面登入的是另一個帳號。請用目標帳號開啟簽到頁面後重試：{{checkInUrl}}",
     "nativePageIdentityMissing": "無法確認臨時簽到頁面的登入帳號。請開啟簽到頁面並使用目標帳號登入後重試：{{checkInUrl}}",
     "nativePageStatusUnconfirmed": "已點擊頁面簽到操作，但未確認目標帳號完成簽到。請開啟簽到頁面手動確認：{{checkInUrl}}",
     "nativePageTargetNotFound": "未在頁面上找到簽到按鈕。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
     "nativePageTriggerFailed": "無法觸發頁面簽到操作。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
     "resultPendingConfirmation": "簽到結果待確認",
+    "sessionBusy": "另一個登入流程正在進行中，請稍後重試。",
     "turnstileIncognitoAccessRequired": "需要允許擴充套件在無痕模式執行，才能在無痕頁面獲取 Turnstile Token（多帳號場景）。請在擴充套件管理頁開啟“允許在無痕模式執行”後重試；或手動開啟簽到頁面完成驗證：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 驗證，請開啟簽到頁面完成驗證：{{checkInUrl}}",
     "unknownError": "發生未知錯誤"
@@ -196,8 +209,13 @@
     "already_checked_today": "今日已簽到",
     "authentication_required": "登入狀態已失效或需要登入。請先登入目標站點，再重試。",
     "auto_checkin_disabled": "自動簽到已關閉",
+    "checkin_page_unavailable": "無法開啟或觸發目標站點的簽到頁面，請稍後重試。",
+    "checkin_unconfirmed": "簽到請求已送出，但目標站點未確認簽到結果，請稍後重試。",
     "credentials_missing": "缺少已儲存的帳號憑證，請重新識別帳號或更新憑證。",
     "detection_disabled": "檢測已關閉",
+    "execution_context_invalid": "本次執行未能建立受保護工作階段，請重新發起簽到。",
+    "login_provider_in_use": "所選登入方式已由另一個 AgentRouter 帳號使用。請改用另一種登入方式，或先到該帳號中調整。",
+    "manual_verification_required": "目標站點要求完成人工驗證，請開啟簽到頁面完成驗證後再試。",
     "method_disabled": "此站點的簽到功能已停用",
     "method_not_matched": "已選簽到方式與目前站點不再相符，請重新偵測簽到方式。",
     "method_unavailable": "已選簽到方式已無法使用，請重新偵測簽到方式。",
@@ -206,9 +224,11 @@
     "no_provider": "帳號所屬站點型別暫不支援簽到",
     "no_selected_method": "尚未選擇簽到方式，請在帳號設定中重新偵測或選擇。",
     "permission_denied": "目標站點拒絕了簽到請求，請重新登入或檢查帳號權限。",
+    "session_busy": "另一個登入流程正在進行中，請稍後重試。",
     "source_unavailable": "目標站點暫時無法使用，請稍後重試。",
     "status_unavailable": "暫時無法確認目前簽到狀態，因此未執行簽到",
-    "timeout": "連線逾時，簽到未能完成，請重試。"
+    "timeout": "連線逾時，簽到未能完成，請重試。",
+    "upstream_error": "目標站點回傳了無法識別的簽到結果，請稍後重試。"
   },
   "snapshot": {
     "badges": {

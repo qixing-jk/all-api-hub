@@ -1,6 +1,10 @@
 /** Account creation workflow. */
 
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import {
+  createLoginProviderClaimGuard,
+  LoginProviderClaimConflictError,
+} from "~/services/accountLogin/providerClaims"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/accountFormValidation"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
@@ -125,6 +129,14 @@ export async function validateAndSaveAccount(
       message: getCredentialValidationMessage(normalizedSiteType, error),
     }
   }
+
+  // Two enabled AgentRouter accounts cannot share one browser login context. The
+  // guard is evaluated inside the account storage transaction below, so two
+  // concurrent saves cannot both pass it.
+  const loginProviderGuard = await createLoginProviderClaimGuard({
+    siteUrl: url,
+  })
+
   const productProfile = getAccountSiteProductProfile(normalizedSiteType)
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
@@ -189,7 +201,9 @@ export async function validateAndSaveAccount(
     }
 
     try {
-      const accountId = await accountMutations.addAccount(accountData)
+      const accountId = await accountMutations.addAccount(accountData, {
+        guard: loginProviderGuard,
+      })
       logger.info(
         "Account saved before deferred data refresh",
         getAccountOperationLogDetails(
@@ -227,6 +241,9 @@ export async function validateAndSaveAccount(
           status: ACCOUNT_PERSISTENCE_LOG_STATUSES.PersistFailed,
         }),
       )
+      if (saveError instanceof LoginProviderClaimConflictError) {
+        return { success: false, message: saveError.message }
+      }
       const errorMessage = getErrorMessage(saveError)
       return {
         success: false,
@@ -300,7 +317,9 @@ export async function validateAndSaveAccount(
       last_sync_time: Date.now(),
     }
 
-    const accountId = await accountMutations.addAccount(accountData)
+    const accountId = await accountMutations.addAccount(accountData, {
+      guard: loginProviderGuard,
+    })
     logger.info(
       "Account saved with data refresh",
       getAccountOperationLogDetails(
@@ -331,6 +350,11 @@ export async function validateAndSaveAccount(
       feedbackLevel: ACCOUNT_SAVE_FEEDBACK_LEVELS.Success,
     }
   } catch (error) {
+    // A refused claim is decided, not a data failure: the fallback save would be
+    // rejected for the same reason, so report it instead of retrying.
+    if (error instanceof LoginProviderClaimConflictError) {
+      return { success: false, message: error.message }
+    }
     // FALLBACK: 即使获取数据失败也要保存配置
     logger.warn(
       "Data fetch failed; saving configuration only",
@@ -363,7 +387,9 @@ export async function validateAndSaveAccount(
 
     // Try to save partial account data
     try {
-      const accountId = await accountMutations.addAccount(partialAccountData)
+      const accountId = await accountMutations.addAccount(partialAccountData, {
+        guard: loginProviderGuard,
+      })
       logger.warn(
         "Account saved without data refresh",
         getAccountOperationLogDetails(
@@ -402,6 +428,9 @@ export async function validateAndSaveAccount(
           status: ACCOUNT_PERSISTENCE_LOG_STATUSES.PersistFailed,
         }),
       )
+      if (saveError instanceof LoginProviderClaimConflictError) {
+        return { success: false, message: saveError.message }
+      }
       const errorMessage = getErrorMessage(saveError)
       return {
         success: false,

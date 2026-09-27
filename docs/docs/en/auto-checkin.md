@@ -104,6 +104,15 @@ The following sites have supported check-in methods. Availability still depends 
 | `sub2api` | Yes | Valid login credentials for the detected Sub2API Pro or Denxio check-in method |
 | AgentRouter (`agentrouter.org`) | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
 
+### AgentRouter login check-in limits
+
+AgentRouter grants the check-in benefit during a fresh OAuth login, and the browser signs in with the GitHub or Linux DO identity **already signed in to your browser** rather than with per-account credentials. As a result:
+
+- **The login method must be selected explicitly.** When you add an account, the extension preselects the GitHub / Linux DO identity that account is bound to on the site. If the account is bound to both, or the deployment does not expose the binding, the method stays unselected. Check-in then fails with a request to choose a method; the extension never guesses a default for you.
+- **One login method belongs to one AgentRouter account with automatic check-in enabled.** Two accounts both using GitHub (or both using Linux DO) drive the same browser identity: the second one only gets an identity-mismatch error and disturbs the shared login session.
+- **What a conflict looks like**: in the account settings, a login method already owned by another account is greyed out with the reason; during a background run the non-owning account is skipped and the result explains why. Ownership follows real evidence: the account the browser last signed in as holds the method, an untried account comes next, and the lowest account ID is only the final tiebreak. If two accounts ever disputed one method, ownership therefore converges on the one that can actually sign in.
+- **How to release a method**: switch that account to the other method (for example, another account on Linux DO and this one on GitHub), set this account's login method to "Not selected" to clear it, or disable/delete the account that holds it. A greyed-out option is only a hint; it never blocks you from changing or clearing this account's own selection.
+
 ::: warning Deployment differences
 Even when the site type matches, a deployment can be customized: the expected endpoint may be missing and return 404/405, authentication may differ, or human verification may be required. Do not assume that every site "compatible with New API" has built-in automatic check-in.
 :::

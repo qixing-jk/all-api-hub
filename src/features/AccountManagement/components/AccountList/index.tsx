@@ -34,7 +34,6 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
-import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
@@ -60,6 +59,7 @@ import {
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
+import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
@@ -1136,7 +1136,7 @@ export default function AccountList({
   return (
     <Card
       padding="none"
-      className="border-border/80 dark:border-foreground/10 [container-type:inline-size] flex flex-col overflow-hidden rounded-xl shadow-xs"
+      className="border-border/80 [container-type:inline-size] flex flex-col overflow-hidden rounded-lg border shadow-none"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>
@@ -1157,7 +1157,7 @@ export default function AccountList({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-y-density-1-5 h-(--density-control-lg) shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
+                className="gap-y-density-1-5 min-h-(--density-control-lg) shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
                 aria-expanded={filtersOpen}
                 aria-controls={filterPanelId}
                 onClick={() => setFiltersOpen((previous) => !previous)}

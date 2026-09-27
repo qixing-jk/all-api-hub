@@ -28,6 +28,12 @@
       "slate": "石板灰",
       "violet": "紫色"
     },
+    "contentWidth": "内容宽度",
+    "contentWidthDescription": "仅影响完整管理页面。",
+    "contentWidths": {
+      "centered": "居中",
+      "full": "全宽"
+    },
     "densities": {
       "comfortable": "宽松",
       "compact": "紧凑",
@@ -36,6 +42,13 @@
     "density": "界面密度",
     "densityDescription": "调整列表间距和控件高度，不改变字号。",
     "description": "修改后自动保存，应用于设置页、弹窗和侧栏。",
+    "font": "字体",
+    "fontDescription": "选择界面字体。跟随主题时，默认主题使用无衬线字体，Anthropic 使用衬线字体。",
+    "fonts": {
+      "default": "跟随主题",
+      "sans": "无衬线",
+      "serif": "衬线"
+    },
     "preset": "主题风格",
     "presetColorsHint": "当前主题自带完整配色。切换到默认主题可单独选择强调色。",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "默认主题"
     },
-    "preview": "效果预览",
-    "primaryAction": "主要操作",
     "radii": {
       "default": "默认",
       "large": "大",
@@ -57,8 +68,16 @@
     "radius": "圆角大小",
     "reset": "恢复默认外观",
     "resetDensity": "重置密度",
+    "resetFont": "重置字体",
+    "resetTextSize": "重置文字大小",
     "saveFailed": "保存失败，请重试。",
-    "secondaryAction": "次要操作",
+    "textSize": "文字大小",
+    "textSizeDescription": "调整字号和行高，控件会随内容适应，不改变界面密度设置。",
+    "textSizes": {
+      "default": "默认",
+      "extraLarge": "超大",
+      "large": "大"
+    },
     "title": "外观设置"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "导入与导出"
     }
   },
-  "description": "管理插件的基本配置选项",
+  "description": "调整外观、账号管理、自动任务与数据备份等设置。",
   "display": {
     "cny": "人民币 (¥)",
     "currencyDesc": "设置余额和收支显示的默认货币单位",
     "currencyUnit": "货币单位",
     "defaultTab": "默认标签页",
     "defaultTabDesc": "设置插件启动时显示的默认标签页",
-    "description": "自定义插件的外观和显示偏好",
+    "description": "自定义插件的界面语言和显示偏好",
     "title": "显示设置",
     "todayCashflow": "今日收支",
     "todayCashflowEnabled": "显示今日收支",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "已是默认值",
     "confirmReset": "确认重置",
     "preferencesChangedExternally": "偏好设置已在其他位置发生变化，请刷新后重试。",
+    "resetAllConfirmDesc": "将恢复全部偏好设置，并清空已配置的连接地址和凭据。账户列表不会被删除；历史保留策略也会恢复默认。是否继续？",
     "resetConfirmDesc": "确定要将{{name}}重置为默认设置吗？此操作无法撤销。",
+    "resetConnectionConfirmDesc": "将清空本组连接地址、凭据及相关配置。之后需要重新配置，是否恢复默认值？",
     "resetFailed": "重置{{name}}失败",
+    "resetHistoryConfirmDesc": "恢复默认值将缩短历史保留期限，超出期限的记录可能被清理且无法恢复。是否继续？",
     "resetSuccess": "{{name}}已重置为默认设置",
+    "retentionSaveHint": "其他选项自动保存；保留天数需点击应用，缩短期限可能清理历史记录。",
     "runtimeRequestFailed": "运行时请求失败，请稍后重试。",
     "saveSettingsFailed": "保存设置失败",
     "updateFailed": "{{name}}更新失败",
@@ -613,7 +637,12 @@
       "enableDesc": "关闭后会停止后台定时抓取，已保存的本地公告记录仍会保留，公告页面仍可手动检查。",
       "interval": "抓取间隔",
       "intervalDesc": "设置后台抓取网站公告的分钟间隔，支持 15 到 1440 分钟。",
-      "intervalInvalid": "请输入 {{min}} 到 {{max}} 之间的整数分钟数。"
+      "intervalInvalid": "请输入 {{min}} 到 {{max}} 之间的整数分钟数。",
+      "maxAge": "通知时效",
+      "maxAgeDesc": "发布时间超过此时效的公告会直接标记为已读，只保存到公告列表，不发送通知。",
+      "maxAgeInvalid": "请输入 {{min}} 到 {{max}} 之间的整数天数。",
+      "upstreamRead": "通知后标记站点已读",
+      "upstreamReadDesc": "开启后，通知投递成功会把本次抓到的公告在站点上标为已读。关闭时只在你于公告页标记已读后同步上游；被通知并不等于已读。仅对支持同步已读的站点生效。"
     },
     "title": "网站公告"
   },
@@ -676,6 +705,7 @@
     "permissions": "权限管理",
     "refresh": "数据刷新",
     "select": "选择一个分组",
+    "siteAnnouncements": "网站公告",
     "webAiApiCheck": "AI API 测试"
   },
   "taskNotifications": {
@@ -814,16 +844,15 @@
   },
   "theme": {
     "appearance": "外观",
-    "clickSwitch": "点击切换到{{nextMode}}模式",
     "current": "当前: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "当前: 跟随系统 ({{theme}})",
     "dark": "深色",
     "followSystem": "跟随系统",
     "followSystemTheme": "跟随系统主题设置",
     "light": "浅色",
-    "selectTheme": "选择一个外观主题",
+    "mode": "明暗模式",
+    "selectTheme": "选择浅色、深色或跟随系统",
     "switchTo": "切换到{{theme}}主题: {{description}}",
-    "toggle": "主题切换，当前{{currentMode}}模式，点击切换到{{nextMode}}模式",
     "useDarkTheme": "使用深色主题",
     "useLightTheme": "使用浅色主题"
   },

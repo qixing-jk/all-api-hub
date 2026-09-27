@@ -1,11 +1,11 @@
-import { UI_CONSTANTS } from "~/constants/ui"
-import { subtractDaysFromDayKey } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { QUOTA_PER_USD } from "~/constants/money"
 import type { CurrencyAmount, SiteAccount } from "~/types"
 import type {
   DailyBalanceHistoryStore,
   TodayIncomeEstimateResult,
 } from "~/types/dailyBalanceHistory"
 import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
+import { subtractDaysFromDayKey } from "~/utils/core/dayKey"
 
 type TodayIncomeEstimateAccount = Pick<SiteAccount, "id" | "manualBalanceUsd">
 
@@ -122,7 +122,7 @@ export function convertQuotaToMoney(params: {
   quota: number
   exchangeRate: number
 }): CurrencyAmount {
-  const usd = params.quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const usd = params.quota / QUOTA_PER_USD
   return {
     USD: usd,
     CNY: usd * params.exchangeRate,

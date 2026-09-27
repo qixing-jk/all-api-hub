@@ -4,6 +4,7 @@ import type { AccountMetricCoverage } from "~/types"
 
 import type {
   OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS,
+  OPTIONS_OVERVIEW_ATTENTION_CATEGORIES,
   OPTIONS_OVERVIEW_ATTENTION_KINDS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES,
@@ -54,6 +55,10 @@ export type OptionsOverviewAttentionKind = ValueOf<
   typeof OPTIONS_OVERVIEW_ATTENTION_KINDS
 >
 
+export type OptionsOverviewAttentionCategory = ValueOf<
+  typeof OPTIONS_OVERVIEW_ATTENTION_CATEGORIES
+>
+
 export type OptionsOverviewConfigurationStatus = ValueOf<
   typeof OPTIONS_OVERVIEW_CONFIGURATION_STATUSES
 >
@@ -61,6 +66,7 @@ export type OptionsOverviewConfigurationStatus = ValueOf<
 export interface OptionsOverviewAttentionItem {
   id: string
   kind: OptionsOverviewAttentionKind
+  category: OptionsOverviewAttentionCategory
   severity: Exclude<OptionsOverviewSeverity, "success">
   titleOptions?: Record<string, unknown>
   descriptionOptions?: Record<string, unknown>

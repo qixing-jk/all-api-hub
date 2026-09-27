@@ -1,7 +1,7 @@
 import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
 interface FirefoxWarningDialogProps {
@@ -63,7 +63,10 @@ export default function FirefoxAddAccountWarningDialog({
       </div>
 
       {/* 按钮组 */}
-      <div className="pt-density-2 flex space-x-3">
+      <ActionGroup
+        layout="stack-on-narrow"
+        className="gap-y-density-3 pt-density-2 gap-x-3"
+      >
         <Button
           type="button"
           variant="secondary"
@@ -82,7 +85,7 @@ export default function FirefoxAddAccountWarningDialog({
         >
           {t("dialog.firefox.openSidebar")}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 

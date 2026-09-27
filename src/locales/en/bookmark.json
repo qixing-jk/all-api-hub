@@ -11,7 +11,7 @@
     "description": "This will permanently delete \"{{name}}\".",
     "title": "Delete bookmark?"
   },
-  "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
+  "description": "Bookmark sites, consoles and documentation, and organize links with tags for quick access.",
   "dialog": {
     "currentPageLabel": "Current page",
     "currentPageUnavailable": "Current page unavailable",

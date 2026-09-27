@@ -561,6 +561,7 @@ describe("UserPreferencesContext", () => {
       preset: THEME_PRESET.ANTHROPIC,
       color: THEME_COLOR.VIOLET,
       radius: THEME_RADIUS.LARGE,
+      textSize: "large",
     }
     render(
       <UserPreferencesProvider>
@@ -595,6 +596,7 @@ describe("UserPreferencesContext", () => {
 
     const appearance = {
       density: "compact",
+      textSize: "extra-large",
       preset: THEME_PRESET.ANTHROPIC,
       color: THEME_COLOR.ROSE,
       radius: THEME_RADIUS.SMALL,
@@ -2678,6 +2680,10 @@ describe("UserPreferencesContext", () => {
         notificationEnabled:
           DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
         intervalMinutes: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes,
+        notificationMaxAgeDays:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+        autoMarkUpstreamReadOnNotify:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
       },
     })
   })
@@ -2706,6 +2712,10 @@ describe("UserPreferencesContext", () => {
       enabled: true,
       notificationEnabled: false,
       intervalMinutes: 120,
+      notificationMaxAgeDays:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
     })
     expect((latestContext as any)?.preferences.lastUpdated).toBeGreaterThan(
       preferences.lastUpdated,
@@ -2714,6 +2724,10 @@ describe("UserPreferencesContext", () => {
       enabled: true,
       notificationEnabled: false,
       intervalMinutes: 120,
+      notificationMaxAgeDays:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationMaxAgeDays,
+      autoMarkUpstreamReadOnNotify:
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.autoMarkUpstreamReadOnNotify,
     })
   })
 

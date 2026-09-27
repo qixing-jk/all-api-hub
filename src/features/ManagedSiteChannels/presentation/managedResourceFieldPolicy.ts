@@ -37,7 +37,6 @@ import {
 } from "~/constants/veloera"
 import {
   defineResourceEditorFieldPolicy,
-  resolveResourceFieldPolicy,
   type ResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
   type ResourceFieldTextResolver,
@@ -1198,28 +1197,6 @@ export const getManagedResourceFieldValuePresentation = (
     ...(field.resolveOptionFallback
       ? { resolveOptionFallback: field.resolveOptionFallback }
       : {}),
-  }
-}
-
-/** Correlates fact-only descriptors with frontend-owned presentation metadata. */
-export function resolveManagedResourceFieldPolicy(
-  descriptors: readonly ResourceFieldDescriptor[],
-  policy: ManagedResourceEditorFieldPolicy,
-) {
-  try {
-    return resolveResourceFieldPolicy(
-      descriptors,
-      adaptManagedCredentialPolicy(descriptors, policy),
-      MANAGED_RESOURCE_SECTION_ORDER,
-    )
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "resource field policy mismatch"
-    ) {
-      throw new Error("managed resource field policy mismatch")
-    }
-    throw error
   }
 }
 

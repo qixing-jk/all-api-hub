@@ -22,6 +22,7 @@ import type {
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createUpstreamFailureResult,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
@@ -86,26 +87,24 @@ const runCheckIn = async (
   const signed = stats.todaySigned === true
 
   if ("alreadySigned" in submitResult) {
-    return {
-      status: signed
-        ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-        : CHECKIN_RESULT_STATUS.FAILED,
-      messageKey: signed
-        ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: stats,
-    }
+    return signed
+      ? {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+          data: stats,
+        }
+      : createUpstreamFailureResult({ data: stats })
   }
 
-  return {
-    status: signed
-      ? CHECKIN_RESULT_STATUS.SUCCESS
-      : CHECKIN_RESULT_STATUS.FAILED,
-    messageKey: signed
-      ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful
-      : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-    data: stats,
-  }
+  return signed
+    ? {
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        messageKey:
+          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+        data: stats,
+      }
+    : createUpstreamFailureResult({ data: stats })
 }
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({

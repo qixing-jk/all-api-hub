@@ -37,6 +37,29 @@ describe("DisplaySettings", () => {
       </I18nextProvider>,
     )
 
+  it("disables reset when display settings already use defaults", () => {
+    const context = vi.mocked(useUserPreferencesContext)()
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      ...context,
+      activeTab: DATA_TYPE_CASHFLOW,
+    })
+    renderSubject()
+    expect(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    ).toBeDisabled()
+  })
+
+  it("offers the interface language beside the display preferences", () => {
+    renderSubject()
+
+    expect(
+      screen.getByText("settings:appearanceLanguage.language"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:appearanceLanguage.languageDesc"),
+    ).toBeInTheDocument()
+  })
+
   it("shows result-aware feedback after changing the currency", async () => {
     const writeResult = { ok: true as const }
     const updateCurrencyType = vi.fn().mockResolvedValue(writeResult)

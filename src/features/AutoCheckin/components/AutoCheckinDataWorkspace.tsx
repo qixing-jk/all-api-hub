@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui"
 import { CORNERS } from "~/constants/designTokens"
-import { countAutoCheckinResults } from "~/features/AutoCheckin/utils/autoCheckin"
+import { countAutoCheckinResultsNeedingAttention } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
   getAutoCheckinSnapshotReadinessCategory,
   SNAPSHOT_READINESS_FILTER,
@@ -88,12 +88,7 @@ export default function AutoCheckinDataWorkspace({
       ? AUTO_CHECKIN_DATA_VIEW.Results
       : AUTO_CHECKIN_DATA_VIEW.Readiness,
   )
-  const {
-    failed: failedCount,
-    uncertain: uncertainCount,
-    skipped: skippedCount,
-  } = countAutoCheckinResults(results)
-  const attentionCount = failedCount + uncertainCount + skippedCount
+  const attentionCount = countAutoCheckinResultsNeedingAttention(results)
   const setupRequiredCount = snapshots.filter(
     (snapshot) =>
       getAutoCheckinSnapshotReadinessCategory(snapshot) ===
@@ -151,7 +146,7 @@ export default function AutoCheckinDataWorkspace({
             className={DATA_VIEW_TRIGGER_CLASS_NAME}
           >
             {setupRequiredCount > 0 ? (
-              <CircleAlert className="text-warning-text h-4 w-4 shrink-0" />
+              <CircleAlert className="text-warning-indicator h-4 w-4 shrink-0" />
             ) : (
               <ClipboardCheck className="h-4 w-4 shrink-0" />
             )}

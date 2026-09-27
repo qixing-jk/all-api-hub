@@ -367,7 +367,7 @@ export function BookmarkTreeSelector({
   const isSearching = searchQuery.trim().length > 0
   const hasVisibleNodes = visibleNodeIds.length > 0
 
-  // The virtualizer needs pixels, including live density and root-font changes.
+  // The virtualizer needs pixels, including live density and text-size changes.
   // Measure the inherited CSS token so its offsets match the visible rows.
   useLayoutEffect(() => {
     const element = rowMeasureRef.current
@@ -423,7 +423,7 @@ export function BookmarkTreeSelector({
       <div
         ref={rowMeasureRef}
         aria-hidden="true"
-        className="pointer-events-none invisible absolute h-(--density-tree-row) w-0"
+        className="pointer-events-none invisible absolute h-(--density-tree-row) min-h-[calc(var(--font-size-sm--line-height)+0.25rem)] w-0"
       />
       <div className="mb-density-2 gap-y-density-2 flex shrink-0 flex-col gap-x-2 sm:flex-row sm:items-center">
         <Input

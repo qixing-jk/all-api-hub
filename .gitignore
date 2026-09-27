@@ -12,6 +12,10 @@
 /playwright-report
 /test-results
 /diagnostics-results
+# Vitest shard inputs and outputs: blob reports, and the durations manifest the
+# shard sequencer reads (CI restores both from the Actions cache).
+/.vitest-reports
+/.vitest-durations
 
 # playwright-cli
 .playwright-cli/

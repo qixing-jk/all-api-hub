@@ -100,7 +100,7 @@
       "title": "Nutzungszeit-Heatmap"
     }
   },
-  "description": "Synchronisieren und visualisieren Sie den aggregierten Nutzungsverlauf über alle Konten hinweg, mit Exportunterstützung.",
+  "description": "Anfragen, Token-Nutzung und Kosten nach Konto, Modell und Zeitraum auswerten.",
   "empty": {
     "description": "Aktivieren Sie die Synchronisierung unter Einstellungen → Kontonutzung und klicken Sie dann auf „Jetzt synchronisieren“, um den aktuellen Nutzungsverlauf abzurufen.",
     "title": "Noch keine Daten zum Nutzungsverlauf"

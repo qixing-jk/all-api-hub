@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { cn } from "~/lib/utils"
 import {
   API_VERIFICATION_MODES,
   type ApiVerificationMode,
@@ -20,19 +21,29 @@ export function VerificationModeSelect({
   value,
   onChange,
   disabled,
+  labelRowClassName,
 }: {
   value: ApiVerificationMode
   onChange: (value: ApiVerificationMode) => void
   disabled?: boolean
+  /**
+   * Extra classes for the label row.
+   *
+   * Callers whose sibling fields reserve a taller label row can pass the same
+   * height here so paired controls keep a shared baseline.
+   */
+  labelRowClassName?: string
 }) {
   const { t } = useTranslation("aiApiVerification")
   const id = useId()
 
   return (
     <div className="space-y-density-1-5">
-      <label htmlFor={id} className="text-muted-foreground block text-xs">
-        {t("verifyDialog.meta.mode")}
-      </label>
+      <div className={cn("flex items-center", labelRowClassName)}>
+        <label htmlFor={id} className="text-muted-foreground text-xs">
+          {t("verifyDialog.meta.mode")}
+        </label>
+      </div>
       <Select
         value={value}
         onValueChange={(mode) => onChange(mode as ApiVerificationMode)}

@@ -130,6 +130,10 @@ describe("managed-site status for runtime keys", () => {
       native,
       service,
     ])
+    // Both keys belong to one scan, so they share its channel search cache.
+    expect(check.mock.calls[0][0].operationContext).toBe(
+      check.mock.calls[1][0].operationContext,
+    )
     expect(JSON.stringify(view.result.current.states)).not.toContain(
       "private-channel-secret",
     )
@@ -149,11 +153,26 @@ describe("managed-site status for runtime keys", () => {
     view.rerender({ keys: [first, second] })
     await waitFor(() => expect(check).toHaveBeenCalledTimes(2))
     expect(signal.aborted).toBe(false)
-    expect(check.mock.calls[0][0].operationContext).not.toBe(
-      check.mock.calls[1][0].operationContext,
+    // A later scan must not reuse searches that could predate its own edits.
+    expect(check.mock.calls[1][0].operationContext).not.toBe(
+      check.mock.calls[0][0].operationContext,
     )
     await act(async () => pending.resolve({ status: "added" }))
     expect(view.result.current.states[first.id].result?.status).toBe("added")
+  })
+
+  it("gives a manual refresh its own channel search cache", async () => {
+    const first = key("first")
+    const view = renderStatuses([first])
+    await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
+    const scanContext = check.mock.calls[0][0].operationContext
+
+    await act(async () => {
+      await view.result.current.refresh()
+    })
+
+    expect(check).toHaveBeenCalledTimes(2)
+    expect(check.mock.calls[1][0].operationContext).not.toBe(scanContext)
   })
 
   it.each(["credentials", "endpoint", "models"])(

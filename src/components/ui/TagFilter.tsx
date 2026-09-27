@@ -283,7 +283,7 @@ export function TagFilter(props: TagFilterProps) {
         disabled={isOptionDisabled}
         data-tag-filter-chip="true"
         className={cn(
-          "py-density-1 border px-3 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px]",
+          "py-density-1 border px-3 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[length:calc(0.8125rem+var(--text-size-increment))]",
           chipBaseClasses,
           isInOverflow && "w-full justify-between",
         )}
@@ -298,7 +298,7 @@ export function TagFilter(props: TagFilterProps) {
             <Badge
               variant={option.variant ?? (isActive ? "default" : "outline")}
               size="sm"
-              className="shrink-0 border-transparent px-1.5 text-[11px]"
+              className="text-2xs shrink-0 border-transparent px-1.5"
             >
               {count}
             </Badge>
@@ -327,7 +327,7 @@ export function TagFilter(props: TagFilterProps) {
           isActive={!hasSelection}
           disabled={disabled}
           className={cn(
-            "py-density-1 border px-3 text-xs font-medium shadow-xs sm:text-[13px]",
+            "py-density-1 border px-3 text-xs font-medium shadow-xs sm:text-[length:calc(0.8125rem+var(--text-size-increment))]",
             !hasSelection
               ? "border-primary bg-primary text-primary-foreground"
               : "dark:bg-card/70 border-border bg-card text-foreground",
@@ -341,7 +341,7 @@ export function TagFilter(props: TagFilterProps) {
               <Badge
                 variant={!hasSelection ? "default" : "outline"}
                 size="sm"
-                className="shrink-0 border-transparent px-1.5 text-[11px]"
+                className="text-2xs shrink-0 border-transparent px-1.5"
               >
                 {allCount}
               </Badge>
@@ -363,7 +363,7 @@ export function TagFilter(props: TagFilterProps) {
                 size="sm"
                 shape="pill"
                 disabled={disabled}
-                className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[13px]"
+                className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[length:calc(0.8125rem+var(--text-size-increment))]"
                 aria-label={moreLabel}
               >
                 <span className="gap-y-density-1 flex items-center gap-x-1">
@@ -371,7 +371,7 @@ export function TagFilter(props: TagFilterProps) {
                   <Badge
                     variant="outline"
                     size="sm"
-                    className="border-transparent px-1.5 text-[11px]"
+                    className="text-2xs border-transparent px-1.5"
                   >
                     +{overflowOptions.length}
                   </Badge>
@@ -379,7 +379,7 @@ export function TagFilter(props: TagFilterProps) {
                     <Badge
                       variant="default"
                       size="sm"
-                      className="border-transparent px-1.5 text-[11px]"
+                      className="text-2xs border-transparent px-1.5"
                     >
                       {overflowSelectedCount}
                     </Badge>
@@ -398,7 +398,7 @@ export function TagFilter(props: TagFilterProps) {
             size="sm"
             shape="pill"
             disabled={disabled}
-            className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[13px]"
+            className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[length:calc(0.8125rem+var(--text-size-increment))]"
             aria-label={moreLabel}
             onClick={() => {
               if (!disabled) {
@@ -411,7 +411,7 @@ export function TagFilter(props: TagFilterProps) {
               <Badge
                 variant="outline"
                 size="sm"
-                className="border-transparent px-1.5 text-[11px]"
+                className="text-2xs border-transparent px-1.5"
               >
                 +{overflowOptions.length}
               </Badge>
@@ -419,7 +419,7 @@ export function TagFilter(props: TagFilterProps) {
                 <Badge
                   variant="default"
                   size="sm"
-                  className="border-transparent px-1.5 text-[11px]"
+                  className="text-2xs border-transparent px-1.5"
                 >
                   {overflowSelectedCount}
                 </Badge>

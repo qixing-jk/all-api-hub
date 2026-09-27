@@ -2275,6 +2275,98 @@ describe("useAccountKeyResourceController", () => {
     ])
   })
 
+  it("retries only failed accounts while retaining healthy rows and progress", async () => {
+    const retryResult = deferred<any>()
+    const accounts = [createAccount("healthy"), createAccount("failed")]
+    const open = vi.fn(async (input: { account: { id: string } }) => {
+      const id = input.account.id
+      if (
+        id === "failed" &&
+        open.mock.calls.filter(([call]) => call.account.id === "failed")
+          .length === 1
+      )
+        throw new Error("failed")
+      return {
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "scope",
+          routeKey: "default",
+          displayName: "Default",
+          isDefault: true,
+        }),
+        openCollection: vi.fn().mockResolvedValue({
+          list:
+            id === "failed"
+              ? () => retryResult.promise
+              : vi.fn().mockResolvedValue({
+                  items: [
+                    {
+                      ...createFacts("scope", "key"),
+                      ref: {
+                        ...createFacts("scope", "key").ref,
+                        accountId: id,
+                      },
+                    },
+                  ],
+                }),
+        }),
+      }
+    })
+    mockNativeResourceSession(open)
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts,
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current.progress).toEqual({
+        total: 2,
+        loaded: 1,
+        loading: 0,
+        error: 1,
+      }),
+    )
+    let retry!: Promise<boolean>
+    act(() => {
+      retry = result.current.retryFailed()
+    })
+    await waitFor(() =>
+      expect(result.current.progress).toEqual({
+        total: 2,
+        loaded: 1,
+        loading: 1,
+        error: 0,
+      }),
+    )
+    expect(result.current.allRows.map((row) => row.ref.accountId)).toEqual([
+      "healthy",
+    ])
+    expect(result.current.settledAccountIds).toEqual(["healthy"])
+    await act(async () => {
+      await result.current.retryFailed()
+    })
+    expect(open).toHaveBeenCalledTimes(3)
+    await act(async () => {
+      retryResult.resolve({ items: [] })
+      await retry
+    })
+    expect(result.current.progress).toEqual({
+      total: 2,
+      loaded: 2,
+      loading: 0,
+      error: 0,
+    })
+    expect(open.mock.calls.map(([call]) => call.account.id)).toEqual([
+      "healthy",
+      "failed",
+      "failed",
+    ])
+    await act(async () => {
+      await result.current.retryFailed()
+    })
+    expect(open).toHaveBeenCalledTimes(3)
+  })
+
   it("keeps identical scope IDs isolated by account in combined inventory", async () => {
     const accounts = [createAccount("account-a"), createAccount("account-b")]
     createDisplayAccountApiContextMock.mockImplementation((account: any) => ({

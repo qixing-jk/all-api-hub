@@ -1,3 +1,4 @@
+import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { isTestMode } from "~/utils/core/environment"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
@@ -28,6 +29,7 @@ type SiteRequestLease<T> = {
 type SiteLimiterState = {
   foregroundStreak: number
   activeCount: number
+  activeBackgroundCount: number
   tokens: number
   lastRefillAt: number
   queue: QueueItem[]
@@ -43,6 +45,11 @@ const SITE_API_REQUEST_LIMITS = {
 
 // Reserve one dispatch for waiting background work after five foreground requests.
 const MAX_FOREGROUND_STREAK = 5
+
+// Keep one token and one concurrency slot out of reach of queued background work
+// whenever foreground work is waiting, so user actions never lose a dispatch to
+// an automatic scan. Both reserves fall away once no foreground work is queued.
+const FOREGROUND_RESERVED_TOKENS = 1
 
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
 
@@ -113,6 +120,9 @@ function resolveNonNegativeNumber(
  * Creates a per-site priority token-bucket limiter with FIFO within each lane. Each lease retains its
  * concurrency slot until completion, even if its caller result settles first.
  *
+ * Queued foreground work keeps one token and one concurrency slot out of reach of background work for
+ * as long as it waits, so an automatic scan cannot make a user action wait for a later dispatch.
+ *
  * Defaults are chosen to stay below New API's dashboard/web default of
  * 60 requests / 180 seconds while still allowing a small local burst.
  */
@@ -130,6 +140,8 @@ export function createSiteRequestLeaseLimiter(
     "requestsPerMinute",
   )
   const refillRatePerMs = requestsPerMinute / 60_000
+  // A bucket that holds a single token has no spare capacity to reserve.
+  const foregroundTokenReserve = capacity > 1 ? FOREGROUND_RESERVED_TOKENS : 0
   const states = new Map<string, SiteLimiterState>()
 
   const runWithoutLimit = async <T>(
@@ -170,6 +182,7 @@ export function createSiteRequestLeaseLimiter(
       state = {
         foregroundStreak: 0,
         activeCount: 0,
+        activeBackgroundCount: 0,
         tokens: capacity,
         lastRefillAt: Date.now(),
         queue: [],
@@ -213,6 +226,39 @@ export function createSiteRequestLeaseLimiter(
     while (state.activeCount < maxConcurrentPerSite && state.queue.length > 0) {
       refillTokens(state)
 
+      // Waiting foreground work jumps the declared queue order, and keeps one
+      // token and one concurrency slot out of reach of a background turn, so an
+      // automatic scan can never turn a user action into a delayed request.
+      const foregroundIndex = state.queue.findIndex(
+        (item) =>
+          item.scheduling?.priority !==
+          REQUEST_SCHEDULING_PRIORITIES.Background,
+      )
+      const hasForegroundWork = foregroundIndex >= 0
+      if (foregroundIndex > 0) {
+        state.queue.unshift(state.queue.splice(foregroundIndex, 1)[0])
+      }
+
+      const backgroundIndex = state.queue.findIndex(
+        (item) =>
+          item.scheduling?.priority ===
+          REQUEST_SCHEDULING_PRIORITIES.Background,
+      )
+      const backgroundTakesTurn =
+        hasForegroundWork &&
+        backgroundIndex >= 0 &&
+        state.foregroundStreak >= MAX_FOREGROUND_STREAK &&
+        state.activeBackgroundCount < Math.max(1, maxConcurrentPerSite - 1)
+      // A background turn spends reserve capacity, so waiting foreground work
+      // takes the turn instead whenever that reserve is not actually available.
+      const requiredTokens = backgroundTakesTurn
+        ? foregroundTokenReserve + 1
+        : 1
+      const index =
+        backgroundTakesTurn && state.tokens >= requiredTokens
+          ? backgroundIndex
+          : 0
+
       if (state.tokens < 1) {
         const waitMs = Math.max(
           1,
@@ -227,26 +273,16 @@ export function createSiteRequestLeaseLimiter(
 
       // Abort dispatch is synchronous: queued handlers remove their item before
       // this turn, and this turn detaches the handler before starting the task.
-      const foregroundIndex = state.queue.findIndex(
-        (item) => item.scheduling?.priority !== "background",
-      )
-      const backgroundIndex = state.queue.findIndex(
-        (item) => item.scheduling?.priority === "background",
-      )
-      const index =
-        backgroundIndex >= 0 &&
-        (foregroundIndex < 0 || state.foregroundStreak >= MAX_FOREGROUND_STREAK)
-          ? backgroundIndex
-          : Math.max(0, foregroundIndex)
       const [item] = state.queue.splice(index, 1)
+      const isBackground =
+        item.scheduling?.priority === REQUEST_SCHEDULING_PRIORITIES.Background
       state.foregroundStreak =
-        item.scheduling?.priority === "background" || backgroundIndex < 0
-          ? 0
-          : state.foregroundStreak + 1
+        isBackground || backgroundIndex < 0 ? 0 : state.foregroundStreak + 1
       detachAbortListener(item)
 
       state.tokens -= 1
       state.activeCount += 1
+      if (isBackground) state.activeBackgroundCount += 1
       void Promise.resolve()
         .then(item.task)
         .then((lease) => {
@@ -258,6 +294,7 @@ export function createSiteRequestLeaseLimiter(
         }, item.reject)
         .finally(() => {
           state.activeCount -= 1
+          if (isBackground) state.activeBackgroundCount -= 1
           schedule(key, state)
           scheduleCleanup(key, state)
         })
@@ -305,59 +342,10 @@ export function createSiteRequestLeaseLimiter(
   }
 }
 
-const wrapLeaseLimiterForTasks =
-  (limiter: ReturnType<typeof createSiteRequestLeaseLimiter>) =>
-  async <T>(
-    key: string,
-    task: () => Promise<T>,
-    signal?: AbortSignal,
-    scheduling?: RequestScheduling,
-  ): Promise<T> =>
-    await limiter(
-      key,
-      () => {
-        let result: Promise<T>
-        try {
-          result = Promise.resolve(task())
-        } catch (error) {
-          result = Promise.reject(error)
-        }
-        return {
-          result,
-          completion: result.then(
-            () => undefined,
-            () => undefined,
-          ),
-        }
-      },
-      signal,
-      scheduling,
-    )
-
-/** Creates a limiter that retains its slot until each task promise settles. */
-export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
-  return wrapLeaseLimiterForTasks(createSiteRequestLeaseLimiter(config))
-}
-
 const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiter({
   ...SITE_API_REQUEST_LIMITS,
   enabled: !isTestMode(),
 })
-const productionSiteRequestLimiter = wrapLeaseLimiterForTasks(
-  productionSiteRequestLeaseLimiter,
-)
-
-/**
- * Runs a site API request through the process-local per-site limiter.
- */
-export async function withSiteApiRequestLimit<T>(
-  key: string,
-  task: () => Promise<T>,
-  signal?: AbortSignal,
-  scheduling?: RequestScheduling,
-): Promise<T> {
-  return await productionSiteRequestLimiter(key, task, signal, scheduling)
-}
 
 /**
  * Runs a request through the limiter while retaining its slot until the

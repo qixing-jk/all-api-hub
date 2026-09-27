@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "Kanal aus der API-Anmeldeinformationsbibliothek importieren",
       "title": "Noch keine Kanäle im selbst gehosteten KI-Gateway"
     },
-    "headerDescription": "Verwalten Sie Kanäle in Ihrem selbst gehosteten KI-Gateway und kombinieren Sie mehrere Kontoschlüssel oder API-Schlüssel in einer einheitlichen KI-API.",
+    "headerDescription": "Kanäle im selbst gehosteten KI-Gateway verwalten und API-Quellen über einen gemeinsamen Endpunkt nutzen.",
     "openChannelConsole": "Öffnen Sie die Gateway-Kanalverwaltung",
     "unconfiguredValueDescription": "Nach der Konfiguration können Sie verstreute Kontoschlüssel und API-Schlüssel als Gateway-Kanäle importieren und diese dann direkt in All API Hub anzeigen und verwalten."
   },

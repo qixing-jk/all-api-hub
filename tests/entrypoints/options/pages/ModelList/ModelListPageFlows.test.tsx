@@ -564,7 +564,7 @@ describe("ModelList page flows", () => {
     ).toEqual(["acc-1"])
     expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelListFilterScope,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
@@ -616,8 +616,8 @@ describe("ModelList page flows", () => {
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-aihubmix" }],
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
         },
         baseFilteredModels: [
           {
@@ -660,8 +660,8 @@ describe("ModelList page flows", () => {
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-runtime" }],
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
         },
         baseFilteredModels: [
           {

@@ -72,6 +72,73 @@ const createOverviewSnapshot = (
 })
 
 describe("useAccountData enabled slices", () => {
+  it("retains the previous successful snapshot for animation across reload and refresh", async () => {
+    const first = createOverviewSnapshot({
+      displayAccounts: [
+        createDisplayAccount({
+          id: "first",
+          balance: { USD: 12, CNY: 84 },
+          todayConsumption: { USD: 2, CNY: 14 },
+        }),
+      ],
+    })
+    const second = createOverviewSnapshot({
+      displayAccounts: [
+        createDisplayAccount({
+          id: "second",
+          balance: { USD: 9, CNY: 63 },
+          todayConsumption: { USD: 3, CNY: 21 },
+        }),
+      ],
+    })
+    mockGetAccountOverviewSnapshot.mockResolvedValueOnce(first)
+    const { result } = renderHook(() => useAccountData())
+    await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+    const load = result.current.loadAccountData
+    expect(result.current.prevBalances).toEqual({})
+    expect(result.current.prevTotalConsumption).toEqual({ USD: 0, CNY: 0 })
+
+    mockGetAccountOverviewSnapshot.mockResolvedValueOnce(second)
+    await act(async () => {
+      await load()
+    })
+    expect(result.current.prevBalances).toEqual({ first: { USD: 12, CNY: 84 } })
+    expect(result.current.prevTotalConsumption).toEqual({ USD: 2, CNY: 14 })
+
+    mockGetAccountOverviewSnapshot.mockRejectedValueOnce(
+      new Error("read failed"),
+    )
+    await act(async () => {
+      await load()
+    })
+    expect(result.current.displayData).toEqual(second.displayAccounts)
+    expect(result.current.prevBalances).toEqual({ first: { USD: 12, CNY: 84 } })
+
+    mockGetAccountOverviewSnapshot.mockResolvedValueOnce(
+      createOverviewSnapshot(),
+    )
+    mockRefreshAllAccounts.mockResolvedValue({ success: 0, failed: 0 })
+    await act(async () => {
+      await result.current.handleRefresh()
+    })
+    expect(result.current.prevBalances).toEqual({ second: { USD: 9, CNY: 63 } })
+    expect(result.current.prevTotalConsumption).toEqual({ USD: 3, CNY: 21 })
+    expect(result.current.loadAccountData).toBe(load)
+    expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(4)
+  })
+
+  it("loads one snapshot on mount without repeating the full account read when loading completes", async () => {
+    mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
+    const { result, rerender } = renderHook(() => useAccountData())
+    await waitFor(() => expect(result.current.isInitialLoad).toBe(false))
+    rerender()
+    expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await result.current.loadAccountData()
+    })
+    expect(mockGetAccountOverviewSnapshot).toHaveBeenCalledTimes(2)
+  })
   it("wraps handleRefresh in one refresh-all intent and forwards its execution", async () => {
     mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
     mockRefreshAllAccounts.mockResolvedValue({ success: 0, failed: 0 })

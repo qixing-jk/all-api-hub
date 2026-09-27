@@ -20,7 +20,7 @@
     },
     "title": "Account breakdown"
   },
-  "description": "Record daily snapshots of balance and cashflow and visualize trends over time.",
+  "description": "View daily balance and cashflow trends to track changes in account funds.",
   "empty": {
     "description": "Enable Balance History and refresh an account to record the first snapshot.",
     "title": "No snapshots yet"

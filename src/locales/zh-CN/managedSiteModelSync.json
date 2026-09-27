@@ -1,5 +1,5 @@
 {
-  "description": "自动更新自建 AI 网关中的模型列表，减少手动维护；渠道创建后可按需开启。",
+  "description": "更新网关渠道的模型列表，查看同步结果与失败原因。",
   "execution": {
     "actions": {
       "refresh": "刷新结果",

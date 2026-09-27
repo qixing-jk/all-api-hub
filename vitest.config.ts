@@ -2,6 +2,8 @@ import { fileURLToPath } from "node:url"
 import path from "path"
 import { defineConfig } from "vitest/config"
 
+import { DurationBalancedSequencer } from "./vitest.shardSequencer"
+
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 const domOnlyTsTests = [
   "entrypoints/content/index.test.ts",
@@ -15,6 +17,7 @@ const domOnlyTsTests = [
   "entrypoints/options/pages/ModelList/useFilteredModels.test.ts",
   "services/ldohSiteLookup.background.test.ts",
   "services/shareSnapshotExport.test.ts",
+  "services/starPromotion/githubStarButton.test.ts",
   "utils/browserApi.test.ts",
   "utils/ccSwitch.test.ts",
   "utils/cherryStudio.test.ts",
@@ -28,6 +31,12 @@ export default defineConfig({
   test: {
     dir: "tests",
     pool: "threads",
+
+    // Shard by measured file cost instead of by file count; see vitest.shardSequencer.ts.
+    // Only consulted when `--shard` is passed, so unsharded runs are unaffected.
+    sequence: {
+      sequencer: DurationBalancedSequencer,
+    },
 
     testTimeout: 15_000,
     hookTimeout: 15_000,

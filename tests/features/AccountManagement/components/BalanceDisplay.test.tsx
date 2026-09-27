@@ -2,7 +2,6 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/BalanceDisplay"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -136,10 +135,7 @@ describe("BalanceDisplay", () => {
       "data-end",
       String(getDisplayMoneyValue(30.25)),
     )
-    expect(balanceValue).toHaveAttribute(
-      "data-duration",
-      String(UI_CONSTANTS.ANIMATION.FAST_DURATION),
-    )
+    expect(balanceValue).toHaveAttribute("data-duration", String(0.6))
 
     const balanceNode = screen.getByTitle("account:list.balance.refreshBalance")
     const consumptionNode = screen.getByTitle(
@@ -185,10 +181,7 @@ describe("BalanceDisplay", () => {
       screen.getByTitle("account:list.balance.refreshBalance"),
     ).getByTestId("countup")
     expect(balanceValue).toHaveAttribute("data-start", "0")
-    expect(balanceValue).toHaveAttribute(
-      "data-duration",
-      String(UI_CONSTANTS.ANIMATION.SLOW_DURATION),
-    )
+    expect(balanceValue).toHaveAttribute("data-duration", String(1.0))
   })
 
   it("qualifies partial daily values without hiding their refresh actions", async () => {
@@ -666,10 +659,7 @@ describe("BalanceDisplay", () => {
       "data-end",
       String(getDisplayMoneyValue(16.5)),
     )
-    expect(balanceValue).toHaveAttribute(
-      "data-duration",
-      String(UI_CONSTANTS.ANIMATION.FAST_DURATION),
-    )
+    expect(balanceValue).toHaveAttribute("data-duration", String(0.6))
   })
 
   it("keeps the refreshing state visible and ignores repeat refresh clicks while the account is already refreshing", async () => {

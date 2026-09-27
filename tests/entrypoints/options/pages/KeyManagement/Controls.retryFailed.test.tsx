@@ -2,39 +2,28 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { AccountSelectorPanel } from "~/features/KeyManagement/components/AccountSelectorPanel"
+import { AccountSummaryBar } from "~/features/KeyManagement/components/AccountSummaryBar"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
-describe("KeyManagement AccountSelectorPanel retry failed", () => {
+describe("KeyManagement account selection and summary", () => {
   it("renders retry failed accounts button and statistics in all-accounts mode", async () => {
     const user = userEvent.setup()
     const onRetryFailedAccounts = vi.fn()
 
     render(
-      <AccountSelectorPanel
-        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
-        setSelectedAccount={vi.fn()}
-        displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
-        aggregateCounts={{
-          total: 0,
-          enabled: 0,
-          showing: 0,
-          knownTotal: 0,
-          knownEnabled: 0,
-          knownShowing: 0,
-        }}
+      <AccountSummaryBar
+        items={[{ accountId: "acc-a", name: "Account A", count: null }]}
         tokenLoadProgress={null}
         failedAccounts={[
           {
             accountId: "acc-a",
             accountName: "Account A",
-            errorMessage: "boom",
           },
           {
             accountId: "acc-b",
             accountName: "Account B",
-            errorMessage: "boom",
           },
         ]}
         onRetryFailedAccounts={onRetryFailedAccounts}
@@ -109,17 +98,7 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
 
   it("shows account progress only while an account is still loading", async () => {
     const baseProps = {
-      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
-      setSelectedAccount: vi.fn(),
-      displayData: [createAccount({ id: "acc-a", name: "Account A" })] as any,
-      aggregateCounts: {
-        total: 0,
-        enabled: 0,
-        showing: 0,
-        knownTotal: 0,
-        knownEnabled: 0,
-        knownShowing: 0,
-      },
+      items: [{ accountId: "acc-a", name: "Account A", count: 1 }],
       failedAccounts: [
         {
           accountId: "acc-b",
@@ -129,18 +108,18 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
       ],
     }
     const { unmount } = render(
-      <AccountSelectorPanel
+      <AccountSummaryBar
         {...baseProps}
         tokenLoadProgress={{ total: 2, loaded: 1, loading: 0, error: 1 }}
       />,
     )
 
-    await screen.findByText(/keyManagement:selectAccount/)
+    await screen.findByText(/keyManagement:accountSummary.title/)
     expect(screen.queryByText(/keyManagement:allAccountsProgress/)).toBeNull()
 
     unmount()
     render(
-      <AccountSelectorPanel
+      <AccountSummaryBar
         {...baseProps}
         tokenLoadProgress={{ total: 3, loaded: 1, loading: 1, error: 1 }}
       />,

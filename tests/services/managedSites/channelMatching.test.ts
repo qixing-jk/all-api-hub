@@ -10,7 +10,6 @@ import {
 } from "~/services/managedSites/channelMatch"
 import {
   findBestManagedSiteChannelMatch,
-  findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
   getManagedSiteChannelKeyComparisonMode,
@@ -121,108 +120,6 @@ describe("channelMatching", () => {
     })
 
     expect(result).toEqual(channels)
-  })
-
-  it("finds comparable channels by split key candidates and treats keyless lookups as URL+models matches", () => {
-    const firstComparableChannel = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_1),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "",
-    })
-    const keyedComparableChannel = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_2),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "first-key,\nsecond-key",
-    })
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [firstComparableChannel, keyedComparableChannel],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-      }),
-    ).toBe(firstComparableChannel)
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [firstComparableChannel, keyedComparableChannel],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "second-key",
-      }),
-    ).toBe(keyedComparableChannel)
-  })
-
-  it("compares channel keys exactly by default", () => {
-    const channelWithoutPrefix = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_21),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "stored-key",
-    })
-    const channelWithPrefix = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_22),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "sk-stored-key",
-    })
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [channelWithoutPrefix],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-stored-key",
-      }),
-    ).toBeNull()
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [channelWithPrefix],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "stored-key",
-      }),
-    ).toBeNull()
-  })
-
-  it("treats an optional sk- prefix as equivalent when that comparison mode is enabled", () => {
-    const channelWithoutPrefix = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_23),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "stored-key",
-    })
-    const channelWithPrefix = buildManagedResourceMatchCandidate({
-      ref: matchingResourceRef(1_24),
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "sk-stored-key",
-    })
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [channelWithoutPrefix],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-stored-key",
-        keyComparisonMode:
-          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
-      }),
-    ).toBe(channelWithoutPrefix)
-
-    expect(
-      findManagedSiteChannelByComparableInputs({
-        channels: [channelWithPrefix],
-        accountBaseUrl: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "stored-key",
-        keyComparisonMode:
-          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
-      }),
-    ).toBe(channelWithPrefix)
   })
 
   it("reports key comparison as unavailable when no key is provided", () => {

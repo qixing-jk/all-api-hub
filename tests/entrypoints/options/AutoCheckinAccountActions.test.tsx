@@ -177,6 +177,84 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
+  it.each(["disabled", "missing"])(
+    "does not repeatedly fail account-info reads for a %s account when another account is retried",
+    async (unavailableAccount) => {
+      const user = userEvent.setup()
+      const browserApi = await import("~/utils/browser/browserApi")
+      const rejectedReads = vi.fn()
+      const accountReads = vi.fn()
+      let statusCalls = 0
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: unknown, data?: any) => {
+          if (message === AutoCheckinMessageTypes.GetStatus) {
+            statusCalls += 1
+            return {
+              success: true,
+              data: {
+                perAccount: {
+                  alpha: {
+                    accountId: "alpha",
+                    accountName: "Alpha",
+                    status:
+                      statusCalls === 1
+                        ? CHECKIN_RESULT_STATUS.FAILED
+                        : CHECKIN_RESULT_STATUS.SUCCESS,
+                    timestamp: 1700000000000,
+                  },
+                  beta: {
+                    accountId: "beta",
+                    accountName: "Beta",
+                    status: CHECKIN_RESULT_STATUS.SKIPPED,
+                    timestamp: 1700000000000,
+                  },
+                },
+              },
+            }
+          }
+          if (message === AutoCheckinMessageTypes.GetAccountInfo) {
+            if (data.accountId === "beta") {
+              accountReads()
+              if (unavailableAccount === "missing" || !data.includeDisabled) {
+                rejectedReads()
+                return {
+                  success: false,
+                  error: `Account ${unavailableAccount}`,
+                }
+              }
+            }
+            return {
+              success: true,
+              data: { id: data.accountId, name: data.accountId },
+            }
+          }
+          return { success: true }
+        },
+      )
+
+      render(<AutoCheckin routeParams={{}} />)
+      await waitFor(() => expect(accountReads).toHaveBeenCalledTimes(1))
+      await user.click(
+        await screen.findByRole("button", {
+          name: "autoCheckin:execution.actions.retryAccount",
+        }),
+      )
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", {
+            name: "autoCheckin:execution.actions.retryAccount",
+          }),
+        ).not.toBeInTheDocument(),
+      )
+
+      expect(statusCalls).toBeGreaterThanOrEqual(2)
+      expect(accountReads).toHaveBeenCalledTimes(1)
+      expect(rejectedReads).toHaveBeenCalledTimes(
+        unavailableAccount === "missing" ? 1 : 0,
+      )
+    },
+  )
+
   it("opens auto check-in settings from the title shortcut", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
@@ -705,6 +783,14 @@ describe("AutoCheckin account actions", () => {
 
     const alphaRow = await screen.findByText("Alpha")
     const betaRow = await screen.findByText("Beta")
+    await waitFor(() =>
+      expect(
+        sendRuntimeMessageSpy.mock.calls.filter(
+          ([message]) => message === AutoCheckinMessageTypes.GetAccountInfo,
+        ),
+      ).toHaveLength(2),
+    )
+    sendRuntimeMessageSpy.mockClear()
     const alphaMoreButton = within(
       alphaRow.closest("tr") as HTMLElement,
     ).getByRole("button", { name: "common:actions.more" })

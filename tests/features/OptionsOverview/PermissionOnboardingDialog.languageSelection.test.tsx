@@ -77,11 +77,6 @@ vi.mock("~/services/permissions/permissionManager", () => {
       Bookmarks: "bookmarks",
     },
     OPTIONAL_PERMISSIONS,
-    OPTIONAL_PERMISSION_DEFINITIONS: OPTIONAL_PERMISSIONS.map((id) => ({
-      id,
-      titleKey: `permissions.items.${id}.title`,
-      descriptionKey: `permissions.items.${id}.description`,
-    })),
     ensurePermissionsDetailed: permissionMocks.ensurePermissionsDetailed,
     hasPermission: permissionMocks.hasPermission,
     onOptionalPermissionsChanged: permissionMocks.onOptionalPermissionsChanged,
@@ -135,13 +130,6 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/General/DisplaySettings",
-  () => ({
-    default: () => <div data-testid="display-settings" />,
-  }),
-)
-
-vi.mock(
   "~/features/BasicSettings/components/tabs/General/LoggingSettings",
   () => ({
     default: () => <div data-testid="logging-settings" />,
@@ -175,6 +163,23 @@ vi.mock("~/features/Appearance/ThemeModeSettings", () => ({
 
 vi.mock("~/features/Appearance/AppearanceControls", () => ({
   AppearanceControls: () => <div data-testid="appearance-controls" />,
+}))
+
+// The appearance and display sections read preferences and expose a section
+// reset; this isolated i18n tree keeps the real provider out of the render.
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  useUserPreferencesContext: () => ({
+    preferences: undefined,
+    themeMode: "system",
+    updateAppearance: async () => ({ ok: true }),
+    currencyType: "USD",
+    activeTab: "balance",
+    showTodayCashflow: true,
+    updateCurrencyType: async () => ({ ok: true }),
+    updateDefaultTab: async () => ({ ok: true }),
+    updateShowTodayCashflow: async () => ({ ok: true }),
+    resetDisplaySettings: async () => ({ ok: true }),
+  }),
 }))
 
 vi.mock("~/utils/feedback/operationFeedback", () => ({

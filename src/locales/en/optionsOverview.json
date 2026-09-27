@@ -3,9 +3,33 @@
     "open": "Open"
   },
   "attention": {
+    "accountsAllDisabled": {
+      "description": "Disabled accounts are skipped by refresh, check-in, and other automation. Re-enable the ones you still use.",
+      "title_one": "The only account is disabled",
+      "title_other": "All {{count}} accounts are disabled"
+    },
+    "accountTempWindowIssue": {
+      "description": "{{reason}}",
+      "title": "{{name}} needs a browser settings check"
+    },
     "accountUnhealthy": {
       "description": "{{reason}}",
       "title": "{{name}} has a health issue"
+    },
+    "actions": {
+      "addAccount": "Add account",
+      "addProfile": "Add credential",
+      "editAccount": "Edit account",
+      "fixAccount": "Fix account",
+      "handleCheckIn": "Handle check-in",
+      "manageAccounts": "Manage accounts",
+      "openSettings": "Open settings",
+      "refreshAccounts": "Refresh accounts",
+      "signInAgain": "Sign in again",
+      "viewAccount": "View account",
+      "viewAnnouncements": "View announcements",
+      "viewCheckIn": "View check-in",
+      "viewCheckInResults": "View results"
     },
     "addAccount": {
       "description": "Add an account before balances, usage, and automation can be summarized.",
@@ -14,6 +38,61 @@
     "addProfile": {
       "description": "Add API credentials so tools and export flows can reuse them.",
       "title": "No API profiles yet"
+    },
+    "autoCheckinGloballyDisabled": {
+      "description_one": "{{count}} account has automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
+      "description_other": "{{count}} accounts have automatic check-in enabled, but nothing runs while the global switch is off. Re-enable it in check-in settings.",
+      "title": "Automatic check-in is off globally"
+    },
+    "autoCheckinNeedsAttention": {
+      "description": "The latest run had failures or unconfirmed results. Open auto check-in to review the reasons and retry.",
+      "title_one": "Automatic check-in needs attention for {{count}} account",
+      "title_other": "Automatic check-in needs attention for {{count}} accounts"
+    },
+    "categories": {
+      "accounts": "Accounts",
+      "automation": "Automation",
+      "credentials": "Credentials",
+      "data": "Data"
+    },
+    "categoryFilterLabel": "Category",
+    "checkInAccountDataMissing": {
+      "description": "Saved credentials or account details are incomplete. Re-detect the account in Accounts, then try check-in again.",
+      "title_one": "{{count}} account is missing saved sign-in data",
+      "title_other": "{{count}} accounts are missing saved sign-in data"
+    },
+    "checkInMethodUnresolved": {
+      "description": "Auto check-in is enabled, but no usable method is ready yet. In Accounts, redetect or choose a check-in method before the next run.",
+      "title": "{{name}} needs a check-in method"
+    },
+    "checkInPermissionDenied": {
+      "description": "The site rejected the check-in request. Sign in again or review the account permissions before retrying.",
+      "title_one": "{{count}} account was denied during check-in",
+      "title_other": "{{count}} accounts were denied during check-in"
+    },
+    "checkInReloginRequired": {
+      "description": "The latest run skipped these accounts because the site sign-in expired. Sign in on the site, then run check-in again.",
+      "title_one": "{{count}} account needs a new sign-in",
+      "title_other": "{{count}} accounts need a new sign-in"
+    },
+    "filterAll": "All",
+    "severityFilterLabel": "Severity",
+    "siteTypeUnknown": {
+      "description": "Automatic check-in cannot determine this site's protocol. Edit the account and choose the correct site type, or run auto-detection again.",
+      "title": "{{name}} has an unknown site type"
+    },
+    "sortHint": "Sorted by impact",
+    "summary_one": "{{count}} pending",
+    "summary_other": "{{count}} pending",
+    "unreadSiteAnnouncements": {
+      "description": "Open site announcements to mark them as read and avoid missing maintenance or risk notices.",
+      "title_one": "{{count}} unread site announcement",
+      "title_other": "{{count}} unread site announcements"
+    },
+    "usageRefreshPending": {
+      "description": "Refresh accounts to complete today's request, token, and cost statistics.",
+      "title_one": "{{count}} account needs a stats refresh",
+      "title_other": "{{count}} accounts need a stats refresh"
     }
   },
   "autoCheckin": {
@@ -174,7 +253,7 @@
     "needs_setup": "Needs setup",
     "not_applicable": "Not applicable"
   },
-  "description": "Review the current state of accounts, keys, usage, and automated tasks.",
+  "description": "Review accounts, keys and usage, and follow up on automated tasks and pending actions.",
   "sections": {
     "automationOverview": "Automation runs",
     "configurationOverview": "Configuration Overview",
@@ -189,6 +268,7 @@
   },
   "states": {
     "allClear": "There is nothing that needs attention right now.",
+    "allClearDescription": "Account issues, missing check-in methods, and statistics that need refresh will appear here automatically.",
     "loadDetailUnavailable": "Some overview information is temporarily unavailable. Try loading it again.",
     "loadedWithError": "Some information failed to load. Showing available data.",
     "loading": "Loading overview..."

@@ -84,17 +84,6 @@
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
-      <img src="../../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
-    </a>
-    <p>
-      <strong>Atlas Cloud</strong> はフルモーダル AI 推論プラットフォームです。1 つの AI API から動画生成、画像生成、LLM API にアクセスでき、300 以上の厳選モデルを横断して利用できます。より手頃な API 利用に向けた新しい Coding Plan プロモーションは、<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">こちらのリンク</a>をご覧ください（<a href="./service-guides/atlascloud.md">設定ガイド</a>）。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
       <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>

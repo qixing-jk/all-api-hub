@@ -70,10 +70,7 @@ export const REQUIREMENT_OUTCOME_BADGE_VARIANTS: Record<
   [ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Uncertain]: "warning",
 }
 
-export const EMPTY_REPAIR_OUTCOME_COUNTS: Record<
-  AccountKeyRepairOutcome,
-  number
-> = {
+const EMPTY_REPAIR_OUTCOME_COUNTS: Record<AccountKeyRepairOutcome, number> = {
   [ACCOUNT_KEY_REPAIR_OUTCOMES.Covered]: 0,
   [ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired]: 0,
   [ACCOUNT_KEY_REPAIR_OUTCOMES.Partial]: 0,

@@ -36,6 +36,7 @@ describe("auto-checkin snapshot readiness categories", () => {
     ["source_unavailable", SNAPSHOT_READINESS_FILTER.TEMPORARILY_UNAVAILABLE],
     ["account_data_missing", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
     ["authentication_required", SNAPSHOT_READINESS_FILTER.SETUP_REQUIRED],
+    ["already_checked_today", SNAPSHOT_READINESS_FILTER.READY],
   ] as const)("maps %s to %s", (skipReason, expected) => {
     expect(
       getAutoCheckinSnapshotReadinessCategory(

@@ -116,7 +116,7 @@
   },
   "copyAllNames": "Copy All Model Names",
   "currentUsableGroups": "Current usable groups",
-  "description": "View and manage available AI models",
+  "description": "Browse models from accounts and API credentials, including pricing, capabilities and availability.",
   "detailedPricing": "Detailed Pricing",
   "diagnostics": {
     "all": "All offers",
@@ -437,6 +437,8 @@
     "title": "Profile-backed model catalog"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "Model access has not been confirmed for the accounts below. Their full site catalogs are shown; some models may not be callable with these accounts. Check account permissions and verification results.",
+    "badge": "Full site catalog",
     "description": "This account's actual available model scope could not be confirmed, so the provider’s full model catalog is shown. Some models may not be callable with this account; use the site's account permissions and real verification results as the final source of truth.",
     "title": "Fell back to the provider’s full model catalog"
   },
@@ -594,6 +596,7 @@
   "selectSourceToContinue": "Select a source above before viewing the model list.",
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
+  "showUnavailableModels": "Also show models without account access",
   "siteDescription": "Site description:",
   "siteSupportedGroups": "Site-supported groups",
   "sortBy": "Sort By",
@@ -654,6 +657,7 @@
   "totalModels_one": "Total {{count}} model",
   "totalModels_other": "Total {{count}} models",
   "unavailable": "Unavailable",
+  "unavailableModelsHint": "Include already loaded models with no usable groups for this account. These models bypass group selection but still follow other filters. This does not fetch additional site-wide models. Applies to this page session only.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Prices are unavailable because this usable group has no multiplier.",
     "keyGroupUnknown": "Prices are unavailable because this key's Sub2API group could not be resolved.",

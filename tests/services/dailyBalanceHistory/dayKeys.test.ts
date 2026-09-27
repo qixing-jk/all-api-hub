@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  addDaysToDayKey,
   computeRetentionCutoffDayKey,
-  getDayKeyFromUnixSeconds,
   listDayKeysInRange,
-  subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
+import {
+  addDaysToDayKey,
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 
 describe("dailyBalanceHistory dayKeys", () => {
   it("keeps a valid cutoff for retention periods beyond the Date range", () => {

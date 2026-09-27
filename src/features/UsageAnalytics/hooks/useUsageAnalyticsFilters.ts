@@ -6,10 +6,6 @@ import {
   compareAccountDisplayNames,
 } from "~/services/accounts/utils/accountDisplayName"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
-import {
-  parseDayKey,
-  subtractDaysFromDayKey,
-} from "~/services/history/usageHistory/core"
 import type { SiteAccount } from "~/types"
 import type {
   UsageHistoryAccountStore,
@@ -17,6 +13,7 @@ import type {
   UsageHistoryExportSelection,
   UsageHistoryStore,
 } from "~/types/usageHistory"
+import { parseDayKey, subtractDaysFromDayKey } from "~/utils/core/dayKey"
 
 import { listDayKeysInRange, type DayKey } from "../charts/dayKeys"
 

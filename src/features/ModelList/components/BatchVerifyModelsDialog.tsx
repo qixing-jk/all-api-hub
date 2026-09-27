@@ -14,6 +14,7 @@ import { Virtuoso } from "react-virtuoso"
 import { formatLatency } from "~/components/dialogs/VerifyApiDialog/utils"
 import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -26,6 +27,7 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
   MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
   pickBatchVerifyCompatibleRuntimeKey,
   resolveBatchVerifyApiType,
   type BatchVerifyApiTypeMode,
@@ -86,6 +88,7 @@ import {
   createProfileModelVerificationHistoryTarget,
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
+  type ApiVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
@@ -357,6 +360,12 @@ export function BatchVerifyModelsDialog({
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
+  /**
+   * Results waiting for the next bulk write. Flushing in batches keeps the store
+   * write count proportional to `MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE`
+   * instead of the number of verified models.
+   */
+  const pendingSummariesRef = useRef<ApiVerificationHistorySummary[]>([])
   const batchFailureCategoryRef = useRef<
     ProductAnalyticsErrorCategory | undefined
   >(undefined)
@@ -572,6 +581,29 @@ export function BatchVerifyModelsDialog({
     [],
   )
 
+  /**
+   * Writes the pending results in one store write.
+   *
+   * Swaps the buffer before awaiting so concurrent workers cannot flush the same
+   * results twice. A failure is logged for the batch: one unwritable store must
+   * not discard the other results, and the rows report their own probe outcomes
+   * regardless of persistence.
+   */
+  const flushPendingResults = useCallback(async () => {
+    const pending = pendingSummariesRef.current
+    if (pending.length === 0) return
+
+    pendingSummariesRef.current = []
+    try {
+      await verificationResultHistoryStorage.upsertLatestSummaries(pending)
+    } catch (persistError) {
+      logger.error("Failed to persist batch verification results", {
+        count: pending.length,
+        message: toSanitizedErrorSummary(persistError, []),
+      })
+    }
+  }, [])
+
   const persistResult = useCallback(
     async (
       item: BatchVerifyModelItem,
@@ -598,9 +630,15 @@ export function BatchVerifyModelsDialog({
       })
       if (!historySummary) return
 
-      await verificationResultHistoryStorage.upsertLatestSummary(historySummary)
+      pendingSummariesRef.current.push(historySummary)
+      if (
+        pendingSummariesRef.current.length >=
+        MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE
+      ) {
+        await flushPendingResults()
+      }
     },
-    [],
+    [flushPendingResults],
   )
 
   const runOne = useCallback(
@@ -948,6 +986,9 @@ export function BatchVerifyModelsDialog({
       if (shouldStopRef.current) {
         markUnfinishedRowsStopped()
       }
+      // Flush the last partial batch on every exit path, including stop and
+      // failure, so completed results always reach storage.
+      await flushPendingResults()
       if (batchAbortControllerRef.current === abortController) {
         batchAbortControllerRef.current = null
       }
@@ -996,7 +1037,7 @@ export function BatchVerifyModelsDialog({
   const statusVariant = (status: BatchVerifyRowStatus) => {
     if (status === BATCH_VERIFY_ROW_STATUSES.PASS) return "success"
     if (status === BATCH_VERIFY_ROW_STATUSES.FAIL) return "danger"
-    if (status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) return "warning"
+    if (status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) return "secondary"
     if (status === BATCH_VERIFY_ROW_STATUSES.RUNNING) return "info"
     return "outline"
   }
@@ -1156,13 +1197,13 @@ export function BatchVerifyModelsDialog({
               })
             : t("modelList:batchVerify.idleHint")}
         </div>
-        <div className="gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup>
           <Button variant="secondary" onClick={onClose} disabled={!canClose}>
             {t("aiApiVerification:verifyDialog.actions.close")}
           </Button>
           {isRunning ? (
             <Button
-              variant="destructive"
+              variant="secondary"
               onClick={stopBatch}
               analyticsAction={
                 PRODUCT_ANALYTICS_ACTION_IDS.StopBatchModelVerify
@@ -1177,7 +1218,7 @@ export function BatchVerifyModelsDialog({
                 : t("modelList:batchVerify.actions.start")}
             </Button>
           )}
-        </div>
+        </ActionGroup>
       </div>
     </ProductAnalyticsScope>
   )
@@ -1243,7 +1284,7 @@ export function BatchVerifyModelsDialog({
                   value: summary.fail,
                 })}
               </Badge>
-              <Badge variant="warning">
+              <Badge variant="secondary">
                 {t("modelList:batchVerify.counts.skipped", {
                   value: summary.skipped,
                 })}

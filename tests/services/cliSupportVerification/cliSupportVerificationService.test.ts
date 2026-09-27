@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  runCliSupportSimulation,
-  runCliSupportTool,
-} from "~/services/verification/cliSupportVerification/cliSupportVerificationService"
+import { runCliSupportTool } from "~/services/verification/cliSupportVerification/cliSupportVerificationService"
 
 const mockRunCliSupportToolFromRegistry = vi.fn()
 
@@ -36,51 +33,29 @@ describe("cliSupportVerificationService", () => {
     })
   })
 
-  it("runs all tools with the same modelId and selected mode in the simulation suite", async () => {
-    mockRunCliSupportToolFromRegistry.mockResolvedValue({
-      id: "codex",
-      status: "pass",
-      latencyMs: 0,
-      summary: "ok",
-    })
-
-    await runCliSupportSimulation({
-      baseUrl: "https://example.com",
-      apiKey: "k",
-      modelId: "m1",
-      mode: "non-streaming",
-    })
-
-    expect(mockRunCliSupportToolFromRegistry).toHaveBeenCalledTimes(3)
-    expect(mockRunCliSupportToolFromRegistry).toHaveBeenNthCalledWith(
-      1,
-      "claude",
-      {
+  it.each(["claude", "codex", "gemini"] as const)(
+    "passes the selected model and mode to the %s tool",
+    async (toolId) => {
+      mockRunCliSupportToolFromRegistry.mockResolvedValue({
+        id: toolId,
+        status: "pass",
+        latencyMs: 0,
+        summary: "ok",
+      })
+      await runCliSupportTool({
+        toolId,
         baseUrl: "https://example.com",
         apiKey: "k",
         modelId: "m1",
         mode: "non-streaming",
-      },
-    )
-    expect(mockRunCliSupportToolFromRegistry).toHaveBeenNthCalledWith(
-      2,
-      "codex",
-      {
+      })
+      expect(mockRunCliSupportToolFromRegistry).toHaveBeenCalledTimes(1)
+      expect(mockRunCliSupportToolFromRegistry).toHaveBeenCalledWith(toolId, {
         baseUrl: "https://example.com",
         apiKey: "k",
         modelId: "m1",
         mode: "non-streaming",
-      },
-    )
-    expect(mockRunCliSupportToolFromRegistry).toHaveBeenNthCalledWith(
-      3,
-      "gemini",
-      {
-        baseUrl: "https://example.com",
-        apiKey: "k",
-        modelId: "m1",
-        mode: "non-streaming",
-      },
-    )
-  })
+      })
+    },
+  )
 })

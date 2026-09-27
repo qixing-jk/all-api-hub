@@ -1,9 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DoneHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -43,6 +51,40 @@ describe("DoneHubSettings", () => {
         <DoneHubSettings />
       </I18nextProvider>,
     )
+
+  it.each([true, false])(
+    "only clears connection drafts after a successful reset (ok=%s)",
+    async (ok) => {
+      const user = userEvent.setup()
+      const resetDoneHubConfig = vi.fn().mockResolvedValue({ ok })
+      vi.mocked(useUserPreferencesContext).mockReturnValue({
+        preferences: { lastUpdated: 1, doneHub: DEFAULT_PREFERENCES.doneHub },
+        doneHubBaseUrl: "",
+        doneHubAdminToken: "",
+        doneHubUserId: "",
+        resetDoneHubConfig,
+      } as any)
+      renderSubject()
+      const reset = screen.getByRole("button", { name: "common:actions.reset" })
+      expect(reset).toBeDisabled()
+      const input = within(
+        document.getElementById("done-hub-user-id")!,
+      ).getByRole("textbox")
+      await user.type(input, "invalid")
+      expect(reset).toBeEnabled()
+      await user.click(reset)
+      expect(resetDoneHubConfig).not.toHaveBeenCalled()
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "common:actions.reset",
+        }),
+      )
+      expect(resetDoneHubConfig).toHaveBeenCalledOnce()
+      expect(input).toHaveValue(ok ? "" : "invalid")
+      if (ok) expect(reset).toBeDisabled()
+      else expect(screen.getByRole("dialog")).toBeVisible()
+    },
+  )
 
   it("trims the base URL before persisting", async () => {
     const updateDoneHubBaseUrl = vi

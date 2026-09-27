@@ -1,6 +1,14 @@
 /** Process-local scheduling intent, read again when a queued request dispatches. */
+export const REQUEST_SCHEDULING_PRIORITIES = {
+  Foreground: "foreground",
+  Background: "background",
+} as const
+
+export type RequestSchedulingPriority =
+  (typeof REQUEST_SCHEDULING_PRIORITIES)[keyof typeof REQUEST_SCHEDULING_PRIORITIES]
+
 export interface RequestScheduling {
-  readonly priority: "foreground" | "background"
+  readonly priority: RequestSchedulingPriority
 }
 
 export interface ScheduledReadOptions {
@@ -74,10 +82,11 @@ export class SharedRead<T> {
     const requestScheduling: RequestScheduling = {
       get priority() {
         return [...consumers.values()].some(
-          (intent) => intent?.priority !== "background",
+          (intent) =>
+            intent?.priority !== REQUEST_SCHEDULING_PRIORITIES.Background,
         )
-          ? "foreground"
-          : "background"
+          ? REQUEST_SCHEDULING_PRIORITIES.Foreground
+          : REQUEST_SCHEDULING_PRIORITIES.Background
       },
     }
     return new Promise<T>((resolve, reject) => {

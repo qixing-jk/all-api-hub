@@ -1,5 +1,5 @@
 {
-  "description": "Atualize automaticamente as listas de modelos no seu gateway de IA auto-hospedado e reduza a manutenção manual; ative o recurso depois que houver canais, quando necessário.",
+  "description": "Atualize as listas de modelos dos canais e consulte os resultados da sincronização e as causas de falhas.",
   "execution": {
     "actions": {
       "refresh": "Atualizar resultados",

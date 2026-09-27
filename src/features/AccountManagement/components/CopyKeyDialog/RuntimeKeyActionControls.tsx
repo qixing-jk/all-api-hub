@@ -396,7 +396,7 @@ export function RuntimeKeyActionControls({
             onClick={handleCopy}
           >
             {copiedRuntimeKeyId === runtimeKey.id ? (
-              <Check className="text-success-text h-4 w-4" />
+              <Check className="text-success-indicator h-4 w-4" />
             ) : (
               <Copy className="text-muted-foreground h-4 w-4" />
             )}

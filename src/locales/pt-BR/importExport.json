@@ -1,5 +1,5 @@
 {
-  "description": "Faça backup, migre ou sincronize os dados do All API Hub.",
+  "description": "Faça backup, restaure e migre dados da extensão usando arquivos locais ou armazenamento em nuvem.",
   "export": {
     "accountData": "Dados das contas",
     "accountDataDescription": "Exporte apenas contas, favoritos e etiquetas.",

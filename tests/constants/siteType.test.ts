@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  ACCOUNT_SITE_DOMAIN_RULES,
   AIHUBMIX_HOSTNAMES,
   getAccountSiteApiRouter,
   isAccountSiteType,
   isManagedSiteType,
+  isUnknownAccountSiteType,
   OPENROUTER_HOSTNAMES,
   SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
 } from "~/constants/siteType"
+import { getAccountSiteDomainRules } from "~/services/accountSiteOnboarding/registry"
 
 describe("siteType constants", () => {
   it("keeps the persisted ModelFlare site type identifier stable", () => {
@@ -31,6 +32,12 @@ describe("siteType constants", () => {
     expect(isAccountSiteType(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(false)
     expect(isAccountSiteType("unsupported-site")).toBe(false)
     expect(isAccountSiteType(null)).toBe(false)
+  })
+
+  it("identifies only the unknown account site fallback", () => {
+    expect(isUnknownAccountSiteType(SITE_TYPES.UNKNOWN)).toBe(true)
+    expect(isUnknownAccountSiteType(SITE_TYPES.NEW_API)).toBe(false)
+    expect(isUnknownAccountSiteType(null)).toBe(false)
   })
 
   it("recognizes managed site type values only", () => {
@@ -105,21 +112,21 @@ describe("siteType constants", () => {
   })
 
   it("includes AIHubMix domain detection rules", () => {
-    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+    expect(getAccountSiteDomainRules()).toContainEqual({
       name: SITE_TYPES.AIHUBMIX,
       hostnames: AIHUBMIX_HOSTNAMES,
     })
   })
 
   it("includes exact SharedChat domain detection rules", () => {
-    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+    expect(getAccountSiteDomainRules()).toContainEqual({
       name: SITE_TYPES.SHAREDCHAT,
       hostnames: SHAREDCHAT_HOSTNAMES,
     })
   })
 
   it("includes the canonical OpenRouter domain detection rule", () => {
-    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+    expect(getAccountSiteDomainRules()).toContainEqual({
       name: SITE_TYPES.OPENROUTER,
       hostnames: OPENROUTER_HOSTNAMES,
     })

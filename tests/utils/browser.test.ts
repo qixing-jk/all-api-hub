@@ -9,7 +9,6 @@ import {
   isExtensionOptions,
   isExtensionPopup,
   isExtensionSidePanel,
-  isFirefoxByUA,
 } from "~/utils/browser"
 
 describe("browser", () => {
@@ -39,25 +38,6 @@ describe("browser", () => {
       })
 
       expect(detectBrowserFamily()).toBe("chromium")
-    })
-  })
-
-  describe("isFirefoxByUA", () => {
-    it("detects Firefox-like user agents from the global navigator", () => {
-      vi.stubGlobal("navigator", {
-        userAgent: "Mozilla/5.0 Firefox/123.0",
-      })
-      expect(isFirefoxByUA()).toBe(true)
-
-      vi.stubGlobal("navigator", {
-        userAgent: "Mozilla/5.0 Gecko/20100101",
-      })
-      expect(isFirefoxByUA()).toBe(true)
-
-      vi.stubGlobal("navigator", {
-        userAgent: "Mozilla/5.0 Chrome/123.0.0.0",
-      })
-      expect(isFirefoxByUA()).toBe(false)
     })
   })
 

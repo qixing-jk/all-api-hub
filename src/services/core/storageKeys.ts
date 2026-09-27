@@ -98,8 +98,33 @@ export const STORAGE_LOCKS = {
    * recommendation catalog cache.
    */
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the GitHub
+   * star promotion state store.
+   */
+  STAR_PROMOTION: "all-api-hub:star-promotion",
   /** Exclusive claim of a popup account draft by its destination view. */
   ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the
+   * development-only fixture account id registry.
+   */
+  DEV_FIXTURE_ACCOUNTS: "all-api-hub:dev-fixture-accounts",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the auto
+   * check-in status blob.
+   */
+  AUTO_CHECKIN_STATUS: "all-api-hub:auto-checkin-status",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the usage
+   * history store.
+   */
+  USAGE_HISTORY: "all-api-hub:usage-history",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the options
+   * search recent-items list.
+   */
+  OPTIONS_SEARCH_RECENT_ITEMS: "all-api-hub:options-search-recent-items",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -108,6 +133,11 @@ export const ACCOUNT_STORAGE_KEYS = {
 
 export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
   RATE_LIMITS: "accountBrowserIdentity_rateLimits_v1",
+} as const
+
+export const LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS = {
+  /** Last observed browser login outcome per account, keyed by account id. */
+  EVIDENCE: "login_provider_evidence",
 } as const
 
 export const TAG_STORAGE_KEYS = {
@@ -192,6 +222,10 @@ const POPUP_INTERRUPTION_STORAGE_KEYS = {
   HINT: "popupInterruption_hint_v1",
 } as const
 
+const STAR_PROMOTION_STORAGE_KEYS = {
+  STATE: "starPromotion_state_v1",
+} as const
+
 export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
   DRAFT_PREFIX: "accountDialogRecovery_draft_v1:",
   PENDING_PREFIX: "accountDialogRecovery_pending_v1:",
@@ -205,7 +239,14 @@ export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
  */
 export const STORAGE_KEYS = {
   PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
+  /**
+   * Development-only registry of account ids created by the dev panel fixture
+   * generator, so cleanup never has to match editable account fields.
+   */
+  DEV_FIXTURE_ACCOUNT_IDS: "devFixtureAccountIds_v1",
   ...ACCOUNT_STORAGE_KEYS,
+  ...ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS,
+  ...LOGIN_PROVIDER_EVIDENCE_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   ...CHANNEL_CONFIG_STORAGE_KEYS,
@@ -228,4 +269,5 @@ export const STORAGE_KEYS = {
   SPONSOR_ADD_ACCOUNT_PENDING_PREFILL:
     SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS.PENDING_PREFILL,
   POPUP_INTERRUPTION_HINT: POPUP_INTERRUPTION_STORAGE_KEYS.HINT,
+  STAR_PROMOTION_STATE: STAR_PROMOTION_STORAGE_KEYS.STATE,
 } as const

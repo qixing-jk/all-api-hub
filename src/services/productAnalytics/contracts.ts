@@ -5,6 +5,7 @@ import {
   AUTO_DETECT_STRATEGIES,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import type { OpenRouterBootstrapAttemptOutcome } from "~/constants/openRouterBootstrap"
 import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
@@ -120,6 +121,20 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION = {
   >
 >
 
+export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
+  Network: "network",
+  Auth: "auth",
+  Permission: "permission",
+  Validation: "validation",
+  Unsupported: "unsupported",
+  RateLimit: "rate_limit",
+  Timeout: "timeout",
+  Unknown: "unknown",
+} as const
+
+export type ProductAnalyticsErrorCategory =
+  (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
+
 const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_REASONS = Object.keys(
   PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION,
 ) as ProtectionBypassDeniedReason[]
@@ -156,6 +171,12 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS = {
     "other",
   ],
   focusUnknownAdapterCounts: [...Object.values(TEMP_CONTEXT_MODES), "other"],
+  tempWindowFetchFailureCategoryCounts: Object.values(
+    PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  ),
+  tempWindowTurnstileFetchFailureCategoryCounts: Object.values(
+    PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  ),
 } as const
 
 /** Fixed scalar properties emitted by the bounded daily bypass summary. */
@@ -229,6 +250,22 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_focus_unknown_adapter_composite_count",
   "protection_bypass_focus_unknown_adapter_tab_count",
   "protection_bypass_focus_unknown_adapter_other_count",
+  "temp_window_fetch_failure_category_network_count",
+  "temp_window_fetch_failure_category_auth_count",
+  "temp_window_fetch_failure_category_permission_count",
+  "temp_window_fetch_failure_category_validation_count",
+  "temp_window_fetch_failure_category_unsupported_count",
+  "temp_window_fetch_failure_category_rate_limit_count",
+  "temp_window_fetch_failure_category_timeout_count",
+  "temp_window_fetch_failure_category_unknown_count",
+  "temp_window_turnstile_fetch_failure_category_network_count",
+  "temp_window_turnstile_fetch_failure_category_auth_count",
+  "temp_window_turnstile_fetch_failure_category_permission_count",
+  "temp_window_turnstile_fetch_failure_category_validation_count",
+  "temp_window_turnstile_fetch_failure_category_unsupported_count",
+  "temp_window_turnstile_fetch_failure_category_rate_limit_count",
+  "temp_window_turnstile_fetch_failure_category_timeout_count",
+  "temp_window_turnstile_fetch_failure_category_unknown_count",
 ] as const
 
 export type ProductAnalyticsProtectionBypassCountProperty =
@@ -241,20 +278,6 @@ export const PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS = {
 
 export type ProductAnalyticsKiloCodeExportTarget =
   (typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS)[keyof typeof PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS]
-
-export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
-  Network: "network",
-  Auth: "auth",
-  Permission: "permission",
-  Validation: "validation",
-  Unsupported: "unsupported",
-  RateLimit: "rate_limit",
-  Timeout: "timeout",
-  Unknown: "unknown",
-} as const
-
-export type ProductAnalyticsErrorCategory =
-  (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
 
 export const PRODUCT_ANALYTICS_FAILURE_REASONS = {
   MissingCredentials: "missing_credentials",
@@ -516,6 +539,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   WebDavSync: "webdav_sync",
   WebAiApiCheck: "web_ai_api_check",
   SponsorRecommendations: "sponsor_recommendations",
+  StarPromotion: "star_promotion",
 } as const
 
 export const PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGERS = [
@@ -555,6 +579,7 @@ export type ProductAnalyticsFeatureId =
 export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyApiCredentialBundle: "copy_api_credential_bundle",
   CopyApiCredentialExportConfig: "copy_api_credential_export_config",
+  CopyApiCredentialProfileKey: "copy_api_credential_profile_key",
   CopyApiCredentialProfileKelivoImportCode:
     "copy_api_credential_profile_kelivo_import_code",
   CopyApiCredentialProfileCursorPlusProviderConfig:
@@ -662,8 +687,12 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenAutoCheckinAccountExternalCheckIn:
     "open_auto_checkin_account_external_check_in",
   OpenAutoCheckinManualSignIn: "open_auto_checkin_manual_sign_in",
+  OpenAutoCheckinSettingsPage: "open_auto_checkin_settings_page",
   OpenBookmark: "open_bookmark",
+  OpenBookmarkImportDialog: "open_bookmark_import_dialog",
   OpenBatchModelVerifyDialog: "open_batch_model_verify_dialog",
+  OpenCreateBookmarkDialog: "open_create_bookmark_dialog",
+  OpenEditBookmarkDialog: "open_edit_bookmark_dialog",
   OpenCreateApiCredentialProfileDialog:
     "open_create_api_credential_profile_dialog",
   OpenAccountKeyManagementFromModel: "open_account_key_management_from_model",
@@ -762,6 +791,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   SelectManagedSiteModelSyncTab: "select_managed_site_model_sync_tab",
   SelectModelSource: "select_model_source",
   FilterModelList: "filter_model_list",
+  SelectModelListFilterScope: "select_model_list_filter_scope",
   SelectApiCredentialProfileExportDestination:
     "select_api_credential_profile_export_destination",
   SelectApiCredentialBaseUrlHistory: "select_api_credential_base_url_history",
@@ -826,6 +856,11 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   RunProductTour: "run_product_tour",
   DeferProductTour: "defer_product_tour",
   ViewProductTourStep: "view_product_tour_step",
+  ShowStarPromotionPrompt: "show_star_promotion_prompt",
+  ClickStarPromotion: "click_star_promotion",
+  DeferStarPromotion: "defer_star_promotion",
+  ConfirmStarPromotionAlreadyStarred: "confirm_star_promotion_already_starred",
+  SuppressStarPromotionDetected: "suppress_star_promotion_detected",
 } as const
 
 export type ProductAnalyticsActionId =
@@ -933,6 +968,11 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   SidepanelActionBar: "sidepanel_action_bar",
   SidepanelHeader: "sidepanel_header",
   SidepanelViewTabs: "sidepanel_view_tabs",
+  OptionsStarPromotionCard: "options_star_promotion_card",
+  UpdateLogDialogStarPrompt: "update_log_dialog_star_prompt",
+  FeedbackMenuStarItem: "feedback_menu_star_item",
+  PermissionOnboardingStarCta: "permission_onboarding_star_cta",
+  ContentRepositoryStarDetection: "content_repository_star_detection",
 } as const
 
 export type ProductAnalyticsSurfaceId =
@@ -1003,11 +1043,18 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AccountDataMissing: "account_data_missing",
   AuthenticationRequired: "authentication_required",
   CredentialsMissing: "credentials_missing",
+  ManualVerificationRequired: "manual_verification_required",
   NetworkError: "network_error",
   SourceUnavailable: "source_unavailable",
   PermissionDenied: "permission_denied",
   Timeout: "timeout",
   StatusUnavailable: "status_unavailable",
+  ExecutionContextInvalid: "execution_context_invalid",
+  CheckinUnconfirmed: "checkin_unconfirmed",
+  CheckinPageUnavailable: "checkin_page_unavailable",
+  SessionBusy: "session_busy",
+  UpstreamError: "upstream_error",
+  LoginProviderInUse: "login_provider_in_use",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =
@@ -1257,6 +1304,7 @@ export type ProductAnalyticsEventPayloadMap = {
     failure_stage?: ProductAnalyticsFailureStage
     failure_reason?: ProductAnalyticsFailureReason
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
+    account_auto_detect_attempt_outcome?: OpenRouterBootstrapAttemptOutcome
     auto_detect_strategy?: ProductAnalyticsAccountAutoDetectStrategy
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     site_type?: ProductAnalyticsSiteType

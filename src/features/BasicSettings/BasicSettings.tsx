@@ -98,6 +98,9 @@ const PermissionsTab = createLazyTabComponent(
 const AutoRefreshTab = createLazyTabComponent(
   () => import("./components/tabs/Refresh/AutoRefreshTab"),
 )
+const SiteAnnouncementsTab = createLazyTabComponent(
+  () => import("./components/tabs/SiteAnnouncements/SiteAnnouncementsTab"),
+)
 const UsageHistorySyncTab = createLazyTabComponent(
   () => import("./components/tabs/UsageHistorySync/UsageHistorySyncTab"),
 )
@@ -112,6 +115,7 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
+  { id: "siteAnnouncements", component: SiteAnnouncementsTab },
   { id: "notifications", component: NotificationsTab },
   { id: "accountManagement", component: AccountManagementTab },
   { id: "refresh", component: AutoRefreshTab },
@@ -226,6 +230,8 @@ function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
   switch (tabId) {
     case "general":
       return t("settings:tabs.general")
+    case "siteAnnouncements":
+      return t("settings:tabs.siteAnnouncements")
     case "notifications":
       return t("settings:tabs.notifications")
     case "balanceHistory":
@@ -388,7 +394,7 @@ function DesktopTabs({
     >
       <div
         aria-hidden="true"
-        className="gap-y-density-2 pointer-events-none absolute top-0 left-0 -z-10 flex gap-x-2 opacity-0"
+        className="gap-y-density-2 pointer-events-none absolute top-0 left-0 -z-10 flex w-full gap-x-2 overflow-hidden opacity-0"
       >
         {tabs.map((tab) => (
           <button

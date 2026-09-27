@@ -176,20 +176,6 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 <div class="readme-sponsor">
   <div class="readme-sponsor-logo">
-    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
-      <img src="../../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
-    </a>
-  </div>
-  <p class="readme-sponsor-copy">
-    Atlas Cloud はフルモーダル AI 推論プラットフォームで、1 つの AI API から動画生成、画像生成、LLM API にアクセスでき、300
-    以上の厳選モデルを横断して利用できます。より手頃な API 利用に向けた新しい Coding Plan プロモーションは、<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">こちらのリンク</a>をご覧ください（<a href="./service-guides/atlascloud.md">設定ガイド</a>）。
-  </p>
-</div>
-
-<hr class="readme-sponsor-divider">
-
-<div class="readme-sponsor">
-  <div class="readme-sponsor-logo">
     <a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
       <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>

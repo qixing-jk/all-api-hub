@@ -8,6 +8,36 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.0.0
+This release focuses on the interface look and feel: new appearance settings plus layout adjustments across pages. Existing accounts, keys, and settings are preserved.
+
+- **New Features:**
+  - **Appearance settings**: A new "Appearance" section lets you switch between Light, Dark, and Follow system, and choose the theme preset, accent color, and corner radius. Every option has a preview and can be reset individually; changes apply immediately to the options page, popup, and side panel.
+  - **Density, text size, and fonts**: Density offers Compact / Default / Comfortable, text size offers Default / Large / Extra large, and fonts offer Follow theme / Sans serif / Serif. Each can be set and reset on its own, so lists are easier to scan and text is easier to read.
+  - **Longer history retention**: Local data is no longer limited by the browser's default storage quota, so usage and balance history can be kept longer. Existing retention periods and automatic cleanup rules are unchanged and stay adjustable in settings. See [Permission Management (Optional Permissions)](./permissions.md).
+  - **Only models you can use**: The model list no longer shows models the current account cannot use, keeping the list short and easy to scan. Use "Also show models without account access" to inspect them temporarily; it applies to the current page only. See [Model List](./model-list.md).
+  - **Check-in results with reasons**: Every check-in records its reason, and results can be filtered by reason. The Overview "Needs attention" panel groups items by reason, so the most impactful issues come first. Existing records stay unchanged. See [Automatic Check-in](./auto-checkin.md).
+  - **Genius Programmer check-in**: On `Sub2API` sites that provide this check-in, the extension can now check in automatically every day and show the results. See [Automatic Check-in](./auto-checkin.md).
+  - **`AgentRouter` check-in**: Choose a GitHub or LinuxDo login method before checking in; adding an account preselects it from the bound identity. Each login method is used by one account at a time, so multiple accounts no longer fight over the shared browser login. See [Automatic Check-in](./auto-checkin.md).
+
+- **Experience Improvements:**
+  - **Page layout**: Settings sections are clearer, with titles and options in the same column; action buttons wrap on narrow windows instead of overflowing out of reach. Sidebar collapse and content width are remembered. The Overview automation panel shows the key run information when collapsed.
+  - **Saving and resetting settings**: Common options save automatically, and each section can be reset on its own. Actions that clear connection credentials or shorten history retention confirm first, and your input survives a failed save.
+  - **Check-in method fallback**: When an account has no method selected, or its method is confirmed unsupported, the daily run picks the only usable method automatically; each account is searched at most once a day, and manual choices are never overwritten. See [Automatic Check-in](./auto-checkin.md).
+  - **Multi-account pages**: Account, model, and key lists and the popup read less repeated data when opening and refreshing, and long lists render on demand for smoother scrolling. The key list marks "loading" and "partial" results and collapses temporarily unreadable accounts. See [Key Management](./key-management.md).
+  - **Clearer status colors**: Success, warning, failure, and "Pending confirmation" are easier to tell apart across themes.
+
+- **Bug Fixes:**
+  - **Account sorting**: "Account name" is back in the Sort by menu, so you can sort by name again. See [Sorting Priority Settings](./sorting-priority.md).
+  - **Temporary pages affecting account order**: Pages the extension opens for check-ins and similar tasks no longer count as pages you are browsing, so they do not change account order or show the "Related page open" badge. Tabs you open yourself are unaffected. See [Sorting Priority Settings](./sorting-priority.md).
+  - **`AnyRouter` check-in**: Manual retries and automatic check-ins no longer fail outright and complete normally.
+  - **Multiple `AgentRouter` accounts**: Browser-login check-ins now run one at a time, so no account is misreported as having an expired login; long waits show a clear prompt instead of retrying silently.
+  - **Data status display**: Fixed pages occasionally showing stale content right after a check-in finished or a setting was saved.
+  - **`AIHubMix` accounts**: Fewer requests rejected by the site or left waiting without a response.
+  - **Key action waiting**: Manual refreshes and opening keys no longer queue behind batch key status checks. See [Key Management](./key-management.md).
+  - **`Octopus` channel import**: Restored detection of existing channels and duplicate-import confirmation; fixed the wrong address that prevented model fetching when importing to `v0.13`. Older Octopus versions are unaffected. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **Narrow windows and older browsers**: Button labels no longer break the layout when they wrap; keyboard focus rings display correctly on older browsers.
+
 ## 3.62.0
 - **New Features:**
   - **Tiered price comparison**: Set input and output lengths, or conditions such as image size and video quality where supported by the site, to compare the applicable model prices. Prices billed per token, image, second, or request are compared separately, with prompts to fill in any required conditions. See [Model List](./model-list.md).

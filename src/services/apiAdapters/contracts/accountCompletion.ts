@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type {
@@ -5,7 +6,7 @@ import type {
   AutoDetectCompletionError,
   AutoDetectCompletionRequest,
 } from "~/services/accounts/autoDetectCompletion/types"
-import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
+import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
@@ -43,7 +44,7 @@ export type AccountCompletionHelpers = {
   createServiceRequest(
     input: AccountCompletionServiceRequestInput,
   ): ApiServiceRequest
-  fetchSiteName(siteStatus: SiteStatusInfo | null): Promise<string>
+  fetchSiteName(bootstrapFacts: AccountBootstrapFacts | null): Promise<string>
   createCompletionError(
     reason: AutoDetectFailureReason,
     cause: unknown,
@@ -51,6 +52,8 @@ export type AccountCompletionHelpers = {
   trimString(value: unknown): string
   createInitialCheckInConfig(input: {
     supported: boolean
+    /** Login provider proven by the remote account binding, when unambiguous. */
+    loginCheckInProvider?: AccountLoginProvider
   }): AutoDetectCompletionData["checkIn"]
   handleCheckInSupportFetchFailure(error: unknown): false
   captureRecoveryData(data: AccountAutoDetectRecoveryData): void

@@ -23,7 +23,10 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
+
+parallelizeShardableSpec()
 
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
@@ -46,10 +49,10 @@ test("uses page color roles for portaled dialogs before visiting feature pages",
       (dark) => document.documentElement.classList.toggle("dark", dark),
       mode === "dark",
     )
-    const surface = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
+    const surface = page.getByTestId(OPTIONS_TEST_IDS.app)
     await expect(surface).toHaveCSS(
       "background-color",
-      await readVisualThemeRoleColor(page, "--background"),
+      await readVisualThemeRoleColor(page, "--workspace"),
     )
     await page.getByRole("button", { name: "Open settings search" }).click()
     const dialog = page.getByRole("dialog", { name: "Search settings" })

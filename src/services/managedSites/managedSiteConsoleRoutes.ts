@@ -22,8 +22,3 @@ export const buildManagedSiteChannelConsoleUrl = (
   baseUrl: string,
   siteType: ManagedSiteType,
 ) => joinConsolePath(baseUrl, getConsoleRoutes(siteType).channels)
-
-export const buildManagedSiteTokenConsoleUrl = (
-  baseUrl: string,
-  siteType: ManagedSiteType,
-) => joinConsolePath(baseUrl, getConsoleRoutes(siteType).tokens)

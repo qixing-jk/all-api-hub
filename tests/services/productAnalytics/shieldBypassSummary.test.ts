@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -63,6 +64,11 @@ describe("shield bypass product analytics summary", () => {
       tempWindowFetchFailureCount: 1,
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 4,
+      tempWindowFetchFailureCategoryCounts: { timeout: 1 },
+      tempWindowTurnstileFetchFailureCategoryCounts: {
+        unsupported: 3,
+        auth: 1,
+      },
       featureCounts: { checkin: 4, account_refresh: 2, other: 1 },
       invocationKindCounts: { automatic: 5, user_command: 2 },
       automaticTriggerCounts: { scheduled: 3, retry: 2 },
@@ -128,12 +134,14 @@ describe("shield bypass product analytics summary", () => {
     )
     await recordShieldBypassTempWindowFetchResult(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
     )
     await recordShieldBypassTempWindowTurnstileFetchResult(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
     await recordShieldBypassTempWindowTurnstileFetchResult(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
     )
 
     expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(1, {
@@ -141,13 +149,34 @@ describe("shield bypass product analytics summary", () => {
     })
     expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(2, {
       tempWindowFetchFailureCount: 1,
+      tempWindowFetchFailureCategoryCounts: {
+        [PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout]: 1,
+      },
     })
     expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(3, {
       tempWindowTurnstileFetchSuccessCount: 1,
     })
     expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(4, {
       tempWindowTurnstileFetchFailureCount: 1,
+      tempWindowTurnstileFetchFailureCategoryCounts: {
+        [PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported]: 1,
+      },
     })
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
+  it("counts a failure without a reviewed category in the total only", async () => {
+    const { recordShieldBypassTempWindowFetchResult } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await recordShieldBypassTempWindowFetchResult(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    )
+
+    expect(
+      stateMocks.incrementShieldBypassSummary,
+    ).toHaveBeenCalledExactlyOnceWith({ tempWindowFetchFailureCount: 1 })
     expect(captureMock).not.toHaveBeenCalled()
   })
 
@@ -303,6 +332,9 @@ describe("shield bypass product analytics summary", () => {
         protection_bypass_focus_background_start_adapter_composite_count: 1,
         protection_bypass_focus_foreground_activation_adapter_composite_count: 1,
         protection_bypass_focus_unknown_adapter_tab_count: 1,
+        temp_window_fetch_failure_category_timeout_count: 1,
+        temp_window_turnstile_fetch_failure_category_auth_count: 1,
+        temp_window_turnstile_fetch_failure_category_unsupported_count: 3,
       },
     )
     expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({
@@ -314,6 +346,8 @@ describe("shield bypass product analytics summary", () => {
       tempWindowFetchFailureCount: 0,
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 0,
+      tempWindowFetchFailureCategoryCounts: {},
+      tempWindowTurnstileFetchFailureCategoryCounts: {},
       featureCounts: {},
       invocationKindCounts: {},
       automaticTriggerCounts: {},

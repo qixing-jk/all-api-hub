@@ -9,8 +9,8 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
+  ActionGroup,
   Badge,
   BodySmall,
   Button,
@@ -26,6 +26,7 @@ import {
 } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { useDeferredPreferenceDraft } from "~/hooks/useDeferredPreferenceDraft"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
@@ -39,8 +40,11 @@ import {
   OPTIONAL_PERMISSION_IDS,
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationChannel,
@@ -59,6 +63,7 @@ import {
   getDocsTaskNotificationsNtfyUrl,
   getDocsTaskNotificationsWecomUrl,
 } from "~/utils/navigation/docsLinks"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 const logger = createLogger("TaskNotificationSettings")
 
@@ -110,12 +115,12 @@ function NotificationSettingItem({
             )}
           </div>
           {actions && (
-            <div
+            <ActionGroup
               data-slot="notification-setting-actions"
-              className="gap-y-density-3 flex w-full flex-wrap items-center justify-end gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
+              className="gap-y-density-3 w-full gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
             >
               {actions}
-            </div>
+            </ActionGroup>
           )}
         </div>
         {children && (
@@ -160,7 +165,7 @@ function NotificationChannelActions({
         type="button"
         size="sm"
         variant="outline"
-        className="h-(--density-control-sm) shadow-none"
+        className="min-h-(--density-control-sm) shadow-none"
         loading={loading}
         disabled={testDisabled}
         data-testid={testButtonTestId}
@@ -224,6 +229,7 @@ export default function TaskNotificationSettings() {
     taskNotifications,
     updateSiteAnnouncementNotifications,
     updateTaskNotifications,
+    loadPreferences,
   } = useUserPreferencesContext()
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(
     null,
@@ -637,6 +643,16 @@ export default function TaskNotificationSettings() {
     <div className="space-y-density-6">
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS}
+        resetRequiresConfirmation={false}
+        resetDisabled={
+          taskNotifications.enabled ===
+          DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled
+        }
+        onReset={() =>
+          updateTaskNotifications({
+            enabled: DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled,
+          })
+        }
         title={t("taskNotifications.groups.setup.title")}
         description={t("taskNotifications.groups.setup.description")}
       >
@@ -660,6 +676,42 @@ export default function TaskNotificationSettings() {
 
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS}
+        resetRequiresConfirmation
+        resetDescription={t("messages.resetConnectionConfirmDesc")}
+        resetDisabled={
+          isAnyChannelTesting ||
+          (matchesDefaultSettings(
+            channels,
+            DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          ) &&
+            ![telegram, feishu, dingtalk, wecom, ntfy, webhook].some(
+              (field) => field.isDirty,
+            ))
+        }
+        onReset={async () => {
+          const result = await updateTaskNotifications({
+            channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          })
+          if (result.ok) {
+            const defaults = DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels
+            telegram.setDraft({
+              botToken: defaults.telegram.botToken,
+              chatId: defaults.telegram.chatId,
+            })
+            feishu.setDraft({ webhookKey: defaults.feishu.webhookKey })
+            dingtalk.setDraft({
+              webhookKey: defaults.dingtalk.webhookKey,
+              secret: defaults.dingtalk.secret,
+            })
+            wecom.setDraft({ webhookKey: defaults.wecom.webhookKey })
+            ntfy.setDraft({
+              topicUrl: defaults.ntfy.topicUrl,
+              accessToken: defaults.ntfy.accessToken,
+            })
+            webhook.setDraft({ url: defaults.webhook.url })
+          }
+          return result
+        }}
         title={t("taskNotifications.groups.channels.title")}
         description={t("taskNotifications.groups.channels.description")}
       >
@@ -676,7 +728,7 @@ export default function TaskNotificationSettings() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-(--density-control-sm) shadow-none"
+                      className="min-h-(--density-control-sm) shadow-none"
                       loading={isRequestingPermission}
                       data-testid={
                         BASIC_SETTINGS_TEST_IDS.taskNotificationsPermissionGrantButton
@@ -1205,6 +1257,28 @@ export default function TaskNotificationSettings() {
 
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATION_EVENTS}
+        resetRequiresConfirmation={false}
+        resetDisabled={
+          matchesDefaultSettings(
+            taskNotifications.tasks,
+            DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          ) &&
+          siteAnnouncementNotifications.notificationEnabled ===
+            DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled
+        }
+        onReset={async () => {
+          const result = await userPreferences.savePreferencesWithResult({
+            taskNotifications: {
+              tasks: DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+            },
+            siteAnnouncementNotifications: {
+              notificationEnabled:
+                DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
+            },
+          })
+          if (result.ok) await loadPreferences()
+          return result
+        }}
         title={t("taskNotifications.groups.tasks.title")}
         description={t("taskNotifications.groups.tasks.description")}
       >

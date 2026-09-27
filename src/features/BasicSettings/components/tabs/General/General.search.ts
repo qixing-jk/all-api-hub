@@ -6,12 +6,6 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-const SITE_ANNOUNCEMENT_BREADCRUMBS = [
-  ...DEFAULT_BREADCRUMBS,
-  "settings:tabs.general",
-  "settings:siteAnnouncementNotifications.title",
-]
-
 const PRODUCT_ANALYTICS_BREADCRUMBS = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.general",
@@ -25,6 +19,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "general-display",
     "settings:display.title",
     200,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:appearance",
@@ -32,6 +27,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     SETTINGS_ANCHORS.APPEARANCE,
     "settings:theme.appearance",
     201,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:action-click",
@@ -39,38 +35,30 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "action-click",
     "settings:actionClick.title",
     202,
-  ),
-  buildSectionDefinition(
-    "section:site-announcements",
-    "general",
-    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS,
-    "settings:siteAnnouncementNotifications.title",
-    203,
-    {
-      descriptionKey: "settings:siteAnnouncementNotifications.description",
-      keywords: ["announcement", "notice", "polling"],
-    },
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:changelog",
     "general",
     "changelog-on-update",
     "settings:changelogOnUpdate.title",
-    204,
+    203,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:logging",
     "general",
     "logging",
     "settings:logging.title",
-    205,
+    204,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:product-analytics",
     "general",
     "product-analytics",
     "settings:productAnalytics.title",
-    206,
+    205,
     {
       descriptionKey: "settings:productAnalytics.description",
       keywords: ["analytics", "posthog", "privacy", "anonymous", "opt out"],
@@ -81,11 +69,70 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "general",
     "dangerous-zone",
     "settings:danger.title",
-    207,
+    206,
   ),
 ]
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
+  buildControlDefinition(
+    "control:appearance-content-width",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_CONTENT_WIDTH,
+    "settings:appearance.contentWidth",
+    534,
+    {
+      descriptionKey: "settings:appearance.contentWidthDescription",
+      keywordKeys: [
+        "settings:appearance.contentWidths.centered",
+        "settings:appearance.contentWidths.full",
+      ],
+      keywords: ["layout", "width", "布局", "宽度"],
+    },
+  ),
+  buildControlDefinition(
+    "control:appearance-font",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_FONT,
+    "settings:appearance.font",
+    534,
+    {
+      descriptionKey: "settings:appearance.fontDescription",
+      keywords: [
+        "font",
+        "serif",
+        "sans",
+        "typography",
+        "字体",
+        "字體",
+        "衬线",
+        "襯線",
+      ],
+    },
+  ),
+  buildControlDefinition(
+    "control:appearance-text-size",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE,
+    "settings:appearance.textSize",
+    533,
+    {
+      descriptionKey: "settings:appearance.textSizeDescription",
+      keywords: [
+        "text size",
+        "font size",
+        "large",
+        "readability",
+        "文字大小",
+        "字体大小",
+        "字體大小",
+        "字号",
+        "字號",
+        "大字",
+        "超大",
+        "読みやすさ",
+      ],
+    },
+  ),
   buildControlDefinition(
     "control:appearance-density",
     "general",
@@ -186,7 +233,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "control:appearance-theme-mode",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_THEME_MODE,
-    "settings:theme.appearance",
+    "settings:theme.mode",
     503,
     {
       descriptionKey: "settings:theme.selectTheme",
@@ -209,7 +256,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.general",
-        "settings:theme.appearance",
+        "settings:display.title",
       ],
       keywords: ["language", "locale", "i18n"],
     },
@@ -238,55 +285,11 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:site-announcements-polling",
-    "general",
-    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-    "settings:siteAnnouncementNotifications.polling.enable",
-    506,
-    {
-      descriptionKey:
-        "settings:siteAnnouncementNotifications.polling.enableDesc",
-      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
-      keywords: ["announcement", "notice", "polling", "background check"],
-    },
-  ),
-  buildControlDefinition(
-    "control:site-announcements-interval",
-    "general",
-    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL,
-    "settings:siteAnnouncementNotifications.polling.interval",
-    507,
-    {
-      descriptionKey:
-        "settings:siteAnnouncementNotifications.polling.intervalDesc",
-      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
-      keywords: [
-        "announcement",
-        "notice",
-        "polling interval",
-        "background check interval",
-        "minutes",
-      ],
-    },
-  ),
-  buildControlDefinition(
-    "control:site-announcements-page",
-    "general",
-    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
-    "settings:siteAnnouncementNotifications.page.title",
-    508,
-    {
-      descriptionKey: "settings:siteAnnouncementNotifications.page.description",
-      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
-      keywords: ["announcement", "notice", "records", "page"],
-    },
-  ),
-  buildControlDefinition(
     "control:changelog-on-update",
     "general",
     "changelog-on-update-toggle",
     "settings:changelogOnUpdate.toggleLabel",
-    509,
+    506,
     {
       descriptionKey: "settings:changelogOnUpdate.toggleDesc",
       breadcrumbsKeys: [
@@ -302,7 +305,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-console-enabled",
     "settings:logging.consoleEnabled",
-    510,
+    507,
     {
       descriptionKey: "settings:logging.consoleEnabledDesc",
       breadcrumbsKeys: [
@@ -318,7 +321,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-min-level",
     "settings:logging.minLevel",
-    511,
+    508,
     {
       descriptionKey: "settings:logging.minLevelDesc",
       breadcrumbsKeys: [
@@ -334,7 +337,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED,
     "settings:productAnalytics.enableLabel",
-    512,
+    509,
     {
       descriptionKey: "settings:productAnalytics.enableDescription",
       breadcrumbsKeys: PRODUCT_ANALYTICS_BREADCRUMBS,
@@ -346,7 +349,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "danger-reset-settings",
     "settings:danger.resetSettings",
-    513,
+    510,
     {
       descriptionKey: "settings:danger.resetDesc",
       breadcrumbsKeys: [

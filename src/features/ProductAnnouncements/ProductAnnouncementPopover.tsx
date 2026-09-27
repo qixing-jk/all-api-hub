@@ -102,7 +102,7 @@ function ProductAnnouncementPanel({
           variant={filter === "active" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "gap-y-density-1-5 h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
+            "gap-y-density-1-5 min-h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
             filter === "active" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "active"}
@@ -117,7 +117,7 @@ function ProductAnnouncementPanel({
           variant={filter === "dismissed" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "gap-y-density-1-5 h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
+            "gap-y-density-1-5 min-h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
             filter === "dismissed" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "dismissed"}

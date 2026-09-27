@@ -7,6 +7,7 @@ import { KiloCodeDefaultModelSelect } from "~/components/KiloCodeDefaultModelSel
 import { KiloCodeExportGuidance } from "~/components/KiloCodeExportGuidance"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import {
+  ActionGroup,
   Alert,
   Button,
   FormField,
@@ -371,7 +372,7 @@ export function KiloCodeProfileExportDialog({
           featureId={exportDialogAnalyticsContext.featureId}
           surfaceId={exportDialogSurface}
         >
-          <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+          <ActionGroup>
             <Button variant="ghost" type="button" onClick={onClose}>
               {t("common:actions.cancel")}
             </Button>
@@ -394,7 +395,7 @@ export function KiloCodeProfileExportDialog({
                 ? t("ui:dialog.kiloCode.actions.downloadKiloV7Settings")
                 : t("ui:dialog.kiloCode.actions.downloadLegacySettings")}
             </Button>
-          </div>
+          </ActionGroup>
         </ProductAnalyticsScope>
       }
     >

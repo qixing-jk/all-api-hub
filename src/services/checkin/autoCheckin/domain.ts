@@ -12,7 +12,6 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -26,6 +25,7 @@ import type {
   CheckInSelectionState,
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],
@@ -181,6 +181,15 @@ const deriveExecutionEligibility = (
   input: CheckInInspectionInput,
   selectionState: CheckInSelectionState,
 ): CheckInExecutionEligibility => {
+  // A claim held by another account outranks every per-account reason: the
+  // browser login context is shared, so this run cannot use the provider no
+  // matter how ready the account itself looks.
+  if (input.loginProviderClaimedByAnother === true) {
+    return {
+      eligible: false,
+      skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.LoginProviderInUse,
+    }
+  }
   if (input.accountDisabled) {
     return {
       eligible: false,

@@ -18,9 +18,7 @@ import { createLogger } from "~/utils/core/logger"
 
 import { doneHubRequests } from "./request"
 
-export { fetchCheckInStatus } from "~/services/apiService/newApiFamily/default/accountData"
 export {
-  fetchAccountData,
   fetchTodayIncome,
   fetchTodayUsage,
   refreshAccountData,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   buildEstimatedTodayIncomeMoneyTotals,
   convertQuotaToMoney,
@@ -264,7 +264,7 @@ describe("today income estimate", () => {
   })
 
   it("converts quota values to USD and CNY money amounts", () => {
-    const quota = 2 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const quota = 2 * QUOTA_PER_USD
 
     expect(convertQuotaToMoney({ quota, exchangeRate: 7 })).toEqual({
       USD: 2,
@@ -273,7 +273,7 @@ describe("today income estimate", () => {
   })
 
   it("builds trusted totals from reported income and estimated totals from available estimates", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const totalsStore = createStore({
       a1: {
         "2026-05-22": {
@@ -321,7 +321,7 @@ describe("today income estimate", () => {
   })
 
   it("does not trust raw snapshot income when estimate status nulls reported income", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const totalsStore = createStore({
       disabled: {
         "2026-05-22": {

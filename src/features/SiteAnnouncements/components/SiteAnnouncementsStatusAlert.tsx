@@ -1,6 +1,7 @@
-import { ShieldAlert } from "lucide-react"
+import { Info, ShieldAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { cn } from "~/lib/utils"
 import type { SiteAnnouncementSiteState } from "~/types/siteAnnouncements"
 
 import { formatDateTime } from "../utils"
@@ -21,9 +22,20 @@ export function SiteAnnouncementsStatusAlert({
     return null
   }
 
+  const unsupported = status.status === "unsupported"
+  const Icon = unsupported ? Info : ShieldAlert
+
   return (
-    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground mb-density-4 gap-y-density-3 py-density-3 flex gap-x-3 rounded-md border px-4 text-sm">
-      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+    <div
+      role={unsupported ? "status" : "alert"}
+      className={cn(
+        "mb-density-4 gap-y-density-3 py-density-3 flex gap-x-3 rounded-md border px-4 text-sm",
+        unsupported
+          ? "border-info-border bg-info-soft text-info-soft-foreground"
+          : "border-destructive-border bg-destructive-soft text-destructive-soft-foreground",
+      )}
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0">
         <p className="font-medium">
           {status.status === "unsupported"
@@ -37,7 +49,7 @@ export function SiteAnnouncementsStatusAlert({
                 error: status.lastError ?? "-",
               })}
         </p>
-        <p className="text-warning-text mt-density-1 text-xs">
+        <p className="mt-density-1 text-xs">
           {t("status.lastChecked", {
             time: formatDateTime(status.lastCheckedAt),
           })}

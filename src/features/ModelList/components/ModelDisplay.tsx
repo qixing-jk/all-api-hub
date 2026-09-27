@@ -264,6 +264,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
         isGroupSelectionInteractive={isGroupSelectionInteractive}
         source={sourceForModel}
         sourceIdentity={item.sourceIdentity}
+        isProviderCatalogFallback={item.isProviderCatalogFallback}
         displayCapabilities={displayCapabilities}
         verificationSummary={verificationSummary}
         onFilterAccount={onFilterAccount}

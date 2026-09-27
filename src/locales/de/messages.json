@@ -100,6 +100,7 @@
       "bookmarkNameRequired": "Lesezeichenname darf nicht leer sein",
       "bookmarkUrlRequired": "Lesezeichen-URL darf nicht leer sein",
       "incompleteAccountInfo": "Bitte geben Sie alle Kontoinformationen ein",
+      "loginProviderInUse": "Die Anmeldemethode {{provider}} wird bereits vom AgentRouter-Konto „{{account}}“ mit aktiviertem automatischem Check-in verwendet. Wähle die andere Methode, deaktiviere dort den automatischen Check-in oder leere diese Auswahl.",
       "updateAccountFailed": "Konto konnte nicht aktualisiert werden: {{error}}",
       "urlRequired": "Website-URL darf nicht leer sein",
       "userIdNumeric": "Die Benutzer-ID muss eine Zahl sein"

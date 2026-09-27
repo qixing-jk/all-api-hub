@@ -7,14 +7,8 @@ import { cn } from "~/lib/utils"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 
 import type { OptionsOverviewStatusCard } from "../types"
+import { OVERVIEW_SEVERITY_INDICATOR_CLASSES } from "./overviewPresentation"
 import { getStatusCardLabel } from "./statusCardText"
-
-const severityClasses = {
-  error: "bg-destructive shadow-destructive/30",
-  warning: "bg-warning shadow-warning/30",
-  info: "bg-info shadow-info/30",
-  success: "bg-success shadow-success/30",
-} as const
 
 interface OverviewStatusSummaryProps {
   items: OptionsOverviewStatusCard[]
@@ -151,7 +145,7 @@ function StatusMetricContent({
       {visibleQualifier ? (
         <span
           aria-hidden="true"
-          className="text-muted-foreground ml-1.5 text-[10px] font-medium"
+          className="text-muted-foreground text-3xs ml-1.5 font-medium"
         >
           {visibleQualifier}
         </span>
@@ -164,8 +158,8 @@ function StatusMetricContent({
       <div className="gap-y-density-3-5 flex min-w-0 items-center gap-x-3.5">
         <span
           className={cn(
-            "h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_4px]",
-            severityClasses[item.severity],
+            "h-2.5 w-2.5 shrink-0 rounded-full",
+            OVERVIEW_SEVERITY_INDICATOR_CLASSES[item.severity],
           )}
         />
         <div className="min-w-0">

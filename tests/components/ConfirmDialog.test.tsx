@@ -25,6 +25,9 @@ describe("ConfirmDialog", () => {
       "default",
     )
     expect(
+      screen.getByRole("button", { name: "Continue" }).parentElement,
+    ).toHaveClass("flex-col-reverse", "sm:flex-row")
+    expect(
       dialog.querySelector(".lucide-circle-help, .lucide-circle-question-mark"),
     ).toBeInTheDocument()
     expect(

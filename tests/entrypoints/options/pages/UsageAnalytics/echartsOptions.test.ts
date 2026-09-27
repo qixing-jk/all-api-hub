@@ -6,14 +6,12 @@ import {
   buildHorizontalBarOption,
   buildLatencyHistogramOption,
   buildLatencyTrendOption,
-  buildLineTrendOption,
   buildPieOption,
   getAccountTotalsRows,
   getLatencyBucketLabels,
   getModelTotalsRows,
   getSlowModelRows,
   getSlowTokenRows,
-  getTokenTotalsRows,
   resolveFusedDailyByModelForTokens,
   resolveFusedDailyForTokens,
   resolveFusedHourlyForTokens,
@@ -359,104 +357,6 @@ describe("UsageAnalytics echartsOptions", () => {
     expect(merged.buckets.slice(2).every((value) => value === 0)).toBe(true)
   })
 
-  it("getTokenTotalsRows formats known, unknown, and unlabeled tokens", () => {
-    const accountStore = createEmptyUsageHistoryAccountStore()
-    const dayKey = "2026-01-01"
-
-    accountStore.tokenNamesById["1"] = "Token A"
-    accountStore.dailyByToken["1"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 10,
-        quotaConsumed: 0,
-      },
-    }
-    accountStore.dailyByToken["2"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 5,
-        quotaConsumed: 0,
-      },
-    }
-    accountStore.dailyByToken["unknown"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 1,
-        quotaConsumed: 0,
-      },
-    }
-
-    const store: UsageHistoryStore = {
-      schemaVersion: 1,
-      accounts: { a1: accountStore },
-    }
-    const exportData = computeUsageHistoryExport({
-      store,
-      selection: { accountIds: ["a1"], startDay: dayKey, endDay: dayKey },
-    })
-
-    const rows = getTokenTotalsRows({
-      exportData,
-      topN: 99,
-      unknownLabel: "Unknown",
-    })
-    const byId = Object.fromEntries(
-      rows.map((row) => [row.tokenId, row] as const),
-    )
-
-    expect(byId["1"].tokenLabel).toBe("Token A (#1)")
-    expect(byId["2"].tokenLabel).toBe("#2")
-    expect(byId["unknown"].tokenLabel).toBe("Unknown")
-  })
-
-  it("getTokenTotalsRows does not prefix the Other bucket with #", () => {
-    const accountStore = createEmptyUsageHistoryAccountStore()
-    const dayKey = "2026-01-01"
-
-    accountStore.dailyByToken["1"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 100,
-        quotaConsumed: 0,
-      },
-    }
-    accountStore.dailyByToken["2"] = {
-      [dayKey]: {
-        requests: 1,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 5,
-        quotaConsumed: 0,
-      },
-    }
-
-    const store: UsageHistoryStore = {
-      schemaVersion: 1,
-      accounts: { a1: accountStore },
-    }
-    const exportData = computeUsageHistoryExport({
-      store,
-      selection: { accountIds: ["a1"], startDay: dayKey, endDay: dayKey },
-    })
-
-    const rows = getTokenTotalsRows({
-      exportData,
-      topN: 1,
-      otherLabel: "Other",
-    })
-
-    const other = rows.find((row) => row.tokenId === "Other")
-    expect(other?.tokenLabel).toBe("Other")
-  })
-
   it("getModelTotalsRows sorts deterministically and aggregates remainder into Other", () => {
     const accountStore = createEmptyUsageHistoryAccountStore()
     const dayKey = "2026-01-01"
@@ -641,12 +541,5 @@ describe("UsageAnalytics echartsOptions", () => {
       valueLabel: "Count",
     }) as any
     expect(bar.series[0].data).toEqual([1, 2])
-
-    const line = buildLineTrendOption({
-      categories: ["x"],
-      values: [null],
-      seriesLabel: "Series",
-    }) as any
-    expect(line.series[0].connectNulls).toBe(true)
   })
 })

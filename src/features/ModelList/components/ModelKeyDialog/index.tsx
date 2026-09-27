@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
   Button,
   EmptyState,
@@ -16,7 +17,6 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
@@ -26,6 +26,7 @@ import {
   getPreferredAccountKeyGroup,
 } from "~/services/accounts/accountKeyNames"
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -304,7 +305,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 onClick={() => {
                   void handleRetryFetchRuntimeKeys()
                 }}
-                variant="destructive"
+                variant="outline"
                 size="sm"
               >
                 {t("common:actions.retry")}
@@ -408,7 +409,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     </p>
                   </div>
 
-                  <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+                  <ActionGroup className="items-stretch justify-start">
                     <Button
                       onClick={() => {
                         void handleCreateCompatibleKey(
@@ -439,7 +440,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     >
                       {t("modelList:keyDialog.createCustomKey")}
                     </Button>
-                  </div>
+                  </ActionGroup>
                 </div>
               </div>
             )
@@ -484,7 +485,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 ) : null}
               </div>
 
-              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="items-stretch justify-start">
                 <Button
                   onClick={copySelectedKey}
                   disabled={!canCopy}
@@ -506,7 +507,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 >
                   {t("modelList:keyDialog.createAnotherKey")}
                 </Button>
-              </div>
+              </ActionGroup>
             </div>
           )}
         </div>

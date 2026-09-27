@@ -46,6 +46,7 @@ describe("SiteAnnouncementsStatusAlert", () => {
     expect(
       screen.getByText("siteAnnouncements:status.unsupported"),
     ).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveClass("bg-info-soft")
   })
 
   it("renders the failure message and timestamp for errored checks", async () => {
@@ -64,6 +65,7 @@ describe("SiteAnnouncementsStatusAlert", () => {
       await screen.findByText(/siteAnnouncements:status\.failedTitle/),
     ).toBeInTheDocument()
     expect(screen.getByText("Failure: timeout")).toBeInTheDocument()
+    expect(screen.getByRole("alert")).toHaveClass("bg-destructive-soft")
     expect(
       screen.getByText(/siteAnnouncements:status\.lastChecked/),
     ).toBeInTheDocument()

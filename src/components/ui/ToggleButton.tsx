@@ -10,7 +10,7 @@ const toggleButtonVariants = cva(
       variant: {
         default:
           "bg-transparent hover:bg-surface-subtle dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
-        active: "bg-card text-foreground shadow-sm scale-105 focus:ring-ring",
+        active: "bg-card text-foreground shadow-sm focus:ring-ring",
         ghost:
           "bg-transparent hover:bg-muted dark:hover:bg-card text-muted-foreground dark:text-secondary-foreground hover:text-foreground focus:ring-border-strong",
       },
@@ -20,7 +20,7 @@ const toggleButtonVariants = cva(
         lg: "px-4 py-density-2 text-base",
       },
       shape: {
-        default: "rounded-md",
+        default: "rounded-lg",
         pill: "rounded-full",
         square: "rounded-lg",
       },

@@ -1,29 +1,23 @@
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountKeyResourceRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS } from "~/services/accounts/accountSiteProfile"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelCatalogRequest } from "~/services/apiAdapters/contracts/modelCatalog"
-import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import { createAccountModelPricingRequest } from "~/services/modelCatalog/accountRequest"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources/readiness"
 import {
-  buildSub2ApiRuntimePricingResponse,
-  loadSub2ApiEstimatedPricingResponse,
-} from "~/services/modelList/accountSources/sub2apiEstimates"
-import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"
@@ -55,21 +49,6 @@ export const ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED =
 const createUnsupportedModelListSourceError = (siteType: string) =>
   new Error(`No model-list source capability is registered for ${siteType}`)
 
-const createAccountModelPricingRequest = (
-  account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
-  abortSignal?: AbortSignal,
-): ModelPricingRequest => ({
-  baseUrl: account.baseUrl,
-  accountId: account.id,
-  abortSignal,
-  auth: {
-    authType: account.authType,
-    userId: account.userId,
-    accessToken: account.token,
-    cookie: account.cookieAuthSessionCookie,
-  },
-})
-
 const createRuntimeCatalogRequest = (
   account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
   runtimeKey: AccountRuntimeKey,
@@ -89,7 +68,7 @@ const buildRuntimeModelCatalogPricingResponse = (
   account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
   models: readonly ModelDescriptor[],
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
-): PricingResponse =>
+): ModelCatalogSnapshot =>
   buildModelListCatalogPricingResponse({
     models,
     unavailableReason,
@@ -127,7 +106,7 @@ const resolveFallbackRuntimeKeySecret = async (
  */
 export async function loadAccountRuntimeKeyFallbackPricingResponse(
   params: LoadAccountRuntimeKeyFallbackPricingParams,
-): Promise<PricingResponse> {
+): Promise<ModelCatalogSnapshot> {
   const declaredModelIds = params.runtimeKey.modelAccess.suggestedModelIds
   const readiness = resolveModelListAccountSourceReadiness(params.account)
   let resolvedRuntimeKeySecret = ""
@@ -170,23 +149,14 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
         ),
       )
 
-      if (
-        readiness.dashboardEstimateLoader ===
-        ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api
-      ) {
-        const modelOnlyResponse =
-          buildSub2ApiRuntimePricingResponse(runtimeModels)
-
-        if (!isAccountKeyResourceRuntimeKey(resolvedRuntimeKey)) {
-          return modelOnlyResponse
-        }
-
-        return await loadSub2ApiEstimatedPricingResponse({
-          account: params.account,
-          selectedRef: resolvedRuntimeKey.resourceRef,
-          resolvedKey: resolvedRuntimeKey.secret,
-          runtimeModels,
-          abortSignal: params.abortSignal,
+      if (readiness.modelCatalog.enrichPricing) {
+        return await readiness.modelCatalog.enrichPricing({
+          accountRequest: createAccountModelPricingRequest(
+            params.account,
+            params.abortSignal,
+          ),
+          runtimeKey: resolvedRuntimeKey,
+          models: runtimeModels,
         })
       }
 

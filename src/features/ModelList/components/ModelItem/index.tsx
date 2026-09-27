@@ -14,17 +14,15 @@ import {
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groupSelectionScopes"
 import type {
-  ModelListSourceIdentity,
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
-import {
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-} from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
+import type { ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
   isModelPriceUnavailable,
   type ModelPricing,
@@ -82,6 +80,7 @@ interface ModelItemProps {
   isGroupSelectionInteractive?: boolean
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
+  isProviderCatalogFallback?: boolean
   displayCapabilities?: ModelManagementSourceCapabilities
   isLowestPrice?: boolean
   isComparisonOffer?: boolean
@@ -130,6 +129,7 @@ export default function ModelItem(props: ModelItemProps) {
     isGroupSelectionInteractive = true,
     source,
     sourceIdentity,
+    isProviderCatalogFallback = false,
     displayCapabilities = source.capabilities,
     isLowestPrice = false,
     isComparisonOffer = false,
@@ -429,9 +429,20 @@ export default function ModelItem(props: ModelItemProps) {
                 : undefined
             }
             trailingContent={
-              sourceBadge || sourceUrlActions || canExpand ? (
+              sourceBadge ||
+              sourceUrlActions ||
+              canExpand ||
+              isProviderCatalogFallback ? (
                 <>
                   {sourceBadge}
+                  {isProviderCatalogFallback && (
+                    <Badge
+                      variant="warning"
+                      title={t("providerCatalogFallbackNotice.description")}
+                    >
+                      {t("providerCatalogFallbackNotice.badge")}
+                    </Badge>
+                  )}
                   {sourceUrlActions}
                   {canExpand && (
                     <ModelItemExpandButton

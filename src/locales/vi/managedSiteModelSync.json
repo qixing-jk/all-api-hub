@@ -1,5 +1,5 @@
 {
-  "description": "Tự động cập nhật danh sách model trong AI gateway tự triển khai và giảm bảo trì thủ công; có thể bật khi cần sau khi đã tạo kênh.",
+  "description": "Cập nhật danh sách mô hình của các kênh và xem kết quả đồng bộ cùng nguyên nhân thất bại.",
   "execution": {
     "actions": {
       "refresh": "Làm mới kết quả",

@@ -55,6 +55,9 @@ type AccountTokenUiScenarioContext = AccountUsageScenarioContext & {
   openFromAccountRow?: boolean
   cleanupAccountFixture?: boolean
   cleanup?: () => Promise<void>
+  prepareKeyEditor?: Parameters<
+    typeof submitTokenCreationFromKeyManagementPage
+  >[0]["prepareEditor"]
 }
 
 async function runAccountTokenUiScenario(
@@ -80,6 +83,7 @@ async function runAccountTokenUiScenario(
     await submitTokenCreationFromKeyManagementPage({
       page: keyManagementPage,
       tokenName,
+      prepareEditor: context.prepareKeyEditor,
     })
     submittedTokenName = tokenName
 
@@ -237,6 +241,40 @@ export async function verifyAccountTokenModelsProbeUsage(
         closeDialog: true,
         ...context.modelsProbe,
       })
+    },
+  })
+}
+
+/** Loads the account catalog with a run-owned key and cleans up that key. */
+export async function verifyAccountRuntimeKeyModelCatalogUsage(
+  context: AccountTokenUiScenarioContext,
+) {
+  const tokenName = context.buildTokenName()
+  await runAccountTokenUiScenario({
+    ...context,
+    buildTokenName: () => tokenName,
+    prepareKeyEditor: async (editor) => {
+      // An unbound Sub2API key can be saved but cannot call the model endpoint.
+      await editor.getByRole("combobox", { name: "Group", exact: true }).click()
+      await editor
+        .page()
+        .getByRole("option")
+        .filter({ hasNotText: /^Ungrouped$/u })
+        .first()
+        .click({ timeout: 10_000 })
+    },
+    useCreatedToken: async ({ page }) => {
+      const keyManagementUrl = page.url()
+      try {
+        await verifyAccountModelCatalog({
+          page,
+          extensionId: context.extensionId,
+          accountId: context.account.accountId,
+          expectations: { runtimeKeyName: tokenName },
+        })
+      } finally {
+        await page.goto(keyManagementUrl)
+      }
     },
   })
 }

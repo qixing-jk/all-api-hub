@@ -130,6 +130,12 @@ describe("AccountDialog ActionButtons", () => {
     render(<ActionButtons {...props} />)
 
     expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.reDetect",
+      }),
+    ).toHaveClass("bg-(--button-outline-bg)")
+
+    expect(
       await screen.findByRole("button", { name: "common:actions.cancel" }),
     ).toBeInTheDocument()
     expect(

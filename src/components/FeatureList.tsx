@@ -12,10 +12,10 @@ const FeatureList = ({ title, items, variant }: FeatureListProps) => {
   const palette =
     variant === "success"
       ? {
-          dot: "bg-success",
+          dot: "bg-success-indicator",
           box: "bg-success-soft border-success-border",
           text: "text-success-soft-foreground",
-          bullet: "bg-success",
+          bullet: "bg-success-indicator",
         }
       : {
           dot: "bg-primary",

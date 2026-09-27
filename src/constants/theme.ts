@@ -27,6 +27,23 @@ export const THEME_DENSITY = {
   COMFORTABLE: "comfortable",
 } as const
 
+export const THEME_FONT = {
+  DEFAULT: "default",
+  SANS: "sans",
+  SERIF: "serif",
+} as const
+
+export const THEME_TEXT_SIZE = {
+  DEFAULT: "default",
+  LARGE: "large",
+  EXTRA_LARGE: "extra-large",
+} as const
+
+export const THEME_CONTENT_WIDTH = {
+  CENTERED: "centered",
+  FULL: "full",
+} as const
+
 export const THEME_RADIUS = {
   NONE: "none",
   SMALL: "small",
@@ -43,7 +60,10 @@ export const THEME_ATTRIBUTES = {
   PRESET: "data-theme-preset",
   RADIUS: "data-theme-radius",
   DENSITY: "data-theme-density",
+  TEXT_SIZE: "data-theme-text-size",
+  FONT: "data-theme-font",
   OWNER: "data-theme-owner",
+  SWITCHING: "data-theme-switching",
 } as const
 
 /** React takes ownership once authoritative preferences have loaded. */

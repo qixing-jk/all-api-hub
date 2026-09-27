@@ -3,6 +3,7 @@ import {
   isAccountSiteType,
   SITE_TYPES,
 } from "~/constants/siteType"
+import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 import { getRegistrableDomain } from "~/utils/core/domain"
@@ -36,13 +37,13 @@ function isNotDefaultSiteName(siteName: string): boolean {
  * @param input 可能为浏览器 Tab 对象或字符串 URL
  * @param siteTypeHint Optional site-type hint so site-specific API overrides can
  * be used when resolving the display name.
- * @param siteStatusInfo Optional pre-fetched status; null marks a completed empty lookup and avoids a redundant request.
+ * @param bootstrapFacts Optional pre-fetched facts; null marks a completed empty lookup and avoids a redundant request.
  * @returns 计算后的站点名称
  */
 export async function getSiteName(
   input: browser.tabs.Tab | string,
   siteTypeHint?: string,
-  siteStatusInfo?: { system_name?: string | null } | null,
+  bootstrapFacts?: AccountBootstrapFacts | null,
 ): Promise<string> {
   // 1. 统一提取信息
   const urlString = typeof input === "string" ? input : input.url ?? ""
@@ -64,17 +65,17 @@ export async function getSiteName(
 
   // 4. 仅在已知 siteType 时才请求站点状态，避免为未知站点增加额外探测请求。
   if (siteTypeHint) {
-    let resolvedSiteStatus = siteStatusInfo
+    let resolvedFacts = bootstrapFacts
     if (
-      resolvedSiteStatus === undefined &&
+      resolvedFacts === undefined &&
       siteTypeHint &&
       isAccountSiteType(siteTypeHint)
     ) {
       try {
         const accountBootstrap =
           getSiteTypeCapabilities(siteTypeHint).account?.bootstrap
-        resolvedSiteStatus = accountBootstrap
-          ? await accountBootstrap.fetchSiteStatus({
+        resolvedFacts = accountBootstrap
+          ? await accountBootstrap.loadBootstrapFacts({
               baseUrl: hostWithProtocol,
               auth: {
                 authType: AuthTypeEnum.None,
@@ -82,14 +83,14 @@ export async function getSiteName(
             })
           : null
       } catch {
-        resolvedSiteStatus = null
+        resolvedFacts = null
       }
     }
     if (
-      resolvedSiteStatus?.system_name &&
-      isNotDefaultSiteName(resolvedSiteStatus.system_name)
+      resolvedFacts?.displayName &&
+      isNotDefaultSiteName(resolvedFacts.displayName)
     ) {
-      return resolvedSiteStatus.system_name
+      return resolvedFacts.displayName
     }
   }
 

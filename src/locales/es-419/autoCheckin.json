@@ -1,5 +1,5 @@
 {
-  "description": "Realiza automáticamente el check-in de cuentas elegibles todos los días dentro de una ventana de tiempo configurable. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
+  "description": "Realiza el registro diario programado de cuentas elegibles, revisa ejecuciones completadas y reintenta tareas fallidas.",
   "execution": {
     "actions": {
       "devModeHint": "Modo dev: los botones de acción siempre se muestran para pruebas.",
@@ -36,15 +36,28 @@
       "all": "Todos",
       "alreadyChecked": "Registro ya realizado",
       "clearAll": "Borrar filtros",
+      "clearReasons": "Borrar motivos",
       "countFiltered": "Mostrando {{filtered}} de {{total}}",
       "countTotal": "{{total}} en total",
       "failed": "Fallidos",
       "needsAttention": "Requiere atención",
+      "reasonAll": "Todos los motivos",
+      "reasonLabel": "Filtrar por motivo",
       "searchLabel": "Buscar resultados de ejecución",
       "searchPlaceholder": "Buscar por nombre de cuenta, ID o mensaje...",
+      "selectedReasons_one": "{{count}} motivo seleccionado",
+      "selectedReasons_many": "{{count}} motivos seleccionados",
+      "selectedReasons_other": "{{count}} motivos seleccionados",
       "selectedStatuses_one": "{{count}} estado seleccionado",
       "selectedStatuses_many": "{{count}} estados seleccionados",
       "selectedStatuses_other": "{{count}} estados seleccionados",
+      "skipCategoryAccountDisabled": "Cuenta deshabilitada",
+      "skipCategoryActionRequired": "Requiere tu acción",
+      "skipCategoryDisabled": "Desactivado",
+      "skipCategoryExpected": "No requiere acción",
+      "skipCategoryUnclassified": "Sin clasificar",
+      "skipCategoryUnsupported": "No compatible",
+      "skipCategoryWaiting": "Se reintentará automáticamente",
       "skipped": "No ejecutados",
       "statusLabel": "Filtrar por estado de ejecución",
       "success": "Registro en esta ejecución",
@@ -86,7 +99,7 @@
     },
     "title": "Check-in automático"
   },
-  "manualDescription": "Puedes realizar un check-in por lotes para las cuentas elegibles. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
+  "manualDescription": "Realiza manualmente el registro diario de cuentas elegibles en lote, revisa ejecuciones completadas y reintenta tareas fallidas.",
   "messages": {
     "error": {
       "accountDisabled": "La cuenta está deshabilitada",
@@ -150,12 +163,14 @@
     "checkinFailed": "Check-in fallido",
     "checkinSuccessful": "Check-in correcto",
     "endpointNotSupported": "Este endpoint de check-in no es compatible. Comprueba si el tipo de sitio de tu cuenta coincide con el sitio real.",
+    "loginProviderRequired": "Selecciona un método de inicio de sesión antes de ejecutar el registro diario de esta cuenta.",
     "nativePageIdentityMismatch": "La página temporal de check-in inició sesión con una cuenta distinta. Abre la página de check-in con la cuenta de destino y reintenta: {{checkInUrl}}",
     "nativePageIdentityMissing": "No se pudo confirmar el inicio de sesión de la página temporal de check-in. Abre la página de check-in, inicia sesión con la cuenta de destino y reintenta: {{checkInUrl}}",
     "nativePageStatusUnconfirmed": "Se hizo clic en la acción de check-in de la página, pero no se confirmó el estado de la cuenta de destino. Abre la página de check-in y revisa manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "No se pudo encontrar el botón de check-in en la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "No se pudo activar la acción de check-in de la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
     "resultPendingConfirmation": "Resultado del check-in pendiente de confirmación",
+    "sessionBusy": "Ya hay otro inicio de sesión en curso. Vuelve a intentarlo más tarde.",
     "turnstileIncognitoAccessRequired": "La extensión debe tener permiso para ejecutarse en ventanas de incógnito/privadas para obtener el token de Turnstile en una ventana temporal privada (escenario multi-cuenta). Habilita \"Permitir en incógnito\" para esta extensión y reintenta, o abre la página de check-in para completar la verificación: {{checkInUrl}}",
     "turnstileManualRequired": "Se requiere verificación de Cloudflare Turnstile. Abre la página de check-in para completar la verificación: {{checkInUrl}}",
     "unknownError": "Ocurrió un error desconocido"
@@ -202,8 +217,13 @@
     "already_checked_today": "Ya hizo check-in hoy",
     "authentication_required": "La sesión expiró o es necesario iniciar sesión. Inicia sesión en el sitio y vuelve a intentarlo.",
     "auto_checkin_disabled": "Check-in automático deshabilitado",
+    "checkin_page_unavailable": "No se pudo abrir ni activar la página de check-in del sitio. Inténtalo de nuevo más tarde.",
+    "checkin_unconfirmed": "La solicitud de check-in se envió, pero el sitio no confirmó el resultado. Inténtalo de nuevo más tarde.",
     "credentials_missing": "Faltan las credenciales guardadas. Vuelve a detectar la cuenta o actualiza sus credenciales.",
     "detection_disabled": "Detección deshabilitada",
+    "execution_context_invalid": "Esta ejecución no pudo abrir una sesión protegida. Vuelve a iniciar el check-in.",
+    "login_provider_in_use": "El método de inicio de sesión seleccionado ya pertenece a otra cuenta de AgentRouter. Elige el otro método o cámbialo en esa cuenta.",
+    "manual_verification_required": "El sitio requiere verificación manual. Complétala en la página de check-in y vuelve a intentarlo.",
     "method_disabled": "La función de check-in de este sitio está deshabilitada",
     "method_not_matched": "El método de check-in seleccionado ya no coincide con este sitio. Vuelve a detectarlo.",
     "method_unavailable": "El método de check-in seleccionado ya no está disponible. Vuelve a detectarlo.",
@@ -212,9 +232,11 @@
     "no_provider": "El tipo de sitio de la cuenta actualmente no admite check-in",
     "no_selected_method": "No hay un método de check-in seleccionado. Vuelve a detectarlo o elige uno en la configuración de la cuenta.",
     "permission_denied": "El sitio rechazó el permiso para hacer check-in. Inicia sesión de nuevo o revisa los permisos de la cuenta.",
+    "session_busy": "Ya hay otro inicio de sesión en curso. Inténtalo de nuevo más tarde.",
     "source_unavailable": "El sitio de origen no está disponible temporalmente. Inténtalo de nuevo más tarde.",
     "status_unavailable": "No se pudo confirmar el estado actual, por lo que no se intentó el check-in",
-    "timeout": "La conexión agotó el tiempo de espera antes de completar el check-in. Vuelve a intentarlo."
+    "timeout": "La conexión agotó el tiempo de espera antes de completar el check-in. Vuelve a intentarlo.",
+    "upstream_error": "El sitio devolvió un resultado de check-in no reconocido. Inténtalo de nuevo más tarde."
   },
   "snapshot": {
     "badges": {

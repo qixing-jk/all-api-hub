@@ -9,7 +9,6 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import type { AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -31,7 +30,6 @@ import type { AutoCheckinMethodRegistration } from "~/services/checkin/autoCheck
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import {
-  markCheckInMethodExecuted,
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
@@ -40,6 +38,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 import type {
@@ -50,21 +49,6 @@ import type {
 } from "~/types/checkIn"
 
 export { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery"
-
-/** Marks the selected method checked using execution evidence. */
-export function markSelectedCheckInExecuted(input: {
-  config: CheckInConfig
-  siteType: AccountSiteType
-  observedAt: number
-}): CheckInConfig {
-  const methodId = resolveSelectedCheckInMethod(input)
-  if (!methodId) return input.config
-  return markCheckInMethodExecuted({
-    config: input.config,
-    methodId,
-    observedAt: input.observedAt,
-  })
-}
 
 type ExecuteSelectedCheckInResult =
   | {
@@ -88,6 +72,7 @@ type ExecuteSelectedCheckInResult =
 const resolveSelectedCheckInRegistration = (input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
 }) => {
   const state = inspectAccountCheckIn({
     config: input.account.checkIn,
@@ -95,6 +80,7 @@ const resolveSelectedCheckInRegistration = (input: {
     siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const registration = state.executionEligibility.eligible
     ? autoCheckinMethodRegistry.resolveById(state.executionEligibility.methodId)
@@ -369,6 +355,10 @@ const reconcileUncertainResult = async (input: {
       status.availability === CHECK_IN_METHOD_AVAILABILITIES.Enabled
         ? {
             status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+            messageKey: getAutoCheckinSkipReasonTranslationKey(
+              AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+            ),
             retryable: true,
           }
         : { retryable: false }),
@@ -387,10 +377,12 @@ const reconcileUncertainResult = async (input: {
 export function inspectSelectedCheckInCompatibility(input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
+  loginProviderClaimedByAnother?: boolean
 }) {
   const { state, registration } = resolveSelectedCheckInRegistration({
     account: input.account,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const providerReadiness = registration?.provider.getReadiness(input.account)
   return {
@@ -409,6 +401,11 @@ export async function executeSelectedCheckIn(input: {
   /** Rechecks unattended-run intent immediately before an initial or recovered POST. */
   isAutomaticExecutionEnabled?: () => Promise<boolean>
   /**
+   * Resolved cross-account fact: another enabled account already owns the
+   * browser login provider this account claims. Unset keeps the run unblocked.
+   */
+  loginProviderClaimedByAnother?: boolean
+  /**
    * Retry safety guard: a provider with readback must confirm current status
    * before another mutation. Providers may also require this for initial
    * daily/manual runs through requiresAuthoritativeStatusBeforeMutation.
@@ -421,6 +418,7 @@ export async function executeSelectedCheckIn(input: {
     siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    loginProviderClaimedByAnother: input.loginProviderClaimedByAnother,
   })
   const canRefreshCachedStatus =
     !initialState.executionEligibility.eligible &&

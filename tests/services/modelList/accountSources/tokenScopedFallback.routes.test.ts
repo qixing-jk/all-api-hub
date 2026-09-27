@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
@@ -74,8 +73,6 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
     resolveDisplayAccountTokenForSecretMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
-      dashboardEstimateLoader:
-        ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -93,7 +90,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
     )
   })
 
-  it("returns runtime model-only rows when a token-scoped route has no dashboard estimate loader", async () => {
+  it("returns runtime model-only rows when a token-scoped route has no pricing enrichment capability", async () => {
     fetchRuntimeModelsMock.mockResolvedValueOnce([{ id: "runtime-only-model" }])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
@@ -147,6 +144,59 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
         },
       }),
     ])
+  })
+
+  it("uses provider pricing enrichment without a provider-name switch", async () => {
+    fetchRuntimeModelsMock.mockResolvedValueOnce([{ id: "runtime-only-model" }])
+
+    const snapshot = {
+      success: true,
+      data: [{ model_name: "runtime-only-model", model_price: 7 }],
+      groupRatios: {},
+      groupAccess: { kind: "not-applicable" },
+    }
+    const enrichPricing = vi.fn().mockResolvedValue(snapshot)
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        modelCatalog: { fetchModels: fetchRuntimeModelsMock, enrichPricing },
+      },
+    })
+    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
+      account: {
+        id: "account-1",
+        name: "Account",
+        siteType: SITE_TYPES.SHAREDCHAT,
+        baseUrl: "https://sub2api.example.invalid",
+        userId: "1",
+        token: "account-token",
+        authType: AuthTypeEnum.AccessToken,
+        tagIds: [],
+      },
+      token: {
+        id: 10,
+        user_id: 1,
+        key: "sk-runtime-secret",
+        status: 1,
+        name: "Runtime Key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+        models: "",
+      },
+    })
+
+    expect(result).toBe(snapshot)
+    expect(enrichPricing).toHaveBeenCalledWith({
+      accountRequest: expect.objectContaining({
+        baseUrl: "https://sub2api.example.invalid",
+        auth: expect.objectContaining({ accessToken: "account-token" }),
+      }),
+      runtimeKey: expect.objectContaining({ secret: "sk-runtime-secret" }),
+      models: [{ id: "runtime-only-model" }],
+    })
   })
 
   it("accepts the legacy minimal account shape for token fallback callers", async () => {

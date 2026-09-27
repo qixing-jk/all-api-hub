@@ -16,12 +16,18 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import {
+  AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { getAccountKeyResourceRow } from "~~/e2e/utils/accountLifecycle"
 import {
   createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -130,6 +136,276 @@ test("options default route opens overview and preserves explicit basic links", 
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
   )
   await expect(page).toHaveURL(new RegExp(`#${MENU_ITEM_IDS.BASIC}$`))
+})
+
+test("automation row shortcut hides again after mouse interaction", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const automation = page.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.automationOverview,
+  )
+  await expect(automation).toBeVisible()
+
+  const row = automation.getByRole("button", {
+    name: /^Auto check-in/,
+  })
+  const shortcut = automation.getByRole("button", {
+    name: "Open Auto check-in",
+  })
+
+  await expect(shortcut).toHaveCSS("opacity", "0")
+
+  await row.hover()
+  await expect(shortcut).toHaveCSS("opacity", "1")
+
+  await row.click()
+  await page.mouse.move(0, 0)
+  await expect(shortcut).toHaveCSS("opacity", "0")
+
+  // Keyboard focus still reveals the shortcut for keyboard users.
+  await page.keyboard.press("Tab")
+  await expect(shortcut).toBeFocused()
+  await expect(shortcut).toHaveCSS("opacity", "1")
+})
+
+test("overview attention list surfaces unknown site type check-in setup", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const account = createStoredAccount({
+    id: "unknown-site-account",
+    site_name: "Unknown Site",
+    site_url: "https://unknown.example.com",
+    site_type: SITE_TYPES.UNKNOWN,
+    checkIn: {
+      automaticExecutionEnabled: true,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [account])
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "Unknown Site has an unknown site type"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+
+  await attention
+    .getByRole("button", { name: `Edit account: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        search: url.searchParams.get("search"),
+      }
+    })
+    .toEqual({
+      hash: `#${MENU_ITEM_IDS.ACCOUNT}`,
+      search: "unknown-site-account",
+    })
+})
+
+test("overview attention list flags disabled-only accounts", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "disabled-account",
+      site_name: "Disabled Relay",
+      site_url: "https://disabled.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      disabled: true,
+    }),
+  ])
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "The only account is disabled"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(attention.getByText("No accounts yet")).toHaveCount(0)
+
+  await attention
+    .getByRole("button", { name: `Manage accounts: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return url.hash
+    })
+    .toBe(`#${MENU_ITEM_IDS.ACCOUNT}`)
+})
+
+test("overview attention list surfaces accounts paused by the global check-in switch", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const account = createStoredAccount({
+    id: "paused-checkin-account",
+    site_name: "Paused Relay",
+    site_url: "https://paused.example.com",
+    site_type: SITE_TYPES.NEW_API,
+    checkIn: {
+      automaticExecutionEnabled: true,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [account])
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      globalEnabled: false,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "Automatic check-in is off globally"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(
+    attention.getByText(
+      /1 account has automatic check-in enabled, but nothing runs/u,
+    ),
+  ).toBeVisible()
+
+  await attention
+    .getByRole("button", { name: `Handle check-in: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        tab: url.searchParams.get("tab"),
+        anchor: url.searchParams.get("anchor"),
+      }
+    })
+    .toEqual({
+      hash: `#${MENU_ITEM_IDS.BASIC}`,
+      tab: "checkinRedeem",
+      anchor: SETTINGS_ANCHORS.AUTO_CHECKIN,
+    })
+
+  await expect(
+    page.locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`),
+  ).toBeInViewport()
+})
+test("overview attention list surfaces missing sign-in data as a todo", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      globalEnabled: true,
+      pretriggerDailyOnUiOpen: false,
+    },
+  })
+  await seedAutoCheckinStatus(serviceWorker, {
+    lastRunAt: new Date().toISOString(),
+    lastRunResult: AUTO_CHECKIN_RUN_RESULT.PARTIAL,
+    perAccount: {
+      "skipped-account": {
+        accountId: "skipped-account",
+        accountName: "Skipped Relay",
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+        timestamp: 1,
+      },
+      "routine-account": {
+        accountId: "routine-account",
+        accountName: "Routine Relay",
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY,
+        timestamp: 1,
+      },
+    },
+    summary: {
+      totalEligible: 2,
+      executed: 2,
+      successCount: 1,
+      failedCount: 0,
+      skippedCount: 1,
+      needsRetry: false,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const attention = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.needsAttention)
+  const itemTitle = "1 account is missing saved sign-in data"
+  await expect(attention).toBeVisible()
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+  await expect(attention.getByText("Routine Relay")).toHaveCount(0)
+
+  const severityFilters = attention.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityFilters,
+  )
+  await expect(
+    severityFilters.getByRole("button", { name: "Warning 1" }),
+  ).toBeVisible()
+
+  const categoryFilters = attention.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.attentionCategoryFilters,
+  )
+  const automationFilter = categoryFilters.getByRole("button", {
+    name: "Automation 1",
+  })
+  await expect(automationFilter).toBeVisible()
+  await automationFilter.click()
+  await expect(attention.getByText("No API profiles yet")).toHaveCount(0)
+  await expect(attention.getByText(itemTitle)).toBeVisible()
+
+  await attention
+    .getByRole("button", { name: `Fix account: ${itemTitle}` })
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return { hash: url.hash }
+    })
+    .toEqual({ hash: `#${MENU_ITEM_IDS.AUTO_CHECKIN}` })
+
+  await expect(
+    page.getByRole("button", { name: "Run now", exact: true }),
+  ).toBeVisible()
 })
 
 test("overview action center opens disabled auto check-in settings", async ({

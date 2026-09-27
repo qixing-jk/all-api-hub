@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Body,
   Button,
   Caption,
@@ -187,14 +188,14 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
               {t("redemptionAssist:messages.promptSettingsLink")}
             </Link>
           </div>
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button variant="secondary" onClick={handleCancel}>
               {t("common:actions.cancel")}
             </Button>
             <Button disabled={selectedCount === 0} onClick={handleAutoRedeem}>
               {t("redemptionAssist:actions.autoRedeem")}
             </Button>
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </ProductAnalyticsScope>

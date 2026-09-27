@@ -95,7 +95,7 @@ function Calendar({
         month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "flex-1 rounded-md text-[0.8rem] font-normal text-muted-foreground select-none",
+          "flex-1 rounded-md text-[length:calc(0.8rem+var(--text-size-increment))] font-normal text-muted-foreground select-none",
           defaultClassNames.weekday,
         ),
         week: cn("mt-density-2 flex w-full", defaultClassNames.week),
@@ -104,7 +104,7 @@ function Calendar({
           defaultClassNames.week_number_header,
         ),
         week_number: cn(
-          "text-[0.8rem] text-muted-foreground select-none",
+          "text-[length:calc(0.8rem+var(--text-size-increment))] text-muted-foreground select-none",
           defaultClassNames.week_number,
         ),
         day: cn(

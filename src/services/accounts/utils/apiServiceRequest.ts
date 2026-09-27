@@ -12,7 +12,6 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
@@ -204,31 +203,6 @@ export const createAccountApiRequestFromStoredAccount = (
     accessToken: account.account_info?.access_token ?? "",
     cookie: account.cookieAuth?.sessionCookie,
   })
-
-/**
- * Resolve the latest stored account and build its account API request context.
- */
-export async function resolveStoredAccountApiContext(
-  accountId: string,
-): Promise<AccountApiContext> {
-  if (!hasNonEmptyString(accountId)) {
-    throw new StoredAccountApiContextError(
-      "MISSING_ACCOUNT_ID",
-      "account_api_context_missing_account_id",
-    )
-  }
-
-  const account = await accountQueries.getAccountById(accountId)
-
-  if (!account) {
-    throw new StoredAccountApiContextError(
-      "ACCOUNT_NOT_FOUND",
-      "account_api_context_account_not_found",
-    )
-  }
-
-  return createAccountApiRequestFromStoredAccount(account)
-}
 
 const withDisplayAccountAuthSession = (
   account: Pick<DisplaySiteData, "siteType">,
@@ -481,7 +455,8 @@ const requireResolvedProviderAccountKeyResourceSecret = (
 }
 
 /**
- * Resolves a runtime-key clone with the latest usable secret for its source.
+ * Resolves a runtime-key clone, using an in-hand secret in automatic mode.
+ * Callers that require a fresh provider read select the Provider source.
  */
 export async function resolveDisplayAccountRuntimeKeySecret<
   TRuntimeKey extends AccountRuntimeKey,
@@ -544,7 +519,6 @@ export async function resolveDisplayAccountRuntimeKeySecret<
 
     if (
       source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
-      usesAssociatedProfileByDefault(availability) &&
       hasUsableApiTokenKey(runtimeKey.secret)
     ) {
       return projectResolvedRuntimeKey(runtimeKey.secret)

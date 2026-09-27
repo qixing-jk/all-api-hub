@@ -6,8 +6,8 @@ import { SUPPORTED_UI_LANGUAGES } from "~/constants/i18n"
 import {
   getOpenRouterKeyResourceFieldPolicy,
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
-  resolveOpenRouterKeyResourceFieldPolicy,
 } from "~/features/KeyManagement/presentation/openRouterKeyResourceFieldPolicy"
+import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,
@@ -179,25 +179,28 @@ describe("OpenRouter key resource field policy", () => {
     ]
 
     expect(() =>
-      resolveOpenRouterKeyResourceFieldPolicy(
+      resolveResourceFieldPolicy(
         [...descriptors, { fieldId: "unclassified", type: "text" }],
-        "create",
+        getOpenRouterKeyResourceFieldPolicy("create"),
+        OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")
     expect(() =>
-      resolveOpenRouterKeyResourceFieldPolicy(
+      resolveResourceFieldPolicy(
         [...descriptors, descriptors[0]!],
-        "create",
+        getOpenRouterKeyResourceFieldPolicy("create"),
+        OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")
     expect(() =>
-      resolveOpenRouterKeyResourceFieldPolicy(
+      resolveResourceFieldPolicy(
         descriptors.map((descriptor) =>
           descriptor.fieldId === fields.Name
             ? { fieldId: descriptor.fieldId, type: "number" as const }
             : descriptor,
         ),
-        "create",
+        getOpenRouterKeyResourceFieldPolicy("create"),
+        OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")
   })

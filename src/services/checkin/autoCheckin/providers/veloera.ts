@@ -16,6 +16,7 @@ import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createUpstreamFailureResult,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
@@ -153,14 +154,10 @@ async function checkinVeloera(
       // Preserve the original mutation failure if best-effort readback fails.
     }
 
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      rawMessage: responseMessage || undefined,
-      messageKey: responseMessage
-        ? undefined
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: response ?? undefined,
-    }
+    return createUpstreamFailureResult({
+      rawMessage: responseMessage,
+      data: response,
+    })
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,

@@ -42,6 +42,10 @@ import {
   refreshSearchSections,
 } from "~/features/BasicSettings/components/tabs/Refresh/Refresh.search"
 import {
+  siteAnnouncementsSearchControls,
+  siteAnnouncementsSearchSections,
+} from "~/features/BasicSettings/components/tabs/SiteAnnouncements/SiteAnnouncements.search"
+import {
   usageHistorySyncSearchControls,
   usageHistorySyncSearchSections,
 } from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySync.search"
@@ -62,6 +66,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...PAGE_DEFINITIONS,
   ...TAB_DEFINITIONS,
   ...generalSearchSections,
+  ...siteAnnouncementsSearchSections,
   ...notificationsSearchSections,
   ...accountManagementSearchSections,
   ...refreshSearchSections,
@@ -76,6 +81,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...importExportSearchSections,
   ...productTourSearchSections,
   ...generalSearchControls,
+  ...siteAnnouncementsSearchControls,
   ...notificationsSearchControls,
   ...accountManagementSearchControls,
   ...refreshSearchControls,

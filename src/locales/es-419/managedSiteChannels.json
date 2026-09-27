@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "Importar canal desde la Biblioteca de credenciales de API",
       "title": "Aún no hay canales del AI gateway autohospedado"
     },
-    "headerDescription": "Administra los canales del AI gateway autohospedado y reúne varias claves de cuenta o API keys en una AI API.",
+    "headerDescription": "Administra canales de tu puerta de enlace de IA para reunir distintas fuentes API en un punto de acceso.",
     "openChannelConsole": "Abrir la administración de canales del gateway",
     "unconfiguredValueDescription": "Después de configurarlo, podrás importar claves de cuenta y API keys dispersas como canales del gateway, y verlas y administrarlas directamente en All API Hub."
   },

@@ -4,7 +4,6 @@ import {
   getDeviceTypeInfo,
   isDesktopDevice,
   isMobileDevice,
-  isTabletDevice,
 } from "~/utils/browser/device"
 
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(
@@ -75,7 +74,6 @@ describe("device helpers", () => {
       isDesktop: false,
     })
     expect(isMobileDevice(options)).toBe(true)
-    expect(isTabletDevice(options)).toBe(false)
     expect(isDesktopDevice(options)).toBe(false)
   })
 
@@ -97,7 +95,6 @@ describe("device helpers", () => {
       isTouchDevice: true,
     })
     expect(isMobileDevice(options)).toBe(false)
-    expect(isTabletDevice(options)).toBe(false)
     expect(isDesktopDevice(options)).toBe(true)
   })
 

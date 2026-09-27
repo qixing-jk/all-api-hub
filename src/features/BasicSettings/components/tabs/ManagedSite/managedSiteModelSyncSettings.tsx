@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
-import { SettingSection } from "~/components/SettingSection"
 import {
+  ActionGroup,
   Button,
   Card,
   CardItem,
@@ -19,6 +19,7 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
@@ -49,6 +50,7 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { pushWithinOptionsPage } from "~/utils/navigation"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"
 
@@ -641,6 +643,22 @@ export default function ManagedSiteModelSyncSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation
+      resetDisabled={
+        matchesDefaultSettings(rawPrefs, DEFAULT_MODEL_SYNC_PREFERENCES) &&
+        ![
+          intervalHoursField,
+          concurrencyField,
+          maxRetriesField,
+          channelProcessingTimeoutField,
+          requestsPerMinuteField,
+          burstField,
+        ].some((field) => field.isDirty) &&
+        matchesDefaultSettings(
+          globalChannelModelFiltersDraft,
+          DEFAULT_MODEL_SYNC_PREFERENCES.globalChannelModelFilters,
+        )
+      }
       id="managed-site-model-sync"
       title={t("managedSiteModelSync:settings.title")}
       description={t("managedSiteModelSync:description")}
@@ -649,6 +667,22 @@ export default function ManagedSiteModelSyncSettings() {
           PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
         )
         const result = await resetNewApiModelSyncConfig()
+        if (result.ok) {
+          const defaults = DEFAULT_MODEL_SYNC_PREFERENCES
+          intervalHoursField.setDraft(
+            String(defaults.interval / (60 * 60 * 1000)),
+          )
+          concurrencyField.setDraft(String(defaults.concurrency))
+          maxRetriesField.setDraft(String(defaults.maxRetries))
+          channelProcessingTimeoutField.setDraft(
+            String(defaults.channelProcessingTimeout),
+          )
+          requestsPerMinuteField.setDraft(
+            String(defaults.rateLimit.requestsPerMinute),
+          )
+          burstField.setDraft(String(defaults.rateLimit.burst))
+          setGlobalChannelModelFiltersDraft(defaults.globalChannelModelFilters)
+        }
         tracker.complete(
           result.ok
             ? PRODUCT_ANALYTICS_RESULTS.Success
@@ -943,7 +977,7 @@ export default function ManagedSiteModelSyncSettings() {
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button
               type="button"
               variant="secondary"
@@ -960,7 +994,7 @@ export default function ManagedSiteModelSyncSettings() {
                 ? t("common:status.saving")
                 : t("managedSiteChannels:filters.actions.save")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <ChannelFiltersEditor

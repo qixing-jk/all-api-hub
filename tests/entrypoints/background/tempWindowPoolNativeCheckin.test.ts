@@ -32,7 +32,6 @@ async function settleTempContextReadiness() {
 describe("tempWindowPool native check-in page action", () => {
   let createTabMock: ReturnType<typeof vi.fn>
   let createWindowMock: ReturnType<typeof vi.fn>
-  let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let hasWindowsApiMock: ReturnType<typeof vi.fn>
   let onTabRemovedMock: ReturnType<typeof vi.fn>
   let onWindowRemovedMock: ReturnType<typeof vi.fn>
@@ -45,7 +44,6 @@ describe("tempWindowPool native check-in page action", () => {
 
     createTabMock = vi.fn().mockResolvedValue({ id: 701 })
     createWindowMock = vi.fn()
-    removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     hasWindowsApiMock = vi.fn(() => true)
     onTabRemovedMock = vi.fn(() => () => {})
     onWindowRemovedMock = vi.fn(() => () => {})
@@ -85,6 +83,7 @@ describe("tempWindowPool native check-in page action", () => {
       }
     })
     ;(globalThis as any).browser = {
+      storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },
@@ -110,7 +109,6 @@ describe("tempWindowPool native check-in page action", () => {
         hasWindowsAPI: hasWindowsApiMock,
         onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
-        removeTabOrWindow: removeTabOrWindowMock,
       }
     })
     vi.doMock("~/services/preferences/userPreferences", () => ({

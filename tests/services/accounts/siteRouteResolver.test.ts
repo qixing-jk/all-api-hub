@@ -14,11 +14,11 @@ import {
 import { AuthTypeEnum } from "~/types"
 
 const {
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockgetSiteTypeCapabilities,
   mockResolveRoutePath,
 } = vi.hoisted(() => ({
-  mockFetchSiteStatus: vi.fn(),
+  mockLoadBootstrapFacts: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockResolveRoutePath: vi.fn(),
 }))
@@ -31,18 +31,18 @@ describe("siteRouteResolver", () => {
   beforeEach(() => {
     clearSiteRouteThemeCacheForTests()
     vi.restoreAllMocks()
-    mockFetchSiteStatus.mockReset()
+    mockLoadBootstrapFacts.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockResolveRoutePath.mockReset()
     mockResolveRoutePath.mockImplementation((target, route) =>
       resolveNewApiAccountRoutePath(target, route, {
-        fetchSiteStatus: mockFetchSiteStatus,
+        loadBootstrapFacts: mockLoadBootstrapFacts,
       }),
     )
     mockgetSiteTypeCapabilities.mockReturnValue({
       account: {
         bootstrap: {
-          fetchSiteStatus: mockFetchSiteStatus,
+          loadBootstrapFacts: mockLoadBootstrapFacts,
           resolveRoutePath: mockResolveRoutePath,
         },
       },
@@ -66,7 +66,7 @@ describe("siteRouteResolver", () => {
           route,
         ),
       ).resolves.toBe(`https://site.example${path}`)
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     },
   )
 
@@ -77,8 +77,8 @@ describe("siteRouteResolver", () => {
   })
 
   const mockDefaultNewApiThemeStatus = () =>
-    mockFetchSiteStatus.mockResolvedValue({
-      theme: "default",
+    mockLoadBootstrapFacts.mockResolvedValue({
+      frontendTheme: "default",
     })
 
   it("does not turn an unsupported SharedChat redemption page into a default URL", async () => {
@@ -102,7 +102,7 @@ describe("siteRouteResolver", () => {
         SITE_ROUTE_KINDS.Redeem,
       ),
     ).resolves.toBeNull()
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("uses New API default frontend routes when /api/status reports the default theme", async () => {
@@ -138,7 +138,7 @@ describe("siteRouteResolver", () => {
         SITE_ROUTE_KINDS.Login,
       ),
     ).resolves.toBe("https://new-api.example/sign-in")
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://new-api.example",
       auth: { authType: AuthTypeEnum.None },
     })
@@ -149,7 +149,7 @@ describe("siteRouteResolver", () => {
   })
 
   it("keeps classic New API routes when /api/status is unavailable", async () => {
-    mockFetchSiteStatus.mockRejectedValue(new Error("offline"))
+    mockLoadBootstrapFacts.mockRejectedValue(new Error("offline"))
 
     await expect(
       resolveAccountSiteRouteUrl(
@@ -179,7 +179,7 @@ describe("siteRouteResolver", () => {
       ),
     ).resolves.toBe("https://veloera.example/app/me")
 
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("falls back to static route config when account bootstrap is missing", async () => {
@@ -197,7 +197,7 @@ describe("siteRouteResolver", () => {
     mockgetSiteTypeCapabilities.mockReturnValueOnce({
       account: {
         bootstrap: {
-          fetchSiteStatus: mockFetchSiteStatus,
+          loadBootstrapFacts: mockLoadBootstrapFacts,
         },
       },
     })
@@ -209,7 +209,7 @@ describe("siteRouteResolver", () => {
       ),
     ).resolves.toBe("https://veloera.example/app/me")
     expect(mockResolveRoutePath).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("resolves login URLs through the route resolver when a site type hint is available", async () => {
@@ -228,11 +228,11 @@ describe("siteRouteResolver", () => {
       resolveAccountSiteLoginUrl("https://unknown.example/dashboard"),
     ).resolves.toBe("https://unknown.example/login")
     expect(getBestEffortLoginUrl("not-a-url")).toBe("not-a-url")
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("bounds cached New API theme probes for many account sites", async () => {
-    mockFetchSiteStatus.mockRejectedValue(new Error("offline"))
+    mockLoadBootstrapFacts.mockRejectedValue(new Error("offline"))
 
     for (let index = 0; index < 101; index += 1) {
       await resolveAccountSiteRouteUrl(
@@ -253,7 +253,7 @@ describe("siteRouteResolver", () => {
       SITE_ROUTE_KINDS.Usage,
     )
 
-    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(102)
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledTimes(102)
   })
 
   it("keeps AIHubMix login routing centralized in the route resolver", async () => {
@@ -266,6 +266,6 @@ describe("siteRouteResolver", () => {
     expect(
       getBestEffortLoginUrl("https://console.aihubmix.com/statistics"),
     ).toBe("https://console.aihubmix.com/sign-in")
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 })

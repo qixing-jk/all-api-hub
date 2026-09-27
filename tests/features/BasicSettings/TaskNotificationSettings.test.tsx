@@ -1,10 +1,12 @@
 import { act, fireEvent, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/Notifications/TaskNotificationSettings"
 import { TaskNotificationMessageTypes } from "~/services/notifications/messaging"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -31,6 +33,7 @@ import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
+  loadPreferencesMock,
   hasPermissionMock,
   onOptionalPermissionsChangedMock,
   requestPermissionDetailedMock,
@@ -43,6 +46,7 @@ const {
   updateSiteAnnouncementNotificationsMock,
   updateTaskNotificationsMock,
 } = vi.hoisted(() => ({
+  loadPreferencesMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   onOptionalPermissionsChangedMock: vi.fn(),
   requestPermissionDetailedMock: vi.fn(),
@@ -73,6 +77,7 @@ const preferenceWriteFailure = () => ({
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
+    loadPreferences: loadPreferencesMock,
     preferences: { lastUpdated: taskNotificationsVersionMock.current },
     siteAnnouncementNotifications: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
     taskNotifications:
@@ -133,6 +138,86 @@ describe("TaskNotificationSettings", () => {
     taskNotificationsVersionMock.current = 1
     updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
     updateTaskNotificationsMock.mockResolvedValue(preferenceWriteSuccess())
+  })
+
+  it("resets notification enablement without changing delivery channels", async () => {
+    taskNotificationsMock.current!.enabled = false
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    fireEvent.click(
+      within(
+        document.getElementById(SETTINGS_ANCHORS.TASK_NOTIFICATIONS)!,
+      ).getByRole("button", { name: "common:actions.reset" }),
+    )
+    await waitFor(() =>
+      expect(updateTaskNotificationsMock).toHaveBeenCalledExactlyOnceWith({
+        enabled: DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled,
+      }),
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("resets task events and announcement delivery together then reloads preferences", async () => {
+    taskNotificationsMock.current!.tasks.autoCheckin = false
+    const save = vi
+      .spyOn(userPreferences, "savePreferencesWithResult")
+      .mockResolvedValueOnce({ ok: true } as any)
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    fireEvent.click(
+      within(
+        document.getElementById(SETTINGS_ANCHORS.TASK_NOTIFICATION_EVENTS)!,
+      ).getByRole("button", { name: "common:actions.reset" }),
+    )
+    await waitFor(() => expect(loadPreferencesMock).toHaveBeenCalledOnce())
+    expect(save).toHaveBeenCalledExactlyOnceWith({
+      taskNotifications: { tasks: DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks },
+      siteAnnouncementNotifications: {
+        notificationEnabled:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
+      },
+    })
+    save.mockRestore()
+  })
+
+  it("confirms clearing channel credentials and resets only channels", async () => {
+    const user = userEvent.setup()
+    taskNotificationsMock.current!.channels.webhook.url =
+      "https://example.com/hook"
+    taskNotificationsMock.current!.tasks.autoCheckin = false
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const reset = within(
+      document.getElementById(SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS)!,
+    ).getByRole("button", { name: "common:actions.reset" })
+    const webhookInput = screen.getByDisplayValue("https://example.com/hook")
+    await user.click(reset)
+    expect(updateTaskNotificationsMock).not.toHaveBeenCalled()
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+    expect(updateTaskNotificationsMock).not.toHaveBeenCalled()
+    await user.click(reset)
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.reset",
+      }),
+    )
+    expect(updateTaskNotificationsMock).toHaveBeenCalledExactlyOnceWith({
+      channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+    })
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(webhookInput).toHaveValue(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels.webhook.url,
+    )
   })
 
   it("renders permission controls and requests notification permission", async () => {

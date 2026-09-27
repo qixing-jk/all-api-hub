@@ -8,11 +8,9 @@ import {
 import {
   createChannel,
   deleteChannel,
-  fetchAccountAvailableModels,
   fetchAvailableModels,
   fetchGroups,
   fetchRemoteModels,
-  fetchSiteUserGroups,
   getChannel,
   getChannelKeyManagement,
   listChannels,
@@ -39,13 +37,15 @@ import {
   OctopusOutboundType,
   type OctopusChannel,
   type OctopusCreateChannelInput,
-  type OctopusCreateChannelRequest,
   type OctopusFetchModelInput,
-  type OctopusFetchModelRequest,
   type OctopusUpdateChannelInput,
-  type OctopusUpdateChannelRequest,
 } from "~/types/octopus"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import type {
+  OctopusCreateChannelRequest,
+  OctopusFetchModelRequest,
+  OctopusUpdateChannelRequest,
+} from "~~/tests/test-utils/octopusLegacyRequests"
 
 const {
   mockGetValidSession,
@@ -3204,77 +3204,5 @@ describe("Octopus API service", () => {
     await expect(fetchGroups(config)).rejects.toThrow(
       "Failed to parse JSON response from /api/v1/group/list",
     )
-  })
-
-  it("returns empty arrays when persisted Octopus preferences are incomplete", async () => {
-    mockGetPreferences.mockResolvedValueOnce({
-      octopus: {
-        baseUrl: "",
-        username: "alice",
-        password: "secret",
-      },
-    })
-    mockGetPreferences.mockResolvedValueOnce({
-      octopus: {
-        baseUrl: "https://octopus.example.com",
-        username: "",
-        password: "secret",
-      },
-    })
-
-    await expect(fetchSiteUserGroups({} as any)).resolves.toEqual([])
-    await expect(fetchAccountAvailableModels({} as any)).resolves.toEqual([])
-    expect(mockGetValidSession).not.toHaveBeenCalled()
-  })
-
-  it("returns empty arrays when stored Octopus preferences cannot be loaded", async () => {
-    mockGetPreferences
-      .mockRejectedValueOnce(new Error("storage failed"))
-      .mockRejectedValueOnce(new Error("storage failed"))
-
-    await expect(fetchSiteUserGroups({} as any)).resolves.toEqual([])
-    await expect(fetchAccountAvailableModels({} as any)).resolves.toEqual([])
-  })
-
-  it("uses stored Octopus preferences for group/model discovery and swallows downstream failures", async () => {
-    const fetchMock = vi.fn()
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: [{ id: 1, name: "default", items: [] }],
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response("upstream unavailable", {
-          status: 503,
-          headers: { "Content-Type": "text/plain" },
-        }),
-      )
-    vi.stubGlobal("fetch", fetchMock)
-    mockGetPreferences
-      .mockResolvedValueOnce({
-        octopus: {
-          baseUrl: "https://octopus.example.com",
-          username: "alice",
-          password: "secret",
-        },
-      })
-      .mockResolvedValueOnce({
-        octopus: {
-          baseUrl: "https://octopus.example.com",
-          username: "alice",
-          password: "secret",
-        },
-      })
-
-    await expect(fetchSiteUserGroups({} as any)).resolves.toEqual(["default"])
-    await expect(fetchAccountAvailableModels({} as any)).resolves.toEqual([])
   })
 })

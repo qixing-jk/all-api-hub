@@ -382,9 +382,15 @@ const resolveRuntimeKey = async (
   const tokenId = decodeTokenId(ref.resourceId)
   let token: NewApiToken | undefined
   try {
-    token = (await collectValidatedInventoryTokens(config, options)).find(
-      (candidate) => candidate.id === tokenId,
+    // GetToken returns this token's key (masked on current New API, plaintext
+    // on older compatible sites); only masked keys need the reveal transport.
+    // https://github.com/QuantumNous/new-api/blob/main/controller/token.go
+    token = await config.transport.fetchTokenById(
+      requestWithOptions(config, options),
+      tokenId,
     )
+    if (token && token.id !== tokenId)
+      throw new Error("token_identity_mismatch")
   } catch (error) {
     return {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,

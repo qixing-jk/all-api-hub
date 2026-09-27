@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AccountKeyIcon } from "~/components/icons/productIcons"
+import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
@@ -99,7 +100,7 @@ export function Header({
   }
 
   return (
-    <div className="mb-density-8">
+    <div>
       <ProductAnalyticsScope
         entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement}
@@ -132,22 +133,25 @@ export function Header({
           }
           description={description}
           actions={
-            <>
-              {addTokenDisabledReason ? (
-                <Tooltip content={addTokenDisabledReason} anchorAsChild>
-                  <span
-                    className="inline-flex"
-                    role="group"
-                    tabIndex={0}
-                    aria-disabled="true"
-                    aria-label={t("dialog.addToken")}
-                  >
-                    {addTokenButton}
-                  </span>
-                </Tooltip>
-              ) : (
-                addTokenButton
-              )}
+            <PageActions
+              primary={
+                addTokenDisabledReason ? (
+                  <Tooltip content={addTokenDisabledReason} anchorAsChild>
+                    <span
+                      className="inline-flex"
+                      role="group"
+                      tabIndex={0}
+                      aria-disabled="true"
+                      aria-label={t("dialog.addToken")}
+                    >
+                      {addTokenButton}
+                    </span>
+                  </Tooltip>
+                ) : (
+                  addTokenButton
+                )
+              }
+            >
               {onRepairMissingKeys ? (
                 <Button
                   onClick={onRepairMissingKeys}
@@ -178,12 +182,13 @@ export function Header({
                 disabled={!selectedAccount || isLoading}
                 loading={isManualRefreshLoading}
                 size="sm"
+                variant="outline"
               >
                 {isManualRefreshLoading
                   ? t("common:status.refreshing")
                   : t("refreshTokenList")}
               </Button>
-            </>
+            </PageActions>
           }
         />
       </ProductAnalyticsScope>

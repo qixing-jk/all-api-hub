@@ -70,7 +70,7 @@ export default function AccountFilterBar({
         <SelectTrigger
           size="sm"
           className={cn(
-            "border-border hover:bg-surface-subtle gap-y-density-1-5 h-(--density-control-lg) w-full min-w-0 gap-x-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:h-(--density-control-lg) [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-(--density-control)",
+            "border-border hover:bg-surface-subtle gap-y-density-1-5 min-h-(--density-control-lg) w-full min-w-0 gap-x-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:min-h-(--density-control-lg) [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:min-h-(--density-control)",
             value !== "all" &&
               "border-theme-200 bg-theme-50/60 text-theme-700 dark:border-theme-800 dark:bg-theme-950/40 dark:text-theme-300",
           )}

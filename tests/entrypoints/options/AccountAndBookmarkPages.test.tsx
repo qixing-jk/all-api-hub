@@ -662,6 +662,12 @@ describe("options BookmarkManagement page", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
     )
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
   })
 

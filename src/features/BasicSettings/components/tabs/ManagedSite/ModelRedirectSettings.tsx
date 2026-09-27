@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -12,6 +11,7 @@ import {
 import { Switch } from "~/components/ui/Switch"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import toast from "~/lib/notify"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
@@ -21,9 +21,11 @@ import {
 } from "~/services/managedSites/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { ClearModelRedirectMappingsDialog } from "../../dialogs/ClearModelRedirectMappingsDialog"
 
@@ -187,6 +189,7 @@ export default function ModelRedirectSettings() {
   if (isSupported === false) {
     return (
       <SettingSection
+        resetNotApplicable="runtime-status"
         id="managed-site-model-redirect"
         title={t("title")}
         description={t("description")}
@@ -206,6 +209,11 @@ export default function ModelRedirectSettings() {
       title={t("title")}
       description={t("description")}
       onReset={resetModelRedirectConfig}
+      resetRequiresConfirmation
+      resetDisabled={
+        isUpdating ||
+        matchesDefaultSettings(modelRedirect, DEFAULT_PREFERENCES.modelRedirect)
+      }
     >
       {modelDiscoveryStatus !== "available" &&
         modelDiscoveryStatus !== "loading" && (

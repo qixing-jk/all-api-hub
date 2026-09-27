@@ -183,7 +183,8 @@ vi.mock("~/components/ChannelFiltersEditor", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async () => ({
+  ...(await vi.importActual("~/components/ui/ActionGroup")),
   Button: ({
     children,
     onClick,

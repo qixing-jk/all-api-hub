@@ -200,7 +200,7 @@ describe("AccountManagement bookmark import entry point", () => {
 
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountsFromBookmarks,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmarkImportDialog,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })

@@ -7,6 +7,7 @@ import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
 import { ToasterPortalHost } from "../toast/ToasterPortal"
+import { ActionGroup } from "./ActionGroup"
 import { FloatingLayerProvider } from "./floating-layer"
 
 /**
@@ -127,12 +128,10 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
  */
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
+    <ActionGroup
       data-slot="dialog-footer"
-      className={cn(
-        "gap-density-2 flex flex-col-reverse sm:flex-row sm:justify-end",
-        className,
-      )}
+      layout="stack-on-narrow"
+      className={cn("gap-density-2", className)}
       {...props}
     />
   )

@@ -33,6 +33,7 @@ import {
   verifyAccountTokenCcSwitchModelPickerUsage,
 } from "~~/e2e/scenarios/accountUsage"
 import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
+import { runManagedSiteTokenChannelStatusScenario } from "~~/e2e/scenarios/managedSiteChannels"
 import {
   deleteTokenFromKeyManagementPage,
   getAccountKeyResourceRow,
@@ -58,7 +59,10 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
+
+parallelizeShardableSpec()
 
 function createStubApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
@@ -98,6 +102,16 @@ async function stubManagedSiteImportTargetRoutes(
       const request = route.request()
       const url = new URL(request.url())
       const method = request.method()
+
+      if (
+        method === "DELETE" &&
+        createdChannel &&
+        url.pathname === `/api/channel/${createdChannel.id}`
+      ) {
+        createdChannel = null
+        await route.fulfill({ json: { success: true, message: "deleted" } })
+        return
+      }
 
       if (
         method === "GET" &&
@@ -209,8 +223,57 @@ async function stubManagedSiteImportTargetRoutes(
     },
   )
 
-  return { createPayloads }
+  return {
+    createPayloads,
+    getRemainingChannelCount: () => (createdChannel ? 1 : 0),
+  }
 }
+
+test("imports a New API key with no upstream models using a custom channel model", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(120_000)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, { models: [] })
+  const fixture = await stubManagedSiteImportTargetRoutes(context)
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    managedSiteType: SITE_TYPES.NEW_API,
+    newApi: {
+      baseUrl: MANAGED_SITE_IMPORT_TARGET_ORIGIN,
+      adminToken: "fixture-admin-token",
+      userId: "1",
+      username: "",
+      password: "",
+      totpSecret: "",
+    },
+    autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+    openChangelogOnUpdate: false,
+  })
+  const sourceAccount = await seedMockAccountFixture({ serviceWorker })
+  try {
+    const result = await runManagedSiteTokenChannelStatusScenario({
+      page,
+      extensionId,
+      siteType: SITE_TYPES.NEW_API,
+      label: "New API",
+      runPrefix: "AAH E2E New API empty catalog",
+      tokenName: "AAH E2E empty catalog source",
+      sourceAccount,
+    })
+    expect(result.skipped).toBe(false)
+    expect(fixture.createPayloads).toHaveLength(1)
+    expect(fixture.createPayloads[0]).toMatchObject({
+      channel: { models: "aah-e2e-custom-model" },
+    })
+    expect(fixture.getRemainingChannelCount()).toBe(0)
+  } finally {
+    await sourceAccount.cleanup()
+  }
+})
 
 async function stubSharedChatServiceCredentialRoutes(
   context: Parameters<typeof stubNewApiSiteRoutes>[0],
@@ -1270,6 +1333,60 @@ test("links an existing API credential to an existing key and preserves the asso
   await expect(
     getAccountKeyResourceRow(page, "Manual Association Key"),
   ).toBeVisible()
+})
+
+test("checks listed keys without reloading the source inventory per key", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [createStoredAccount()])
+  await stubNewApiSiteRoutes(context, {
+    initialTokens: [
+      createStubApiToken(),
+      createStubApiToken({ id: 2, name: "Second Key", key: "sk-second-token" }),
+    ],
+  })
+  await seedUserPreferences(worker, {
+    managedSiteType: SITE_TYPES.CLI_PROXY_API,
+    cliProxyApi: {
+      baseUrl: "https://managed-lookup.example.invalid",
+      adminToken: "test-management-key",
+    },
+  })
+  await context.route(
+    "https://managed-lookup.example.invalid/**",
+    async (route) => {
+      const kind = new URL(route.request().url()).pathname.split("/").at(-1)!
+      await route.fulfill({ json: { [kind]: [] } })
+    },
+  )
+  const inventoryPages: string[] = []
+  context.on("request", (request) => {
+    const url = new URL(request.url())
+    if (
+      url.origin === "https://example.com" &&
+      url.pathname === "/api/token/"
+    ) {
+      inventoryPages.push(url.searchParams.get("p")!)
+    }
+  })
+  await openKeyManagementForAccount({
+    page,
+    extensionId,
+    accountId: "e2e-account-1",
+    openFromAccountRow: false,
+  })
+  for (const name of ["Existing Key", "Second Key"]) {
+    await expect(
+      getAccountKeyResourceRow(page, name).getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge,
+      ),
+    ).toContainText("Not added")
+  }
+  // This legacy array-shaped fixture uses a second, empty page to prove completion.
+  expect(inventoryPages).toEqual(["1", "2"])
 })
 
 test("lets scenario cleanup delete only the source key", async ({

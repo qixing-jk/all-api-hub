@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -262,10 +262,10 @@ describe("UsageAnalytics charts", () => {
 
     await screen.findByText("usageAnalytics:summary.cost")
 
-    const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const conversionFactor = QUOTA_PER_USD
     const expectedCost =
       (5 / conversionFactor) * 7.2 +
-      (3 / conversionFactor) * UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      (3 / conversionFactor) * DEFAULT_USD_TO_CNY_RATE
 
     expect(
       screen.getByText(formatPriceCompact(expectedCost, "CNY")),

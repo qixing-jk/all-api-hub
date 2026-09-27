@@ -548,9 +548,6 @@ export const PREFERENCE_WRITE_FAILURE_TYPES = {
   StorageError: "storage-error",
 } as const
 
-export type PreferenceWriteFailureType =
-  (typeof PREFERENCE_WRITE_FAILURE_TYPES)[keyof typeof PREFERENCE_WRITE_FAILURE_TYPES]
-
 export type PreferenceWriteConflict = {
   type: typeof PREFERENCE_WRITE_FAILURE_TYPES.Stale
   expectedLastUpdated: number
@@ -582,8 +579,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: DATA_TYPE_CASHFLOW,
   currencyType: "USD",
   showTodayCashflow: true,
-  sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
-  sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
+  sortField: DATA_TYPE_BALANCE,
+  sortOrder: "desc",
   actionClickBehavior: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥

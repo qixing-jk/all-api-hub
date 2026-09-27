@@ -3,6 +3,8 @@ export const OPTIONS_OVERVIEW_TEST_IDS = {
   statusSummary: "options-overview-status-summary",
   unifiedApiGuidance: "options-overview-unified-api-guidance",
   needsAttention: "options-overview-needs-attention",
+  attentionSeverityFilters: "options-overview-attention-severity-filters",
+  attentionCategoryFilters: "options-overview-attention-category-filters",
   automationOverview: "options-overview-automation-overview",
   recentUsage: "options-overview-recent-usage",
   actionCenter: "options-overview-action-center",

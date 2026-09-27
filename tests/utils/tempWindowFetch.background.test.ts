@@ -155,7 +155,10 @@ describe("tempWindowFetch helpers (background context)", () => {
     expect(response).toBe(coordinatorResponse)
   })
 
-  it("passes the profile-isolated task kind through the same Coordinator API", async () => {
+  it.each([
+    TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
+  ])("passes %s through the same Coordinator API", async (taskKind) => {
     const coordinatorResponse = { success: true, data: "isolated-result" }
     executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
 
@@ -163,17 +166,17 @@ describe("tempWindowFetch helpers (background context)", () => {
       protectionBypassExecution: testExecution,
       originUrl: "https://example.invalid",
       fetchUrl: "https://example.invalid/api/test",
-      tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+      tempContextTaskKind: taskKind,
     })
 
     expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
       execution: testExecution,
       task: {
-        kind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+        kind: taskKind,
         params: {
           originUrl: "https://example.invalid",
           fetchUrl: "https://example.invalid/api/test",
-          tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+          tempContextTaskKind: taskKind,
         },
       },
     })

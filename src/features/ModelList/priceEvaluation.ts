@@ -269,7 +269,7 @@ function resolveBestCalculatedItem(
   priceComparisonWeights: ModelPriceComparisonWeights,
   pricingScenario?: PricingScenario,
   isPriceComparisonActive = pricingScenario !== undefined,
-): CalculatedModelItem | null {
+): CalculatedModelItem {
   const calculatePrice = (
     model: typeof rawItem.model,
     groupMultiplier: number,
@@ -328,6 +328,9 @@ function resolveBestCalculatedItem(
     calculatedPrice: params.calculatedPrice,
     source: rawItem.source,
     sourceIdentity: rawItem.sourceIdentity,
+    ...(rawItem.isProviderCatalogFallback
+      ? { isProviderCatalogFallback: true }
+      : {}),
     groupRatios: rawItem.groupRatios,
     groupContext: rawItem.groupContext,
     activeGroupContext: params.activeGroupContext,
@@ -353,13 +356,6 @@ function resolveBestCalculatedItem(
       calculatedPrice: calculatePrice(rawItem.model, 1),
       activeGroupContext,
     })
-  }
-
-  if (
-    groupCandidates !== undefined &&
-    activeGroupContext.activeUsableGroups.length === 0
-  ) {
-    return null
   }
 
   if (activeGroupContext.activePriceableGroups.length === 0) {
@@ -445,7 +441,7 @@ function resolveBestCalculatedItem(
   }
 }
 
-/** Maps raw priced rows into calculated display rows for the current filters. */
+/** Prices already-filtered rows without changing their visibility. */
 export function calculateModelListPrices(params: {
   rawItems: ModelListItem[]
   getGroupCandidates: (item: ModelListItem) => string[] | undefined
@@ -463,18 +459,16 @@ export function calculateModelListPrices(params: {
     isPriceComparisonActive,
   } = params
 
-  return rawItems
-    .map((item) =>
-      resolveBestCalculatedItem(
-        item,
-        getGroupCandidates(item),
-        showRealPrice,
-        priceComparisonWeights,
-        pricingScenario,
-        isPriceComparisonActive,
-      ),
-    )
-    .filter((item): item is CalculatedModelItem => item !== null)
+  return rawItems.map((item) =>
+    resolveBestCalculatedItem(
+      item,
+      getGroupCandidates(item),
+      showRealPrice,
+      priceComparisonWeights,
+      pricingScenario,
+      isPriceComparisonActive,
+    ),
+  )
 }
 
 /** Orders evaluated rows and marks comparable minima within matching model and billing units. */

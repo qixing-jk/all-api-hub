@@ -303,20 +303,11 @@ const resolveRuntimeKey = async (
   try {
     if (ref.scopeKey !== ACCOUNT_SCOPE_KEY) throw new Error("invalid_scope")
     const keyId = decodeKeyId(ref.resourceId)
-    const key = (
-      await fetchAllVoApiV2RawKeys(requestWithOptions(config, options))
-    ).find((candidate) => candidate.id === keyId)
-    if (!key) {
-      return {
-        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
-        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
-      }
-    }
     return {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
       secret: await resolveVoApiV2KeySecretById(
         requestWithOptions(config, options),
-        key.id,
+        keyId,
       ),
     }
   } catch (error) {

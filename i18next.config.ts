@@ -19,6 +19,8 @@ export default defineConfig({
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
     preservePatterns: [
+      // Search breadcrumbs still use this label after removing the sidebar footer.
+      "ui:navigation.settings",
       // Search-only title; the provider link uses a separate interpolated label.
       "settings:managedSite.deploymentDocs",
       "settings:refresh.shieldAutomaticFeature*",

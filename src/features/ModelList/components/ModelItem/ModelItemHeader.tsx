@@ -79,7 +79,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             </h3>
             {showRequestModelId ? (
               <p
-                className="text-muted-foreground mt-0.5 truncate font-mono text-[11px] sm:text-xs"
+                className="text-muted-foreground text-2xs mt-0.5 truncate font-mono sm:text-xs"
                 title={model.model_name}
               >
                 {model.model_name}
@@ -162,7 +162,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             <Badge
               variant={getBillingVariant(model.quota_type)}
               size="sm"
-              className="text-[10px] sm:text-xs"
+              className="text-3xs sm:text-xs"
             >
               {getBillingModeText(model.quota_type)}
             </Badge>
@@ -172,7 +172,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             <Badge
               variant="secondary"
               size="sm"
-              className="max-w-[9rem] min-w-0 text-[10px] sm:text-xs"
+              className="text-3xs max-w-[9rem] min-w-0 sm:text-xs"
               title={groupSummary.title}
               aria-label={groupSummary.title}
             >

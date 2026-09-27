@@ -15,7 +15,6 @@ const {
   mockFetchSiteStatus,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
-  veloeraFetchSupportCheckIn,
   wongFetchSupportCheckIn,
 } = vi.hoisted(() => ({
   anyrouterFetchSupportCheckIn: vi.fn(),
@@ -24,26 +23,27 @@ const {
   mockFetchSiteStatus: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
-  veloeraFetchSupportCheckIn: vi.fn(),
   wongFetchSupportCheckIn: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
-  defaultAccountBootstrapImplementation: {
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-    fetchSupportCheckIn: mockFetchCheckInSupport,
-    fetchSiteStatus: mockFetchSiteStatus,
-    fetchUserInfo: mockFetchUserInfo,
-    getOrCreateAccessToken: mockGetOrCreateAccessToken,
-  },
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountBootstrap",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/accountBootstrap")
+    >()),
+    defaultAccountBootstrapImplementation: {
+      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+      fetchSupportCheckIn: mockFetchCheckInSupport,
+      fetchSiteStatus: mockFetchSiteStatus,
+      fetchUserInfo: mockFetchUserInfo,
+      getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    },
+  }),
+)
 
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
   fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
-}))
-
-vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
-  fetchSupportCheckIn: veloeraFetchSupportCheckIn,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
@@ -94,18 +94,21 @@ describe("createNewApiAccountBootstrap", () => {
     await expect(
       accountBootstrap.getOrCreateAccessToken(request),
     ).resolves.toBe(accessToken)
-    await expect(accountBootstrap.fetchSiteStatus(request)).resolves.toBe(
-      siteStatus,
+    await expect(accountBootstrap.loadBootstrapFacts(request)).resolves.toEqual(
+      {
+        displayName: "Example API",
+        defaultExchangeRate: 7.2,
+        checkInSupported: true,
+      },
     )
-    await expect(accountBootstrap.fetchCheckInSupport(request)).resolves.toBe(
-      true,
-    )
-    expect(accountBootstrap.extractDefaultExchangeRate(siteStatus)).toBe(7.2)
+    await expect(
+      accountBootstrap.fetchCheckInSupport(request, { checkInSupported: true }),
+    ).resolves.toBe(true)
 
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
-    expect(mockFetchCheckInSupport).toHaveBeenCalledWith(request)
+    expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
   })
 
@@ -146,7 +149,6 @@ describe("createNewApiAccountBootstrap", () => {
 
   it.each([
     [SITE_TYPES.ANYROUTER, anyrouterFetchSupportCheckIn],
-    [SITE_TYPES.VELOERA, veloeraFetchSupportCheckIn],
     [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn],
   ])(
     "uses the adapter-level support probe override for %s",
@@ -155,9 +157,9 @@ describe("createNewApiAccountBootstrap", () => {
 
       const accountBootstrap = createNewApiAccountBootstrap(siteType)
 
-      await expect(accountBootstrap.fetchCheckInSupport(request)).resolves.toBe(
-        true,
-      )
+      await expect(
+        accountBootstrap.fetchCheckInSupport(request, {}),
+      ).resolves.toBe(true)
 
       expect(supportProbe).toHaveBeenCalledWith(request)
       expect(mockFetchCheckInSupport).not.toHaveBeenCalled()

@@ -85,6 +85,8 @@ describe("overview automation model", () => {
           enabled: true,
           notificationEnabled: true,
           intervalMinutes: 180,
+          notificationMaxAgeDays: 7,
+          autoMarkUpstreamReadOnNotify: false,
         },
         managedSiteModelSync: {
           ...basePreferences.managedSiteModelSync!,
@@ -155,7 +157,7 @@ describe("overview automation model", () => {
       primaryTarget: {
         menuItemId: MENU_ITEM_IDS.BASIC,
         params: {
-          tab: "general",
+          tab: "siteAnnouncements",
           anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
           highlight: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
         },
@@ -233,7 +235,7 @@ describe("overview automation model", () => {
       }).items.map((item) => [item.id, item.status, item.statusLabel]),
     ).toEqual([
       ["autoCheckin", "warning", "enabled"],
-      ["siteAnnouncements", "info", "disabled"],
+      ["siteAnnouncements", "warning", "enabled"],
       ["webdavAutoSync", "info", "disabled"],
     ])
   })
@@ -248,6 +250,8 @@ describe("overview automation model", () => {
             enabled: false,
             notificationEnabled: false,
             intervalMinutes: 180,
+            notificationMaxAgeDays: 7,
+            autoMarkUpstreamReadOnNotify: false,
           },
         },
         managedSiteType: undefined,

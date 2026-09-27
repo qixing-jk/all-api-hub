@@ -192,12 +192,14 @@ const setupViewModel: OptionsOverviewViewModel = {
     {
       id: "setup:add-account",
       kind: "addAccount",
+      category: "accounts",
       severity: "info",
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
     },
     {
       id: "account:error",
       kind: "accountUnhealthy",
+      category: "accounts",
       severity: "error",
       titleOptions: { name: "Broken Relay" },
       descriptionOptions: { reason: "sync failed" },
@@ -1180,7 +1182,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:actions.open: optionsOverview:attention.accountUnhealthy.title",
+        name: "optionsOverview:attention.actions.viewAccount: optionsOverview:attention.accountUnhealthy.title",
       }),
     )
 
@@ -1378,7 +1380,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:actions.open: optionsOverview:attention.accountUnhealthy.title",
+        name: "optionsOverview:attention.actions.viewAccount: optionsOverview:attention.accountUnhealthy.title",
       }),
     )
 
@@ -1425,7 +1427,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.autoCheckin.label",
+        name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
       }),
     )
 
@@ -1461,7 +1463,7 @@ describe("OptionsOverview", () => {
     expect(attentionCard).not.toHaveClass("overscroll-contain")
     expect(
       screen.getByText("optionsOverview:attention.addAccount.description"),
-    ).toHaveClass("line-clamp-2", "break-words")
+    ).toHaveClass("line-clamp-3", "break-words")
     expect(
       screen.getByText("optionsOverview:attention.addAccount.description"),
     ).toHaveAttribute(
@@ -1491,22 +1493,30 @@ describe("OptionsOverview", () => {
     expect(automationRows).not.toHaveClass("overscroll-contain")
 
     const autoCheckinTrigger = screen.getByRole("button", {
-      name: "optionsOverview:automation.items.autoCheckin.label",
+      name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
     })
     expect(autoCheckinTrigger).toHaveClass("font-medium")
     expect(autoCheckinTrigger).toHaveClass(
       "flex-1",
-      "px-3",
+      "ps-3",
+      "pe-2",
       "py-density-2-5",
-      "hover:bg-muted/70",
+      "hover:bg-transparent",
     )
     expect(autoCheckinTrigger).toHaveAttribute("aria-expanded", "false")
+    expect(autoCheckinTrigger.parentElement).toHaveClass(
+      "group/item",
+      "hover:bg-muted/40",
+    )
+    expect(
+      screen.getByText(/^optionsOverview:autoCheckin\.lastRun:/),
+    ).toBeVisible()
     expect(
       screen.queryByText("optionsOverview:autoCheckin.metrics.success"),
     ).not.toBeInTheDocument()
 
     const siteAnnouncementsTrigger = screen.getByRole("button", {
-      name: "optionsOverview:automation.items.siteAnnouncements.label",
+      name: /^optionsOverview:automation\.items\.siteAnnouncements\.label/,
     })
     expect(siteAnnouncementsTrigger).toHaveAttribute("aria-expanded", "false")
     expect(siteAnnouncementsTrigger).toHaveClass("items-center")
@@ -1554,7 +1564,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.webdavAutoSync.label",
+        name: /^optionsOverview:automation\.items\.webdavAutoSync\.label/,
       }),
     )
 
@@ -1656,7 +1666,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.autoCheckin.label",
+        name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
       }),
     )
 
@@ -1666,7 +1676,7 @@ describe("OptionsOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "optionsOverview:automation.items.webdavAutoSync.label",
+        name: /^optionsOverview:automation\.items\.webdavAutoSync\.label/,
       }),
     )
 

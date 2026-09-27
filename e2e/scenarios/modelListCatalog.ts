@@ -22,6 +22,7 @@ export type ModelListCatalogExpectations = {
   modelNames?: string[]
   totalModels?: number
   allowEmptyCatalog?: boolean
+  runtimeKeyName?: string
 }
 
 function createModelListCatalogUrl(params: {
@@ -54,7 +55,7 @@ async function openModelListCatalogPage(params: {
   await expectPermissionOnboardingHidden(params.page)
   await expect(params.page.getByTestId(MODEL_LIST_TEST_IDS.page)).toBeVisible()
   await expect(
-    params.page.getByRole("heading", { name: "Model List" }),
+    params.page.getByRole("heading", { name: "Model List", exact: true }),
   ).toBeVisible()
 
   return params.page
@@ -104,6 +105,31 @@ export async function runModelListCatalogScenario(params: {
   expectations?: ModelListCatalogExpectations
 }) {
   const page = await openModelListCatalogPage(params)
+  if (params.expectations?.runtimeKeyName) {
+    const keySelector = page.getByRole("combobox", {
+      name: "Key for fallback loading",
+      exact: true,
+    })
+    // A sole eligible key is loaded automatically; multiple keys need selection.
+    await expect(
+      keySelector.or(page.getByTestId(MODEL_LIST_TEST_IDS.controlPanel)),
+    ).toBeVisible({ timeout: 30_000 })
+    if (await keySelector.isVisible()) {
+      await keySelector.click({ timeout: 10_000 })
+      await page
+        .getByRole("option", {
+          name: params.expectations.runtimeKeyName,
+          exact: true,
+        })
+        .click({ timeout: 10_000 })
+      await page
+        .getByRole("button", {
+          name: "Load with selected key",
+          exact: true,
+        })
+        .click({ timeout: 10_000 })
+    }
+  }
   await expectModelListCatalog({
     page,
     expectations: params.expectations,

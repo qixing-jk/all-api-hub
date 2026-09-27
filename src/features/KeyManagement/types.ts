@@ -79,5 +79,9 @@ export type KeyManagementAccountSummaryItem = {
   count: number | null
   /** Rows known despite an incomplete inventory. */
   knownCount?: number
+  /** Available rows, independent of the current search or account filters. */
+  hasData?: boolean
+  isLoading?: boolean
   errorType?: "load-failed" | "unsupported"
+  errorMessage?: string
 }

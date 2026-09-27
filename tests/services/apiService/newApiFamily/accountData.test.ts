@@ -6,7 +6,6 @@ import {
   defaultAccountDataImplementation,
   fetchAccountData,
   fetchAccountQuota,
-  fetchCheckInStatus,
   fetchTodayIncome,
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
@@ -45,18 +44,12 @@ const { mockLoggerDebug, mockLoggerError, mockLoggerInfo, mockLoggerWarn } =
     mockLoggerWarn: vi.fn(),
   }))
 
-vi.mock("~/constants/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/constants/ui")>()
+vi.mock("~/constants/money", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/constants/money")>()
   return {
     ...actual,
-    UI_CONSTANTS: {
-      ...actual.UI_CONSTANTS,
-      EXCHANGE_RATE: {
-        ...actual.UI_CONSTANTS.EXCHANGE_RATE,
-        DEFAULT: 7,
-        CONVERSION_FACTOR: 100,
-      },
-    },
+    DEFAULT_USD_TO_CNY_RATE: 7,
+    QUOTA_PER_USD: 100,
   }
 })
 
@@ -198,33 +191,6 @@ describe("newApiFamily accountData", () => {
     mockFetchApiData.mockResolvedValueOnce({})
 
     await expect(fetchAccountQuota(baseRequest)).resolves.toBe(0)
-  })
-
-  it("fetchCheckInStatus returns whether the user can still check in today", async () => {
-    mockFetchApiData.mockResolvedValueOnce({
-      stats: {
-        checked_in_today: false,
-      },
-    })
-
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(true)
-  })
-
-  it.each([404, 500])(
-    "fetchCheckInStatus treats ApiError %i as unsupported",
-    async (statusCode) => {
-      mockFetchApiData.mockRejectedValueOnce(
-        new ApiError("unsupported", statusCode),
-      )
-
-      await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
-    },
-  )
-
-  it("fetchCheckInStatus also hides unexpected failures", async () => {
-    mockFetchApiData.mockRejectedValueOnce(new Error("boom"))
-
-    await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
   })
 
   it("fetchTodayUsage short-circuits when cashflow collection is disabled", async () => {

@@ -6,6 +6,7 @@ import {
   VerificationModeSelect,
 } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -653,12 +654,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const footer = (
-    <div className="gap-y-density-2 flex justify-end gap-x-2">
+    <ActionGroup>
       <Button variant="secondary" onClick={onClose} disabled={!canClose}>
         {t("verifyDialog.actions.close")}
       </Button>
       <Button
-        variant={isRunning ? "destructive" : "success"}
+        variant={isRunning ? "secondary" : "default"}
         onClick={isRunning ? stopRun : runAll}
         disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
         loading={isRunning}
@@ -668,7 +669,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           ? t("verifyDialog.actions.stop")
           : t("verifyDialog.actions.run")}
       </Button>
-    </div>
+    </ActionGroup>
   )
 
   return (
@@ -853,7 +854,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
                   <Button
                     size="sm"
-                    variant={tool.isRunning ? "destructive" : "secondary"}
+                    variant="secondary"
                     onClick={tool.isRunning ? stopTool : runSingleTool}
                     loading={tool.isRunning}
                     loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}

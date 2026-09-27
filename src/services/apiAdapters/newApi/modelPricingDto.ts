@@ -1,6 +1,10 @@
 import { parseNewApiBillingExpression } from "~/services/apiAdapters/newApi/billingExpression"
 import { parseNewApiMediaPricing } from "~/services/apiAdapters/newApi/mediaPricing"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import {
+  normalizeGroupNames,
+  normalizeGroupRatios,
+} from "~/services/modelCatalog/groupFacts"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   PRICE_RATE_UNITS,
   PRICING_GROUP_MULTIPLIERS,
@@ -13,6 +17,8 @@ import {
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { isPlainObject, isRecord } from "~/utils/core/object"
+
+import { applyFamilyGroupEvidence } from "./groupEvidence"
 
 const INVALID_RESPONSE_MESSAGE = "Invalid New API model pricing response"
 
@@ -94,17 +100,22 @@ const normalizeOptionalNonnegativeRatio = (
 /** Convert New API's native pricing extensions into the product contract. */
 export function normalizeNewApiModelPricingResponse(
   value: unknown,
-): PricingResponse {
+): ModelCatalogSnapshot {
   const response = parseNativePricingResponse(value)
   const vendorsById = buildVendorRegistry(response.vendors)
-  const canonicalResponse: Record<string, unknown> = { ...response }
-  delete canonicalResponse.vendors
-
-  canonicalResponse.data = response.data.map((row) => {
+  const data = response.data.map((row) => {
     const canonicalRow: Record<string, unknown> = { ...row }
+    canonicalRow.enable_groups = normalizeGroupNames(
+      Array.isArray(row.enable_groups)
+        ? row.enable_groups.filter(
+            (group): group is string => typeof group === "string",
+          )
+        : [],
+    )
     const vendorId = canonicalRow.vendor_id
 
     delete canonicalRow.vendor_id
+    delete canonicalRow.groupAccess
     delete canonicalRow.vendorEvidence
     delete canonicalRow.cache_ratio
     delete canonicalRow.create_cache_ratio
@@ -209,13 +220,33 @@ export function normalizeNewApiModelPricingResponse(
     return canonicalRow
   })
 
-  return canonicalResponse as unknown as PricingResponse
+  const groupRatios = normalizeGroupRatios(response.group_ratio)
+  const usableGroups = normalizeGroupNames(Object.keys(response.usable_group))
+  return applyFamilyGroupEvidence({
+    data: data as unknown as ModelCatalogSnapshot["data"],
+    success: response.success,
+    ...(response.model_list_source
+      ? {
+          model_list_source:
+            response.model_list_source as ModelCatalogSnapshot["model_list_source"],
+        }
+      : {}),
+    groupRatios,
+    groupAccess: usableGroups.length
+      ? { kind: "authoritative", usableGroups }
+      : Object.keys(groupRatios).length
+        ? {
+            kind: "compatible-priced-fallback",
+            candidateGroups: Object.keys(groupRatios),
+          }
+        : { kind: "authoritative", usableGroups: [] },
+  })
 }
 
 /** Adapt V-API's current group field without weakening the shared envelope. */
 export function normalizeVApiModelPricingResponse(
   value: unknown,
-): PricingResponse {
+): ModelCatalogSnapshot {
   if (!isPlainObject(value)) {
     return normalizeNewApiModelPricingResponse(value)
   }
@@ -225,12 +256,8 @@ export function normalizeVApiModelPricingResponse(
   const usableGroup = isRecord(value.usable_group)
     ? value.usable_group
     : value.group_names
-  const response = normalizeNewApiModelPricingResponse({
+  return normalizeNewApiModelPricingResponse({
     ...value,
     usable_group: usableGroup,
   })
-  const canonicalResponse: Record<string, unknown> = { ...response }
-  delete canonicalResponse.group_names
-
-  return canonicalResponse as unknown as PricingResponse
 }

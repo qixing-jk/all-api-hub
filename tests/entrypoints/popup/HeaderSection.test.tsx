@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -188,6 +189,20 @@ describe("popup HeaderSection", () => {
       openDialog: vi.fn(),
       closeDialog: vi.fn(),
     })
+  })
+
+  it("offers explicit theme choices in popup and side panel", async () => {
+    const user = userEvent.setup()
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+    await user.click(
+      screen.getByRole("button", { name: "settings:theme.current" }),
+    )
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(3)
+    expect(
+      screen.getByRole("menuitemradio", {
+        name: "settings:theme.followSystem",
+      }),
+    ).toHaveAttribute("aria-checked", "true")
   })
 
   it("shows open side panel button in popup", async () => {
@@ -450,9 +465,6 @@ describe("popup HeaderSection", () => {
 
     expect(
       await screen.findByRole("button", { name: "ui:feedback.trigger" }),
-    ).toBeInTheDocument()
-    expect(
-      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
     ).toBeInTheDocument()
   })
 })

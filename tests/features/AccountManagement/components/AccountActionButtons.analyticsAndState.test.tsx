@@ -404,7 +404,7 @@ describe("AccountActionButtons", () => {
       name: "account:actions.delete",
     })
 
-    expect(enableButton).toHaveClass("text-success-text")
+    expect(enableButton).toHaveClass("text-secondary-foreground")
     expect(deleteButton).toHaveClass("text-destructive-text")
     expect(
       within(menu).queryByRole("menuitem", {
@@ -603,11 +603,14 @@ describe("AccountActionButtons", () => {
       expect(clipboardWriteTextMock).not.toHaveBeenCalled()
       expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
         }),
       )
+      // The row action is one operation regardless of how it resolves, so the
+      // dialog fallback is reported as an insight instead of a second id.
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        { insights: { fallbackUsed: true } },
       )
     },
   )

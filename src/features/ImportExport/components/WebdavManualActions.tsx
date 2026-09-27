@@ -1,7 +1,14 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, BodySmall, Button, Heading4, Modal } from "~/components/ui"
+import {
+  ActionGroup,
+  Alert,
+  BodySmall,
+  Button,
+  Heading4,
+  Modal,
+} from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -142,7 +149,7 @@ export function WebdavManualActions({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
+          <ActionGroup>
             <Button
               variant="secondary"
               size="sm"
@@ -161,7 +168,7 @@ export function WebdavManualActions({
             >
               {t("webdav.manual.confirmContinue")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <Alert
@@ -188,7 +195,7 @@ export function WebdavManualActions({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
+          <ActionGroup>
             <Button
               variant="secondary"
               size="sm"
@@ -209,7 +216,7 @@ export function WebdavManualActions({
                   ? t("common:status.uploading")
                   : t("webdav.rebuildDialog.confirm")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <div className="space-y-density-3">

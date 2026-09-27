@@ -1,10 +1,10 @@
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import {
   normalizeModelDescriptors,
@@ -14,7 +14,7 @@ import {
 interface BuildModelListCatalogPricingResponseParams {
   models: readonly ModelDescriptor[]
   unavailableReason?: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS]
-  source?: PricingResponse["model_list_source"]
+  source?: ModelCatalogSnapshot["model_list_source"]
 }
 
 /**
@@ -68,14 +68,14 @@ export function buildModelListCatalogPricingResponse({
     kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
     supportsPricing: false,
   },
-}: BuildModelListCatalogPricingResponseParams): PricingResponse {
+}: BuildModelListCatalogPricingResponseParams): ModelCatalogSnapshot {
   return {
     data: normalizeModelDescriptors(models).map((model) =>
       createModelListCatalogModel(model, unavailableReason),
     ),
-    group_ratio: {},
+    groupRatios: {},
     model_list_source: source,
     success: true,
-    usable_group: {},
+    groupAccess: { kind: "unavailable" },
   }
 }

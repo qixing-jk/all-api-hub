@@ -8,7 +8,8 @@ const BEARER_PATTERN = /\bBearer\s+([a-zA-Z0-9._-]+)\b/gi
 /**
  * Best-effort redaction for secret-like substrings that may appear in optional
  * user-controlled text (e.g., notes). This does not replace the allowlist-based
- * export pipeline; it is a defense-in-depth helper.
+ * export pipeline. Retained as a tested sanitization primitive; the current
+ * share pipeline does not call it, so it provides no active export protection.
  */
 export const redactShareSecrets = (value: string): string =>
   value

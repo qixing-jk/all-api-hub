@@ -74,10 +74,24 @@ export function buildOptionsOverviewViewModel(
         account.health.status === SiteHealthStatus.Warning),
   )
   const usageSnapshot = buildUsageSnapshot(input.accountStats, input.usageStore)
+  const globalAutomaticExecutionEnabled =
+    input.preferences?.autoCheckin?.globalEnabled !== false
+  const usageRefreshPendingCount = resolveUsageRefreshPendingCount(
+    input.accountStats.todayStatsCoverage,
+  )
+  const unreadAnnouncementCount = input.siteAnnouncementRecords.filter(
+    (record) => !record.read,
+  ).length
   const attentionItems = buildAttentionItems({
     enabledAccountCount: enabledAccounts.length,
+    totalAccountCount: input.accounts.length,
     profileCount: input.apiCredentialProfiles.length,
     problemAccounts,
+    accounts: input.displayData,
+    autoCheckinStatus: input.autoCheckinStatus,
+    globalAutomaticExecutionEnabled,
+    usageRefreshPendingCount,
+    unreadAnnouncementCount,
     accountsDataAvailable: input.accountsDataAvailable,
     profilesDataAvailable: input.profilesDataAvailable,
   })
@@ -133,4 +147,16 @@ export function buildOptionsOverviewViewModel(
       hasUsageData: usageSnapshot.hasUsageData,
     }),
   }
+}
+/**
+ * Uses the largest metric gap so every pending account is counted once.
+ */
+function resolveUsageRefreshPendingCount(
+  coverage: AccountStats["todayStatsCoverage"],
+): number {
+  return Math.max(
+    coverage.consumption.legacyUnclassifiedCount,
+    coverage.requests.legacyUnclassifiedCount,
+    coverage.tokens.legacyUnclassifiedCount,
+  )
 }

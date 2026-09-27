@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
+  ActionGroup,
   Button,
   Card,
   CardContent,
@@ -10,16 +10,15 @@ import {
   Label,
   Switch,
 } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import toast from "~/lib/notify"
-import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
-import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 const logger = createLogger("BalanceHistorySettings")
 
@@ -42,10 +41,13 @@ export default function BalanceHistorySettings() {
     useState<boolean>(
       preferences.balanceHistory?.estimatedTodayIncome?.enabled ?? false,
     )
-  const [retentionDays, setRetentionDays] = useState<number>(
-    preferences.balanceHistory?.retentionDays ??
-      DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays,
+  const [retentionDays, setRetentionDays] = useState(
+    String(
+      preferences.balanceHistory?.retentionDays ??
+        DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays,
+    ),
   )
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     setEnabled(
@@ -58,28 +60,30 @@ export default function BalanceHistorySettings() {
     setEstimatedTodayIncomeEnabled(
       preferences.balanceHistory?.estimatedTodayIncome?.enabled ?? false,
     )
-    setRetentionDays(
-      preferences.balanceHistory?.retentionDays ??
-        DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays,
-    )
   }, [preferences.balanceHistory])
 
-  const alarmsSupported = hasAlarmsAPI()
-  const showDebugSeedAction = isDevelopmentMode()
+  useEffect(() => {
+    setRetentionDays(
+      String(
+        preferences.balanceHistory?.retentionDays ??
+          DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays,
+      ),
+    )
+  }, [preferences.balanceHistory?.retentionDays])
 
-  const safeRetentionDays = useMemo(
-    () => clampBalanceHistoryRetentionDays(retentionDays),
-    [retentionDays],
-  )
+  const alarmsSupported = hasAlarmsAPI()
+
+  const safeRetentionDays = Number(retentionDays)
+  const retentionValid =
+    Number.isSafeInteger(safeRetentionDays) && safeRetentionDays >= 1
 
   const handleApplySettings = useCallback(async () => {
+    if (!retentionValid || isSaving) return
+    setIsSaving(true)
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.savingSettings"))
       const writeResult = await updateBalanceHistory({
-        enabled,
-        endOfDayCapture: { enabled: endOfDayCaptureEnabled },
-        estimatedTodayIncome: { enabled: estimatedTodayIncomeEnabled },
         retentionDays: safeRetentionDays,
       })
 
@@ -102,47 +106,61 @@ export default function BalanceHistorySettings() {
         }),
         { id: toastId },
       )
+    } finally {
+      setIsSaving(false)
     }
-  }, [
-    enabled,
-    endOfDayCaptureEnabled,
-    estimatedTodayIncomeEnabled,
-    safeRetentionDays,
-    t,
-    updateBalanceHistory,
-  ])
-
-  const handleSeedEstimateSnapshots = useCallback(async () => {
-    let toastId: string | undefined
+  }, [safeRetentionDays, retentionValid, isSaving, t, updateBalanceHistory])
+  const saveToggle = async (
+    updates: Parameters<typeof updateBalanceHistory>[0],
+    accept: () => void,
+  ) => {
+    setIsSaving(true)
     try {
-      toastId = toast.loading("Seeding estimated income snapshots…")
-      const response = await sendRuntimeMessage<{
-        success: boolean
-        data?: { seeded: number; skipped: number }
-        error?: string
-      }>({
-        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
-      })
-
-      if (!response?.success) {
-        toast.error(response?.error ?? "Failed to seed test snapshots", {
-          id: toastId,
-        })
-        return
-      }
-
-      toast.success(
-        `Seeded ${response.data?.seeded ?? 0} account(s), skipped ${response.data?.skipped ?? 0}. Check Popup stats or Balance History metrics.`,
-        { id: toastId },
-      )
-    } catch (error) {
-      logger.error("Failed to seed estimated income test snapshots", error)
-      toast.error(getErrorMessage(error), { id: toastId })
+      const result = await updateBalanceHistory(updates)
+      if (result.ok) accept()
+      else toast.error(t("settings:messages.saveSettingsFailed"))
+    } catch {
+      toast.error(t("settings:messages.saveSettingsFailed"))
+    } finally {
+      setIsSaving(false)
     }
-  }, [])
+  }
 
   return (
     <SettingSection
+      resetRequiresConfirmation={
+        (preferences.balanceHistory?.retentionDays ??
+          DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays) >
+        DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
+      }
+      resetDescription={t("settings:messages.resetHistoryConfirmDesc")}
+      resetDisabled={
+        isSaving ||
+        (matchesDefaultSettings(
+          preferences.balanceHistory,
+          DEFAULT_BALANCE_HISTORY_PREFERENCES,
+        ) &&
+          Number(retentionDays) ===
+            DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays)
+      }
+      onReset={async () => {
+        const result = await updateBalanceHistory(
+          DEFAULT_BALANCE_HISTORY_PREFERENCES,
+        )
+        if (result.ok) {
+          setEnabled(DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled)
+          setEndOfDayCaptureEnabled(
+            DEFAULT_BALANCE_HISTORY_PREFERENCES.endOfDayCapture.enabled,
+          )
+          setEstimatedTodayIncomeEnabled(
+            DEFAULT_BALANCE_HISTORY_PREFERENCES.estimatedTodayIncome.enabled,
+          )
+          setRetentionDays(
+            String(DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays),
+          )
+        }
+        return result
+      }}
       id="balance-history"
       title={t("title")}
       description={t("description")}
@@ -164,7 +182,10 @@ export default function BalanceHistorySettings() {
             <Switch
               aria-label={t("settings.enabled")}
               checked={enabled}
-              onChange={setEnabled}
+              onChange={(value) =>
+                void saveToggle({ enabled: value }, () => setEnabled(value))
+              }
+              disabled={isSaving}
             />
           </div>
 
@@ -183,8 +204,12 @@ export default function BalanceHistorySettings() {
             <Switch
               aria-label={t("settings.endOfDayCapture")}
               checked={endOfDayCaptureEnabled}
-              onChange={setEndOfDayCaptureEnabled}
-              disabled={!alarmsSupported}
+              onChange={(value) =>
+                void saveToggle({ endOfDayCapture: { enabled: value } }, () =>
+                  setEndOfDayCaptureEnabled(value),
+                )
+              }
+              disabled={!alarmsSupported || isSaving}
             />
           </div>
 
@@ -203,7 +228,13 @@ export default function BalanceHistorySettings() {
             <Switch
               aria-label={t("settings.estimatedTodayIncome")}
               checked={estimatedTodayIncomeEnabled}
-              onChange={setEstimatedTodayIncomeEnabled}
+              onChange={(value) =>
+                void saveToggle(
+                  { estimatedTodayIncome: { enabled: value } },
+                  () => setEstimatedTodayIncomeEnabled(value),
+                )
+              }
+              disabled={isSaving}
             />
           </div>
 
@@ -217,38 +248,38 @@ export default function BalanceHistorySettings() {
             id="balance-history-retention-days"
             className="gap-y-density-2 grid grid-cols-1 gap-x-2"
           >
-            <Label className="text-sm font-medium">
+            <Label
+              htmlFor="balance-history-retention-days-input"
+              className="text-sm font-medium"
+            >
               {t("settings.retentionDays")}
             </Label>
             <Input
+              id="balance-history-retention-days-input"
               type="number"
               min={1}
-              value={safeRetentionDays}
+              value={retentionDays}
+              required
+              disabled={isSaving}
               aria-label={t("settings.retentionDays")}
-              onChange={(event) => setRetentionDays(Number(event.target.value))}
+              onChange={(event) => setRetentionDays(event.target.value)}
             />
           </div>
 
-          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+          <p className="text-muted-foreground text-sm">
+            {t("settings:messages.retentionSaveHint")}
+          </p>
+          <ActionGroup className="items-stretch justify-start">
             <Button
               id="balance-history-apply-settings"
+              disabled={!retentionValid || isSaving}
               variant="default"
               size="sm"
               onClick={() => void handleApplySettings()}
             >
               {t("actions.applySettings")}
             </Button>
-            {showDebugSeedAction && (
-              <Button
-                id="balance-history-debug-seed-estimate-snapshots"
-                variant="secondary"
-                size="sm"
-                onClick={() => void handleSeedEstimateSnapshots()}
-              >
-                Dev: Seed estimate snapshots
-              </Button>
-            )}
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </SettingSection>

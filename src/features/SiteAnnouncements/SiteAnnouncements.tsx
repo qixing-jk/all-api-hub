@@ -215,21 +215,21 @@ export default function SiteAnnouncementsPage({
         label: t("summary.total"),
         value: records.length,
         icon: Megaphone,
-        tone: "blue",
+        tone: "accent",
       },
       {
         key: "unread",
         label: t("summary.unread"),
         value: unreadCount,
         icon: Inbox,
-        tone: "amber",
+        tone: "info",
       },
       {
         key: "sites",
         label: t("summary.sites"),
         value: affectedSiteCount,
         icon: Bell,
-        tone: "emerald",
+        tone: "neutral",
       },
     ],
     [affectedSiteCount, records.length, t, unreadCount],
@@ -439,7 +439,7 @@ export default function SiteAnnouncementsPage({
   }
 
   const handleOpenPollingSettings = useCallback(() => {
-    void openSettingsTab("general", {
+    void openSettingsTab("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
@@ -456,7 +456,7 @@ export default function SiteAnnouncementsPage({
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="general"
+            tabId="siteAnnouncements"
             anchor={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             label={t("actions.pollingSettings")}
           />

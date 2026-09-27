@@ -16,6 +16,7 @@ import {
   createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -24,7 +25,6 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
-  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -143,7 +143,7 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
     },
   })
 
-  await setPlasmoStorageValue(serviceWorker, AUTO_CHECKIN_STATUS_STORAGE_KEY, {
+  await seedAutoCheckinStatus(serviceWorker, {
     lastDailyRunDay: today,
     lastRunAt: new Date(Date.now() - 60_000).toISOString(),
     lastRunResult: "failed",

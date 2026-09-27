@@ -18,7 +18,7 @@ import {
   MANAGED_SITE_CHANNELS_REFRESH_STATES,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
-import { expect } from "~~/e2e/fixtures/extensionTest"
+import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
 import { expectOctopusImportModels } from "~~/e2e/scenarios/octopusImportModels"
 import {
@@ -51,10 +51,13 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   tokenCleanupPrefix?: string
   beforeDeleteConfirm?: () => void | Promise<void>
   verifyRenamePreservation?: { baseUrl: string }
+  /** Controlled fixtures only: the source and channel catalogs are identical. */
+  verifyExactModelMatch?: boolean
 }
 
 const CRUD_MODEL = "gpt-4o-mini"
 const CRUD_UPDATED_MODEL = "gpt-4.1-mini"
+const STATUS_MODEL = "aah-e2e-custom-model"
 
 export function getManagedSiteStatusSourceAccountType(
   siteType: ManagedSiteType,
@@ -62,7 +65,14 @@ export function getManagedSiteStatusSourceAccountType(
   if (siteType === SITE_TYPES.NEW_API || siteType === SITE_TYPES.SUB2API) {
     return siteType
   }
-  if (siteType === SITE_TYPES.OCTOPUS) return SITE_TYPES.NEW_API
+  if (
+    siteType === SITE_TYPES.OCTOPUS ||
+    siteType === SITE_TYPES.VELOERA ||
+    siteType === SITE_TYPES.DONE_HUB ||
+    siteType === SITE_TYPES.AXON_HUB ||
+    siteType === SITE_TYPES.CLAUDE_CODE_HUB
+  )
+    return SITE_TYPES.NEW_API
 
   return null
 }
@@ -253,13 +263,6 @@ export async function runManagedSiteChannelsCrudScenario<
 export async function runManagedSiteTokenChannelStatusScenario<
   TSiteType extends ManagedSiteType,
 >(context: ManagedSiteChannelScenarioContext<TSiteType>) {
-  if (context.siteType === SITE_TYPES.VELOERA) {
-    return {
-      skipped: true,
-      reason: `${context.label} does not support base URL channel lookup`,
-    }
-  }
-
   if (!context.sourceAccount || !context.tokenName) {
     return {
       skipped: true,
@@ -271,6 +274,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
 
   const sourceAccount = context.sourceAccount
   const tokenName = context.tokenName
+  const statusModel = context.verifyExactModelMatch ? CRUD_MODEL : STATUS_MODEL
   const channelName = `${context.runPrefix} status`
   let keyManagementPage = context.page
   let createdTokenName: string | null = null
@@ -350,30 +354,38 @@ export async function runManagedSiteTokenChannelStatusScenario<
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(channelName)
     if (context.siteType === SITE_TYPES.OCTOPUS) {
-      await expectOctopusImportModels({
-        page: keyManagementPage,
-        sourceBaseUrl: sourceAccount.baseUrl,
-      })
+      await test.step("Model discovery accepts an empty upstream catalog", () =>
+        expectOctopusImportModels({
+          page: keyManagementPage,
+          sourceBaseUrl: sourceAccount.baseUrl,
+        }))
+    }
+    if (
+      context.siteType !== SITE_TYPES.SUB2API &&
+      !context.verifyExactModelMatch
+    ) {
+      // Channel identity does not require a callable upstream model. Keep this
+      // independent of the source account's group and model availability.
+      await fillModelInput(keyManagementPage, statusModel)
     }
     await submitChannelDialogAndWaitForClose(keyManagementPage)
 
-    if (
-      context.siteType === SITE_TYPES.SUB2API ||
-      context.siteType === SITE_TYPES.OCTOPUS
-    ) {
-      // Hash navigation can preserve React state; reload to force a fresh lookup.
-      await keyManagementPage.reload()
-      await waitForExtensionRoot(keyManagementPage)
-      row = (
-        await expectTokenCreatedInKeyManagementPage({
-          page: keyManagementPage,
-          tokenName,
-        })
-      ).row
-    }
+    // Hash navigation can preserve React state; reload to force a fresh lookup.
+    await keyManagementPage.reload()
+    await waitForExtensionRoot(keyManagementPage)
+    row = (
+      await expectTokenCreatedInKeyManagementPage({
+        page: keyManagementPage,
+        tokenName,
+      })
+    ).row
     await expectManagedSiteImportStatusAfterChannelCreate(
       row,
-      context.siteType === SITE_TYPES.OCTOPUS ? channelName : undefined,
+      context.siteType !== SITE_TYPES.NEW_API &&
+        context.siteType !== SITE_TYPES.SUB2API
+        ? channelName
+        : undefined,
+      context.verifyExactModelMatch ?? false,
     )
     if (context.siteType === SITE_TYPES.SUB2API) {
       await expect
@@ -386,7 +398,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
         expect(new URL(requestUrl).searchParams.get("search")).toBeNull()
       }
     }
-    if (context.siteType === SITE_TYPES.OCTOPUS) {
+    if (context.verifyExactModelMatch) {
       await row
         .getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton)
         .click()
@@ -409,10 +421,18 @@ export async function runManagedSiteTokenChannelStatusScenario<
     await expectPaginationSummary(keyManagementPage, "1", "1", "1")
     if (context.siteType === SITE_TYPES.OCTOPUS) {
       await openSingleVisibleChannelEditDialog(keyManagementPage, channelName)
-      await expectOctopusImportModels({
-        page: keyManagementPage,
-        sourceBaseUrl: sourceAccount.baseUrl,
-        saved: true,
+      await expect(
+        keyManagementPage.getByLabel(`Copy ${statusModel}`, { exact: true }),
+      ).toBeVisible()
+      await test.step("Saved channel model discovery preserves custom models", async () => {
+        await expectOctopusImportModels({
+          page: keyManagementPage,
+          sourceBaseUrl: sourceAccount.baseUrl,
+          saved: true,
+        })
+        await expect(
+          keyManagementPage.getByLabel(`Copy ${statusModel}`, { exact: true }),
+        ).toBeVisible()
       })
       await keyManagementPage
         .getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton)
@@ -539,11 +559,17 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
 async function expectManagedSiteImportStatusAfterChannelCreate(
   row: Locator,
   matchedChannelName?: string,
+  requireExactModelMatch = true,
 ) {
   if (matchedChannelName) {
     await expect(
       row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
-    ).toHaveText("Added", { timeout: 30_000 })
+    ).toHaveText(
+      requireExactModelMatch ? "Added" : /^(Added|Needs confirmation)$/u,
+      {
+        timeout: 30_000,
+      },
+    )
   }
   const detailsTrigger = row.getByTestId("managed-site-status-details")
   await detailsTrigger.click()
@@ -561,7 +587,13 @@ async function expectManagedSiteImportStatusAfterChannelCreate(
   )
 
   if (matchedChannelName) {
-    await expect(channelLinkButton).toContainText(matchedChannelName)
+    if (requireExactModelMatch) {
+      await expect(channelLinkButton).toContainText(matchedChannelName)
+    } else {
+      // A key-only match exposes "Review channels" until model differences are
+      // confirmed. The saved channel itself is checked by name below.
+      await expect(channelLinkButton).toBeVisible()
+    }
     await expect(verificationRetryButton).toHaveCount(0)
     await expect(details).toContainText("Key matched")
   } else {

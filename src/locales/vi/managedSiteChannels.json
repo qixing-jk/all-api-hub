@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "Nhập kênh từ Kho API Credentials",
       "title": "Chưa có kênh AI gateway tự triển khai"
     },
-    "headerDescription": "Quản lý kênh của AI gateway tự triển khai và gộp nhiều key tài khoản hoặc API key thành một AI API.",
+    "headerDescription": "Quản lý kênh trên cổng AI tự triển khai để kết nối nhiều nguồn API qua một điểm truy cập.",
     "openChannelConsole": "Mở trang quản lý kênh gateway",
     "unconfiguredValueDescription": "Sau khi cấu hình, bạn có thể nhập các key tài khoản và API key rời rạc làm kênh gateway, rồi xem và quản lý trực tiếp trong All API Hub."
   },

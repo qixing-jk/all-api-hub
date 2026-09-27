@@ -1,11 +1,7 @@
-import {
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-} from "~/features/ModelList/modelManagementSources"
-import type {
-  ModelListSourceIdentity,
-  ModelManagementItemSource,
-} from "~/features/ModelList/modelManagementSources"
+import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import type { ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
 type ModelListSourceLabel = {

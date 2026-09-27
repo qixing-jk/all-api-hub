@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { extractItemsFromArrayOrItemsPayload } from "~/services/apiTransport/pagination"
 import {
@@ -131,7 +131,7 @@ const parseSub2ApiKeyGroupId = (
  */
 export const convertUsdBalanceToQuota = (balanceUsd: number): number => {
   const safe = Number.isFinite(balanceUsd) && balanceUsd > 0 ? balanceUsd : 0
-  return Math.round(safe * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)
+  return Math.round(safe * QUOTA_PER_USD)
 }
 
 /**

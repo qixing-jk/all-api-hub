@@ -1,7 +1,12 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import { THEME_ATTRIBUTES, THEME_COLOR, THEME_MODE } from "~/constants/theme"
+import {
+  THEME_ATTRIBUTES,
+  THEME_COLOR,
+  THEME_MODE,
+  THEME_PRESET,
+} from "~/constants/theme"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -75,22 +80,40 @@ test("custom color roles reach page content, controls and portals in both modes"
       "rgb(241, 228, 211)",
     )
     await expect(page.locator("body")).toHaveCSS("color", "rgb(37, 56, 65)")
-    await expect(page.locator("aside .bg-sidebar")).toHaveCSS(
+    await expect(page.locator("aside div.bg-sidebar")).toHaveCSS(
       "background-color",
       "rgb(228, 222, 240)",
     )
-    const preview = page.getByText("Primary action", { exact: true })
-    await expect(preview).toHaveCSS("background-color", "rgb(135, 63, 160)")
-    await expect(preview).toHaveCSS("color", "rgb(255, 242, 207)")
-    const reset = page.getByRole("button", { name: "Reset appearance" })
-    await expect(reset).toHaveCSS("background-color", "rgb(247, 237, 222)")
-    await expect(reset).toHaveCSS("border-top-color", "rgb(137, 98, 73)")
+    // The removed appearance preview carried these samples. The checked preset
+    // badge paints the accent pair, and the announcements action is a real
+    // outline control in its owning settings tab.
+    const accentSample = page.locator(
+      `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="${THEME_PRESET.DEFAULT}"]) span.bg-primary.text-primary-foreground`,
+    )
+    await expect(accentSample).toHaveCSS(
+      "background-color",
+      "rgb(135, 63, 160)",
+    )
+    await expect(accentSample).toHaveCSS("color", "rgb(255, 242, 207)")
+    const basicSettings = page.getByTestId("basic-settings-page")
+    await basicSettings
+      .getByRole("button", { name: "Site announcements", exact: true })
+      .click()
+    const outline = page
+      .locator(`#${SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE}`)
+      .getByRole("button", { name: "View announcements", exact: true })
+    await expect(outline).toHaveCSS("background-color", "rgb(247, 237, 222)")
+    await expect(outline).toHaveCSS("border-top-color", "rgb(137, 98, 73)")
+    await basicSettings
+      .getByRole("button", { name: "General", exact: true })
+      .click()
     await page.getByRole("button", { name: /^Current:/ }).click()
     await expect(page.getByRole("menu")).toHaveCSS(
       "background-color",
       "rgb(226, 239, 220)",
     )
-    await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+    await page.keyboard.press("Escape")
+    await page.getByRole("button", { name: "Appearance settings" }).click()
     const drawer = page.getByRole("dialog", { name: "Appearance settings" })
     await expect(drawer).toHaveCSS("background-color", "rgb(226, 239, 220)")
     await expect(drawer).toHaveCSS("color", "rgb(35, 69, 45)")

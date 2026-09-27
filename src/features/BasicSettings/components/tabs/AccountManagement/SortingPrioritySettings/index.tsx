@@ -2,13 +2,17 @@ import type { TFunction } from "i18next"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { CONFIGURABLE_SORTING_CRITERIA } from "~/services/preferences/utils/sortingPriority"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import {
+  CONFIGURABLE_SORTING_CRITERIA,
+  DEFAULT_SORTING_PRIORITY_CONFIG,
+} from "~/services/preferences/utils/sortingPriority"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { getSortingCriteriaTargetId } from "./search"
 
@@ -111,6 +115,11 @@ export default function SortingPrioritySettings() {
       title={t("sorting.title")}
       description={t("sorting.description")}
       onReset={resetSortingPriorityConfig}
+      resetRequiresConfirmation={false}
+      resetDisabled={matchesDefaultSettings(
+        initialConfig,
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+      )}
     >
       <Card>
         <CardContent className="space-y-density-5">

@@ -11,7 +11,7 @@
     "description": "将永久删除“{{name}}”。",
     "title": "删除书签？"
   },
-  "description": "保存站点控制台/文档/管理页等快捷链接，无需创建完整账号。",
+  "description": "收藏站点、控制台与文档链接，按标签整理并快速访问。",
   "dialog": {
     "currentPageLabel": "当前页面",
     "currentPageUnavailable": "暂时无法读取当前页面",

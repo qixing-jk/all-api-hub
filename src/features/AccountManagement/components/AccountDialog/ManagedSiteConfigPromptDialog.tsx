@@ -1,6 +1,7 @@
 import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -37,7 +38,7 @@ export function ManagedSiteConfigPromptDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <TriangleAlert className="text-warning-text h-5 w-5" />
+            <TriangleAlert className="text-warning-indicator h-5 w-5" />
             <h2 className="text-foreground text-lg font-semibold">
               {t("accountDialog:warnings.managedSiteConfig.title", {
                 managedSite: managedSiteLabel,
@@ -47,7 +48,10 @@ export function ManagedSiteConfigPromptDialog({
         </div>
       }
       footer={
-        <div className="flex space-x-3">
+        <ActionGroup
+          layout="stack-on-narrow"
+          className="gap-y-density-3 gap-x-3"
+        >
           <Button
             type="button"
             onClick={onClose}
@@ -59,12 +63,12 @@ export function ManagedSiteConfigPromptDialog({
           <Button
             type="button"
             onClick={onOpenSettings}
-            variant="warning"
+            variant="default"
             className="flex-1"
           >
             {t("accountDialog:warnings.managedSiteConfig.actions.openSettings")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <div className="space-y-density-3">

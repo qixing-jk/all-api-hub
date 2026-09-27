@@ -269,7 +269,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               <Button
                 type="button"
                 onClick={handleEditClick}
-                variant="warning"
+                variant="outline"
                 size="sm"
                 leftIcon={<Pencil className="h-3 w-3" />}
               >

@@ -6,11 +6,14 @@ import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
 export type NewApiFamilyTokenTransport =
-  typeof defaultTransport.defaultKeyManagementImplementation
+  typeof defaultTransport.defaultKeyManagementImplementation & {
+    fetchTokenById: typeof defaultTransport.fetchTokenById
+  }
 
 const baseTransport: NewApiFamilyTokenTransport = {
   ...defaultTransport.defaultKeyManagementImplementation,
   fetchAccountTokens: defaultTransport.fetchAccountTokens,
+  fetchTokenById: defaultTransport.fetchTokenById,
   fetchCurrentUserGroup: defaultTransport.fetchCurrentUserGroup,
   createApiToken: defaultTransport.createApiToken,
   updateApiToken: defaultTransport.updateApiToken,

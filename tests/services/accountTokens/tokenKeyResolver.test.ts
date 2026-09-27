@@ -24,10 +24,6 @@ const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
-vi.mock("~/constants/ui", () => ({
-  UI_CONSTANTS: {},
-}))
-
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   newApiFamilyRequests: {
     data: mockFetchApiData,

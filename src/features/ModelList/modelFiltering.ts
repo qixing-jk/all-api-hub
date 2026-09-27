@@ -3,7 +3,11 @@ import {
   MODEL_LIST_BILLING_MODES,
   type ModelListBillingMode,
 } from "~/features/ModelList/billingModes"
-import { resolveActiveModelGroupContext } from "~/features/ModelList/groupContext"
+import {
+  isModelKnownUnavailable,
+  MODEL_GROUP_ACCESS_STATES,
+  resolveActiveModelGroupContext,
+} from "~/features/ModelList/groupContext"
 import {
   matchesModelCapabilityFilters,
   type ModelCapabilityMetadataCoverage,
@@ -22,6 +26,7 @@ import {
 } from "~/services/models/modelVendor"
 
 interface ModelListFilters {
+  showUnavailableModels?: boolean
   searchTerm: string
   selectedBillingMode: ModelListBillingMode
   selectedGroups: string[]
@@ -170,6 +175,7 @@ export function createModelListFilterPipeline(params: {
     getGroupCandidates,
   } = params
   const {
+    showUnavailableModels = false,
     searchTerm,
     selectedBillingMode,
     selectedGroups,
@@ -178,6 +184,8 @@ export function createModelListFilterPipeline(params: {
   const selectedAccountIds = new Set(accountFilterAccountIds)
   const filterBase = (overrides: FilterOverrides = {}) => {
     let filtered = rawModelItems
+    const nextShowUnavailableModels =
+      overrides.showUnavailableModels ?? showUnavailableModels
     const nextSearchTerm = overrides.searchTerm ?? searchTerm
     const nextSelectedBillingMode =
       overrides.selectedBillingMode ?? selectedBillingMode
@@ -197,18 +205,22 @@ export function createModelListFilterPipeline(params: {
     }
 
     filtered = filtered.filter((item) => {
-      if (!supportsPricingDerivedBehavior(item)) {
+      const context = item.groupContext
+      if (isModelKnownUnavailable(context)) {
+        return nextShowUnavailableModels
+      }
+      if (
+        context.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN ||
+        context.accessState === MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE ||
+        context.supportedGroups.length === 0
+      ) {
         return true
       }
 
       const candidates = getGroupCandidates(item, nextSelectedGroups)
-      if (candidates === undefined) {
-        return true
-      }
-
       return (
         resolveActiveModelGroupContext({
-          context: item.groupContext,
+          context,
           candidateGroups: candidates,
         }).activeUsableGroups.length > 0
       )
@@ -269,6 +281,8 @@ export function createModelListFilterPipeline(params: {
     ).items
     const getFilteredModels = (overrides: FilterOverrides = {}) => {
       const unchanged =
+        (overrides.showUnavailableModels ?? showUnavailableModels) ===
+          showUnavailableModels &&
         (overrides.searchTerm ?? searchTerm) === searchTerm &&
         (overrides.selectedBillingMode ?? selectedBillingMode) ===
           selectedBillingMode &&

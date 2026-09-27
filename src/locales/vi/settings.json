@@ -28,6 +28,12 @@
       "slate": "Xám đá",
       "violet": "Tím"
     },
+    "contentWidth": "Chiều rộng nội dung",
+    "contentWidthDescription": "Chỉ áp dụng cho trang quản lý đầy đủ.",
+    "contentWidths": {
+      "centered": "Căn giữa",
+      "full": "Toàn chiều rộng"
+    },
     "densities": {
       "comfortable": "Thoáng",
       "compact": "Gọn",
@@ -36,6 +42,13 @@
     "density": "Mật độ giao diện",
     "densityDescription": "Điều chỉnh khoảng cách giữa các hàng và chiều cao điều khiển mà không đổi cỡ chữ.",
     "description": "Thay đổi được lưu tự động và áp dụng cho trang cài đặt, cửa sổ bật lên và bảng bên.",
+    "font": "Phông chữ",
+    "fontDescription": "Chọn phông chữ giao diện. Khi theo chủ đề, chủ đề mặc định dùng chữ không chân và Anthropic dùng chữ có chân.",
+    "fonts": {
+      "default": "Theo chủ đề",
+      "sans": "Không chân",
+      "serif": "Có chân"
+    },
     "preset": "Chủ đề có sẵn",
     "presetColorsHint": "Chủ đề này có bảng màu riêng. Chọn chủ đề mặc định để chọn màu nhấn riêng.",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Chủ đề mặc định"
     },
-    "preview": "Xem trước",
-    "primaryAction": "Thao tác chính",
     "radii": {
       "default": "Mặc định",
       "large": "Lớn",
@@ -57,8 +68,16 @@
     "radius": "Độ bo góc",
     "reset": "Đặt lại giao diện",
     "resetDensity": "Đặt lại mật độ",
+    "resetFont": "Đặt lại phông chữ",
+    "resetTextSize": "Đặt lại cỡ chữ",
     "saveFailed": "Không thể lưu. Vui lòng thử lại.",
-    "secondaryAction": "Thao tác phụ",
+    "textSize": "Cỡ chữ",
+    "textSizeDescription": "Điều chỉnh cỡ chữ và chiều cao dòng. Các thành phần điều khiển giãn theo nội dung mà không đổi thiết lập mật độ.",
+    "textSizes": {
+      "default": "Mặc định",
+      "extraLarge": "Rất lớn",
+      "large": "Lớn"
+    },
     "title": "Cài đặt giao diện"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "Nhập và xuất"
     }
   },
-  "description": "Quản lý các tùy chọn cấu hình cơ bản của tiện ích",
+  "description": "Điều chỉnh giao diện, quản lý tài khoản, tác vụ tự động và sao lưu dữ liệu.",
   "display": {
     "cny": "Nhân dân tệ (¥)",
     "currencyDesc": "Đặt đơn vị tiền tệ mặc định để hiển thị số dư và thu chi",
     "currencyUnit": "Đơn vị tiền tệ",
     "defaultTab": "Tab mặc định",
     "defaultTabDesc": "Đặt tab hiển thị mặc định khi khởi động tiện ích",
-    "description": "Tùy chỉnh giao diện và tùy chọn hiển thị của tiện ích",
+    "description": "Tùy chỉnh ngôn ngữ giao diện và tùy chọn hiển thị của tiện ích",
     "title": "Cài đặt hiển thị",
     "todayCashflow": "Thu chi hôm nay",
     "todayCashflowEnabled": "Hiển thị thu chi hôm nay",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Đã ở giá trị mặc định",
     "confirmReset": "Xác nhận đặt lại",
     "preferencesChangedExternally": "Tùy chọn đã thay đổi ở nơi khác. Vui lòng làm mới rồi thử lại.",
+    "resetAllConfirmDesc": "Khôi phục mọi tùy chọn và xóa địa chỉ kết nối cùng thông tin xác thực đã cấu hình? Các tài khoản đã lưu được giữ lại; chính sách lưu lịch sử cũng trở về mặc định.",
     "resetConfirmDesc": "Bạn có chắc muốn đặt lại {{name}} về cài đặt mặc định không? Thao tác này không thể hoàn tác.",
+    "resetConnectionConfirmDesc": "Thao tác này xóa địa chỉ kết nối, thông tin xác thực và cài đặt liên quan trong nhóm này. Bạn sẽ cần cấu hình lại. Khôi phục mặc định?",
     "resetFailed": "Đặt lại {{name}} thất bại",
+    "resetHistoryConfirmDesc": "Khôi phục mặc định sẽ rút ngắn thời gian lưu lịch sử. Các bản ghi cũ có thể bị xóa vĩnh viễn. Tiếp tục?",
     "resetSuccess": "{{name}} đã được đặt lại về cài đặt mặc định",
+    "retentionSaveHint": "Các tùy chọn khác được lưu tự động. Số ngày lưu cần được áp dụng riêng; rút ngắn thời gian có thể xóa lịch sử.",
     "runtimeRequestFailed": "Yêu cầu runtime thất bại. Vui lòng thử lại sau.",
     "saveSettingsFailed": "Lưu cài đặt thất bại",
     "updateFailed": "Cập nhật {{name}} thất bại",
@@ -613,7 +637,12 @@
       "enableDesc": "Sau khi tắt sẽ dừng lấy định kỳ trong nền. Bản ghi thông báo cục bộ đã lưu vẫn được giữ, và trang thông báo vẫn có thể kiểm tra thủ công.",
       "interval": "Khoảng thời gian lấy",
       "intervalDesc": "Đặt khoảng thời gian lấy thông báo website trong nền theo phút, hỗ trợ từ 15 đến 1440 phút.",
-      "intervalInvalid": "Nhập số phút nguyên từ {{min}} đến {{max}}."
+      "intervalInvalid": "Nhập số phút nguyên từ {{min}} đến {{max}}.",
+      "maxAge": "Giới hạn thời gian thông báo",
+      "maxAgeDesc": "Thông báo được đăng trước giới hạn này sẽ được lưu ở trạng thái đã đọc và không gửi thông báo.",
+      "maxAgeInvalid": "Nhập số ngày nguyên từ {{min}} đến {{max}}.",
+      "upstreamRead": "Đánh dấu đã đọc trên site sau khi thông báo",
+      "upstreamReadDesc": "Khi bật, thông báo gửi thành công cũng sẽ đánh dấu các thông báo vừa lấy là đã đọc trên site. Khi tắt, trạng thái đã đọc phía máy chủ chỉ được đồng bộ sau khi bạn tự đánh dấu đã đọc trên trang; được thông báo không có nghĩa là đã đọc. Chỉ áp dụng cho các site hỗ trợ đồng bộ đã đọc."
     },
     "title": "Thông báo website"
   },
@@ -676,6 +705,7 @@
     "permissions": "Quản lý quyền",
     "refresh": "Làm mới dữ liệu",
     "select": "Chọn một nhóm",
+    "siteAnnouncements": "Thông báo website",
     "webAiApiCheck": "Kiểm tra AI API"
   },
   "taskNotifications": {
@@ -814,16 +844,15 @@
   },
   "theme": {
     "appearance": "Giao diện",
-    "clickSwitch": "Bấm để chuyển sang chế độ {{nextMode}}",
     "current": "Hiện tại: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Hiện tại: theo hệ thống ({{theme}})",
     "dark": "Tối",
     "followSystem": "Theo hệ thống",
     "followSystemTheme": "Cài đặt chủ đề theo hệ thống",
     "light": "Sáng",
-    "selectTheme": "Chọn một chủ đề giao diện",
+    "mode": "Chế độ giao diện",
+    "selectTheme": "Chọn sáng, tối hoặc theo hệ thống",
     "switchTo": "Chuyển sang chủ đề {{theme}}: {{description}}",
-    "toggle": "Chuyển chủ đề, hiện ở chế độ {{currentMode}}, bấm để chuyển sang chế độ {{nextMode}}",
     "useDarkTheme": "Dùng chủ đề tối",
     "useLightTheme": "Dùng chủ đề sáng"
   },

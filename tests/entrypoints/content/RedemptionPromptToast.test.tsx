@@ -43,7 +43,8 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async () => ({
+  ...(await vi.importActual("~/components/ui/ActionGroup")),
   Body: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Button: ({
     analyticsAction,

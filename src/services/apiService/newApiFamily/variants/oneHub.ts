@@ -17,7 +17,7 @@ import {
   inferHasMoreFromNumberedPage,
 } from "~/services/apiTransport/pagination"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import type { UserGroupInfo } from "~/services/models/userGroup"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
@@ -42,7 +42,7 @@ export const fetchUserGroupMap = async (request: ApiServiceRequest) => {
 export const fetchModelPricing = async (
   request: ApiServiceRequest,
   isDoneHub = false,
-): Promise<PricingResponse> => {
+): Promise<ModelCatalogSnapshot> => {
   try {
     const [availableModel, userGroupMap] = await Promise.all([
       fetchAvailableModel(request),

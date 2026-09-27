@@ -149,7 +149,9 @@ test("adds an account, creates a reusable API profile from its key, and verifies
   await expectPermissionOnboardingHidden(page)
 
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
-  await page.locator("#site-url").fill(JOURNEY_SITE_URL)
+  await expect(
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+  ).toHaveValue(JOURNEY_SITE_URL)
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
   await expect(page.getByRole("button", { name: "Confirm Add" })).toBeVisible()
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()

@@ -2,7 +2,7 @@ import { Plug } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   BodySmall,
   Button,
@@ -77,12 +77,11 @@ export function WebdavConnectionSettings({
                 {t("webdav.provider.description")}
               </BodySmall>
             </div>
-            <ResponsiveToggleGroup
+            <SegmentedControl
               id={WEBDAV_TARGET_IDS.provider}
               aria-label={t("webdav.provider.label")}
               value={provider}
               onValueChange={handleProviderChange}
-              showActiveIndicator
               options={[
                 {
                   value: CLOUD_SYNC_PROVIDERS.WEBDAV,

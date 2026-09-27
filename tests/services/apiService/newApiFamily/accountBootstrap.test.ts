@@ -85,6 +85,66 @@ describe("newApiFamily accountBootstrap", () => {
     })
   })
 
+  it("fetchUserInfo exposes the OAuth identities bound to the account", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 9,
+      username: "alice",
+      access_token: "",
+      github_id: "gh-1",
+      linux_do_id: "",
+    })
+
+    await expect(
+      fetchUserInfo({ ...request, auth: { ...request.auth, userId: "9" } }),
+    ).resolves.toMatchObject({ loginProviders: ["github"] })
+  })
+
+  it("fetchUserInfo reports both bindings and numeric provider ids", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 9,
+      username: "alice",
+      access_token: "",
+      github_id: "gh-1",
+      linux_do_id: 7,
+    })
+
+    await expect(
+      fetchUserInfo({ ...request, auth: { ...request.auth, userId: "9" } }),
+    ).resolves.toMatchObject({ loginProviders: ["github", "linuxdo"] })
+  })
+
+  it("fetchUserInfo omits OAuth identities without binding evidence", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 9,
+      username: "alice",
+      access_token: "",
+      github_id: "",
+      linux_do_id: null,
+    })
+
+    const result = await fetchUserInfo({
+      ...request,
+      auth: { ...request.auth, userId: "9" },
+    })
+
+    expect(result).not.toHaveProperty("loginProviders")
+  })
+
+  it("getOrCreateAccessToken carries the OAuth identities of the verified account", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 1,
+      username: "alice",
+      access_token: "existing-token",
+      linux_do_id: "ldo-7",
+    })
+
+    await expect(getOrCreateAccessToken(request)).resolves.toEqual({
+      username: "alice",
+      access_token: "existing-token",
+      loginProviders: ["linuxdo"],
+    })
+  })
+
   it("createAccessToken prevents transport replay for every token generation", async () => {
     mockFetchApiData.mockResolvedValueOnce("new-token")
 

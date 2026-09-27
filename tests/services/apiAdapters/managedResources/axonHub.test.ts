@@ -14,7 +14,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
   getManagedResourceFieldPolicy,
-  resolveManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -56,6 +55,7 @@ import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import { resolveManagedResourceTestPolicy } from "~~/tests/test-utils/managedResourceFieldPolicy"
 
 const mocks = vi.hoisted(() => {
   class RequestError extends Error {
@@ -391,7 +391,7 @@ const expectEditorMatchesFieldPolicy = (
     mode,
   )
   expect(policy).toBeDefined()
-  const resolved = resolveManagedResourceFieldPolicy(editor.fields, policy!)
+  const resolved = resolveManagedResourceTestPolicy(editor.fields, policy!)
   expect(
     new Set(resolved.fields.map(({ presentation }) => presentation.fieldId)),
   ).toEqual(

@@ -140,7 +140,7 @@ export function ProductAnnouncementList({
                   variant={SEVERITY_BADGE_VARIANTS[notice.severity]}
                   size="sm"
                   className={cn(
-                    "mr-1.5 px-1.5 py-0 align-[0.0625rem] text-[0.625rem] leading-4 font-medium",
+                    "text-3xs mr-1.5 px-1.5 py-0 align-[0.0625rem] leading-4 font-medium",
                     PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES[notice.severity].badge,
                   )}
                 >

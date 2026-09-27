@@ -347,6 +347,51 @@ describe("siteAnnouncementStorage", () => {
     ).resolves.toHaveLength(0)
   })
 
+  it("marks newly discovered identities read after retention evicts their records", async () => {
+    const siteKey = "notice:new-api:https://retention.example.invalid"
+    const site = {
+      siteKey,
+      siteName: "Retention Example",
+      siteType: "new-api" as const,
+      baseUrl: "https://retention.example.invalid",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    }
+    const records = Array.from({ length: 101 }, (_, index) => ({
+      siteKey,
+      siteName: site.siteName,
+      siteType: site.siteType,
+      baseUrl: site.baseUrl,
+      accountId: site.accountId,
+      providerId: site.providerId,
+      title: `Historical notice ${index}`,
+      content: `Historical body ${index}`,
+      fingerprint: `historical-${index}`,
+    }))
+
+    const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site,
+      records,
+      now: 100,
+    })
+
+    await expect(
+      siteAnnouncementStorage.markRecordIdentitiesRead(created),
+    ).resolves.toBe(101)
+
+    const store = await siteAnnouncementStorage.getStore()
+    expect(store.sites[siteKey]?.records).toHaveLength(100)
+    expect(
+      Object.values(store.identityLedger[siteKey] ?? {}).every(
+        (marker) => marker.readAt !== undefined,
+      ),
+    ).toBe(true)
+    expect(store.sites[siteKey]?.records.every((record) => record.read)).toBe(
+      true,
+    )
+  })
+
   it("preserves the read invariant without creating a notification candidate for read imports", async () => {
     const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {

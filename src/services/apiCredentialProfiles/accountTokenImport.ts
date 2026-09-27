@@ -13,7 +13,7 @@ import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfil
 export type ApiCredentialProfileLinkedBy =
   ApiCredentialProfileCaptureInput["linkedBy"]
 
-interface CreateProfileFromAccountTokenParams {
+interface CaptureProfileFromAccountTokenParams {
   accountName: string
   fallbackAccountName?: string
   baseUrl: string
@@ -36,7 +36,7 @@ export async function captureProfileFromAccountToken({
   apiType = API_TYPES.OPENAI_COMPATIBLE,
   locator,
   linkedBy = API_CREDENTIAL_PROFILE_LINK_SOURCES.ResolvedRuntimeKey,
-}: CreateProfileFromAccountTokenParams) {
+}: CaptureProfileFromAccountTokenParams) {
   return apiCredentialProfileLinks.capture({
     profile: {
       name: buildApiCredentialProfileName({
@@ -55,14 +55,4 @@ export async function captureProfileFromAccountToken({
     ...(locator ? { locator } : {}),
     linkedBy,
   })
-}
-
-/**
- * Creates an API credential profile from an account-scoped token.
- */
-export async function createProfileFromAccountToken(
-  params: CreateProfileFromAccountTokenParams,
-) {
-  const result = await captureProfileFromAccountToken(params)
-  return result.profile
 }

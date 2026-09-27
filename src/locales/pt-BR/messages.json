@@ -102,6 +102,7 @@
       "bookmarkNameRequired": "O nome do favorito não pode estar vazio",
       "bookmarkUrlRequired": "A URL do favorito não pode estar vazia",
       "incompleteAccountInfo": "Preencha todas as informações da conta",
+      "loginProviderInUse": "O método de login {{provider}} já é usado pela conta AgentRouter «{{account}}» com check-in automático ativado. Escolha o outro método, desative o check-in automático dessa conta ou limpe esta seleção.",
       "updateAccountFailed": "Falha ao atualizar conta {{error}}",
       "urlRequired": "A URL do site não pode estar vazia",
       "userIdNumeric": "O ID do usuário deve ser um número"

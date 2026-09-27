@@ -130,6 +130,7 @@ export const mapSub2ApiCheckInMutationError = (
   if (context.mutationLifecycle?.dispatched) {
     return {
       status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
     }
   }

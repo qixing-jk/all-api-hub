@@ -180,7 +180,6 @@ export function ProductAnnouncementButton({
     [activeNotices.length, surface],
   )
 
-  const shouldReserveSlot = onlyWhenRisk && surface === "popup-header"
   const shouldShowButton =
     !onlyWhenRisk || Boolean(state.view.primaryRiskNotice)
   const shouldUseSheet = surface === "popup-header" || isSmallScreen
@@ -202,7 +201,7 @@ export function ProductAnnouncementButton({
           size="sm"
           aria-hidden="true"
           data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.badge}
-          className="pointer-events-none absolute -top-1 -right-1 min-w-4 px-1 text-[0.6rem] leading-3"
+          className="pointer-events-none absolute -top-1 -right-1 min-w-4 px-1 text-[length:calc(0.6rem+var(--text-size-increment))] leading-[max(0.75rem,1em)]"
         >
           {activeRiskCount > 99 ? "99+" : activeRiskCount}
         </Badge>
@@ -247,21 +246,6 @@ export function ProductAnnouncementButton({
       </Popover>
     )
   ) : null
-
-  if (shouldReserveSlot) {
-    return (
-      <span
-        aria-hidden={!shouldShowButton ? "true" : undefined}
-        data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.reservedSlot}
-        className={cn(
-          "inline-flex h-(--density-control-xs) w-(--density-control-xs) shrink-0 items-center justify-center sm:h-(--density-control-sm) sm:w-(--density-control-sm)",
-          className,
-        )}
-      >
-        {button}
-      </span>
-    )
-  }
 
   return button
 }

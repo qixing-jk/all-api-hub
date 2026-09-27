@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
@@ -97,7 +97,7 @@ const nativeDetailFacts = (
       ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily ||
     siteType === SITE_TYPES.AIHUBMIX
   const money = (value: number) =>
-    `$${(value / (rawQuotaUnits ? UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR : 1)).toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+    `$${(value / (rawQuotaUnits ? QUOTA_PER_USD : 1)).toLocaleString(undefined, { maximumFractionDigits: 6 })}`
   const details: KeyResourceFact[] = []
   for (const field of facts.fields) {
     const remaining = [

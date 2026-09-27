@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react"
 import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button } from "~/components/ui"
+import { ActionGroup, Badge, Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
@@ -118,12 +118,12 @@ export function ProductAnnouncementBanner({
             ) : null}
           </div>
         </div>
-        <div className="gap-y-density-2 flex shrink-0 flex-wrap items-center gap-x-2 sm:justify-end">
+        <ActionGroup className="shrink-0 justify-start sm:justify-end">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="border-border bg-card/70 text-secondary-foreground hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.04] dark:hover:bg-foreground/[0.08] h-(--density-control-sm) px-3 text-xs"
+            className="border-border bg-card/70 text-secondary-foreground hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.04] dark:hover:bg-foreground/[0.08] min-h-(--density-control-sm) px-3 text-xs"
             onClick={handleViewAll}
           >
             {t("actions.viewAll")}
@@ -132,12 +132,12 @@ export function ProductAnnouncementBanner({
             type="button"
             variant="ghost"
             size="sm"
-            className="dark:text-secondary-foreground text-muted-foreground hover:bg-muted dark:hover:bg-foreground/[0.08] h-(--density-control-sm) px-3 text-xs"
+            className="dark:text-secondary-foreground text-muted-foreground hover:bg-muted dark:hover:bg-foreground/[0.08] min-h-(--density-control-sm) px-3 text-xs"
             onClick={handleDismiss}
           >
             {t("actions.dismiss")}
           </Button>
-        </div>
+        </ActionGroup>
       </div>
     </section>
   )

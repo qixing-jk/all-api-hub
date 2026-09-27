@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   composeRuntimeAction,
-  hasRuntimeActionPrefix,
   RuntimeActionIds,
   RuntimeActionPrefixes,
   RuntimeMessageTypes,
@@ -25,30 +24,6 @@ describe("runtimeActions registry and helpers", () => {
     }
 
     expect(unique.size).toBe(values.length)
-  })
-
-  it("matches prefixes safely (null/undefined/non-string never match)", () => {
-    expect(
-      hasRuntimeActionPrefix(undefined, RuntimeActionPrefixes.OpenSettings),
-    ).toBe(false)
-    expect(
-      hasRuntimeActionPrefix(null, RuntimeActionPrefixes.OpenSettings),
-    ).toBe(false)
-    expect(
-      hasRuntimeActionPrefix(123, RuntimeActionPrefixes.OpenSettings),
-    ).toBe(false)
-    expect(
-      hasRuntimeActionPrefix(
-        "openSettings:webAiApiCheck",
-        RuntimeActionPrefixes.OpenSettings,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        "openSettingsX:webAiApiCheck",
-        RuntimeActionPrefixes.OpenSettings,
-      ),
-    ).toBe(false)
   })
 
   it("composes stable on-the-wire action IDs", () => {

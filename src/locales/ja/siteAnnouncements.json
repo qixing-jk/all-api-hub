@@ -13,9 +13,9 @@
     "unread": "未読"
   },
   "description": {
-    "disabledSummary": "自動取得は現在オフです。手動確認は引き続き実行できます。",
-    "enabledInterval": "現在の間隔: {{intervalMinutes}} 分ごと。",
-    "enabledSummary": "自動取得は現在オンです。取得したサイト公告を確認し、未読状態を管理して手動確認を実行できます。",
+    "disabledSummary": "サイトのお知らせを確認し、未読状態を管理します。自動確認は無効ですが、手動で確認できます。",
+    "enabledInterval": "{{intervalMinutes}} 分ごとに確認します。",
+    "enabledSummary": "サイトのお知らせを確認し、未読状態を管理します。自動確認は有効です。",
     "pollingSettingsLink": "自動取得を設定"
   },
   "empty": {

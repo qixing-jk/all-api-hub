@@ -1,3 +1,5 @@
+import { formatUtcDayKey } from "~/utils/core/dayKey"
+
 /** Keep the user's retention period within the safe integer range. */
 export function normalizeHistoryRetentionDays(
   value: unknown,
@@ -20,5 +22,5 @@ export function getHistoryRetentionCutoffDayKey(
   const days = normalizeHistoryRetentionDays(retentionDays, 1)
   const today = Date.parse(`${todayKey}T00:00:00.000Z`)
   const cutoff = Math.max(-86_400_000, today - (days - 1) * 86_400_000)
-  return new Date(cutoff).toISOString().slice(0, 10)
+  return formatUtcDayKey(new Date(cutoff))
 }

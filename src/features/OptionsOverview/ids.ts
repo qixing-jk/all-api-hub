@@ -14,8 +14,26 @@ export const OPTIONS_OVERVIEW_STATUS_CARD_IDS = {
   attention: "attention",
 } as const
 
+export const OPTIONS_OVERVIEW_ATTENTION_CATEGORIES = {
+  accounts: "accounts",
+  credentials: "credentials",
+  automation: "automation",
+  data: "data",
+} as const
+
 export const OPTIONS_OVERVIEW_ATTENTION_KINDS = {
   accountUnhealthy: "accountUnhealthy",
+  accountTempWindowIssue: "accountTempWindowIssue",
+  accountsAllDisabled: "accountsAllDisabled",
+  siteTypeUnknown: "siteTypeUnknown",
+  checkInMethodUnresolved: "checkInMethodUnresolved",
+  autoCheckinNeedsAttention: "autoCheckinNeedsAttention",
+  autoCheckinGloballyDisabled: "autoCheckinGloballyDisabled",
+  checkInReloginRequired: "checkInReloginRequired",
+  checkInAccountDataMissing: "checkInAccountDataMissing",
+  checkInPermissionDenied: "checkInPermissionDenied",
+  usageRefreshPending: "usageRefreshPending",
+  unreadSiteAnnouncements: "unreadSiteAnnouncements",
   addAccount: "addAccount",
   addProfile: "addProfile",
 } as const

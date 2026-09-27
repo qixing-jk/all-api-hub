@@ -109,7 +109,7 @@
   },
   "copyAllNames": "複製所有模型名稱",
   "currentUsableGroups": "當前帳號可用分組",
-  "description": "檢視和管理可用的AI模型",
+  "description": "瀏覽帳號與 API 憑證的模型，查看價格、能力和可用性。",
   "detailedPricing": "詳細定價",
   "diagnostics": {
     "all": "全部報價",
@@ -428,6 +428,8 @@
     "title": "API 憑據模型目錄"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "以下帳號的實際可用模型範圍尚未確認，目前列出站點完整模型目錄。部分模型可能無法透過這些帳號呼叫，請以帳號權限和實際驗證結果為準。",
+    "badge": "站點完整目錄",
     "description": "未能確認此帳號的實際可用模型範圍，目前顯示站點完整模型目錄。部分模型可能無法透過此帳號呼叫，請以站點帳號權限和實際驗證結果為準。",
     "title": "已回退到站點完整模型目錄"
   },
@@ -584,6 +586,7 @@
   "selectSource": "選擇資料來源",
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
+  "showUnavailableModels": "同時顯示無權使用的模型",
   "siteDescription": "站點說明：",
   "siteSupportedGroups": "站點支援的分組",
   "sortBy": "排序方式",
@@ -643,6 +646,7 @@
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",
   "unavailable": "不可用",
+  "unavailableModelsHint": "額外顯示已取得資料中，目前帳號明確沒有可用群組的模型。這些模型不受群組選擇限制，但仍受其他篩選條件限制；不會額外取得全站模型。僅目前頁面工作階段有效。",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "價格不可用，因為目前可用分組沒有分組倍率。",
     "keyGroupUnknown": "價格不可用，因為無法解析此金鑰的 Sub2API 分組。",

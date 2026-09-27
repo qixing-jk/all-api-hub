@@ -15,6 +15,7 @@ const request = {
 }
 const transport = {
   ...defaultKeyManagementImplementation,
+  fetchTokenById: vi.fn(),
   fetchUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
 }

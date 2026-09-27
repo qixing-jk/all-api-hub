@@ -36,6 +36,7 @@ import {
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_LIST_GROUP_SEMANTICS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
@@ -78,6 +79,8 @@ import { PriceComparisonControls } from "./PriceComparisonControls"
 import { PricingScenarioControls } from "./PricingScenarioControls"
 
 interface ControlPanelProps {
+  showUnavailableModels?: boolean
+  setShowUnavailableModels?: (show: boolean) => void
   pricingScenarioSettings?: ModelPricingScenarioSettings
   setPricingScenarioSettings?: (settings: ModelPricingScenarioSettings) => void
   selectedSource: ModelManagementSource | null
@@ -128,6 +131,8 @@ interface ControlPanelProps {
 /**
  * Top control strip for searching, filtering, and display options.
  * @param props Component props bundle.
+ * @param props.showUnavailableModels Whether unavailable models are included.
+ * @param props.setShowUnavailableModels Setter for unavailable model visibility.
  * @param props.selectedSource Active model-management source.
  * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.selectedSourceValue Active model-management source value.
@@ -165,6 +170,8 @@ interface ControlPanelProps {
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
+  showUnavailableModels = false,
+  setShowUnavailableModels,
   pricingScenarioSettings,
   setPricingScenarioSettings,
   selectedSource,
@@ -495,10 +502,10 @@ export function ControlPanel({
 
   return (
     <Card
-      className="mb-density-6"
+      className="mb-density-3 rounded-none border-x-0 border-t-0 bg-transparent shadow-none"
       data-testid={MODEL_LIST_TEST_IDS.controlPanel}
     >
-      <CardContent className="[container-type:inline-size]">
+      <CardContent className="[container-type:inline-size] px-0 pt-0">
         {isProfileSource && (
           <Alert
             variant="default"
@@ -682,6 +689,23 @@ export function ControlPanel({
             <fieldset className="max-w-full shrink-0">
               <legend className="sr-only">{t("displayOptions")}</legend>
               <div className="gap-y-density-2 flex flex-wrap items-center gap-x-4 text-sm">
+                {setShowUnavailableModels &&
+                  selectedSource?.groupSemantics ===
+                    MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY && (
+                    <Tooltip content={t("unavailableModelsHint")}>
+                      <label className="flex cursor-pointer items-center space-x-2">
+                        <Switch
+                          checked={showUnavailableModels}
+                          onChange={setShowUnavailableModels}
+                          aria-label={t("showUnavailableModels")}
+                          size="sm"
+                        />
+                        <Label className="cursor-pointer">
+                          {t("showUnavailableModels")}
+                        </Label>
+                      </label>
+                    </Tooltip>
+                  )}
                 {sourceCapabilities.supportsPricing && (
                   <label className="flex cursor-pointer items-center space-x-2">
                     <Switch

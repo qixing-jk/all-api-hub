@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { MODEL_CAPABILITY_FILTER_VALUES } from "~/features/ModelList/modelCapabilityFilters"
 import {
@@ -8,64 +7,11 @@ import {
   projectModelListVendorFilter,
 } from "~/features/ModelList/modelFiltering"
 import type { ModelListItem } from "~/features/ModelList/modelListItems"
-import { createAccountSource } from "~/features/ModelList/modelManagementSources"
-import { prepareModelListSource } from "~/features/ModelList/sourcePreparation"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildModelListItemFixture } from "~~/tests/test-utils/modelListSource"
 
-const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
-  id: `account-${siteType}`,
-  name: "Example Account",
-  username: "example-user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  health: { status: SiteHealthStatus.Healthy },
-  siteType,
-  baseUrl: "https://account.example.invalid",
-  token: "example-token",
-  userId: "example-user-id",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: buildCheckInConfig(),
-})
-
-function row(
-  id: string,
-  ratios: Record<string, number>,
-  usableGroups = ["a", "b"],
-): ModelListItem {
-  const account = { ...createAccountFixture(SITE_TYPES.NEW_API), id }
-  const prepared = prepareModelListSource({
-    source: createAccountSource(account),
-    pricing: {
-      success: true,
-      data: [
-        {
-          model_name: "model",
-          model_ratio: 1,
-          model_price: 0,
-          completion_ratio: 1,
-          quota_type: 0,
-          enable_groups: ["a", "b"],
-          supported_endpoint_types: [],
-        },
-      ],
-      usable_group: Object.fromEntries(usableGroups.map((g) => [g, true])),
-      group_ratio: ratios,
-    },
-  })
-  return {
-    ...prepared.items[0],
-    comparableModelIdentity: { key: "exact:model", displayName: "model" },
-    resolvedVendor: { state: "unknown" },
-  }
-}
 function item(accountId: string, name: string, vendor: string): ModelListItem {
-  const result = row(accountId, { a: 1 })
+  const result = buildModelListItemFixture(accountId, { a: 1 })
   return {
     ...result,
     model: { ...result.model, model_name: name },
@@ -105,6 +51,86 @@ function pipeline(
   })
 }
 describe("model list filtering scopes", () => {
+  it("hides denied account offers by default and restores them in visibility previews", () => {
+    const denied = buildModelListItemFixture("a", { vip: 1 }, ["vip"])
+    const allowed = buildModelListItemFixture("b", { a: 1 }, ["a"])
+    const result = pipeline([denied, allowed], { accountFilterAccountIds: [] })
+    const view = result.forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+    expect(view.getFilteredModels()).toEqual([allowed])
+    expect(view.getFilteredResultCount()).toBe(1)
+    expect(view.getFilteredModels({ showUnavailableModels: true })).toEqual([
+      denied,
+      allowed,
+    ])
+    expect(view.getFilteredResultCount({ showUnavailableModels: true })).toBe(2)
+    expect(
+      pipeline([denied, allowed], { accountFilterAccountIds: ["a"] })
+        .forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+        .getFilteredModels(),
+    ).toEqual([])
+  })
+
+  it("preserves unknown, non-group, missing-support and usable-but-unpriced rows", () => {
+    const unknown = buildModelListItemFixture("a", {})
+    unknown.groupContext = {
+      ...unknown.groupContext,
+      accessState: "unknown",
+      usableGroups: [],
+    }
+    const nonGroup = buildModelListItemFixture("a", {})
+    nonGroup.groupContext = {
+      ...nonGroup.groupContext,
+      accessState: "not-applicable",
+      usableGroups: [],
+    }
+    const missingSupport = buildModelListItemFixture("a", {}, [])
+    missingSupport.groupContext.supportedGroups = []
+    const unpriced = buildModelListItemFixture("a", {}, ["a"])
+    const items = [unknown, nonGroup, missingSupport, unpriced]
+    expect(
+      pipeline(items)
+        .forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+        .getFilteredModels(),
+    ).toEqual(items)
+  })
+
+  it("reveals denied rows explicitly without widening selected usable groups", () => {
+    const denied = buildModelListItemFixture("a", { vip: 1 }, ["vip"])
+    const usable = buildModelListItemFixture("a", { b: 1 }, ["b"])
+    const result = pipeline([denied, usable]).forVendor(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(
+      result.getFilteredResultCount({
+        showUnavailableModels: true,
+        selectedGroups: ["a"],
+      }),
+    ).toBe(1)
+    expect(
+      result.getFilteredResultCount({
+        showUnavailableModels: true,
+        selectedGroups: [],
+      }),
+    ).toBe(2)
+  })
+
+  it("honors an explicitly empty group selection while retaining unknown rows", () => {
+    const usable = buildModelListItemFixture("a", {}, ["a"])
+    // Missing pricing does not exempt a known usable row from group selection.
+    usable.source.capabilities.supportsPricing = false
+    const unknown = buildModelListItemFixture("a", {}, [])
+    unknown.groupContext.accessState = "unknown"
+    const denied = buildModelListItemFixture("a", { vip: 1 }, ["vip"])
+    const view = pipeline([usable, unknown, denied], {
+      getGroupCandidates: () => [],
+    }).forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+    expect(view.getFilteredModels()).toEqual([unknown])
+    expect(view.getFilteredModels({ showUnavailableModels: true })).toEqual([
+      unknown,
+      denied,
+    ])
+  })
+
   it("keeps account summaries independent of account selection and the selected vendor", () => {
     const result = pipeline([
       item("a", "first", "one"),
@@ -171,6 +197,12 @@ describe("model list filtering scopes", () => {
   it("keeps catalog-only rows visible under billing and group filters", () => {
     const catalog = item("a", "catalog", "one")
     catalog.source.capabilities.supportsPricing = false
+    catalog.groupContext = {
+      ...catalog.groupContext,
+      accessState: "unknown",
+      usableGroups: [],
+      priceableGroups: [],
+    }
     const result = pipeline([catalog], {
       filters: {
         searchTerm: "",

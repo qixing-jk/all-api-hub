@@ -2,9 +2,9 @@ import { BarChart3 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -96,6 +96,7 @@ export default function ProductAnalyticsSettings() {
 
   return (
     <SettingSection
+      resetNotApplicable="external-consent"
       id={SETTINGS_ANCHORS.PRODUCT_ANALYTICS}
       title={t("productAnalytics.title")}
       description={t("productAnalytics.description")}

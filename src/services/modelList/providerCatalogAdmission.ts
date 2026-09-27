@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_FAILURE_CATEGORIES,
   MODEL_CATALOG_SCOPES,
@@ -11,7 +12,6 @@ import {
   type ModelListSourceActionPolicy,
   type ModelListSourceInfo,
   type ModelPriceMetadata,
-  type PricingResponse,
   type ProductCanonicalModel,
 } from "~/services/modelList/pricingModel"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
@@ -47,7 +47,7 @@ export type ProviderModelCatalogModel = ProductCanonicalModel & {
 }
 
 export type ProviderModelCatalogPricingResponse = Omit<
-  PricingResponse,
+  ModelCatalogSnapshot,
   "data" | "success" | "model_list_source"
 > & {
   data: ProviderModelCatalogModel[]
@@ -322,16 +322,16 @@ const providerModelCatalogSourceSchema = z.strictObject({
 
 const providerModelCatalogPricingResponseSchema = z.strictObject({
   data: z.array(productCanonicalModelSchema),
-  group_ratio: z.record(z.string(), finiteNonnegativeNumberSchema),
+  groupRatios: z.record(z.string(), finiteNonnegativeNumberSchema),
   success: z.literal(true),
-  usable_group: z.record(z.string(), z.unknown()),
+  groupAccess: z.strictObject({ kind: z.literal("not-applicable") }),
   model_list_source: providerModelCatalogSourceSchema,
 })
 
 /**
  * Admits only the complete product-owned provider response contract.
  *
- * This boundary is intentionally stricter than the historical PricingResponse
+ * This boundary is intentionally stricter than the general ModelCatalogSnapshot
  * type: provider rows must carry explicit price metadata, valid presentation
  * facts when present, and every source action decision before cache or React
  * state can consume them.

@@ -1,7 +1,7 @@
 import type { Ref } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
+import { Heading3, SearchableSelect } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -15,18 +15,6 @@ interface AccountSelectorPanelProps {
   selectorOpen?: boolean
   onSelectorOpenChange?: (open: boolean) => void
   selectorTriggerRef?: Ref<HTMLButtonElement>
-  tokenLoadProgress?: {
-    total: number
-    loaded: number
-    loading: number
-    error: number
-  } | null
-  failedAccounts?: Array<{
-    accountId: string
-    accountName: string
-    errorMessage?: string
-  }>
-  onRetryFailedAccounts?: () => void
   aggregateCounts: KeyManagementAggregateCounts
 }
 
@@ -40,19 +28,9 @@ export function AccountSelectorPanel({
   selectorOpen,
   onSelectorOpenChange,
   selectorTriggerRef,
-  tokenLoadProgress,
-  failedAccounts = [],
-  onRetryFailedAccounts,
   aggregateCounts: counts,
 }: AccountSelectorPanelProps) {
   const { t } = useTranslation("keyManagement")
-
-  const isAllAccountsMode =
-    selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-  const failedCount = isAllAccountsMode ? failedAccounts.length : 0
-  const failedAccountNames = failedAccounts
-    .map((account) => account.accountName)
-    .join(", ")
 
   return (
     <div className="mb-density-6 space-y-density-4">
@@ -104,43 +82,7 @@ export function AccountSelectorPanel({
                 count: counts.showing ?? counts.knownShowing,
               })}
             </span>
-            {isAllAccountsMode && tokenLoadProgress?.loading ? (
-              <span>
-                {t("allAccountsProgress", {
-                  completed: tokenLoadProgress.loaded + tokenLoadProgress.error,
-                  total: tokenLoadProgress.total,
-                })}
-                {` · ${t("allAccountsLoading", {
-                  count: tokenLoadProgress.loading,
-                })}`}
-              </span>
-            ) : null}
           </div>
-
-          {failedCount > 0 ? (
-            <div className="gap-y-density-2 flex items-center gap-x-2">
-              <Badge
-                variant="warning"
-                size="sm"
-                title={
-                  failedAccountNames
-                    ? `${t("allAccountsFailed", { count: failedCount })}: ${failedAccountNames}`
-                    : t("allAccountsFailed", { count: failedCount })
-                }
-              >
-                {t("allAccountsFailed", { count: failedCount })}
-              </Badge>
-              <Button
-                size="sm"
-                variant="outline"
-                type="button"
-                onClick={onRetryFailedAccounts}
-                disabled={!onRetryFailedAccounts}
-              >
-                {t("actions.retryFailed")}
-              </Button>
-            </div>
-          ) : null}
         </div>
       )}
     </div>

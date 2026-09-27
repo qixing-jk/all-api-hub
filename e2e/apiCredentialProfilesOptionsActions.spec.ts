@@ -944,3 +944,50 @@ test("imports an API credential profile into Claude Code Router", async ({
     ),
   ).toBeVisible()
 })
+
+// The API type and test mode fields share one grid row, so their label rows and
+// controls must render at the same offsets.
+test("aligns the credential verification meta fields across the paired row", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await context.route("https://aligned-api.example.com/v1/models", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: [] }),
+    }),
+  )
+  const serviceWorker = await getServiceWorker(context)
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile({
+      id: "profile-aligned",
+      name: "Aligned Profile",
+      baseUrl: "https://aligned-api.example.com",
+    }),
+  ])
+
+  await openProfilesPage(page, extensionId)
+  await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton).click()
+  await expect(
+    page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+  ).toBeVisible()
+
+  const apiTypeLabel = page.getByText("API type", { exact: true })
+  const modeLabel = page.getByText("Test mode", { exact: true })
+  const apiTypeTrigger = page.locator(
+    '[data-slot="searchable-select-trigger"][aria-label="API type"]',
+  )
+  const modeTrigger = page.getByRole("combobox", { name: "Test mode" })
+
+  const apiTypeLabelBox = await apiTypeLabel.boundingBox()
+  const modeLabelBox = await modeLabel.boundingBox()
+  const apiTypeTriggerBox = await apiTypeTrigger.boundingBox()
+  const modeTriggerBox = await modeTrigger.boundingBox()
+
+  expect(modeLabelBox?.y).toBe(apiTypeLabelBox?.y)
+  expect(modeTriggerBox?.y).toBe(apiTypeTriggerBox?.y)
+  expect(modeTriggerBox?.width).toBe(apiTypeTriggerBox?.width)
+  expect(modeTriggerBox?.height).toBe(apiTypeTriggerBox?.height)
+})

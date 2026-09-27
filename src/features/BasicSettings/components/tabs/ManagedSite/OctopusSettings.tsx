@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -128,7 +130,16 @@ export default function OctopusSettings() {
       id="octopus"
       title={t("octopus.title")}
       description={t("octopus.description")}
-      onReset={resetOctopusConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.octopus,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.octopus,
+        reset: resetOctopusConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

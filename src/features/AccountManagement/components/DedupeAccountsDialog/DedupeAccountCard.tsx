@@ -9,8 +9,8 @@ import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection
 import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { getTodayMetricPresentation } from "~/utils/core/formatters"
+import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
-import { getHealthStatusDisplay } from "../../utils/healthStatusUtils"
 import type {
   DedupeAccountsDialogGroup,
   DedupeAccountsKeepChangeInput,
@@ -172,7 +172,7 @@ export function DedupeAccountCard({
             </Badge>
           )}
           {disabled && (
-            <Badge size="sm" variant="warning">
+            <Badge size="sm" variant="secondary">
               {t("account:list.site.disabled")}
             </Badge>
           )}
@@ -216,7 +216,7 @@ export function DedupeAccountCard({
         >
           <dl className="gap-y-density-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.accountId")}
               </dt>
               <dd className="text-secondary-foreground font-mono break-all">
@@ -225,7 +225,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.siteType")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -234,7 +234,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.authType")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -243,12 +243,12 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.health")}
               </dt>
               <dd className="text-secondary-foreground gap-y-density-2 flex items-center gap-x-2">
                 <span
-                  className={`h-2 w-2 rounded-full ${healthDisplay.color}`}
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${healthDisplay.color}`}
                   aria-hidden="true"
                 />
                 <span>{healthDisplay.text}</span>
@@ -256,7 +256,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.healthReason")}
               </dt>
               <dd className="text-secondary-foreground break-words">
@@ -265,7 +265,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.lastSync")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -274,7 +274,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.updatedAt")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -283,7 +283,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.createdAt")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -292,7 +292,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.userId")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -301,7 +301,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.quota")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -310,7 +310,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayConsumption")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -322,7 +322,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayRequests")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -334,7 +334,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayTokens")}
               </dt>
               <dd className="text-secondary-foreground break-all">
@@ -364,7 +364,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.checkinDetection")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -375,7 +375,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.autoCheckin")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -386,7 +386,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.customCheckinUrl")}
               </dt>
               <dd className="text-secondary-foreground font-mono break-all">
@@ -396,7 +396,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.notes")}
               </dt>
               <dd className="text-secondary-foreground break-words">
@@ -405,7 +405,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.excludeFromTotalBalance")}
               </dt>
               <dd className="text-secondary-foreground">

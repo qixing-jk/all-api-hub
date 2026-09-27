@@ -28,6 +28,12 @@
       "slate": "Slate",
       "violet": "Violet"
     },
+    "contentWidth": "Content width",
+    "contentWidthDescription": "Applies to the full management page only.",
+    "contentWidths": {
+      "centered": "Centered",
+      "full": "Full width"
+    },
     "densities": {
       "comfortable": "Comfortable",
       "compact": "Compact",
@@ -36,6 +42,13 @@
     "density": "Interface density",
     "densityDescription": "Adjust row spacing and control height without changing text size.",
     "description": "Changes are saved automatically and apply to options, popup and side panel.",
+    "font": "Font",
+    "fontDescription": "Choose the interface font. Follow theme uses sans serif for the default theme and serif for Anthropic.",
+    "fonts": {
+      "default": "Follow theme",
+      "sans": "Sans serif",
+      "serif": "Serif"
+    },
     "preset": "Theme preset",
     "presetColorsHint": "This theme includes its own palette. Choose Default theme to pick an accent color separately.",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Default theme"
     },
-    "preview": "Preview",
-    "primaryAction": "Primary action",
     "radii": {
       "default": "Default",
       "large": "Large",
@@ -57,8 +68,16 @@
     "radius": "Corner radius",
     "reset": "Reset appearance",
     "resetDensity": "Reset density",
+    "resetFont": "Reset font",
+    "resetTextSize": "Reset text size",
     "saveFailed": "Could not save. Please try again.",
-    "secondaryAction": "Secondary action",
+    "textSize": "Text size",
+    "textSizeDescription": "Adjust text size and line height. Controls grow to fit content without changing your density setting.",
+    "textSizes": {
+      "default": "Default",
+      "extraLarge": "Extra large",
+      "large": "Large"
+    },
     "title": "Appearance settings"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "Import & Export"
     }
   },
-  "description": "Manage the basic configuration options of the plugin",
+  "description": "Adjust appearance, account management, automated tasks and data backup settings.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Set the default currency unit for balance and cashflow display",
     "currencyUnit": "Currency Unit",
     "defaultTab": "Default Tab",
     "defaultTabDesc": "Set the default tab displayed when the plugin starts",
-    "description": "Customize the appearance and display preferences of the plugin",
+    "description": "Customize the interface language and display preferences of the plugin",
     "title": "Display Settings",
     "todayCashflow": "Today's Cashflow",
     "todayCashflowEnabled": "Show Today's Cashflow",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Already at defaults",
     "confirmReset": "Confirm Reset",
     "preferencesChangedExternally": "Preferences changed externally. Refresh and try again.",
+    "resetAllConfirmDesc": "Restore all preferences and clear configured connection addresses and credentials? Saved accounts are kept; history retention policies also return to defaults.",
     "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone.",
+    "resetConnectionConfirmDesc": "This clears the connection addresses, credentials, and related settings in this group. You will need to configure them again. Restore defaults?",
     "resetFailed": "Failed to reset {{name}}",
+    "resetHistoryConfirmDesc": "Restoring defaults shortens the history retention period. Older records may be removed permanently. Continue?",
     "resetSuccess": "{{name}} has been reset to default settings",
+    "retentionSaveHint": "Other options save automatically. Apply retention days explicitly; shortening retention may remove history.",
     "runtimeRequestFailed": "Runtime request failed. Try again later.",
     "saveSettingsFailed": "Failed to save settings",
     "updateFailed": "{{name}} Update failed",
@@ -614,7 +638,12 @@
       "enableDesc": "When disabled, scheduled background polling stops. Existing local records are kept, and the announcement page can still run a manual check.",
       "interval": "Polling interval",
       "intervalDesc": "Set the background site announcement polling interval in minutes, from 15 to 1440.",
-      "intervalInvalid": "Enter a whole number from {{min}} to {{max}} minutes."
+      "intervalInvalid": "Enter a whole number from {{min}} to {{max}} minutes.",
+      "maxAge": "Notification age limit",
+      "maxAgeDesc": "Announcements published earlier than this limit are saved to the list as already read and never notify.",
+      "maxAgeInvalid": "Enter a whole number from {{min}} to {{max}} days.",
+      "upstreamRead": "Mark announcements read on the site after notifying",
+      "upstreamReadDesc": "When enabled, a delivered notification also marks the fetched announcements read on the site. When disabled, the upstream read state only syncs after you mark an announcement read on the page; being notified is not the same as having read. Only applies to sites that support upstream read sync."
     },
     "title": "Site announcements"
   },
@@ -677,6 +706,7 @@
     "permissions": "Permissions",
     "refresh": "Data Refresh",
     "select": "Select a tab",
+    "siteAnnouncements": "Site announcements",
     "webAiApiCheck": "AI API Test"
   },
   "taskNotifications": {
@@ -815,16 +845,15 @@
   },
   "theme": {
     "appearance": "Appearance",
-    "clickSwitch": "Click to switch to {{nextMode}} mode",
     "current": "Current: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Current: Follow system ({{theme}})",
     "dark": "Dark",
     "followSystem": "Follow system",
     "followSystemTheme": "Follow system theme settings",
     "light": "Light",
-    "selectTheme": "Select an appearance theme",
+    "mode": "Theme mode",
+    "selectTheme": "Choose light, dark, or follow system",
     "switchTo": "Switch to {{theme}} theme: {{description}}",
-    "toggle": "Theme toggle, current {{currentMode}} mode, click to switch to {{nextMode}} mode",
     "useDarkTheme": "Use dark theme",
     "useLightTheme": "Use light theme"
   },

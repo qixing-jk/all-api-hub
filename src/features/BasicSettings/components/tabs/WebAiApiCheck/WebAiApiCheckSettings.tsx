@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -12,6 +11,7 @@ import {
   Textarea,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
@@ -19,6 +19,7 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
 import { isSafeRegexPattern } from "~/utils/core/regex"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
 
@@ -227,10 +228,32 @@ export default function WebAiApiCheckSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation
+      resetDisabled={
+        matchesDefaultSettings(config, DEFAULT_PREFERENCES.webAiApiCheck) &&
+        !(patternsDirty || keyCleanupPatternsDirty)
+      }
       id="web-ai-api-check"
       title={t("webAiApiCheck:settings.title")}
       description={t("webAiApiCheck:settings.description")}
-      onReset={resetWebAiApiCheckConfig}
+      onReset={async () => {
+        const result = await resetWebAiApiCheckConfig()
+        if (result.ok) {
+          acceptPatternsDraft(
+            (
+              DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist
+                .patterns ?? []
+            ).join("\n"),
+          )
+          acceptKeyCleanupPatternsDraft(
+            (
+              DEFAULT_PREFERENCES.webAiApiCheck!.keyCleanup.removalPatterns ??
+              []
+            ).join("\n"),
+          )
+        }
+        return result
+      }}
     >
       <Card padding="none">
         <CardList>

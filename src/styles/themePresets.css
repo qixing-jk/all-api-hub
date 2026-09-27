@@ -14,6 +14,7 @@
   --theme-color-900: #603327;
   --theme-color-950: #341a13;
   --background: #faf9f5;
+  --workspace: var(--background);
   --foreground: #2f2e29;
   --card: #f0eee6;
   --popover: #fffdf7;
@@ -43,7 +44,7 @@
   --chart-3: #5686b4;
   --chart-4: #a7688a;
   --chart-5: #60877b;
-  --sidebar: #eeebe2;
+  --sidebar: var(--background);
   --sidebar-accent: #e1dbcf;
 }
 

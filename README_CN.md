@@ -195,18 +195,6 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 <hr>
 
 <div>
-  <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
-    <img src="resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud" width="128" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    Atlas Cloud 是全模态 AI 推理平台，开发者只需接入一个 AI API，即可统一访问视频生成、图像生成和 LLM
-    API，覆盖 300+ 精选模型。Atlas Cloud 新推出 Coding Plan 优惠，适合需要更高性价比 API 访问的开发者，欢迎通过<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">此链接</a>了解（<a href="https://all-api-hub.qixing1217.top/service-guides/atlascloud.html">使用教程</a>）。
-  </p>
-</div>
-
-<hr>
-
-<div>
   <a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
     <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="128" align="left" hspace="10" vspace="4">
   </a>

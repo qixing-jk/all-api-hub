@@ -25,6 +25,13 @@ export const OVERVIEW_ATTENTION_BADGE_VARIANTS = {
   info: "info",
 } as const satisfies Record<OptionsOverviewAttentionItem["severity"], string>
 
+export const OVERVIEW_SEVERITY_INDICATOR_CLASSES = {
+  error: "bg-destructive-indicator",
+  warning: "bg-warning-indicator",
+  info: "bg-info-indicator",
+  success: "bg-success-indicator",
+} as const satisfies Record<OptionsOverviewSeverity, string>
+
 export const OVERVIEW_CONFIGURATION_BADGE_VARIANTS = {
   [CONFIGURATION_STATUSES.configured]: "success",
   [CONFIGURATION_STATUSES.disabled]: "secondary",

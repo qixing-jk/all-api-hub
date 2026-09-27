@@ -195,18 +195,6 @@ GitHub Stable と Nightly は手動インストール用チャネルで、自動
 <hr>
 
 <div>
-  <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
-    <img src="resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud" width="128" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    Atlas Cloud はフルモーダル AI 推論プラットフォームで、1 つの AI API から動画生成、画像生成、LLM API にアクセスでき、300
-    以上の厳選モデルを横断して利用できます。より手頃な API 利用に向けた新しい Coding Plan プロモーションは、<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">こちらのリンク</a>をご覧ください（<a href="https://all-api-hub.qixing1217.top/ja/service-guides/atlascloud.html">設定ガイド</a>）。
-  </p>
-</div>
-
-<hr>
-
-<div>
   <a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
     <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="128" align="left" hspace="10" vspace="4">
   </a>

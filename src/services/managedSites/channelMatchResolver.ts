@@ -41,12 +41,18 @@ export type ManagedSiteChannelMatchContext = Pick<
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
+  /** Shared reads stay reusable for the life of the batch that owns this cache. */
   searchResultsByTargetKey: Map<
     string,
-    Promise<ManagedResourceMatchList | null>
+    SharedRead<ManagedResourceMatchList | null>
   >
-  channelSecretKeysByResourceKey: Map<string, Promise<string>>
+  channelSecretKeysByResourceKey: Map<string, SharedRead<string>>
   resolvedChannelKeysByResourceKey: Record<string, string>
+  /**
+   * Fresh scans set this so they never join a pending search that predates
+   * the batch; other contexts keep sharing equivalent in-flight searches.
+   */
+  bypassPendingSearches?: boolean
 }
 
 // Only pending searches cross operation boundaries: a later import must see
@@ -61,8 +67,8 @@ function getPendingSearch(
   managedSite: ManagedSiteChannelMatchContext,
   managedConfig: ManagedSiteRuntimeConfigValue,
   searchBaseUrl: string,
-  options: ScheduledReadOptions,
-): Promise<ManagedResourceMatchList | null> {
+  bypassJoin = false,
+): SharedRead<ManagedResourceMatchList | null> {
   let searches = pendingSearches.get(managedSite.matching)
   if (!searches) {
     searches = new Map()
@@ -75,8 +81,8 @@ function getPendingSearch(
     ),
     searchBaseUrl,
   ])
-  const existing = searches.get(key)
-  if (existing && !existing.signal.aborted) return existing.read(options)
+  const existing = bypassJoin ? undefined : searches.get(key)
+  if (existing && !existing.signal.aborted) return existing
   const read = new SharedRead<ManagedResourceMatchList | null>(
     async (sharedOptions) => {
       try {
@@ -91,15 +97,17 @@ function getPendingSearch(
     },
   )
   searches.set(key, read)
-  return read.read(options)
+  return read
 }
 
-export const createManagedSiteChannelMatchRequestCache =
-  (): ManagedSiteChannelMatchRequestCache => ({
-    searchResultsByTargetKey: new Map(),
-    channelSecretKeysByResourceKey: new Map(),
-    resolvedChannelKeysByResourceKey: {},
-  })
+export const createManagedSiteChannelMatchRequestCache = (
+  options: { bypassPendingSearches?: boolean } = {},
+): ManagedSiteChannelMatchRequestCache => ({
+  searchResultsByTargetKey: new Map(),
+  channelSecretKeysByResourceKey: new Map(),
+  resolvedChannelKeysByResourceKey: {},
+  ...(options.bypassPendingSearches ? { bypassPendingSearches: true } : {}),
+})
 
 interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
   managedSite: ManagedSiteChannelMatchContext
@@ -162,38 +170,43 @@ const fetchRecoverableCandidateSecretKey = async (
     config: params.managedConfig,
   })
   const resourceKey = getManagedResourceRefKey(params.resourceRef)
+  let secretRead =
+    params.requestCache?.channelSecretKeysByResourceKey.get(resourceKey)
   try {
-    const cachedSecretKeyPromise =
-      params.requestCache?.channelSecretKeysByResourceKey.get(resourceKey)
-
-    if (cachedSecretKeyPromise) {
-      return await cachedSecretKeyPromise
+    // Every consumer of a cached read joins it independently, so one key's
+    // abort neither cancels the secret fetch nor fails the keys still waiting
+    // on it.
+    if (!secretRead || secretRead.signal.aborted) {
+      secretRead = new SharedRead<string>(async (sharedOptions) =>
+        params.managedSite.matching.fetchSecretKey!(
+          params.managedConfig,
+          params.resourceRef,
+          {
+            protectionBypassExecution: params.protectionBypassExecution,
+            signal: sharedOptions.signal,
+            requestScheduling: sharedOptions.requestScheduling,
+          },
+        ),
+      )
+      params.requestCache?.channelSecretKeysByResourceKey.set(
+        resourceKey,
+        secretRead,
+      )
     }
 
-    const secretKeyPromise = params.managedSite.matching.fetchSecretKey!(
-      params.managedConfig,
-      params.resourceRef,
-      {
-        protectionBypassExecution: params.protectionBypassExecution,
-        signal: params.signal,
-        requestScheduling: params.requestScheduling,
-      },
-    )
-    params.requestCache?.channelSecretKeysByResourceKey.set(
-      resourceKey,
-      secretKeyPromise,
-    )
-    secretKeyPromise.catch(() => {
-      if (
-        params.requestCache?.channelSecretKeysByResourceKey.get(resourceKey) ===
-        secretKeyPromise
-      ) {
-        params.requestCache.channelSecretKeysByResourceKey.delete(resourceKey)
-      }
+    return await secretRead.read({
+      signal: params.signal,
+      requestScheduling: params.requestScheduling,
     })
-
-    return await secretKeyPromise
   } catch (error) {
+    // A caller's own abort leaves the shared read to its other consumers, but
+    // a failed read is not reusable: a later lookup retries it.
+    const requestCache = params.requestCache
+    const cachedRead =
+      requestCache?.channelSecretKeysByResourceKey.get(resourceKey)
+    if (!params.signal?.aborted && requestCache && cachedRead === secretRead) {
+      requestCache.channelSecretKeysByResourceKey.delete(resourceKey)
+    }
     if (error instanceof MatchResolutionUnresolvedError) {
       throw error
     }
@@ -238,31 +251,35 @@ export async function resolveManagedSiteChannelMatch(
     searchBaseUrl,
   ])
 
-  let searchResultsPromise =
-    requestCache?.searchResultsByTargetKey.get(searchCacheKey)
+  // Every consumer of a cached read joins it independently, so one caller's
+  // abort neither cancels the search nor fails the callers still waiting on it.
+  let searchRead = requestCache?.searchResultsByTargetKey.get(searchCacheKey)
 
-  if (!searchResultsPromise) {
-    const cache = requestCache
-    searchResultsPromise = getPendingSearch(
+  if (!searchRead || searchRead.signal.aborted) {
+    searchRead = getPendingSearch(
       managedSite,
       managedConfig,
       searchBaseUrl,
-      params,
+      requestCache?.bypassPendingSearches === true,
     )
-    cache?.searchResultsByTargetKey.set(searchCacheKey, searchResultsPromise)
-    searchResultsPromise.catch(() => {
-      if (
-        cache &&
-        cache.searchResultsByTargetKey.get(searchCacheKey) ===
-          searchResultsPromise
-      ) {
-        cache.searchResultsByTargetKey.delete(searchCacheKey)
-      }
-    })
+    requestCache?.searchResultsByTargetKey.set(searchCacheKey, searchRead)
   }
 
   params.signal?.throwIfAborted()
-  const searchResults = await searchResultsPromise
+  let searchResults: ManagedResourceMatchList | null
+  try {
+    searchResults = await searchRead.read(params)
+  } catch (error) {
+    // A caller's own abort leaves the shared read to its other consumers, but a
+    // failed search is not reusable: a later lookup in this batch retries it.
+    if (
+      !params.signal?.aborted &&
+      requestCache?.searchResultsByTargetKey.get(searchCacheKey) === searchRead
+    ) {
+      requestCache.searchResultsByTargetKey.delete(searchCacheKey)
+    }
+    throw error
+  }
   params.signal?.throwIfAborted()
 
   if (!searchResults) {

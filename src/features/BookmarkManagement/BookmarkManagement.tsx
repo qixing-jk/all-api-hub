@@ -69,7 +69,9 @@ function BookmarkManagementContent({
               size="sm"
               onClick={() => openAddBookmark()}
               data-testid={SITE_BOOKMARKS_TEST_IDS.addButton}
-              analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark}
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog
+              }
             >
               {t("bookmark:actions.add")}
             </Button>

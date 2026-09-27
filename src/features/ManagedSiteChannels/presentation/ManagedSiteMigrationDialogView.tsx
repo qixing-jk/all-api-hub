@@ -2,6 +2,7 @@ import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
 
 import Tooltip from "~/components/Tooltip"
 import {
+  ActionGroup,
   Badge,
   Button,
   CollapsibleSection,
@@ -66,7 +67,7 @@ function PreviewComparisonRow({
 }) {
   return (
     <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="bg-muted/50 py-density-2 px-3 text-[11px] font-medium uppercase">
+      <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
         {label}
       </div>
       <div className="bg-background py-density-2 px-3 text-sm break-words">
@@ -113,7 +114,7 @@ export function ManagedSiteMigrationDialogView({
       <div className="text-muted-foreground text-sm">
         {labels.footerSummary}
       </div>
-      <div className="gap-y-density-2 flex w-full justify-end gap-x-2 sm:w-auto">
+      <ActionGroup className="w-full sm:w-auto">
         {requiresRefresh ? (
           <Button
             type="button"
@@ -132,14 +133,14 @@ export function ManagedSiteMigrationDialogView({
         >
           {labels.close}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   ) : (
     <div className="gap-y-density-3 flex flex-col items-stretch gap-x-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-muted-foreground text-sm">
         {labels.footerSummary}
       </div>
-      <div className="gap-y-density-2 flex w-full justify-end gap-x-2 sm:w-auto">
+      <ActionGroup className="w-full sm:w-auto">
         <Button
           type="button"
           variant="outline"
@@ -157,7 +158,7 @@ export function ManagedSiteMigrationDialogView({
         >
           {isRunning ? labels.running : labels.start}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 
@@ -378,7 +379,7 @@ export function ManagedSiteMigrationDialogView({
                           className="overflow-hidden rounded-md border"
                         >
                           <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-                            <div className="bg-muted/50 py-density-2 px-3 text-[11px] font-medium uppercase">
+                            <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
                               {labels.fieldLabel}
                             </div>
                             <div className="bg-muted/50 py-density-2 px-3 text-xs font-medium">

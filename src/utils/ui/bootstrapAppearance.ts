@@ -12,7 +12,7 @@ import {
   readCachedThemePreferences,
 } from "~/utils/ui/themePreferences"
 
-/** Restore popup colors independently of the application and locale bundles. */
+/** Restore document appearance independently of the application and locale bundles. */
 export async function bootstrapAppearance() {
   const root = document.documentElement
   const systemDark = () => window.matchMedia(SYSTEM_DARK_MODE_QUERY).matches

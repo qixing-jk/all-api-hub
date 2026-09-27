@@ -6,12 +6,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanceHistory/constants"
-import { getDayKeyFromUnixSeconds as getBalanceHistoryDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import {
   USAGE_HISTORY_ALARM_NAME,
   USAGE_HISTORY_STORAGE_KEYS,
 } from "~/services/history/usageHistory/constants"
-import { getDayKeyFromUnixSeconds as getUsageHistoryDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
@@ -31,6 +29,7 @@ import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -839,7 +838,7 @@ test("runs usage-history sync when its MV3 alarm fires", async ({
   const baseUrl = "https://usage-alarm.example.com"
   const nowSeconds = Math.floor(Date.now() / 1000)
   const logCreatedAt = nowSeconds - 60
-  const usageDayKey = getUsageHistoryDayKeyFromUnixSeconds(logCreatedAt)
+  const usageDayKey = getDayKeyFromUnixSeconds(logCreatedAt)
   let usageLogRequests = 0
 
   await context.route(`${baseUrl}/**`, async (route) => {
@@ -975,9 +974,7 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
   const serviceWorker = await getServiceWorker(context)
   const accountId = "balance-alarm-account"
   const baseUrl = "https://balance-alarm.example.com"
-  const balanceDayKey = getBalanceHistoryDayKeyFromUnixSeconds(
-    Math.floor(Date.now() / 1000),
-  )
+  const balanceDayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
 
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({

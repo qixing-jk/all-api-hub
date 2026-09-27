@@ -80,6 +80,22 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 })
 
 describe("AccountDialog warnings", () => {
+  it.each([
+    [AutoDetectErrorType.NETWORK_ERROR, "bg-destructive-soft"],
+    [AutoDetectErrorType.TIMEOUT, "bg-destructive-soft"],
+    [AutoDetectErrorType.UNAUTHORIZED, "bg-warning-soft"],
+    [AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED, "bg-warning-soft"],
+  ])(
+    "distinguishes detection failure from an unmet prerequisite: %s",
+    (type, surface) => {
+      render(
+        <AutoDetectErrorAlert
+          error={{ type, message: "Detection feedback" }}
+        />,
+      )
+      expect(screen.getByRole("alert")).toHaveClass(surface)
+    },
+  )
   beforeEach(() => {
     openLoginTabMock.mockReset()
     reloadCurrentTabMock.mockReset()

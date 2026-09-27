@@ -14,6 +14,10 @@ import {
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
 import {
+  registerInternalTab,
+  unregisterInternalTab,
+} from "~/services/browsingContext/internalTabsBackground"
+import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
   normalizeTempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -21,19 +25,13 @@ import {
   userPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/userPreferences"
-import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_STATUS_KINDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsResult,
-  type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/contracts"
 import {
   recordShieldBypassFocusObservation,
@@ -192,12 +190,6 @@ async function removeInstalledDownloadBlockRules(
 const SHIELD_BYPASS_UI_RETRY_MS = 250
 /** Max retry attempts for showing the shield-bypass UI in the temp tab. */
 const SHIELD_BYPASS_UI_MAX_RETRIES = 20
-
-const backgroundShieldBypassAnalyticsScope = {
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-} as const
 
 /**
  * Best-effort: Ask the content script in the temporary tab/window to show a
@@ -735,6 +727,7 @@ export async function executeAuthorizedTempContextTask(
   await runTempPageHandler(url, { incognito }, async () => {
     switch (task.kind) {
       case TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch:
+      case TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch:
       case TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch:
         await executeTempWindowFetch(
           task.params,
@@ -1017,17 +1010,6 @@ function getTempWindowAnalyticsResult(
 }
 
 /**
- * Converts analytics completion result into a coarse health-style status.
- */
-function getTempWindowAnalyticsStatusKind(
-  result: ProductAnalyticsResult,
-): ProductAnalyticsStatusKind {
-  return result === PRODUCT_ANALYTICS_RESULTS.Success
-    ? PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
-    : PRODUCT_ANALYTICS_STATUS_KINDS.Error
-}
-
-/**
  * Maps structured temp-window failures to privacy-safe analytics categories.
  */
 function getTempWindowErrorCategory(input: {
@@ -1095,6 +1077,10 @@ function getTempWindowErrorCategory(input: {
 
 /**
  * Emits temp-window completion analytics without request URLs or response bodies.
+ *
+ * Outcomes are counted into the daily shield-bypass summary rather than emitted
+ * per request: this path is the highest-volume action in the product, and the
+ * summary already tracks the same counters per user per day.
  */
 function trackTempWindowFetchCompleted(input: {
   actionId: ProductAnalyticsActionId
@@ -1106,26 +1092,21 @@ function trackTempWindowFetchCompleted(input: {
       input.result === PRODUCT_ANALYTICS_RESULTS.Success
         ? PRODUCT_ANALYTICS_RESULTS.Success
         : PRODUCT_ANALYTICS_RESULTS.Failure,
+      input.errorCategory,
     )
-  } else if (
+    return
+  }
+
+  if (
     input.actionId === PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch
   ) {
     void recordShieldBypassTempWindowTurnstileFetchResult(
       input.result === PRODUCT_ANALYTICS_RESULTS.Success
         ? PRODUCT_ANALYTICS_RESULTS.Success
         : PRODUCT_ANALYTICS_RESULTS.Failure,
+      input.errorCategory,
     )
   }
-
-  void trackProductAnalyticsActionCompleted({
-    ...backgroundShieldBypassAnalyticsScope,
-    actionId: input.actionId,
-    result: input.result,
-    ...(input.errorCategory ? { errorCategory: input.errorCategory } : {}),
-    insights: {
-      statusKind: getTempWindowAnalyticsStatusKind(input.result),
-    },
-  })
 }
 
 const tempRequestContextMap = new Map<string, TempContext>()
@@ -1373,6 +1354,7 @@ function handleTempWindowRemoved(windowId: number) {
  * Handles browser tab removal and destroys the matching tracked context.
  */
 function handleTempTabRemoved(tabId: number) {
+  void unregisterInternalTab(tabId)
   logTempWindow("tabRemoved", {
     tabId,
   })
@@ -1498,6 +1480,7 @@ async function executeAutoDetectSite(
 async function executeTempWindowFetch(
   request: TaskParams<
     | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+    | typeof TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
     | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
     | typeof TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
   >,
@@ -3098,6 +3081,9 @@ async function createTempContextInstance(
         "No temp-window download block rule could be installed before navigation",
         { requestId, origin, tabId: opened.tabId },
       )
+    }
+    if (!(await registerInternalTab(opened.tabId))) {
+      throw new Error("Unable to persist internal tab ownership")
     }
     await updateTab(opened.tabId, { url })
 

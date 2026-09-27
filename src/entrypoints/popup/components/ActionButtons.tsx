@@ -67,7 +67,7 @@ export default function ActionButtons({
     return typeof customUrl === "string" && customUrl.trim() !== ""
   })
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
-  // Highlight red when any external check-in is still pending today.
+  // Use a neutral indicator while any external check-in is still pending today.
   const hasUncheckedExternalCheckIns = externalCheckInAccounts.some(
     (account) => !account.checkIn?.customCheckIn?.isCheckedInToday,
   )
@@ -185,12 +185,12 @@ export default function ActionButtons({
                   className="touch-manipulation"
                   aria-label={t("navigation.externalCheckinAll")}
                 >
-                  {/* Match per-account indicator colors: red when not checked in today, green when done. */}
+                  {/* Match per-account indicators: neutral while pending, success when done. */}
                   <CircleDollarSign
                     className={`h-4 w-4 ${
                       hasUncheckedExternalCheckIns
-                        ? "text-destructive-text"
-                        : "text-success-text"
+                        ? "text-neutral-indicator"
+                        : "text-success-indicator"
                     }`}
                   />
                 </IconButton>

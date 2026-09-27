@@ -89,6 +89,14 @@ describe("autoCheckin translation helpers", () => {
       "autoCheckin:skipReasons.source_unavailable",
     ],
     [AUTO_CHECKIN_SKIP_REASON.TIMEOUT, "autoCheckin:skipReasons.timeout"],
+    [
+      AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+      "autoCheckin:skipReasons.manual_verification_required",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.EXECUTION_CONTEXT_INVALID,
+      "autoCheckin:skipReasons.execution_context_invalid",
+    ],
   ])(
     "maps skip reason %s to the correct translation key",
     (reason, expected) => {

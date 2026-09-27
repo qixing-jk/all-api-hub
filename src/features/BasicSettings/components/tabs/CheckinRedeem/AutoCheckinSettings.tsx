@@ -2,8 +2,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   Card,
   CardItem,
@@ -14,6 +13,7 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
@@ -31,6 +31,7 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { pushWithinOptionsPage } from "~/utils/navigation"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { AUTO_CHECKIN_TARGET_IDS } from "./searchTargets"
 
@@ -101,7 +102,7 @@ export default function AutoCheckinSettings() {
   const handleNavigateToExecution = () => {
     void trackProductAnalyticsActionStarted({
       ...AUTO_CHECKIN_SETTINGS_ANALYTICS_CONTEXT,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinSettingsPage,
     })
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`)
   }
@@ -261,12 +262,38 @@ export default function AutoCheckinSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        matchesDefaultSettings(preferences, DEFAULT_PREFERENCES.autoCheckin) &&
+        ![
+          windowStartField,
+          windowEndField,
+          deterministicTimeField,
+          retryIntervalField,
+          retryMaxAttemptsField,
+        ].some((field) => field.isDirty)
+      }
       id={AUTO_CHECKIN_TARGET_IDS.section}
       title={t("autoCheckin:settings.title")}
       titleActions={<AutoCheckinRiskHint />}
       description={t("autoCheckin:settings.enableDesc")}
       onReset={async () => {
-        return resetAutoCheckinConfig()
+        const result = await resetAutoCheckinConfig()
+        if (result.ok) {
+          const defaults = DEFAULT_PREFERENCES.autoCheckin!
+          windowStartField.setDraft(defaults.windowStart)
+          windowEndField.setDraft(defaults.windowEnd)
+          deterministicTimeField.setDraft(
+            defaults.deterministicTime ?? defaults.windowStart,
+          )
+          retryIntervalField.setDraft(
+            String(defaults.retryStrategy.intervalMinutes),
+          )
+          retryMaxAttemptsField.setDraft(
+            String(defaults.retryStrategy.maxAttemptsPerDay),
+          )
+        }
+        return result
       }}
     >
       <Card padding="none">
@@ -366,7 +393,7 @@ export default function AutoCheckinSettings() {
             title={t("autoCheckin:settings.scheduleModeTitle")}
             description={t("autoCheckin:settings.scheduleModeDesc")}
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("autoCheckin:settings.scheduleModeTitle")}
                 value={preferences.scheduleMode}
                 onValueChange={(scheduleMode) => {

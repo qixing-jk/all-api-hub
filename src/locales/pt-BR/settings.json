@@ -28,6 +28,12 @@
       "slate": "Cinza ardósia",
       "violet": "Violeta"
     },
+    "contentWidth": "Largura do conteúdo",
+    "contentWidthDescription": "Aplica-se apenas à página completa de gerenciamento.",
+    "contentWidths": {
+      "centered": "Centralizado",
+      "full": "Largura total"
+    },
     "densities": {
       "comfortable": "Confortável",
       "compact": "Compacta",
@@ -36,6 +42,13 @@
     "density": "Densidade da interface",
     "densityDescription": "Ajuste o espaçamento entre linhas e a altura dos controles sem alterar o tamanho do texto.",
     "description": "As alterações são salvas automaticamente e aplicadas às configurações, ao popup e ao painel lateral.",
+    "font": "Fonte",
+    "fontDescription": "Escolha a fonte da interface. Ao seguir o tema, o padrão usa uma fonte sem serifa e o Anthropic usa uma com serifa.",
+    "fonts": {
+      "default": "Seguir o tema",
+      "sans": "Sem serifa",
+      "serif": "Com serifa"
+    },
     "preset": "Tema predefinido",
     "presetColorsHint": "Este tema inclui sua própria paleta. Escolha o tema padrão para selecionar a cor de destaque separadamente.",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Tema padrão"
     },
-    "preview": "Prévia",
-    "primaryAction": "Ação principal",
     "radii": {
       "default": "Padrão",
       "large": "Grande",
@@ -57,8 +68,16 @@
     "radius": "Arredondamento dos cantos",
     "reset": "Redefinir aparência",
     "resetDensity": "Redefinir densidade",
+    "resetFont": "Redefinir fonte",
+    "resetTextSize": "Redefinir tamanho do texto",
     "saveFailed": "Não foi possível salvar. Tente novamente.",
-    "secondaryAction": "Ação secundária",
+    "textSize": "Tamanho do texto",
+    "textSizeDescription": "Ajuste o tamanho do texto e a altura das linhas. Os controles se adaptam ao conteúdo sem alterar a densidade escolhida.",
+    "textSizes": {
+      "default": "Padrão",
+      "extraLarge": "Muito grande",
+      "large": "Grande"
+    },
     "title": "Configurações de aparência"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "Importação e Exportação"
     }
   },
-  "description": "Gerencie as configurações básicas da extensão",
+  "description": "Ajuste a aparência, a gestão de contas, as tarefas automáticas e o backup de dados.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Definir a unidade monetária padrão para exibição de saldo e fluxo de caixa",
     "currencyUnit": "Unidade monetária",
     "defaultTab": "Guia Padrão",
     "defaultTabDesc": "Definir a guia padrão exibida quando a extensão é iniciada",
-    "description": "Personalize a aparência e as preferências de exibição da extensão",
+    "description": "Personalize o idioma da interface e as preferências de exibição da extensão",
     "title": "Configurações de exibição",
     "todayCashflow": "Fluxo de caixa de hoje",
     "todayCashflowEnabled": "Mostrar o fluxo de caixa de hoje",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Já usa os valores padrão",
     "confirmReset": "Confirmar redefinição",
     "preferencesChangedExternally": "Preferências alteradas externamente. Atualize e tente novamente.",
+    "resetAllConfirmDesc": "Restaurar todas as preferências e apagar endereços e credenciais configurados? As contas salvas são mantidas; as políticas de retenção também voltam aos padrões.",
     "resetConfirmDesc": "Tem certeza de que deseja redefinir {{name}} para as configurações padrão? Esta operação não pode ser desfeita.",
+    "resetConnectionConfirmDesc": "Isso apaga os endereços de conexão, credenciais e configurações relacionadas deste grupo. Será necessário configurá-los novamente. Restaurar padrões?",
     "resetFailed": "Falha ao redefinir {{name}}",
+    "resetHistoryConfirmDesc": "Restaurar os padrões reduz o período de retenção. Registros antigos podem ser removidos permanentemente. Continuar?",
     "resetSuccess": "{{name}} foi redefinido para as configurações padrão",
+    "retentionSaveHint": "As outras opções são salvas automaticamente. Aplique os dias de retenção explicitamente; reduzi-los pode remover o histórico.",
     "runtimeRequestFailed": "Falha na solicitação de tempo de execução. Tente novamente mais tarde.",
     "saveSettingsFailed": "Falha ao salvar as configurações",
     "updateFailed": "Falha na atualização do {{name}}",
@@ -615,7 +639,12 @@
       "enableDesc": "Quando desativado, a pesquisa em segundo plano programada é interrompida. Os registros locais existentes são mantidos e a página de anúncio ainda pode executar uma verificação manual.",
       "interval": "Intervalo de pesquisa",
       "intervalDesc": "Defina o intervalo de pesquisa do anúncio do site em segundo plano em minutos, de 15 a 1440.",
-      "intervalInvalid": "Insira um número inteiro de minutos entre {{min}} e {{max}}."
+      "intervalInvalid": "Insira um número inteiro de minutos entre {{min}} e {{max}}.",
+      "maxAge": "Janela de notificação",
+      "maxAgeDesc": "Anúncios publicados antes desse limite são salvos como lidos e não geram notificação.",
+      "maxAgeInvalid": "Insira um número inteiro de dias entre {{min}} e {{max}}.",
+      "upstreamRead": "Marcar como lidos no site após notificar",
+      "upstreamReadDesc": "Quando ativado, uma notificação entregue também marca como lidos os anúncios obtidos no site. Quando desativado, o estado de leitura só é sincronizado depois que você marca um anúncio como lido na página; ser notificado não é o mesmo que ter lido. Aplica-se apenas a sites que suportam sincronização do estado de leitura."
     },
     "title": "Anúncios do site"
   },
@@ -678,6 +707,7 @@
     "permissions": "Permissões",
     "refresh": "Atualização de dados",
     "select": "Selecionar uma guia",
+    "siteAnnouncements": "Anúncios do site",
     "webAiApiCheck": "Teste da AI API"
   },
   "taskNotifications": {
@@ -816,16 +846,15 @@
   },
   "theme": {
     "appearance": "Aparência",
-    "clickSwitch": "Clique para mudar para o modo {{nextMode}}",
     "current": "Atual: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Atual: Seguir sistema ({{theme}})",
     "dark": "Escuro",
     "followSystem": "Seguir sistema",
     "followSystemTheme": "Seguir as configurações de tema do sistema",
     "light": "Claro",
-    "selectTheme": "Selecione um tema de aparência",
+    "mode": "Modo de aparência",
+    "selectTheme": "Escolha claro, escuro ou seguir o sistema",
     "switchTo": "Mudar para o tema {{theme}}: {{description}}",
-    "toggle": "Alternância de tema, modo {{currentMode}} atual, clique para alternar para o modo {{nextMode}}",
     "useDarkTheme": "Usar tema escuro",
     "useLightTheme": "Usar tema claro"
   },

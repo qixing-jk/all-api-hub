@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
+  ActionGroup,
   Button,
   DatePicker,
   FormField,
@@ -419,7 +420,7 @@ export function ApiCredentialProfileDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button
               variant="secondary"
               onClick={handleClose}
@@ -434,7 +435,7 @@ export function ApiCredentialProfileDialog({
             >
               {isSaving ? t("common:status.saving") : t("common:actions.save")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <div className="space-y-density-4">

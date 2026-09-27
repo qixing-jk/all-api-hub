@@ -11,6 +11,7 @@ type UseDeferredPreferenceDraftOptions<T> = {
   savedValue: T
   savedVersion: number
   onCommit: (draft: T) => Promise<DeferredPreferenceCommitResult<T>>
+  preserveDraftOnError?: boolean
   isEqual?: (left: T, right: T) => boolean
 }
 
@@ -23,6 +24,7 @@ export function useDeferredPreferenceDraft<T>({
   savedVersion,
   onCommit,
   isEqual,
+  preserveDraftOnError = false,
 }: UseDeferredPreferenceDraftOptions<T>) {
   const { draft, setDraft, acceptDraft, isDirty } = usePreferenceDraft({
     savedValue,
@@ -58,12 +60,12 @@ export function useDeferredPreferenceDraft<T>({
           : latestSavedValueRef.current
         if (result.ok) {
           acceptDraft(nextValue)
-        } else {
+        } else if (!preserveDraftOnError) {
           setDraft(nextValue)
         }
         return result.ok ? { ...result, value: nextValue } : result
       } catch {
-        setDraft(latestSavedValueRef.current)
+        if (!preserveDraftOnError) setDraft(latestSavedValueRef.current)
         return { ok: false }
       } finally {
         inFlightCommitRef.current = null

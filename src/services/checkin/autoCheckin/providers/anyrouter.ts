@@ -2,6 +2,7 @@ import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  createUpstreamFailureResult,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
@@ -104,14 +105,10 @@ const checkinAnyRouter = async (
       }
     }
 
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      rawMessage: rawResponseMessage || undefined,
-      messageKey: rawResponseMessage
-        ? undefined
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: response ?? undefined,
-    }
+    return createUpstreamFailureResult({
+      rawMessage: rawResponseMessage,
+      data: response,
+    })
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,

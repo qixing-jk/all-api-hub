@@ -11,7 +11,7 @@
     "description": "Dadurch wird „{{name}}“ dauerhaft gelöscht.",
     "title": "Lesezeichen löschen?"
   },
-  "description": "Speichern Sie Schnelllinks (Konsole/Dokumente/Administratorseiten), ohne vollständige Konten zu erstellen.",
+  "description": "Websites, Konsolen und Dokumentation als Lesezeichen speichern und mit Tags für schnellen Zugriff ordnen.",
   "dialog": {
     "currentPageLabel": "Aktuelle Seite",
     "currentPageUnavailable": "Aktuelle Seite nicht verfügbar",

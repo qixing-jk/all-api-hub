@@ -9,12 +9,13 @@ import {
   type ProductAnalyticsSponsorRecommendationsSummaryPatch,
   type ProductAnalyticsSponsorRecommendationsSummaryState,
 } from "~/services/productAnalytics/state"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 
 /**
  * Formats timestamps into the UTC day bucket used for daily summaries.
  */
 function getUtcDay(timestamp = Date.now()) {
-  return new Date(timestamp).toISOString().slice(0, 10)
+  return formatUtcDayKey(new Date(timestamp))
 }
 
 /**

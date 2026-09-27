@@ -25,12 +25,12 @@ describe("FeatureList", () => {
     const panel = heading.parentElement?.querySelector("div.rounded-lg")
     const items = screen.getAllByRole("listitem")
 
-    expect(heading.querySelector("div")).toHaveClass("bg-success")
+    expect(heading.querySelector("div")).toHaveClass("bg-success-indicator")
     expect(panel).toHaveClass("bg-success-soft", "border-success-border")
     expect(items).toHaveLength(2)
     items.forEach((item) => {
       expect(item).toHaveClass("text-success-soft-foreground")
-      expect(item.querySelector("div")).toHaveClass("bg-success")
+      expect(item.querySelector("div")).toHaveClass("bg-success-indicator")
     })
     expect(container).toHaveTextContent("Fast")
     expect(container).toHaveTextContent("Safe")

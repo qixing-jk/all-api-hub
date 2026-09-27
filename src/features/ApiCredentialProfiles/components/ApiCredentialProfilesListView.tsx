@@ -384,7 +384,7 @@ export function ApiCredentialProfilesListView({
           aria-label={t("apiCredentialProfiles:controls.apiTypePlaceholder")}
           className={cn(
             variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup &&
-              "h-(--density-control-sm) px-2 text-xs",
+              "min-h-(--density-control-sm) px-2 text-xs",
           )}
         />
       </div>

@@ -9,6 +9,7 @@ import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
   THEME_MODE,
+  THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -21,6 +22,99 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
+
+test("theme mode keeps supporting copy close and does not reserve an invisible reset slot", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await seedUserPreferences(await getServiceWorker(context), {
+    themeMode: THEME_MODE.SYSTEM,
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  const card = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
+  const group = card.getByRole("group")
+  await expect(group).toBeVisible()
+  const control = card.locator('[data-slot="card-item-control"]')
+  await expect
+    .configure({ soft: true })
+    .poll(async () => {
+      const groupBox = (await group.boundingBox())!
+      const controlBox = (await control.boundingBox())!
+      return controlBox.x + controlBox.width - groupBox.x - groupBox.width
+    })
+    .toBeLessThanOrEqual(1)
+  const description = card.getByText("Choose light, dark, or follow system", {
+    exact: true,
+  })
+  const currentTheme = card.getByText(/^Current:/)
+  await expect(async () => {
+    const descriptionBox = (await description.boundingBox())!
+    const currentBox = (await currentTheme.boundingBox())!
+    const gap = currentBox.y - descriptionBox.y - descriptionBox.height
+    expect(gap).toBeGreaterThanOrEqual(0)
+    expect(gap).toBeLessThanOrEqual(4)
+  }).toPass({ timeout: 10_000 })
+})
+
+for (const width of [1280, 390, 320]) {
+  test(`changing text size keeps the appearance drawer bottom aligned at ${width}px`, async ({
+    context,
+    page,
+    extensionId,
+  }) => {
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+    const appearanceButton = page.getByRole("button", {
+      name: "Appearance settings",
+    })
+    await expect(appearanceButton).toBeInViewport()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      )
+      .toBe(true)
+    await appearanceButton.click()
+    const drawer = page.getByRole("dialog", { name: "Appearance settings" })
+    for (const name of ["Extra large", "Large", "Default"]) {
+      const radio = drawer
+        .getByRole("group", { name: "Text size", exact: true })
+        .getByRole("radio", { name, exact: true })
+      await radio.evaluate((input) => input.scrollIntoView({ block: "start" }))
+      await radio.locator("..").click()
+      await expect(radio).toBeChecked()
+      await expect(drawer.locator('[aria-busy="true"]')).toHaveCount(0)
+      await expect(
+        drawer.getByRole("heading", { name: "Appearance settings" }),
+      ).toBeInViewport()
+      await expect
+        .poll(async () =>
+          drawer.evaluate((el) => {
+            const reset = Array.from(el.querySelectorAll("button")).find(
+              (button) => button.textContent?.includes("Reset appearance"),
+            )!
+            const scroller = reset.closest("[aria-busy]")!.parentElement!
+            scroller.scrollTop = scroller.scrollHeight
+            return Math.abs(
+              el.getBoundingClientRect().bottom -
+                reset.getBoundingClientRect().bottom,
+            )
+          }),
+        )
+        .toBeLessThan(48)
+    }
+  })
+}
 
 test("appearance applies across windows, survives reload, and resets", async ({
   context,
@@ -46,11 +140,17 @@ test("appearance applies across windows, survives reload, and resets", async ({
   await expect(
     page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`),
   ).toBeVisible()
-  const preview = page.getByText("Primary action", { exact: true })
-  const originalColor = await preview.evaluate(
-    (el) => getComputedStyle(el).backgroundColor,
+  // The removed appearance preview was the live sample of the accent and the
+  // corner scale. Sample a surviving accent-painted control and a settings card
+  // instead: the card's radius comes from the same `--radius-lg` token the
+  // reload and reset assertions below rely on.
+  const accentSample = page.locator(
+    `#${SETTINGS_ANCHORS.APPEARANCE_PRESET} label:has(input[value="${THEME_PRESET.DEFAULT}"]) span.bg-primary.text-primary-foreground`,
   )
-  const primary = page.getByRole("button", { name: "Reset appearance" })
+  const radiusSample = page
+    .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
+    .locator("xpath=ancestor::*[@data-slot='card'][1]")
+  const originalColor = await readVisualThemeRoleColor(page, "--primary")
   await page
     .locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`)
     .getByRole("radio", { name: "Violet" })
@@ -65,8 +165,8 @@ test("appearance applies across windows, survives reload, and resets", async ({
     .getByRole("radio", { name: "Square" })
     .locator("..")
     .click()
-  await expect(primary).toHaveCSS("border-top-left-radius", "0px")
-  await expect(preview).not.toHaveCSS("background-color", originalColor)
+  await expect(radiusSample).toHaveCSS("border-top-left-radius", "0px")
+  await expect(accentSample).not.toHaveCSS("background-color", originalColor)
   await expect(sidepanel.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.COLOR,
     THEME_COLOR.VIOLET,
@@ -85,16 +185,18 @@ test("appearance applies across windows, survives reload, and resets", async ({
       .locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`)
       .getByRole("radio", { name: "Violet" }),
   ).toBeChecked()
-  await expect(primary).toHaveCSS("border-top-left-radius", "0px")
+  await expect(radiusSample).toHaveCSS("border-top-left-radius", "0px")
   await page
     .locator(`#${SETTINGS_ANCHORS.APPEARANCE_RADIUS}`)
     .getByRole("radio", { name: "Large" })
     .locator("..")
     .click()
-  await expect(primary).toHaveCSS("border-top-left-radius", "18px")
-  // The menu retains quick light/dark changes and opens the full panel in place.
-  await page.getByRole("button", { name: /^Current:/ }).click()
-  await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+  // The card reads the same `--radius-lg` scale the removed preview button drew
+  // from `--radius-md`; the exact step is asserted on the theme attribute, so
+  // this only needs to prove the rendered corner follows the setting.
+  await expect(radiusSample).not.toHaveCSS("border-top-left-radius", "0px")
+  // The independent appearance button opens the full panel in place.
+  await page.getByRole("button", { name: "Appearance settings" }).click()
   const drawer = page.getByRole("dialog", { name: "Appearance settings" })
   await expect(drawer).toBeVisible()
   await drawer
@@ -119,7 +221,7 @@ test("appearance applies across windows, survives reload, and resets", async ({
       color,
     )
   }
-  for (const width of [1280, 390]) {
+  for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(drawer).toBeVisible()
     expect(
@@ -159,7 +261,9 @@ test("appearance applies across windows, survives reload, and resets", async ({
     })
   await defaultRadius.focus()
   await page.keyboard.press("ArrowRight")
-  const largeRadius = drawer.getByRole("radio", { name: "Large", exact: true })
+  const largeRadius = drawer
+    .getByRole("group", { name: "Corner radius" })
+    .getByRole("radio", { name: "Large", exact: true })
   await expect(largeRadius).toBeChecked()
   await expect(largeRadius).toBeFocused()
   await expect(sidepanel.locator("html")).toHaveAttribute(
@@ -169,6 +273,8 @@ test("appearance applies across windows, survives reload, and resets", async ({
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.keyboard.press("Escape")
   await expect(drawer).not.toBeVisible()
-  await expect(page.getByRole("button", { name: /^Current:/ })).toBeFocused()
+  await expect(
+    page.getByRole("button", { name: "Appearance settings" }),
+  ).toBeFocused()
   await closeExtensionViews(context, page)
 })

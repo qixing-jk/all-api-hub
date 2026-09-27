@@ -3,6 +3,7 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, ConfirmDialog, Modal } from "~/components/ui"
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import toast from "~/lib/notify"
 import {
@@ -273,7 +274,7 @@ export default function DedupeAccountsDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex flex-col-reverse gap-x-2 sm:flex-row sm:justify-end">
+          <ActionGroup layout="stack-on-narrow">
             <Button
               type="button"
               variant="secondary"
@@ -295,7 +296,7 @@ export default function DedupeAccountsDialog({
                 {t("ui:dialog.dedupeAccounts.previewDelete")}
               </Button>
             )}
-          </div>
+          </ActionGroup>
         }
       >
         {(groups.length > 0 ||

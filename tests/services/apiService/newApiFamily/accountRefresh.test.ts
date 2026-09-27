@@ -4,7 +4,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   defaultAccountRefreshImplementation,
   refreshAccountData,
-  validateAccountConnection,
 } from "~/services/apiService/newApiFamily/default/accountRefresh"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -19,12 +18,10 @@ const {
   commonDetermineHealthStatus,
   newApiFamilyFetchSupportCheckIn,
   newApiFamilyFetchAccountData,
-  newApiFamilyFetchAccountQuota,
 } = vi.hoisted(() => ({
   commonDetermineHealthStatus: vi.fn(),
   newApiFamilyFetchSupportCheckIn: vi.fn(),
   newApiFamilyFetchAccountData: vi.fn(),
-  newApiFamilyFetchAccountQuota: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/accountHealth", () => ({
@@ -33,7 +30,6 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountData: newApiFamilyFetchAccountData,
-  fetchAccountQuota: newApiFamilyFetchAccountQuota,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountBootstrap", () => ({
@@ -111,14 +107,6 @@ describe("newApiFamily accountRefresh", () => {
       },
     })
     expect(commonDetermineHealthStatus).toHaveBeenCalledWith(error)
-  })
-
-  it("validateAccountConnection reflects whether quota fetch succeeds", async () => {
-    newApiFamilyFetchAccountQuota.mockResolvedValueOnce(1)
-    await expect(validateAccountConnection(supportRequest)).resolves.toBe(true)
-
-    newApiFamilyFetchAccountQuota.mockRejectedValueOnce(new Error("offline"))
-    await expect(validateAccountConnection(supportRequest)).resolves.toBe(false)
   })
 
   it("uses New API-family refresh helpers by default for New API", async () => {

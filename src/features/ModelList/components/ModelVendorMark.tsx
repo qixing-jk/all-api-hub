@@ -86,7 +86,9 @@ export function ModelVendorMark({
             aria-hidden={true}
             className={cn(
               "inline-flex size-4 items-center justify-center leading-none font-semibold tracking-tight select-none",
-              presentation.initials.length === 1 ? "text-xs" : "text-[11px]",
+              presentation.initials.length === 1
+                ? "text-[12px]"
+                : "text-[11px]",
             )}
           >
             {presentation.initials}

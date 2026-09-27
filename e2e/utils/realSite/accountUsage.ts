@@ -9,6 +9,7 @@ import {
   verifyAccountKeyToApiProfileUsage,
   verifyAccountModelCatalogUsage,
   verifyAccountProviderDestinationUsage,
+  verifyAccountRuntimeKeyModelCatalogUsage,
 } from "~~/e2e/scenarios/accountUsage"
 import {
   runAccountFixtureUsagePlan,
@@ -206,6 +207,20 @@ export const realSiteAccountUsageChecks = {
         await verifyRealSiteAccountModelCatalogUsage({
           ...context,
           expectations: options.expectations,
+        })
+      },
+    }
+  },
+
+  runtimeKeyModelCatalog(): RealSiteAccountUsageCheck {
+    return {
+      name: "load account model catalog with a temporary API key",
+      timeoutMs: REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS,
+      run: async (context) => {
+        await verifyAccountRuntimeKeyModelCatalogUsage({
+          ...context,
+          buildTokenName: () => buildUsageTokenName(context.label),
+          cleanupAccountFixture: false,
         })
       },
     }

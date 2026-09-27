@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  isNewApiOwnedSessionRequest,
   NEW_API_OWNED_SESSION_ACTIONS,
   parseNewApiOwnedSessionRequest,
 } from "~/services/managedSites/newApiOwnedSession/contracts"
@@ -13,25 +12,25 @@ const validBundle = {
   accessExpiresAt: 1_900_000_000,
 }
 
-describe("isNewApiOwnedSessionRequest", () => {
+describe("parseNewApiOwnedSessionRequest", () => {
   it.each([
     NEW_API_OWNED_SESSION_ACTIONS.Capture,
     NEW_API_OWNED_SESSION_ACTIONS.Refresh,
   ])("accepts a complete %s bundle", (action) => {
-    expect(isNewApiOwnedSessionRequest({ action, bundle: validBundle })).toBe(
-      true,
-    )
+    expect(
+      parseNewApiOwnedSessionRequest({ action, bundle: validBundle }),
+    ).not.toBeNull()
   })
 
   it.each(["baseUrl", "sessionId", "accessToken", "accessExpiresAt"])(
     "rejects a bundle with an invalid %s field",
     (field) => {
       expect(
-        isNewApiOwnedSessionRequest({
+        parseNewApiOwnedSessionRequest({
           action: NEW_API_OWNED_SESSION_ACTIONS.Capture,
           bundle: { ...validBundle, [field]: null },
         }),
-      ).toBe(false)
+      ).toBeNull()
     },
   )
 
@@ -44,11 +43,11 @@ describe("isNewApiOwnedSessionRequest", () => {
     ["infinite expiry", { accessExpiresAt: Number.POSITIVE_INFINITY }],
   ])("rejects a bundle with a %s", (_description, invalidFields) => {
     expect(
-      isNewApiOwnedSessionRequest({
+      parseNewApiOwnedSessionRequest({
         action: NEW_API_OWNED_SESSION_ACTIONS.Capture,
         bundle: { ...validBundle, ...invalidFields },
       }),
-    ).toBe(false)
+    ).toBeNull()
   })
 
   it("normalizes a valid bundle at the runtime boundary", () => {
@@ -70,24 +69,24 @@ describe("isNewApiOwnedSessionRequest", () => {
 
   it("validates optional touch SIDs and base URLs", () => {
     expect(
-      isNewApiOwnedSessionRequest({
+      parseNewApiOwnedSessionRequest({
         action: NEW_API_OWNED_SESSION_ACTIONS.Touch,
         baseUrl: validBundle.baseUrl,
       }),
-    ).toBe(true)
+    ).not.toBeNull()
     expect(
-      isNewApiOwnedSessionRequest({
+      parseNewApiOwnedSessionRequest({
         action: NEW_API_OWNED_SESSION_ACTIONS.Touch,
         baseUrl: validBundle.baseUrl,
         sessionId: 42,
       }),
-    ).toBe(false)
+    ).toBeNull()
     expect(
-      isNewApiOwnedSessionRequest({
+      parseNewApiOwnedSessionRequest({
         action: NEW_API_OWNED_SESSION_ACTIONS.GetStatus,
         baseUrl: 42,
       }),
-    ).toBe(false)
+    ).toBeNull()
   })
 
   it("rejects an unknown owned-session action", () => {

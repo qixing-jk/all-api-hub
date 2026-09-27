@@ -5,7 +5,7 @@ import { Alert } from "~/components/ui"
 const PrivacyNotice = () => {
   const { t } = useTranslation("about")
   return (
-    <Alert variant="success">
+    <Alert variant="info">
       <div>
         <p className="mb-density-1 font-medium">{t("privacyTitle")}</p>
         <p className="text-sm">{t("privacyText")}</p>

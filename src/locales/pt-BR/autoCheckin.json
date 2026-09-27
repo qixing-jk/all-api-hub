@@ -1,5 +1,5 @@
 {
-  "description": "Faça check-in automático de contas qualificadas todos os dias dentro de um período de tempo configurável. A lista de resultados abaixo mostra registros de execução concluídos, não uma fila pendente.",
+  "description": "Faça check-in agendado de contas elegíveis, consulte execuções concluídas e tente novamente as tarefas com falha.",
   "execution": {
     "actions": {
       "devModeHint": "Modo Dev: botões de ação são sempre mostrados para teste.",
@@ -36,15 +36,28 @@
       "all": "Todos",
       "alreadyChecked": "Check-in já realizado",
       "clearAll": "Limpar filtros",
+      "clearReasons": "Limpar motivos",
       "countFiltered": "Mostrando {{filtered}} de {{total}}",
       "countTotal": "{{total}} no total",
       "failed": "Falha",
       "needsAttention": "Requer atenção",
+      "reasonAll": "Todos os motivos",
+      "reasonLabel": "Filtrar por motivo",
       "searchLabel": "Pesquisar resultados da execução",
       "searchPlaceholder": "Pesquise por nome da conta, ID ou mensagem...",
+      "selectedReasons_one": "{{count}} motivo selecionado",
+      "selectedReasons_many": "{{count}} motivos selecionados",
+      "selectedReasons_other": "{{count}} motivos selecionados",
       "selectedStatuses_one": "{{count}} status selecionado",
       "selectedStatuses_many": "{{count}} status selecionados",
       "selectedStatuses_other": "{{count}} status selecionados",
+      "skipCategoryAccountDisabled": "Conta desativada",
+      "skipCategoryActionRequired": "Requer sua ação",
+      "skipCategoryDisabled": "Desativado",
+      "skipCategoryExpected": "Nenhuma ação necessária",
+      "skipCategoryUnclassified": "Não classificado",
+      "skipCategoryUnsupported": "Não compatível",
+      "skipCategoryWaiting": "Será repetido automaticamente",
       "skipped": "Não executado",
       "statusLabel": "Filtrar por status da execução",
       "success": "Check-in nesta execução",
@@ -86,7 +99,7 @@
     },
     "title": "Check-in automático"
   },
-  "manualDescription": "Você pode executar um check-in em lote para contas qualificadas. A lista de resultados abaixo mostra registros de execução concluídos, não uma fila pendente.",
+  "manualDescription": "Faça check-in manual em lote de contas elegíveis, consulte execuções concluídas e tente novamente as tarefas com falha.",
   "messages": {
     "error": {
       "accountDisabled": "Conta desativada",
@@ -150,12 +163,14 @@
     "checkinFailed": "Falha no check-in",
     "checkinSuccessful": "Check-in bem-sucedido",
     "endpointNotSupported": "Este endpoint de check-in não é compatível. Verifique se o tipo de site da sua conta corresponde ao site real.",
+    "loginProviderRequired": "Selecione um método de login antes de executar o check-in desta conta.",
     "nativePageIdentityMismatch": "A página de check-in temporário está conectada com uma conta diferente. Abra a página de check-in com a conta de destino e tente novamente: {{checkInUrl}}",
     "nativePageIdentityMissing": "O login temporário da página de check-in não pôde ser confirmado. Abra a página de check-in, faça login com a conta de destino e tente novamente: {{checkInUrl}}",
     "nativePageStatusUnconfirmed": "A ação de check-in da página foi clicada, mas o status da conta de destino não foi confirmado. Por favor, abra a página de check-in e verifique manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "O botão de check-in não foi encontrado na página. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "A ação de check-in da página não pôde ser acionada. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
     "resultPendingConfirmation": "Resultado do check-in aguardando confirmação",
+    "sessionBusy": "Outro login já está em andamento. Tente novamente mais tarde.",
     "turnstileIncognitoAccessRequired": "A extensão deve ter permissão para ser executada em janelas anônimas/privadas para buscar o token Turnstile em uma janela temporária privada (cenário de múltiplas contas). Ative \"Permitir modo anônimo\" para esta extensão e tente novamente ou abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "turnstileManualRequired": "A verificação Cloudflare Turnstile é necessária. Abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "unknownError": "Ocorreu um erro desconhecido"
@@ -202,8 +217,13 @@
     "already_checked_today": "Check-in já realizado hoje",
     "authentication_required": "A sessão expirou ou é necessário entrar. Entre no site e tente novamente.",
     "auto_checkin_disabled": "Check-in automático desativado",
+    "checkin_page_unavailable": "Não foi possível abrir ou acionar a página de check-in do site. Tente novamente mais tarde.",
+    "checkin_unconfirmed": "A solicitação de check-in foi enviada, mas o site não confirmou o resultado. Tente novamente mais tarde.",
     "credentials_missing": "As credenciais salvas estão ausentes. Detecte a conta novamente ou atualize as credenciais.",
     "detection_disabled": "Detecção desativada",
+    "execution_context_invalid": "Esta execução não conseguiu abrir uma sessão protegida. Inicie o check-in novamente.",
+    "login_provider_in_use": "O método de login selecionado já pertence a outra conta AgentRouter. Escolha o outro método ou altere-o nessa conta.",
+    "manual_verification_required": "O site exige verificação manual. Conclua na página de check-in e tente novamente.",
     "method_disabled": "A função de check-in deste site está desativada",
     "method_not_matched": "O método de check-in selecionado não corresponde mais a este site. Detecte-o novamente.",
     "method_unavailable": "O método de check-in selecionado não está mais disponível. Detecte-o novamente.",
@@ -212,9 +232,11 @@
     "no_provider": "O tipo de site da conta atualmente não suporta check-in",
     "no_selected_method": "Nenhum método de check-in está selecionado. Detecte novamente ou selecione um nas configurações da conta.",
     "permission_denied": "O site negou permissão para o check-in. Entre novamente ou verifique as permissões da conta.",
+    "session_busy": "Já existe outro login em andamento. Tente novamente mais tarde.",
     "source_unavailable": "O site de origem está temporariamente indisponível. Tente novamente mais tarde.",
     "status_unavailable": "Não foi possível confirmar o status atual, portanto o check-in não foi realizado",
-    "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente."
+    "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente.",
+    "upstream_error": "O site retornou um resultado de check-in não reconhecido. Tente novamente mais tarde."
   },
   "snapshot": {
     "badges": {

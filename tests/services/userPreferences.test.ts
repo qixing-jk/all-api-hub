@@ -9,6 +9,7 @@ import {
 } from "~/constants/tempContextMode"
 import {
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
@@ -24,6 +25,28 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("retains sidebar collapse and content width across independent appearance writes", async () => {
+    await userPreferences.savePreferences({
+      appearance: { sidebarCollapsed: true },
+    })
+    await userPreferences.savePreferences({
+      appearance: { contentWidth: THEME_CONTENT_WIDTH.FULL },
+    })
+    await userPreferences.savePreferences({ appearance: { color: "rose" } })
+    expect((await userPreferences.getPreferences()).appearance).toMatchObject({
+      sidebarCollapsed: true,
+      contentWidth: "full",
+      color: "rose",
+    })
+    await userPreferences.savePreferences({
+      appearance: { sidebarCollapsed: false },
+    })
+    expect((await userPreferences.getPreferences()).appearance).toMatchObject({
+      sidebarCollapsed: false,
+      contentWidth: "full",
+    })
+  })
+
   it("merges appearance edits without discarding other choices or settings", async () => {
     await userPreferences.savePreferences({
       appearance: { color: THEME_COLOR.ROSE, radius: THEME_RADIUS.LARGE },
@@ -38,14 +61,39 @@ describe("userPreferences", () => {
     await userPreferences.savePreferences({
       appearance: { density: "comfortable" },
     })
+    await userPreferences.savePreferences({
+      appearance: { textSize: "extra-large" },
+    })
+    await userPreferences.savePreferences({
+      appearance: { fontFamily: "serif" },
+    })
     const preferences = await userPreferences.getPreferences()
     expect(preferences.appearance).toEqual({
+      contentWidth: "centered",
+      sidebarCollapsed: false,
       preset: "anthropic",
       color: "rose",
       radius: "small",
       density: "comfortable",
+      textSize: "extra-large",
+      fontFamily: "serif",
     })
     expect(preferences.currencyType).toBe("CNY")
+    await userPreferences.savePreferences({
+      appearance: { density: "default" },
+    })
+    expect((await userPreferences.getPreferences()).appearance).toEqual({
+      ...preferences.appearance,
+      density: "default",
+    })
+    await userPreferences.savePreferences({
+      appearance: { textSize: "default" },
+    })
+    expect((await userPreferences.getPreferences()).appearance).toEqual({
+      ...preferences.appearance,
+      density: "default",
+      textSize: "default",
+    })
   })
 
   describe("DEFAULT_PREFERENCES", () => {

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -586,12 +587,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           </Button>
         ) : null}
       </div>
-      <div className="gap-y-density-2 flex justify-end gap-x-2">
+      <ActionGroup>
         <Button variant="secondary" onClick={onClose} disabled={!canClose}>
           {t("verifyDialog.actions.close")}
         </Button>
         <Button
-          variant={isRunning ? "destructive" : "success"}
+          variant={isRunning ? "secondary" : "default"}
           onClick={isRunning ? stopRun : runAll}
           disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
           loading={isRunning}
@@ -601,7 +602,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             ? t("verifyDialog.actions.stop")
             : t("verifyDialog.actions.run")}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 
@@ -821,7 +822,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
                   <Button
                     size="sm"
-                    variant={probe.isRunning ? "destructive" : "secondary"}
+                    variant="secondary"
                     onClick={probe.isRunning ? stopProbe : runSingleProbe}
                     loading={probe.isRunning}
                     loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}

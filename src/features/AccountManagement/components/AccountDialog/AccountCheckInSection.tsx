@@ -19,7 +19,12 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
-import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_PROVIDER_LABELS,
+  ACCOUNT_LOGIN_PROVIDERS,
+  isAccountLoginProvider,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
@@ -44,16 +49,22 @@ import {
   useCheckInFeedback,
   type CheckInFeedbackSource,
 } from "~/features/CheckInFeedback/useCheckInFeedback"
+import {
+  resolveLoginCheckInProvider,
+  setLoginProviderSelection,
+  type LoginProviderClaimConflict,
+} from "~/services/accountLogin/providerClaims"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
-import { getLoginCheckInProvider } from "~/services/checkin/autoCheckin/providers/agentrouter/config"
 import type { CheckInConfig } from "~/types"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
+/** Clears the stored login method so the user can free up a claimed provider. */
+const UNSET_LOGIN_PROVIDER_VALUE = "unset"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
 
-export const ACCOUNT_CHECK_IN_TARGET_IDS = {
+const ACCOUNT_CHECK_IN_TARGET_IDS = {
   section: "account-check-in-config",
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
@@ -68,6 +79,8 @@ interface AccountCheckInSectionProps {
   checkIn: CheckInConfig
   siteType: AccountSiteType
   siteUrl?: string
+  /** Login providers already claimed by another enabled AgentRouter account. */
+  claimedLoginProviders?: readonly LoginProviderClaimConflict[]
   onCheckInChange: (value: CheckInConfig) => void
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
@@ -81,13 +94,14 @@ export function AccountCheckInSection({
   checkIn,
   siteType,
   siteUrl,
+  claimedLoginProviders = [],
   onCheckInChange,
   onCheckInSelectionChange,
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
 }: AccountCheckInSectionProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "messages"])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
   const inspection = inspectAccountCheckIn({
     config: checkIn,
@@ -130,6 +144,14 @@ export function AccountCheckInSection({
   const redetectionFeedbackPresentation =
     getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
   const browserAutomation = checkIn.customCheckIn?.browserAutomation
+
+  const selectedLoginProvider = resolveLoginCheckInProvider(checkIn)
+  // The currently stored value stays selectable even when another account owns
+  // it, so an account with pre-existing duplicate data can still change or
+  // clear its own selection instead of being locked out of the control.
+  const isLoginProviderClaimed = (provider: AccountLoginProvider) =>
+    provider !== selectedLoginProvider &&
+    claimedLoginProviders.some((claim) => claim.provider === provider)
 
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
@@ -306,28 +328,61 @@ export function AccountCheckInSection({
                 description={t("form.loginCheckInProviderDesc")}
               >
                 <Select
-                  value={getLoginCheckInProvider(checkIn)}
+                  // A stored method must stay selectable even when another
+                  // account owns it, otherwise an account with pre-existing
+                  // duplicate data could not change or clear its own value.
+                  value={selectedLoginProvider ?? UNSET_LOGIN_PROVIDER_VALUE}
                   onValueChange={(provider) => {
-                    if (
-                      provider !== ACCOUNT_LOGIN_PROVIDERS.Github &&
-                      provider !== ACCOUNT_LOGIN_PROVIDERS.LinuxDo
-                    )
+                    if (provider === UNSET_LOGIN_PROVIDER_VALUE) {
+                      onCheckInChange(setLoginProviderSelection(checkIn, null))
                       return
-                    onCheckInChange({ ...checkIn, loginCheckIn: { provider } })
+                    }
+                    if (!isAccountLoginProvider(provider)) return
+                    onCheckInChange(
+                      setLoginProviderSelection(checkIn, provider),
+                    )
                   }}
                 >
                   <SelectTrigger aria-label={t("form.loginCheckInProvider")}>
-                    <SelectValue />
+                    <SelectValue
+                      placeholder={t("form.loginCheckInProviderNotSelected")}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ACCOUNT_LOGIN_PROVIDERS.Github}>
-                      GitHub
+                    <SelectItem value={UNSET_LOGIN_PROVIDER_VALUE}>
+                      {t("form.loginCheckInProviderNotSelected")}
                     </SelectItem>
-                    <SelectItem value={ACCOUNT_LOGIN_PROVIDERS.LinuxDo}>
-                      Linux DO
-                    </SelectItem>
+                    {(
+                      [
+                        ACCOUNT_LOGIN_PROVIDERS.Github,
+                        ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
+                      ] as const
+                    ).map((provider) => (
+                      <SelectItem
+                        key={provider}
+                        value={provider}
+                        disabled={isLoginProviderClaimed(provider)}
+                      >
+                        {ACCOUNT_LOGIN_PROVIDER_LABELS[provider]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {claimedLoginProviders.length > 0 && (
+                  <p className="text-muted-foreground mt-density-1 text-xs">
+                    {t("messages:errors.validation.loginProviderInUse", {
+                      provider: claimedLoginProviders
+                        .map(
+                          (claim) =>
+                            ACCOUNT_LOGIN_PROVIDER_LABELS[claim.provider],
+                        )
+                        .join(" / "),
+                      account: claimedLoginProviders
+                        .map((claim) => claim.owner.site_name)
+                        .join(" / "),
+                    })}
+                  </p>
+                )}
               </FormField>
             )}
         </div>

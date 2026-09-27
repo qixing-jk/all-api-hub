@@ -73,12 +73,6 @@ export const applyNormalizedModelsToPreviewItem = (
   }
 }
 
-export const applyModelsToPreviewItem = (
-  item: ManagedSiteTokenBatchExportPreviewItem,
-  models: string[],
-): ManagedSiteTokenBatchExportPreviewItem =>
-  applyNormalizedModelsToPreviewItem(item, normalizeModels(models))
-
 const hasDuplicateRiskWarning = (
   item: ManagedSiteTokenBatchExportPreviewItem,
 ) =>

@@ -22,7 +22,11 @@ export const managedSiteSub2ApiSearchSections: OptionsSearchItemDefinition[] = [
     SETTINGS_ANCHORS.SUB2API,
     "settings:sub2apiManagedSite.title",
     347,
-    { keywords: ["sub2api", "admin api key"], isVisible: isSub2Api },
+    {
+      keywordKeys: ["common:actions.reset"],
+      keywords: ["sub2api", "admin api key"],
+      isVisible: isSub2Api,
+    },
   ),
 ]
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/accountCreationTimeout"
+import { EMPTY_ACCOUNT_INFO_METRICS } from "~/services/accounts/accountPersistence/constants"
 import { prepareAccountPersistenceIdentity } from "~/services/accounts/accountPersistence/shared"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
@@ -2254,6 +2255,7 @@ describe("accountPersistence save and update", () => {
       expect.objectContaining({
         sub2apiAuth: undefined,
       }),
+      expect.anything(),
     )
   })
 
@@ -2522,6 +2524,7 @@ describe("accountPersistence save and update", () => {
           reason: "quota fetch failed",
         }),
       }),
+      expect.anything(),
     )
   })
 
@@ -2833,5 +2836,307 @@ describe("accountPersistence save and update", () => {
         siteType: SITE_TYPES.NEW_API,
       }),
     )
+  })
+
+  it("rejects a second AgentRouter account claiming a used login provider", async () => {
+    await accountStorage.addAccount({
+      site_name: "AgentRouter owner",
+      site_url: "https://agentrouter.org",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      account_info: {
+        id: "17",
+        access_token: "token",
+        username: "owner",
+        quota: 0,
+        ...EMPTY_ACCOUNT_INFO_METRICS,
+      },
+      last_sync_time: 0,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://agentrouter.org",
+      "AgentRouter duplicate",
+      "user",
+      "token",
+      "18",
+      "7",
+      "",
+      [],
+      buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:errors.validation.loginProviderInUse",
+    })
+    // The conflicting save must not have persisted a second account.
+    expect(await accountStorage.getAllAccounts()).toHaveLength(1)
+  })
+
+  it("rejects a concurrent AgentRouter claim that loses the storage race", async () => {
+    // Both saves read the same empty snapshot before either writes. The guard
+    // runs inside the account storage transaction, so the second one sees the
+    // first account and is refused instead of persisting a duplicate claim.
+    const save = () =>
+      validateAndSaveAccount(
+        "https://agentrouter.org",
+        "AgentRouter concurrent",
+        "user",
+        "token",
+        "18",
+        "7",
+        "",
+        [],
+        buildCheckInConfig({
+          automaticExecutionEnabled: true,
+          loginCheckIn: { provider: "github" },
+        }),
+        SITE_TYPES.NEW_API,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      )
+
+    const [first, second] = await Promise.all([save(), save()])
+    const outcomes = [first, second]
+
+    expect(outcomes.filter((outcome) => outcome.success)).toHaveLength(1)
+    expect(outcomes.filter((outcome) => !outcome.success)).toMatchObject([
+      { message: "messages:errors.validation.loginProviderInUse" },
+    ])
+    // Exactly one claim survived the race.
+    expect(await accountStorage.getAllAccounts()).toHaveLength(1)
+  })
+
+  it("saves an AgentRouter account claiming the other login provider", async () => {
+    await accountStorage.addAccount({
+      site_name: "AgentRouter owner",
+      site_url: "https://agentrouter.org",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      account_info: {
+        id: "17",
+        access_token: "token",
+        username: "owner",
+        quota: 0,
+        ...EMPTY_ACCOUNT_INFO_METRICS,
+      },
+      last_sync_time: 0,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://agentrouter.org",
+      "AgentRouter linuxdo",
+      "user",
+      "token",
+      "18",
+      "7",
+      "",
+      [],
+      buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "linuxdo" },
+      }),
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(await accountStorage.getAllAccounts()).toHaveLength(2)
+  })
+
+  it("refuses an update that would take a login provider another account owns", async () => {
+    const ownerId = await accountStorage.addAccount({
+      site_name: "AgentRouter owner",
+      site_url: "https://agentrouter.org",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      account_info: {
+        id: "17",
+        access_token: "token",
+        username: "owner",
+        quota: 0,
+        ...EMPTY_ACCOUNT_INFO_METRICS,
+      },
+      last_sync_time: 0,
+    })
+
+    const targetId = await accountStorage.addAccount({
+      site_name: "AgentRouter target",
+      site_url: "https://agentrouter.org",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      account_info: {
+        id: "18",
+        access_token: "token",
+        username: "target",
+        quota: 0,
+        ...EMPTY_ACCOUNT_INFO_METRICS,
+      },
+      last_sync_time: 0,
+    })
+
+    const result = await validateAndUpdateAccount(
+      targetId,
+      "https://agentrouter.org",
+      "AgentRouter target",
+      "user",
+      "token",
+      "18",
+      "7",
+      "",
+      [],
+      buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:errors.validation.loginProviderInUse",
+    })
+    // The refused update left both accounts exactly as they were.
+    const accounts = await accountStorage.getAllAccounts()
+    expect(accounts).toHaveLength(2)
+    expect(
+      accounts.find((account) => account.id === targetId)?.checkIn.loginCheckIn,
+    ).toBeUndefined()
+    expect(
+      accounts.find((account) => account.id === ownerId)?.checkIn.loginCheckIn,
+    ).toEqual({ provider: "github" })
+  })
+
+  it("refuses a create that claims a login provider owned by another account", async () => {
+    await accountStorage.addAccount({
+      site_name: "AgentRouter owner",
+      site_url: "https://agentrouter.org",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      account_info: {
+        id: "17",
+        access_token: "token",
+        username: "owner",
+        quota: 0,
+        ...EMPTY_ACCOUNT_INFO_METRICS,
+      },
+      last_sync_time: 0,
+    })
+
+    // The fetched account carries the claim, and this save refreshes data first,
+    // so the refusal has to travel back out of the persistence fallback too.
+    fetchAccountDataMock.mockResolvedValueOnce({
+      ...LOG_TEST_ACCOUNT_DATA,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://agentrouter.org",
+      "AgentRouter duplicate",
+      "user",
+      "token",
+      "18",
+      "7",
+      "",
+      [],
+      buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        loginCheckIn: { provider: "github" },
+      }),
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:errors.validation.loginProviderInUse",
+    })
+    expect(await accountStorage.getAllAccounts()).toHaveLength(1)
   })
 })

@@ -116,7 +116,7 @@
   },
   "copyAllNames": "Alle Modellnamen kopieren",
   "currentUsableGroups": "Aktuell nutzbare Gruppen",
-  "description": "Verfügbare KI-Modelle anzeigen und verwalten",
+  "description": "Modelle aus Konten und API-Zugangsdaten mit Preisen, Fähigkeiten und Verfügbarkeit durchsuchen.",
   "detailedPricing": "Detaillierte Preise",
   "diagnostics": {
     "all": "Alle Angebote",
@@ -437,6 +437,8 @@
     "title": "Profilgestützter Modellkatalog"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "Der Modellzugriff für die folgenden Konten wurde nicht bestätigt. Die vollständigen Modellkataloge der Websites werden angezeigt; einige Modelle sind mit diesen Konten möglicherweise nicht aufrufbar. Prüfen Sie die Kontoberechtigungen und Verifizierungsergebnisse.",
+    "badge": "Vollständiger Website-Katalog",
     "description": "Der tatsächlich verfügbare Modellumfang dieses Kontos konnte nicht bestätigt werden, daher wird der vollständige Modellkatalog des Anbieters angezeigt. Einige Modelle können mit diesem Konto möglicherweise nicht aufgerufen werden. Maßgeblich sind die Kontoberechtigungen der Website und die tatsächlichen Verifizierungsergebnisse.",
     "title": "Zurück zum vollständigen Modellkatalog des Anbieters"
   },
@@ -594,6 +596,7 @@
   "selectSourceToContinue": "Wählen Sie oben eine Quelle aus, bevor Sie die Modellliste anzeigen.",
   "showing_one": "Zeigt {{count}} Modell",
   "showing_other": "Zeigt {{count}} Modelle",
+  "showUnavailableModels": "Auch Modelle ohne Kontozugriff anzeigen",
   "siteDescription": "Website-Beschreibung:",
   "siteSupportedGroups": "Von der Website unterstützte Gruppen",
   "sortBy": "Sortieren nach",
@@ -654,6 +657,7 @@
   "totalModels_one": "Gesamt {{count}} Modell",
   "totalModels_other": "Insgesamt {{count}} Modelle",
   "unavailable": "Nicht verfügbar",
+  "unavailableModelsHint": "Bereits geladene Modelle ohne nutzbare Gruppen für dieses Konto einbeziehen. Diese Modelle umgehen die Gruppenauswahl, unterliegen aber weiterhin anderen Filtern. Es werden keine zusätzlichen Modelle der gesamten Website abgerufen. Gilt nur für diese Seitensitzung.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Preise sind nicht verfügbar, da diese verwendbare Gruppe keinen Multiplikator hat.",
     "keyGroupUnknown": "Preise sind nicht verfügbar, weil die Sub2API-Gruppe dieses Schlüssels nicht ermittelt werden konnte.",

@@ -9,7 +9,7 @@ import { type ComponentProps, type KeyboardEvent, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Badge, Button, Card } from "~/components/ui"
+import { ActionGroup, Badge, Button, Card } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { cn } from "~/lib/utils"
 import {
@@ -145,7 +145,7 @@ export function SiteAnnouncementCard({
                     </h3>
                     <div className="gap-y-density-1-5 flex shrink-0 gap-x-1.5">
                       {!record.read && (
-                        <Badge variant="warning" size="sm">
+                        <Badge variant="info" size="sm">
                           {t("badges.unread")}
                         </Badge>
                       )}
@@ -242,7 +242,7 @@ export function SiteAnnouncementCard({
                 <AnnouncementMarkdown content={display.body} />
               </div>
 
-              <div className="mt-density-4 gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
+              <ActionGroup className="mt-density-4">
                 <AnnouncementSourceLink
                   sourceUrl={sourceUrl}
                   label={t("actions.viewSource")}
@@ -276,18 +276,18 @@ export function SiteAnnouncementCard({
                 >
                   {t("actions.collapse")}
                 </Button>
-              </div>
+              </ActionGroup>
             </div>
           )}
 
           {!expanded && !record.read && (
-            <div className="gap-y-density-2 pb-density-3 flex justify-end gap-x-2 px-4 lg:hidden">
+            <ActionGroup className="pb-density-3 px-4 lg:hidden">
               <AnnouncementSourceLink
                 sourceUrl={sourceUrl}
                 label={t("actions.viewSource")}
                 size="sm"
                 variant="ghost"
-                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 h-(--density-control-tight) text-xs"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 min-h-(--density-control-sm) text-xs"
                 leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
               />
               <Button
@@ -300,7 +300,7 @@ export function SiteAnnouncementCard({
               >
                 {t("actions.markRead")}
               </Button>
-            </div>
+            </ActionGroup>
           )}
         </div>
       </Card>

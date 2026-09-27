@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
-  ACCOUNT_SITE_DOMAIN_RULES,
   ACCOUNT_SITE_TITLE_RULES,
   AIHUBMIX_HOSTNAMES,
   getAccountSiteApiRouter,
@@ -63,7 +62,6 @@ describe("account site onboarding registry", () => {
   })
 
   it("projects account site domain rules from metadata", () => {
-    expect(getAccountSiteDomainRules()).toEqual(ACCOUNT_SITE_DOMAIN_RULES)
     expect(getAccountSiteDomainRules()).toContainEqual({
       name: SITE_TYPES.AIHUBMIX,
       hostnames: [...AIHUBMIX_HOSTNAMES],

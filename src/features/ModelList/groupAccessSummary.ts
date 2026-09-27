@@ -17,46 +17,46 @@ function haveEqualGroupRatios(
 export function summarizeModelListGroupAccess(params: {
   sources: readonly Pick<
     PreparedModelListSource,
-    "source" | "groupRatios" | "groupAccessEvidence"
+    "source" | "groupRatios" | "canRepairGroupSelection"
   >[]
   usesAccountContexts: boolean
   selectedAccountId?: string
 }) {
-  let isGroupAccessAuthoritative = false
+  let canRepairGroupSelection = false
   let singleSourceGroupRatios: Record<string, number> = {}
   let matchingContextCount = 0
-  const authorityByAccount = new Map<string, boolean>()
+  const repairByAccount = new Map<string, boolean>()
   for (const prepared of params.sources) {
-    const authoritative = prepared.groupAccessEvidence === "authoritative"
+    const canRepair = prepared.canRepairGroupSelection
     if (
       !params.usesAccountContexts ||
       prepared.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
     ) {
-      isGroupAccessAuthoritative = authoritative
+      canRepairGroupSelection = canRepair
       singleSourceGroupRatios = prepared.groupRatios
       continue
     }
     const accountId = prepared.source.account.id
-    authorityByAccount.set(
+    repairByAccount.set(
       accountId,
-      (authorityByAccount.get(accountId) ?? true) && authoritative,
+      (repairByAccount.get(accountId) ?? true) && canRepair,
     )
     if (accountId !== params.selectedAccountId) continue
     if (matchingContextCount === 0) {
-      isGroupAccessAuthoritative = authoritative
+      canRepairGroupSelection = canRepair
       singleSourceGroupRatios = prepared.groupRatios
     } else {
-      isGroupAccessAuthoritative &&= authoritative
+      canRepairGroupSelection &&= canRepair
       if (!haveEqualGroupRatios(singleSourceGroupRatios, prepared.groupRatios))
         singleSourceGroupRatios = {}
     }
     matchingContextCount += 1
   }
   return {
-    isGroupAccessAuthoritative,
+    canRepairGroupSelection,
     singleSourceGroupRatios,
-    authoritativeGroupAccessByAccountId: Object.fromEntries(
-      authorityByAccount,
+    canRepairGroupSelectionByAccountId: Object.fromEntries(
+      repairByAccount,
     ) as Record<string, boolean>,
   }
 }

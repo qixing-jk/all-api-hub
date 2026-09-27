@@ -124,8 +124,3 @@ export const parseNewApiOwnedSessionRequest = (
 
   return null
 }
-
-export const isNewApiOwnedSessionRequest = (
-  value: unknown,
-): value is NewApiOwnedSessionRequest =>
-  parseNewApiOwnedSessionRequest(value) !== null

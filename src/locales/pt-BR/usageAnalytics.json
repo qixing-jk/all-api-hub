@@ -100,7 +100,7 @@
       "title": "Mapa de calor do tempo de uso"
     }
   },
-  "description": "Sincronize e visualize o histórico de uso agregado entre contas, com suporte para exportação.",
+  "description": "Analise solicitações, uso de tokens e custos por conta, modelo e período.",
   "empty": {
     "description": "Ative a sincronização em Configurações → Uso da conta e clique em \"Sincronizar agora\" para obter o histórico de uso recente.",
     "title": "Ainda não há dados de histórico de uso"

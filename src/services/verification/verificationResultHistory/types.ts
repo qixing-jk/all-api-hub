@@ -6,7 +6,17 @@ import type {
 } from "~/services/verification/aiApiVerification/types"
 import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification/types"
 
-export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 1
+/**
+ * Stored schema version.
+ *
+ * This is the only durable record of which writer produced a stored payload, and
+ * therefore of whether its entries already passed the sanitizer. Readers trust a
+ * payload at this exact version and run the boundary sanitizer on anything else,
+ * so bump it whenever the stored shape or the sanitizing rules change: every
+ * existing payload is then re-sanitized once on read and rewritten under the new
+ * version before it is trusted.
+ */
+export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 2
 
 export const API_VERIFICATION_HISTORY_STATUSES = {
   Pass: API_VERIFICATION_PROBE_STATUSES.Pass,
@@ -73,4 +83,9 @@ export type ApiVerificationHistoryConfig = {
   version: number
   summaries: ApiVerificationHistorySummary[]
   lastUpdated: number
+  /**
+   * When the last complete orphan sweep finished. `0` means "never swept", which
+   * keeps sweeps enabled for payloads written before this field existed.
+   */
+  lastOrphanSweepAt: number
 }

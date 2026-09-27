@@ -2131,27 +2131,32 @@ describe("product analytics privacy filtering", () => {
 
   it("defines one reviewed property for every controlled bypass bucket", () => {
     const prefixes = {
-      featureCounts: "feature",
-      invocationKindCounts: "invocation",
-      automaticTriggerCounts: "trigger",
-      operationCounts: "operation",
-      decisionCounts: "decision",
-      denialReasonCounts: "denial",
-      adapterCounts: "adapter",
-      focusStartCounts: "focus_start",
-      focusEndCounts: "focus_end",
-      focusTransitionCounts: "focus_transition",
-      focusBackgroundStartAdapterCounts: "focus_background_start_adapter",
+      featureCounts: "protection_bypass_feature",
+      invocationKindCounts: "protection_bypass_invocation",
+      automaticTriggerCounts: "protection_bypass_trigger",
+      operationCounts: "protection_bypass_operation",
+      decisionCounts: "protection_bypass_decision",
+      denialReasonCounts: "protection_bypass_denial",
+      adapterCounts: "protection_bypass_adapter",
+      focusStartCounts: "protection_bypass_focus_start",
+      focusEndCounts: "protection_bypass_focus_end",
+      focusTransitionCounts: "protection_bypass_focus_transition",
+      focusBackgroundStartAdapterCounts:
+        "protection_bypass_focus_background_start_adapter",
       focusForegroundActivationAdapterCounts:
-        "focus_foreground_activation_adapter",
-      focusUnknownAdapterCounts: "focus_unknown_adapter",
+        "protection_bypass_focus_foreground_activation_adapter",
+      focusUnknownAdapterCounts: "protection_bypass_focus_unknown_adapter",
+      tempWindowFetchFailureCategoryCounts:
+        "temp_window_fetch_failure_category",
+      tempWindowTurnstileFetchFailureCategoryCounts:
+        "temp_window_turnstile_fetch_failure_category",
     } as const
     const expected = Object.entries(
       PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
     ).flatMap(([dimension, values]) =>
       values.map(
         (value) =>
-          `protection_bypass_${prefixes[dimension as keyof typeof prefixes]}_${value}_count`,
+          `${prefixes[dimension as keyof typeof prefixes]}_${value}_count`,
       ),
     )
 

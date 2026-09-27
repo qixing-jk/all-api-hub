@@ -1,7 +1,20 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { EMPTY_DEV_IDENTITY } from "~/utils/core/devIdentity"
 import i18n from "~/utils/i18n"
 import * as documentTitleModule from "~/utils/navigation/documentTitle"
+import {
+  buildDevIdentity,
+  DEV_IDENTITY_FIXTURE_PATH_TAIL,
+} from "~~/tests/test-utils/devIdentityFixtures"
+
+const { getDevIdentityMock } = vi.hoisted(() => ({
+  getDevIdentityMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/extensionIdentity", () => ({
+  getDevIdentity: (...args: unknown[]) => getDevIdentityMock(...args),
+}))
 
 vi.mock("~/utils/i18n", () => ({
   default: {
@@ -12,11 +25,14 @@ vi.mock("~/utils/i18n", () => ({
 
       return key
     }),
-    on: vi.fn(),
   },
 }))
 
 describe("documentTitle", () => {
+  beforeEach(() => {
+    getDevIdentityMock.mockReturnValue(EMPTY_DEV_IDENTITY)
+  })
+
   describe("setDocumentTitle", () => {
     it("sets title for options page", () => {
       documentTitleModule.setDocumentTitle("options")
@@ -33,6 +49,16 @@ describe("documentTitle", () => {
       expect(document.title).toBe("ui:pageTitle.sidepanel | ui:pageTitle.app")
     })
 
+    it("appends the build's source path so tabs identify their checkout", () => {
+      getDevIdentityMock.mockReturnValue(buildDevIdentity())
+
+      documentTitleModule.setDocumentTitle("options")
+
+      expect(document.title).toBe(
+        `ui:pageTitle.options | ui:pageTitle.app · ${DEV_IDENTITY_FIXTURE_PATH_TAIL}`,
+      )
+    })
+
     it("catches errors from i18n.t without throwing", () => {
       const originalTitle = document.title
       const tSpy = vi.mocked(i18n.t as unknown as (key: string) => string)
@@ -45,24 +71,6 @@ describe("documentTitle", () => {
       documentTitleModule.setDocumentTitle("options")
 
       expect(document.title).toBe(originalTitle)
-    })
-  })
-
-  describe("initializeDocumentTitle", () => {
-    it("sets title initially and registers languageChanged listener", () => {
-      const onSpy = vi.mocked(i18n.on)
-
-      documentTitleModule.initializeDocumentTitle("options")
-
-      expect(onSpy).toHaveBeenCalledWith(
-        "languageChanged",
-        expect.any(Function),
-      )
-
-      const handler = onSpy.mock.calls[0][1] as () => void
-
-      // handler should be callable without throwing
-      handler()
     })
   })
 })

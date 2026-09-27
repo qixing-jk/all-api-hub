@@ -1,5 +1,5 @@
 {
-  "description": "Sao lưu, di chuyển hoặc đồng bộ dữ liệu All API Hub.",
+  "description": "Sao lưu, khôi phục và chuyển dữ liệu tiện ích bằng tệp cục bộ hoặc lưu trữ đám mây.",
   "export": {
     "accountData": "Dữ liệu tài khoản",
     "accountDataDescription": "Chỉ xuất tài khoản, dấu trang và thẻ.",

@@ -12,7 +12,6 @@ import {
   fetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
-  resolveStoredAccountApiContext,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -22,10 +21,6 @@ import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
-
-const { mockGetAccountById } = vi.hoisted(() => ({
-  mockGetAccountById: vi.fn(),
-}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
@@ -50,12 +45,6 @@ vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
   accountSub2ApiAuthSession: {
     getLatestAuth: vi.fn(),
     persistAuthUpdate: vi.fn(),
-  },
-}))
-
-vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
-  accountQueries: {
-    getAccountById: mockGetAccountById,
   },
 }))
 
@@ -86,12 +75,18 @@ const buildStoredAccount = (overrides: Record<string, unknown> = {}) => ({
   id: "account-1",
   site_name: "Example",
   site_url: "https://example.com",
-  site_type: "new-api",
+  site_type: SITE_TYPES.NEW_API,
   authType: AuthTypeEnum.AccessToken,
   account_info: {
     id: "1",
     username: "Ada",
     access_token: "token",
+    quota: 0,
+    today_prompt_tokens: 0,
+    today_completion_tokens: 0,
+    today_quota_consumption: 0,
+    today_requests_count: 0,
+    today_income: 0,
   },
   cookieAuth: undefined,
   ...overrides,
@@ -120,7 +115,6 @@ describe("display account API context and native runtime keys", () => {
     vi.mocked(getSiteTypeCapabilities).mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
     vi.mocked(resolveAssociatedProfileSecret).mockReset()
-    mockGetAccountById.mockReset()
   })
 
   afterEach(() => {
@@ -478,18 +472,17 @@ describe("display account API context and native runtime keys", () => {
     },
   )
 
-  it("resolves stored account context from the latest persisted account", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        account_info: {
-          id: "stored-user",
-          username: "Latest",
-          access_token: "stored-token",
-        },
-      }),
-    )
+  it("builds a request context from the supplied stored account", () => {
+    const account = buildStoredAccount({
+      account_info: {
+        ...buildStoredAccount().account_info,
+        id: "stored-user",
+        username: "Latest",
+        access_token: "stored-token",
+      },
+    })
 
-    await expect(resolveStoredAccountApiContext("account-1")).resolves.toEqual({
+    expect(createAccountApiRequestFromStoredAccount(account)).toEqual({
       accountId: "account-1",
       siteType: "new-api",
       request: expect.objectContaining({
@@ -503,25 +496,23 @@ describe("display account API context and native runtime keys", () => {
         },
       }),
     })
-    expect(mockGetAccountById).toHaveBeenCalledWith("account-1")
   })
 
-  it("preserves stored cookie-auth session in request auth", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        authType: AuthTypeEnum.Cookie,
-        account_info: {
-          id: "stored-user",
-          username: "Latest",
-          access_token: "",
-        },
-        cookieAuth: {
-          sessionCookie: "session=stored",
-        },
-      }),
-    )
+  it("preserves stored cookie-auth session in request auth", () => {
+    const account = buildStoredAccount({
+      authType: AuthTypeEnum.Cookie,
+      account_info: {
+        ...buildStoredAccount().account_info,
+        id: "stored-user",
+        username: "Latest",
+        access_token: "",
+      },
+      cookieAuth: {
+        sessionCookie: "session=stored",
+      },
+    })
 
-    const context = await resolveStoredAccountApiContext("account-1")
+    const context = createAccountApiRequestFromStoredAccount(account)
 
     expect(context.request).toEqual(
       expect.objectContaining({
@@ -537,14 +528,12 @@ describe("display account API context and native runtime keys", () => {
     expect(context.request).not.toHaveProperty("cookieAuthSessionCookie")
   })
 
-  it("decorates stored Sub2API contexts with the account auth session port", async () => {
-    mockGetAccountById.mockResolvedValueOnce(
-      buildStoredAccount({
-        site_type: SITE_TYPES.SUB2API,
-      }),
-    )
+  it("decorates stored Sub2API contexts with the account auth session port", () => {
+    const account = buildStoredAccount({
+      site_type: SITE_TYPES.SUB2API,
+    })
 
-    const context = await resolveStoredAccountApiContext("account-1")
+    const context = createAccountApiRequestFromStoredAccount(account)
 
     expect(context.siteType).toBe(SITE_TYPES.SUB2API)
     expect(context.request).toEqual(
@@ -552,27 +541,6 @@ describe("display account API context and native runtime keys", () => {
         sub2apiAuthSession: accountSub2ApiAuthSession,
       }),
     )
-  })
-
-  it("throws a stable error when the stored account id is blank", async () => {
-    await expect(resolveStoredAccountApiContext("   ")).rejects.toMatchObject({
-      name: "StoredAccountApiContextError",
-      code: "MISSING_ACCOUNT_ID",
-      message: "account_api_context_missing_account_id",
-    })
-    expect(mockGetAccountById).not.toHaveBeenCalled()
-  })
-
-  it("throws a stable error when the stored account no longer exists", async () => {
-    mockGetAccountById.mockResolvedValueOnce(null)
-
-    await expect(
-      resolveStoredAccountApiContext("missing"),
-    ).rejects.toMatchObject({
-      name: "StoredAccountApiContextError",
-      code: "ACCOUNT_NOT_FOUND",
-      message: "account_api_context_account_not_found",
-    })
   })
 
   it("throws a stable error when a stored account has a blank id", () => {
@@ -800,38 +768,43 @@ describe("display account API context and native runtime keys", () => {
     })
   })
 
-  it("uses an in-hand one-time resource secret before profile lookup or provider recovery", async () => {
-    const open = vi.fn()
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.OPENROUTER,
-      account: {
-        keyResourceManagement: {
-          inventorySecretAvailability:
-            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-          open,
+  it.each([
+    [SITE_TYPES.OPENROUTER, INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly],
+    [SITE_TYPES.NEW_API, INVENTORY_SECRET_AVAILABILITIES.Recoverable],
+  ])(
+    "uses an in-hand %s resource secret before profile lookup or provider recovery",
+    async (siteType, availability) => {
+      const open = vi.fn()
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        siteType,
+        account: {
+          keyResourceManagement: {
+            inventorySecretAvailability: availability,
+            open,
+          },
         },
-      },
-    } as any)
-    const account = { ...ACCOUNT, siteType: SITE_TYPES.OPENROUTER }
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
-      ref: {
-        accountId: ACCOUNT.id,
-        siteType: SITE_TYPES.OPENROUTER,
-        scopeKey: "account",
-        resourceId: "created-key",
-      },
-      label: "Just created",
-      secret: "sk-one-time-secret",
-    })
-    await expect(
-      resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
-    ).resolves.toMatchObject({
-      secret: "sk-one-time-secret",
-      resourceRef: runtimeKey.resourceRef,
-    })
-    expect(open).not.toHaveBeenCalled()
-    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
-  })
+      } as any)
+      const account = { ...ACCOUNT, siteType }
+      const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType,
+          scopeKey: "account",
+          resourceId: "created-key",
+        },
+        label: "Just created",
+        secret: "sk-one-time-secret",
+      })
+      await expect(
+        resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
+      ).resolves.toMatchObject({
+        secret: "sk-one-time-secret",
+        resourceRef: runtimeKey.resourceRef,
+      })
+      expect(open).not.toHaveBeenCalled()
+      expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+    },
+  )
 
   it("automatically resolves create-response-only resource keys from an associated profile", async () => {
     const open = vi.fn()
@@ -887,40 +860,45 @@ describe("display account API context and native runtime keys", () => {
     expect(open).not.toHaveBeenCalled()
   })
 
-  it("keeps provider resolution authoritative for recoverable resource keys", async () => {
-    const resolve = vi.fn().mockResolvedValue({
-      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
-      secret: "provider-secret",
-    })
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      account: {
-        keyResourceManagement: {
-          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
-        },
-      },
-    } as any)
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
-      status: "resolved",
-      secret: "associated-secret",
-      profile: { baseUrl: "https://associated.example.invalid" },
-    } as any)
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
-      ref: {
-        accountId: ACCOUNT.id,
+  it.each(["", "masked********key", "sk-in-hand-secret"])(
+    "honors explicit provider resolution with existing secret %s",
+    async (secret) => {
+      const resolve = vi.fn().mockResolvedValue({
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: "provider-secret",
+      })
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
         siteType: SITE_TYPES.NEW_API,
-        scopeKey: "account",
-        resourceId: "resource-example",
-      },
-      label: "Example key",
-      secret: "",
-    })
+        account: {
+          keyResourceManagement: {
+            open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+          },
+        },
+      } as any)
+      vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+        status: "resolved",
+        secret: "associated-secret",
+        profile: { baseUrl: "https://associated.example.invalid" },
+      } as any)
+      const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "resource-example",
+        },
+        label: "Example key",
+        secret,
+      })
 
-    await expect(
-      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey),
-    ).resolves.toMatchObject({ secret: "sk-provider-secret" })
-    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
-  })
+      await expect(
+        resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey, {
+          secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider,
+        }),
+      ).resolves.toMatchObject({ secret: "sk-provider-secret" })
+      expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+    },
+  )
 
   it("uses an associated resource secret only after explicit provider fallback", async () => {
     const resolve = vi.fn().mockResolvedValue({

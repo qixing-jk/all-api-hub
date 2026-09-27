@@ -7,7 +7,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
@@ -22,7 +22,6 @@ import {
 import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
-  markSelectedCheckInExecuted,
 } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import {
@@ -31,6 +30,7 @@ import {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
+  markCheckInMethodExecuted,
   mergeCompatibilityCheckInStatus,
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
@@ -42,6 +42,20 @@ import type { CheckInConfig } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+function markSelectedCheckInExecuted(input: {
+  config: CheckInConfig
+  siteType: AccountSiteType
+  observedAt: number
+}): CheckInConfig {
+  const methodId = resolveSelectedCheckInMethod(input)
+  if (!methodId) return input.config
+  return markCheckInMethodExecuted({
+    config: input.config,
+    methodId,
+    observedAt: input.observedAt,
+  })
+}
 
 describe("check-in methods compatibility activation", () => {
   afterEach(() => {

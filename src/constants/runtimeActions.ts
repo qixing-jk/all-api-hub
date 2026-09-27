@@ -77,6 +77,8 @@ export const RuntimeActionIds = {
   CloudflareGuardLog: "cloudflareGuardLog",
 
   CloseTempWindow: "closeTempWindow",
+  GetInternalTabIds: "getInternalTabIds",
+  GetSenderPageContext: "getSenderPageContext",
   CancelCheckinFeedbackScan: "cancelCheckinFeedbackScan",
   ContentCheckinFeedbackScan: "contentCheckinFeedbackScan",
   ContentCancelCheckinFeedbackScan: "contentCancelCheckinFeedbackScan",
@@ -152,22 +154,11 @@ export const RuntimeActionIds = {
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
+  ContentStarPromotionReport: "starPromotionReport",
 } as const
 
 export type RuntimeActionId =
   (typeof RuntimeActionIds)[keyof typeof RuntimeActionIds]
-
-/**
- * Null-safe prefix matcher for runtime action routing.
- * @param action Incoming runtime message action value.
- * @param prefix Canonical prefix to match against.
- */
-export function hasRuntimeActionPrefix(
-  action: unknown,
-  prefix: RuntimeActionPrefix,
-): boolean {
-  return typeof action === "string" && action.startsWith(prefix)
-}
 
 /**
  * Compose a runtime action ID from a canonical prefix and a suffix.

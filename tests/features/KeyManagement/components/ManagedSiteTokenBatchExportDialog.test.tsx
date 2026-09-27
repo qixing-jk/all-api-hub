@@ -1835,6 +1835,17 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
   })
 
+  it("reflows the preview summary and actions in narrow dialogs", async () => {
+    mockPreparePreview.mockResolvedValue(preview)
+    renderDialog()
+
+    const actions = (
+      await screen.findByRole("button", { name: "common:actions.cancel" })
+    ).parentElement
+    expect(actions).toHaveClass("flex-wrap")
+    expect(actions?.parentElement).toHaveClass("flex-col", "sm:flex-row")
+  })
+
   it("closes the completed dialog before navigating to managed-site channels", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

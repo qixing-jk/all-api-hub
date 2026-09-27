@@ -5,6 +5,9 @@ export const SETTINGS_ANCHORS = {
   APPEARANCE_PRESET: "appearance-preset",
   APPEARANCE_COLOR: "appearance-color",
   APPEARANCE_DENSITY: "appearance-density",
+  APPEARANCE_FONT: "appearance-font",
+  APPEARANCE_TEXT_SIZE: "appearance-text-size",
+  APPEARANCE_CONTENT_WIDTH: "appearance-content-width",
   APPEARANCE_RADIUS: "appearance-radius",
   NEW_API_TOTP_SECRET: "new-api-totp-secret",
   MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",
@@ -53,6 +56,10 @@ export const SETTINGS_ANCHORS = {
     "site-announcement-notifications-enabled",
   SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL:
     "site-announcement-notifications-interval",
+  SITE_ANNOUNCEMENT_NOTIFICATIONS_MAX_AGE:
+    "site-announcement-notifications-max-age",
+  SITE_ANNOUNCEMENT_NOTIFICATIONS_UPSTREAM_READ:
+    "site-announcement-notifications-upstream-read",
   SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE: "site-announcement-notifications-page",
   AUTO_CHECKIN: "auto-checkin",
   BALANCE_HISTORY: "balance-history",

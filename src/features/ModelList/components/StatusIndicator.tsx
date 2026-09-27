@@ -344,7 +344,7 @@ export function StatusIndicator({
           <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
             {pricingUrl && (
               <WorkflowTransitionButton
-                variant="warning"
+                variant="default"
                 onClick={() =>
                   window.open(pricingUrl, "_blank", "noopener,noreferrer")
                 }

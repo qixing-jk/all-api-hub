@@ -17,8 +17,6 @@ import { veloeraRequests } from "./request"
 
 export {
   fetchAccountData,
-  fetchCheckInStatus,
-  fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/newApiFamily/variants/veloera"
 

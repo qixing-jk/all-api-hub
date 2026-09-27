@@ -11,7 +11,7 @@
     "description": "Sẽ xóa vĩnh viễn \"{{name}}\".",
     "title": "Xóa dấu trang?"
   },
-  "description": "Lưu các liên kết lối tắt đến bảng điều khiển/tài liệu/trang quản trị của trang web v.v. mà không cần tạo tài khoản đầy đủ.",
+  "description": "Lưu liên kết trang web, bảng điều khiển và tài liệu; sắp xếp bằng thẻ để truy cập nhanh.",
   "dialog": {
     "currentPageLabel": "Trang hiện tại",
     "currentPageUnavailable": "Tạm thời không thể đọc trang hiện tại",

@@ -123,7 +123,7 @@
   },
   "copyAllNames": "Copiar todos os nomes de modelos",
   "currentUsableGroups": "Grupos disponíveis no momento",
-  "description": "Veja e gerencie os modelos de IA disponíveis",
+  "description": "Explore modelos de contas e credenciais de API, com preços, recursos e disponibilidade.",
   "detailedPricing": "Preços detalhados",
   "diagnostics": {
     "all": "Todas as ofertas",
@@ -447,6 +447,8 @@
     "title": "Catálogo baseado em credencial"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "O acesso aos modelos das contas abaixo não foi confirmado. Os catálogos completos dos sites são exibidos; alguns modelos podem não estar disponíveis para essas contas. Confira as permissões das contas e os resultados da verificação.",
+    "badge": "Catálogo completo do site",
     "description": "Não foi possível confirmar o conjunto de modelos realmente disponível para esta conta, por isso o catálogo completo do provedor é exibido. Alguns modelos talvez não possam ser usados por esta conta; considere as permissões da conta no site e os resultados de verificações reais como a fonte definitiva.",
     "title": "Usando o catálogo completo de modelos do provedor"
   },
@@ -605,6 +607,7 @@
   "showing_one": "Exibindo {{count}} modelo",
   "showing_many": "Exibindo {{count}} modelos",
   "showing_other": "Exibindo {{count}} modelos",
+  "showUnavailableModels": "Mostrar também modelos sem acesso pela conta",
   "siteDescription": "Descrição do site:",
   "siteSupportedGroups": "Grupos compatíveis com o site",
   "sortBy": "Ordenar por",
@@ -666,6 +669,7 @@
   "totalModels_many": "Total de {{count}} modelos",
   "totalModels_other": "Total de {{count}} modelos",
   "unavailable": "Indisponível",
+  "unavailableModelsHint": "Incluir modelos já carregados sem grupos utilizáveis para esta conta. Esses modelos ignoram a seleção de grupos, mas continuam sujeitos aos outros filtros. Nenhum modelo adicional de todo o site será buscado. Vale apenas durante esta sessão da página.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Os preços estão indisponíveis porque este grupo utilizável não tem multiplicador.",
     "keyGroupUnknown": "Os preços estão indisponíveis porque não foi possível identificar o grupo desta chave no Sub2API.",

@@ -362,6 +362,13 @@ describe("SiteAnnouncementsPage", () => {
 
   it("links the disabled page description to announcement polling settings", async () => {
     const user = userEvent.setup()
+    vi.mocked(userPreferences.getPreferences).mockResolvedValueOnce(
+      deepOverride(structuredClone(DEFAULT_PREFERENCES), {
+        siteAnnouncementNotifications: {
+          enabled: false,
+        },
+      }),
+    )
 
     render(<SiteAnnouncementsPage />)
 
@@ -375,7 +382,7 @@ describe("SiteAnnouncementsPage", () => {
       }),
     )
 
-    expect(openSettingsTab).toHaveBeenCalledWith("general", {
+    expect(openSettingsTab).toHaveBeenCalledWith("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
@@ -1248,6 +1255,14 @@ describe("SiteAnnouncementsPage", () => {
       },
     )
 
+    vi.mocked(userPreferences.getPreferences).mockResolvedValueOnce(
+      deepOverride(structuredClone(DEFAULT_PREFERENCES), {
+        siteAnnouncementNotifications: {
+          enabled: false,
+        },
+      }),
+    )
+
     render(<SiteAnnouncementsPage />)
 
     expect(
@@ -1263,7 +1278,7 @@ describe("SiteAnnouncementsPage", () => {
         name: "siteAnnouncements:empty.pollingSettingsLink",
       }),
     )
-    expect(openSettingsTab).toHaveBeenCalledWith("general", {
+    expect(openSettingsTab).toHaveBeenCalledWith("siteAnnouncements", {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })

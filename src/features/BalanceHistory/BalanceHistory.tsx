@@ -12,14 +12,15 @@ import { useTranslation } from "react-i18next"
 import { EChart } from "~/components/charts/EChart"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
+  ActionGroup,
   Alert,
   Button,
   Card,
   Input,
   Label,
   TagFilter,
-  ToggleButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
 import {
@@ -29,7 +30,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
+import { ANIMATIONS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import toast from "~/lib/notify"
@@ -40,9 +41,7 @@ import {
 } from "~/services/accounts/utils/accountDisplayName"
 import {
   computeRetentionCutoffDayKey,
-  getDayKeyFromUnixSeconds,
   listDayKeysInRange,
-  subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import {
@@ -73,6 +72,10 @@ import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { assertNever } from "~/utils/core/assert"
+import {
+  getDayKeyFromUnixSeconds,
+  subtractDaysFromDayKey,
+} from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
@@ -1100,7 +1103,7 @@ export default function BalanceHistory() {
           title={t("hints.disabled.title")}
           description={t("hints.disabled.description")}
         >
-          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="mt-density-3 items-stretch justify-start">
             <WorkflowTransitionButton
               size="sm"
               variant="outline"
@@ -1116,7 +1119,7 @@ export default function BalanceHistory() {
             >
               {t("hints.disabled.actions.openSettings")}
             </WorkflowTransitionButton>
-          </div>
+          </ActionGroup>
         </Alert>
       ) : (
         <>
@@ -1167,26 +1170,17 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div
-                className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-              >
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("USD")}
-                  isActive={currencyType === "USD"}
-                  size="default"
-                  aria-label={t("settings:display.usd")}
-                >
-                  {t("settings:display.usd")}
-                </ToggleButton>
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("CNY")}
-                  isActive={currencyType === "CNY"}
-                  size="default"
-                  aria-label={t("settings:display.cny")}
-                >
-                  {t("settings:display.cny")}
-                </ToggleButton>
-              </div>
+              <SegmentedControl
+                layout="fit"
+                size="default"
+                aria-label={t("settings:display.currencyUnit")}
+                value={currencyType}
+                onValueChange={handleCurrencyChange}
+                options={[
+                  { value: "USD", label: t("settings:display.usd") },
+                  { value: "CNY", label: t("settings:display.cny") },
+                ]}
+              />
 
               <div>
                 <Label className="text-sm font-medium">
@@ -1228,7 +1222,7 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="items-stretch justify-start">
                 {QUICK_RANGES.map((preset) => {
                   const label = getBalanceHistoryQuickRangeLabel(t, preset.id)
                   return (
@@ -1248,7 +1242,7 @@ export default function BalanceHistory() {
                     </Button>
                   )
                 })}
-              </div>
+              </ActionGroup>
 
               <div className="text-muted-foreground text-xs">
                 {t("summary.coverage", {
@@ -1377,7 +1371,7 @@ export default function BalanceHistory() {
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                              className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex max-w-full min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                             >
                               <span className="min-w-0 truncate">
                                 {t("breakdown.title")}:{" "}
@@ -1426,31 +1420,24 @@ export default function BalanceHistory() {
                         </div>
                       </div>
 
-                      <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-                        role="group"
+                      <SegmentedControl
+                        layout="fit"
+                        size="sm"
                         aria-label={t("breakdown.controls.chartType")}
-                      >
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={breakdownChartType === "pie"}
-                          onClick={() => setBreakdownChartType("pie")}
-                          disabled={breakdownData.hasNegativeValues}
-                          aria-label={t("breakdown.chartTypes.pie")}
-                        >
-                          {t("breakdown.chartTypes.pie")}
-                        </ToggleButton>
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={breakdownChartType === "bar"}
-                          onClick={() => setBreakdownChartType("bar")}
-                          aria-label={t("breakdown.chartTypes.histogram")}
-                        >
-                          {t("breakdown.chartTypes.histogram")}
-                        </ToggleButton>
-                      </div>
+                        value={breakdownChartType}
+                        onValueChange={setBreakdownChartType}
+                        options={[
+                          {
+                            value: "pie",
+                            label: t("breakdown.chartTypes.pie"),
+                            disabled: breakdownData.hasNegativeValues,
+                          },
+                          {
+                            value: "bar",
+                            label: t("breakdown.chartTypes.histogram"),
+                          },
+                        ]}
+                      />
                     </div>
 
                     {effectiveBreakdownMetric === "balance" && (
@@ -1502,7 +1489,7 @@ export default function BalanceHistory() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex max-w-full min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.title")}:{" "}
@@ -1548,7 +1535,7 @@ export default function BalanceHistory() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex max-w-full min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.controls.scope")}:{" "}
@@ -1585,30 +1572,17 @@ export default function BalanceHistory() {
                             : t("trend.subtitle")}
                         </div>
                       </div>
-                      <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-                        role="group"
+                      <SegmentedControl
+                        layout="fit"
+                        size="sm"
                         aria-label={t("trend.controls.chartType")}
-                      >
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={trendChartType === "line"}
-                          onClick={() => setTrendChartType("line")}
-                          aria-label={t("trend.chartTypes.line")}
-                        >
-                          {t("trend.chartTypes.line")}
-                        </ToggleButton>
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={trendChartType === "bar"}
-                          onClick={() => setTrendChartType("bar")}
-                          aria-label={t("trend.chartTypes.bar")}
-                        >
-                          {t("trend.chartTypes.bar")}
-                        </ToggleButton>
-                      </div>
+                        value={trendChartType}
+                        onValueChange={setTrendChartType}
+                        options={[
+                          { value: "line", label: t("trend.chartTypes.line") },
+                          { value: "bar", label: t("trend.chartTypes.bar") },
+                        ]}
+                      />
                     </div>
 
                     {hasAnyTrendMetricData ? (

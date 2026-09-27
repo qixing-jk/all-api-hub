@@ -13,10 +13,6 @@ import type { ManagedSiteTokenChannelAssessment } from "~/services/managedSites/
 
 export type { ManagedSiteType } from "~/constants/siteType"
 export type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
-export {
-  MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
-  MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-} from "~/services/managedSites/channelMatch"
 
 export type ManagedSiteAssessmentSignalsLike =
   | ManagedSiteChannelAssessmentSignals

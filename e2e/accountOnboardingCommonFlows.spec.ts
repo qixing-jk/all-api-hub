@@ -47,7 +47,10 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { expectAccountListItemVisibleBySite } from "~~/e2e/utils/realSite/accountAdd"
+
+parallelizeShardableSpec()
 
 const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 const AIHUBMIX_SITE_URL = AIHUBMIX_WEB_ORIGIN
@@ -554,6 +557,8 @@ test("adds an account through the real add-account auto-detect flow", async ({
 }) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
+    // This scenario enters its URL manually; avoid racing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
     tempWindowFallback: {
       enabled: false,
     },

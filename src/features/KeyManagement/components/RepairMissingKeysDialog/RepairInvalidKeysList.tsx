@@ -170,7 +170,7 @@ export function RepairInvalidKeysList({
                         <Badge
                           variant="outline"
                           size="sm"
-                          className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
+                          className="border-border text-2xs shrink-0 px-2 py-0.5 font-medium"
                           title={resource.groupLabel}
                         >
                           {t(
@@ -188,7 +188,7 @@ export function RepairInvalidKeysList({
                 <Badge
                   variant="outline"
                   size="sm"
-                  className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
+                  className="border-border text-2xs shrink-0 px-2 py-0.5 font-medium"
                   title={resource.siteType}
                 >
                   {resource.siteType}

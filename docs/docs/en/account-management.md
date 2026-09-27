@@ -41,7 +41,7 @@ As your account list grows, use the following features to keep it organized.
 ### 2.3 Sorting Priority
 
 - In **Settings → Account Management → Sorting Priority Settings**, independently control current-site and related-open-page priority. Changes save automatically.
-- Use **Sort by** to select balance, today's consumption or income, check-in requirement, health status, custom check-in or redeem links, or creation time, then toggle the direction.
+- Use **Sort by** to select account name, balance, today's consumption or income, check-in requirement, health status, custom check-in or redeem links, or creation time, then toggle the direction.
 - **Reset to default order** clears the field sort while retaining browsing-context switches and saved manual positions.
 - Click **Reorder** in the full settings page to drag accounts. Changes save automatically, and accounts move only within their pinned, normal, or disabled group.
 - Search and manual ordering do not apply browsing-context boosts. See [Sorting Priority Settings](./sorting-priority.md).

@@ -16,10 +16,8 @@ import {
   calculateModelPrice,
   formatPrice,
   formatPriceCompact,
-  formatPriceRange,
   getBillingModeText,
   getEndpointTypesText,
-  isModelAvailableForGroup,
   isTokenBillingType,
   resolvePriceAmount,
 } from "~/services/models/utils/modelPricing"
@@ -325,38 +323,6 @@ describe("modelPricing utils", () => {
     })
   })
 
-  describe("formatPriceRange", () => {
-    it("should format price range when input != output", () => {
-      expect(formatPriceRange(1.0, 2.0, "USD", 2)).toBe("$1.00 ~ $2.00")
-    })
-
-    it("should return single price when input = output", () => {
-      expect(formatPriceRange(1.5, 1.5, "USD", 2)).toBe("$1.50")
-    })
-
-    it("should handle different currencies", () => {
-      expect(formatPriceRange(10.0, 20.0, "CNY", 2)).toBe("¥10.00 ~ ¥20.00")
-    })
-
-    it("should use default precision of 4", () => {
-      expect(formatPriceRange(0.1234, 0.5678, "USD")).toBe("$0.1234 ~ $0.5678")
-    })
-
-    it("should handle zero prices", () => {
-      expect(formatPriceRange(0, 0, "USD", 2)).toBe("$0")
-      expect(formatPriceRange(0, 1.5, "USD", 2)).toBe("$0 ~ $1.50")
-    })
-
-    it("should format very small prices with exponential notation", () => {
-      const result = formatPriceRange(0.00001, 0.00002, "USD", 4)
-      expect(result).toContain("e")
-    })
-
-    it("should respect custom precision", () => {
-      expect(formatPriceRange(1.23456, 2.34567, "USD", 2)).toBe("$1.23 ~ $2.35")
-    })
-  })
-
   describe("getBillingModeText", () => {
     it("should return token-based text for quota_type 0", () => {
       expect(getBillingModeText(0)).toBe("ui:billing.tokenBased")
@@ -369,42 +335,6 @@ describe("modelPricing utils", () => {
     it("should return per-call text for other quota types", () => {
       expect(getBillingModeText(2)).toBe("ui:billing.perCall")
       expect(getBillingModeText(99)).toBe("ui:billing.perCall")
-    })
-  })
-
-  describe("isModelAvailableForGroup", () => {
-    const model: ModelPricing = {
-      model_name: "test-model",
-      quota_type: 0,
-      model_ratio: 1,
-      completion_ratio: 1,
-      model_price: 0,
-      enable_groups: ["default", "vip", "premium"],
-      supported_endpoint_types: ["chat"],
-    }
-
-    it("should return true for enabled group", () => {
-      expect(isModelAvailableForGroup(model, "default")).toBe(true)
-      expect(isModelAvailableForGroup(model, "vip")).toBe(true)
-      expect(isModelAvailableForGroup(model, "premium")).toBe(true)
-    })
-
-    it("should return false for disabled group", () => {
-      expect(isModelAvailableForGroup(model, "free")).toBe(false)
-      expect(isModelAvailableForGroup(model, "enterprise")).toBe(false)
-    })
-
-    it("should handle empty enable_groups", () => {
-      const restrictedModel: ModelPricing = {
-        ...model,
-        enable_groups: [],
-      }
-      expect(isModelAvailableForGroup(restrictedModel, "default")).toBe(false)
-    })
-
-    it("should be case-sensitive", () => {
-      expect(isModelAvailableForGroup(model, "VIP")).toBe(false)
-      expect(isModelAvailableForGroup(model, "Default")).toBe(false)
     })
   })
 

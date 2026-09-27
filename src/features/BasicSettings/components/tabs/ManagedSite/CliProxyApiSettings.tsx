@@ -1,16 +1,18 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import {
   CliProxyApiError,
   listAllCliProxyApiProviders,
 } from "~/services/apiService/cliProxyApi"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -141,7 +143,16 @@ export default function CliProxyApiSettings() {
       id="cli-proxy"
       title={t("cliProxyApi.title")}
       description={t("cliProxyApi.description")}
-      onReset={resetCliProxyApiConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.cliProxyApi,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.cliProxyApi,
+        reset: resetCliProxyApiConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

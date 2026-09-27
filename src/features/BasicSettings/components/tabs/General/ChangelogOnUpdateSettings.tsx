@@ -1,9 +1,10 @@
 import { FileText } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
@@ -22,6 +23,13 @@ export default function ChangelogOnUpdateSettings() {
 
   return (
     <SettingSection
+      onReset={() =>
+        updateOpenChangelogOnUpdate(DEFAULT_PREFERENCES.openChangelogOnUpdate!)
+      }
+      resetDisabled={
+        openChangelogOnUpdate === DEFAULT_PREFERENCES.openChangelogOnUpdate
+      }
+      resetRequiresConfirmation={false}
       id="changelog-on-update"
       title={t("changelogOnUpdate.title")}
       description={t("changelogOnUpdate.description")}

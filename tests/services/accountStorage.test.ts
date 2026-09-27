@@ -1,23 +1,30 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
+import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/capture"
-import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  createAccountModelVerificationHistoryTarget,
+  createVerificationHistorySummary,
+  verificationResultHistoryStorage,
+} from "~/services/verification/verificationResultHistory"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -31,6 +38,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
@@ -39,6 +47,7 @@ import {
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { requireHistoryTarget } from "~~/tests/test-utils/history"
 
 const storageData = new Map<string, any>()
 
@@ -777,11 +786,10 @@ describe("accountStorage core behaviors", () => {
         id: "1",
         access_token: "token",
         username: "tester",
-        quota: 88 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        quota: 88 * QUOTA_PER_USD,
         today_prompt_tokens: 0,
         today_completion_tokens: 12_345,
-        today_quota_consumption:
-          1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        today_quota_consumption: 1.23 * QUOTA_PER_USD,
         today_requests_count: 10,
         today_income: 0,
         usage: {
@@ -1179,6 +1187,80 @@ describe("accountStorage core behaviors", () => {
     const updated = accounts.find((acc) => acc.id === "with-tags")
 
     expect(updated?.tagIds).toEqual([])
+  })
+
+  it("addAccount runs the write guard inside the transaction and aborts on rejection", async () => {
+    seedStorage([])
+    const seenAccountIds: string[][] = []
+
+    await expect(
+      accountStorage.addAccount(createAccount({ site_name: "Guarded" }), {
+        guard: (config, nextAccount) => {
+          seenAccountIds.push(config.accounts.map((account) => account.id))
+          if (nextAccount.site_name === "Guarded") {
+            throw new AccountWriteRejectedError("rejected")
+          }
+        },
+      }),
+    ).rejects.toBeInstanceOf(AccountWriteRejectedError)
+
+    // The guard saw the pre-write snapshot, and nothing was persisted.
+    expect(seenAccountIds).toEqual([[]])
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts,
+    ).toEqual([])
+  })
+
+  it("mutateAccount evaluates the guard against the pending update", async () => {
+    seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
+    const observed: Array<{ id: string; siteName: string }> = []
+
+    const updated = await accountCheckInState.updateAccountWithCheckInDraft(
+      "guarded",
+      { site_name: "After" },
+      createCanonicalCheckIn(),
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        // The guard receives the update as it would be written, so a rule is
+        // evaluated against the new value rather than the stored one.
+        guard: (config, nextAccount) => {
+          observed.push({ id: nextAccount.id, siteName: nextAccount.site_name })
+          expect(
+            config.accounts.find((account) => account.id === "guarded")
+              ?.site_name,
+          ).toBe("Before")
+        },
+      },
+    )
+
+    expect(updated).toBe(true)
+    expect(observed).toEqual([{ id: "guarded", siteName: "After" }])
+  })
+
+  it("mutateAccount leaves the account untouched when its guard rejects", async () => {
+    seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
+
+    await expect(
+      accountCheckInState.updateAccountWithCheckInDraft(
+        "guarded",
+        { site_name: "After" },
+        createCanonicalCheckIn(),
+        {
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+          guard: () => {
+            throw new AccountWriteRejectedError("rejected")
+          },
+        },
+      ),
+    ).rejects.toBeInstanceOf(AccountWriteRejectedError)
+
+    // The rejection is decided, so it must not be swallowed into a save failure
+    // that the caller would report as an unrelated storage error.
+    const persisted = storageData.get(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+    ) as AccountStorageConfig
+    expect(persisted.accounts[0].site_name).toBe("Before")
   })
 
   it("addAccount preserves its rejection when the storage write fails", async () => {
@@ -1597,7 +1679,7 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    const today = new Date().toISOString().split("T")[0]
+    const today = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
     const success =
       await accountStorage.markAccountAsCustomCheckedIn("custom-1")
 
@@ -2672,6 +2754,107 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it("deleteAccount should drop the account's verification results", async () => {
+    seedStorage([
+      createAccount({ id: "verify-live" }),
+      createAccount({ id: "verify-gone" }),
+    ])
+
+    const seedResults = async (accountId: string, modelId: string) => {
+      const target = requireHistoryTarget(
+        createAccountModelVerificationHistoryTarget(accountId, modelId),
+      )
+      await verificationResultHistoryStorage.upsertLatestSummary(
+        requireHistoryTarget(
+          createVerificationHistorySummary({
+            target,
+            apiType: API_TYPES.OPENAI,
+            results: [
+              {
+                id: "models",
+                status: "pass",
+                latencyMs: 1,
+                summary: "Available",
+              },
+            ],
+          }),
+        ),
+      )
+    }
+    await seedResults("verify-live", "m-1")
+    await seedResults("verify-gone", "m-1")
+
+    await accountStorage.deleteAccount("verify-gone")
+
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        targetKey: "account:verify-live:model:m-1",
+      }),
+    ])
+  })
+
+  it("deleteAccount should stay committed when verification cleanup fails", async () => {
+    seedStorage([createAccount({ id: "cleanup-failure" })])
+    const cleanupError = new Error("verification storage unavailable")
+    const reconcileSpy = vi
+      .spyOn(verificationResultHistoryStorage, "reconcileOwners")
+      .mockRejectedValueOnce(cleanupError)
+
+    await expect(accountStorage.deleteAccount("cleanup-failure")).resolves.toBe(
+      true,
+    )
+    await expect(
+      accountStorage.getAccountById("cleanup-failure"),
+    ).resolves.toBeNull()
+    expect(mockLoggerError).toHaveBeenCalledWith("清理账号验证结果失败", {
+      accountIds: ["cleanup-failure"],
+      error: cleanupError,
+    })
+
+    reconcileSpy.mockRestore()
+  })
+
+  it("deleteAccounts should drop verification results for every deleted id", async () => {
+    seedStorage([
+      createAccount({ id: "bulk-verify-live" }),
+      createAccount({ id: "bulk-verify-a" }),
+      createAccount({ id: "bulk-verify-b" }),
+    ])
+
+    await verificationResultHistoryStorage.upsertLatestSummaries(
+      ["bulk-verify-a", "bulk-verify-b", "bulk-verify-live"].map((accountId) =>
+        requireHistoryTarget(
+          createVerificationHistorySummary({
+            target: requireHistoryTarget(
+              createAccountModelVerificationHistoryTarget(accountId, "m-1"),
+            ),
+            apiType: API_TYPES.OPENAI,
+            results: [
+              {
+                id: "models",
+                status: "pass",
+                latencyMs: 1,
+                summary: "Available",
+              },
+            ],
+          }),
+        ),
+      ),
+    )
+
+    await accountStorage.deleteAccounts(["bulk-verify-a", "bulk-verify-b"])
+
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        targetKey: "account:bulk-verify-live:model:m-1",
+      }),
+    ])
+  })
+
   it("deleteAccounts should de-dupe ids and prune pinned and ordered references", async () => {
     const accounts = [
       createAccount({ id: "bulk-a" }),
@@ -3032,7 +3215,9 @@ describe("accountStorage core behaviors", () => {
         customCheckIn: {
           url: "https://example.com/check",
           isCheckedInToday: true,
-          lastCheckInDate: new Date().toISOString().split("T")[0],
+          lastCheckInDate: getDayKeyFromUnixSeconds(
+            Math.floor(Date.now() / 1000),
+          ),
         },
       },
     })
@@ -4237,8 +4422,7 @@ describe("accountStorage core behaviors", () => {
   it("refreshAccount should preserve manual balance quota when set", async () => {
     const manualBalanceUsd = "1.23"
     const manualQuota = Math.round(
-      Number.parseFloat(manualBalanceUsd) *
-        UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      Number.parseFloat(manualBalanceUsd) * QUOTA_PER_USD,
     )
     const account = createAccount({
       id: "manual-quota",

@@ -28,6 +28,12 @@
       "slate": "Schiefergrau",
       "violet": "Violett"
     },
+    "contentWidth": "Inhaltsbreite",
+    "contentWidthDescription": "Gilt nur für die vollständige Verwaltungsseite.",
+    "contentWidths": {
+      "centered": "Zentriert",
+      "full": "Volle Breite"
+    },
     "densities": {
       "comfortable": "Geräumig",
       "compact": "Kompakt",
@@ -36,6 +42,13 @@
     "density": "Oberflächendichte",
     "densityDescription": "Zeilenabstände und Höhe der Bedienelemente anpassen, ohne die Schriftgröße zu ändern.",
     "description": "Änderungen werden automatisch gespeichert und auf Einstellungen, Popup und Seitenleiste angewendet.",
+    "font": "Schriftart",
+    "fontDescription": "Wählen Sie die Schriftart der Oberfläche. Bei „Dem Design folgen“ verwendet das Standarddesign eine serifenlose Schrift und Anthropic eine Serifenschrift.",
+    "fonts": {
+      "default": "Dem Design folgen",
+      "sans": "Serifenlos",
+      "serif": "Serifen"
+    },
     "preset": "Designvorlage",
     "presetColorsHint": "Dieses Design hat eine eigene Farbpalette. Im Standarddesign können Sie die Akzentfarbe separat wählen.",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "Standarddesign"
     },
-    "preview": "Vorschau",
-    "primaryAction": "Hauptaktion",
     "radii": {
       "default": "Standard",
       "large": "Groß",
@@ -57,8 +68,16 @@
     "radius": "Eckenradius",
     "reset": "Darstellung zurücksetzen",
     "resetDensity": "Dichte zurücksetzen",
+    "resetFont": "Schriftart zurücksetzen",
+    "resetTextSize": "Textgröße zurücksetzen",
     "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
-    "secondaryAction": "Nebenaktion",
+    "textSize": "Textgröße",
+    "textSizeDescription": "Schriftgröße und Zeilenhöhe anpassen. Bedienelemente passen sich dem Inhalt an, ohne die eingestellte Dichte zu ändern.",
+    "textSizes": {
+      "default": "Standard",
+      "extraLarge": "Sehr groß",
+      "large": "Groß"
+    },
     "title": "Darstellung"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "Import & Export"
     }
   },
-  "description": "Verwalten Sie die grundlegenden Konfigurationsoptionen des Plugins",
+  "description": "Darstellung, Kontoverwaltung, automatische Aufgaben und Datensicherung anpassen.",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "Legen Sie die Standardwährungseinheit für die Saldo- und Cashflow-Anzeige fest",
     "currencyUnit": "Währungseinheit",
     "defaultTab": "Standardregisterkarte",
     "defaultTabDesc": "Legen Sie die Standardregisterkarte fest, die beim Start des Plugins angezeigt wird",
-    "description": "Passen Sie das Erscheinungsbild und die Anzeigeeinstellungen des Plugins an",
+    "description": "Passen Sie Sprache und Anzeigeeinstellungen des Plugins an",
     "title": "Anzeigeeinstellungen",
     "todayCashflow": "Heutiger Cashflow",
     "todayCashflowEnabled": "Heutigen Cashflow anzeigen",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Bereits auf Standardwerten",
     "confirmReset": "Zurücksetzen bestätigen",
     "preferencesChangedExternally": "Einstellungen wurden extern geändert. Aktualisieren Sie und versuchen Sie es erneut.",
+    "resetAllConfirmDesc": "Alle Einstellungen zurücksetzen und konfigurierte Verbindungsadressen und Zugangsdaten löschen? Gespeicherte Konten bleiben erhalten; auch die Aufbewahrungsregeln werden zurückgesetzt.",
     "resetConfirmDesc": "Sind Sie sicher, dass Sie {{name}} auf die Standardeinstellungen zurücksetzen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "resetConnectionConfirmDesc": "Die Verbindungsadressen, Zugangsdaten und zugehörigen Einstellungen dieser Gruppe werden gelöscht und müssen erneut eingerichtet werden. Standardwerte wiederherstellen?",
     "resetFailed": "Fehler beim Zurücksetzen von {{name}}",
+    "resetHistoryConfirmDesc": "Die Standardwerte verkürzen die Aufbewahrungsdauer. Ältere Einträge können dauerhaft gelöscht werden. Fortfahren?",
     "resetSuccess": "{{name}} wurde auf die Standardeinstellungen zurückgesetzt",
+    "retentionSaveHint": "Andere Optionen werden automatisch gespeichert. Die Aufbewahrungsdauer muss angewendet werden; eine Verkürzung kann Verlaufseinträge löschen.",
     "runtimeRequestFailed": "Laufzeitanforderung fehlgeschlagen. Versuchen Sie es später noch einmal.",
     "saveSettingsFailed": "Einstellungen konnten nicht gespeichert werden",
     "updateFailed": "{{name}} Update fehlgeschlagen",
@@ -614,7 +638,12 @@
       "enableDesc": "Wenn deaktiviert, wird die geplante Hintergrundabfrage gestoppt. Vorhandene lokale Aufzeichnungen bleiben erhalten und auf der Ankündigungsseite kann weiterhin eine manuelle Überprüfung durchgeführt werden.",
       "interval": "Abfrageintervall",
       "intervalDesc": "Legen Sie das Abfrageintervall für Hintergrund-Website-Ankündigungen in Minuten fest, von 15 bis 1440.",
-      "intervalInvalid": "Geben Sie eine ganze Minutenzahl zwischen {{min}} und {{max}} ein."
+      "intervalInvalid": "Geben Sie eine ganze Minutenzahl zwischen {{min}} und {{max}} ein.",
+      "maxAge": "Gültigkeitsdauer für Benachrichtigungen",
+      "maxAgeDesc": "Ankündigungen, die früher veröffentlicht wurden, werden als gelesen gespeichert und lösen keine Benachrichtigung aus.",
+      "maxAgeInvalid": "Geben Sie eine ganze Zahl zwischen {{min}} und {{max}} Tagen ein.",
+      "upstreamRead": "Nach der Benachrichtigung auf der Website als gelesen markieren",
+      "upstreamReadDesc": "Wenn aktiviert, markiert eine zugestellte Benachrichtigung die abgerufenen Ankündigungen auch auf der Website als gelesen. Wenn deaktiviert, wird der Lesestatus nur synchronisiert, nachdem du eine Ankündigung auf der Seite als gelesen markierst; benachrichtigt zu werden ist nicht dasselbe wie gelesen zu haben. Gilt nur für Websites, die eine Synchronisierung des Lesestatus unterstützen."
     },
     "title": "Website-Ankündigungen"
   },
@@ -677,6 +706,7 @@
     "permissions": "Berechtigungen",
     "refresh": "Datenaktualisierung",
     "select": "Wählen Sie eine Registerkarte",
+    "siteAnnouncements": "Website-Ankündigungen",
     "webAiApiCheck": "AI API-Test"
   },
   "taskNotifications": {
@@ -815,16 +845,15 @@
   },
   "theme": {
     "appearance": "Aussehen",
-    "clickSwitch": "Klicken Sie hier, um in den {{nextMode}}-Modus zu wechseln",
     "current": "Aktuell: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Aktuell: Systemeinstellung ({{theme}})",
     "dark": "Dunkel",
     "followSystem": "Systemeinstellung",
     "followSystemTheme": "Systemdesign verwenden",
     "light": "Hell",
-    "selectTheme": "Wählen Sie ein Darstellungsthema aus",
+    "mode": "Darstellungsmodus",
+    "selectTheme": "Hell, Dunkel oder Systemeinstellung wählen",
     "switchTo": "Zum Thema {{theme}} wechseln: {{description}}",
-    "toggle": "Designumschalter: aktuell {{currentMode}}; klicken, um zu {{nextMode}} zu wechseln",
     "useDarkTheme": "Dunkles Thema verwenden",
     "useLightTheme": "Verwenden Sie ein helles Thema"
   },

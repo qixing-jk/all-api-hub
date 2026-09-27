@@ -24,6 +24,7 @@ export function useContentAppearance() {
     THEME_MODE.LIGHT,
   )
   const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -62,6 +63,8 @@ export function useContentAppearance() {
         }
       } catch (error) {
         logger.warn("Failed to load theme preferences", error)
+      } finally {
+        if (active && currentRevision === revision) setReady(true)
       }
     }
 
@@ -81,5 +84,5 @@ export function useContentAppearance() {
     }
   }, [])
 
-  return { resolvedTheme, appearance }
+  return { resolvedTheme, appearance, ready }
 }

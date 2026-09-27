@@ -18,6 +18,7 @@ import type {
   UsageHistoryExportSelection,
   UsageHistoryStore,
 } from "~/types/usageHistory"
+import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -99,9 +100,7 @@ export const useUsageAnalyticsExport = (params: {
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `all-api-hub-usage-history-${
-        new Date().toISOString().split("T")[0]
-      }.json`
+      link.download = `all-api-hub-usage-history-${formatUtcDayKey()}.json`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

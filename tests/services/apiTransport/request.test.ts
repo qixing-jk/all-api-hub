@@ -21,6 +21,8 @@ import {
 } from "~/services/apiTransport/type"
 import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
+  getTempContextTaskMetadata,
+  isProtectionBypassTaskPermitted,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
@@ -44,10 +46,10 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   },
 )
 
-const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
-  const mockWithSiteApiRequestLimit = vi.fn()
+const { mockWithSiteApiRequestLease } = vi.hoisted(() => {
+  const mockWithSiteApiRequestLease = vi.fn()
 
-  return { mockWithSiteApiRequestLimit }
+  return { mockWithSiteApiRequestLease }
 })
 
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
@@ -149,8 +151,7 @@ vi.mock(
       >()
     return {
       ...actual,
-      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLease,
     }
   },
 )
@@ -216,7 +217,7 @@ describe("apiTransport request helpers", () => {
 
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any, _signal?: AbortSignal) =>
         await runMockSiteRequestTask(task),
     )
@@ -433,7 +434,7 @@ describe("apiTransport request helpers", () => {
       },
       { endpoint: "/api/user/self" },
     )
-    expect(mockWithSiteApiRequestLimit.mock.calls[0][3]).toBe(requestScheduling)
+    expect(mockWithSiteApiRequestLease.mock.calls[0][3]).toBe(requestScheduling)
   })
 
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
@@ -457,8 +458,8 @@ describe("apiTransport request helpers", () => {
       ),
     ).resolves.toEqual({ ok: true })
 
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(1)
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(1)
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
       "https://example.com",
       expect.any(Function),
       undefined,
@@ -516,7 +517,7 @@ describe("apiTransport request helpers", () => {
         },
       )
 
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.invalid",
         expect.any(Function),
         expectedSignal,
@@ -569,7 +570,7 @@ describe("apiTransport request helpers", () => {
         })
       })
 
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any) => {
         runDispatchedTask = () => {
           runDispatchedTask = undefined
@@ -650,7 +651,7 @@ describe("apiTransport request helpers", () => {
         { headers: { "content-type": "application/json" } },
       ),
     )
-    mockWithSiteApiRequestLimit.mockImplementation(
+    mockWithSiteApiRequestLease.mockImplementation(
       async (_key: string, task: () => any) =>
         await new Promise((resolve, reject) => {
           dispatchRequest = () => {
@@ -742,7 +743,7 @@ describe("apiTransport request helpers", () => {
 
       await vi.advanceTimersByTimeAsync(0)
       expect(fetchSpy).toHaveBeenCalledTimes(1)
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.invalid",
         expect.any(Function),
         abortDeadline.signal,
@@ -901,11 +902,11 @@ describe("apiTransport request helpers", () => {
       { endpoint: "/api/status" },
     )
 
-    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(2)
-    expect(mockWithSiteApiRequestLimit.mock.calls[0][0]).toBe(
+    expect(mockWithSiteApiRequestLease).toHaveBeenCalledTimes(2)
+    expect(mockWithSiteApiRequestLease.mock.calls[0][0]).toBe(
       "https://example.com",
     )
-    expect(mockWithSiteApiRequestLimit.mock.calls[1][0]).toBe(
+    expect(mockWithSiteApiRequestLease.mock.calls[1][0]).toBe(
       "https://example.com",
     )
   })
@@ -2281,65 +2282,101 @@ describe("apiTransport request helpers", () => {
     onResponse: vi.fn(),
   })
 
-  it("uses the temp-window route for an explicitly forced request", async () => {
-    forceTempWindowRoute()
-    mockSendRuntimeMessage.mockResolvedValueOnce({
-      success: true,
-      status: 200,
-      data: {
-        success: true,
-        data: { ok: true },
-        message: "temp",
-      },
-    })
-
-    let normalFetchCount = 0
-    server.use(
-      http.post(API_URL, () => {
-        normalFetchCount += 1
-        return HttpResponse.json({
-          success: true,
-          data: { ok: false },
-          message: "normal",
+  it.each([
+    {
+      version: 2,
+      kind: "user_command",
+      command: "retry_checkin_account",
+      surface: "options",
+    } as const,
+    {
+      version: 2,
+      kind: "automatic",
+      feature: "checkin",
+      trigger: "scheduled",
+      surface: "background",
+    } as const,
+  ])(
+    "allows a forced check-in POST through the $kind temp-window route",
+    async (execution) => {
+      forceTempWindowRoute()
+      mockSendRuntimeMessage.mockImplementationOnce(async ({ task }) => {
+        expect(getTempContextTaskMetadata(task)).toEqual({
+          operation: "fetch",
+          cause: "explicit_context",
         })
-      }),
-    )
-
-    await expect(
-      fetchApiData<{ ok: boolean }>(
-        {
-          baseUrl: BASE_URL,
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            cookie: "session=abc123",
+        if (
+          !isProtectionBypassTaskPermitted(
+            PROTECTION_BYPASS_FEATURES.Checkin,
+            task.kind,
+          )
+        ) {
+          return {
+            success: false,
+            error: "task_not_permitted",
+            code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+          }
+        }
+        return {
+          success: true,
+          status: 200,
+          data: {
+            success: true,
+            data: { ok: true },
+            message: "temp",
           },
-          fetchContext: {
-            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
-            tabId: 456,
-            origin: "https://example.com",
-          },
-          forceTempWindow: true,
-          protectionBypassExecution: backgroundProtectionBypassExecution,
-        },
-        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
-      ),
-    ).resolves.toEqual({ ok: true })
+        }
+      })
 
-    expect(normalFetchCount).toBe(0)
-    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.ProtectionBypassExecuteTask,
-        task: {
-          kind: "profile_isolated_fetch",
-          params: expect.objectContaining({
-            originUrl: BASE_URL,
-            fetchUrl: API_URL,
-          }),
-        },
-      }),
-    )
-  })
+      let normalFetchCount = 0
+      server.use(
+        http.post(API_URL, () => {
+          normalFetchCount += 1
+          return HttpResponse.json({
+            success: true,
+            data: { ok: false },
+            message: "normal",
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData<{ ok: boolean }>(
+          {
+            baseUrl: BASE_URL,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              cookie: "session=abc123",
+            },
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId: 456,
+              origin: "https://example.com",
+            },
+            forceTempWindow: true,
+            protectionBypassExecution: execution,
+          },
+          { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+        ),
+      ).resolves.toEqual({ ok: true })
+
+      expect(normalFetchCount).toBe(0)
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.ProtectionBypassExecuteTask,
+          task: {
+            kind: "explicit_page_fetch",
+            params: expect.objectContaining({
+              originUrl: BASE_URL,
+              fetchUrl: API_URL,
+            }),
+          },
+        }),
+      )
+      expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("applies the provider decoder to a forced temp-window error response", async () => {
     forceTempWindowRoute()
@@ -4146,7 +4183,7 @@ describe("apiTransport request helpers", () => {
         { endpoint },
       )
 
-      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      expect(mockWithSiteApiRequestLease).toHaveBeenCalledWith(
         "https://example.com",
         expect.any(Function),
         undefined,
@@ -4184,7 +4221,7 @@ describe("apiTransport request helpers", () => {
       { endpoint: ENDPOINT },
     )
 
-    expect(mockWithSiteApiRequestLimit).not.toHaveBeenCalled()
+    expect(mockWithSiteApiRequestLease).not.toHaveBeenCalled()
   })
 
   it("fetchApi supports text responses", async () => {

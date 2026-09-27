@@ -1,5 +1,5 @@
 {
-  "description": "在每天的指定时间窗口内，自动为符合条件的账号执行签到；下方结果列表显示已执行的签到记录，不是待签到队列。",
+  "description": "按计划为符合条件的账号签到，查看已执行记录并重试失败任务。",
   "execution": {
     "actions": {
       "devModeHint": "开发模式：为便于测试，操作按钮将始终显示。",
@@ -36,13 +36,24 @@
       "all": "全部",
       "alreadyChecked": "已签到",
       "clearAll": "清除筛选",
+      "clearReasons": "清除原因",
       "countFiltered": "显示 {{filtered}} / {{total}} 条",
       "countTotal": "共 {{total}} 条",
       "failed": "失败",
       "needsAttention": "需要处理",
+      "reasonAll": "全部原因",
+      "reasonLabel": "按原因筛选",
       "searchLabel": "搜索执行结果",
       "searchPlaceholder": "搜索账号名称、ID 或结果信息...",
+      "selectedReasons": "已选 {{count}} 个原因",
       "selectedStatuses": "已选 {{count}} 类",
+      "skipCategoryAccountDisabled": "账号已禁用",
+      "skipCategoryActionRequired": "需要你处理",
+      "skipCategoryDisabled": "已停用",
+      "skipCategoryExpected": "无需处理",
+      "skipCategoryUnclassified": "未分类",
+      "skipCategoryUnsupported": "暂不支持",
+      "skipCategoryWaiting": "稍后自动重试",
       "skipped": "未执行",
       "statusLabel": "按执行状态筛选",
       "success": "本次签到成功",
@@ -84,7 +95,7 @@
     },
     "title": "自动签到"
   },
-  "manualDescription": "可以为符合条件的账号执行批量签到；下方结果列表显示已执行的签到记录，不是待签到队列。",
+  "manualDescription": "手动为符合条件的账号批量签到，查看已执行记录并重试失败任务。",
   "messages": {
     "error": {
       "accountDisabled": "账号已禁用",
@@ -144,12 +155,14 @@
     "checkinFailed": "签到失败",
     "checkinSuccessful": "签到成功",
     "endpointNotSupported": "不支持该签到接口，请检查账号的站点类型与实际站点是否相同",
+    "loginProviderRequired": "请先选择签到登录方式，再执行该账号的签到。",
     "nativePageIdentityMismatch": "临时签到页面登录的是另一个账号。请用目标账号打开签到页面后重试：{{checkInUrl}}",
     "nativePageIdentityMissing": "无法确认临时签到页面的登录账号。请打开签到页面并使用目标账号登录后重试：{{checkInUrl}}",
     "nativePageStatusUnconfirmed": "已点击页面签到操作，但未确认目标账号完成签到。请打开签到页面手动确认：{{checkInUrl}}",
     "nativePageTargetNotFound": "未在页面上找到签到按钮。请打开签到页面手动完成签到：{{checkInUrl}}",
     "nativePageTriggerFailed": "无法触发页面签到操作。请打开签到页面手动完成签到：{{checkInUrl}}",
     "resultPendingConfirmation": "签到结果待确认",
+    "sessionBusy": "另一个登录流程正在进行中，请稍后重试。",
     "turnstileIncognitoAccessRequired": "需要允许扩展在无痕模式运行，才能在无痕页面获取 Turnstile Token（多账号场景）。请在扩展管理页开启“允许在无痕模式运行”后重试；或手动打开签到页面完成验证：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 验证，请打开签到页面完成验证：{{checkInUrl}}",
     "unknownError": "发生未知错误"
@@ -196,8 +209,13 @@
     "already_checked_today": "今日已签到",
     "authentication_required": "登录状态已失效或需要登录。请先登录目标站点，再重试。",
     "auto_checkin_disabled": "自动签到已关闭",
+    "checkin_page_unavailable": "无法打开或触发目标站点的签到页面，请稍后重试。",
+    "checkin_unconfirmed": "签到请求已发出，但目标站点未确认签到结果，请稍后重试。",
     "credentials_missing": "缺少已保存的账号凭据，请重新识别账号或更新凭据。",
     "detection_disabled": "检测已关闭",
+    "execution_context_invalid": "本次执行未能建立受保护会话，请重新发起签到。",
+    "login_provider_in_use": "所选登录方式已由另一个 AgentRouter 账号使用。请改用另一种登录方式，或先到该账号中调整。",
+    "manual_verification_required": "目标站点要求完成人工验证，请打开签到页面完成验证后再试。",
     "method_disabled": "该站点的签到功能已停用",
     "method_not_matched": "已选签到方式与当前站点不再匹配，请重新检测签到方式。",
     "method_unavailable": "已选签到方式已不可用，请重新检测签到方式。",
@@ -206,9 +224,11 @@
     "no_provider": "账号所属站点类型暂不支持签到",
     "no_selected_method": "尚未选择签到方式，请在账号设置中重新检测或选择。",
     "permission_denied": "目标站点拒绝了签到请求，请重新登录或检查账号权限。",
+    "session_busy": "另一个登录流程正在进行中，请稍后重试。",
     "source_unavailable": "目标站点暂时不可用，请稍后重试。",
     "status_unavailable": "暂时无法确认当前签到状态，因此未执行签到",
-    "timeout": "连接超时，签到未能完成，请重试。"
+    "timeout": "连接超时，签到未能完成，请重试。",
+    "upstream_error": "目标站点返回了无法识别的签到结果，请稍后重试。"
   },
   "snapshot": {
     "badges": {

@@ -10,13 +10,8 @@ import { executeTempCheckinFeedbackScan } from "~/entrypoints/background/checkin
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_STATUS_KINDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -62,6 +57,15 @@ vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
   recordShieldBypassFocusObservation: recordShieldBypassFocusObservationMock,
 }))
 
+/**
+ * Temp-window attempts are counted into the daily shield-bypass summary instead
+ * of emitting one completion event per request, so no temp-window path may
+ * reach the per-action analytics helper.
+ */
+function expectNoPerRequestTempWindowCompletion() {
+  expect(trackProductAnalyticsActionCompletedMock).not.toHaveBeenCalled()
+}
+
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
     debug: vi.fn(),
@@ -88,7 +92,6 @@ describe("tempWindowPool window fallback", () => {
   let createWindowMock: ReturnType<typeof vi.fn>
   let removeTabMock: ReturnType<typeof vi.fn>
   let removeWindowMock: ReturnType<typeof vi.fn>
-  let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let hasWindowsApiMock: ReturnType<typeof vi.fn>
   let isAllowedIncognitoAccessMock: ReturnType<typeof vi.fn>
   let onTabRemovedMock: ReturnType<typeof vi.fn>
@@ -116,7 +119,6 @@ describe("tempWindowPool window fallback", () => {
     createWindowMock = vi.fn()
     removeTabMock = vi.fn().mockResolvedValue(undefined)
     removeWindowMock = vi.fn().mockResolvedValue(undefined)
-    removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     hasWindowsApiMock = vi.fn(() => true)
     isAllowedIncognitoAccessMock = vi.fn().mockResolvedValue(true)
     onTabRemovedMock = vi.fn(() => () => {})
@@ -214,6 +216,7 @@ describe("tempWindowPool window fallback", () => {
     vi.useFakeTimers()
     vi.resetModules()
     ;(globalThis as any).browser = {
+      storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },
@@ -242,7 +245,6 @@ describe("tempWindowPool window fallback", () => {
         onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
         removeTab: removeTabMock,
-        removeTabOrWindow: removeTabOrWindowMock,
         removeWindow: removeWindowMock,
       }
     })
@@ -782,19 +784,10 @@ describe("tempWindowPool window fallback", () => {
         data: "ok",
       },
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      undefined,
     )
     expect(createWindowMock).toHaveBeenCalledTimes(1)
     expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
@@ -1612,9 +1605,52 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
   })
 
+  it.each(["rejected", "unavailable"])(
+    "closes without navigating when ownership persistence is %s",
+    async (failure) => {
+      tempContextMode = "tab"
+      createTabMock.mockResolvedValueOnce({ id: 615 })
+      applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_615)
+      if (failure === "rejected") {
+        vi.spyOn(browser.storage.session, "set").mockRejectedValueOnce(
+          new Error("write failed"),
+        )
+      } else {
+        ;(globalThis as any).browser.storage = {}
+      }
+      const { handleTempWindowFetch } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+      const sendResponse = vi.fn()
+      const request = handleTempWindowFetch(
+        {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/test",
+          fetchOptions: { method: "GET" },
+          requestId: "req-ownership-write-failed",
+        },
+        sendResponse,
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      await request
+      expect(tabsUpdateMock).not.toHaveBeenCalled()
+      expect(removeTabMock).toHaveBeenCalledWith(615)
+      expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+        2_000_615,
+      )
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false }),
+      )
+      expect(sendMessageMock).not.toHaveBeenCalled()
+    },
+  )
+
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
     tempContextMode = "tab"
     const setupOrder: string[] = []
+    const { getInternalTabIds } = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
     createTabMock.mockImplementationOnce(async () => {
       setupOrder.push("open")
       return { id: 601 }
@@ -1630,6 +1666,7 @@ describe("tempWindowPool window fallback", () => {
       },
     )
     tabsUpdateMock.mockImplementationOnce(async () => {
+      expect(await getInternalTabIds([601])).toContain(601)
       setupOrder.push("navigate")
       return undefined
     })
@@ -2039,7 +2076,6 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeWindowMock).toHaveBeenCalledWith(305)
     expect(removeTabMock).not.toHaveBeenCalledWith(306)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(306)
   })
 
   it("preserves a structured unsupported result for incognito temp contexts", async () => {
@@ -2206,20 +2242,10 @@ describe("tempWindowPool window fallback", () => {
       success: false,
       error: "messages:background.incognitoAccessRequired",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
     )
   })
 
@@ -3056,8 +3082,13 @@ describe("tempWindowPool window fallback", () => {
     const onTabRemoved = onTabRemovedMock.mock.calls.at(0)?.[0]
     expect(onTabRemoved).toBeTypeOf("function")
 
+    const { getInternalTabIds } = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    expect(await getInternalTabIds([513])).toContain(513)
     onTabRemoved?.(513)
     await vi.advanceTimersByTimeAsync(1)
+    expect(await getInternalTabIds([513])).not.toContain(513)
 
     const closeResponse = vi.fn()
     await handleCloseTempWindow(
@@ -3073,7 +3104,6 @@ describe("tempWindowPool window fallback", () => {
     )
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("cleans up a pooled popup context when the browser removes the temp window externally", async () => {
@@ -3128,7 +3158,6 @@ describe("tempWindowPool window fallback", () => {
     )
 
     await vi.advanceTimersByTimeAsync(2100)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("cleans up pooled tab contexts on background suspend without double-closing delayed releases", async () => {
@@ -3322,7 +3351,6 @@ describe("tempWindowPool window fallback", () => {
 
     expect(removeTabMock).toHaveBeenCalledWith(901)
     expect(removeWindowMock).not.toHaveBeenCalledWith(901)
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(901)
   })
 
   it("cleans up pooled popup contexts on background suspend and forces a fresh popup next time", async () => {
@@ -3620,18 +3648,11 @@ describe("tempWindowPool window fallback", () => {
       code: API_ERROR_CODES.HTTP_429,
       error: "rate limited",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
+    expect(recordTempWindowFetchResultMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+    )
     expect(removeTabMock).toHaveBeenCalledWith(510)
   })
 
@@ -3770,7 +3791,6 @@ describe("tempWindowPool window fallback", () => {
         data: "guard-recovered",
       },
     })
-    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(509)
   })
 
   it("reuses a live same-origin tab context before delayed release and recreates it after idle cleanup", async () => {
@@ -5030,6 +5050,7 @@ describe("tempWindowPool window fallback", () => {
     })
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      undefined,
     )
   })
 
@@ -5286,20 +5307,10 @@ describe("tempWindowPool window fallback", () => {
         action: RuntimeActionIds.ContentPerformTempWindowFetch,
       }),
     )
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
     )
     // The pool schedules the delayed release via setTimeout(2000); advance
     // fake timers instead of sleeping on real time (matches other suites here).
@@ -5376,24 +5387,14 @@ describe("tempWindowPool window fallback", () => {
       url: "https://example.com/api/checkin?turnstile=token-xyz",
       cookieHeader: "cf_clearance=1",
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
     )
 
     const analyticsCallsJson = JSON.stringify(
-      trackProductAnalyticsActionCompletedMock.mock.calls,
+      recordTempWindowTurnstileFetchResultMock.mock.calls,
     )
     expect(analyticsCallsJson).not.toContain("token-xyz")
     expect(analyticsCallsJson).not.toContain("turnstile=token-xyz")
@@ -5470,18 +5471,11 @@ describe("tempWindowPool window fallback", () => {
         hasTurnstile: true,
       },
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
-      insights: {
-        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-      },
-    })
+    expectNoPerRequestTempWindowCompletion()
+    expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+    )
     expect(removeTabMock).toHaveBeenCalledWith(813)
   })
 })

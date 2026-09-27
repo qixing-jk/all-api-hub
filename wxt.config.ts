@@ -1,6 +1,6 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { defineConfig } from "wxt"
+import { defineConfig, type ConfigEnv } from "wxt"
 
 import {
   getE2eRequiredChromiumPermissions,
@@ -8,8 +8,13 @@ import {
   readE2eBuildVariant,
 } from "./e2e/utils/e2eBuildVariants"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+import { APP_SHORT_NAME } from "./src/constants/branding"
 import { APP_LOCALE_ASSET_GLOB } from "./src/constants/i18n"
 import { OPENROUTER_WEB_ORIGIN } from "./src/services/accountSiteDefinitions/identifiers"
+import {
+  formatDevManifestName,
+  type BakedDevIdentity,
+} from "./src/utils/core/devIdentity"
 
 type BrowserTarget = "chrome" | "firefox" | "safari" | string
 type ManifestPermission = string
@@ -21,6 +26,11 @@ const MANIFEST_BROWSER_TARGETS = {
 } as const
 const PRODUCTION_OUT_DIR_TEMPLATE =
   "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}"
+const OUT_BASE_DIR_NAME = ".output"
+/** WXT's out dir suffix for `wxt` (serve) builds. */
+const DEV_MODE_OUT_DIR_SUFFIX = "-dev"
+/** Global carrying the baked dev identity into extension code. */
+const DEV_IDENTITY_GLOBAL_KEY = "__AAH_DEV_IDENTITY__"
 const CORE_EXTENSION_PERMISSIONS = [
   "tabs",
   "storage",
@@ -58,15 +68,19 @@ export default defineConfig({
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   manifest: (env) => {
     const projectPath = getProjectRootPath()
-    const description =
-      env.command === "serve"
-        ? buildDevManifestDescription(projectPath)
-        : "__MSG_manifest_description__"
+    const isDevServe = env.command === "serve"
+    const description = isDevServe
+      ? buildDevManifestDescription(projectPath)
+      : "__MSG_manifest_description__"
     const requiredPermissions = getManifestRequiredPermissions(env.browser)
     const optionalPermissions = getManifestOptionalPermissions(env.browser)
 
     return {
-      name: "__MSG_manifest_name__",
+      // Local builds share a display name, so the dev name carries the project
+      // path to keep them apart in the extension list, menus and window titles.
+      name: isDevServe
+        ? formatDevManifestName(APP_SHORT_NAME, projectPath)
+        : "__MSG_manifest_name__",
       description,
       default_locale: "en",
       permissions: requiredPermissions,
@@ -109,6 +123,13 @@ export default defineConfig({
   vite: (env) => {
     console.log("当前构建模式:", env.mode)
     return {
+      // Baked for every command so release bundles bake an explicit `null`
+      // instead of leaking a local path or leaving the global undefined.
+      define: {
+        [DEV_IDENTITY_GLOBAL_KEY]: JSON.stringify(
+          buildBakedDevIdentity(env, getProjectRootPath()),
+        ),
+      },
       plugins: [reactDevToolsAuto()],
       content_security_policy: {
         extension_pages: {
@@ -205,6 +226,30 @@ function buildDevManifestDescription(projectPath: string) {
   const maxPathLen = MANIFEST_DESCRIPTION_MAX_LEN - prefix.length
   const shortPath = shortenPathForManifestDescription(projectPath, maxPathLen)
   return `${prefix}${shortPath}`
+}
+
+/**
+ * Identity baked into development builds: the source directory, the output
+ * directory the browser loads, and when the build ran. Release builds bake
+ * `null` so no local path is published.
+ *
+ * The output directory is derived from WXT's out dir naming rather than observed,
+ * which is why the dev panel labels it as derived.
+ */
+function buildBakedDevIdentity(
+  env: ConfigEnv,
+  projectPath: string,
+): BakedDevIdentity | null {
+  if (env.command !== "serve") return null
+
+  const outDirName = `${env.browser}-mv${env.manifestVersion}${DEV_MODE_OUT_DIR_SUFFIX}`
+
+  return {
+    projectPath,
+    outputPath: path.resolve(projectPath, OUT_BASE_DIR_NAME, outDirName),
+    builtAt: new Date().toISOString(),
+    browserTarget: String(env.browser),
+  }
 }
 
 function getBuildSourcemap(mode: string) {

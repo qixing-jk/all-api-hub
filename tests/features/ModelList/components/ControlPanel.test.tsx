@@ -273,6 +273,31 @@ function renderControlPanel(
 }
 
 describe("ControlPanel", () => {
+  it("can reveal unavailable models even when the filtered list is empty", async () => {
+    const user = userEvent.setup()
+    const props = renderControlPanel({
+      selectedSource: {
+        ...ACCOUNT_SOURCE,
+        groupSemantics: "account-or-runtime-key",
+      },
+      showUnavailableModels: false,
+      setShowUnavailableModels: vi.fn(),
+      filteredModels: [],
+    })
+    await user.click(
+      screen.getByRole("checkbox", { name: "showUnavailableModels" }),
+    )
+    expect(props.setShowUnavailableModels).toHaveBeenCalledWith(true)
+  })
+
+  it("omits the unavailable-group toggle for sources without group semantics", () => {
+    renderControlPanel({
+      selectedSource: { ...ACCOUNT_SOURCE, groupSemantics: "not-applicable" },
+      setShowUnavailableModels: vi.fn(),
+    })
+    expect(screen.queryByText("showUnavailableModels")).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

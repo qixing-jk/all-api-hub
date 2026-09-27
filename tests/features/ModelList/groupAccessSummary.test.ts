@@ -1,50 +1,30 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { summarizeModelListGroupAccess } from "~/features/ModelList/groupAccessSummary"
 import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import type { PreparedModelListSource } from "~/features/ModelList/sourcePreparation"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-
-const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
-  id: `account-${siteType}`,
-  name: "Example Account",
-  username: "example-user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  health: { status: SiteHealthStatus.Healthy },
-  siteType,
-  baseUrl: "https://account.example.invalid",
-  token: "example-token",
-  userId: "example-user-id",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: buildCheckInConfig(),
-})
+import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
 
 function evidence(
   id: string,
-  authoritative: boolean,
+  canRepairGroupSelection: boolean,
   groupRatios: Record<string, number>,
 ) {
   return {
     source: createAccountSource({
-      ...createAccountFixture(SITE_TYPES.NEW_API),
+      ...buildModelListAccountFixture(SITE_TYPES.NEW_API),
       id,
     }),
     groupRatios,
-    groupAccessEvidence: authoritative ? "authoritative" : "insufficient",
+    canRepairGroupSelection,
   } satisfies Pick<
     PreparedModelListSource,
-    "source" | "groupRatios" | "groupAccessEvidence"
+    "source" | "groupRatios" | "canRepairGroupSelection"
   >
 }
 describe("model list group access summary", () => {
-  it("requires every context for the selected account to be authoritative, including empty ones", () => {
+  it("requires every context for the selected account to allow selection repair, including empty ones", () => {
     const result = summarizeModelListGroupAccess({
       usesAccountContexts: true,
       selectedAccountId: "selected",
@@ -54,9 +34,9 @@ describe("model list group access summary", () => {
         evidence("selected", false, {}),
       ],
     })
-    expect(result.isGroupAccessAuthoritative).toBe(false)
+    expect(result.canRepairGroupSelection).toBe(false)
     expect(result.singleSourceGroupRatios).toEqual({})
-    expect(result.authoritativeGroupAccessByAccountId).toEqual({
+    expect(result.canRepairGroupSelectionByAccountId).toEqual({
       other: true,
       selected: false,
     })
@@ -71,7 +51,7 @@ describe("model list group access summary", () => {
         evidence("selected", true, { vip: 0 }),
       ],
     })
-    expect(result.isGroupAccessAuthoritative).toBe(true)
+    expect(result.canRepairGroupSelection).toBe(true)
     expect(result.singleSourceGroupRatios).toEqual({})
   })
   it("compares normalized ratios by value rather than key insertion order", () => {
@@ -91,7 +71,7 @@ describe("model list group access summary", () => {
       selectedAccountId: "absent",
       sources: [evidence("other", true, { a: 1 })],
     })
-    expect(result.isGroupAccessAuthoritative).toBe(false)
+    expect(result.canRepairGroupSelection).toBe(false)
     expect(result.singleSourceGroupRatios).toEqual({})
   })
   it("uses a single source without creating aggregate-account repair state", () => {
@@ -99,8 +79,8 @@ describe("model list group access summary", () => {
       usesAccountContexts: false,
       sources: [evidence("single", true, { a: 0 })],
     })
-    expect(result.isGroupAccessAuthoritative).toBe(true)
+    expect(result.canRepairGroupSelection).toBe(true)
     expect(result.singleSourceGroupRatios).toEqual({ a: 0 })
-    expect(result.authoritativeGroupAccessByAccountId).toEqual({})
+    expect(result.canRepairGroupSelectionByAccountId).toEqual({})
   })
 })

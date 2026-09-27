@@ -326,7 +326,7 @@ describe("OneHub data transformers", () => {
       expect(quote(272001).matchedRules).toHaveLength(1)
     })
 
-    it("should convert OneHubModelPricing into PricingResponse with default group when no groups", () => {
+    it("should convert OneHubModelPricing into ModelCatalogSnapshot with default group when no groups", () => {
       const input = {
         "gpt-4": {
           groups: [],
@@ -359,8 +359,11 @@ describe("OneHub data transformers", () => {
       expect(item.completion_ratio).toBe(2)
       expect(item.enable_groups).toEqual(["default"])
       expect(item.supported_endpoint_types).toEqual([])
-      expect(result.group_ratio).toEqual({})
-      expect(result.usable_group).toEqual({})
+      expect(result.groupRatios).toEqual({})
+      expect(result.groupAccess).toEqual({
+        kind: "authoritative",
+        usableGroups: [],
+      })
     })
 
     it("should preserve groups when provided and use fallback for missing owned_by", () => {
@@ -600,15 +603,14 @@ describe("OneHub data transformers", () => {
 
       const result = transformModelPricing(input as any, userGroupMap as any)
 
-      expect(result.group_ratio).toEqual({
+      expect(result.groupRatios).toEqual({
         group1: 2,
         group2: 0,
         group3: 1,
       })
-      expect(result.usable_group).toEqual({
-        group1: "Group 1",
-        group2: "Group 2",
-        group3: "Group 3",
+      expect(result.groupAccess).toEqual({
+        kind: "authoritative",
+        usableGroups: ["group1", "group2", "group3"],
       })
     })
 
@@ -627,7 +629,7 @@ describe("OneHub data transformers", () => {
           },
         )
 
-        expect(result.group_ratio).toEqual({ invalid: 1 })
+        expect(result.groupRatios).toEqual({ invalid: 1 })
       },
     )
   })

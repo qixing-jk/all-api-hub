@@ -210,7 +210,7 @@ describe("AccountDialog SiteInfoInput", () => {
     )
     expect(authTypeTrigger).toHaveAttribute("data-size", "default")
     expect(authTypeTrigger).toHaveClass(
-      "data-[size=default]:h-(--density-control)",
+      "data-[size=default]:min-h-(--density-control)",
     )
   })
 

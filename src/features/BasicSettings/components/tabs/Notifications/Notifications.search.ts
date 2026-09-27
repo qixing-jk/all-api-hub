@@ -189,6 +189,7 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
     "settings:taskNotifications.groups.setup.title",
     303,
     {
+      keywordKeys: ["common:actions.reset"],
       descriptionKey: "settings:taskNotifications.groups.setup.description",
       keywords: ["notification", "scheduled task", "alarm"],
     },
@@ -200,6 +201,7 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
     "settings:taskNotifications.groups.channels.title",
     304,
     {
+      keywordKeys: ["common:actions.reset"],
       descriptionKey: "settings:taskNotifications.groups.channels.description",
       keywords: [
         "notification",
@@ -224,6 +226,7 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
     "settings:taskNotifications.groups.tasks.title",
     305,
     {
+      keywordKeys: ["common:actions.reset"],
       descriptionKey: "settings:taskNotifications.groups.tasks.description",
       keywords: ["notification", "task", "scheduled task", "event"],
     },

@@ -17,6 +17,7 @@ import { ensureContentI18nReady } from "~/utils/i18n/content"
 
 import { setupContentMessageHandlers } from "./messageHandlers"
 import { setContentScriptContext } from "./shared/uiRoot"
+import { setupStarPromotionContent } from "./starPromotion/observeRepoStarButton"
 
 /**
  * Unified logger scoped to the content-script entrypoint.
@@ -99,10 +100,12 @@ function mainLogic() {
 
   const cleanupMessageHandlers = setupContentMessageHandlers()
   const cleanupFeatureControllers = setupContentFeatureControllers()
+  const cleanupStarPromotion = setupStarPromotionContent()
 
   return () => {
     cleanupMessageHandlers()
     cleanupFeatureControllers()
+    cleanupStarPromotion()
   }
 }
 

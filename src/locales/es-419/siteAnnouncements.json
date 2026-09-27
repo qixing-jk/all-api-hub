@@ -13,9 +13,9 @@
     "unread": "Sin leer"
   },
   "description": {
-    "disabledSummary": "El sondeo automático está desactivado; aún puedes ejecutar una comprobación manual.",
-    "enabledInterval": "Intervalo actual: cada {{intervalMinutes}} minutos.",
-    "enabledSummary": "El sondeo automático está activado; revisa los anuncios obtenidos, administra el estado de lectura y ejecuta una comprobación manual.",
+    "disabledSummary": "Lee anuncios de sitios y administra su estado de lectura. Las comprobaciones automáticas están desactivadas; puedes comprobar manualmente.",
+    "enabledInterval": "Se comprueba cada {{intervalMinutes}} minutos.",
+    "enabledSummary": "Lee anuncios de sitios y administra su estado de lectura. Las comprobaciones automáticas están activadas.",
     "pollingSettingsLink": "Configurar sondeo automático"
   },
   "empty": {

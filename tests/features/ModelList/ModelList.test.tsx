@@ -350,9 +350,9 @@ function createModelListData() {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { vip: 1 },
+      groupRatios: { vip: 1 },
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "authoritative", usableGroups: [] },
     },
     pricingContexts: [],
     isLoading: false,
@@ -382,6 +382,52 @@ describe("ModelList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseModelListData.mockReturnValue(createModelListData())
+  })
+
+  it("names only accounts with unconfirmed catalog scope in all-account mode", () => {
+    const fallbackAccount = {
+      ...ACCOUNT,
+      id: "fallback",
+      name: "Fallback Account",
+    }
+    const normalAccount = { ...ACCOUNT, id: "normal", name: "Normal Account" }
+    const pricing = createModelListData().pricingData
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      accounts: [fallbackAccount, normalAccount],
+      selectedSource: {
+        kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+        value: ALL_ACCOUNTS_SOURCE_VALUE,
+        capabilities: CAPABILITIES,
+      },
+      currentAccount: null,
+      pricingData: null,
+      isProviderCatalogFallbackActive: true,
+      pricingContexts: [
+        {
+          account: fallbackAccount,
+          pricing: {
+            ...pricing,
+            model_list_source: {
+              kind: "catalog-fallback",
+              catalogScope: "provider",
+            },
+          },
+        },
+        { account: normalAccount, pricing },
+      ],
+    })
+    render(<ModelList />)
+    const notice = screen.getByRole("alert")
+    expect(within(notice).getByText("Fallback Account")).toBeInTheDocument()
+    expect(within(notice).queryByText("Normal Account")).not.toBeInTheDocument()
+    expect(
+      within(notice).getByText(
+        testI18n.t(
+          "modelList:providerCatalogFallbackNotice.allAccountsDescription",
+        ),
+      ),
+    ).toBeInTheDocument()
   })
 
   it("renders the personalized catalog fallback notice with model data", () => {

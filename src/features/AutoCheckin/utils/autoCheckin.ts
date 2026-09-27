@@ -1,18 +1,147 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_SKIP_REASONS,
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
+  type AutoCheckinSkipReason,
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
-/** Atomic outcomes selected by the needs-attention filter preset. */
-export const NEEDS_ATTENTION_RESULT_STATUSES = [
+import {
+  AUTO_CHECKIN_SKIP_CATEGORIES,
+  AUTO_CHECKIN_SKIP_CATEGORY,
+  getAutoCheckinSkipCategory,
+  isAutoCheckinSkipReasonActionable,
+  type AutoCheckinSkipCategory,
+} from "./skipCategories"
+
+/**
+ * Statuses whose results can carry a persisted reason code and therefore take
+ * part in the reason narrowing.
+ */
+export const AUTO_CHECKIN_REASON_FILTERABLE_STATUSES = [
+  CHECKIN_RESULT_STATUS.SKIPPED,
   CHECKIN_RESULT_STATUS.FAILED,
   CHECKIN_RESULT_STATUS.UNCERTAIN,
-  CHECKIN_RESULT_STATUS.SKIPPED,
-] as const satisfies readonly CheckinResultStatus[]
+] as const
+
+export type AutoCheckinReasonFilterableStatus =
+  (typeof AUTO_CHECKIN_REASON_FILTERABLE_STATUSES)[number]
+
+const REASON_FILTERABLE_STATUS_SET = new Set<string>(
+  AUTO_CHECKIN_REASON_FILTERABLE_STATUSES,
+)
+
+/** Narrows a result status to the subset that persists a reason code. */
+function isReasonFilterableStatus(
+  status: CheckinResultStatus,
+): status is AutoCheckinReasonFilterableStatus {
+  return REASON_FILTERABLE_STATUS_SET.has(status)
+}
+
+/**
+ * Reason narrowing shared by every reason-carrying status. Categories and the
+ * precise reasons behind them are one selection; `appliesTo` records which
+ * statuses the selection narrows.
+ */
+export interface AutoCheckinReasonFilter {
+  appliesTo: AutoCheckinReasonFilterableStatus[]
+  categories: AutoCheckinSkipCategory[]
+  reasons: AutoCheckinSkipReason[]
+}
+
+/** Result-table filter state: status multi-select plus optional reason narrowing. */
+export interface AutoCheckinResultFilter {
+  statuses: CheckinResultStatus[]
+  reason: AutoCheckinReasonFilter
+}
+
+/** Default filter: every result is visible. */
+export const EMPTY_AUTO_CHECKIN_RESULT_FILTER: AutoCheckinResultFilter = {
+  statuses: [],
+  reason: {
+    appliesTo: [],
+    categories: [],
+    reasons: [],
+  },
+}
+
+/** Preset for results that genuinely need a user decision. */
+export function createNeedsAttentionResultFilter(): AutoCheckinResultFilter {
+  return {
+    statuses: [
+      CHECKIN_RESULT_STATUS.FAILED,
+      CHECKIN_RESULT_STATUS.UNCERTAIN,
+      CHECKIN_RESULT_STATUS.SKIPPED,
+    ],
+    // Failed and uncertain rows stay complete: only actionable skips are
+    // narrowed, so the preset still matches the attention queue.
+    reason: {
+      appliesTo: [CHECKIN_RESULT_STATUS.SKIPPED],
+      categories: [AUTO_CHECKIN_SKIP_CATEGORY.ACTION_REQUIRED],
+      reasons: [],
+    },
+  }
+}
+
+/** Returns whether the reason selection currently narrows any result. */
+export function isAutoCheckinReasonFilterActive(
+  filter: AutoCheckinResultFilter,
+): boolean {
+  return (
+    filter.reason.appliesTo.length > 0 &&
+    (filter.reason.categories.length > 0 || filter.reason.reasons.length > 0)
+  )
+}
+
+/**
+ * Resolves the statuses a reason selection would apply to. Without a status
+ * selection every reason-carrying status is narrowed.
+ */
+export function resolveAutoCheckinReasonScope(
+  statuses: readonly CheckinResultStatus[],
+): AutoCheckinReasonFilterableStatus[] {
+  if (statuses.length === 0) return [...AUTO_CHECKIN_REASON_FILTERABLE_STATUSES]
+
+  return AUTO_CHECKIN_REASON_FILTERABLE_STATUSES.filter((status) =>
+    statuses.includes(status),
+  )
+}
+
+/** Counts active filter dimensions for analytics without exposing values. */
+export function countActiveResultFilterDimensions(
+  filter: AutoCheckinResultFilter,
+  keyword: string,
+): number {
+  return (
+    (filter.statuses.length > 0 ? 1 : 0) +
+    (isAutoCheckinReasonFilterActive(filter) ? 1 : 0) +
+    (keyword.trim() ? 1 : 0)
+  )
+}
+
+/** Detects the semantic needs-attention preset behind the filter state. */
+export function isAutoCheckinNeedsAttentionFilter(
+  filter: AutoCheckinResultFilter,
+): boolean {
+  const preset = createNeedsAttentionResultFilter()
+  return (
+    matchesSelection(filter.statuses, preset.statuses) &&
+    matchesSelection(filter.reason.appliesTo, preset.reason.appliesTo) &&
+    matchesSelection(filter.reason.categories, preset.reason.categories) &&
+    filter.reason.reasons.length === 0
+  )
+}
+
+/** Compares two selections independent of their order. */
+function matchesSelection<T>(selection: readonly T[], expected: readonly T[]) {
+  return (
+    selection.length === expected.length &&
+    expected.every((value) => selection.includes(value))
+  )
+}
 
 interface AutoCheckinResultCounts {
   total: number
@@ -61,13 +190,109 @@ export function countAutoCheckinResults(
 }
 
 /**
- * Checks whether a result belongs to the selected status filter.
+ * Resolves the semantic reason category of a result. Unknown or legacy skip
+ * reasons keep the routine bucket; other reason-carrying statuses fall back to
+ * the unclassified bucket so the reason dimension covers every row, while
+ * statuses without a reason vocabulary stay uncategorized.
  */
-function matchesAutoCheckinResultStatus(
+function resolveResultReasonCategory(
   result: CheckinAccountResult,
-  selectedStatuses: ReadonlySet<CheckinResultStatus>,
+): AutoCheckinSkipCategory | null {
+  const category = getAutoCheckinSkipCategory(result.reasonCode)
+  if (category) return category
+
+  if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
+    return AUTO_CHECKIN_SKIP_CATEGORY.EXPECTED
+  }
+
+  return isReasonFilterableStatus(result.status)
+    ? AUTO_CHECKIN_SKIP_CATEGORY.UNCLASSIFIED
+    : null
+}
+
+/**
+ * Checks whether a result matches the selected statuses and, for the
+ * reason-carrying statuses in scope, the selected reason selection.
+ */
+function matchesAutoCheckinResultFilter(
+  result: CheckinAccountResult,
+  filter: AutoCheckinResultFilter,
 ): boolean {
-  return selectedStatuses.size === 0 || selectedStatuses.has(result.status)
+  if (filter.statuses.length > 0 && !filter.statuses.includes(result.status)) {
+    return false
+  }
+  if (!isAutoCheckinReasonFilterActive(filter)) return true
+  if (
+    !isReasonFilterableStatus(result.status) ||
+    !filter.reason.appliesTo.includes(result.status)
+  ) {
+    return true
+  }
+
+  const reason = result.reasonCode ?? null
+  if (reason && filter.reason.reasons.includes(reason)) return true
+
+  const category = resolveResultReasonCategory(result)
+  return category !== null && filter.reason.categories.includes(category)
+}
+
+/** Returns whether one result needs an explicit user follow-up. */
+export function isAutoCheckinResultNeedingAttention(
+  result: CheckinAccountResult,
+): boolean {
+  if (
+    result.status === CHECKIN_RESULT_STATUS.FAILED ||
+    result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+  ) {
+    return true
+  }
+
+  return (
+    result.status === CHECKIN_RESULT_STATUS.SKIPPED &&
+    isAutoCheckinSkipReasonActionable(result.reasonCode)
+  )
+}
+
+/** Counts the results surfaced by the needs-attention preset. */
+export function countAutoCheckinResultsNeedingAttention(
+  results: readonly CheckinAccountResult[],
+): number {
+  return results.filter(isAutoCheckinResultNeedingAttention).length
+}
+
+/** Counts results per persisted reason code. */
+export function countAutoCheckinResultReasons(
+  results: readonly CheckinAccountResult[],
+): Record<AutoCheckinSkipReason, number> {
+  const counts = Object.fromEntries(
+    AUTO_CHECKIN_SKIP_REASONS.map((reason) => [reason, 0]),
+  ) as Record<AutoCheckinSkipReason, number>
+
+  for (const result of results) {
+    const reason = result.reasonCode
+    if (!reason) continue
+    if (!Object.hasOwn(counts, reason)) continue
+    counts[reason] += 1
+  }
+
+  return counts
+}
+
+/** Counts results per semantic reason category. */
+export function countAutoCheckinResultReasonCategories(
+  results: readonly CheckinAccountResult[],
+): Record<AutoCheckinSkipCategory, number> {
+  const counts = Object.fromEntries(
+    AUTO_CHECKIN_SKIP_CATEGORIES.map((category) => [category, 0]),
+  ) as Record<AutoCheckinSkipCategory, number>
+
+  for (const result of results) {
+    const category = resolveResultReasonCategory(result)
+    if (!category) continue
+    counts[category] += 1
+  }
+
+  return counts
 }
 
 /**
@@ -94,6 +319,13 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.endpointNotSupported",
         messageParams,
       )
+    case "autoCheckin:providerFallback.loginProviderRequired":
+      return t(
+        "autoCheckin:providerFallback.loginProviderRequired",
+        messageParams,
+      )
+    case "messages:errors.validation.loginProviderInUse":
+      return t("messages:errors.validation.loginProviderInUse", messageParams)
     case "autoCheckin:providerFallback.nativePageIdentityMismatch":
       return t(
         "autoCheckin:providerFallback.nativePageIdentityMismatch",
@@ -149,6 +381,8 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.browserAutomationTriggerFailed",
         messageParams,
       )
+    case "autoCheckin:providerFallback.sessionBusy":
+      return t("autoCheckin:providerFallback.sessionBusy", messageParams)
     case "autoCheckin:providerFallback.unknownError":
       return t("autoCheckin:providerFallback.unknownError", messageParams)
     case "autoCheckin:providerFallback.turnstileManualRequired":
@@ -173,6 +407,23 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.credentials_missing", messageParams)
     case "autoCheckin:skipReasons.detection_disabled":
       return t("autoCheckin:skipReasons.detection_disabled", messageParams)
+    case "autoCheckin:skipReasons.checkin_page_unavailable":
+      return t(
+        "autoCheckin:skipReasons.checkin_page_unavailable",
+        messageParams,
+      )
+    case "autoCheckin:skipReasons.checkin_unconfirmed":
+      return t("autoCheckin:skipReasons.checkin_unconfirmed", messageParams)
+    case "autoCheckin:skipReasons.execution_context_invalid":
+      return t(
+        "autoCheckin:skipReasons.execution_context_invalid",
+        messageParams,
+      )
+    case "autoCheckin:skipReasons.manual_verification_required":
+      return t(
+        "autoCheckin:skipReasons.manual_verification_required",
+        messageParams,
+      )
     case "autoCheckin:skipReasons.method_disabled":
       return t("autoCheckin:skipReasons.method_disabled", messageParams)
     case "autoCheckin:skipReasons.method_not_matched":
@@ -195,12 +446,18 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.auto_checkin_disabled", messageParams)
     case "autoCheckin:skipReasons.already_checked_today":
       return t("autoCheckin:skipReasons.already_checked_today", messageParams)
+    case "autoCheckin:skipReasons.session_busy":
+      return t("autoCheckin:skipReasons.session_busy", messageParams)
     case "autoCheckin:skipReasons.status_unavailable":
       return t("autoCheckin:skipReasons.status_unavailable", messageParams)
+    case "autoCheckin:skipReasons.upstream_error":
+      return t("autoCheckin:skipReasons.upstream_error", messageParams)
     case "autoCheckin:skipReasons.no_provider":
       return t("autoCheckin:skipReasons.no_provider", messageParams)
     case "autoCheckin:skipReasons.account_unavailable":
       return t("autoCheckin:skipReasons.account_unavailable", messageParams)
+    case "autoCheckin:skipReasons.login_provider_in_use":
+      return t("autoCheckin:skipReasons.login_provider_in_use", messageParams)
     default:
       return messageKey
   }
@@ -223,9 +480,6 @@ export function getAutoCheckinResultMessage<
   if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
     return t("autoCheckin:providerFallback.resultPendingConfirmation")
   }
-  if (result.reasonCode) {
-    return translateAutoCheckinSkipReason(t, result.reasonCode)
-  }
   if (result.messageKey) {
     return translateAutoCheckinMessageKey(
       t,
@@ -233,25 +487,27 @@ export function getAutoCheckinResultMessage<
       result.messageParams,
     )
   }
+  if (result.reasonCode) {
+    return translateAutoCheckinSkipReason(t, result.reasonCode)
+  }
   if (result.rawMessage) return result.rawMessage
   if (result.message) return result.message
   return t("autoCheckin:providerFallback.unknownError")
 }
 
 /**
- * Applies the result-table status and localized keyword filters.
+ * Applies the result-table filter state and localized keyword filter.
  */
 export function filterAutoCheckinResults(
   results: readonly CheckinAccountResult[],
-  selectedStatuses: readonly CheckinResultStatus[],
+  filter: AutoCheckinResultFilter,
   keyword: string,
   t: TFunction,
 ): CheckinAccountResult[] {
   const normalizedKeyword = keyword.trim().toLowerCase()
-  const selectedStatusSet = new Set(selectedStatuses)
 
   return results.filter((result) => {
-    if (!matchesAutoCheckinResultStatus(result, selectedStatusSet)) return false
+    if (!matchesAutoCheckinResultFilter(result, filter)) return false
     if (!normalizedKeyword) return true
 
     return (

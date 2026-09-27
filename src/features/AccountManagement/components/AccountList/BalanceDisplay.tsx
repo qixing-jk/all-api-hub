@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Button } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -14,7 +13,7 @@ import {
   getCurrencySymbol,
   getTodayMetricPresentation,
 } from "~/utils/core/formatters"
-import { getDisplayMoneyValue } from "~/utils/core/money"
+import { getDisplayMoneyValue, MONEY_DECIMAL_PLACES } from "~/utils/core/money"
 
 const formatCompactNumber = (value: number) =>
   new Intl.NumberFormat(undefined, {
@@ -83,7 +82,7 @@ const AnimatedValue: React.FC<{
       displayEndValue === null
         ? undefined
         : `${prefix}${currencySymbol}${displayEndValue.toFixed(
-            UI_CONSTANTS.MONEY.DECIMALS,
+            MONEY_DECIMAL_PLACES,
           )}${suffix}`
     const content =
       displayEndValue === null ? (
@@ -96,16 +95,12 @@ const AnimatedValue: React.FC<{
             <CountUp
               start={displayStartValue}
               end={displayEndValue}
-              duration={
-                isInitialLoad
-                  ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
-                  : UI_CONSTANTS.ANIMATION.FAST_DURATION
-              }
-              decimals={UI_CONSTANTS.MONEY.DECIMALS}
+              duration={isInitialLoad ? 1.0 : 0.6}
+              decimals={MONEY_DECIMAL_PLACES}
               preserveValue
             />
           ) : (
-            displayEndValue.toFixed(UI_CONSTANTS.MONEY.DECIMALS)
+            displayEndValue.toFixed(MONEY_DECIMAL_PLACES)
           )}
           {suffix}
         </>
@@ -275,7 +270,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             value={consumptionPresentation.value}
             startValue={0}
             prefix="-"
-            className={`text-[10px] sm:text-xs ${
+            className={`text-3xs sm:text-xs ${
               (consumptionPresentation.value ?? 0) > 0
                 ? "text-cashflow-expense"
                 : "dark:text-muted-foreground text-faint-foreground"
@@ -302,7 +297,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             value={incomePresentation.value}
             startValue={0}
             prefix="+"
-            className={`text-[10px] sm:text-xs ${
+            className={`text-3xs sm:text-xs ${
               (incomePresentation.value ?? 0) > 0
                 ? "text-cashflow-income"
                 : "dark:text-muted-foreground text-faint-foreground"
@@ -330,7 +325,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 value={estimatedTodayIncome}
                 startValue={0}
                 prefix="~"
-                className={`text-[10px] sm:text-xs ${
+                className={`text-3xs sm:text-xs ${
                   estimatedTodayIncome > 0
                     ? "text-cashflow-income"
                     : "dark:text-muted-foreground text-faint-foreground"
@@ -358,7 +353,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       )}
 
       {(site.usage || site.subscription) && (
-        <div className="text-muted-foreground mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-[10px] sm:text-xs">
+        <div className="text-muted-foreground text-3xs mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 sm:text-xs">
           {site.subscription?.name && (
             <span
               className="max-w-full truncate"

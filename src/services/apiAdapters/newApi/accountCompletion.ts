@@ -1,6 +1,8 @@
+import { isAccountLoginProvider } from "~/constants/accountLogin"
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -47,6 +49,7 @@ function normalizeTokenInfo(
       ? (tokenInfo as {
           username?: unknown
           access_token?: unknown
+          loginProviders?: unknown
           user?: { display_name?: unknown }
         })
       : {}
@@ -60,6 +63,9 @@ function normalizeTokenInfo(
         ? trimString(tokenData.user?.display_name)
         : ""),
     accessToken: trimString(tokenData.access_token),
+    loginProviders: Array.isArray(tokenData.loginProviders)
+      ? tokenData.loginProviders.filter(isAccountLoginProvider)
+      : [],
   }
 }
 
@@ -240,8 +246,8 @@ export const createNewApiAccountCompletion = (
       return normalizedTokenInfo
     })
 
-    const siteStatusPromise = accountBootstrap
-      .fetchSiteStatus(
+    const bootstrapFactsPromise = accountBootstrap
+      .loadBootstrapFacts(
         createRequest({
           authType: requestedAuthType || AuthTypeEnum.None,
         }),
@@ -253,27 +259,27 @@ export const createNewApiAccountCompletion = (
         )
       })
 
-    const checkSupportPromise = siteStatusPromise.then((siteStatus) =>
-      typeof siteStatus?.checkin_enabled === "boolean"
-        ? siteStatus.checkin_enabled
-        : accountBootstrap
-            .fetchCheckInSupport(
-              createRequest({
-                authType: AuthTypeEnum.None,
-              }),
-            )
-            .catch(helpers.handleCheckInSupportFetchFailure),
+    const checkSupportPromise = bootstrapFactsPromise.then((bootstrapFacts) =>
+      accountBootstrap
+        .fetchCheckInSupport(
+          createRequest({
+            authType: AuthTypeEnum.None,
+          }),
+          bootstrapFacts,
+        )
+        .catch(helpers.handleCheckInSupportFetchFailure),
     )
 
-    const siteMetadataPromise = siteStatusPromise.then(async (siteStatus) => {
-      const exchangeRate =
-        accountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-      helpers.captureRecoveryData({ exchangeRate })
-      const siteName = await helpers.fetchSiteName(siteStatus)
-      helpers.captureRecoveryData({ siteName })
-      return { siteName, exchangeRate }
-    })
+    const siteMetadataPromise = bootstrapFactsPromise.then(
+      async (bootstrapFacts) => {
+        const exchangeRate =
+          bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
+        helpers.captureRecoveryData({ exchangeRate })
+        const siteName = await helpers.fetchSiteName(bootstrapFacts)
+        helpers.captureRecoveryData({ siteName })
+        return { siteName, exchangeRate }
+      },
+    )
 
     const [tokenResult, checkSupportResult, siteMetadataResult] =
       await Promise.allSettled([
@@ -363,6 +369,13 @@ export const createNewApiAccountCompletion = (
       authType: effectiveAuthType,
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,
+        // AgentRouter grants the check-in benefit during a fresh OAuth login
+        // that reuses whichever GitHub / Linux DO identity the browser holds.
+        // One proven binding therefore preselects the provider; two bindings or
+        // none stay unselected instead of guessing GitHub.
+        ...(isAgentRouterLoginUrl(url) && tokenInfo.loginProviders.length === 1
+          ? { loginCheckInProvider: tokenInfo.loginProviders[0] }
+          : {}),
       }),
     }
   },

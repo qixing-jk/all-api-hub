@@ -66,6 +66,7 @@ import {
 } from "../types"
 import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
 import { BatchSelectionControl } from "./BatchSelectionControl"
+import { KeyAccountGroups } from "./KeyAccountGroups"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenEmptyState } from "./TokenEmptyState"
@@ -942,8 +943,12 @@ export function TokenList(props: TokenListProps) {
             </Button>
           </div>
 
-          <div className="space-y-density-3">
-            {groupedRows.map((group) => {
+          <KeyAccountGroups
+            groups={groupedRows}
+            hasNavigationTarget={Boolean(
+              associationTarget || guidedManagedSiteImportAccountId,
+            )}
+            renderGroup={(group) => {
               const { account } = group
               const isCollapsed = collapsedAccountIds.has(account.id)
               const shouldShowShowingCount =
@@ -1051,8 +1056,8 @@ export function TokenList(props: TokenListProps) {
                   ) : null}
                 </Card>
               )
-            })}
-          </div>
+            }}
+          />
         </>
       ) : (
         <div className="space-y-density-3">

@@ -1,5 +1,5 @@
 {
-  "description": "Automatically check in eligible accounts every day within a configurable time window. The result list below shows completed run records, not a pending queue.",
+  "description": "Check in eligible accounts on a schedule, review completed runs and retry failed tasks.",
   "execution": {
     "actions": {
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
@@ -36,14 +36,26 @@
       "all": "All",
       "alreadyChecked": "Already checked in",
       "clearAll": "Clear filters",
+      "clearReasons": "Clear reasons",
       "countFiltered": "Showing {{filtered}} of {{total}}",
       "countTotal": "{{total}} total",
       "failed": "Failed",
       "needsAttention": "Needs attention",
+      "reasonAll": "All reasons",
+      "reasonLabel": "Filter by reason",
       "searchLabel": "Search execution results",
       "searchPlaceholder": "Search by account name, ID, or message...",
+      "selectedReasons_one": "{{count}} reason selected",
+      "selectedReasons_other": "{{count}} reasons selected",
       "selectedStatuses_one": "{{count}} status selected",
       "selectedStatuses_other": "{{count}} statuses selected",
+      "skipCategoryAccountDisabled": "Account disabled",
+      "skipCategoryActionRequired": "Needs your action",
+      "skipCategoryDisabled": "Disabled",
+      "skipCategoryExpected": "No action needed",
+      "skipCategoryUnclassified": "Unclassified",
+      "skipCategoryUnsupported": "Unsupported",
+      "skipCategoryWaiting": "Will retry automatically",
       "skipped": "Not executed",
       "statusLabel": "Filter by execution status",
       "success": "Checked in this run",
@@ -85,7 +97,7 @@
     },
     "title": "Auto Check-in"
   },
-  "manualDescription": "Run a batch check-in for eligible accounts. The result list below shows completed run records, not a pending queue.",
+  "manualDescription": "Manually check in eligible accounts in batches, review completed runs and retry failed tasks.",
   "messages": {
     "error": {
       "accountDisabled": "Account is disabled",
@@ -147,12 +159,14 @@
     "checkinFailed": "Check-in failed",
     "checkinSuccessful": "Check-in successful",
     "endpointNotSupported": "This check-in endpoint is not supported. Please check if your account's site type is the same as the actual site.",
+    "loginProviderRequired": "Select a check-in login method before running this account's check-in.",
     "nativePageIdentityMismatch": "The temporary check-in page is logged in as a different account. Open the check-in page with the target account, then retry: {{checkInUrl}}",
     "nativePageIdentityMissing": "The temporary check-in page login could not be confirmed. Open the check-in page, sign in with the target account, then retry: {{checkInUrl}}",
     "nativePageStatusUnconfirmed": "The page check-in action was clicked, but the target account status was not confirmed. Please open the check-in page and check manually: {{checkInUrl}}",
     "nativePageTargetNotFound": "The check-in button could not be found on the page. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
     "nativePageTriggerFailed": "The page check-in action could not be triggered. Please open the check-in page and complete check-in manually: {{checkInUrl}}",
     "resultPendingConfirmation": "Check-in result pending confirmation",
+    "sessionBusy": "Another login is already in progress. Try again later.",
     "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
     "unknownError": "Unknown error occurred"
@@ -199,8 +213,13 @@
     "already_checked_today": "Already checked today",
     "authentication_required": "Sign-in has expired or is required. Sign in to the site, then try again.",
     "auto_checkin_disabled": "Auto check-in disabled",
+    "checkin_page_unavailable": "The site's check-in page could not be opened or triggered. Try again later.",
+    "checkin_unconfirmed": "The check-in request was sent, but the site did not confirm the result. Try again later.",
     "credentials_missing": "Saved credentials are missing. Re-detect the account or update its credentials.",
     "detection_disabled": "Detection disabled",
+    "execution_context_invalid": "This run could not open a protected session. Start the check-in again.",
+    "login_provider_in_use": "The selected login method already belongs to another AgentRouter account. Choose the other method or change it on that account.",
+    "manual_verification_required": "The site requires manual verification. Complete it on the check-in page and try again.",
     "method_disabled": "This site's check-in method is disabled",
     "method_not_matched": "The selected check-in method no longer matches this site. Re-detect the check-in method.",
     "method_unavailable": "The selected check-in method is no longer available. Re-detect the check-in method.",
@@ -209,9 +228,11 @@
     "no_provider": "The account's site type currently does not support check-in",
     "no_selected_method": "No check-in method is selected. Re-detect or select one in account settings.",
     "permission_denied": "The site denied permission to check in. Sign in again or review the account permissions.",
+    "session_busy": "Another login is already in progress. Try again later.",
     "source_unavailable": "The source site is temporarily unavailable. Try again later.",
     "status_unavailable": "The current check-in status could not be confirmed, so no check-in was attempted",
-    "timeout": "The connection timed out before check-in could complete. Try again."
+    "timeout": "The connection timed out before check-in could complete. Try again.",
+    "upstream_error": "The site returned an unrecognized check-in result. Try again later."
   },
   "snapshot": {
     "badges": {

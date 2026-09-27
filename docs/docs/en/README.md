@@ -177,21 +177,6 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 
 <div class="readme-sponsor">
   <div class="readme-sponsor-logo">
-    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
-      <img src="../../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
-    </a>
-  </div>
-  <p class="readme-sponsor-copy">
-    Atlas Cloud is a full-modal AI inference platform that gives developers one API for video generation, image
-    generation, and LLM access across 300+ curated models. Check out Atlas Cloud's new coding plan promotion for more budget-friendly API access:
-    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">this link</a> (<a href="./service-guides/atlascloud.md">setup guide</a>).
-  </p>
-</div>
-
-<hr class="readme-sponsor-divider">
-
-<div class="readme-sponsor">
-  <div class="readme-sponsor-logo">
     <a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
       <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>

@@ -28,6 +28,7 @@ import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/provide
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  createUpstreamFailureResult,
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
@@ -36,7 +37,10 @@ import {
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -108,6 +112,7 @@ async function checkinWongGongyi(
     if (checkinResponse.data?.enabled === false) {
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
         messageKey: "autoCheckin:providerWong.checkinDisabled",
         rawMessage: responseMessage || undefined,
         data: checkinResponse.data,
@@ -144,14 +149,10 @@ async function checkinWongGongyi(
       }
     }
 
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      rawMessage: responseMessage || undefined,
-      messageKey: responseMessage
-        ? undefined
-        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-      data: checkinResponse ?? undefined,
-    }
+    return createUpstreamFailureResult({
+      rawMessage: responseMessage,
+      data: checkinResponse,
+    })
   } catch (error: unknown) {
     return resolveProviderErrorResult({
       error,

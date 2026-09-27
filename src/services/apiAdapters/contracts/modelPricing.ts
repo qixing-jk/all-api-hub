@@ -1,5 +1,5 @@
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 
 export type ModelPricingRequest = ApiServiceRequest
 
@@ -8,7 +8,7 @@ export const MODEL_PRICING_RUNTIME_KEY_FALLBACKS = {
 } as const
 
 export type ModelPricingCapability = {
-  fetchPricing(request: ModelPricingRequest): Promise<PricingResponse>
+  fetchPricing(request: ModelPricingRequest): Promise<ModelCatalogSnapshot>
   /** Invalidates provider-owned shared snapshots before a manual refresh. */
   invalidateCache?(): void
   /** Uses account pricing for fallback when runtime key secrets cannot be revealed. */

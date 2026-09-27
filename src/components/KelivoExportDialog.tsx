@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
   Button,
   FormField,
@@ -218,7 +219,7 @@ export function KelivoExportDialog({
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup>
           <Button type="button" variant="ghost" onClick={handleClose}>
             {t("common:actions.cancel")}
           </Button>
@@ -230,7 +231,7 @@ export function KelivoExportDialog({
           >
             {t("ui:dialog.kelivo.actions.copy")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <form id={formId} className="space-y-density-4" onSubmit={handleSubmit}>

@@ -6,11 +6,11 @@ import type {
   UsageHistoryStore,
 } from "~/types/usageHistory"
 import { USAGE_HISTORY_EXPORT_SCHEMA_VERSION } from "~/types/usageHistory"
+import { parseDayKey } from "~/utils/core/dayKey"
 
 import {
   createEmptyUsageHistoryAggregate,
   createEmptyUsageHistoryLatencyAggregate,
-  parseDayKey,
 } from "./core"
 
 /**

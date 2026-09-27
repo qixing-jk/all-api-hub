@@ -8,8 +8,6 @@ import {
   sharePendingConfigRead,
   type ScheduledReadOptions,
 } from "~/services/apiTransport/requestScheduling"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { userPreferences } from "~/services/preferences/userPreferences"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   createAutomaticProtectionBypassExecution,
@@ -1054,8 +1052,6 @@ export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
   }
 }
 
-export { octopusAuthManager } from "./auth"
-
 const createOctopusRequestHeaders = (
   session: OctopusAuthSession,
   headers?: HeadersInit,
@@ -1068,64 +1064,6 @@ const createOctopusRequestHeaders = (
     requestHeaders.set(name, value)
   }
   return requestHeaders
-}
-
-const getStoredOctopusConfig = async (): Promise<OctopusConfig | null> => {
-  const octopusConfig = (await userPreferences.getPreferences())?.octopus
-  if (
-    !octopusConfig?.baseUrl ||
-    !octopusConfig?.username ||
-    !octopusConfig?.password
-  ) {
-    return null
-  }
-  return {
-    baseUrl: octopusConfig.baseUrl,
-    username: octopusConfig.username,
-    password: octopusConfig.password,
-  }
-}
-
-/**
- * 获取站点分组列表（符合 common API 签名）
- * 使用当前 Octopus 管理员会话调用 /api/v1/group/list
- * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
- */
-export async function fetchSiteUserGroups(
-  _request: ApiServiceRequest,
-): Promise<string[]> {
-  try {
-    const octopusConfig = await getStoredOctopusConfig()
-    if (!octopusConfig) {
-      logger.warn("Octopus config not available, returning empty groups")
-      return []
-    }
-    return await fetchGroups(octopusConfig)
-  } catch (error) {
-    logger.error("Failed to fetch site user groups", error)
-    return []
-  }
-}
-
-/**
- * 获取账号可用模型列表（符合 common API 签名）
- * 使用当前 Octopus 管理员会话调用 /api/v1/model/list
- * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
- */
-export async function fetchAccountAvailableModels(
-  _request: ApiServiceRequest,
-): Promise<string[]> {
-  try {
-    const octopusConfig = await getStoredOctopusConfig()
-    if (!octopusConfig) {
-      logger.warn("Octopus config not available, returning empty models")
-      return []
-    }
-    return await fetchAvailableModels(octopusConfig)
-  } catch (error) {
-    logger.error("Failed to fetch account available models", error)
-    return []
-  }
 }
 
 /** Resolve credential editing from the probed protocol, never from version labels. */

@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   fetchAccountData,
   fetchCodexServiceCredential,
@@ -268,12 +268,11 @@ describe("apiService SharedChat", () => {
     )
 
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 88 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      quota: 88 * QUOTA_PER_USD,
       today_requests_count: 10,
       today_prompt_tokens: 0,
       today_completion_tokens: 12345,
-      today_quota_consumption:
-        1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      today_quota_consumption: 1.23 * QUOTA_PER_USD,
       today_income: 0,
       todayStatsAvailability: {
         consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
@@ -451,11 +450,10 @@ describe("apiService SharedChat", () => {
     )
 
     await expect(fetchAccountData(accountRequest)).resolves.toMatchObject({
-      quota: 88 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      quota: 88 * QUOTA_PER_USD,
       today_requests_count: 10,
       today_completion_tokens: 12345,
-      today_quota_consumption:
-        1.23 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      today_quota_consumption: 1.23 * QUOTA_PER_USD,
       usage: {
         totalRequests: 10,
         totalTokens: 12345,

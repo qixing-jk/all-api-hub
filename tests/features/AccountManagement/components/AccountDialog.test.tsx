@@ -337,6 +337,7 @@ vi.mock("~/utils/core/logger", () => ({
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
+    accounts: [],
     displayData: [],
     detectedSiteAccounts: [],
     detectedAccount: null,

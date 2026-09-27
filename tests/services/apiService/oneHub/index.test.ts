@@ -8,7 +8,7 @@ import {
   fetchModelPricing,
   fetchUserGroupMap,
   fetchUserGroups,
-} from "~/services/apiService/oneHub"
+} from "~/services/apiService/newApiFamily/variants/oneHub"
 import {
   transformModelPricing,
   transformUserGroup,

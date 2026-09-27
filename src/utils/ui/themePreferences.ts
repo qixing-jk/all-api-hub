@@ -6,6 +6,7 @@ import {
 import {
   isThemeMode,
   normalizeAppearance,
+  resolveThemeFont,
   type AppearancePreferences,
   type ResolvedTheme,
   type ThemeMode,
@@ -44,22 +45,33 @@ export function resolveThemeMode(
     : mode
 }
 
-/** Scope preview/content colors without applying document-only radius settings. */
+/** Scope content appearance without applying preferences to the host page. */
 export function getAppearanceScopeAttributes(
   appearance: Pick<AppearancePreferences, "color" | "preset"> &
-    Partial<Pick<AppearancePreferences, "density">>,
+    Partial<Pick<AppearancePreferences, "density" | "textSize" | "fontFamily">>,
 ) {
   return {
     [THEME_ATTRIBUTES.COLOR_SCOPE]: "",
+    ...(appearance.fontFamily
+      ? {
+          [THEME_ATTRIBUTES.FONT]: resolveThemeFont({
+            fontFamily: appearance.fontFamily,
+            preset: appearance.preset,
+          }),
+        }
+      : {}),
     ...(appearance.density
       ? { [THEME_ATTRIBUTES.DENSITY]: appearance.density }
+      : {}),
+    ...(appearance.textSize
+      ? { [THEME_ATTRIBUTES.TEXT_SIZE]: appearance.textSize }
       : {}),
     [THEME_ATTRIBUTES.COLOR]: appearance.color,
     [THEME_ATTRIBUTES.PRESET]: appearance.preset,
   }
 }
 
-/** Apply document colors and radius before startup and during React updates. */
+/** Apply document appearance before startup and during React updates. */
 export function applyThemePreferences(
   root: HTMLElement,
   preferences: ThemePreferences,
@@ -67,12 +79,31 @@ export function applyThemePreferences(
 ) {
   const { themeMode, appearance } = preferences
   const resolvedTheme = resolveThemeMode(themeMode, systemDark)
+  const paletteChanged =
+    root.classList.contains(THEME_MODE.DARK) !==
+      (resolvedTheme === THEME_MODE.DARK) ||
+    root.getAttribute(THEME_ATTRIBUTES.COLOR) !== appearance.color ||
+    root.getAttribute(THEME_ATTRIBUTES.PRESET) !== appearance.preset
+
+  if (paletteChanged) root.setAttribute(THEME_ATTRIBUTES.SWITCHING, "")
   root.classList.toggle(THEME_MODE.DARK, resolvedTheme === THEME_MODE.DARK)
   root.setAttribute(THEME_ATTRIBUTES.COLOR, appearance.color)
   root.setAttribute(THEME_ATTRIBUTES.PRESET, appearance.preset)
   root.setAttribute(THEME_ATTRIBUTES.RADIUS, appearance.radius)
   root.setAttribute(THEME_ATTRIBUTES.DENSITY, appearance.density)
+  root.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, appearance.textSize)
+  root.setAttribute(THEME_ATTRIBUTES.FONT, resolveThemeFont(appearance))
   root.style.colorScheme = resolvedTheme
+  if (paletteChanged) {
+    // Resolve the new palette with transitions suppressed before restoring local
+    // interaction effects. Synchronous cleanup also works in background views,
+    // where animation frames can be paused, and cannot leave hover disabled.
+    try {
+      void root.ownerDocument.defaultView?.getComputedStyle(root).color
+    } finally {
+      root.removeAttribute(THEME_ATTRIBUTES.SWITCHING)
+    }
+  }
 }
 
 /** Cache only display choices; browser storage remains the authoritative source. */

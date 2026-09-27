@@ -8,6 +8,7 @@ import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import {
   Alert,
+  Badge,
   Button,
   EmptyState,
   IconButton,
@@ -59,6 +60,7 @@ import {
 } from "~/utils/navigation"
 
 import { sortModelListAccounts } from "./accountOrdering"
+import { isProviderCatalogFallback } from "./catalogFallback"
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { BatchVerifyModelsDialog } from "./components/BatchVerifyModelsDialog"
@@ -135,6 +137,8 @@ export default function ModelList(props: {
     setAllAccountsExcludedGroupsByAccountId,
 
     // Display options
+    showUnavailableModels,
+    setShowUnavailableModels,
     showRealPrice,
     setShowRealPrice,
     showEndpointTypes,
@@ -269,7 +273,7 @@ export default function ModelList(props: {
     )
     void trackProductAnalyticsActionStarted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelListFilterScope,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
@@ -290,6 +294,18 @@ export default function ModelList(props: {
   const shouldShowSourceSetupEmptyState = !hasAnySources
   const shouldShowSourceSelectionEmptyState =
     !shouldShowSourceSetupEmptyState && !selectedSource
+
+  const providerCatalogFallbackAccounts = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          pricingContexts
+            .filter(({ pricing }) => isProviderCatalogFallback(pricing))
+            .map(({ account }) => [account.id, account]),
+        ).values(),
+      ),
+    [pricingContexts],
+  )
 
   const accountSummaryItems = useMemo(() => {
     const stateByAccountId = new Map(
@@ -553,7 +569,10 @@ export default function ModelList(props: {
   )
 
   const page = (
-    <div className="py-density-6 px-6" data-testid={MODEL_LIST_TEST_IDS.page}>
+    <div
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-testid={MODEL_LIST_TEST_IDS.page}
+    >
       <PageHeader
         icon={Cpu}
         title={t("title")}
@@ -741,8 +760,29 @@ export default function ModelList(props: {
               variant="warning"
               className="mb-density-6"
               title={t("providerCatalogFallbackNotice.title")}
-              description={t("providerCatalogFallbackNotice.description")}
-            />
+              description={t(
+                selectedSource.kind ===
+                  MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+                  ? "providerCatalogFallbackNotice.allAccountsDescription"
+                  : "providerCatalogFallbackNotice.description",
+              )}
+            >
+              {selectedSource.kind ===
+                MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS && (
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {providerCatalogFallbackAccounts.map((account) => (
+                    <li key={account.id} className="max-w-full break-words">
+                      <Badge
+                        variant="warning"
+                        className="max-w-full break-words whitespace-normal"
+                      >
+                        {account.name}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Alert>
           )}
 
           {verifyContext && (
@@ -805,6 +845,8 @@ export default function ModelList(props: {
           )}
 
           <ControlPanel
+            showUnavailableModels={showUnavailableModels}
+            setShowUnavailableModels={setShowUnavailableModels}
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
             selectedSourceValue={selectedSourceValue}

@@ -213,6 +213,62 @@ const buildSite = (overrides: Partial<DisplaySiteData> = {}) =>
   })
 
 describe("SiteInfo", () => {
+  it("offers a refresh for a stale migrated check-in", async () => {
+    const user = userEvent.setup()
+    const checkIn = createCheckIn({ checked: true, observedAt: 1 })
+    checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ]!.status = {
+      outcome: "known",
+      availability: "enabled",
+      today: "checked",
+      evidence: { source: "legacy_migration", legacyObservedAt: 1 },
+    }
+    render(<SiteInfo site={buildSite({ checkIn })} />)
+    await user.click(
+      screen.getByRole("button", {
+        name: "account:list.site.checkInStatusOutdated",
+      }),
+    )
+    expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+      true,
+    )
+  })
+
+  it.each(["site", "custom"] as const)(
+    "allows retry after %s check-in navigation fails",
+    async (source) => {
+      const user = userEvent.setup()
+      const navigation =
+        source === "site" ? mockOpenCheckInPage : mockOpenCheckInAndRedeem
+      navigation.mockRejectedValueOnce(new Error("navigation failed"))
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: false,
+              customCheckIn: {
+                url: "https://example.com/checkin",
+                isCheckedInToday: false,
+              },
+            }),
+          })}
+        />,
+      )
+      const button = screen.getByTestId(
+        source === "site"
+          ? ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton
+          : ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton,
+      )
+      await user.click(button)
+      await waitFor(() => expect(navigation).toHaveBeenCalledTimes(1))
+      expect(button).toBeEnabled()
+      await user.click(button)
+      await waitFor(() => expect(navigation).toHaveBeenCalledTimes(2))
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     accountDataScenario.detectedSiteAccounts = []
@@ -311,7 +367,7 @@ describe("SiteInfo", () => {
     })
 
     expect(healthButton.querySelector('[aria-hidden="true"]')).toHaveClass(
-      "bg-surface-inverse-muted",
+      "bg-neutral-indicator",
     )
   })
 
@@ -489,6 +545,13 @@ describe("SiteInfo", () => {
         name: "account:list.site.notCheckedInToday",
       }),
     ).toBeVisible()
+    expect(
+      screen
+        .getByRole("button", {
+          name: "account:list.site.notCheckedInToday",
+        })
+        .querySelector("svg"),
+    ).toHaveClass("text-neutral-indicator")
     expect(
       screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
     ).not.toBeInTheDocument()

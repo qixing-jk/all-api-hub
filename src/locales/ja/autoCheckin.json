@@ -1,5 +1,5 @@
 {
-  "description": "条件を満たすアカウントを、設定可能な時間帯の中で毎日自動チェックインします。下の結果一覧は完了した実行記録であり、待機中のキューではありません。",
+  "description": "対象アカウントのチェックインを定期実行し、実行済みの記録の確認や失敗したタスクの再試行を行います。",
   "execution": {
     "actions": {
       "devModeHint": "開発モード: テスト用にアクションボタンを常に表示します。",
@@ -36,13 +36,24 @@
       "all": "すべて",
       "alreadyChecked": "チェックイン済み",
       "clearAll": "フィルターを解除",
+      "clearReasons": "理由をクリア",
       "countFiltered": "{{total}} 件中 {{filtered}} 件を表示",
       "countTotal": "全 {{total}} 件",
       "failed": "失敗",
       "needsAttention": "確認が必要",
+      "reasonAll": "すべての理由",
+      "reasonLabel": "理由で絞り込む",
       "searchLabel": "実行結果を検索",
       "searchPlaceholder": "アカウント名、ID、メッセージで検索...",
+      "selectedReasons_other": "{{count}} 件の理由を選択",
       "selectedStatuses_other": "{{count}} 件の状態を選択",
+      "skipCategoryAccountDisabled": "アカウント無効",
+      "skipCategoryActionRequired": "対応が必要",
+      "skipCategoryDisabled": "無効",
+      "skipCategoryExpected": "対応不要",
+      "skipCategoryUnclassified": "未分類",
+      "skipCategoryUnsupported": "未対応",
+      "skipCategoryWaiting": "自動で再試行",
       "skipped": "未実行",
       "statusLabel": "実行状態で絞り込む",
       "success": "今回チェックイン成功",
@@ -84,7 +95,7 @@
     },
     "title": "自動チェックイン"
   },
-  "manualDescription": "条件を満たすアカウントに一括チェックインを実行できます。下の結果一覧は完了した実行記録であり、待機中のキューではありません。",
+  "manualDescription": "対象アカウントのチェックインを手動で一括実行し、実行済みの記録の確認や失敗したタスクの再試行を行います。",
   "messages": {
     "error": {
       "accountDisabled": "アカウントは無効です",
@@ -144,12 +155,14 @@
     "checkinFailed": "チェックインに失敗しました",
     "checkinSuccessful": "チェックインに成功しました",
     "endpointNotSupported": "このチェックインエンドポイントはサポートされていません。アカウントのサイト種別が実際のサイトと一致しているか確認してください。",
+    "loginProviderRequired": "このアカウントのチェックインを実行する前に、チェックインのログイン方法を選択してください。",
     "nativePageIdentityMismatch": "一時チェックインページは別のアカウントでログインしています。対象アカウントでチェックインページを開いてから再試行してください: {{checkInUrl}}",
     "nativePageIdentityMissing": "一時チェックインページのログインアカウントを確認できませんでした。チェックインページを開き、対象アカウントでログインしてから再試行してください: {{checkInUrl}}",
     "nativePageStatusUnconfirmed": "ページ上のチェックイン操作はクリックされましたが、対象アカウントの状態を確認できませんでした。チェックインページを開いて手動で確認してください: {{checkInUrl}}",
     "nativePageTargetNotFound": "ページ上でチェックインボタンが見つかりませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
     "nativePageTriggerFailed": "ページ上のチェックイン操作を実行できませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
     "resultPendingConfirmation": "チェックイン結果を確認中",
+    "sessionBusy": "別のログイン処理が進行中です。しばらくしてから再試行してください。",
     "turnstileIncognitoAccessRequired": "プライベート一時ウィンドウで Turnstile トークンを取得するには、拡張機能のシークレット / プライベートウィンドウ実行を許可する必要があります（複数アカウントの場面）。この拡張機能の「シークレットモードでの実行を許可」を有効にして再試行するか、チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile 認証が必要です。チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "unknownError": "不明なエラーが発生しました"
@@ -196,8 +209,13 @@
     "already_checked_today": "本日はすでにチェック済みです",
     "authentication_required": "ログインの有効期限が切れているか、ログインが必要です。対象サイトにログインしてから再試行してください。",
     "auto_checkin_disabled": "自動チェックインは無効です",
+    "checkin_page_unavailable": "対象サイトのチェックインページを開けなかったか、操作を実行できませんでした。しばらくして再試行してください。",
+    "checkin_unconfirmed": "チェックイン要求は送信されましたが、対象サイトが結果を確認できませんでした。しばらくして再試行してください。",
     "credentials_missing": "保存済みの認証情報が不足しています。アカウントを再検出するか、認証情報を更新してください。",
     "detection_disabled": "検出は無効です",
+    "execution_context_invalid": "この実行では保護されたセッションを確立できませんでした。チェックインを再実行してください。",
+    "login_provider_in_use": "選択したログイン方法はすでに別の AgentRouter アカウントが使用しています。もう一方の方法を選ぶか、そのアカウント側で変更してください。",
+    "manual_verification_required": "対象サイトで手動認証が必要です。チェックインページで認証を完了してから再試行してください。",
     "method_disabled": "このサイトのチェックイン機能は無効です",
     "method_not_matched": "選択したチェックイン方法は現在のサイトと一致しません。チェックイン方法を再検出してください。",
     "method_unavailable": "選択したチェックイン方法は利用できなくなりました。チェックイン方法を再検出してください。",
@@ -206,9 +224,11 @@
     "no_provider": "このアカウントのサイト種別は現在チェックインに対応していません",
     "no_selected_method": "チェックイン方法が選択されていません。アカウント設定で再検出または選択してください。",
     "permission_denied": "サイトがチェックインを拒否しました。再ログインするか、アカウント権限を確認してください。",
+    "session_busy": "別のログイン処理が進行中です。しばらくして再試行してください。",
     "source_unavailable": "対象サイトは一時的に利用できません。しばらくしてから再試行してください。",
     "status_unavailable": "現在のチェックイン状態を確認できなかったため、チェックインは実行されませんでした",
-    "timeout": "接続がタイムアウトし、チェックインを完了できませんでした。再試行してください。"
+    "timeout": "接続がタイムアウトし、チェックインを完了できませんでした。再試行してください。",
+    "upstream_error": "対象サイトから判別できないチェックイン結果が返されました。しばらくして再試行してください。"
   },
   "snapshot": {
     "badges": {

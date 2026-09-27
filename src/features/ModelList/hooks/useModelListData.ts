@@ -3,14 +3,10 @@ import { useEffect, useMemo, useState } from "react"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
 import { useAccountData } from "~/hooks/useAccountData"
-import {
-  MODEL_CATALOG_SCOPES,
-  MODEL_LIST_SOURCE_KINDS,
-  type PricingResponse,
-} from "~/services/modelList/pricingModel"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
+import { isProviderCatalogFallback } from "../catalogFallback"
 import {
   repairAllAccountGroupExclusions,
   repairSelectedGroups,
@@ -35,15 +31,6 @@ import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
 
 const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
-
-/** Identifies provider-wide fallback catalogs using the normalized response scope. */
-function isProviderCatalogFallback(pricing: PricingResponse | null) {
-  return (
-    pricing?.model_list_source?.kind ===
-      MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK &&
-    pricing.model_list_source.catalogScope === MODEL_CATALOG_SCOPES.PROVIDER
-  )
-}
 
 /** Resolves account routing after profile-route precedence has been settled. */
 function resolveRouteAccountSourceValue(
@@ -80,6 +67,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
   // UI state
   const state = useModelListState()
   const {
+    showUnavailableModels,
     selectedSourceValue,
     setSelectedSourceValue,
     selectedBillingMode,
@@ -339,6 +327,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     [state.pricingScenarioSettings, priceComparisonWeights],
   )
   const filteredData = useFilteredModels({
+    showUnavailableModels,
     pricingScenario,
     isPriceComparisonActive: isModelListPriceSortMode(sortMode),
     pricingData: modelData.pricingData,
@@ -362,14 +351,14 @@ export function useModelListData(routeParams?: Record<string, string>) {
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) return
     if (!modelData.pricingData) return
     if (!modelData.hasAuthoritativePricingData) return
-    if (!filteredData.isGroupAccessAuthoritative) return
+    if (!filteredData.canRepairGroupSelection) return
 
     setSelectedGroups((current) =>
       repairSelectedGroups(current, filteredData.availableGroups),
     )
   }, [
     filteredData.availableGroups,
-    filteredData.isGroupAccessAuthoritative,
+    filteredData.canRepairGroupSelection,
     modelData.isLoading,
     modelData.hasAuthoritativePricingData,
     modelData.pricingData,
@@ -390,7 +379,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
             !queryState.isLoading &&
             queryState.hasData &&
             !queryState.hasError &&
-            filteredData.authoritativeGroupAccessByAccountId[
+            filteredData.canRepairGroupSelectionByAccountId[
               queryState.account.id
             ] === true,
         )
@@ -407,7 +396,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     )
   }, [
     filteredData.availableAccountGroupsByAccountId,
-    filteredData.authoritativeGroupAccessByAccountId,
+    filteredData.canRepairGroupSelectionByAccountId,
     modelData.accountQueryStates,
     selectedSource?.kind,
     selectedSource?.value,

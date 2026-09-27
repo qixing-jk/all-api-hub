@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -31,6 +31,7 @@ import {
   waitFor,
   within,
 } from "~~/tests/test-utils/render"
+import { stubVerificationOwnerStoresUnavailable } from "~~/tests/test-utils/verificationOwnerStores"
 
 const {
   mockFetchAccountTokens,
@@ -150,7 +151,13 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("VerifyApiDialog", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   beforeEach(async () => {
+    // This suite passes accounts in as props instead of persisting them, so the
+    // orphan sweep must not read the empty owner stores as "every owner is gone".
+    stubVerificationOwnerStoresUnavailable()
+
     // Prevent cross-test leakage from `mockResolvedValueOnce` and call counts.
     mockFetchAccountTokens.mockReset()
     mockFetchDisplayAccountRuntimeKeys.mockReset()

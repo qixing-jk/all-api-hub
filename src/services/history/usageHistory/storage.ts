@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryAccountStore,
@@ -8,6 +10,7 @@ import {
   type UsageHistoryLatencyAggregate,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
+import { parseDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
@@ -17,7 +20,6 @@ import {
   computeRetentionCutoffDayKey,
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-  parseDayKey,
   pruneUsageHistoryAccountStore,
 } from "./core"
 
@@ -530,21 +532,28 @@ class UsageHistoryStorage {
     })
   }
 
-  async getStore(): Promise<UsageHistoryStore> {
+  private async readStore(): Promise<{
+    ok: boolean
+    store: UsageHistoryStore
+  }> {
     try {
       const stored = (await this.storage.get(
         USAGE_HISTORY_STORAGE_KEYS.STORE,
       )) as unknown
 
       if (stored && typeof stored === "object") {
-        return sanitizeStore(stored)
+        return { ok: true, store: sanitizeStore(stored) }
       }
 
-      return createEmptyStore()
+      return { ok: true, store: createEmptyStore() }
     } catch (error) {
       logger.error("Failed to load store", error)
-      return createEmptyStore()
+      return { ok: false, store: createEmptyStore() }
     }
+  }
+
+  async getStore(): Promise<UsageHistoryStore> {
+    return (await this.readStore()).store
   }
 
   async setStore(store: UsageHistoryStore): Promise<boolean> {
@@ -557,13 +566,27 @@ class UsageHistoryStorage {
     }
   }
 
+  /**
+   * Update the store under an exclusive write lock to avoid cross-context
+   * read-modify-write races.
+   */
   async updateStore(
     updater: (store: UsageHistoryStore) => UsageHistoryStore | void,
   ): Promise<UsageHistoryStore> {
-    const current = await this.getStore()
-    const updated = updater(current) ?? current
-    await this.setStore(updated)
-    return updated
+    return withExtensionStorageWriteLock(
+      STORAGE_LOCKS.USAGE_HISTORY,
+      async () => {
+        const read = await this.readStore()
+        if (!read.ok) {
+          return read.store
+        }
+
+        const current = read.store
+        const updated = updater(current) ?? current
+        await this.setStore(updated)
+        return updated
+      },
+    )
   }
 
   async getAccountStore(accountId: string): Promise<UsageHistoryAccountStore> {

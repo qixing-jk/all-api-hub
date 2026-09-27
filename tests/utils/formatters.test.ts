@@ -9,14 +9,12 @@ import {
   calculateTotalBalance,
   calculateTotalConsumption,
   calculateTotalIncomeForSites,
-  createSortComparator,
   formatFullTime,
   formatKeyTime,
   formatLocaleDateTime,
   formatRelativeTime,
   formatTimestamp,
   formatTokenCount,
-  getCurrencyDisplayName,
   getCurrencySymbol,
   getOppositeCurrency,
   getTodayMetricPresentation,
@@ -217,35 +215,6 @@ describe("formatters utilities", () => {
     })
   })
 
-  describe("createSortComparator", () => {
-    const items = [
-      { name: "Alice", age: 30 },
-      { name: "Bob", age: 25 },
-      { name: "Charlie", age: 35 },
-    ]
-
-    it("should sort in ascending order", () => {
-      const comparator = createSortComparator<(typeof items)[0]>("age", "asc")
-      const sorted = [...items].sort(comparator)
-      expect(sorted[0].name).toBe("Bob")
-      expect(sorted[2].name).toBe("Charlie")
-    })
-
-    it("should sort in descending order", () => {
-      const comparator = createSortComparator<(typeof items)[0]>("age", "desc")
-      const sorted = [...items].sort(comparator)
-      expect(sorted[0].name).toBe("Charlie")
-      expect(sorted[2].name).toBe("Bob")
-    })
-
-    it("should handle string fields", () => {
-      const comparator = createSortComparator<(typeof items)[0]>("name", "asc")
-      const sorted = [...items].sort(comparator)
-      expect(sorted[0].name).toBe("Alice")
-      expect(sorted[2].name).toBe("Charlie")
-    })
-  })
-
   describe("formatKeyTime", () => {
     it("should return translation string when timestamp is non-positive", () => {
       const result = formatKeyTime(0)
@@ -439,13 +408,6 @@ describe("formatters utilities", () => {
           legacyUnclassifiedCount: 0,
         },
       })
-    })
-  })
-
-  describe("getCurrencyDisplayName", () => {
-    it("should use correct translation keys for USD and CNY", () => {
-      expect(getCurrencyDisplayName("USD")).toBe("common:currency.usd")
-      expect(getCurrencyDisplayName("CNY")).toBe("common:currency.cny")
     })
   })
 

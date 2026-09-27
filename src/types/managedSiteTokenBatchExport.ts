@@ -105,11 +105,6 @@ export const isResolvedManagedSiteTokenBatchExportItemInput = (
 ): input is ResolvedManagedSiteTokenBatchExportItemInput =>
   input.kind !== MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
 
-export const isBlockedManagedSiteTokenBatchExportItemInput = (
-  input: ManagedSiteTokenBatchExportItemInput,
-): input is BlockedManagedSiteTokenBatchExportItemInput =>
-  input.kind === MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
-
 export type ManagedSiteTokenBatchExportMatchedChannel =
   ManagedSiteAssessmentChannel
 

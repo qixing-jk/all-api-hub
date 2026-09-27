@@ -304,29 +304,6 @@ export const formatPriceCompact = (
 }
 
 /**
- * 格式化价格区间显示（输入-输出）
- * @param inputPrice 输入价格
- * @param outputPrice 输出价格
- * @param currency 货币类型
- * @param precision 小数位数
- */
-export const formatPriceRange = (
-  inputPrice: number,
-  outputPrice: number,
-  currency: CurrencyType = "USD",
-  precision: number = 4,
-): string => {
-  const formattedInput = formatPrice(inputPrice, currency, precision)
-  const formattedOutput = formatPrice(outputPrice, currency, precision)
-
-  if (inputPrice === outputPrice) {
-    return formattedInput
-  }
-
-  return `${formattedInput} ~ ${formattedOutput}`
-}
-
-/**
  * 获取计费模式的显示文本
  * @param quotaType 后端返回的计费模式类型
  */
@@ -334,18 +311,6 @@ export const getBillingModeText = (quotaType: number): string => {
   return isTokenBillingType(quotaType)
     ? t("ui:billing.tokenBased")
     : t("ui:billing.perCall")
-}
-
-/**
- * 检查模型是否对指定分组可用
- * @param model 模型定价数据
- * @param userGroup 用户分组标识
- */
-export const isModelAvailableForGroup = (
-  model: ModelPricing,
-  userGroup: string,
-): boolean => {
-  return model.enable_groups.includes(userGroup)
 }
 
 /**

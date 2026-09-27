@@ -911,11 +911,11 @@ describe("ProductAnnouncementButton", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("reserves a non-focusable popup slot until risk state is available", async () => {
+  it("leaves no popup slot when there are no risk notices", async () => {
     sendMessageMock.mockResolvedValue(
       createState({
-        notices: [riskNotice],
-        activeNotices: [riskNotice],
+        notices: [],
+        activeNotices: [],
         primaryRiskNotice: null,
         unseenActiveCount: 0,
       }),
@@ -927,14 +927,9 @@ describe("ProductAnnouncementButton", () => {
       withUserPreferencesProvider: false,
     })
 
-    const slot = screen.getByTestId("product-announcement-reserved-slot")
-    expect(slot).toBeInTheDocument()
-    expect(slot).toHaveClass(
-      "h-(--density-control-xs)",
-      "w-(--density-control-xs)",
-      "sm:h-(--density-control-sm)",
-      "sm:w-(--density-control-sm)",
-    )
+    expect(
+      screen.queryByTestId("product-announcement-reserved-slot"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
         name: "productAnnouncements:actions.open",
@@ -948,7 +943,7 @@ describe("ProductAnnouncementButton", () => {
     })
   })
 
-  it("uses the reserved popup slot when risk notices become visible", async () => {
+  it("shows the popup button when risk notices become visible", async () => {
     sendMessageMock.mockResolvedValue(
       createState({
         notices: [riskNotice],
@@ -964,7 +959,6 @@ describe("ProductAnnouncementButton", () => {
       withUserPreferencesProvider: false,
     })
 
-    const slot = screen.getByTestId("product-announcement-reserved-slot")
     const button = await screen.findByRole("button", {
       name: "productAnnouncements:actions.openWithRiskCount",
     })
@@ -975,9 +969,9 @@ describe("ProductAnnouncementButton", () => {
       "sm:h-(--density-control-sm)",
       "sm:w-(--density-control-sm)",
     )
-    expect(slot).toContainElement(
-      screen.getByTestId("product-announcement-button"),
-    )
+    expect(
+      screen.queryByTestId("product-announcement-reserved-slot"),
+    ).not.toBeInTheDocument()
   })
 
   it("ignores stale announcement loads after a newer reload wins", async () => {

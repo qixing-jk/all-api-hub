@@ -1,8 +1,1 @@
-{
-  "src/entrypoints/background/devActionBranding.ts": {
-    "reason": "The development toolbar badge is browser branding outside the CSS theme scope.",
-    "tokens": {
-      "#DC2626": 1
-    }
-  }
-}
+{}

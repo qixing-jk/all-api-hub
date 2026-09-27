@@ -153,13 +153,31 @@ describe("BasicSettings tab layout", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("renders masked New API login-assist fields and persists them on blur", async () => {
-    const user = userEvent.setup()
+  it.each([
+    { field: "password", showLabel: "showPassword" },
+    { field: "totpSecret", showLabel: "showTotpSecret" },
+  ])(
+    "masks the New API $field until explicitly revealed",
+    async ({ field, showLabel }) => {
+      const user = userEvent.setup()
+      render(<NewApiSettings />)
+      const input = screen.getByPlaceholderText(
+        `settings:newApi.fields.${field}Placeholder`,
+      )
+      expect(input).toHaveAttribute("type", "password")
+      await user.click(
+        screen.getByRole("button", {
+          name: `settings:newApi.fields.${showLabel}`,
+        }),
+      )
+      expect(input).toHaveAttribute("type", "text")
+    },
+  )
+
+  it("persists New API login-assist fields on blur", async () => {
     const contextValue = createContextValue()
     mockedUseUserPreferencesContext.mockReturnValue(contextValue)
-
     render(<NewApiSettings />)
-
     const usernameInput = screen.getByPlaceholderText(
       "settings:newApi.fields.usernamePlaceholder",
     )
@@ -169,24 +187,6 @@ describe("BasicSettings tab layout", () => {
     const totpInput = screen.getByPlaceholderText(
       "settings:newApi.fields.totpSecretPlaceholder",
     )
-
-    expect(passwordInput).toHaveAttribute("type", "password")
-    expect(totpInput).toHaveAttribute("type", "password")
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "settings:newApi.fields.showPassword",
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "settings:newApi.fields.showTotpSecret",
-      }),
-    )
-
-    expect(passwordInput).toHaveAttribute("type", "text")
-    expect(totpInput).toHaveAttribute("type", "text")
-
     fireEvent.change(usernameInput, { target: { value: " next-admin " } })
     fireEvent.blur(usernameInput)
     fireEvent.change(passwordInput, { target: { value: " next-password " } })

@@ -175,11 +175,6 @@ const getBookmarkHash = () => `#${MENU_ITEM_IDS.BOOKMARK}`
 const getBasicSettingsHash = () => `#${MENU_ITEM_IDS.BASIC}`
 
 /**
- * Hash fragment pointing to the About section inside options.html.
- */
-const getAboutHash = () => `#${MENU_ITEM_IDS.ABOUT}`
-
-/**
  * Hash fragment pointing to API credential profiles inside options.html.
  */
 const getApiCredentialProfilesHash = () =>
@@ -524,14 +519,6 @@ const _openSettingsTabInNewTab = async (
 /**
  * Opens the repository bug report template in a new browser tab.
  */
-const _openAboutPage = () => {
-  const targetHash = getAboutHash()
-  return openOrFocusOptionsPage(targetHash)
-}
-
-/**
- * Opens the repository bug report template in a new browser tab.
- */
 const _openBugReportPage = async () => {
   await createActiveTab(getFeedbackDestinationUrls().bugReport)
 }
@@ -557,13 +544,6 @@ const _openSiteSupportRequestPage = async (
   context?: SiteSupportRequestContext,
 ) => {
   await createActiveTab(getSiteSupportRequestUrl(context))
-}
-
-/**
- * Opens the repository discussions page in a new browser tab.
- */
-const _openDiscussionsPage = async () => {
-  await createActiveTab(getFeedbackDestinationUrls().discussions)
 }
 
 /**
@@ -854,14 +834,6 @@ export const openFullBookmarkManagerPage = withPopupClose(
  * Navigate to the default settings landing section and close the popup if
  * applicable, so the user ends up in the options page only.
  */
-export const openBookmarkManagerWithSearch = withPopupClose((search: string) =>
-  _openFullBookmarkManagerPage({ search }),
-)
-
-/**
- * Navigate to the default settings landing section and close the popup if
- * applicable, so the user ends up in the options page only.
- */
 export const openSettingsPage = withPopupClose(_openSettingsPage)
 
 /**
@@ -926,11 +898,6 @@ export const openSidePanelPage = withPopupClose(openSidePanelWithFallback)
 /**
  * Open the bug-report issue template and close the popup afterward when needed.
  */
-export const openAboutPage = withPopupClose(_openAboutPage)
-
-/**
- * Open the bug-report issue template and close the popup afterward when needed.
- */
 export const openBugReportPage = withPopupClose(_openBugReportPage)
 
 /**
@@ -949,11 +916,6 @@ export const openLanguageRequestPage = withPopupClose(_openLanguageRequestPage)
 export const openSiteSupportRequestPage = withPopupClose(
   _openSiteSupportRequestPage,
 )
-
-/**
- * Open the docs community hub and close the popup afterward when needed.
- */
-export const openDiscussionsPage = withPopupClose(_openDiscussionsPage)
 
 /**
  * Open the docs community hub and close the popup afterward when needed.
@@ -990,13 +952,6 @@ export const openAccountBaseUrl = withPopupClose(_openAccountBaseUrl)
  */
 export const openManagedSiteChannelsPage = withPopupClose(
   _openManagedSiteChannelsPage,
-)
-
-/**
- * Open Managed Site model sync dashboard focused on a single channel.
- */
-export const openManagedSiteModelSyncPage = withPopupClose(
-  _openManagedSiteModelSyncPage,
 )
 
 /**

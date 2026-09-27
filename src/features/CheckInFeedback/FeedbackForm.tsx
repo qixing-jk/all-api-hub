@@ -173,7 +173,7 @@ export function FeedbackForm({
           {scanning ? (
             <Spinner size="sm" />
           ) : scanStatus === "completed" ? (
-            <Check className="text-success-text mt-0.5 h-4 w-4 shrink-0" />
+            <Check className="text-success-indicator mt-0.5 h-4 w-4 shrink-0" />
           ) : (
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
           )}

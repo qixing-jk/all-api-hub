@@ -1,9 +1,9 @@
-import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
-import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import {
   fetchModelPricing,
   invalidateAIHubMixPublicCatalogs,
-} from "~/services/apiService/aihubmix"
+} from "~/services/apiAdapters/aihubmix/catalog"
+import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
+import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 
 export const aihubmixModelPricing: ModelPricingCapability = {
   runtimeKeyFallback: MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,

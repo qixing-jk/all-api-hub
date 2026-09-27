@@ -147,6 +147,48 @@ const automationSummaryFallbackResolvers: Record<
   [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.webdavAutoSync]: {},
 }
 
+const automationSummaryLineResolvers = {
+  [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin]: (item, t) => {
+    const lastRun = findSummaryRow(item, SUMMARY_ROW_IDS.lastRun)
+    return lastRun?.value
+      ? formatSummaryRow(item, lastRun, t)
+      : t("optionsOverview:autoCheckin.notRunYet")
+  },
+  [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.siteAnnouncements]: (item, t) => {
+    const lastChecked = findSummaryRow(item, SUMMARY_ROW_IDS.lastChecked)
+    const unread = findSummaryRow(item, SUMMARY_ROW_IDS.unread)
+    const lastCheckedText = lastChecked?.value
+      ? formatSummaryRow(item, lastChecked, t)
+      : t("optionsOverview:automation.neverChecked")
+    const unreadCount = Number(unread?.value ?? 0)
+
+    return unreadCount > 0 && unread
+      ? `${lastCheckedText} · ${formatSummaryRow(item, unread, t)}`
+      : lastCheckedText
+  },
+  [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.managedSiteModelSync]: (item, t) =>
+    joinSummaryRows(
+      item,
+      [
+        findSummaryRow(item, SUMMARY_ROW_IDS.interval),
+        findSummaryRow(item, SUMMARY_ROW_IDS.concurrency),
+      ],
+      t,
+    ),
+  [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.webdavAutoSync]: (item, t) =>
+    joinSummaryRows(
+      item,
+      [
+        findSummaryRow(item, SUMMARY_ROW_IDS.interval),
+        findSummaryRow(item, SUMMARY_ROW_IDS.strategy),
+      ],
+      t,
+    ),
+} satisfies Record<
+  AutomationItemId,
+  (item: OptionsOverviewAutomationItem, t: TFunction) => string
+>
+
 /**
  * Explains disabled automation rows without treating them as failures.
  */
@@ -212,6 +254,16 @@ export function getAutomationSummaryRowLabel(
 }
 
 /**
+ * Builds the single most useful runtime fact for a collapsed automation row.
+ */
+export function getAutomationItemSummaryLine(
+  item: OptionsOverviewAutomationItem,
+  t: TFunction,
+) {
+  return automationSummaryLineResolvers[item.id](item, t)
+}
+
+/**
  * Resolves empty-state fallbacks for automation summary rows.
  */
 function getAutomationSummaryFallback(
@@ -220,6 +272,44 @@ function getAutomationSummaryFallback(
   t: TFunction,
 ) {
   return automationSummaryFallbackResolvers[itemId][rowId]?.(t) ?? "-"
+}
+
+/**
+ * Picks one summary row by its semantic id.
+ */
+function findSummaryRow(
+  item: OptionsOverviewAutomationItem,
+  rowId: AutomationSummaryRowId,
+) {
+  return item.summaryRows.find((row) => row.id === rowId)
+}
+
+/**
+ * Formats one summary row as an inline "label: value" fact.
+ */
+function formatSummaryRow(
+  item: OptionsOverviewAutomationItem,
+  row: OptionsOverviewAutomationItem["summaryRows"][number],
+  t: TFunction,
+) {
+  return `${getAutomationSummaryRowLabel(item.id, row.id, t)}: ${formatSummaryValue(item.id, row, t)}`
+}
+
+/**
+ * Joins the meaningful rows of a compact two-fact summary line.
+ */
+function joinSummaryRows(
+  item: OptionsOverviewAutomationItem,
+  rows: Array<OptionsOverviewAutomationItem["summaryRows"][number] | undefined>,
+  t: TFunction,
+) {
+  return rows
+    .filter(
+      (row): row is OptionsOverviewAutomationItem["summaryRows"][number] =>
+        Boolean(row?.value),
+    )
+    .map((row) => formatSummaryRow(item, row, t))
+    .join(" · ")
 }
 
 /**

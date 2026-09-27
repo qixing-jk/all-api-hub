@@ -214,7 +214,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-(--density-control) w-full"
+            className="min-h-(--density-control) w-full"
             aria-label={t("snapshot.filters.readinessLabel")}
           >
             <SelectValue />
@@ -250,7 +250,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-(--density-control) w-full"
+            className="min-h-(--density-control) w-full"
             aria-label={t("snapshot.filters.statusLabel")}
           >
             <SelectValue />
@@ -264,6 +264,9 @@ export default function AccountSnapshotTable({
             </SelectItem>
             <SelectItem value={SNAPSHOT_STATUS_FILTER.FAILED}>
               {t("execution.status.failed")}
+            </SelectItem>
+            <SelectItem value={SNAPSHOT_STATUS_FILTER.UNCERTAIN}>
+              {t("execution.status.uncertain")}
             </SelectItem>
             <SelectItem value={SNAPSHOT_STATUS_FILTER.SKIPPED}>
               {t("execution.status.skipped")}

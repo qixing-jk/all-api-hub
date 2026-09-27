@@ -214,7 +214,7 @@ const SelectTrigger = React.forwardRef<
     data-slot="select-trigger"
     data-size={size}
     className={cn(
-      "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 *:data-[slot=select-value]:gap-density-2 flex w-full items-center justify-between rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:h-(--density-control) data-[size=sm]:h-(--density-control-sm) *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+      "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 *:data-[slot=select-value]:gap-density-2 py-density-1 flex h-auto w-full min-w-0 items-center justify-between rounded-md border px-3 text-left text-sm break-words whitespace-normal shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:min-h-(--density-control) data-[size=sm]:min-h-(--density-control-sm) *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
       className,
     )}
     {...props}
@@ -297,7 +297,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     data-slot="select-item"
     className={cn(
-      `dark:text-foreground dark:focus:bg-secondary/80 gap-density-2 relative flex w-full cursor-pointer items-center ${CORNERS.item} text-secondary-foreground focus:bg-theme-50 focus:text-foreground data-[state=checked]:text-foreground py-density-1-5 *:[span]:last:gap-density-2 px-2 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center`,
+      `dark:text-foreground dark:focus:bg-secondary/80 gap-density-2 relative flex w-full min-w-0 cursor-pointer items-center ${CORNERS.item} text-secondary-foreground focus:bg-theme-50 focus:text-foreground data-[state=checked]:text-foreground py-density-1-5 *:[span]:last:gap-density-2 pr-8 pl-2 text-sm break-words whitespace-normal outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:min-w-0 *:[span]:last:items-center`,
       className,
     )}
     {...props}

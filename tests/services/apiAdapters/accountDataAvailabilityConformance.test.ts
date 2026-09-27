@@ -1,13 +1,13 @@
 import { http, HttpResponse, type HttpHandler } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_TYPES,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import type { AccountData } from "~/services/accounts/accountDataModel"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import type { SiteBackendFamily } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
@@ -431,9 +431,7 @@ describe("AccountData availability producer conformance", () => {
       createRequest(SITE_TYPES.NEW_API),
     )
 
-    expect(data.today_income).toBe(
-      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR * 2,
-    )
+    expect(data.today_income).toBe(QUOTA_PER_USD * 2)
     expect(data.todayStatsAvailability?.income).toEqual(
       partial(ACCOUNT_TODAY_METRIC_REASONS.SourcePartial),
     )

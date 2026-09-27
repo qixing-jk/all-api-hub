@@ -20,7 +20,7 @@
     },
     "title": "Kontoaufschlüsselung"
   },
-  "description": "Zeichnen Sie täglich Schnappschüsse von Kontostand und Cashflow auf und visualisieren Sie Trends im Zeitverlauf.",
+  "description": "Tägliche Guthaben- und Zahlungsströme verfolgen, um Änderungen am Kontoguthaben zu sehen.",
   "empty": {
     "description": "Aktivieren Sie den Kontostandverlauf und aktualisieren Sie ein Konto, um den ersten Schnappschuss aufzuzeichnen.",
     "title": "Noch keine Schnappschüsse"

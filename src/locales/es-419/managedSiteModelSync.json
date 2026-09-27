@@ -1,5 +1,5 @@
 {
-  "description": "Actualiza automáticamente las listas de modelos del AI gateway autohospedado y reduce mantenimiento manual; puedes activarlo cuando haga falta después de crear canales.",
+  "description": "Actualiza las listas de modelos de los canales y consulta los resultados de sincronización y las causas de errores.",
   "execution": {
     "actions": {
       "refresh": "Actualizar resultados",

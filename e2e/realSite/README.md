@@ -244,9 +244,8 @@ AAH_E2E_VELOERA_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_VELOERA_ADMIN_USER_ID=1
 ```
 
-Veloera channel CRUD/search is covered by the managed-site channel E2E. Key
-channel-status assertions are skipped for Veloera because the product currently
-does not support base-URL channel lookup for that managed-site type.
+Veloera channel CRUD/search and key channel-status assertions are covered by the
+managed-site channel E2E, using a New API source account for the latter.
 
 ## Managed-Site Channel Matrix
 
@@ -299,6 +298,16 @@ Managed-only site types use a New API source account for key channel-status
 checks when New API account env is available. Without that source account, the
 spec still covers channel CRUD/search for the managed target and annotates the
 status check as skipped.
+
+Channel-status scenarios explicitly add a custom test model through the editor.
+They verify persisted channel identity and key matching without requiring a
+particular source-account group, a nonempty upstream catalog, or a callable model.
+For targets that compare model sets, a confirmed key match may display
+`Needs confirmation` when the custom model differs from the source catalog.
+Octopus model-discovery steps separately check the request protocol, successful
+response, and usable editor controls; an empty model list is valid. The custom
+model must remain saved after reopening the channel and refreshing discovery.
+Controlled browser tests cover both empty and populated catalogs.
 
 ```env
 AAH_E2E_OCTOPUS_BASE_URL=https://octopus.example.com

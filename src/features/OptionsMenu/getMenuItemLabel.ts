@@ -58,6 +58,8 @@ export function getMenuItemLabel(
       return t("ui:navigation.meshGradientLab")
     case DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW:
       return t("ui:navigation.unifiedApiGuidancePreview")
+    case DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW:
+      return t("ui:navigation.starPromotionPreview")
     default:
       return assertNever(itemId, `Unexpected menu item id: ${itemId}`)
   }

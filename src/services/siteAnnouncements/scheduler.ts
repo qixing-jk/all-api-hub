@@ -1,5 +1,9 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  REQUEST_SCHEDULING_PRIORITIES,
+  type RequestScheduling,
+} from "~/services/apiTransport/requestScheduling"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
@@ -16,9 +20,12 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
-  DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+  clampNotificationMaxAgeDays,
+  clampPollingIntervalMinutes,
   normalizeSiteAnnouncementPreferences,
+  SITE_ANNOUNCEMENT_CHECK_TRIGGERS,
   SITE_ANNOUNCEMENT_STATUS,
+  type SiteAnnouncementCheckTrigger,
 } from "~/types/siteAnnouncements"
 import {
   clearAlarm,
@@ -45,16 +52,21 @@ import { fingerprintAnnouncement, normalizeAnnouncementText } from "./text"
 
 const logger = createLogger("SiteAnnouncementScheduler")
 
-/**
- * Constrains user-configured polling intervals to the supported range.
- */
-function clampIntervalMinutes(value: unknown): number {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes
-  }
+const MS_PER_DAY = 24 * 60 * 60 * 1000
 
-  return Math.min(24 * 60, Math.max(15, Math.trunc(parsed)))
+/**
+ * Runs user-initiated checks in the limiter's foreground lane and automatic
+ * polling in the background lane, so a scan cannot compete with the user's
+ * own requests on the same site.
+ */
+const TRIGGER_REQUEST_PRIORITIES: Record<
+  SiteAnnouncementCheckTrigger,
+  RequestScheduling["priority"]
+> = {
+  [SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Alarm]:
+    REQUEST_SCHEDULING_PRIORITIES.Background,
+  [SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Manual]:
+    REQUEST_SCHEDULING_PRIORITIES.Foreground,
 }
 
 /**
@@ -63,14 +75,17 @@ function clampIntervalMinutes(value: unknown): number {
 function createProviderRequest(
   account: SiteAccount,
   provider: SiteAnnouncementProvider,
+  priority: RequestScheduling["priority"],
 ): SiteAnnouncementProviderRequest {
+  const { request } = createAccountApiRequestFromStoredAccount(account)
+
   return {
     accountId: account.id,
     siteName: account.site_name,
     siteType: account.site_type,
     baseUrl: account.site_url,
     providerId: provider.id,
-    apiRequest: createAccountApiRequestFromStoredAccount(account).request,
+    apiRequest: { ...request, requestScheduling: { priority } },
   }
 }
 
@@ -109,6 +124,45 @@ function createRecordInput(params: {
     readAt: params.announcement.readAt,
     fingerprint,
   }
+}
+
+/**
+ * Splits freshly stored records into news and history.
+ *
+ * A site's first successful scan only establishes a baseline: everything it
+ * returns predates the user's decision to track that site, so none of it is
+ * news. On later scans, announcements published before the notification age
+ * window are history too. Records without an upstream timestamp cannot be aged
+ * and stay news, because their provider only ever reports the current notice.
+ */
+function partitionAnnouncementRecords(params: {
+  records: SiteAnnouncementRecord[]
+  isFirstScan: boolean
+  maxAgeDays: number
+  now: number
+}): {
+  news: SiteAnnouncementRecord[]
+  history: SiteAnnouncementRecord[]
+} {
+  if (params.isFirstScan) {
+    return { news: [], history: [...params.records] }
+  }
+
+  const oldestNewsAt = params.now - params.maxAgeDays * MS_PER_DAY
+  const news: SiteAnnouncementRecord[] = []
+  const history: SiteAnnouncementRecord[] = []
+
+  for (const record of params.records) {
+    const isOutdated =
+      typeof record.createdAt === "number" && record.createdAt < oldestNewsAt
+    if (isOutdated) {
+      history.push(record)
+    } else {
+      news.push(record)
+    }
+  }
+
+  return { news, history }
 }
 
 /**
@@ -151,7 +205,8 @@ function getAnnouncementCooldownExpiresAt(params: {
   }
 
   return (
-    lastCheckedAt + clampIntervalMinutes(params.intervalMinutes) * 60 * 1000
+    lastCheckedAt +
+    clampPollingIntervalMinutes(params.intervalMinutes) * 60 * 1000
   )
 }
 
@@ -182,6 +237,18 @@ async function rescheduleAnnouncementAlarm(params: {
 }
 
 /**
+ * Returns the dedupe key identifying the announcement source an account polls.
+ */
+function getAnnouncementSourceKey(account: SiteAccount): string {
+  const provider = getSiteAnnouncementProvider(account.site_type)
+  return provider.createSiteKey({
+    accountId: account.id,
+    siteType: account.site_type,
+    baseUrl: account.site_url,
+  })
+}
+
+/**
  * Chooses the next alarm delay from persisted site cooldowns.
  */
 function getAnnouncementAlarmDelayMinutes(params: {
@@ -192,16 +259,7 @@ function getAnnouncementAlarmDelayMinutes(params: {
   const now = Date.now()
   let nextDelayMinutes = Number.POSITIVE_INFINITY
   const accounts = dedupeAnnouncementSources(params.accounts)
-  const enabledSiteKeys = new Set(
-    accounts.map((account) => {
-      const provider = getSiteAnnouncementProvider(account.site_type)
-      return provider.createSiteKey({
-        accountId: account.id,
-        siteType: account.site_type,
-        baseUrl: account.site_url,
-      })
-    }),
-  )
+  const enabledSiteKeys = new Set(accounts.map(getAnnouncementSourceKey))
   const siteKeysWithStatus = new Set(
     params.siteStates
       .filter((siteState) => enabledSiteKeys.has(siteState.siteKey))
@@ -209,13 +267,7 @@ function getAnnouncementAlarmDelayMinutes(params: {
   )
 
   for (const account of accounts) {
-    const provider = getSiteAnnouncementProvider(account.site_type)
-    const siteKey = provider.createSiteKey({
-      accountId: account.id,
-      siteType: account.site_type,
-      baseUrl: account.site_url,
-    })
-    if (!siteKeysWithStatus.has(siteKey)) {
+    if (!siteKeysWithStatus.has(getAnnouncementSourceKey(account))) {
       return 1
     }
   }
@@ -250,12 +302,7 @@ function dedupeAnnouncementSources(accounts: SiteAccount[]): SiteAccount[] {
   const result: SiteAccount[] = []
 
   for (const account of accounts) {
-    const provider = getSiteAnnouncementProvider(account.site_type)
-    const key = provider.createSiteKey({
-      accountId: account.id,
-      siteType: account.site_type,
-      baseUrl: account.site_url,
-    })
+    const key = getAnnouncementSourceKey(account)
     if (seen.has(key)) {
       continue
     }
@@ -281,7 +328,9 @@ class SiteAnnouncementScheduler {
         return
       }
 
-      await this.runCheck({ trigger: "alarm" })
+      await this.runCheck({
+        trigger: SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Alarm,
+      })
     })
 
     await this.applyScheduleFromPreferences()
@@ -296,7 +345,7 @@ class SiteAnnouncementScheduler {
       return
     }
 
-    const intervalMinutes = clampIntervalMinutes(config.intervalMinutes)
+    const intervalMinutes = clampPollingIntervalMinutes(config.intervalMinutes)
 
     if (!config.enabled) {
       await clearAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
@@ -348,8 +397,11 @@ class SiteAnnouncementScheduler {
     const next: SiteAnnouncementPreferences = {
       ...current,
       ...updates,
-      intervalMinutes: clampIntervalMinutes(
+      intervalMinutes: clampPollingIntervalMinutes(
         updates.intervalMinutes ?? current.intervalMinutes,
+      ),
+      notificationMaxAgeDays: clampNotificationMaxAgeDays(
+        updates.notificationMaxAgeDays ?? current.notificationMaxAgeDays,
       ),
     }
 
@@ -361,11 +413,14 @@ class SiteAnnouncementScheduler {
   }
 
   async runManualCheck(accountIds?: string[]) {
-    return await this.runCheck({ trigger: "manual", accountIds })
+    return await this.runCheck({
+      trigger: SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Manual,
+      accountIds,
+    })
   }
 
   private async runCheck(params: {
-    trigger: "alarm" | "manual"
+    trigger: SiteAnnouncementCheckTrigger
     accountIds?: string[]
   }): Promise<SiteAnnouncementCheckResult | null> {
     if (this.isRunning) {
@@ -383,27 +438,23 @@ class SiteAnnouncementScheduler {
     }
 
     try {
-      const automaticPollingPreferences =
-        params.trigger === "alarm"
-          ? normalizeSiteAnnouncementPreferences(
-              (await userPreferences.getPreferences())
-                .siteAnnouncementNotifications,
-            )
-          : undefined
+      const pollingPreferences = normalizeSiteAnnouncementPreferences(
+        (await userPreferences.getPreferences()).siteAnnouncementNotifications,
+      )
 
-      if (params.trigger === "alarm" && !automaticPollingPreferences?.enabled) {
+      if (
+        params.trigger === SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Alarm &&
+        !pollingPreferences.enabled
+      ) {
         return result
       }
 
-      const siteStatesByKey =
-        params.trigger === "alarm"
-          ? new Map(
-              (await siteAnnouncementStorage.getStatus()).map((site) => [
-                site.siteKey,
-                site,
-              ]),
-            )
-          : undefined
+      const siteStatesByKey = new Map(
+        (await siteAnnouncementStorage.getStatus()).map((site) => [
+          site.siteKey,
+          site,
+        ]),
+      )
 
       const accounts = params.accountIds?.length
         ? await Promise.all(
@@ -418,28 +469,34 @@ class SiteAnnouncementScheduler {
 
       for (const account of dedupeAnnouncementSources(accounts)) {
         const provider = getSiteAnnouncementProvider(account.site_type)
-        const request = createProviderRequest(account, provider)
+        const request = createProviderRequest(
+          account,
+          provider,
+          TRIGGER_REQUEST_PRIORITIES[params.trigger],
+        )
         const siteKey = provider.createSiteKey({
           accountId: account.id,
           siteType: account.site_type,
           baseUrl: account.site_url,
         })
         const now = Date.now()
-        const existingSiteState = siteStatesByKey?.get(siteKey)
+        const existingSiteState = siteStatesByKey.get(siteKey)
+        // The first successful scan of a site only records what already exists
+        // there; nothing it finds can be news the user has not seen.
+        const isFirstScan = existingSiteState?.lastSuccessAt === undefined
 
         if (
-          params.trigger === "alarm" &&
-          automaticPollingPreferences &&
+          params.trigger === SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Alarm &&
           existingSiteState &&
           isWithinAnnouncementCooldown({
             siteState: existingSiteState,
             now,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
           })
         ) {
           const cooldownExpiresAt = getAnnouncementCooldownExpiresAt({
             siteState: existingSiteState,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
           })
           if (cooldownExpiresAt != null) {
             nextCooldownExpiresAt = Math.min(
@@ -450,7 +507,7 @@ class SiteAnnouncementScheduler {
 
           logger.debug("Skipping site announcement check within cooldown", {
             siteKey,
-            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            intervalMinutes: pollingPreferences.intervalMinutes,
             lastCheckedAt: existingSiteState.lastCheckedAt ?? null,
           })
           continue
@@ -493,21 +550,45 @@ class SiteAnnouncementScheduler {
           result.records.push(...createdRecords)
 
           if (createdRecords.length > 0) {
-            const notification = await notifySiteAnnouncements(createdRecords)
-            await siteAnnouncementStorage.updateNotificationState(
-              siteKey,
-              createdRecords.map((record) => record.id),
-              {
-                notifiedAt: notification.success ? Date.now() : undefined,
-                notificationError: notification.error,
-              },
-            )
+            const { news, history } = partitionAnnouncementRecords({
+              records: createdRecords,
+              isFirstScan,
+              maxAgeDays: pollingPreferences.notificationMaxAgeDays,
+              now,
+            })
 
-            if (notification.success) {
-              result.notified += createdRecords.length
-              // Ack every item in checkResult.announcements, not just createdRecords,
-              // so provider.markRead can stop returning already-seen unread payloads.
-              await provider.markRead?.(request, checkResult.announcements)
+            if (history.length > 0) {
+              await siteAnnouncementStorage.markRecordIdentitiesRead(history)
+            }
+
+            // A manual check means the user is already looking at the page it
+            // refreshes, so it never notifies.
+            if (
+              news.length > 0 &&
+              params.trigger !== SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Manual
+            ) {
+              const notification = await notifySiteAnnouncements(news)
+              await siteAnnouncementStorage.updateNotificationState(
+                siteKey,
+                news.map((record) => record.id),
+                {
+                  notifiedAt: notification.success ? Date.now() : undefined,
+                  notificationError: notification.error,
+                },
+              )
+
+              if (notification.success) {
+                result.notified += news.length
+                // Only an explicit opt-in acks the upstream unread state,
+                // because delivering a notification is not the same as the user
+                // having read the announcement.
+                if (pollingPreferences.autoMarkUpstreamReadOnNotify) {
+                  // Ack every item in checkResult.announcements, not just
+                  // createdRecords, so provider.markRead can stop returning
+                  // already-seen unread payloads.
+                  await provider.markRead?.(request, checkResult.announcements)
+                }
+              }
             }
           }
         } catch (error) {
@@ -527,12 +608,12 @@ class SiteAnnouncementScheduler {
       }
 
       if (
-        params.trigger === "alarm" &&
-        automaticPollingPreferences?.enabled &&
+        params.trigger === SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Alarm &&
+        pollingPreferences.enabled &&
         nextCooldownExpiresAt != null
       ) {
-        const intervalMinutes = clampIntervalMinutes(
-          automaticPollingPreferences.intervalMinutes,
+        const intervalMinutes = clampPollingIntervalMinutes(
+          pollingPreferences.intervalMinutes,
         )
         const delayInMinutes = Math.max(
           1,
@@ -615,9 +696,14 @@ async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
     return
   }
 
-  await service.markRead(createProviderRequest(account, service), [
-    { id: record.upstreamId },
-  ])
+  await service.markRead(
+    createProviderRequest(
+      account,
+      service,
+      TRIGGER_REQUEST_PRIORITIES[SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Manual],
+    ),
+    [{ id: record.upstreamId }],
+  )
 }
 
 /**

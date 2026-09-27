@@ -47,9 +47,16 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
   },
 }))
 
-vi.mock("~/services/history/usageHistory/sync", () => ({
-  syncUsageHistoryForAccount: vi.fn(),
-}))
+vi.mock("~/services/history/usageHistory/sync", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/history/usageHistory/sync")
+    >()
+  return {
+    ...actual,
+    syncUsageHistoryForAccount: vi.fn(),
+  }
+})
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =

@@ -48,7 +48,6 @@
 - [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)：チャージ時に `all-api-hub` クーポンコードを入力すると 10% オフになります。[設定ガイド](./sponsor-guides/packycode.md)
 - [Xingchen AI](https://ai.centos.hk)：1:1 のチャージ比率、請求書対応、Claude は通常価格の 40% 程度から利用できます。[設定ガイド](./sponsor-guides/xingchen.md)
 - [XuanShu API](https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB)：企業、技術チーム、個人開発者向けの次世代 AI モデルルーティングゲートウェイで、Claude、GPT、Grok など世界トップクラスのモデルへ、エンタープライズ級の安定性を備えた API で一括アクセスできます。モデル料金は通常価格の 10% から 60% まで。こちらのリンクから登録するとチャージ特典が追加され、初回チャージはさらにお得です。法人のお客様は法人銀行振込と請求書発行に対応しています。[設定ガイド](./service-guides/xuanshuapi.md)
-- [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：1 つの AI API で 300 以上の厳選された動画、画像、LLM モデルを利用でき、新しい Coding Plan プロモーションでより手頃に API へアクセスできます。[設定ガイド](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8)：Claude Code / Codex / Gemini CLI 向けの公式高安定中継サービスです。このリンクから登録すると初回チャージが 20% オフになり、エンタープライズ顧客は最大 25% オフを受けられます。
 - [Suixiang AI Relay](https://sui-xiang.com/)：Claude、Codex、Gemini などの API 中継サービスを提供し、従量課金、毎日のチェックインによるテストクレジット、複数回線冗長、自動フェイルオーバーに対応します。[設定ガイド](./service-guides/suixiang.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub)：AI 画像・動画生成に特化した低価格 API プラットフォーム。GPT-Image-2 は 1 枚 $0.006 から、1 ドルで 160 枚以上の画像を生成できます。画像と動画をひとつの非同期 API でカバーし、タスクを送信して ID を取得、ポーリングまたはコールバックで結果を取得できます。数万枚のバッチ処理もタイムアウトなしで実行でき、モデルを切り替えてもコードの変更は不要です。従量課金・月額料金なし。

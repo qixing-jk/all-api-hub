@@ -6,7 +6,7 @@ import {
 import { formatRelativeTime } from "~/utils/core/formatters"
 import { joinUrl } from "~/utils/core/url"
 
-import type { UnreadFilter } from "./types"
+import type { AnnouncementMetric, UnreadFilter } from "./types"
 
 export interface SiteAnnouncementSiteOption {
   value: string
@@ -66,15 +66,15 @@ export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
 /**
  * Returns the Tailwind classes for a summary metric tone.
  */
-export function getMetricToneClasses(tone: "blue" | "amber" | "emerald") {
+export function getMetricToneClasses(tone: AnnouncementMetric["tone"]) {
   switch (tone) {
-    case "amber":
-      return "bg-warning-soft text-warning-soft-foreground ring-warning-text dark:ring-warning-text/20"
-    case "emerald":
-      return "bg-success-soft text-success-soft-foreground ring-success-text dark:ring-success-text/20"
-    case "blue":
+    case "info":
+      return "bg-info-soft text-info-soft-foreground ring-info-border"
+    case "neutral":
+      return "bg-muted text-secondary-foreground ring-border"
+    case "accent":
     default:
-      return "bg-theme-50 text-theme-700 ring-theme-200 dark:bg-theme-400/10 dark:text-theme-200 dark:ring-theme-400/20"
+      return "bg-primary-soft text-primary-soft-foreground ring-primary-soft-border"
   }
 }
 

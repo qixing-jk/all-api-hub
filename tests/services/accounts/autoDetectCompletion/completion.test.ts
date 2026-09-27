@@ -22,14 +22,14 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 const {
   getSiteTypeCapabilitiesMock,
   accountCompletionMock,
-  fetchSiteStatusMock,
+  loadBootstrapFactsMock,
   fetchCheckInStatusMock,
 } = vi.hoisted(() => ({
   getSiteTypeCapabilitiesMock: vi.fn(),
   accountCompletionMock: {
     complete: vi.fn(),
   },
-  fetchSiteStatusMock: vi.fn(),
+  loadBootstrapFactsMock: vi.fn(),
   fetchCheckInStatusMock: vi.fn(),
 }))
 
@@ -81,7 +81,7 @@ describe("auto-detect completion", () => {
       account: {
         completion: accountCompletionMock,
         bootstrap: {
-          fetchSiteStatus: fetchSiteStatusMock,
+          loadBootstrapFacts: loadBootstrapFactsMock,
         },
       },
     })
@@ -178,11 +178,11 @@ describe("auto-detect completion", () => {
 
     await expect(
       helpers.fetchSiteName({
-        system_name: "Status Portal",
+        displayName: "Status Portal",
       }),
     ).resolves.toBe("Status Portal")
     await expect(helpers.fetchSiteName(null)).resolves.toBe("Example")
-    expect(fetchSiteStatusMock).not.toHaveBeenCalled()
+    expect(loadBootstrapFactsMock).not.toHaveBeenCalled()
     expect(result).toMatchObject({
       ...completedAccountData,
       checkIn: {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
+import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
@@ -19,13 +19,10 @@ import {
   normalizeAccountSiteProfileUrlForStorage,
   normalizeAccountSiteSupplementalAuth,
   resolveAccountSiteContentSessionHintForOrigin,
-  resolveAccountSiteCreatedTokenSecretHandling,
   resolveAccountSiteDefaultAuthType,
-  resolveAccountSiteTokenFormNetworkLimitPolicy,
   resolveAccountSiteUserIdentity,
   shouldDecorateAccountApiRequestWithAuthSession,
 } from "~/services/accounts/accountSiteProfile"
-import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
 import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   AIHUBMIX_API_ORIGIN,
@@ -183,9 +180,6 @@ describe("accountSiteProfile", () => {
       kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
     })
     expect(profile).not.toHaveProperty("supplementalAuth")
-    expect(profile.modelList.dashboardEstimateLoader).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
-    )
     expect(profile.modelList.statusScope).toBe(
       ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
     )
@@ -225,10 +219,7 @@ describe("accountSiteProfile", () => {
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
-      modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
-      },
+      modelList: {},
     })
   })
 
@@ -289,21 +280,18 @@ describe("accountSiteProfile", () => {
     ).toBe(ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE)
   })
 
-  it("resolves token creation and form policy helpers", () => {
+  it("defines token creation and form policies in the product profile", () => {
     expect(
-      resolveAccountSiteCreatedTokenSecretHandling({
-        siteType: SITE_TYPES.AIHUBMIX,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX).createdToken
+        .secretHandling,
     ).toBe(ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog)
     expect(
-      resolveAccountSiteCreatedTokenSecretHandling({
-        siteType: SITE_TYPES.NEW_API,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.NEW_API).createdToken
+        .secretHandling,
     ).toBe(ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey)
     expect(
-      resolveAccountSiteTokenFormNetworkLimitPolicy({
-        siteType: SITE_TYPES.AIHUBMIX,
-      }),
+      getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX).tokenForm
+        .networkLimitPolicy,
     ).toBe(ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit)
   })
 

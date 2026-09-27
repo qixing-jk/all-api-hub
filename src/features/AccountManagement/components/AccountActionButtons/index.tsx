@@ -399,16 +399,16 @@ export default function AccountActionButtons({
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: canSmartCopyKey
-        ? PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey
-        : PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
       surfaceId: rowActionsSurface,
       entrypoint: optionsEntrypoint,
     })
 
     if (!canSmartCopyKey) {
       onCopyKey(site)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: { fallbackUsed: true },
+      })
       return
     }
 
@@ -1099,7 +1099,6 @@ export default function AccountActionButtons({
                   onClick={handleDisableToggle}
                   icon={CircleCheck}
                   label={t("actions.enableAccount")}
-                  tone="success"
                   closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />

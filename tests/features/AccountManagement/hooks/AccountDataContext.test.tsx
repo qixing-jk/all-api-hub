@@ -14,8 +14,8 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AccountDataProvider,
   useAccountDataContext,
@@ -219,6 +219,7 @@ vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: {
+    getAllAccounts: mockGetAllAccounts,
     getAccountById: mockGetAccountById,
     checkUrlExists: vi.fn(async () => null),
   },
@@ -337,6 +338,10 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue({
+    success: true,
+    tabIds: [],
+  })
   mockGetAllAccounts.mockReset()
   mockGetAllBookmarks.mockReset()
   mockGetOrderedList.mockReset()
@@ -438,6 +443,40 @@ function createEmptyStats() {
 }
 
 describe("AccountDataContext initial statistics", () => {
+  it("reads a batch of updated accounts once instead of loading the full envelope per account", async () => {
+    const accounts = Array.from({ length: 100 }, (_, index) => ({
+      id: `account-${index}`,
+      tagIds: [],
+    }))
+    mockGetAllAccounts.mockResolvedValue(accounts)
+    mockGetAccountById.mockImplementation(async (id: string) =>
+      accounts.find((account) => account.id === id),
+    )
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() => expect(getContext().displayData).toHaveLength(100))
+    mockGetAllAccounts.mockClear()
+    await act(async () => {
+      await getContext().reloadAccountsById(
+        accounts.map((account) => account.id),
+      )
+    })
+    expect(getContext().displayData).toHaveLength(100)
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+    expect(mockGetAllAccounts).toHaveBeenCalledTimes(1)
+  })
+  it("does not read balance history when estimated income is disabled", async () => {
+    mockGetAllAccounts.mockResolvedValue([{ id: "a", tagIds: [] }])
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() => expect(getContext().displayData).toHaveLength(1))
+    expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
+
+    mockGetAccountById.mockResolvedValue({ id: "a", tagIds: [] })
+    await act(async () => {
+      await getContext().reloadAccountsById(["a"])
+    })
+    expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
+    expect(getContext().displayData[0].estimatedTodayIncome).toBeNull()
+  })
   it("starts with unavailable empty statistics coverage", async () => {
     mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
     const getContext = await renderAccountDataProvider()
@@ -778,7 +817,7 @@ describe("AccountDataContext handleReorder", () => {
 
 describe("AccountDataContext initial load orchestration", () => {
   it("excludes today-income opt-outs from estimated income totals", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
@@ -858,7 +897,7 @@ describe("AccountDataContext initial load orchestration", () => {
   })
 
   it("projects available estimated income onto display account rows", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
@@ -2256,6 +2295,8 @@ describe("AccountDataContext refresh orchestration", () => {
   })
 
   it("does not let an older targeted reload overwrite a newer reload after balance history loads", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockGetAllAccounts.mockResolvedValue([
       { id: "saved-account-id", name: "before", last_sync_time: 0 },
     ])
@@ -2509,6 +2550,197 @@ describe("AccountDataContext sorting behavior", () => {
   )
 
   it.each([
+    [
+      "late match",
+      { success: true, tabIds: [] },
+      { success: true, tabIds: [10] },
+      undefined,
+    ],
+    [
+      "late exclusion",
+      { success: true, tabIds: [10] },
+      { success: true, tabIds: [] },
+      "open-tabs",
+    ],
+    ["late failure", undefined, { success: true, tabIds: [] }, "open-tabs"],
+  ])(
+    "keeps the latest related-page scan when an older query settles: %s",
+    async (_label, olderResponse, latestResponse, expectedBoost) => {
+      mockUserPreferencesContext.current.sortingPriorityConfig = {
+        lastModified: 1,
+        criteria: [
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 0,
+          },
+        ],
+      }
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-b",
+          site_url: "https://b.example.com",
+          account_info: { id: 2 },
+          last_sync_time: 0,
+        },
+      ])
+      mockConvertToDisplayData.mockReturnValue([
+        { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+      ])
+      mockGetAllTabs.mockResolvedValue([
+        createBrowserTab({ id: 10, url: "https://b.example.com" }),
+      ])
+      const send = vi
+        .spyOn(browser.runtime, "sendMessage")
+        .mockResolvedValue({ success: true, tabIds: [10] })
+      const getLatestCtx = await renderAccountDataProvider()
+      await waitFor(() => expect(getLatestCtx().isInitialLoad).toBe(false))
+      const removed = mockOnTabRemoved.mock.calls.at(-1)![0]
+      const older = createDeferred<unknown>()
+      send.mockReturnValueOnce(older.promise)
+      const before = send.mock.calls.length
+      await act(async () =>
+        removed(99, { windowId: 1, isWindowClosing: false }),
+      )
+      await waitFor(() => expect(send).toHaveBeenCalledTimes(before + 1))
+      send.mockResolvedValue(latestResponse)
+      await act(async () =>
+        removed(98, { windowId: 1, isWindowClosing: false }),
+      )
+      await waitFor(() => expect(send).toHaveBeenCalledTimes(before + 2))
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(expectedBoost)
+      await act(async () => {
+        older.resolve(olderResponse)
+        await older.promise
+      })
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(expectedBoost)
+    },
+  )
+
+  it("clears unconfirmed browsing boosts and recovers on a later successful scan", async () => {
+    mockUserPreferencesContext.current.sortingPriorityConfig = {
+      lastModified: 1,
+      criteria: [
+        { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 0 },
+        {
+          id: SortingCriteriaType.MATCHED_OPEN_TABS,
+          enabled: true,
+          priority: 1,
+        },
+      ],
+    }
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-b",
+        site_url: "https://b.example.com",
+        account_info: { id: 2 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+    ])
+    const tab = createBrowserTab({ id: 10, url: "https://b.example.com" })
+    mockGetActiveTabs.mockResolvedValue([tab])
+    mockGetAllTabs.mockResolvedValue([tab])
+    mockReadAccountBrowserIdentityFromTab.mockResolvedValue("2")
+    const send = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue({ success: true, tabIds: [] })
+    const getLatestCtx = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+        "current-site",
+      ),
+    )
+    const activated = mockOnTabActivated.mock.calls.map(
+      ([listener]) => listener,
+    )
+    send.mockResolvedValue(undefined)
+    await act(async () => {
+      for (const listener of activated) listener({ tabId: 10, windowId: 1 })
+    })
+    await waitFor(() => expect(getLatestCtx().isDetecting).toBe(false))
+    expect(getLatestCtx().getAccountContextBoost("acc-b")).toBeUndefined()
+    expect(getLatestCtx().detectedAccount).toBeNull()
+    expect(getLatestCtx().sortedData.map(({ id }) => id)).toEqual(["acc-b"])
+    send.mockResolvedValue({ success: true, tabIds: [] })
+    await act(async () => {
+      for (const listener of activated) listener({ tabId: 10, windowId: 1 })
+    })
+    await waitFor(() =>
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+        "current-site",
+      ),
+    )
+  })
+
+  it.each([false, true])(
+    "ignores internal temporary pages while retaining ordinary same-site tabs: %s",
+    async (hasOrdinaryTab) => {
+      mockUserPreferencesContext.current.sortingPriorityConfig = {
+        lastModified: 1,
+        criteria: [
+          { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 0 },
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 1,
+          },
+        ],
+      }
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-a",
+          site_url: "https://a.example.com",
+          account_info: { id: 1 },
+          last_sync_time: 0,
+        },
+        {
+          id: "acc-b",
+          site_url: "https://b.example.com",
+          account_info: { id: 2 },
+          last_sync_time: 0,
+        },
+      ])
+      mockConvertToDisplayData.mockReturnValue([
+        { id: "acc-a", name: "Alpha", baseUrl: "https://a.example.com" },
+        { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+      ])
+      const temporaryTab = createBrowserTab({
+        id: 10,
+        url: "https://b.example.com/dashboard",
+      })
+      mockGetActiveTabs.mockResolvedValue([temporaryTab])
+      mockGetAllTabs.mockResolvedValue(
+        hasOrdinaryTab
+          ? [temporaryTab, createBrowserTab({ id: 11, url: temporaryTab.url })]
+          : [temporaryTab],
+      )
+      mockReadAccountBrowserIdentityFromTab.mockResolvedValue("2")
+      const runtimeSpy = vi
+        .spyOn(browser.runtime, "sendMessage")
+        .mockResolvedValue({ success: true, tabIds: [10] })
+      try {
+        const getLatestCtx = await renderAccountDataProvider()
+        await waitFor(() => expect(getLatestCtx().isInitialLoad).toBe(false))
+        await waitFor(() => expect(getLatestCtx().isDetecting).toBe(false))
+        expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+          hasOrdinaryTab ? "open-tabs" : undefined,
+        )
+        expect(getLatestCtx().detectedAccount).toBeNull()
+        expect(getLatestCtx().detectedSiteAccounts).toEqual([])
+        expect(getLatestCtx().sortedData.map(({ id }) => id)).toEqual(
+          hasOrdinaryTab ? ["acc-b", "acc-a"] : ["acc-a", "acc-b"],
+        )
+        expect(mockReadAccountBrowserIdentityFromTab).not.toHaveBeenCalled()
+      } finally {
+        runtimeSpy.mockRestore()
+      }
+    },
+  )
+
+  it.each([
     ["matching site", "https://b.example.com/dashboard", "Beta", true],
     ["unrelated title", "https://unrelated.test", "Beta", false],
     ["domain suffix", "https://b.example.com.evil.test", "Unrelated", false],
@@ -2739,7 +2971,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("preserves estimated today income on targeted reload display rows", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
@@ -3003,6 +3235,8 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("merges concurrent targeted reloads against the latest account snapshot", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {
@@ -3159,6 +3393,8 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("ignores older targeted reloads for the same account after a newer reload completes", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {

@@ -28,6 +28,12 @@
       "slate": "スレート",
       "violet": "紫"
     },
+    "contentWidth": "コンテンツ幅",
+    "contentWidthDescription": "管理ページ全体にのみ適用されます。",
+    "contentWidths": {
+      "centered": "中央揃え",
+      "full": "全幅"
+    },
     "densities": {
       "comfortable": "ゆったり",
       "compact": "コンパクト",
@@ -36,6 +42,13 @@
     "density": "表示密度",
     "densityDescription": "文字サイズを変えずに、行の間隔とコントロールの高さを調整します。",
     "description": "変更は自動保存され、設定画面、ポップアップ、サイドパネルに適用されます。",
+    "font": "フォント",
+    "fontDescription": "画面のフォントを選択します。テーマに合わせる場合、標準テーマはサンセリフ、Anthropic はセリフを使用します。",
+    "fonts": {
+      "default": "テーマに合わせる",
+      "sans": "サンセリフ",
+      "serif": "セリフ"
+    },
     "preset": "テーマプリセット",
     "presetColorsHint": "このテーマは専用の配色を使用します。アクセントカラーを個別に選ぶには標準テーマに切り替えてください。",
     "presetDescriptions": {
@@ -46,8 +59,6 @@
       "anthropic": "Anthropic",
       "default": "標準テーマ"
     },
-    "preview": "プレビュー",
-    "primaryAction": "メイン操作",
     "radii": {
       "default": "標準",
       "large": "大",
@@ -57,8 +68,16 @@
     "radius": "角の丸み",
     "reset": "外観をリセット",
     "resetDensity": "表示密度をリセット",
+    "resetFont": "フォントをリセット",
+    "resetTextSize": "文字サイズをリセット",
     "saveFailed": "保存できませんでした。もう一度お試しください。",
-    "secondaryAction": "サブ操作",
+    "textSize": "文字サイズ",
+    "textSizeDescription": "文字サイズと行の高さを調整します。表示密度の設定を変えずに、内容に合わせて操作部品の高さが変わります。",
+    "textSizes": {
+      "default": "標準",
+      "extraLarge": "特大",
+      "large": "大"
+    },
     "title": "外観設定"
   },
   "appearanceLanguage": {
@@ -229,14 +248,14 @@
       "title": "インポートとエクスポート"
     }
   },
-  "description": "拡張機能の設定を管理します",
+  "description": "外観、アカウント管理、自動タスク、データのバックアップなどを設定します。",
   "display": {
     "cny": "CNY (¥)",
     "currencyDesc": "残高とキャッシュフロー表示の既定通貨を設定します",
     "currencyUnit": "通貨単位",
     "defaultTab": "既定タブ",
     "defaultTabDesc": "拡張機能起動時に表示するタブを設定します",
-    "description": "拡張機能の見た目と表示設定をカスタマイズします",
+    "description": "拡張機能の表示言語と表示設定をカスタマイズします",
     "title": "表示設定",
     "todayCashflow": "本日のキャッシュフロー",
     "todayCashflowEnabled": "本日のキャッシュフローを表示",
@@ -317,11 +336,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "すでに初期値です",
     "confirmReset": "リセットの確認",
     "preferencesChangedExternally": "設定が他の場所で変更されました。更新してからもう一度お試しください。",
+    "resetAllConfirmDesc": "すべての設定を初期値に戻し、接続先と認証情報を消去しますか？保存済みアカウントは残ります。履歴の保持設定も初期値に戻ります。",
     "resetConfirmDesc": "{{name}} を既定設定に戻しますか？ この操作は元に戻せません。",
+    "resetConnectionConfirmDesc": "このグループの接続先、認証情報、関連設定を消去します。再設定が必要になります。初期値に戻しますか？",
     "resetFailed": "{{name}} のリセットに失敗しました",
+    "resetHistoryConfirmDesc": "初期値に戻すと履歴の保持期間が短くなります。古い記録が完全に削除される可能性があります。続行しますか？",
     "resetSuccess": "{{name}} を既定設定にリセットしました",
+    "retentionSaveHint": "他の項目は自動保存されます。保持日数は適用操作が必要です。期間を短くすると履歴が削除される場合があります。",
     "runtimeRequestFailed": "ランタイムリクエストに失敗しました。後でもう一度お試しください。",
     "saveSettingsFailed": "設定の保存に失敗しました",
     "updateFailed": "{{name}} の更新に失敗しました",
@@ -613,7 +637,12 @@
       "enableDesc": "無効にするとバックグラウンドの定期取得を停止します。保存済みのローカル公告記録は残り、公告ページから手動確認できます。",
       "interval": "取得間隔",
       "intervalDesc": "サイト公告をバックグラウンドで取得する間隔を分単位で設定します。15 から 1440 分まで指定できます。",
-      "intervalInvalid": "{{min}}～{{max}} 分の整数を入力してください。"
+      "intervalInvalid": "{{min}}～{{max}} 分の整数を入力してください。",
+      "maxAge": "通知の対象期間",
+      "maxAgeDesc": "この期間より前に公開された公告は既読として保存され、通知されません。",
+      "maxAgeInvalid": "{{min}}～{{max}} 日の整数を入力してください。",
+      "upstreamRead": "通知後にサイト側で既読にする",
+      "upstreamReadDesc": "有効にすると、通知の送信成功時に取得した公告をサイト側でも既読にします。無効の場合、上流の既読状態は公告ページで既読にしたときだけ同期されます。通知されたことは既読と同じではありません。既読同期に対応したサイトにのみ適用されます。"
     },
     "title": "サイト公告"
   },
@@ -676,6 +705,7 @@
     "permissions": "権限",
     "refresh": "データ更新",
     "select": "タブを選択",
+    "siteAnnouncements": "サイト公告",
     "webAiApiCheck": "AI API テスト"
   },
   "taskNotifications": {
@@ -814,16 +844,15 @@
   },
   "theme": {
     "appearance": "外観",
-    "clickSwitch": "クリックして {{nextMode}} モードへ切り替え",
     "current": "現在: {{theme}}（{{resolvedTheme}}）",
     "currentTheme": "現在: システムに従う（{{theme}}）",
     "dark": "ダーク",
     "followSystem": "システムに従う",
     "followSystemTheme": "システムのテーマ設定に従う",
     "light": "ライト",
-    "selectTheme": "外観テーマを選択",
+    "mode": "表示モード",
+    "selectTheme": "ライト、ダーク、またはシステム設定に従う",
     "switchTo": "{{theme}} テーマへ切り替え: {{description}}",
-    "toggle": "テーマ切り替え。現在は {{currentMode}} モードです。クリックして {{nextMode}} モードへ切り替えます",
     "useDarkTheme": "ダークテーマを使用",
     "useLightTheme": "ライトテーマを使用"
   },

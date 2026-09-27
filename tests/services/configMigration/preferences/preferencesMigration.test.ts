@@ -355,12 +355,12 @@ describe("preferencesMigration", () => {
       })
     })
 
-    it("defaults site announcement polling to disabled for new preference snapshots", () => {
+    it("defaults site announcement polling to enabled for new preference snapshots", () => {
       expect(DEFAULT_PREFERENCES.siteAnnouncementNotifications).toEqual(
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
       )
       expect(DEFAULT_PREFERENCES.siteAnnouncementNotifications?.enabled).toBe(
-        false,
+        true,
       )
     })
 
@@ -1393,6 +1393,8 @@ describe("preferencesMigration", () => {
           enabled: true,
           notificationEnabled: false,
           intervalMinutes: 120,
+          notificationMaxAgeDays: 7,
+          autoMarkUpstreamReadOnNotify: false,
         },
       })
 
@@ -1403,6 +1405,8 @@ describe("preferencesMigration", () => {
         enabled: false,
         notificationEnabled: false,
         intervalMinutes: 120,
+        notificationMaxAgeDays: 7,
+        autoMarkUpstreamReadOnNotify: false,
       })
     })
 

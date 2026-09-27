@@ -1,7 +1,7 @@
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime.js"
 
-import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
+import { CURRENCY_SYMBOLS } from "~/constants/money"
 import {
   collectAccountMetricContributors,
   isAccountTodayMetricAvailable,
@@ -14,7 +14,6 @@ import type {
   CurrencyMetricTotal,
   CurrencyType,
   DisplaySiteData,
-  SortOrder,
 } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -48,10 +47,10 @@ export const getTodayMetricPresentation = (
  * 格式化 Token 数量
  */
 export const formatTokenCount = (count: number): string => {
-  if (count >= UI_CONSTANTS.TOKEN.MILLION_THRESHOLD) {
-    return (count / UI_CONSTANTS.TOKEN.MILLION_THRESHOLD).toFixed(1) + "M"
-  } else if (count >= UI_CONSTANTS.TOKEN.THOUSAND_THRESHOLD) {
-    return (count / UI_CONSTANTS.TOKEN.THOUSAND_THRESHOLD).toFixed(1) + "K"
+  if (count >= 1_000_000) {
+    return (count / 1_000_000).toFixed(1) + "M"
+  } else if (count >= 1_000) {
+    return (count / 1_000).toFixed(1) + "K"
   }
   return count.toString()
 }
@@ -274,37 +273,12 @@ export const getCurrencySymbol = (currencyType: CurrencyType): string => {
 }
 
 /**
- * 获取货币显示名称
- */
-export const getCurrencyDisplayName = (currencyType: CurrencyType): string => {
-  return currencyType === "USD"
-    ? t("common:currency.usd")
-    : t("common:currency.cny")
-}
-
-/**
  * 获取切换后的货币类型
  */
 export const getOppositeCurrency = (
   currencyType: CurrencyType,
 ): CurrencyType => {
   return currencyType === "USD" ? "CNY" : "USD"
-}
-
-/**
- * 生成排序比较函数
- */
-export const createSortComparator = <T>(field: keyof T, order: SortOrder) => {
-  return (a: T, b: T): number => {
-    const aValue = a[field]
-    const bValue = b[field]
-
-    if (order === "asc") {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
-    } else {
-      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
-    }
-  }
 }
 
 /**

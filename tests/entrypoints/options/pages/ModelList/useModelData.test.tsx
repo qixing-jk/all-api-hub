@@ -10,12 +10,12 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -399,9 +399,12 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
     const fetchPricing = vi.fn().mockResolvedValue({
       data: [],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
     const mockedgetSiteTypeCapabilities = vi.mocked(getSiteTypeCapabilities)
     mockedgetSiteTypeCapabilities.mockReturnValue(
@@ -440,9 +443,12 @@ describe("useModelData all-accounts loading", () => {
     toastErrorMock.mockReset()
     const fetchPricing = vi.fn().mockResolvedValue({
       data: [],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
     const mockedgetSiteTypeCapabilities = vi.mocked(getSiteTypeCapabilities)
     mockedgetSiteTypeCapabilities.mockReturnValue(
@@ -485,9 +491,9 @@ describe("useModelData all-accounts loading", () => {
     try {
       const fetchProviderPricing = vi.fn().mockResolvedValue({
         data: [createProviderCatalogModel("example/provider-model")],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: { kind: "not-applicable" as const },
         model_list_source: createProviderCatalogModelListSource(),
       })
       const providerModelCatalog = {
@@ -556,9 +562,9 @@ describe("useModelData all-accounts loading", () => {
     const cacheKey = `provider-catalog|${sourceId}`
     const createProviderPricing = (modelName: string) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     })
     const fetchProviderPricing = vi
@@ -638,6 +644,9 @@ describe("useModelData all-accounts loading", () => {
           result.current.pricingContexts[0]?.pricing.data[0]?.model_name,
         ).toBe("example/cached-model")
       })
+      expect(result.current.pricingContexts[0]?.account.id).toBe(
+        secondAccount.id,
+      )
       expect(fetchProviderPricing).toHaveBeenCalledTimes(1)
 
       await act(async () => {
@@ -750,9 +759,9 @@ describe("useModelData all-accounts loading", () => {
     const cacheKey = `provider-catalog|${sourceId}`
     const fetchProviderPricing = vi.fn().mockResolvedValue({
       data: [createProviderCatalogModel("example/provider-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: false,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
@@ -802,9 +811,9 @@ describe("useModelData all-accounts loading", () => {
     const cacheKey = `provider-catalog|${sourceId}`
     const fetchProviderPricing = vi.fn().mockResolvedValue({
       data: [createProviderCatalogModel("example/refetched-provider-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
@@ -842,9 +851,9 @@ describe("useModelData all-accounts loading", () => {
           },
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     })
 
@@ -874,9 +883,9 @@ describe("useModelData all-accounts loading", () => {
     const cacheKey = `provider-catalog|${sourceId}`
     const fetchProviderPricing = vi.fn().mockResolvedValue({
       data: [createProviderCatalogModel("example/provider-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
         provider: SITE_TYPES.OPENROUTER,
@@ -932,7 +941,15 @@ describe("useModelData all-accounts loading", () => {
       const events: string[] = []
       const fetchPricing = vi.fn(async () => {
         events.push("fetch")
-        return { data: [], group_ratio: {}, usable_group: {}, success: true }
+        return {
+          data: [],
+          groupRatios: {},
+          groupAccess: {
+            kind: "authoritative" as const,
+            usableGroups: [],
+          },
+          success: true,
+        }
       })
       const capabilities = createMockSiteTypeCapabilities(fetchPricing, {
         siteType: SITE_TYPES.AIHUBMIX,
@@ -987,15 +1004,18 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: true },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     })
     const providerPricing = {
       data: [createProviderCatalogModel("example/provider-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     }
     const fetchProviderPricing = vi.fn().mockResolvedValue(providerPricing)
@@ -1116,9 +1136,9 @@ describe("useModelData all-accounts loading", () => {
   it("keeps personalized provider catalogs isolated by saved account identity", async () => {
     const createPricing = (modelName: string) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: createProviderCatalogModelListSource(),
     })
     const fetchPublicPricing = vi
@@ -1217,9 +1237,9 @@ describe("useModelData all-accounts loading", () => {
   it("uses the public provider catalog without an auth failure when the saved credential is absent", async () => {
     const publicPricing = {
       data: [createProviderCatalogModel("example/public-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1273,9 +1293,9 @@ describe("useModelData all-accounts loading", () => {
   it("cancels an obsolete personalized request without loading the public fallback", async () => {
     const createPricing = (modelName: string) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PERSONALIZED,
@@ -1363,9 +1383,9 @@ describe("useModelData all-accounts loading", () => {
       catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
     ) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -1450,9 +1470,9 @@ describe("useModelData all-accounts loading", () => {
       catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
     ) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -1560,9 +1580,9 @@ describe("useModelData all-accounts loading", () => {
   it("classifies an invalid personalized adapter result before using the public fallback", async () => {
     const publicPricing = {
       data: [createProviderCatalogModel("example/public-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1680,9 +1700,9 @@ describe("useModelData all-accounts loading", () => {
     async ({ error, category, message }) => {
       const publicPricing = {
         data: [createProviderCatalogModel("example/public-model")],
-        group_ratio: {},
+        groupRatios: {},
         success: true as const,
-        usable_group: {},
+        groupAccess: { kind: "not-applicable" as const },
         model_list_source: {
           ...createProviderCatalogModelListSource(),
           catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1734,9 +1754,9 @@ describe("useModelData all-accounts loading", () => {
   it("does not share pending public fallback requests across query clients", async () => {
     const publicPricing = {
       data: [createProviderCatalogModel("example/public-model")],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1810,9 +1830,9 @@ describe("useModelData all-accounts loading", () => {
       catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
     ) => ({
       data: [createProviderCatalogModel(modelName)],
-      group_ratio: {},
+      groupRatios: {},
       success: true as const,
-      usable_group: {},
+      groupAccess: { kind: "not-applicable" as const },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -1990,9 +2010,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: true },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     })
     const fetchProviderPricing = vi
       .fn()
@@ -2310,9 +2333,12 @@ describe("useModelData all-accounts loading", () => {
           },
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: "default" },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
         provider: SITE_TYPES.SUB2API,
@@ -2329,8 +2355,11 @@ describe("useModelData all-accounts loading", () => {
           enable_groups: ["vip"],
         },
       ],
-      group_ratio: { vip: 0.5 },
-      usable_group: { vip: "vip" },
+      groupRatios: { vip: 0.5 },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["vip"],
+      },
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce(fallbackTokens)
@@ -2384,7 +2413,7 @@ describe("useModelData all-accounts loading", () => {
     ])
   })
 
-  it("loads only active Sub2API fallback keys in all-accounts mode", async () => {
+  it("loads only active recoverable Sub2API keys in all-accounts mode", async () => {
     const fetchPricing = vi.fn()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing, {
@@ -2403,7 +2432,7 @@ describe("useModelData all-accounts loading", () => {
       {
         id: 21,
         user_id: 21,
-        key: "sk-active",
+        key: "",
         status: 1,
         name: "Active runtime key",
         created_time: 0,
@@ -2439,9 +2468,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: true },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValueOnce(tokens)
@@ -2555,9 +2587,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: "default" },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     }
 
     mockFetchDisplayAccountTokens.mockResolvedValue(tokens)
@@ -2671,6 +2706,55 @@ describe("useModelData all-accounts loading", () => {
     ])
   })
 
+  it("reports invalid format when every runtime-key catalog is malformed", async () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(vi.fn(), {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
+      }),
+    )
+    const account = createDisplayAccount({ siteType: SITE_TYPES.SUB2API })
+    mockFetchDisplayAccountTokens.mockResolvedValue([
+      {
+        id: 51,
+        user_id: 51,
+        key: "sk-invalid",
+        status: 1,
+        name: "Invalid key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValue({
+      data: null,
+      groupRatios: {},
+      success: true,
+      groupAccess: { kind: "authoritative", usableGroups: [] },
+    })
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+    await waitFor(
+      () =>
+        expect(result.current.accountQueryStates).toEqual([
+          expect.objectContaining({
+            hasError: true,
+            errorType: "invalid-format",
+          }),
+        ]),
+      { timeout: 3000 },
+    )
+  })
+
   it("marks mixed Sub2API all-token failures as load failed instead of invalid format", async () => {
     const fetchPricing = vi.fn()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
@@ -2719,16 +2803,22 @@ describe("useModelData all-accounts loading", () => {
     mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce({
         data: null,
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce({
         data: null,
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
@@ -2791,9 +2881,12 @@ describe("useModelData all-accounts loading", () => {
             supported_endpoint_types: [],
           },
         ],
-        group_ratio: { default: 1 },
+        groupRatios: { default: 1 },
         success: true,
-        usable_group: { default: true },
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: ["default"],
+        },
       })
       .mockResolvedValueOnce({
         data: [
@@ -2807,9 +2900,12 @@ describe("useModelData all-accounts loading", () => {
             supported_endpoint_types: [],
           },
         ],
-        group_ratio: { default: 1 },
+        groupRatios: { default: 1 },
         success: true,
-        usable_group: { default: true },
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: ["default"],
+        },
       })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),
@@ -2915,9 +3011,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: true },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),
@@ -2979,9 +3078,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { vip: 1 },
+      groupRatios: { vip: 1 },
       success: true,
-      usable_group: { vip: true },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["vip"],
+      },
     }
     const fetchPricing = vi
       .fn()
@@ -3032,9 +3134,12 @@ describe("useModelData all-accounts loading", () => {
 
     const fetchPricing = vi.fn().mockResolvedValue({
       data: null,
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),
@@ -3092,9 +3197,12 @@ describe("useModelData all-accounts loading", () => {
               supported_endpoint_types: [],
             },
           ],
-          group_ratio: { default: 1 },
+          groupRatios: { default: 1 },
           success: true,
-          usable_group: { default: true },
+          groupAccess: {
+            kind: "authoritative" as const,
+            usableGroups: ["default"],
+          },
         })
       }
 
@@ -3164,9 +3272,12 @@ describe("useModelData all-accounts loading", () => {
               supported_endpoint_types: [],
             },
           ],
-          group_ratio: { default: 1 },
+          groupRatios: { default: 1 },
           success: true,
-          usable_group: { default: true },
+          groupAccess: {
+            kind: "authoritative" as const,
+            usableGroups: ["default"],
+          },
         })
       }
 
@@ -3236,17 +3347,23 @@ describe("useModelData all-accounts loading", () => {
               supported_endpoint_types: [],
             },
           ],
-          group_ratio: { default: 1 },
+          groupRatios: { default: 1 },
           success: true,
-          usable_group: { default: true },
+          groupAccess: {
+            kind: "authoritative" as const,
+            usableGroups: ["default"],
+          },
         })
       }
 
       return Promise.resolve({
         data: null,
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
@@ -3313,9 +3430,12 @@ describe("useModelData all-accounts loading", () => {
 
       return Promise.resolve({
         data: null,
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
@@ -3514,9 +3634,12 @@ describe("useModelData all-accounts loading", () => {
             supported_endpoint_types: [],
           },
         ],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
       .mockRejectedValueOnce(new Error("private fallback error"))
 
@@ -3598,9 +3721,12 @@ describe("useModelData all-accounts loading", () => {
             supported_endpoint_types: [],
           },
         ],
-        group_ratio: { default: 1 },
+        groupRatios: { default: 1 },
         success: true,
-        usable_group: { default: true },
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: ["default"],
+        },
       })
       .mockResolvedValueOnce({
         data: [
@@ -3614,9 +3740,12 @@ describe("useModelData all-accounts loading", () => {
             supported_endpoint_types: [],
           },
         ],
-        group_ratio: { default: 1 },
+        groupRatios: { default: 1 },
         success: true,
-        usable_group: { default: true },
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: ["default"],
+        },
       })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),
@@ -3687,6 +3816,50 @@ describe("useModelData all-accounts loading", () => {
     })
   })
 
+  it.each([false, true])(
+    "updates live account facts without reloading catalog (all accounts: %s)",
+    async (allAccounts) => {
+      const fetchPricing = vi.fn().mockResolvedValue({
+        data: [],
+        success: true,
+        groupRatios: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
+      })
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createMockSiteTypeCapabilities(fetchPricing),
+      )
+      const account = createDisplayAccount({
+        id: "live-account-facts",
+        name: "Before",
+        exchangeRate: 7,
+      })
+      const { result, rerender } = renderHook(
+        ({ account }: { account: DisplaySiteData }) =>
+          useModelData({
+            selectedSource: allAccounts
+              ? createAllAccountsSource()
+              : createAccountSource(account),
+            accounts: [account],
+          }),
+        { initialProps: { account }, wrapper: createWrapper() },
+      )
+      await waitFor(() =>
+        expect(result.current.pricingContexts[0]?.account.name).toBe("Before"),
+      )
+      const updated = {
+        ...account,
+        name: "After",
+        exchangeRate: 8,
+        token: "updated-account-token",
+      }
+      rerender({ account: updated })
+      await waitFor(() =>
+        expect(result.current.pricingContexts[0]?.account).toEqual(updated),
+      )
+      expect(fetchPricing).toHaveBeenCalledTimes(1)
+    },
+  )
+
   it("uses cached single-account pricing scoped by site and auth type", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -3723,9 +3896,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: "default" },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     }
 
     await modelPricingCache.invalidate(cacheKey)
@@ -3796,9 +3972,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: { default: 1 },
+      groupRatios: { default: 1 },
       success: true,
-      usable_group: { default: "default" },
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: ["default"],
+      },
     })
 
     try {
@@ -3839,9 +4018,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     }
 
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
@@ -3922,9 +4104,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SHAREDCHAT,
@@ -4086,9 +4271,12 @@ describe("useModelData all-accounts loading", () => {
           },
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
         provider: SITE_TYPES.SUB2API,
@@ -4391,7 +4579,7 @@ describe("useModelData all-accounts loading", () => {
     )
   })
 
-  it("auto-loads Sub2API runtime models when a single fallback key is available", async () => {
+  it("auto-loads Sub2API runtime models with a single recoverable key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -4414,7 +4602,7 @@ describe("useModelData all-accounts loading", () => {
     const fallbackToken = {
       id: 19,
       user_id: 19,
-      key: "sk-sub2api-auto-masked",
+      key: "",
       status: 1,
       name: "Only runtime key",
       created_time: 0,
@@ -4441,9 +4629,12 @@ describe("useModelData all-accounts loading", () => {
           },
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
         provider: SITE_TYPES.SUB2API,
@@ -4545,9 +4736,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
         provider: SITE_TYPES.SUB2API,
@@ -4615,15 +4809,15 @@ describe("useModelData all-accounts loading", () => {
 
     const firstDeferred = createDeferred<{
       data: never[]
-      group_ratio: Record<string, never>
+      groupRatios: Record<string, never>
       success: true
-      usable_group: Record<string, never>
+      groupAccess: { kind: "authoritative"; usableGroups: string[] }
     }>()
     const secondDeferred = createDeferred<{
       data: never[]
-      group_ratio: Record<string, never>
+      groupRatios: Record<string, never>
       success: true
-      usable_group: Record<string, never>
+      groupAccess: { kind: "authoritative"; usableGroups: string[] }
     }>()
     const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
@@ -4676,15 +4870,21 @@ describe("useModelData all-accounts loading", () => {
     await act(async () => {
       firstDeferred.resolve({
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
       secondDeferred.resolve({
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
       await Promise.all([firstDeferred.promise, secondDeferred.promise])
     })
@@ -4871,18 +5071,21 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
 
-    const { result } = renderHook(
-      () =>
+    const { result, rerender } = renderHook(
+      ({ account }: { account: DisplaySiteData }) =>
         useModelData({
           selectedSource: createAccountSource(account),
           accounts: [account],
         }),
-      { wrapper: createWrapper() },
+      { initialProps: { account }, wrapper: createWrapper() },
     )
 
     await waitFor(() => {
@@ -4939,6 +5142,22 @@ describe("useModelData all-accounts loading", () => {
     expect(
       result.current.pricingData?.data.map((item) => item.model_name),
     ).toEqual(["gpt-4o-mini"])
+    const identity = result.current.pricingContexts[0]?.sourceIdentity
+    const updatedAccount = {
+      ...account,
+      name: "Updated fallback account",
+      exchangeRate: 8,
+    }
+    rerender({ account: updatedAccount })
+    await waitFor(() =>
+      expect(result.current.pricingContexts[0]?.account).toEqual(
+        updatedAccount,
+      ),
+    )
+    expect(result.current.pricingContexts[0]?.sourceIdentity).toEqual(identity)
+    expect(
+      mockLoadAccountRuntimeKeyFallbackPricingResponse,
+    ).toHaveBeenCalledTimes(1)
   })
 
   it("refreshes an active account-key fallback catalog instead of retrying direct pricing", async () => {
@@ -4986,9 +5205,12 @@ describe("useModelData all-accounts loading", () => {
           supported_endpoint_types: [],
         },
       ],
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
     mockLoadAccountRuntimeKeyFallbackPricingResponse
       .mockResolvedValueOnce(createFallbackPricing("stale-fallback-model"))
@@ -5066,9 +5288,12 @@ describe("useModelData all-accounts loading", () => {
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce({
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),
@@ -5142,9 +5367,12 @@ describe("useModelData all-accounts loading", () => {
       expect(result.current.accountFallback?.selectedRuntimeKeyId).toBeNull()
       expect(result.current.pricingData).toEqual({
         data: [],
-        group_ratio: {},
+        groupRatios: {},
         success: true,
-        usable_group: {},
+        groupAccess: {
+          kind: "authoritative" as const,
+          usableGroups: [],
+        },
       })
     })
   })
@@ -5479,9 +5707,12 @@ describe("useModelData all-accounts loading", () => {
       if (accountId === "bad-format") {
         return Promise.resolve({
           data: null,
-          group_ratio: {},
+          groupRatios: {},
           success: true,
-          usable_group: {},
+          groupAccess: {
+            kind: "authoritative" as const,
+            usableGroups: [],
+          },
         })
       }
 
@@ -5546,9 +5777,12 @@ describe("useModelData all-accounts loading", () => {
 
     const fetchPricing = vi.fn().mockResolvedValue({
       data: null,
-      group_ratio: {},
+      groupRatios: {},
       success: true,
-      usable_group: {},
+      groupAccess: {
+        kind: "authoritative" as const,
+        usableGroups: [],
+      },
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing),

@@ -12,11 +12,8 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -29,47 +26,6 @@ export async function fetchSupportCheckIn(
   _request: ApiServiceRequest,
 ): Promise<boolean | undefined> {
   return true
-}
-
-/**
- * Fetch AnyRouter check-in capability for the user.
- */
-export async function fetchCheckInStatus(
-  request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  try {
-    const userId = request.auth.userId
-    const numericUserId =
-      typeof userId === "number" ? userId : Number(String(userId))
-    if (!Number.isFinite(numericUserId)) {
-      return undefined
-    }
-
-    const tempWindowRequestSource = normalizeTempWindowRequestSource(
-      request.tempWindowRequestSource,
-    )
-    if (!request.protectionBypassExecution) {
-      return undefined
-    }
-    const checkInContext = {
-      tempWindowRequestSource,
-      protectionBypassExecution: request.protectionBypassExecution,
-    }
-    const checkInData = await anyrouterProvider.checkIn(
-      {
-        site_url: request.baseUrl,
-        id: request.accountId,
-        cookieAuthSessionCookie:
-          request.cookieAuthSessionCookie ?? request.auth.cookie,
-        account_info: { id: numericUserId },
-      },
-      checkInContext,
-    )
-    return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-  } catch (error) {
-    logger.warn("获取签到状态失败", error)
-    return undefined
-  }
 }
 
 /**

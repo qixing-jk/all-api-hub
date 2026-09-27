@@ -1,6 +1,10 @@
 import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import type {
+  TempWindowFallbackSettingsAnchor,
+  TempWindowFallbackSettingsTab,
+} from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 
 import { OPTIONS_OVERVIEW_CONFIGURATION_STATUSES as CONFIGURATION_STATUSES } from "./ids"
 import type {
@@ -44,6 +48,23 @@ export function buildBasicSettingsAnchorTarget(
       tab: BASIC_SETTINGS_ANCHOR_TO_TAB[anchor],
       anchor,
       highlight: anchor,
+    },
+  }
+}
+
+/**
+ * Sends temp-window fallback issues to the settings tab that can resolve them.
+ */
+export function buildTempWindowSettingsTarget(input: {
+  settingsTab: TempWindowFallbackSettingsTab
+  settingsAnchor?: TempWindowFallbackSettingsAnchor
+}): OptionsOverviewNavigationTarget {
+  return {
+    menuItemId: MENU_ITEM_IDS.BASIC,
+    params: {
+      tab: input.settingsTab,
+      anchor: input.settingsAnchor,
+      highlight: input.settingsAnchor,
     },
   }
 }

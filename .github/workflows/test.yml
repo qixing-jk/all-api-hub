@@ -133,7 +133,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Restore unit test durations
+        uses: actions/cache/restore@v5
+        with:
+          # Timings published by the previous run's merge job. A miss (first run, or an
+          # evicted cache) only means this shard falls back to file-count sharding.
+          path: .vitest-durations
+          key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            unit-test-durations-
+
       - name: Run test shard with coverage
+        env:
+          UNIT_TEST_SHARD_DURATIONS: .vitest-durations/shard-durations.json
         run: >
           pnpm exec vitest --run --coverage
           --coverage.thresholds.statements=0
@@ -199,6 +211,20 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/lcov.info
+
+      - name: Generate unit test durations
+        # Per-file timings for the next run's shard sequencer, derived from the blob
+        # reports every shard already uploads.
+        run: node scripts/write-unit-test-durations.mjs
+
+      - name: Save unit test durations
+        # Only runs that may publish to the base repository's cache scope write timings;
+        # pull requests restore main's copy instead of republishing their own.
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/cache/save@v5
+        with:
+          path: .vitest-durations
+          key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}

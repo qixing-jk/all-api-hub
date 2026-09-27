@@ -61,13 +61,15 @@ describe("auto-checkin provider error normalization", () => {
     })
   })
 
-  it("does not label an unstructured provider failure as a network problem", () => {
+  it("keeps unstructured provider failures out of the network bucket", () => {
     expect(
       resolveProviderErrorResult({ error: new Error("Invalid response") }),
     ).toEqual({
       status: "failed",
+      reasonCode: "upstream_error",
       rawMessage: "Invalid response",
       messageKey: undefined,
+      retryable: true,
     })
 
     const businessFailure = resolveProviderErrorResult({
@@ -75,9 +77,9 @@ describe("auto-checkin provider error normalization", () => {
     })
     expect(businessFailure).toMatchObject({
       status: "failed",
+      reasonCode: "upstream_error",
       rawMessage: "Database connection failed",
     })
-    expect(businessFailure.reasonCode).toBeUndefined()
   })
 
   it("keeps authentication and permission failures distinct from network problems", () => {
@@ -91,6 +93,33 @@ describe("auto-checkin provider error normalization", () => {
         error: Object.assign(new Error("Forbidden"), { statusCode: 403 }),
       }),
     ).toMatchObject({ reasonCode: "permission_denied" })
+  })
+
+  it("classifies unsupported endpoints and invalid protected-context runs", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: Object.assign(new Error("Not found"), { statusCode: 404 }),
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reasonCode: "no_provider",
+      messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+    })
+
+    expect(
+      resolveProviderErrorResult({
+        error: new ApiError(
+          "This run cannot continue",
+          undefined,
+          undefined,
+          API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+        ),
+      }),
+    ).toEqual({
+      status: "failed",
+      messageKey: "autoCheckin:skipReasons.execution_context_invalid",
+      reasonCode: "execution_context_invalid",
+    })
   })
 
   it("classifies a lost result after mutation dispatch as uncertain", () => {
@@ -117,6 +146,7 @@ describe("auto-checkin provider error normalization", () => {
       }),
     ).toEqual({
       status: "uncertain",
+      reasonCode: "upstream_error",
       rawMessage: "Invalid response",
       messageKey: undefined,
     })

@@ -26,7 +26,6 @@ import {
   getActiveTab,
   getActiveTabs,
   getAlarm,
-  getAllAlarms,
   getAllCookieStores,
   getAllTabs,
   getBrowserApiCapabilities,
@@ -36,13 +35,11 @@ import {
   getExtensionVersion,
   getManagementSelf,
   getManifest,
-  getManifestVersion,
   getRuntimeId,
   getSessionStorageValues,
   getTab,
   getWindow,
   hasAlarmsAPI,
-  hasBookmarksAPI,
   hasContextMenusAPI,
   hasCookieStoresAPI,
   hasNotificationsAPI,
@@ -70,13 +67,10 @@ import {
   reloadRuntime,
   reloadTab,
   removeContextMenu,
-  removePermissions,
   removePermissionsDetailed,
   removeSessionStorageValues,
   removeTab,
-  removeTabOrWindow,
   removeWindow,
-  requestPermissions,
   requestPermissionsDetailed,
   requestRuntimeUpdateCheck,
   sendRuntimeActionMessage,
@@ -188,29 +182,6 @@ describe("browserApi alarms helpers", () => {
 
     expect(getMock).toHaveBeenCalledWith("alarm-x")
     expect(result).toBe(alarm)
-  })
-
-  it("getAllAlarms should return empty array and warn when alarms API is not supported", async () => {
-    ;(globalThis as any).browser = {}
-
-    const result = await getAllAlarms()
-
-    expect(result).toEqual([])
-  })
-
-  it("getAllAlarms should delegate to browser.alarms.getAll when supported", async () => {
-    const alarms = [{ name: "a" }, { name: "b" }]
-    const getAllMock = vi.fn().mockResolvedValue(alarms)
-    ;(globalThis as any).browser = {
-      alarms: {
-        getAll: getAllMock,
-      },
-    }
-
-    const result = await getAllAlarms()
-
-    expect(getAllMock).toHaveBeenCalled()
-    expect(result).toBe(alarms)
   })
 
   it("onAlarm should warn and return no-op when alarms API is not supported", () => {
@@ -1314,26 +1285,6 @@ describe("browserApi window and manifest helpers", () => {
     ;(globalThis as any).chrome = originalChrome
   })
 
-  it("warns before falling back to tab removal", async () => {
-    const error = new Error("not a window")
-    const removeWindowMock = vi.fn().mockRejectedValueOnce(error)
-    const removeTabMock = vi.fn().mockResolvedValue(undefined)
-    ;(globalThis as any).browser.windows.remove = removeWindowMock
-    ;(globalThis as any).browser.tabs.remove = removeTabMock
-
-    await removeTabOrWindow(42)
-
-    expect(removeWindowMock).toHaveBeenCalledWith(42)
-    expect(loggerMock.warn).toHaveBeenCalledWith(
-      "removeTabOrWindow: Failed to remove as window, falling back to tab",
-      { id: 42, error },
-    )
-    expect(removeTabMock).toHaveBeenCalledWith(42)
-    expect(removeWindowMock.mock.invocationCallOrder[0]).toBeLessThan(
-      removeTabMock.mock.invocationCallOrder[0],
-    )
-  })
-
   it("removes a known tab without probing the windows API", async () => {
     const removeTabMock = vi.fn().mockResolvedValue(undefined)
     const removeWindowMock = vi.fn().mockResolvedValue(undefined)
@@ -1430,7 +1381,6 @@ describe("browserApi window and manifest helpers", () => {
       version: "0.0.0",
       optional_permissions: [],
     })
-    expect(getManifestVersion()).toBe(3)
   })
 
   it("returns the trimmed runtime extension version", () => {
@@ -1841,18 +1791,6 @@ describe("browserApi action and permissions helpers", () => {
     await expect(containsPermissions({ permissions: ["tabs"] })).resolves.toBe(
       false,
     )
-    await expect(requestPermissions({ permissions: ["tabs"] })).resolves.toBe(
-      false,
-    )
-    await expect(removePermissions({ permissions: ["tabs"] })).resolves.toBe(
-      false,
-    )
-    ;(globalThis as any).browser.permissions.request = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("request failed"))
-    ;(globalThis as any).browser.permissions.remove = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("remove failed"))
     await expect(
       requestPermissionsDetailed({ permissions: ["tabs"] }),
     ).resolves.toEqual({
@@ -1876,12 +1814,6 @@ describe("browserApi action and permissions helpers", () => {
       checkPermissionViaMessage({ permissions: ["tabs"] }),
     ).resolves.toBe(true)
     await expect(containsPermissions({ permissions: ["tabs"] })).resolves.toBe(
-      true,
-    )
-    await expect(requestPermissions({ permissions: ["tabs"] })).resolves.toBe(
-      true,
-    )
-    await expect(removePermissions({ permissions: ["tabs"] })).resolves.toBe(
       true,
     )
     await expect(
@@ -1943,17 +1875,6 @@ describe("browserApi bookmark helpers", () => {
   afterAll(() => {
     ;(globalThis as any).browser = originalBrowser
     ;(globalThis as any).chrome = originalChrome
-  })
-
-  it("reports bookmark API support only when getTree is callable", () => {
-    ;(globalThis as any).browser = {}
-    expect(hasBookmarksAPI()).toBe(false)
-    ;(globalThis as any).browser = { bookmarks: {} }
-    expect(hasBookmarksAPI()).toBe(false)
-    ;(globalThis as any).browser = {
-      bookmarks: { getTree: vi.fn() },
-    }
-    expect(hasBookmarksAPI()).toBe(true)
   })
 
   it("reads the browser bookmark tree when supported", async () => {

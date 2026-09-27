@@ -13,9 +13,9 @@
     "unread": "Unread"
   },
   "description": {
-    "disabledSummary": "Automatic polling is off; you can still trigger a manual check.",
-    "enabledInterval": "Current interval: every {{intervalMinutes}} minutes.",
-    "enabledSummary": "Automatic polling is on; review fetched announcements, manage unread state, and trigger a manual check.",
+    "disabledSummary": "Read site announcements and manage unread items. Automatic checks are off; manual checks remain available.",
+    "enabledInterval": "Checks run every {{intervalMinutes}} minutes.",
+    "enabledSummary": "Read site announcements and manage unread items. Automatic checks are on.",
     "pollingSettingsLink": "Configure automatic polling"
   },
   "empty": {

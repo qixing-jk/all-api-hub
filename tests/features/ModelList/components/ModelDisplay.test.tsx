@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
 import {
+  createModelGroupResolver,
   MODEL_GROUP_ACCESS_STATES,
   resolveActiveModelGroupContext,
-  resolveModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
@@ -260,14 +260,11 @@ const createCalculatedModel = (
   const groupRatios = Object.fromEntries(
     model.enable_groups.map((group, index) => [group, index + 1]),
   )
-  const groupContext = resolveModelGroupContext({
+  const groupContext = createModelGroupResolver({
     groupSemantics: source.groupSemantics,
-    model,
-    usableGroup: Object.fromEntries(
-      model.enable_groups.map((group) => [group, true]),
-    ),
+    groupAccess: { kind: "authoritative", usableGroups: model.enable_groups },
     groupRatios,
-  })
+  })(model)
   const activeGroupContext = resolveActiveModelGroupContext({
     context: groupContext,
     effectiveGroup: overrides.effectiveGroup,
@@ -344,6 +341,36 @@ describe("ModelDisplay", () => {
 
     const renderedProps = modelItemSpy.mock.calls.at(-1)?.[0]
     expect(renderedProps.resolvedVendor).toBe(resolvedVendor)
+  })
+
+  it("resolves a whitespace-padded model name to the row's verification summary", () => {
+    // Pins the trimming contract shared by every model-list lookup: the target
+    // factories normalize the model name, so a row whose upstream name carries
+    // whitespace still finds the summary the filters found.
+    const summaryKey = serializeVerificationHistoryTarget(
+      requireHistoryTarget(
+        createAccountModelVerificationHistoryTarget("account-1", "gpt-4o-mini"),
+      ),
+    )
+
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({ model: { model_name: "  gpt-4o-mini  " } }),
+        ]}
+        verificationSummariesByKey={{
+          [summaryKey]: { status: "success" } as any,
+        }}
+        showRealPrice={false}
+        showEndpointTypes={false}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId(TEST_IDS.modelItem)).toHaveAttribute(
+      "data-summary-status",
+      "success",
+    )
   })
 
   it("shows an empty state when no filtered models are available", () => {
@@ -690,7 +717,7 @@ describe("ModelDisplay", () => {
 
     expect(defaultRateItem).toHaveAttribute(
       "data-exchange-rate",
-      String(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT),
+      String(DEFAULT_USD_TO_CNY_RATE),
     )
     expect(defaultRateItem).toHaveAttribute("data-summary-status", "none")
 

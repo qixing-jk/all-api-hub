@@ -407,7 +407,7 @@
       "importFromApiKeyLibrary": "从 API 凭据库导入渠道",
       "title": "还没有自建 AI 网关渠道"
     },
-    "headerDescription": "管理自建 AI 网关中的渠道，把多个账号 Key 或 API Key 汇总成一个统一 AI API。",
+    "headerDescription": "管理自建 AI 网关的渠道，将多个 API 来源接入统一入口。",
     "openChannelConsole": "打开网关渠道管理",
     "unconfiguredValueDescription": "配置后，可以把分散的账号 Key 和 API Key 导入为网关渠道，并直接在 All API Hub 中统一查看和管理。"
   },

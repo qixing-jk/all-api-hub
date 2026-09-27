@@ -14,12 +14,15 @@ import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatib
 export function createNewApiAccountRecovery(params: {
   page: Page
   config: CompatibleApiRealSiteConfig
+  /** Readiness budget for the detected-account dialog; tests shorten it. */
+  dialogReadyTimeoutMs?: number
 }): {
   extensionPageGuardOptions: ExtensionPageGuardOptions
   prepareDetectedDialog: (dialog: AccountAddDialog) => Promise<void>
 } {
   const baseUrl = `${params.config.baseUrl.replace(/\/+$/u, "")}/`
   const tokenUrl = new URL("api/user/token", baseUrl).href
+  const dialogReadyTimeoutMs = params.dialogReadyTimeoutMs ?? 30_000
 
   return {
     extensionPageGuardOptions: {
@@ -32,15 +35,21 @@ export function createNewApiAccountRecovery(params: {
         "Enter an Access Token manually",
         { exact: true },
       )
-      await expect
-        .poll(
-          async () =>
-            ((await dialog.confirmAddButton.isVisible()) &&
-              (await dialog.confirmAddButton.isEnabled())) ||
-            (await recoveryHeading.isVisible()),
-          { timeout: 30_000 },
-        )
-        .toBe(true)
+      try {
+        await expect
+          .poll(
+            async () =>
+              ((await dialog.confirmAddButton.isVisible()) &&
+                (await dialog.confirmAddButton.isEnabled())) ||
+              (await recoveryHeading.isVisible()),
+            { timeout: dialogReadyTimeoutMs },
+          )
+          .toBe(true)
+      } catch (error) {
+        if (!isDetectedDialogPollTimeout(error)) throw error
+
+        throw new Error(await describeDetectedDialogFailure(dialog, error))
+      }
 
       if (!(await recoveryHeading.isVisible())) return
 
@@ -221,5 +230,44 @@ async function fillSecret(input: Locator, value: string, label: string) {
   } catch {
     // Locator action errors can contain the fill value in their call log.
     throw new Error(`Could not fill the New API ${label} field.`)
+  }
+}
+
+/**
+ * Playwright reports poll exhaustion as a timeout in the assertion call log,
+ * while a predicate failure (for example a strict-mode locator error) rejects
+ * immediately with its own error and must keep that identity.
+ */
+function isDetectedDialogPollTimeout(error: unknown) {
+  return (
+    error instanceof Error &&
+    /Timeout \d+ms exceeded while waiting on the predicate/u.test(error.message)
+  )
+}
+
+/**
+ * New API detection can stop before either supported state appears (for
+ * example "Could not get User ID"). Surface the dialog's own failure text so a
+ * CI log names the real reason instead of only reporting a poll timeout.
+ */
+async function describeDetectedDialogFailure(
+  dialog: AccountAddDialog,
+  error: unknown,
+) {
+  const failureText = await readDetectedDialogFailureText(dialog)
+  const detail =
+    failureText || (error instanceof Error ? error.message : String(error))
+
+  return `New API account detection never became confirmable: ${detail}`
+}
+
+async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
+  try {
+    const banner = dialog.dialog.getByText(/^Auto-detection failed:/u).first()
+    if (!(await banner.isVisible())) return ""
+
+    return (await banner.innerText()).replace(/\s+/gu, " ").trim()
+  } catch {
+    return ""
   }
 }

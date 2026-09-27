@@ -44,7 +44,11 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
+} from "~/types/autoCheckin"
 import type {
   TempWindowCheckinPageAction,
   TempWindowRequestSource,
@@ -57,6 +61,7 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { formatLocalMonthKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { joinUrl } from "~/utils/core/url"
 
@@ -132,7 +137,6 @@ const TURNSTILE_INTERACTIVE_ASSIST_TIMEOUT_MS =
   TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS
 const NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS = 8_000
 const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
-const CHECKIN_STATUS_MONTH_FORMAT_LENGTH = 7
 
 // New API exposes GET /api/user/checkin for readback and POST for mutation.
 // Its official UI treats the public /api/status checkin_enabled flag as the
@@ -336,9 +340,7 @@ async function fetchCheckedInTodayStatus(
     }
   | undefined
 > {
-  const currentMonth = new Date()
-    .toISOString()
-    .slice(0, CHECKIN_STATUS_MONTH_FORMAT_LENGTH)
+  const currentMonth = formatLocalMonthKey()
   const request =
     existingRequest ??
     (account
@@ -518,6 +520,7 @@ async function maybeRetryTurnstileInIncognito(params: {
   if (incognitoAllowed === false) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
       messageKey: NEW_API_MESSAGE_KEYS.turnstileIncognitoAccessRequired,
       messageParams: { checkInUrl: params.checkInUrl },
       data: params.assisted ?? undefined,
@@ -559,8 +562,16 @@ function resolveNativePageFailureResult(params: {
   action: TempWindowCheckinPageAction
   checkInUrl: string
 }): CheckinResult {
+  const identityReasonCode =
+    params.action.reason === "identity_missing" ||
+    params.action.reason === "identity_mismatch"
+      ? AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+      : null
   const base = {
     status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode:
+      identityReasonCode ?? AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+    retryable: identityReasonCode === null,
     messageParams: { checkInUrl: params.checkInUrl },
     rawMessage: params.action.error || undefined,
     data: params.action,
@@ -613,6 +624,8 @@ async function resolveNativePageCheckinResult(params: {
   if (!checkInUrl) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
     }
@@ -624,6 +637,7 @@ async function resolveNativePageCheckinResult(params: {
   if (!expectedUserId) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
       messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMissing,
       messageParams: { checkInUrl },
     }
@@ -648,6 +662,8 @@ async function resolveNativePageCheckinResult(params: {
     const errorMessage = getProviderErrorMessage(error)
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+      retryable: true,
       messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
       messageParams: { checkInUrl },
       rawMessage: errorMessage || undefined,
@@ -677,6 +693,8 @@ async function resolveNativePageCheckinResult(params: {
 
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    retryable: true,
     messageKey: NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
     messageParams: { checkInUrl },
     rawMessage: action.error || undefined,
@@ -751,6 +769,8 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   if (!checkInUrl) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
     }
@@ -772,6 +792,8 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   if (!assisted) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+      retryable: true,
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
       data: assisted ?? undefined,
@@ -846,6 +868,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
             status: CHECKIN_RESULT_STATUS.FAILED,
             messageKey: NEW_API_MESSAGE_KEYS.turnstileIncognitoAccessRequired,
             messageParams: { checkInUrl },
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
             data: assisted ?? undefined,
           }
         }
@@ -865,12 +888,15 @@ async function resolveTurnstileAssistedCheckinResult(params: {
         messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
         messageParams: { checkInUrl },
         rawMessage: assisted.error || params.responseMessage || undefined,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
         data: assisted ?? undefined,
       }
     }
 
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+      retryable: true,
       rawMessage: assisted.error || params.responseMessage || undefined,
       messageKey: assisted.error
         ? undefined
@@ -915,12 +941,15 @@ async function resolveTurnstileAssistedCheckinResult(params: {
       messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
       messageParams: { checkInUrl },
       rawMessage: params.responseMessage || assistedMessage || undefined,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
       data: assistedPayload ?? undefined,
     }
   }
 
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    retryable: true,
     rawMessage: assistedMessage || undefined,
     messageKey: assistedMessage
       ? undefined
@@ -969,6 +998,30 @@ function getProviderErrorMessage(error: unknown): string {
 }
 
 /**
+ * Resolve the persisted reason of a direct check-in rejection that already
+ * carries upstream copy, so the row keeps a filterable classification.
+ */
+function resolveDirectFailureReason(params: {
+  message: string
+  error?: unknown
+}): AutoCheckinSkipReason {
+  if (isEndpointUnsupportedFailure(params)) {
+    return AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
+  }
+  if (isAuthOrPermissionFailureMessage(params.message)) {
+    return AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+  }
+  if (isRateLimitedMessage(params.message)) {
+    return AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR
+  }
+  if (isTurnstileRelatedMessage(params.message)) {
+    return AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+  }
+
+  return AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR
+}
+
+/**
  * Provider entry: execute check-in directly and normalize the response.
  */
 async function checkinNewApi(
@@ -996,10 +1049,10 @@ async function checkinNewApi(
       if (statusAfterFailure?.enabled === false) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinDisabled,
           rawMessage: responseMessage || undefined,
-          messageKey: responseMessage
-            ? undefined
-            : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
           data: checkinResponse,
         }
       }
@@ -1050,8 +1103,13 @@ async function checkinNewApi(
       })
     }
 
+    const directReason = resolveDirectFailureReason({
+      message: responseMessage,
+    })
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: directReason,
+      retryable: directReason === AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
       rawMessage: responseMessage || undefined,
       messageKey: responseMessage
         ? undefined

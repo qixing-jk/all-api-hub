@@ -125,6 +125,20 @@ describe("Model redirect bulk clear flow", () => {
 
   const renderSubject = () => render(<ModelRedirectSettings />)
 
+  it("reflows the preview summary and actions in narrow dialogs", async () => {
+    renderSubject()
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
+    const continueButton = await screen.findByRole("button", {
+      name: t("bulkClear.actions.continue"),
+    })
+    const actions = continueButton.parentElement
+    expect(actions).toHaveClass("flex-wrap")
+    expect(actions?.parentElement).toHaveClass("flex-col", "sm:flex-row")
+  })
+
   it("discovers models from the default New API configuration in legacy preferences", async () => {
     const user = userEvent.setup()
     const runtimeConfig = await vi.importActual<

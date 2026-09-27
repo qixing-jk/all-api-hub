@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowDown,
+  ArrowDownAZ,
   ArrowUp,
   ArrowUpDown,
   CalendarCheck,
@@ -93,6 +94,11 @@ export function AccountListHeader({
     label: string
     icon: LucideIcon
   }> = [
+    {
+      field: "name",
+      icon: ArrowDownAZ,
+      label: t("account:list.header.account"),
+    },
     {
       field: DATA_TYPE_BALANCE,
       icon: Wallet,
@@ -207,7 +213,7 @@ export function AccountListHeader({
         >
           <div
             className={cn(
-              "bg-muted/70 dark:bg-foreground/5 flex h-(--density-control-tight) shrink-0 items-center rounded-md transition-colors",
+              "bg-muted/70 dark:bg-foreground/5 flex min-h-(--density-control-tight) shrink-0 items-center rounded-md transition-colors",
               hasActiveSort &&
                 "bg-theme-50/70 text-theme-700 dark:bg-theme-950/40 dark:text-theme-300",
             )}

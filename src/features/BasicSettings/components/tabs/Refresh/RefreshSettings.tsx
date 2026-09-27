@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import {
@@ -11,6 +11,7 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 /**
  * Settings section for auto-refresh behavior (intervals, toggle, refresh on open).
@@ -101,7 +102,27 @@ export default function RefreshSettings() {
       id="auto-refresh"
       title={t("refresh.title")}
       description={t("refresh.description")}
-      onReset={resetAutoRefreshConfig}
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        matchesDefaultSettings(
+          preferences?.accountAutoRefresh,
+          DEFAULT_ACCOUNT_AUTO_REFRESH,
+        ) &&
+        !refreshIntervalField.isDirty &&
+        !minRefreshIntervalField.isDirty
+      }
+      onReset={async () => {
+        const result = await resetAutoRefreshConfig()
+        if (result.ok) {
+          refreshIntervalField.setDraft(
+            String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval),
+          )
+          minRefreshIntervalField.setDraft(
+            String(DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval),
+          )
+        }
+        return result
+      }}
     >
       <Card padding="none">
         <CardList>

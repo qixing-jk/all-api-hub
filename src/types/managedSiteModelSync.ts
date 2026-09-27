@@ -49,15 +49,6 @@ export type ExecutionHistoryItemResult = Omit<
 export type ExecutionHistoryResult = ExecutionResult<ExecutionHistoryItemResult>
 
 /**
- * Execution filter options
- */
-export interface ExecutionFilter {
-  status?: "success" | "failure" | "all"
-  httpStatus?: number
-  searchKeyword?: string
-}
-
-/**
  * New API Model Sync Preferences
  */
 export interface ManagedSiteModelSyncPreferences {

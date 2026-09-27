@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   BodySmall,
   Button,
   Checkbox,
@@ -73,7 +74,7 @@ export function WebDAVDecryptPasswordModal({
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
+        <ActionGroup>
           <Button
             variant="secondary"
             size="sm"
@@ -92,7 +93,7 @@ export function WebDAVDecryptPasswordModal({
               ? t("common:status.processing")
               : t("webdav.encryption.decryptAction")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <div className="space-y-density-3">

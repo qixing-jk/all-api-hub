@@ -1,5 +1,11 @@
 import { Info } from "lucide-react"
-import { useEffect, useRef, useState, type ComponentProps } from "react"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
@@ -16,6 +22,7 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { DisplaySiteData } from "~/types"
@@ -35,6 +42,7 @@ import DialogHeader from "./DialogHeader"
 import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
 import { useAccountDialog } from "./hooks/useAccountDialog"
 import { useAccountDialogRecoveryHandoff } from "./hooks/useAccountDialogRecoveryHandoff"
+import { useLoginProviderEvidence } from "./hooks/useLoginProviderEvidence"
 import InfoPanel from "./InfoPanel"
 import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
 import {
@@ -85,6 +93,7 @@ export default function AccountDialog({
   const { t } = useTranslation("messages")
   const { t: tAccountDialog } = useTranslation("accountDialog")
   const {
+    accounts,
     displayData,
     detectedSiteAccounts,
     detectedAccount,
@@ -111,6 +120,24 @@ export default function AccountDialog({
   })
 
   const accountFormRef = useRef<AccountFormHandle>(null)
+  // Login-context claims are read from the already-loaded account list, which
+  // refreshes with account changes; the edited account never claims against
+  // itself, so its own stored selection stays changeable and clearable. The
+  // same last-login evidence the scheduler uses keeps the greyed-out option in
+  // step with what a run would actually skip.
+  const loginProviderEvidence = useLoginProviderEvidence({
+    enabled: isOpen,
+    refreshKey: accounts,
+  })
+  const claimedLoginProviders = useMemo(
+    () =>
+      resolveLoginProviderClaims({
+        accounts,
+        accountId: account?.id,
+        evidence: loginProviderEvidence,
+      }),
+    [accounts, account?.id, loginProviderEvidence],
+  )
   const accessTokenContinuation = useAccountDialogRecoveryHandoff({
     enabled: isOpen && isExtensionPopup(),
     state: state.tokenRecoveryState ?? null,
@@ -413,6 +440,7 @@ export default function AccountDialog({
                 feedbackBaseUrl={state.url}
                 feedbackOriginalBaseUrl={account?.baseUrl}
                 sitePolicy={currentSitePolicy}
+                claimedLoginProviders={claimedLoginProviders}
                 isDetected={state.isDetected}
                 isImportingSub2apiSession={state.isImportingSub2apiSession}
                 isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}

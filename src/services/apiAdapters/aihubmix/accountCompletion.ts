@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
@@ -53,9 +53,9 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.AccessToken,
     })
 
-    let siteStatus = null
+    let bootstrapFacts = null
     try {
-      siteStatus = await aihubmixAccountBootstrap.fetchSiteStatus(
+      bootstrapFacts = await aihubmixAccountBootstrap.loadBootstrapFacts(
         helpers.createServiceRequest({
           baseUrl: url,
           context,
@@ -72,24 +72,21 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
     }
 
     const exchangeRate =
-      aihubmixAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
     helpers.captureRecoveryData({ exchangeRate })
 
-    const checkSupport =
-      typeof siteStatus?.checkin_enabled === "boolean"
-        ? siteStatus.checkin_enabled
-        : await aihubmixAccountBootstrap
-            .fetchCheckInSupport(
-              helpers.createServiceRequest({
-                baseUrl: url,
-                context,
-                auth: {
-                  authType: AuthTypeEnum.None,
-                },
-              }),
-            )
-            .catch(helpers.handleCheckInSupportFetchFailure)
+    const checkSupport = await aihubmixAccountBootstrap
+      .fetchCheckInSupport(
+        helpers.createServiceRequest({
+          baseUrl: url,
+          context,
+          auth: {
+            authType: AuthTypeEnum.None,
+          },
+        }),
+        bootstrapFacts,
+      )
+      .catch(helpers.handleCheckInSupportFetchFailure)
 
     if (!username || !accessToken) {
       throw helpers.createCompletionError(
@@ -100,7 +97,7 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    const siteName = await helpers.fetchSiteName(siteStatus)
+    const siteName = await helpers.fetchSiteName(bootstrapFacts)
     helpers.captureRecoveryData({ siteName })
 
     return {

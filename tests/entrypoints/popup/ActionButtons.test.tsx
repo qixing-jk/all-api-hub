@@ -72,6 +72,36 @@ const expectPopupAction = ({
 }
 
 describe("popup ActionButtons", () => {
+  it.each([false, true])(
+    "shows external check-in completion only when all accounts are checked: %s",
+    async (allChecked) => {
+      displayDataMock = [false, true].map((checked, index) => ({
+        id: `account-${index}`,
+        checkIn: {
+          customCheckIn: {
+            url: `https://example.com/${index}`,
+            isCheckedInToday: allChecked || checked,
+          },
+        },
+      }))
+      const { default: ActionButtons } = await import(
+        "~/entrypoints/popup/components/ActionButtons"
+      )
+      render(
+        <ActionButtons
+          primaryActionLabel="addAccount"
+          onPrimaryAction={vi.fn()}
+        />,
+      )
+      const button = await screen.findByRole("button", {
+        name: "ui:navigation.externalCheckinAll",
+      })
+      expect(button.querySelector("svg")).toHaveClass(
+        allChecked ? "text-success-indicator" : "text-neutral-indicator",
+      )
+    },
+  )
+
   it("tracks the account primary action with popup action bar metadata", async () => {
     const onPrimaryAction = vi.fn()
     const { default: ActionButtons } = await import(
@@ -95,6 +125,37 @@ describe("popup ActionButtons", () => {
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
     })
+  })
+
+  it("tracks opening the bookmark dialog instead of a bookmark creation attempt", async () => {
+    const onPrimaryAction = vi.fn()
+    const { default: ActionButtons } = await import(
+      "~/entrypoints/popup/components/ActionButtons"
+    )
+    render(
+      <ActionButtons
+        primaryActionLabel="addBookmark"
+        onPrimaryAction={onPrimaryAction}
+        primaryAnalyticsAction={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+        }}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole("button", { name: "addBookmark" }))
+
+    expect(onPrimaryAction).toHaveBeenCalledTimes(1)
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+    })
+    // `create_bookmark` must stay reserved for the save span.
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+      }),
+    )
   })
 
   it("opens auto check-in page and triggers run when quick check-in button clicked", async () => {

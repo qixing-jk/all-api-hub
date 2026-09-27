@@ -100,6 +100,7 @@
       "bookmarkNameRequired": "Bookmark name cannot be empty",
       "bookmarkUrlRequired": "Bookmark URL cannot be empty",
       "incompleteAccountInfo": "Please fill in all account information",
+      "loginProviderInUse": "The {{provider}} login method is already used by the AgentRouter account {{account}} with automatic check-in enabled. Choose the other method, disable automatic check-in on that account, or clear this selection.",
       "updateAccountFailed": "Failed to update account {{error}}",
       "urlRequired": "Site URL cannot be empty",
       "userIdNumeric": "User ID must be a number"

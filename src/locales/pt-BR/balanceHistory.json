@@ -20,7 +20,7 @@
     },
     "title": "Detalhamento da conta"
   },
-  "description": "Registre instantâneos diários de saldo e fluxo de caixa e visualize tendências ao longo do tempo.",
+  "description": "Consulte tendências diárias de saldo, receitas e despesas para acompanhar os fundos das contas.",
   "empty": {
     "description": "Ative o histórico de saldo e atualize uma conta para registrar o primeiro instantâneo.",
     "title": "Nenhum instantâneo ainda"

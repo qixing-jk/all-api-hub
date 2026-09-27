@@ -11,7 +11,7 @@
     "description": "Esto eliminará permanentemente \"{{name}}\".",
     "title": "¿Eliminar marcador?"
   },
-  "description": "Guarda enlaces rápidos (consola/docs/páginas de administración) sin crear cuentas completas.",
+  "description": "Guarda enlaces a sitios, consolas y documentación, y organízalos con etiquetas para acceder rápidamente.",
   "dialog": {
     "currentPageLabel": "Página actual",
     "currentPageUnavailable": "Página actual no disponible",

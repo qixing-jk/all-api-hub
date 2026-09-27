@@ -1,6 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 
-import { OPTIONS_SEARCH_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  OPTIONS_SEARCH_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 
 import type { OptionsSearchItem } from "./types"
 
@@ -54,23 +58,28 @@ async function migrateLegacyRecentItemIds() {
 }
 
 /**
+ * Loads recent item ids without converting a storage failure into an empty list.
+ */
+async function loadRecentSearchItemIdsOrThrow() {
+  const stored = await storage.get(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS)
+  if (stored !== undefined) {
+    return sanitizeRecentItemIds(stored)
+  }
+
+  const migratedIds = await migrateLegacyRecentItemIds()
+  if (migratedIds) {
+    return migratedIds
+  }
+
+  return []
+}
+
+/**
  * Loads the recent search item id list from extension storage.
  */
 export async function loadRecentSearchItemIds() {
   try {
-    const stored = await storage.get(
-      OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS,
-    )
-    if (stored !== undefined) {
-      return sanitizeRecentItemIds(stored)
-    }
-
-    const migratedIds = await migrateLegacyRecentItemIds()
-    if (migratedIds) {
-      return migratedIds
-    }
-
-    return []
+    return await loadRecentSearchItemIdsOrThrow()
   } catch {
     return []
   }
@@ -78,19 +87,27 @@ export async function loadRecentSearchItemIds() {
 
 /**
  * Saves the selected search item id to the front of the recent items list.
+ *
+ * The read and the write are held under the same lock the list is seeded
+ * through, so two overlapping selections cannot drop one of the two ids.
  */
 export async function saveRecentSearchItemSelection(
   item: Pick<OptionsSearchItem, "id">,
 ) {
   try {
-    const currentIds = await loadRecentSearchItemIds()
-    const nextIds = sanitizeRecentItemIds([
-      item.id,
-      ...currentIds.filter((existingId) => existingId !== item.id),
-    ])
+    return await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.OPTIONS_SEARCH_RECENT_ITEMS,
+      async () => {
+        const currentIds = await loadRecentSearchItemIdsOrThrow()
+        const nextIds = sanitizeRecentItemIds([
+          item.id,
+          ...currentIds.filter((existingId) => existingId !== item.id),
+        ])
 
-    await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, nextIds)
-    return nextIds
+        await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, nextIds)
+        return nextIds
+      },
+    )
   } catch {
     // Ignore storage failures; recent items are a non-critical enhancement.
     return []

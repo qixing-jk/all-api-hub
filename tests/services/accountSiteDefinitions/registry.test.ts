@@ -13,7 +13,6 @@ import {
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
@@ -123,6 +122,20 @@ const productProfileSiteTypeIsForbidden: "siteType" extends keyof NonNullable<
   : true = true
 
 describe("account site definition registry", () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "/keys"],
+    [SITE_TYPES.SUB2API, "/keys"],
+    [SITE_TYPES.VELOERA, "/app/tokens"],
+    [SITE_TYPES.DONE_HUB, "/panel/token"],
+    [SITE_TYPES.OCTOPUS, "/keys"],
+    [SITE_TYPES.AXON_HUB, "/api-keys"],
+    [SITE_TYPES.CLAUDE_CODE_HUB, "/dashboard/users"],
+  ])("preserves the registered token console path for %s", (siteType, path) => {
+    expect(
+      getAccountSiteDefinition(siteType)?.managedResource?.consoleRoutes.tokens,
+    ).toBe(path)
+  })
+
   it("requires every account registration to explicitly declare every page or null", () => {
     const routeKeys = [
       "loginPath",
@@ -719,8 +732,6 @@ describe("account site definition registry", () => {
         storedUserIdentityFields: ["id"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -743,8 +754,6 @@ describe("account site definition registry", () => {
         storedUserIdentityFields: ["username"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,

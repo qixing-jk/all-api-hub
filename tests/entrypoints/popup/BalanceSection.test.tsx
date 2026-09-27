@@ -3,10 +3,13 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
 import AccountBalanceSummary from "~/entrypoints/popup/components/BalanceSection/AccountBalanceSummary"
 import { TokenStats } from "~/entrypoints/popup/components/BalanceSection/TokenStats"
 import { UpdateTimeAndWarning } from "~/entrypoints/popup/components/BalanceSection/UpdateTimeAndWarning"
+import {
+  RELATIVE_TIME_REFRESH_INTERVAL_MS,
+  SUMMARY_ANIMATION_DURATION,
+} from "~/entrypoints/popup/summaryConfig"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -197,7 +200,7 @@ describe("popup BalanceSection components", () => {
     expect(balanceValue).toHaveAttribute("data-end", "10")
     expect(balanceValue).toHaveAttribute(
       "data-duration",
-      String(UI_CONSTANTS.ANIMATION.UPDATE_DURATION),
+      String(SUMMARY_ANIMATION_DURATION.UPDATE),
     )
     expect(
       screen.getAllByRole("button", {
@@ -722,7 +725,7 @@ describe("popup BalanceSection components", () => {
     expect(balanceValue).toHaveAttribute("data-end", "70")
     expect(balanceValue).toHaveAttribute(
       "data-duration",
-      String(UI_CONSTANTS.ANIMATION.INITIAL_DURATION),
+      String(SUMMARY_ANIMATION_DURATION.INITIAL),
     )
     expect(
       screen.getByRole("button", {
@@ -763,7 +766,7 @@ describe("popup BalanceSection components", () => {
     expect(screen.getByText("account:currentLoginAdded")).toBeInTheDocument()
 
     act(() => {
-      vi.advanceTimersByTime(UI_CONSTANTS.UPDATE_INTERVAL)
+      vi.advanceTimersByTime(RELATIVE_TIME_REFRESH_INTERVAL_MS)
     })
 
     expect(formatRelativeTimeMock).toHaveBeenCalledTimes(2)

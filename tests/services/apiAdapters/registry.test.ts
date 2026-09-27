@@ -35,7 +35,7 @@ const expectAccountBootstrapCapability = (
 ) => {
   expect(capabilities.account?.bootstrap).toEqual(
     expect.objectContaining({
-      fetchSiteStatus: expect.any(Function),
+      loadBootstrapFacts: expect.any(Function),
       fetchUserInfo: expect.any(Function),
       resolveRoutePath: expect.any(Function),
     }),
@@ -223,6 +223,7 @@ describe("apiAdapters registry", () => {
       markRead: expect.any(Function),
     })
     expect(capabilities.account?.modelCatalog).toEqual({
+      enrichPricing: expect.any(Function),
       fetchModels: expect.any(Function),
     })
     expectInviteLinkCapability(capabilities)

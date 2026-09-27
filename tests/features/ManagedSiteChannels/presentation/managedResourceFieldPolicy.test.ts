@@ -39,7 +39,6 @@ import {
   getManagedResourceFieldOptionLabel,
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_SECTION_ORDER,
-  resolveManagedResourceFieldPolicy,
   type ManagedResourceFieldPresentation,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
@@ -50,6 +49,7 @@ import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { resolveManagedResourceTestPolicy } from "~~/tests/test-utils/managedResourceFieldPolicy"
 
 describe("Octopus native editor vocabulary", () => {
   it("exposes native outbound types and only the supported channel controls", () => {
@@ -488,7 +488,7 @@ describe("managed resource field policy", () => {
       )
 
       expect(policy).toBeDefined()
-      const resolved = resolveManagedResourceFieldPolicy(
+      const resolved = resolveManagedResourceTestPolicy(
         createDescriptors().filter(
           ({ fieldId }) =>
             mode === "create" ||
@@ -986,7 +986,7 @@ describe("managed resource field policy", () => {
     ).toThrow()
 
     expect(() =>
-      resolveManagedResourceFieldPolicy([{ fieldId: "name", type: "number" }], {
+      resolveManagedResourceTestPolicy([{ fieldId: "name", type: "number" }], {
         fields: [
           {
             fieldId: "name",

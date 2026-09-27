@@ -14,6 +14,7 @@ export const checkinRedeemSearchSections: OptionsSearchItemDefinition[] = [
     AUTO_CHECKIN_TARGET_IDS.section,
     "autoCheckin:settings.title",
     260,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:redemption-assist",
@@ -21,6 +22,7 @@ export const checkinRedeemSearchSections: OptionsSearchItemDefinition[] = [
     "redemption-assist",
     "redemptionAssist:settings.title",
     261,
+    { keywordKeys: ["common:actions.reset"] },
   ),
 ]
 

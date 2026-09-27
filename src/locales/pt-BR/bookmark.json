@@ -11,7 +11,7 @@
     "description": "Isso excluirá permanentemente \"{{name}}\".",
     "title": "Excluir marcador?"
   },
-  "description": "Salve links rápidos (painel/documentação/páginas de administração) sem precisar criar contas completas.",
+  "description": "Salve links de sites, consoles e documentação e organize-os com etiquetas para acesso rápido.",
   "dialog": {
     "currentPageLabel": "Página atual",
     "currentPageUnavailable": "Página atual indisponível",

@@ -6,10 +6,10 @@ import type {
   DailyBalanceSnapshot,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import { getDayKeyFromUnixSeconds } from "./dayKeys"
 import { dailyBalanceHistoryStorage } from "./storage"
 
 const logger = createLogger("DailyBalanceHistoryCapture")
