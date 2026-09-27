@@ -656,6 +656,39 @@ describe("newApiFamily accountData", () => {
     expect(mockExtractAmount).toHaveBeenCalledWith("recharge 3 USD", 9)
   })
 
+  it("aggregates zero-quota reward content across income sources and pages", async () => {
+    const { aggregateIncomeData } = await vi.importActual<
+      typeof import("~/services/apiService/newApiFamily/default/accountDataUtils")
+    >("~/services/apiService/newApiFamily/default/accountDataUtils")
+    mockAggregateIncomeData.mockImplementation(aggregateIncomeData)
+    mockFetchApiData.mockImplementation(async (_request, { endpoint }) => {
+      const params = new URL(endpoint, baseRequest.baseUrl).searchParams
+      if (params.get("type") === String(LogType.Topup)) {
+        return params.get("p") === "1"
+          ? {
+              items: [
+                { quota: 0, content: "通过兑换码充值 ＄2.000000 额度" },
+                { quota: 50, content: "充值 ＄100.00 额度" },
+              ],
+              total: 3,
+            }
+          : { items: [{ quota: 0, content: "充值 ¥7.00 额度" }], total: 3 }
+      }
+      return {
+        items: [{ quota: 0, content: "签到奖励 ＄0.500000 额度" }],
+        total: 1,
+      }
+    })
+
+    await expect(
+      fetchTodayIncome({ ...baseRequest, exchangeRate: 7 }),
+    ).resolves.toEqual({
+      today_income: 400,
+      todayStatsAvailability: { income: complete },
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(3)
+  })
+
   it("fetchTodayIncome uses the default exchange rate when the request has no exchange rate", async () => {
     mockExtractAmount.mockReturnValueOnce({ amount: 2 })
     mockFetchApiData

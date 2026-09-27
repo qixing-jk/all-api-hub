@@ -248,10 +248,34 @@ describe("New API family account data utilities", () => {
       expect(result.coverage).toEqual({ validCount: 0, invalidCount: 2 })
     })
 
-    it("keeps an explicit zero quota instead of falling back to content", () => {
-      const result = aggregateIncomeData([{ quota: 0, content: "$100" }], 7)
+    it.each([
+      ["system check-in", "签到奖励 ＄10.586246 额度", 10.586246],
+      ["top-up", "通过兑换码充值 ＄0.200000 额度，兑换码ID 1", 0.2],
+      ["CNY reward", "签到奖励 ¥7.00 额度", 1],
+    ])(
+      "parses %s content when quota is the default zero",
+      (_label, content, usd) => {
+        const result = aggregateIncomeData([{ quota: 0, content }], 7, 500_000)
 
-      expect(result.today_income).toBe(0)
+        expect(result.today_income).toBeCloseTo(usd * 500_000)
+        expect(result.coverage).toEqual({ validCount: 1, invalidCount: 0 })
+      },
+    )
+
+    it.each([undefined, "system message without an amount", "$0"])(
+      "keeps zero quota when content has no nonzero amount (%s)",
+      (content) => {
+        const result = aggregateIncomeData([{ quota: 0, content }], 7)
+
+        expect(result.today_income).toBe(0)
+        expect(result.coverage).toEqual({ validCount: 1, invalidCount: 0 })
+      },
+    )
+
+    it("uses nonzero quota without counting the content amount twice", () => {
+      const result = aggregateIncomeData([{ quota: 50, content: "$100" }], 7)
+
+      expect(result.today_income).toBe(50)
       expect(result.coverage).toEqual({ validCount: 1, invalidCount: 0 })
     })
 
@@ -274,6 +298,24 @@ describe("New API family account data utilities", () => {
       expect(result.today_income).toBe(0)
       expect(result.coverage).toEqual({ validCount: 0, invalidCount: 1 })
     })
+
+    it.each([
+      ["parsed amount overflow", "$" + "9".repeat(400), 7],
+      ["quota conversion overflow", "$" + "9".repeat(307), 7],
+      ["zero exchange rate", "¥7.00", 0],
+      ["non-finite exchange rate", "¥7.00", Number.NaN],
+    ])(
+      "rejects %s in zero-quota content without losing covered income",
+      (_label, content, exchangeRate) => {
+        const result = aggregateIncomeData(
+          [{ quota: 50 }, { quota: 0, content }],
+          exchangeRate,
+        )
+
+        expect(result.today_income).toBe(50)
+        expect(result.coverage).toEqual({ validCount: 1, invalidCount: 1 })
+      },
+    )
 
     it("does not let finite income rows overflow the total", () => {
       const result = aggregateIncomeData(

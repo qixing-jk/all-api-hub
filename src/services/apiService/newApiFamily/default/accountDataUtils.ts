@@ -152,7 +152,7 @@ export const aggregateUsageData = (
 }
 
 /**
- * Aggregate income logs using content only for the quota-absent dialect.
+ * Aggregate income logs, including zero-quota records with amounts in content.
  * @param items Untrusted income log rows.
  * @param exchangeRate CNY per USD exchange rate used by content parsing.
  * @param conversionFactor Backend quota units per parsed currency unit.
@@ -179,15 +179,15 @@ export const aggregateIncomeData = (
       continue
     }
 
-    let value: unknown
-    if (Object.hasOwn(item, "quota")) {
-      value = item.quota
-    } else if (typeof item.content === "string") {
+    const hasQuota = Object.hasOwn(item, "quota")
+    let value: unknown = hasQuota ? item.quota : undefined
+    // New API RecordLog/RecordTopupLog leave quota at 0; income is in content.
+    // https://github.com/QuantumNous/new-api/blob/main/model/log.go
+    if ((!hasQuota || item.quota === 0) && typeof item.content === "string") {
       const extracted = extractAmount(item.content, exchangeRate)
-      value =
-        extracted && Number.isFinite(extracted.amount)
-          ? conversionFactor * extracted.amount
-          : undefined
+      if (extracted) {
+        value = conversionFactor * extracted.amount
+      }
     }
 
     const next = addFiniteValue(result.today_income, value)
