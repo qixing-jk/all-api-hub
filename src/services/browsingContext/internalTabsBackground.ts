@@ -22,6 +22,8 @@ const logger = createLogger("InternalBrowsingTabs")
  * inside one browser session.
  */
 let browserSession: string | undefined
+let browserSessionRead: Promise<string> | undefined
+let browserSessionRotation: Promise<string> | undefined
 
 /**
  * How the flagged tab relates to its window, so a later worker can close it the
@@ -118,22 +120,28 @@ async function writeNewBrowserSession(): Promise<string> {
  * consistent inside this worker.
  */
 export async function readInternalTabBrowserSession(): Promise<string> {
+  if (browserSessionRotation) return await browserSessionRotation
   if (browserSession) return browserSession
+  browserSessionRead ??= (async () => {
+    let stored: string | null = null
+    try {
+      const values = await getLocalStorage(
+        INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
+      )
+      const candidate = values[INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]
+      stored =
+        typeof candidate === "string" && candidate.trim() ? candidate : null
+    } catch (error) {
+      logger.warn("Unable to read the temp-page browser session", error)
+    }
 
-  let stored: string | null = null
-  try {
-    const values = await getLocalStorage(
-      INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
-    )
-    const candidate = values[INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]
-    stored =
-      typeof candidate === "string" && candidate.trim() ? candidate : null
-  } catch (error) {
-    logger.warn("Unable to read the temp-page browser session", error)
-  }
+    browserSession = stored ?? (await writeNewBrowserSession())
+    return browserSession
+  })().finally(() => {
+    browserSessionRead = undefined
+  })
 
-  browserSession = stored ?? (await writeNewBrowserSession())
-  return browserSession
+  return await browserSessionRead
 }
 
 /**
@@ -141,8 +149,21 @@ export async function readInternalTabBrowserSession(): Promise<string> {
  * foreign. Called on browser startup, not on an extension reload or update.
  */
 export async function rotateInternalTabBrowserSession(): Promise<string> {
-  browserSession = await writeNewBrowserSession()
-  return browserSession
+  if (browserSessionRotation) return await browserSessionRotation
+
+  const rotation = (async () => {
+    // A read started before onStartup must not replace the new token after
+    // rotation writes it.
+    if (browserSessionRead) await browserSessionRead
+    browserSession = await writeNewBrowserSession()
+    return browserSession
+  })()
+  browserSessionRotation = rotation
+  try {
+    return await rotation
+  } finally {
+    browserSessionRotation = undefined
+  }
 }
 
 /**

@@ -114,7 +114,9 @@ describe("temp context dev section", () => {
       value: "armed (about a minute)",
       tone: "runtime",
     })
-    expect(rows[1]?.hint).toContain("A close was rejected")
+    expect(rows[1]?.hint).toContain("A context was acquired")
+    expect(rows[1]?.hint).toContain("a close was rejected")
+    expect(rows[1]?.hint).toContain("a recent page is still held")
 
     expect(rows[2]).toMatchObject({
       id: "last-run",
@@ -139,6 +141,74 @@ describe("temp context dev section", () => {
     })
     // The read follows the action so the rows show what it left behind.
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith(LIST_MARKERS)
+  })
+
+  it.each([
+    ["Dev: Leak a shared background tab", "shared-tab"],
+    ["Dev: Leak a visible tab", "visible-tab"],
+  ])("creates the requested %s fixture", async (label, scenario) => {
+    renderDevPanelSection(useTempContextDevSection)
+    await screen.findByTestId("row-markers")
+    sendRuntimeMessageMock.mockClear()
+
+    await runAction(label)
+
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+      action: RuntimeActionIds.TempContextDebugCreateOrphan,
+      scenario,
+    })
+  })
+
+  it("shows when no retry is armed and refreshes the background state", async () => {
+    renderDevPanelSection(useTempContextDevSection)
+    await screen.findByTestId("row-markers")
+    sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      data: { retryArmed: false, markers: [], runs: [] },
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Refresh temp page state" }),
+    )
+
+    expect(await screen.findByTestId("row-retry")).toHaveTextContent(
+      "not armed",
+    )
+    expect(screen.getByTestId("row-markers")).toHaveTextContent("0 (0 orphan)")
+  })
+
+  it("reports a failed refresh while keeping the last valid state", async () => {
+    renderDevPanelSection(useTempContextDevSection)
+    await screen.findByTestId("row-markers")
+    sendRuntimeMessageMock.mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dev: Refresh temp page state" }),
+    )
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith("storage unavailable"),
+    )
+    expect(screen.getByTestId("row-markers")).toHaveTextContent("3 (2 orphan)")
+  })
+
+  it("reports a rejected action request as an error", async () => {
+    renderDevPanelSection(useTempContextDevSection)
+    await screen.findByTestId("row-markers")
+    sendRuntimeMessageMock.mockRejectedValueOnce(
+      new Error("worker unavailable"),
+    )
+
+    await runAction("Dev: Run reclamation now")
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith("worker unavailable", {
+        id: "toast-id",
+      }),
+    )
+    expect(screen.getByTestId("row-markers")).toHaveTextContent("3 (2 orphan)")
   })
 
   it("reports how many temp pages a run reclaimed", async () => {

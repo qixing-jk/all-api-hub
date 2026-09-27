@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY } from "~/services/core/storageKeys"
+
 const OWNED_WINDOW = { windowScope: "owned", createdAt: 1 } as const
 const SHARED_WINDOW = { windowScope: "shared", createdAt: 1 } as const
 
@@ -211,6 +213,70 @@ describe("internal browsing tab ownership", () => {
     )
 
     await owner.unregisterInternalTab(881)
+  })
+
+  it("shares one session initialization across concurrent first reads", async () => {
+    await browser.storage.local.remove(INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY)
+    vi.resetModules()
+    const owner = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    const write = vi.spyOn(browser.storage.local, "set")
+
+    const sessions = await Promise.all([
+      owner.readInternalTabBrowserSession(),
+      owner.readInternalTabBrowserSession(),
+      owner
+        .persistInternalTabMarker(882, SHARED_WINDOW)
+        .then(
+          async () => (await owner.listInternalTabRecords())[0]?.browserSession,
+        ),
+    ])
+
+    expect(new Set(sessions).size).toBe(1)
+    expect(
+      write.mock.calls.filter(([value]) =>
+        Object.hasOwn(value, INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY),
+      ),
+    ).toHaveLength(1)
+    await owner.unregisterInternalTab(882)
+  })
+
+  it("does not let an in-flight first read overwrite a browser-start rotation", async () => {
+    await browser.storage.local.set({
+      [INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]: "previous-session",
+    })
+    vi.resetModules()
+    const owner = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    let finishRead!: (value: Record<string, string>) => void
+    const read = vi.spyOn(browser.storage.local, "get").mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishRead = resolve
+        }),
+    )
+
+    const firstRead = owner.readInternalTabBrowserSession()
+    const rotation = owner.rotateInternalTabBrowserSession()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    finishRead({
+      [INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY]: "previous-session",
+    })
+    await firstRead
+    const newSession = await rotation
+
+    expect(newSession).not.toBe("previous-session")
+    expect(await owner.readInternalTabBrowserSession()).toBe(newSession)
+    expect(
+      (
+        await browser.storage.local.get(
+          INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY,
+        )
+      )[INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY],
+    ).toBe(newSession)
+    read.mockRestore()
   })
 
   it("keeps the browser session stable until it is rotated", async () => {

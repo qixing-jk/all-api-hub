@@ -274,8 +274,8 @@ export function useTempContextDevSection(): DevPanelSection {
         label: "Reclamation retry",
         value: retryArmed ? "armed (about a minute)" : "not armed",
         hint: retryArmed
-          ? "A close was rejected; the sweep comes back for it."
-          : "Armed only after a close the browser refused.",
+          ? "A context was acquired, a close was rejected, or a recent page is still held; the sweep will retry."
+          : "Armed when a context is acquired, a close is rejected, or a recent page is still held.",
         tone: "runtime",
       },
       {

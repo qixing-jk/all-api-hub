@@ -264,6 +264,51 @@ describe("background onSuspend temp-context cleanup", () => {
     expect(rotateTempPageBrowserSessionMock).toHaveBeenCalledTimes(1)
   })
 
+  it("waits for browser-start rotation before the first orphan sweep", async () => {
+    let finishRotation!: (session: string) => void
+    let finishServices!: () => void
+    initializeServicesMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishServices = resolve
+      }),
+    )
+    rotateTempPageBrowserSessionMock.mockReturnValueOnce(
+      new Promise<string>((resolve) => {
+        finishRotation = resolve
+      }),
+    )
+
+    await import("~/entrypoints/background/index")
+    const startup = onStartupListener?.()
+    finishServices()
+    await vi.waitFor(() => {
+      expect(initializeCookieInterceptorsMock).toHaveBeenCalledTimes(1)
+    })
+    expect(reclaimOrphanedTempPagesMock).not.toHaveBeenCalled()
+
+    finishRotation("browser-session-2")
+    await startup
+    await vi.waitFor(() => {
+      expect(reclaimOrphanedTempPagesMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("logs a failed browser-session rotation and continues startup", async () => {
+    const failure = new Error("storage unavailable")
+    rotateTempPageBrowserSessionMock.mockRejectedValueOnce(failure)
+
+    await import("~/entrypoints/background/index")
+    await onStartupListener?.()
+
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "Failed to start a new temp-page browser session",
+      failure,
+    )
+    await vi.waitFor(() => {
+      expect(reclaimOrphanedTempPagesMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it("reclaims temporary pages left behind by the previous worker on every start", async () => {
     await import("~/entrypoints/background/index")
 

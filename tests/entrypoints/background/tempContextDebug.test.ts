@@ -218,6 +218,34 @@ describe("temp-context debug actions", () => {
     expect(response.error).toBe("Fixture window could not be created")
   })
 
+  it("reports when an owned fixture window has no tab to mark", async () => {
+    queryTabsMock.mockResolvedValueOnce([])
+
+    const response = await runDebugAction({
+      action: RuntimeActionIds.TempContextDebugCreateOrphan,
+      scenario: TEMP_CONTEXT_DEBUG_ORPHAN_SCENARIOS.OwnedWindow,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      error: "Fixture window has no tab to own",
+    })
+  })
+
+  it("reports when a shared fixture tab has no id to mark", async () => {
+    createTabMock.mockResolvedValueOnce({ windowId: 1 })
+
+    const response = await runDebugAction({
+      action: RuntimeActionIds.TempContextDebugCreateOrphan,
+      scenario: TEMP_CONTEXT_DEBUG_ORPHAN_SCENARIOS.SharedTab,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      error: "Fixture tab could not be created",
+    })
+  })
+
   it("opens a tracked context that reclamation must skip", async () => {
     acquireMock.mockResolvedValue({ tabId: 42 })
 
@@ -243,6 +271,21 @@ describe("temp-context debug actions", () => {
     expect(response.success).toBe(false)
     expect(response.error).toBe("Fixture URL must be absolute")
     expect(acquireMock).not.toHaveBeenCalled()
+  })
+
+  it("accepts an absolute URL for a tracked fixture", async () => {
+    acquireMock.mockResolvedValueOnce({ tabId: 43 })
+
+    const response = await runDebugAction({
+      action: RuntimeActionIds.TempContextDebugCreateTrackedContext,
+      url: "https://example.org/fixture",
+    })
+
+    expect(response.success).toBe(true)
+    expect(acquireMock).toHaveBeenCalledWith(
+      "https://example.org/fixture",
+      expect.any(String),
+    )
   })
 
   it("lists markers with their live ownership and the last run", async () => {

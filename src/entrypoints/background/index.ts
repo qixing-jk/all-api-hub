@@ -64,6 +64,8 @@ import {
  */
 const logger = createLogger("BackgroundEntrypoint")
 
+let browserStartupRotation: Promise<unknown> | undefined
+
 /**
  * Test-mode builds should not auto-open install/update permission onboarding,
  * otherwise E2E suites inherit unrelated tabs/dialogs from the background
@@ -210,9 +212,10 @@ export default defineBackground(() => {
     logger.info("浏览器启动，恢复后台服务与 alarms 调度")
     // A browser start begins a new session for temp-page ownership; tab ids do
     // not carry over, so markers from the previous one only get cleared.
-    await rotateTempPageBrowserSession().catch((error) => {
+    browserStartupRotation = rotateTempPageBrowserSession().catch((error) => {
       logger.warn("Failed to start a new temp-page browser session", error)
     })
+    await browserStartupRotation
     try {
       await initializeServices()
     } catch (error) {
@@ -261,6 +264,8 @@ async function main() {
   void uninstallSurveyService.refresh()
   // Runs on every worker activation, which is the recovery point for temp-window
   // closes lost to the previous worker's death. Never blocks startup.
+  // The startup event can still be rotating the browser-session token here.
+  if (browserStartupRotation) await browserStartupRotation
   void reclaimOrphanedTempPages().catch((error) => {
     logger.warn("Failed to reclaim orphaned temporary pages", error)
   })

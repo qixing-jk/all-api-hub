@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  readTempPageReclaimRetryArmed,
   readTempPageReclamationHistory,
   reclaimOrphanedTempPages,
   rotateTempPageBrowserSession,
@@ -72,5 +73,14 @@ describe("temp page reclamation composition", () => {
     await rotateTempPageBrowserSession()
 
     expect(rotateInternalTabBrowserSession).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports whether the retry alarm is armed", async () => {
+    const get = vi.spyOn(browser.alarms, "get")
+    get.mockResolvedValueOnce(undefined)
+    await expect(readTempPageReclaimRetryArmed()).resolves.toBe(false)
+    get.mockResolvedValueOnce({ name: RETRY_ALARM } as browser.alarms.Alarm)
+    await expect(readTempPageReclaimRetryArmed()).resolves.toBe(true)
+    expect(get).toHaveBeenCalledWith(RETRY_ALARM)
   })
 })

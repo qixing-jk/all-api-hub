@@ -2783,6 +2783,9 @@ async function createTempContextInstance(
     ) {
       throw new Error("Unable to persist internal tab ownership")
     }
+    // The worker may stop while navigation or readiness is pending, before a
+    // request receives this context and arms its delayed-close retry.
+    await scheduleTempPageReclaimRetry()
     await updateTab(opened.tabId, { url })
 
     logTempWindow("createTempContextInstance", {
