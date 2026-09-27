@@ -37,7 +37,15 @@ it("keeps Tailwind utility names inside className separated", () => {
     )
 
     const checkLiterals = (node: ts.Node) => {
-      if (ts.isStringLiteralLike(node)) {
+      // `isStringLiteralLike` covers plain strings and templates without
+      // substitutions; the static segments of an interpolated template are
+      // separate node kinds, so they have to be named here too.
+      if (
+        ts.isStringLiteralLike(node) ||
+        ts.isTemplateHead(node) ||
+        ts.isTemplateMiddle(node) ||
+        ts.isTemplateTail(node)
+      ) {
         for (const token of node.text.split(/\s+/)) {
           if (!CONCATENATED_ROLE.test(token)) continue
           const { line } = source.getLineAndCharacterOfPosition(
