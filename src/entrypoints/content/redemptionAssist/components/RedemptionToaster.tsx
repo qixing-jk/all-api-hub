@@ -54,9 +54,9 @@ export const RedemptionToaster: React.FC = () => {
 
           const typeClasses =
             toast.type === "success"
-              ? "border-l-4 border-l-success-text text-success-text"
+              ? "border-l-4 border-l-success-indicator text-success-text"
               : toast.type === "error"
-                ? "border-l-4 border-l-destructive-text text-destructive-text"
+                ? "border-l-4 border-l-destructive-indicator text-destructive-text"
                 : ""
 
           const cardClassName = `${baseCardClasses} ${typeClasses}`
