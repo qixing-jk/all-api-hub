@@ -72,6 +72,7 @@
     "copyInviteLinksUnsupported": "A seleção atual não suporta links de convite.",
     "copySiteUrls": "Copiar URL dos sites",
     "copySiteUrlsClipboardFailed": "O navegador não conseguiu escrever na área de transferência. Copie as URL dos sites manualmente na lista de contas.",
+    "copySiteUrlsNone": "As contas selecionadas não têm URLs de sites para copiar.",
     "copySiteUrlsSuccess_one": "URL do site {{count}} copiada.",
     "copySiteUrlsSuccess_many": "URLs de {{count}} sites copiadas.",
     "copySiteUrlsSuccess_other": "URLs de {{count}} sites copiadas.",

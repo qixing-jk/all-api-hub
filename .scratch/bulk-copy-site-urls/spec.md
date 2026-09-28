@@ -24,10 +24,10 @@ Two changes in the options-page account bulk toolbar:
 
 ## Touched surfaces
 
-- `src/features/AccountManagement/siteUrlCopyWorkflow.ts` (new): payload + clipboard write, returns `Success` / `ClipboardFailure`.
+- `src/features/AccountManagement/siteUrlCopyWorkflow.ts` (new): payload + clipboard write, returns `Success` / `ClipboardFailure` / `NoCopyableUrls`.
 - `AccountBulkToolbar.tsx`: new `onCopySiteUrls` prop + button.
-- `AccountList/index.tsx`: `handleBulkCopySiteUrls` (analytics, toasts).
-- `src/locales/*/account.json` (8 locales): `bulk.copySiteUrls`, `bulk.copySiteUrlsSuccess(_one/_many/_other)`, `bulk.copySiteUrlsClipboardFailed`, plus the reworded `bulk.selectVisible` / `bulk.clearVisible`.
+- `AccountList/index.tsx`: `handleBulkCopySiteUrls` (analytics, toasts, `isBulkCopyingSiteUrls` busy tracking and re-entry guard).
+- `src/locales/*/account.json` (8 locales): `bulk.copySiteUrls`, `bulk.copySiteUrlsSuccess(_one/_many/_other)`, `bulk.copySiteUrlsClipboardFailed`, `bulk.copySiteUrlsNone`, plus the reworded `bulk.selectVisible` / `bulk.clearVisible`.
 - `docs/docs/account-management.md` + `en/` + `ja/`: bulk action list.
 - `e2e/accountToolbarLayout.spec.ts`: renamed selectors, plus a `Copy site URLs` / `复制站点地址` visibility assertion at 320/480/960/1280 in both themes.
 

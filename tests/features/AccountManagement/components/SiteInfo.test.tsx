@@ -373,6 +373,24 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("falls back to only the URL in the open-site tooltip description when name matches URL", async () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          name: "https://provider.example.com",
+          baseUrl: "https://provider.example.com",
+        })}
+      />,
+    )
+
+    const siteLinkButton = await screen.findByRole("button", {
+      name: "https://provider.example.com",
+    })
+    expect(siteLinkButton).toHaveAccessibleDescription(
+      "account:actions.openSite: https://provider.example.com",
+    )
+  })
+
   it("shows the raw site type in the account row", () => {
     render(<SiteInfo site={buildSite({ siteType: SITE_TYPES.SUB2API })} />)
 

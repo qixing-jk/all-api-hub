@@ -3100,6 +3100,127 @@ describe("AccountList", () => {
     })
   })
 
+  it("shows an error and preserves clipboard when no selected accounts have copyable site URLs", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    const blankAccount = buildDisplaySiteData({
+      id: "site-url-blank",
+      name: "Site URL Blank",
+      disabled: false,
+      baseUrl: "   ",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [blankAccount],
+        displayData: [blankAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("site-url-blank"),
+      ),
+    )
+
+    await user.click(await getBulkAction(user, "copySiteUrls"))
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:bulk.copySiteUrlsNone",
+      )
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: {
+          itemCount: 0,
+          selectedCount: 1,
+          successCount: 0,
+          failureCount: 0,
+          skippedCount: 1,
+        },
+      })
+    })
+  })
+
+  it("prevents same-turn re-entry and ignores second click while site-URL copy is pending", async () => {
+    const user = userEvent.setup()
+    let resolveClipboard: (() => void) | undefined
+    const pendingWrite = new Promise<void>((resolve) => {
+      resolveClipboard = resolve
+    })
+    const clickTarget = { current: null as HTMLElement | null }
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({
+        writeText: clipboardWriteTextMock.mockImplementation(() => {
+          clickTarget.current?.click()
+          return pendingWrite
+        }),
+      }),
+    })
+    const pendingAccount = buildDisplaySiteData({
+      id: "site-url-reentry",
+      name: "Site URL Re-entry",
+      disabled: false,
+      baseUrl: "https://site-url-reentry.example.invalid",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [pendingAccount],
+        displayData: [pendingAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("site-url-reentry"),
+      ),
+    )
+
+    const bulkCopyButton = await getBulkAction(user, "copySiteUrls")
+    clickTarget.current = bulkCopyButton
+    await user.click(bulkCopyButton)
+
+    await act(async () => {
+      resolveClipboard?.()
+    })
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      trackProductAnalyticsActionStartedMock.mock.calls.filter(
+        ([context]) =>
+          context.actionId ===
+          PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
+      ),
+    ).toHaveLength(1)
+  })
+
   it("prevents same-turn re-entry when bulk invite-link copy starts", async () => {
     const user = userEvent.setup()
     const pendingAccount = buildDisplaySiteData({

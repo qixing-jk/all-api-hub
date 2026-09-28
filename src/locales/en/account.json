@@ -71,6 +71,7 @@
     "copyInviteLinksUnsupported": "The current selection does not support invite links.",
     "copySiteUrls": "Copy site URLs",
     "copySiteUrlsClipboardFailed": "Clipboard access was blocked. Copy the site URLs from the account list manually.",
+    "copySiteUrlsNone": "The selected accounts do not have site addresses to copy.",
     "copySiteUrlsSuccess_one": "Copied {{count}} site URL.",
     "copySiteUrlsSuccess_other": "Copied {{count}} site URLs.",
     "deleteConfirmAction": "Delete selected",

@@ -70,6 +70,7 @@
     "copyInviteLinksUnsupported": "当前所选账号暂不支持邀请链接。",
     "copySiteUrls": "复制站点地址",
     "copySiteUrlsClipboardFailed": "浏览器无法写入剪贴板，请手动复制账号列表中的站点地址。",
+    "copySiteUrlsNone": "所选账号没有可复制的站点地址。",
     "copySiteUrlsSuccess": "已复制 {{count}} 个站点地址。",
     "deleteConfirmAction": "删除已选账号",
     "deleteConfirmDescription": "你将删除 {{count}} 个已选账号。请在确认前仔细检查这些选择。",

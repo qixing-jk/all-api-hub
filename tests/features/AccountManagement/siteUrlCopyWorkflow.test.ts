@@ -110,11 +110,31 @@ describe("runSiteUrlCopyWorkflow", () => {
     })
   })
 
-  it("writes an empty payload without throwing when nothing is copyable", async () => {
+  it("returns NoCopyableUrls without overwriting clipboard when nothing is copyable", async () => {
+    const result = await runSiteUrlCopyWorkflow({
+      accounts: [
+        buildDisplaySiteData({ id: "blank-1", baseUrl: "" }),
+        buildDisplaySiteData({ id: "blank-2", baseUrl: "   " }),
+      ],
+    })
+
+    expect(result).toEqual({
+      result: SITE_URL_COPY_RESULTS.NoCopyableUrls,
+      payload: "",
+      selectedCount: 2,
+      itemCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      skippedCount: 2,
+    })
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+  })
+
+  it("returns NoCopyableUrls without overwriting clipboard when accounts list is empty", async () => {
     const result = await runSiteUrlCopyWorkflow({ accounts: [] })
 
     expect(result).toEqual({
-      result: SITE_URL_COPY_RESULTS.Success,
+      result: SITE_URL_COPY_RESULTS.NoCopyableUrls,
       payload: "",
       selectedCount: 0,
       itemCount: 0,
@@ -122,6 +142,6 @@ describe("runSiteUrlCopyWorkflow", () => {
       failureCount: 0,
       skippedCount: 0,
     })
-    expect(clipboardWriteTextMock).toHaveBeenCalledWith("")
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
   })
 })

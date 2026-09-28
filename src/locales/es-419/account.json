@@ -72,6 +72,7 @@
     "copyInviteLinksUnsupported": "La selección actual no admite enlaces de invitación.",
     "copySiteUrls": "Copiar URL de los sitios",
     "copySiteUrlsClipboardFailed": "El navegador no pudo escribir en el portapapeles. Copia manualmente las URL de los sitios desde la lista de cuentas.",
+    "copySiteUrlsNone": "Las cuentas seleccionadas no tienen URL de sitios para copiar.",
     "copySiteUrlsSuccess_one": "Se copió {{count}} URL del sitio.",
     "copySiteUrlsSuccess_many": "Se copiaron {{count}} URL de los sitios.",
     "copySiteUrlsSuccess_other": "Se copiaron {{count}} URL de los sitios.",

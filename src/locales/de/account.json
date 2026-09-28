@@ -71,6 +71,7 @@
     "copyInviteLinksUnsupported": "Die aktuelle Auswahl unterstützt keine Einladungslinks.",
     "copySiteUrls": "Website-URLs kopieren",
     "copySiteUrlsClipboardFailed": "Der Browser konnte nicht in die Zwischenablage schreiben. Kopieren Sie die Website-URLs bitte manuell aus der Kontoliste.",
+    "copySiteUrlsNone": "Die ausgewählten Konten haben keine Website-URLs zum Kopieren.",
     "copySiteUrlsSuccess_one": "{{count}} Website-URL kopiert.",
     "copySiteUrlsSuccess_other": "{{count}} Website-URLs kopiert.",
     "deleteConfirmAction": "Ausgewählte löschen",

@@ -165,6 +165,7 @@ export default function AccountList({
   const [isBulkDisabling, setIsBulkDisabling] = useState(false)
   const [isBulkCopyingInviteLinks, setIsBulkCopyingInviteLinks] =
     useState(false)
+  const [isBulkCopyingSiteUrls, setIsBulkCopyingSiteUrls] = useState(false)
   const [manualInviteLinkPayload, setManualInviteLinkPayload] = useState<
     string | null
   >(null)
@@ -185,6 +186,7 @@ export default function AccountList({
   const isReorderSavingRef = useRef(false)
   const isMountedRef = useRef(true)
   const inviteLinkCopyAbortControllerRef = useRef<AbortController | null>(null)
+  const isBulkCopyingSiteUrlsRef = useRef(false)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
@@ -492,7 +494,10 @@ export default function AccountList({
     isReorderSaving
   const handleLabel = t("account:list.dragHandle")
   const isBulkBusy =
-    isBulkDeleting || isBulkDisabling || isBulkCopyingInviteLinks
+    isBulkDeleting ||
+    isBulkDisabling ||
+    isBulkCopyingInviteLinks ||
+    isBulkCopyingSiteUrls
   const shouldRenderSortableList =
     isReorderMode &&
     isManualSortFeatureEnabled &&
@@ -791,7 +796,11 @@ export default function AccountList({
   }
 
   const handleBulkCopySiteUrls = async () => {
-    if (selectedAccounts.length === 0 || isBulkBusy) {
+    if (
+      selectedAccounts.length === 0 ||
+      isBulkBusy ||
+      isBulkCopyingSiteUrlsRef.current
+    ) {
       return
     }
 
@@ -799,30 +808,48 @@ export default function AccountList({
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
     })
-    const result = await runSiteUrlCopyWorkflow({
-      accounts: selectedAccountsInDisplayOrder,
-    })
-    const insights = {
-      itemCount: result.itemCount,
-      selectedCount: result.selectedCount,
-      successCount: result.successCount,
-      failureCount: result.failureCount,
-      skippedCount: result.skippedCount,
-    }
-
-    if (result.result === SITE_URL_COPY_RESULTS.ClipboardFailure) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-        insights,
+    isBulkCopyingSiteUrlsRef.current = true
+    setIsBulkCopyingSiteUrls(true)
+    try {
+      const result = await runSiteUrlCopyWorkflow({
+        accounts: selectedAccountsInDisplayOrder,
       })
-      toast.error(t("account:bulk.copySiteUrlsClipboardFailed"))
-      return
-    }
+      const insights = {
+        itemCount: result.itemCount,
+        selectedCount: result.selectedCount,
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        skippedCount: result.skippedCount,
+      }
 
-    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
-    toast.success(
-      t("account:bulk.copySiteUrlsSuccess", { count: result.itemCount }),
-    )
+      if (result.result === SITE_URL_COPY_RESULTS.NoCopyableUrls) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+          insights,
+        })
+        toast.error(t("account:bulk.copySiteUrlsNone"))
+        return
+      }
+
+      if (result.result === SITE_URL_COPY_RESULTS.ClipboardFailure) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+          insights,
+        })
+        toast.error(t("account:bulk.copySiteUrlsClipboardFailed"))
+        return
+      }
+
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
+      toast.success(
+        t("account:bulk.copySiteUrlsSuccess", { count: result.itemCount }),
+      )
+    } finally {
+      isBulkCopyingSiteUrlsRef.current = false
+      if (isMountedRef.current) {
+        setIsBulkCopyingSiteUrls(false)
+      }
+    }
   }
 
   const handleBulkDelete = async () => {

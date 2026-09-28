@@ -70,6 +70,7 @@
     "copyInviteLinksUnsupported": "Các tài khoản đã chọn hiện không hỗ trợ liên kết mời.",
     "copySiteUrls": "Sao chép URL trang",
     "copySiteUrlsClipboardFailed": "Trình duyệt không thể ghi vào bộ nhớ tạm. Vui lòng sao chép thủ công URL trang trong danh sách tài khoản.",
+    "copySiteUrlsNone": "Các tài khoản đã chọn không có URL trang để sao chép.",
     "copySiteUrlsSuccess_other": "Đã sao chép {{count}} URL trang.",
     "deleteConfirmAction": "Xóa các tài khoản đã chọn",
     "deleteConfirmDescription_other": "Bạn sẽ xóa {{count}} tài khoản đã chọn. Vui lòng kiểm tra kỹ các lựa chọn này trước khi xác nhận.",

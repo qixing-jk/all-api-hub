@@ -70,6 +70,7 @@
     "copyInviteLinksUnsupported": "目前所選帳號暫不支援邀請連結。",
     "copySiteUrls": "複製站點 URL",
     "copySiteUrlsClipboardFailed": "瀏覽器無法寫入剪貼簿，請手動複製帳號列表中的站點 URL。",
+    "copySiteUrlsNone": "所選帳號沒有可複製的站點 URL。",
     "copySiteUrlsSuccess_other": "已複製 {{count}} 個站點 URL。",
     "deleteConfirmAction": "刪除已選帳號",
     "deleteConfirmDescription_other": "你將刪除 {{count}} 個已選帳號。請在確認前仔細檢查這些選擇。",

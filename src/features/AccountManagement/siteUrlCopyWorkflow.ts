@@ -3,16 +3,17 @@ import type { DisplaySiteData } from "~/types"
 export const SITE_URL_COPY_RESULTS = {
   Success: "success",
   ClipboardFailure: "clipboard_failure",
+  NoCopyableUrls: "no_copyable_urls",
 } as const
 
-type SiteUrlCopyResult =
+export type SiteUrlCopyResult =
   (typeof SITE_URL_COPY_RESULTS)[keyof typeof SITE_URL_COPY_RESULTS]
 
 interface RunSiteUrlCopyWorkflowOptions {
   accounts: DisplaySiteData[]
 }
 
-interface SiteUrlCopyWorkflowResult {
+export interface SiteUrlCopyWorkflowResult {
   result: SiteUrlCopyResult
   payload: string
   selectedCount: number
@@ -41,6 +42,15 @@ export async function runSiteUrlCopyWorkflow({
     selectedCount: accounts.length,
     itemCount: siteUrls.length,
     skippedCount: accounts.length - siteUrls.length,
+  }
+
+  if (siteUrls.length === 0) {
+    return {
+      ...baseResult,
+      result: SITE_URL_COPY_RESULTS.NoCopyableUrls,
+      successCount: 0,
+      failureCount: 0,
+    }
   }
 
   try {

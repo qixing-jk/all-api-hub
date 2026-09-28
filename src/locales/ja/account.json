@@ -70,6 +70,7 @@
     "copyInviteLinksUnsupported": "現在の選択では招待リンクに対応していません。",
     "copySiteUrls": "サイト URL をコピー",
     "copySiteUrlsClipboardFailed": "ブラウザーがクリップボードに書き込めません。アカウント一覧のサイト URL を手動でコピーしてください。",
+    "copySiteUrlsNone": "選択したアカウントにはコピーできるサイト URL がありません。",
     "copySiteUrlsSuccess_other": "{{count}} 件のサイト URL をコピーしました。",
     "deleteConfirmAction": "選択したアカウントを削除",
     "deleteConfirmDescription_other": "選択した {{count}} 件のアカウントを削除しようとしています。確認前に選択内容をよく確認してください。",
