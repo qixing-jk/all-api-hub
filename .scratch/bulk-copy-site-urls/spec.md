@@ -20,6 +20,7 @@ Two changes in the options-page account bulk toolbar:
 - **Clipboard failure**: a toast that points at the account list (`请手动复制账号列表中的站点地址。`) rather than the invite-link manual-copy dialog. Invite links need that dialog because the payload was generated and appears nowhere else; addresses are already on screen and one click away from a retry.
 - **Analytics**: new `copy_selected_account_site_urls` action (same shape/insights as `copy_selected_account_invite_links`) so adoption of a new toolbar button is observable.
 - **Rewording**: `全选当前列表` / `取消选中当前列表` (`Select all in this list` / `Deselect all in this list`). `当前结果` never said whose results; `当前列表` names the thing on screen, which is exactly the scope the action has (search + filters applied). Same length as before, so the toolbar's compact-selection breakpoint is unchanged.
+- **Icons**: the selection-scope buttons had none while every action button had one, and the two copy buttons used the generic `Copy`/`Link` glyphs. Added `CheckCheck` / `SquareX` / `Eraser` for scope and clearing, and swapped in `UserPlus` (invite links) / `Globe2` (site addresses). Every toolbar icon keeps the existing `hidden [@container(min-width:24rem)]:block` rule, so narrow layouts stay text-only and the wrap points did not move.
 
 ## Touched surfaces
 
