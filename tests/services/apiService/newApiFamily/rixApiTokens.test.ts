@@ -101,6 +101,15 @@ describe("Rix API token transport", () => {
     await expect(fetchUserGroups(request)).resolves.toEqual(legacyGroups)
   })
 
+  it("falls back to the legacy group payload when the 6.x endpoint returns a non-array", async () => {
+    mockData.mockResolvedValue({ not: "an array" })
+    const legacyGroups = { default: { desc: "Default", ratio: 1 } }
+    mockDefaultFetchUserGroups.mockResolvedValue(legacyGroups)
+
+    await expect(fetchUserGroups(request)).resolves.toEqual(legacyGroups)
+    expect(mockDefaultFetchUserGroups).toHaveBeenCalledWith(request)
+  })
+
   it("starts from the remembered group endpoint on the next read", async () => {
     mockData.mockRejectedValue(new Error("not found"))
     const legacyGroups = { default: { desc: "Default", ratio: 1 } }

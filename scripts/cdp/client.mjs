@@ -103,6 +103,17 @@ export async function connectDevExtension({
       const { targetInfos } = await session.send("Target.getTargets")
       for (const t of targetInfos) {
         if (t.url && t.url.startsWith("chrome-extension://")) {
+          const lowerTitle = (t.title || "").toLowerCase()
+          const isAah =
+            lowerTitle.includes("all api hub") ||
+            lowerTitle.includes("all-api-hub")
+          if (!isAah) continue
+          if (
+            lowerTitle.includes("dev") &&
+            !lowerTitle.includes(currentWorktree)
+          ) {
+            continue
+          }
           targetExtId = new URL(t.url).hostname
           break
         }
@@ -130,6 +141,10 @@ export async function connectDevExtension({
     await dummy.waitForTimeout(600)
     await dummy.close().catch(() => {})
     sw = context.serviceWorkers().find((w) => w.url().includes(targetExtId))
+  }
+  if (!sw) {
+    await browser.close().catch(() => {})
+    throw new Error(`扩展 ${targetExtId} 的 Service Worker 未激活。`)
   }
 
   return {

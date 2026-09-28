@@ -7,6 +7,7 @@ import {
   fetchAccountData as fetchRixApiAccountData,
   fetchAccountQuota as fetchRixApiAccountQuota,
   fetchUserInfo as fetchRixApiUserInfo,
+  refreshAccountData as refreshRixApiAccountData,
 } from "~/services/apiService/newApiFamily/variants/rixApi"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
@@ -253,5 +254,33 @@ describe("Rix API account data variant", () => {
     await expect(
       fetchRixApiAccessToken(request, { expectedUserId: "white-label-owner" }),
     ).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it("preserves login providers when existing access token is returned", async () => {
+    mockData.mockResolvedValue({
+      username: "demo-owner",
+      access_token: "existing-token",
+      github_id: "gh-12345",
+    })
+
+    await expect(
+      fetchRixApiAccessToken(request, { expectedUserId: "demo-owner" }),
+    ).resolves.toEqual({
+      username: "demo-owner",
+      access_token: "existing-token",
+      loginProviders: ["github"],
+    })
+  })
+
+  it("handles failure when refreshing account data", async () => {
+    mockData.mockRejectedValue(new Error("network failure"))
+
+    const result = await refreshRixApiAccountData({
+      ...request,
+      siteType: SITE_TYPES.RIX_API,
+      checkIn: buildCheckInConfig(),
+    })
+    expect(result.success).toBe(false)
+    expect(result.healthStatus).toBeDefined()
   })
 })

@@ -13,10 +13,11 @@ export async function testModelCatalogFlow({ page, extensionId, accountName }) {
   await page.waitForTimeout(1000)
   await dismissModals(page)
 
+  const escapedName = accountName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const selectSourceBtn = page
     .getByRole("button")
     .filter({
-      hasText: new RegExp(`请选择数据源|选择数据源|${accountName}`, "i"),
+      hasText: new RegExp(`请选择数据源|选择数据源|${escapedName}`, "i"),
     })
     .first()
 

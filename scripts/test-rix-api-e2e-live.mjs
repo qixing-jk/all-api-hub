@@ -51,6 +51,9 @@ async function main() {
     console.log(
       `\n✅ 协议层探测结果: ${probeResult.ok ? "命中 Rix API 结构签名" : "未完全命中"} (版本: ${probeResult.version}, 模型数: ${probeResult.modelCount})`,
     )
+    if (!probeResult.ok) {
+      process.exitCode = 1
+    }
   }
 
   // 2. UI 自动化实测阶段 (需要 CDP)

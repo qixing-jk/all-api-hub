@@ -157,4 +157,24 @@ describe("Rix API dialect memory", () => {
 
     await expect(resolveTokenGroups(attempt)).rejects.toBe(failure)
   })
+
+  it("evicts the oldest deployment entry when cache exceeds maximum size", async () => {
+    for (let i = 0; i < 100; i++) {
+      const attempt = vi
+        .fn<(candidate: string) => Promise<string>>()
+        .mockResolvedValue(`res-${i}`)
+      await resolveTokenGroups(attempt, `https://deploy-${i}.example.invalid`)
+    }
+
+    const attempt100 = vi
+      .fn<(candidate: string) => Promise<string>>()
+      .mockResolvedValue("res-100")
+    await resolveTokenGroups(attempt100, "https://deploy-100.example.invalid")
+
+    const reprobeAttempt = vi
+      .fn<(candidate: string) => Promise<string>>()
+      .mockResolvedValue("reprobe")
+    await resolveTokenGroups(reprobeAttempt, "https://deploy-0.example.invalid")
+    expect(reprobeAttempt).toHaveBeenCalledWith("token-group")
+  })
 })

@@ -45,11 +45,16 @@ export async function runAiRouterUiTest({
 
     try {
       // 1. 装配通用账户卡片展示流
-      await testAccountCardFlow({
+      const cardResult = await testAccountCardFlow({
         page,
         extensionId,
         accountName: accountFixture.site_name,
       })
+      if (!cardResult?.ok) {
+        throw new Error(
+          `AI-Router 账户卡片流校验失败: [${accountFixture.site_name}] 未能正常渲染`,
+        )
+      }
 
       // 2. 验证 #models 页面渲染
       console.log("  [UI 步骤 2] 验证 #models 页面渲染...")
@@ -68,6 +73,9 @@ export async function runAiRouterUiTest({
       console.log(
         `  - 模型页根容器加载渲染: ${isModelsVisible ? "✅ 正常" : "❌ 异常"}`,
       )
+      if (!isModelsVisible) {
+        throw new Error("AI-Router 模型页根容器未能正常渲染")
+      }
       console.log("  ✅ AI-Router UI 实测通过，沙盒账号已触发自动清理。")
     } finally {
       await page.close().catch(() => {})

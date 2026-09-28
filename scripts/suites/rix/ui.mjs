@@ -24,22 +24,28 @@ export async function runRixUiTest({
     // -------------------------------------------------------------
     // UI 测试 1: 装配通用自动识别流
     // -------------------------------------------------------------
-    await testAutoDetectFlow({
+    const autoDetectResult = await testAutoDetectFlow({
       page,
       targetUrl,
       expectedType: "Rix",
     })
+    if (!autoDetectResult?.ok) {
+      throw new Error(`Rix 自动识别流失败: 站点 [${targetUrl}] 未能识别为 Rix`)
+    }
 
     // -------------------------------------------------------------
     // UI 测试 2: 装配通用模型目录流 (结合安全沙盒)
     // -------------------------------------------------------------
+    const targetOrigin = new URL(targetUrl).origin
     const existingAccounts = await getAccounts(serviceWorker)
-    const matchedAccount = existingAccounts.find(
-      (a) =>
-        a.site_type === "Rix-Api" ||
-        (a.site_url &&
-          (a.site_url.includes("ephone") || a.site_url.includes("88996"))),
-    )
+    const matchedAccount = existingAccounts.find((a) => {
+      if (a.site_type !== "Rix-Api" || !a.site_url) return false
+      try {
+        return new URL(a.site_url).origin === targetOrigin
+      } catch {
+        return false
+      }
+    })
 
     const testFixture = matchedAccount || {
       id: "sandbox-temp-rix-account",
@@ -55,13 +61,19 @@ export async function runRixUiTest({
     const targetAccountName = testFixture.site_name
 
     // 无论是否注入临时账号，均通过沙盒保证测试后状态完全复原
+    let modelCatalogResult
     await withTemporaryAccount(serviceWorker, testFixture, async () => {
-      await testModelCatalogFlow({
+      modelCatalogResult = await testModelCatalogFlow({
         page,
         extensionId,
         accountName: targetAccountName,
       })
     })
+    if (!modelCatalogResult?.ok) {
+      throw new Error(
+        `Rix 模型目录流校验失败: [${targetAccountName}] 未能渲染模型或模型数为 0`,
+      )
+    }
 
     console.log("  ✅ Rix UI 端到端交互实测全部完成，沙盒现场已安全复原。")
   } finally {

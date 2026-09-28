@@ -573,4 +573,137 @@ describe("Rix API model pricing", () => {
       unit: PRICE_RATE_UNITS.REQUEST,
     })
   })
+
+  it("handles original_price without conditions array and fallback", () => {
+    const row = {
+      id: 101,
+      model_name: "test-no-conditions",
+      price_config: { original_price: { conditions: null } },
+      price_info: { default: { model_ratio: 1 } },
+    }
+    const snapshot = normalizeRixApiModelPricingResponse(
+      buildEnvelope({ model_info: [row] }),
+    )
+    expect(snapshot.data).toHaveLength(1)
+    expect(snapshot.data[0]?.model_name).toBe("test-no-conditions")
+  })
+
+  it("normalizes price_info when default is not an object and cache ratios are present", () => {
+    const row = {
+      id: 102,
+      model_name: "test-v5-cache",
+      price_info: {
+        default: {
+          quota_type: 1,
+          model_ratio: 2,
+          model_completion_ratio: 2,
+          model_cache_ratio: 0.25,
+          model_create_cache_ratio: 1.5,
+        },
+      },
+    }
+    const snapshot = normalizeRixApiModelPricingResponse(
+      buildEnvelope({ model_info: [row] }),
+    )
+    expect(snapshot.data[0]?.token_price_usd_per_million).toEqual({
+      input: 4,
+      output: 8,
+      cache_read: 1,
+      cache_write: 6,
+    })
+  })
+
+  it("handles prompt_tiers with multiple tiers", () => {
+    const row = {
+      id: 103,
+      model_name: "test-tiers",
+      price_config: {
+        original_price: {
+          conditions: [
+            {
+              name: "tier-test",
+              price: {
+                quota_type: 1,
+                input_token_price: 1,
+                output_token_price: 2,
+              },
+              prompt_tiers: [{ max: 1000 }, { max: 2000 }],
+            },
+          ],
+        },
+      },
+    }
+    const snapshot = normalizeRixApiModelPricingResponse(
+      buildEnvelope({ model_info: [row] }),
+    )
+    expect(snapshot.data[0]?.model_name).toBe("test-tiers")
+  })
+
+  it("skips model when row has no pricing configuration", () => {
+    const row = {
+      id: 104,
+      model_name: "test-no-pricing",
+    }
+    const snapshot = normalizeRixApiModelPricingResponse(
+      buildEnvelope({ model_info: [row] }),
+    )
+    expect(snapshot.data).toHaveLength(0)
+  })
+
+  it("filters invalid vendors in vendor_info", () => {
+    const envelope = buildEnvelope({
+      vendor_info: [
+        null,
+        "invalid",
+        { id: "not-number", name: "bad" },
+        { id: 1.5, name: "float" },
+        { id: 2, name: 123 },
+        { id: 3, name: "   " },
+        { id: 4, name: "ValidVendor" },
+      ],
+      model_info: [
+        {
+          id: 105,
+          model_name: "test-vendor",
+          vendor_id: 4,
+          price_info: { default: { model_ratio: 1 } },
+        },
+      ],
+    })
+    const snapshot = normalizeRixApiModelPricingResponse(envelope)
+    expect(snapshot.data[0]?.vendorEvidence?.name).toBe("ValidVendor")
+  })
+
+  it("falls back to empty enable_groups when enable_groups is not array and price_info missing", () => {
+    const row = {
+      id: 106,
+      model_name: "test-no-groups",
+      enable_groups: "not-an-array",
+      price_info: null,
+      price_config: usdTokenRow.price_config,
+    }
+    const snapshot = normalizeRixApiModelPricingResponse(
+      buildEnvelope({ model_info: [row] }),
+    )
+    expect(snapshot.data[0]?.enable_groups).toEqual([])
+  })
+
+  it("throws on non-plain-object response", () => {
+    expect(() => normalizeRixApiModelPricingResponse(null)).toThrow()
+    expect(() => normalizeRixApiModelPricingResponse("string")).toThrow()
+  })
+
+  it("resolves authoritative empty group access when both usableGroups and group ratios are empty", () => {
+    const envelope = buildEnvelope({
+      group_info: null,
+      user_info: null,
+      level_info: null,
+      model_info: [],
+    })
+    const snapshot = normalizeRixApiModelPricingResponse(envelope)
+    expect(snapshot.groupAccess).toEqual({
+      kind: "authoritative",
+      usableGroups: [],
+    })
+  })
 })

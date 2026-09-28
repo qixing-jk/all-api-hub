@@ -51,6 +51,9 @@ async function main() {
       console.log(
         `\n✅ AI-Router 协议层探测完成 (分组数: ${probeResult.groups?.length || 0}, 密钥生命周期: ${probeResult.keyCrudOk ? "正常" : "异常"})`,
       )
+      if (!probeResult.ok) {
+        process.exitCode = 1
+      }
     } else {
       console.log(
         "\nℹ️ 未提供 AI_ROUTER_ACCESS_TOKEN，跳过协议探测 (可通过 --token=... 提供)",

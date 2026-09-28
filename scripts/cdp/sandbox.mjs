@@ -97,12 +97,18 @@ export async function withTemporaryAccount(
   } finally {
     // 3. 强制现场绝对复原原始快照 (统一保证 Plasmo 兼容字符串)
     const restoreVal =
-      typeof snapshotData.raw === "string"
-        ? snapshotData.raw
-        : JSON.stringify(snapshotData.envelope)
+      snapshotData.raw === undefined
+        ? undefined
+        : typeof snapshotData.raw === "string"
+          ? snapshotData.raw
+          : JSON.stringify(snapshotData.envelope)
 
     await serviceWorker.evaluate((original) => {
       return new Promise((resolve) => {
+        if (original === undefined) {
+          chrome.storage.local.remove("site_accounts", () => resolve(true))
+          return
+        }
         chrome.storage.local.set({ site_accounts: original }, () => {
           resolve(true)
         })
