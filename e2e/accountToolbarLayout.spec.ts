@@ -51,7 +51,7 @@ test("keeps bulk selection review and actions usable across widths and themes", 
   await page.getByTestId(ids.accountListBulkManageButton).click()
   const toolbar = page.getByTestId("account-bulk-toolbar")
   await toolbar
-    .getByRole("button", { name: "Select visible results", exact: true })
+    .getByRole("button", { name: "Select all in this list", exact: true })
     .click()
   await expect(toolbar.getByRole("button", { name: "Disable 2" })).toBeVisible()
   await page
@@ -71,11 +71,16 @@ test("keeps bulk selection review and actions usable across widths and themes", 
         name: "Copy invite links",
         exact: true,
       })
+      const directCopySiteUrls = toolbar.getByRole("button", {
+        name: "Copy site URLs",
+        exact: true,
+      })
       const directSelect = toolbar.getByRole("button", {
-        name: "Select visible results",
+        name: "Select all in this list",
         exact: true,
       })
       await expect(directCopy).toBeVisible()
+      await expect(directCopySiteUrls).toBeVisible()
       await expect(
         toolbar.getByRole("button", { name: "Delete selected 3" }),
       ).toBeVisible()
@@ -146,7 +151,7 @@ test("keeps bulk selection review and actions usable across widths and themes", 
   // desktop width instead of assuming Chinese labels need a menu at 320px.
   await page.setViewportSize({ width: 1280, height: 900 })
   await toolbar
-    .getByRole("button", { name: "选择当前结果", exact: true })
+    .getByRole("button", { name: "全选当前列表", exact: true })
     .click()
   for (const width of [1280, 960, 480, 320]) {
     await page.setViewportSize({ width, height: 900 })
@@ -155,7 +160,10 @@ test("keeps bulk selection review and actions usable across widths and themes", 
         toolbar.getByRole("button", { name: "复制邀请链接", exact: true }),
       ).toBeVisible()
       await expect(
-        toolbar.getByRole("button", { name: "选择当前结果", exact: true }),
+        toolbar.getByRole("button", { name: "复制站点地址", exact: true }),
+      ).toBeVisible()
+      await expect(
+        toolbar.getByRole("button", { name: "全选当前列表", exact: true }),
       ).toBeVisible()
     }
     await page.mouse.move(0, 0)

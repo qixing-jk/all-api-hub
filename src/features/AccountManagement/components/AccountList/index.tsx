@@ -31,6 +31,10 @@ import {
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import {
+  runSiteUrlCopyWorkflow,
+  SITE_URL_COPY_RESULTS,
+} from "~/features/AccountManagement/siteUrlCopyWorkflow"
+import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
@@ -779,6 +783,39 @@ export default function AccountList({
     }
   }
 
+  const handleBulkCopySiteUrls = async () => {
+    if (selectedAccounts.length === 0 || isBulkBusy) {
+      return
+    }
+
+    const tracker = startProductAnalyticsAction({
+      ...accountListAnalyticsBaseContext,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
+    })
+    const result = await runSiteUrlCopyWorkflow({ accounts: selectedAccounts })
+    const insights = {
+      itemCount: result.itemCount,
+      selectedCount: result.selectedCount,
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+      skippedCount: result.skippedCount,
+    }
+
+    if (result.result === SITE_URL_COPY_RESULTS.ClipboardFailure) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+        insights,
+      })
+      toast.error(t("account:bulk.copySiteUrlsClipboardFailed"))
+      return
+    }
+
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
+    toast.success(
+      t("account:bulk.copySiteUrlsSuccess", { count: result.itemCount }),
+    )
+  }
+
   const handleBulkDelete = async () => {
     if (selectedAccounts.length === 0 || isBulkBusy) {
       return
@@ -1294,6 +1331,7 @@ export default function AccountList({
             onDeselect={(id) => handleToggleAccountSelection(id, false)}
             onDisable={() => void handleBulkDisable()}
             onCopy={() => void handleBulkCopyInviteLinks()}
+            onCopySiteUrls={() => void handleBulkCopySiteUrls()}
             onDelete={() => setIsBulkDeleteConfirmOpen(true)}
             onExit={handleBulkModeExit}
           />

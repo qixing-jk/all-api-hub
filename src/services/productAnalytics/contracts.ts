@@ -605,6 +605,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyAccountSiteUrl: "copy_account_site_url",
   CopyAccountInviteLink: "copy_account_invite_link",
   CopySelectedAccountInviteLinks: "copy_selected_account_invite_links",
+  CopySelectedAccountSiteUrls: "copy_selected_account_site_urls",
   CopyAccountTokenKey: "copy_account_token_key",
   CopyAccountTokenKelivoImportCode: "copy_account_token_kelivo_import_code",
   CopyServiceCredentialKelivoImportCode:

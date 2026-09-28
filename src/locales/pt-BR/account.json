@@ -58,7 +58,7 @@
   "addFirstAccount": "Adicione sua primeira conta",
   "bulk": {
     "clearAll": "Limpar seleção",
-    "clearVisible": "Limpar seleção visível",
+    "clearVisible": "Desmarcar todos nesta lista",
     "copyInviteLinks": "Copiar links de convite",
     "copyInviteLinksClipboardFailed": "O acesso à área de transferência foi bloqueado. Copie os links de convite gerados manualmente.",
     "copyInviteLinksClipboardFailedWithReasons": "O acesso à área de transferência foi bloqueado. Copie os links de convite gerados manualmente. Outras contas: {{reasonSummary}}.",
@@ -69,6 +69,11 @@
     "copyInviteLinksSuccess_many": "Links de convite {{count}} copiados.",
     "copyInviteLinksSuccess_other": "Links de convite {{count}} copiados.",
     "copyInviteLinksUnsupported": "A seleção atual não suporta links de convite.",
+    "copySiteUrls": "Copiar URL dos sites",
+    "copySiteUrlsClipboardFailed": "O navegador não conseguiu escrever na área de transferência. Copie as URL dos sites manualmente na lista de contas.",
+    "copySiteUrlsSuccess_one": "URL do site {{count}} copiada.",
+    "copySiteUrlsSuccess_many": "URLs de {{count}} sites copiadas.",
+    "copySiteUrlsSuccess_other": "URLs de {{count}} sites copiadas.",
     "deleteConfirmAction": "Excluir selecionado",
     "deleteConfirmDescription_one": "Você está prestes a excluir {{count}} conta selecionada. Revise a seleção antes de confirmar.",
     "deleteConfirmDescription_many": "Você está prestes a excluir {{count}} contas selecionadas. Revise a seleção antes de confirmar.",
@@ -104,7 +109,7 @@
     "selectedSummary_other": "{{selected}} selecionadas",
     "selectionEmpty": "Nenhuma conta selecionada",
     "selectionScope": "Seleção",
-    "selectVisible": "Selecione resultados visíveis"
+    "selectVisible": "Selecionar todos nesta lista"
   },
   "currentLoginAdded": "⚠️O login atual para {{siteName}} já está na sua lista",
   "currentSiteAdded": "⚠️{{siteName}} já tem uma conta salva",

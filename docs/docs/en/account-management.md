@@ -81,11 +81,12 @@ Click the health status icon on the account card to view detailed error informat
 
 Select accounts in Account Management to use the actions below. Search and tag changes retain existing selections, so review all selected accounts and deselect unwanted items before deleting or disabling them.
 
-- **Select Current Results**: Select all accounts matching the current search and tag filters.
-- **Deselect Current Results**: Deselect only accounts in the current filtered results.
+- **Select All in List**: Select all accounts matching the current search and tag filters.
+- **Deselect All in List**: Deselect only accounts in the current filtered results.
 - **Clear All Selections**: Clear all selected accounts.
 - **Disable Selected**: Disable every selected account.
 - **Copy Invitation Links**: Copy invitation links for selected accounts.
+- **Copy Site URLs**: Copy the site URLs of selected accounts, including disabled ones.
 - **Delete Selected**: Delete all selected accounts after confirmation.
 - **Exit Bulk Mode**: Leave bulk-operation mode.
 

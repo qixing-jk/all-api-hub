@@ -58,7 +58,7 @@
   "addFirstAccount": "最初のアカウントを追加",
   "bulk": {
     "clearAll": "選択を解除",
-    "clearVisible": "表示中の選択を解除",
+    "clearVisible": "現在のリストの選択を解除",
     "copyInviteLinks": "招待リンクをコピー",
     "copyInviteLinksClipboardFailed": "クリップボードに書き込めませんでした。生成された招待リンクを手動でコピーしてください。",
     "copyInviteLinksClipboardFailedWithReasons": "クリップボードに書き込めませんでした。生成された招待リンクを手動でコピーしてください。その他のアカウント：{{reasonSummary}}。",
@@ -67,6 +67,9 @@
     "copyInviteLinksPartialSuccess": "{{successCount}} 件の招待リンクをコピーしました。その他のアカウント：{{reasonSummary}}。",
     "copyInviteLinksSuccess_other": "{{count}} 件の招待リンクをコピーしました。",
     "copyInviteLinksUnsupported": "現在の選択では招待リンクに対応していません。",
+    "copySiteUrls": "サイト URL をコピー",
+    "copySiteUrlsClipboardFailed": "ブラウザーがクリップボードに書き込めません。アカウント一覧のサイト URL を手動でコピーしてください。",
+    "copySiteUrlsSuccess_other": "{{count}} 件のサイト URL をコピーしました。",
     "deleteConfirmAction": "選択したアカウントを削除",
     "deleteConfirmDescription_other": "選択した {{count}} 件のアカウントを削除しようとしています。確認前に選択内容をよく確認してください。",
     "deleteConfirmTitle": "選択したアカウントを削除",
@@ -88,7 +91,7 @@
     "selectedSummary_other": "{{selected}} 件を選択",
     "selectionEmpty": "アカウントが選択されていません",
     "selectionScope": "選択範囲",
-    "selectVisible": "表示中の結果を選択"
+    "selectVisible": "現在のリストをすべて選択"
   },
   "currentLoginAdded": "⚠️{{siteName}} の現在のログインは一覧に追加済みです",
   "currentSiteAdded": "⚠️{{siteName}} には保存済みアカウントがあります",

@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, expect, it, vi } from "vitest"
 
 import { AccountBulkToolbar } from "~/features/AccountManagement/components/AccountList/AccountBulkToolbar"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { act, render, screen } from "~~/tests/test-utils/render"
 
 afterEach(() => {
@@ -39,6 +40,7 @@ it("keeps selection available when resizing between direct controls and the comp
     },
   )
   const onSelectVisible = vi.fn()
+  const onCopySiteUrls = vi.fn()
   const user = userEvent.setup()
   render(
     <AccountBulkToolbar
@@ -53,6 +55,7 @@ it("keeps selection available when resizing between direct controls and the comp
       onDeselect={vi.fn()}
       onDisable={vi.fn()}
       onCopy={vi.fn()}
+      onCopySiteUrls={onCopySiteUrls}
       onDelete={vi.fn()}
       onExit={vi.fn()}
     />,
@@ -103,4 +106,36 @@ it("keeps selection available when resizing between direct controls and the comp
   ).toBeEnabled()
   expect(actions).toHaveClass("before:w-px")
   expect(actions).not.toHaveClass("before:h-px")
+})
+
+it("copies site addresses from the action group without leaving bulk mode", async () => {
+  const onCopySiteUrls = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <AccountBulkToolbar
+      selectedAccounts={[buildDisplaySiteData({ id: "alpha" })]}
+      visibleAccountIds={new Set(["alpha"])}
+      isBusy={false}
+      isDisabling={false}
+      isCopying={false}
+      onSelectVisible={vi.fn()}
+      onClearVisible={vi.fn()}
+      onClearAll={vi.fn()}
+      onDeselect={vi.fn()}
+      onDisable={vi.fn()}
+      onCopy={vi.fn()}
+      onCopySiteUrls={onCopySiteUrls}
+      onDelete={vi.fn()}
+      onExit={vi.fn()}
+    />,
+  )
+
+  const copySiteUrlsButton = await screen.findByRole("button", {
+    name: "account:bulk.copySiteUrls",
+  })
+  expect(copySiteUrlsButton).toBeEnabled()
+
+  await user.click(copySiteUrlsButton)
+
+  expect(onCopySiteUrls).toHaveBeenCalledTimes(1)
 })

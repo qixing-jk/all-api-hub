@@ -58,7 +58,7 @@
   "addFirstAccount": "Fügen Sie Ihr erstes Konto hinzu",
   "bulk": {
     "clearAll": "Auswahl löschen",
-    "clearVisible": "Sichtbare Auswahl löschen",
+    "clearVisible": "Auswahl in dieser Liste aufheben",
     "copyInviteLinks": "Einladungslinks kopieren",
     "copyInviteLinksClipboardFailed": "Der Zugriff auf die Zwischenablage wurde blockiert. Kopieren Sie die generierten Einladungslinks manuell.",
     "copyInviteLinksClipboardFailedWithReasons": "Der Zugriff auf die Zwischenablage wurde blockiert. Kopieren Sie die generierten Einladungslinks manuell. Andere Konten: {{reasonSummary}}.",
@@ -68,6 +68,10 @@
     "copyInviteLinksSuccess_one": "{{count}} Einladungslink kopiert.",
     "copyInviteLinksSuccess_other": "{{count}} Einladungslinks kopiert.",
     "copyInviteLinksUnsupported": "Die aktuelle Auswahl unterstützt keine Einladungslinks.",
+    "copySiteUrls": "Website-URLs kopieren",
+    "copySiteUrlsClipboardFailed": "Der Browser konnte nicht in die Zwischenablage schreiben. Kopieren Sie die Website-URLs bitte manuell aus der Kontoliste.",
+    "copySiteUrlsSuccess_one": "{{count}} Website-URL kopiert.",
+    "copySiteUrlsSuccess_other": "{{count}} Website-URLs kopiert.",
     "deleteConfirmAction": "Ausgewählte löschen",
     "deleteConfirmDescription_one": "Sie sind dabei, {{count}} ausgewähltes Konto zu löschen. Überprüfen Sie die Auswahl sorgfältig, bevor Sie bestätigen.",
     "deleteConfirmDescription_other": "Sie sind dabei, {{count}} ausgewählte Konten zu löschen. Überprüfen Sie die Auswahl sorgfältig, bevor Sie sie bestätigen.",
@@ -96,7 +100,7 @@
     "selectedSummary_other": "{{selected}} ausgewählt",
     "selectionEmpty": "Keine Konten ausgewählt",
     "selectionScope": "Auswahl",
-    "selectVisible": "Sichtbare Ergebnisse auswählen"
+    "selectVisible": "Alle in dieser Liste auswählen"
   },
   "currentLoginAdded": "⚠️Der aktuelle Login für {{siteName}} ist bereits in Ihrer Liste",
   "currentSiteAdded": "⚠️{{siteName}} hat bereits ein gespeichertes Konto",

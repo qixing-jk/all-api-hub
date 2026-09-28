@@ -58,7 +58,7 @@
   "addFirstAccount": "Agrega tu primera cuenta",
   "bulk": {
     "clearAll": "Limpiar selección",
-    "clearVisible": "Borrar selección visible",
+    "clearVisible": "Anular selección en esta lista",
     "copyInviteLinks": "Copiar enlaces de invitación",
     "copyInviteLinksClipboardFailed": "El navegador no pudo escribir en el portapapeles. Copia manualmente los enlaces generados.",
     "copyInviteLinksClipboardFailedWithReasons": "El navegador no pudo escribir en el portapapeles. Copia manualmente los enlaces generados. Otras cuentas: {{reasonSummary}}.",
@@ -69,6 +69,11 @@
     "copyInviteLinksSuccess_many": "Se copiaron {{count}} enlaces de invitación.",
     "copyInviteLinksSuccess_other": "Se copiaron {{count}} enlaces de invitación.",
     "copyInviteLinksUnsupported": "La selección actual no admite enlaces de invitación.",
+    "copySiteUrls": "Copiar URL de los sitios",
+    "copySiteUrlsClipboardFailed": "El navegador no pudo escribir en el portapapeles. Copia manualmente las URL de los sitios desde la lista de cuentas.",
+    "copySiteUrlsSuccess_one": "Se copió {{count}} URL del sitio.",
+    "copySiteUrlsSuccess_many": "Se copiaron {{count}} URL de los sitios.",
+    "copySiteUrlsSuccess_other": "Se copiaron {{count}} URL de los sitios.",
     "deleteConfirmAction": "Eliminar seleccionadas",
     "deleteConfirmDescription_one": "Estás por eliminar {{count}} cuenta seleccionada. Revisa la selección con cuidado antes de confirmar.",
     "deleteConfirmDescription_many": "Estás por eliminar {{count}} cuentas seleccionadas. Revisa la selección con cuidado antes de confirmar.",
@@ -104,7 +109,7 @@
     "selectedSummary_other": "{{selected}} seleccionadas",
     "selectionEmpty": "No hay cuentas seleccionadas",
     "selectionScope": "Selección",
-    "selectVisible": "Seleccionar resultados visibles"
+    "selectVisible": "Seleccionar todo en esta lista"
   },
   "currentLoginAdded": "⚠️El inicio de sesión actual de {{siteName}} ya está en tu lista",
   "currentSiteAdded": "⚠️{{siteName}} ya tiene una cuenta guardada",

@@ -1,4 +1,4 @@
-import { Ban, ChevronDown, Copy, ListChecks, Trash2 } from "lucide-react"
+import { Ban, ChevronDown, Copy, Link, ListChecks, Trash2 } from "lucide-react"
 import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -24,6 +24,7 @@ interface AccountBulkToolbarProps {
   onDeselect: (id: string) => void
   onDisable: () => void
   onCopy: () => void
+  onCopySiteUrls: () => void
   onDelete: () => void
   onExit: () => void
 }
@@ -43,6 +44,7 @@ export function AccountBulkToolbar({
   onDeselect,
   onDisable,
   onCopy,
+  onCopySiteUrls,
   onDelete,
   onExit,
 }: AccountBulkToolbarProps) {
@@ -258,6 +260,20 @@ export function AccountBulkToolbar({
               {isCopying
                 ? t("common:status.copying")
                 : t("account:bulk.copyInviteLinks")}
+            </Button>
+            {/* Stored addresses cover disabled accounts too, so this follows
+                the selection count instead of the enabled count. */}
+            <Button
+              variant="outline"
+              size="sm"
+              className={controlClass}
+              onClick={onCopySiteUrls}
+              leftIcon={
+                <Link className="hidden size-3.5 [@container(min-width:24rem)]:block" />
+              }
+              disabled={selectedCount === 0 || isBusy}
+            >
+              {t("account:bulk.copySiteUrls")}
             </Button>
             <Button
               variant="outline"

@@ -58,7 +58,7 @@
   "addFirstAccount": "添加你的第一个站点账号",
   "bulk": {
     "clearAll": "清空选择",
-    "clearVisible": "取消当前结果选择",
+    "clearVisible": "取消选中当前列表",
     "copyInviteLinks": "复制邀请链接",
     "copyInviteLinksClipboardFailed": "浏览器无法写入剪贴板，请手动复制已生成的邀请链接。",
     "copyInviteLinksClipboardFailedWithReasons": "浏览器无法写入剪贴板，请手动复制已生成的邀请链接。其他账号：{{reasonSummary}}。",
@@ -67,6 +67,9 @@
     "copyInviteLinksPartialSuccess": "已复制 {{successCount}} 个邀请链接；其余账号：{{reasonSummary}}。",
     "copyInviteLinksSuccess": "已复制 {{count}} 个邀请链接。",
     "copyInviteLinksUnsupported": "当前所选账号暂不支持邀请链接。",
+    "copySiteUrls": "复制站点地址",
+    "copySiteUrlsClipboardFailed": "浏览器无法写入剪贴板，请手动复制账号列表中的站点地址。",
+    "copySiteUrlsSuccess": "已复制 {{count}} 个站点地址。",
     "deleteConfirmAction": "删除已选账号",
     "deleteConfirmDescription": "你将删除 {{count}} 个已选账号。请在确认前仔细检查这些选择。",
     "deleteConfirmTitle": "删除已选账号",
@@ -88,7 +91,7 @@
     "selectedSummary": "已选 {{selected}} 个",
     "selectionEmpty": "尚未选择账号",
     "selectionScope": "选择范围",
-    "selectVisible": "选择当前结果"
+    "selectVisible": "全选当前列表"
   },
   "currentLoginAdded": "⚠️{{siteName}} 的当前登录账号已在列表中",
   "currentSiteAdded": "⚠️{{siteName}} 已有账号",

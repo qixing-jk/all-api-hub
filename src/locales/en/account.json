@@ -58,7 +58,7 @@
   "addFirstAccount": "Add your first account",
   "bulk": {
     "clearAll": "Clear selection",
-    "clearVisible": "Clear visible selection",
+    "clearVisible": "Deselect all in this list",
     "copyInviteLinks": "Copy invite links",
     "copyInviteLinksClipboardFailed": "Clipboard access was blocked. Copy the generated invite links manually.",
     "copyInviteLinksClipboardFailedWithReasons": "Clipboard access was blocked. Copy the generated invite links manually. Other accounts: {{reasonSummary}}.",
@@ -68,6 +68,10 @@
     "copyInviteLinksSuccess_one": "Copied {{count}} invite link.",
     "copyInviteLinksSuccess_other": "Copied {{count}} invite links.",
     "copyInviteLinksUnsupported": "The current selection does not support invite links.",
+    "copySiteUrls": "Copy site URLs",
+    "copySiteUrlsClipboardFailed": "Clipboard access was blocked. Copy the site URLs from the account list manually.",
+    "copySiteUrlsSuccess_one": "Copied {{count}} site URL.",
+    "copySiteUrlsSuccess_other": "Copied {{count}} site URLs.",
     "deleteConfirmAction": "Delete selected",
     "deleteConfirmDescription_one": "You are about to delete {{count}} selected account. Review the selection carefully before confirming.",
     "deleteConfirmDescription_other": "You are about to delete {{count}} selected accounts. Review the selection carefully before confirming.",
@@ -96,7 +100,7 @@
     "selectedSummary_other": "{{selected}} selected",
     "selectionEmpty": "No accounts selected",
     "selectionScope": "Selection",
-    "selectVisible": "Select visible results"
+    "selectVisible": "Select all in this list"
   },
   "currentLoginAdded": "⚠️The current login for {{siteName}} is already in your list",
   "currentSiteAdded": "⚠️{{siteName}} already has a saved account",
