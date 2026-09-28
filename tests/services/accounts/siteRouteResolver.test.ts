@@ -8,7 +8,7 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import {
-  clearSiteRouteThemeCacheForTests,
+  clearSiteRouteFactsCacheForTests,
   resolveNewApiAccountRoutePath,
 } from "~/services/apiAdapters/newApi/accountRoutes"
 import { AuthTypeEnum } from "~/types"
@@ -29,7 +29,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 
 describe("siteRouteResolver", () => {
   beforeEach(() => {
-    clearSiteRouteThemeCacheForTests()
+    clearSiteRouteFactsCacheForTests()
     vi.restoreAllMocks()
     mockLoadBootstrapFacts.mockReset()
     mockgetSiteTypeCapabilities.mockReset()

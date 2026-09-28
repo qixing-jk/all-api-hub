@@ -6,6 +6,11 @@ import type {
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
 import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
+import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
+import {
+  readRixApiMajorVersion,
+  recordRixApiMajorVersion,
+} from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import * as veloeraCheckIn from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
@@ -32,6 +37,13 @@ const accountBootstrapOverrides: Partial<
   [SITE_TYPES.ANYROUTER]: {
     probeCheckInSupport: anyrouter.fetchSupportCheckIn,
   },
+  [SITE_TYPES.RIX_API]: {
+    // 6.x deployments report no numeric id, so identity resolution follows the
+    // fields the account definition declares, and they issue scoped admin keys
+    // instead of the personal access token the family default asks for.
+    fetchUserInfo: rixApi.fetchUserInfo,
+    getOrCreateAccessToken: rixApi.getOrCreateAccessToken,
+  },
   [SITE_TYPES.VELOERA]: {
     extractCheckInSupport: veloeraCheckIn.extractCheckInSupport,
   },
@@ -56,6 +68,12 @@ export function createNewApiAccountBootstrap(
   const loadBootstrapFacts: AccountBootstrapCapability["loadBootstrapFacts"] =
     async (request) => {
       const status = await implementation.fetchSiteStatus(request)
+      if (siteType === SITE_TYPES.RIX_API && request.baseUrl) {
+        recordRixApiMajorVersion(
+          request.baseUrl,
+          readRixApiMajorVersion(status),
+        )
+      }
       const facts: AccountBootstrapFacts = {}
       if (typeof status?.system_name === "string")
         facts.displayName = status.system_name

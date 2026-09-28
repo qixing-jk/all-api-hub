@@ -576,6 +576,19 @@ describe("account site definition registry", () => {
     })
   })
 
+  it("accepts a username identity for Rix API deployments without a numeric id", () => {
+    // Rix API 6.x omits `id` from its self DTO while keeping `username`, so the
+    // manual-add flow must not demand a numeric id. `id` stays first so older
+    // deployments that still expose it keep resolving to the same identity.
+    const profile = getAccountSiteProductProfile(SITE_TYPES.RIX_API)
+
+    expect(profile.identity).toMatchObject({
+      usernameRequired: true,
+      userIdRequired: false,
+      storedUserIdentityFields: ["id", "username"],
+    })
+  })
+
   it("defines VoAPI v2 before old VoAPI with account-only policy", () => {
     const voApiV2 = getAccountSiteDefinition(SITE_TYPES.VO_API_V2)
 

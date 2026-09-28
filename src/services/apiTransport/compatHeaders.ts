@@ -32,6 +32,22 @@ const COMPAT_USER_ID_HEADER_NAMES = [
 type CompatUserIdHeaderName = (typeof COMPAT_USER_ID_HEADER_NAMES)[number]
 
 /**
+ * Compatibility headers whose deployments validate the value as the numeric
+ * account id instead of treating it as an inert compatibility key.
+ *
+ * Rix API answers a non-numeric `Rix-Api-User` with a format error and a
+ * mismatched integer with another user's-id error on token-authenticated
+ * requests, so an identity that is only a username must not be sent under this
+ * name. Observed 2026-09-26 on Rix API 6.x; other compatibility headers keep
+ * fanning out every identity because their deployments ignore the value.
+ */
+const NUMERIC_USER_ID_ONLY_HEADER_NAMES: ReadonlySet<string> = new Set([
+  "Rix-Api-User",
+])
+
+const NUMERIC_USER_ID_PATTERN = /^\d+$/
+
+/**
  * Build compatibility headers that fan-out the same `userId` across all known
  * One-API/New-API downstream header names.
  *
@@ -46,6 +62,13 @@ export function buildCompatUserIdHeaders(
   const headers: Partial<Record<CompatUserIdHeaderName, string>> = {}
 
   for (const name of COMPAT_USER_ID_HEADER_NAMES) {
+    if (
+      NUMERIC_USER_ID_ONLY_HEADER_NAMES.has(name) &&
+      !NUMERIC_USER_ID_PATTERN.test(value)
+    ) {
+      continue
+    }
+
     headers[name] = value
   }
 

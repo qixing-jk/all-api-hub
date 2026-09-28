@@ -349,6 +349,8 @@
       "allowWallet": "残高の使用を許可",
       "allowWalletHelp": "プランのクォータを使い切った後も、このキーがアカウント残高から課金されて使い続けられます。",
       "channel": "チャネル",
+      "excludeIps": "除外 IP",
+      "excludeIpsPlaceholder": "1 行に 1 件（CIDR 対応）",
       "expiryDays": "有効期間（日）",
       "feedback": {
         "authenticationFailed": "再度ログインするか、このアカウントの認証情報を更新してから再試行してください。",
@@ -358,6 +360,8 @@
         "unavailable": "サービスは一時的に利用できません。しばらくしてからお試しください。",
         "uncertain": "サービスが変更を適用した可能性があります。キーを更新して現在の状態を確認してから、再試行するか判断してください。"
       },
+      "groupOnly": "選択したグループのみ使用",
+      "groupOnlyHelp": "他のグループへ自動的に切り替えず、選択したグループだけを使います。",
       "issues": {
         "inconsistentValue": "この値を確認して、もう一度お試しください。",
         "invalidValue": "有効な値を入力してください。",
@@ -371,11 +375,20 @@
         "retry": "再試行"
       },
       "quotaUsd": "クォータ（米ドル）",
+      "remainingCount": "残り回数",
+      "remainingCountPlaceholder": "このキーであと何回呼び出せるか",
+      "storageLocation": "ストレージ地域",
+      "storageLocationGlobal": "グローバルノード",
+      "storageLocationHelp": "このキーが生成した画像や動画などの保存先。",
+      "storageLocationNone": "転送しない（元のリンクを使用）",
+      "storageLocationUnconfigured": "デプロイの既定",
       "title": {
         "create": "APIキーを作成",
         "edit": "APIキーを編集"
       },
       "totalQuotaUsd": "合計クォータ（米ドル）",
+      "unlimitedCount": "呼び出し回数無制限",
+      "unlimitedCountHelp": "オフにすると「残り回数」を使い切った時点で停止します。回数と残高は別々に計測されます。",
       "unsaved": {
         "description": "閉じると、今回の変更は保存されません。",
         "discard": "変更を破棄",

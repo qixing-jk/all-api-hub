@@ -349,6 +349,8 @@
       "allowWallet": "Cho phép dùng số dư",
       "allowWalletHelp": "Giữ cho khóa này tiếp tục hoạt động bằng số dư tài khoản sau khi hết hạn ngạch gói.",
       "channel": "Kênh",
+      "excludeIps": "IP loại trừ",
+      "excludeIpsPlaceholder": "Mỗi dòng một mục (hỗ trợ CIDR)",
       "expiryDays": "Hết hạn sau (ngày)",
       "feedback": {
         "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
@@ -358,6 +360,8 @@
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
         "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
       },
+      "groupOnly": "Chỉ dùng nhóm đã chọn",
+      "groupOnlyHelp": "Giữ khóa ở nhóm đã chọn thay vì tự chuyển sang nhóm khác.",
       "issues": {
         "inconsistentValue": "Kiểm tra giá trị này rồi thử lại.",
         "invalidValue": "Nhập giá trị hợp lệ.",
@@ -371,11 +375,20 @@
         "retry": "Thử lại"
       },
       "quotaUsd": "Hạn mức (USD)",
+      "remainingCount": "Số lượt còn lại",
+      "remainingCountPlaceholder": "Khóa này còn gọi được bao nhiêu lượt",
+      "storageLocation": "Vị trí lưu trữ",
+      "storageLocationGlobal": "Nút toàn cầu",
+      "storageLocationHelp": "Nơi lưu nội dung do khóa này tạo ra.",
+      "storageLocationNone": "Không lưu trữ (dùng liên kết gốc)",
+      "storageLocationUnconfigured": "Mặc định của máy chủ",
       "title": {
         "create": "Tạo khóa API",
         "edit": "Chỉnh sửa khóa API"
       },
       "totalQuotaUsd": "Tổng hạn mức (USD)",
+      "unlimitedCount": "Không giới hạn lượt gọi",
+      "unlimitedCountHelp": "Khi tắt, khóa sẽ dừng khi hết số lượt còn lại; số lượt và số dư được tính riêng.",
       "unsaved": {
         "description": "Đóng sẽ hủy các thay đổi của bạn.",
         "discard": "Bỏ thay đổi",

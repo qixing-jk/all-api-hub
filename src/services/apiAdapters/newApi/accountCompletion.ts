@@ -21,6 +21,32 @@ const EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE =
 const ACCESS_TOKEN_FETCH_FAILED_MESSAGE =
   "Account access token could not be obtained"
 
+/**
+ * Message shown when a deployment refuses to issue the account credential.
+ *
+ * Rix API issues an access token only to accounts that can pass its sensitive
+ * action check, which the site names as two-factor authentication, a passkey or a
+ * bound phone number.
+ * Source: https://github.com/RixAPI/Rix-API. Observed 2026-09-26 on
+ * https://platform.ephone.ai: `GET /api/user/token` answers 404 on newer builds
+ * while its replacement `POST /api/user/admin-keys` answers 403 with
+ * "Set up two-factor authentication, a passkey, or bind a phone number before
+ * performing sensitive actions".
+ */
+const ACCESS_TOKEN_CREDENTIAL_UNAVAILABLE_MESSAGE =
+  "This deployment issues an access token only to accounts with two-factor authentication, a passkey, or a bound phone number"
+
+/**
+ * Detects the token outcomes that mean this deployment issues no credential to
+ * this account, so the site's own security requirement has to be resolved first.
+ */
+function isAccessTokenCredentialUnavailable(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.statusCode === 404 || error.statusCode === 403)
+  )
+}
+
 /** Rebuilds a token-free completion error while retaining safe API categories. */
 function createSafeCredentialError(error: unknown, message: string): Error {
   if (!(error instanceof ApiError)) {
@@ -217,12 +243,32 @@ export const createNewApiAccountCompletion = (
       }
 
       if (requestedAuthType === AuthTypeEnum.AccessToken) {
-        return accountBootstrap.getOrCreateAccessToken(
-          createRequest({
-            authType: AuthTypeEnum.Cookie,
-            userId: detected.userId,
-          }),
-        )
+        try {
+          return await accountBootstrap.getOrCreateAccessToken(
+            createRequest({
+              authType: AuthTypeEnum.Cookie,
+              userId: detected.userId,
+            }),
+          )
+        } catch (error) {
+          if (
+            siteType !== SITE_TYPES.RIX_API ||
+            !isAccessTokenCredentialUnavailable(error)
+          ) {
+            throw error
+          }
+          // Guide the user to the deployment's own requirement instead of
+          // silently downgrading the account to a browser session: the site does
+          // issue the credential once that check passes, and picking Cookie in
+          // the dialog stays available as the explicit alternative.
+          throw helpers.createCompletionError(
+            AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+            createSafeCredentialError(
+              error,
+              ACCESS_TOKEN_CREDENTIAL_UNAVAILABLE_MESSAGE,
+            ),
+          )
+        }
       }
 
       return Promise.resolve(null)

@@ -359,6 +359,8 @@
       "allowWallet": "Allow using balance",
       "allowWalletHelp": "Keeps this key working from the account balance after its plan quota runs out.",
       "channel": "Channel",
+      "excludeIps": "Excluded IPs",
+      "excludeIpsPlaceholder": "One per line (CIDR supported)",
       "expiryDays": "Expires in (days)",
       "feedback": {
         "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
@@ -368,6 +370,8 @@
         "unavailable": "The service is temporarily unavailable. Try again shortly.",
         "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
       },
+      "groupOnly": "Only use the selected group",
+      "groupOnlyHelp": "Keeps this key on the selected group instead of failing over to others.",
       "issues": {
         "inconsistentValue": "Review this value and try again.",
         "invalidValue": "Enter a valid value.",
@@ -381,11 +385,20 @@
         "retry": "Try again"
       },
       "quotaUsd": "Quota (USD)",
+      "remainingCount": "Remaining calls",
+      "remainingCountPlaceholder": "How many calls this key can still make",
+      "storageLocation": "Storage location",
+      "storageLocationGlobal": "Global node",
+      "storageLocationHelp": "Where the media this key generates is stored.",
+      "storageLocationNone": "Do not store (use original links)",
+      "storageLocationUnconfigured": "Deployment default",
       "title": {
         "create": "Create API Key",
         "edit": "Edit API Key"
       },
       "totalQuotaUsd": "Total quota (USD)",
+      "unlimitedCount": "Unlimited calls",
+      "unlimitedCountHelp": "When off, the key stops once the remaining calls run out; calls and amount are metered separately.",
       "unsaved": {
         "description": "Closing will discard your changes.",
         "discard": "Discard changes",

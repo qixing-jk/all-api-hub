@@ -359,6 +359,8 @@
       "allowWallet": "Guthaben zulassen",
       "allowWalletHelp": "Lässt diesen Schlüssel nach Ausschöpfen des Kontingents weiter über das Kontoguthaben laufen.",
       "channel": "Kanal",
+      "excludeIps": "Ausgeschlossene IPs",
+      "excludeIpsPlaceholder": "Eine pro Zeile (CIDR unterstützt)",
       "expiryDays": "Gültigkeitsdauer (Tage)",
       "feedback": {
         "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
@@ -368,6 +370,8 @@
         "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
         "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
       },
+      "groupOnly": "Nur die ausgewählte Gruppe verwenden",
+      "groupOnlyHelp": "Hält den Schlüssel bei der ausgewählten Gruppe, statt auf andere auszuweichen.",
       "issues": {
         "inconsistentValue": "Überprüfen Sie diesen Wert und versuchen Sie es erneut.",
         "invalidValue": "Geben Sie einen gültigen Wert ein.",
@@ -381,11 +385,20 @@
         "retry": "Versuchen Sie es erneut"
       },
       "quotaUsd": "Kontingent (USD)",
+      "remainingCount": "Verbleibende Aufrufe",
+      "remainingCountPlaceholder": "Wie viele Aufrufe dieser Schlüssel noch erlaubt",
+      "storageLocation": "Speicherort",
+      "storageLocationGlobal": "Globaler Knoten",
+      "storageLocationHelp": "Wo die von diesem Schlüssel erzeugten Medien abgelegt werden.",
+      "storageLocationNone": "Nicht speichern (Original-Links verwenden)",
+      "storageLocationUnconfigured": "Standard der Instanz",
       "title": {
         "create": "API-Schlüssel erstellen",
         "edit": "API-Schlüssel bearbeiten"
       },
       "totalQuotaUsd": "Gesamtkontingent (USD)",
+      "unlimitedCount": "Unbegrenzte Aufrufe",
+      "unlimitedCountHelp": "Wenn aus, stoppt der Schlüssel, sobald die verbleibenden Aufrufe aufgebraucht sind; Aufrufe und Guthaben werden getrennt gezählt.",
       "unsaved": {
         "description": "Beim Schließen werden Ihre Änderungen verworfen.",
         "discard": "Änderungen verwerfen",

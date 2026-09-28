@@ -67,6 +67,24 @@ const editors: Array<{
     },
   },
   {
+    name: "Rix API",
+    editor: () => createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport),
+    valid: {},
+    fields: {
+      name: "required",
+      unlimited_quota: "invalid_value",
+      model_limits_enabled: "invalid_value",
+      model_limits: "invalid_value",
+      allow_ips: "invalid_value",
+      group: "required",
+      expires_at: "invalid_value",
+      unlimited_count: "invalid_value",
+      exclude_ips: "invalid_value",
+      storage_location: "unsupported_option",
+      group_only: "invalid_value",
+    },
+  },
+  {
     name: "VoAPI",
     editor: () => createVoApiV2KeyEditor(request),
     valid: { groups: ["1"], amount: 1 },
@@ -104,6 +122,52 @@ describe.each(editors)(
         issues: expect.arrayContaining([{ fieldId: "name", code: "required" }]),
       })
     })
+  },
+)
+
+it.each([NaN, Infinity, -1, 1.5, "1"])(
+  "rejects a Rix call limit without a usable count %s",
+  (remain_count) => {
+    const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        unlimited_count: false,
+        remain_count,
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "remain_count", code: "out_of_range" },
+      ]),
+    })
+  },
+)
+
+it("requires a group when a Rix key is pinned to it", () => {
+  const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+  expect(
+    editor.validate({ ...editor.initialValues, group: null, group_only: true }),
+  ).toMatchObject({
+    valid: false,
+    issues: expect.arrayContaining([{ fieldId: "group", code: "required" }]),
+  })
+  expect(
+    editor.validate({
+      ...editor.initialValues,
+      group: "openai",
+      group_only: true,
+    }),
+  ).toEqual({ valid: true })
+})
+
+it.each(["global", "none", null])(
+  "accepts the Rix storage choice %s",
+  (storage_location) => {
+    const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+    expect(
+      editor.validate({ ...editor.initialValues, storage_location }),
+    ).toEqual({ valid: true })
   },
 )
 

@@ -2,6 +2,7 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
 import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
+import * as rixApiTokens from "~/services/apiService/newApiFamily/variants/rixApiTokens"
 import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
@@ -75,7 +76,16 @@ const overrides: Partial<
   },
   [SITE_TYPES.VO_API]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.SUPER_API]: compatibleTokenInventoryOverrides,
-  [SITE_TYPES.RIX_API]: compatibleTokenInventoryOverrides,
+  [SITE_TYPES.RIX_API]: {
+    // The 6.x inventory normalizes `p=0` to its first page and reports string
+    // quotas, groups and the revealable key through its own dialects.
+    fetchAccountTokens: rixApiTokens.fetchAccountTokens,
+    fetchTokenById: rixApiTokens.fetchTokenById,
+    fetchUserGroups: rixApiTokens.fetchUserGroups,
+    fetchCurrentUserGroup: rixApiTokens.fetchCurrentUserGroup,
+    fetchAccountAvailableModels: rixApiTokens.fetchAccountAvailableModels,
+    resolveApiTokenKey: rixApiTokens.resolveApiTokenKey,
+  },
   [SITE_TYPES.NEO_API]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.WONG_GONGYI]: {
     ...compatibleTokenInventoryOverrides,

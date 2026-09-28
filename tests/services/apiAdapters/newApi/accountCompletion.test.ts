@@ -575,6 +575,74 @@ describe("newApiAccountCompletion", () => {
     )
   })
 
+  it.each([
+    [
+      "a deployment without the token endpoint",
+      new ApiError("Invalid URL (GET /api/user/token)", 404, "/api/user/token"),
+    ],
+    [
+      "an account the deployment will not issue a credential to",
+      new ApiError(
+        "Set up two-factor authentication, a passkey, or bind a phone number before performing sensitive actions",
+        403,
+        "/api/user/admin-keys",
+      ),
+    ],
+  ])(
+    "guides the account instead of downgrading it when Rix reports %s",
+    async (_label, failure) => {
+      const rixCompletion = createNewApiAccountCompletion(SITE_TYPES.RIX_API)
+      mockGetOrCreateAccessToken.mockRejectedValueOnce(failure)
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "ePhone AI" })
+
+      await expect(
+        rixCompletion.complete(
+          {
+            url: "https://platform.ephone.ai",
+            requestedAuthType: AuthTypeEnum.AccessToken,
+            detected: {
+              userId: "white-label-owner",
+              siteType: SITE_TYPES.RIX_API,
+            },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+      })
+
+      expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      expect(createCompletionError).toHaveBeenCalledWith(
+        AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+        expect.any(Error),
+      )
+    },
+  )
+
+  it("keeps the token failure for other New API-family sites", async () => {
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(
+      new ApiError("Invalid URL (GET /api/user/token)", 404, "/api/user/token"),
+    )
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+
+    await expect(
+      newApiAccountCompletion.complete(
+        {
+          url: "https://no-token.example.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "9",
+            siteType: SITE_TYPES.NEW_API,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toBeInstanceOf(Error)
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("does not fetch token info for unsupported auth and classifies missing username", async () => {
     mockLoadBootstrapFacts.mockResolvedValueOnce({
       displayName: "None Auth Portal",

@@ -39,4 +39,25 @@ describe("site-native check-in support parsing", () => {
       await expect(fetchVeloeraSupport(request)).resolves.toBe(veloeraSupport)
     },
   )
+
+  it.each([
+    [{ enable_checkin: false }, false],
+    [{ enable_checkin: true }, true],
+    // The New API field keeps precedence when a deployment reports both.
+    [{ checkin_enabled: true, enable_checkin: false }, true],
+    [{ checkin_enabled: false, enable_checkin: true }, false],
+  ] as const)(
+    "reads the Rix API check-in switch from %j",
+    async (status, support) => {
+      expect(extractNewApiCheckInSupport(status)).toBe(support)
+
+      requestData.mockResolvedValue(status)
+      await expect(
+        fetchNewApiSupport({
+          baseUrl: "https://support.example.com",
+          auth: { authType: AuthTypeEnum.None },
+        }),
+      ).resolves.toBe(support)
+    },
+  )
 })

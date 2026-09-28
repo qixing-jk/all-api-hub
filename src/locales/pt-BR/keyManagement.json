@@ -369,6 +369,8 @@
       "allowWallet": "Permitir uso do saldo",
       "allowWalletHelp": "Mantém esta chave funcionando com o saldo da conta depois que a cota do plano acabar.",
       "channel": "Canal",
+      "excludeIps": "IPs excluídos",
+      "excludeIpsPlaceholder": "Um por linha (com suporte a CIDR)",
       "expiryDays": "Expira em (dias)",
       "feedback": {
         "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
@@ -378,6 +380,8 @@
         "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
         "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
       },
+      "groupOnly": "Usar somente o grupo selecionado",
+      "groupOnlyHelp": "Mantém a chave no grupo selecionado em vez de alternar para outros.",
       "issues": {
         "inconsistentValue": "Revise este valor e tente novamente.",
         "invalidValue": "Insira um valor válido.",
@@ -391,11 +395,20 @@
         "retry": "Tentar novamente"
       },
       "quotaUsd": "Cota (USD)",
+      "remainingCount": "Chamadas restantes",
+      "remainingCountPlaceholder": "Quantas chamadas esta chave ainda permite",
+      "storageLocation": "Local de armazenamento",
+      "storageLocationGlobal": "Nó global",
+      "storageLocationHelp": "Onde ficam as mídias geradas por esta chave.",
+      "storageLocationNone": "Não armazenar (usar os links originais)",
+      "storageLocationUnconfigured": "Padrão da instância",
       "title": {
         "create": "Criar chave de API",
         "edit": "Editar chave de API"
       },
       "totalQuotaUsd": "Cota total (USD)",
+      "unlimitedCount": "Chamadas ilimitadas",
+      "unlimitedCountHelp": "Quando desativado, a chave para ao esgotar as chamadas restantes; chamadas e saldo são contados separadamente.",
       "unsaved": {
         "description": "Ao fechar, suas alterações serão descartadas.",
         "discard": "Descartar alterações",

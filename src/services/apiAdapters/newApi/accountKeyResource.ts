@@ -40,10 +40,7 @@ import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
-import type {
-  NewApiToken,
-  NewApiTokenWrite,
-} from "~/services/apiService/newApiFamily/tokenTypes"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
@@ -51,6 +48,7 @@ import {
   createNewApiKeyEditor,
   toNewApiTokenWrite,
   type NewApiKeyEditCommand,
+  type NewApiTokenWriteBody,
 } from "./keyResourceEditor"
 import { projectTokenCreatedAt } from "./tokenCreatedAt"
 import { tokenGroupFollowsAccount } from "./tokenGroup"
@@ -485,9 +483,10 @@ const collectValidatedInventoryTokens = async (
   )
 
 const toTokenUpdateRequest = (
+  siteType: AccountSiteType,
   token: NewApiToken,
   name: string,
-): NewApiTokenWrite => ({ ...toNewApiTokenWrite(token), name })
+): NewApiTokenWriteBody => ({ ...toNewApiTokenWrite(token, siteType), name })
 
 const renameProvisionedResource = async (
   config: NewApiAccountKeyResourceConfig,
@@ -533,7 +532,11 @@ const renameProvisionedResource = async (
       await config.transport.updateApiToken(
         request,
         current.id,
-        toTokenUpdateRequest(current, targetDisplayName),
+        toTokenUpdateRequest(
+          config.account.siteType,
+          current,
+          targetDisplayName,
+        ),
       ),
     mapFailure,
     classifyError: (error) =>
@@ -579,17 +582,18 @@ const mapFailure = mapAccountKeyResourceFailure
 
 /** Confirm the editable command, allowing absent fork fields to retain their defaults. */
 const matchesNewApiTokenWrite = (
+  siteType: AccountSiteType,
   token: NewApiToken,
-  command: NewApiTokenWrite,
+  command: NewApiTokenWriteBody,
   allowQuotaConsumption = false,
 ) => {
-  const actual = toNewApiTokenWrite(token)
-  return (Object.keys(command) as (keyof NewApiTokenWrite)[]).every(
+  const actual = toNewApiTokenWrite(token, siteType)
+  return (Object.keys(command) as (keyof NewApiTokenWriteBody)[]).every(
     (key) =>
       resourceValuesEqual(actual[key], command[key]) ||
       (key === "remain_quota" &&
         allowQuotaConsumption &&
-        actual.remain_quota < command.remain_quota),
+        (actual.remain_quota as number) < (command.remain_quota as number)),
   )
 }
 
@@ -679,7 +683,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
         const created = after.filter(
           (token) =>
             !beforeIds.has(token.id) &&
-            matchesNewApiTokenWrite(token, command.values),
+            matchesNewApiTokenWrite(siteType, token, command.values),
         )
         const [createdToken] = created
         if (created.length === 1 && createdToken)
@@ -705,7 +709,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
       command: NewApiKeyEditCommand,
       options,
     ) => {
-      const latest = toNewApiTokenWrite(detail)
+      const latest = toNewApiTokenWrite(detail, config.account.siteType)
       const values = mergeResourceEdits(
         command.baseline,
         command.values,
@@ -753,7 +757,12 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
           updateResult.certainty === "applied" ||
           values.remain_quota === latest.remain_quota
         return updated &&
-          matchesNewApiTokenWrite(updated, values, allowQuotaConsumption)
+          matchesNewApiTokenWrite(
+            siteType,
+            updated,
+            values,
+            allowQuotaConsumption,
+          )
           ? { certainty: "applied" as const, value: updated }
           : {
               certainty: "possibly-applied" as const,

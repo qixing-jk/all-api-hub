@@ -12,7 +12,7 @@ import {
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { getBestEffortLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
-import { clearSiteRouteThemeCacheForTests } from "~/services/apiAdapters/newApi/accountRoutes"
+import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/accountRoutes"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({
@@ -427,7 +427,7 @@ describe("autoDetectUtils", () => {
   describe("openLoginTab", () => {
     beforeEach(() => {
       vi.clearAllMocks()
-      clearSiteRouteThemeCacheForTests()
+      clearSiteRouteFactsCacheForTests()
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
     })
 

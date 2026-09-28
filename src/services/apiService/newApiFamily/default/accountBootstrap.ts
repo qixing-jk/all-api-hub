@@ -31,6 +31,20 @@ interface SiteStatusInfo {
    * Veloera public status uses a distinct snake-case field.
    */
   check_in_enabled?: boolean
+  /**
+   * Rix API reports the switch under a third name while keeping the same
+   * meaning. Observed 2026-09-26 on Rix API 6.x deployments
+   * (https://github.com/RixAPI/Rix-API): `checkin_enabled` absent,
+   * `enable_checkin: false`, and the console hides the check-in entry unless
+   * that field is `true`.
+   */
+  enable_checkin?: boolean
+  /**
+   * Rix API core version, separate from the deployment's own `version` build
+   * number (the vendor demo reports `version: "6.1.25"` with
+   * `rix_version_message: "6.5.17"`).
+   */
+  rix_version_message?: string
 }
 
 interface AccountBootstrapImplementation {
@@ -117,7 +131,7 @@ function isBoundProviderId(value: unknown): boolean {
  * Upstream: https://github.com/QuantumNous/new-api/blob/v0.9.0/controller/user.go
  * (`buildSelfUserData`) and `model/user.go` (`GitHubId`/`LinuxDOId`).
  */
-function extractLoginProviders(
+export function extractLoginProviders(
   userData: unknown,
 ): readonly AccountLoginProvider[] {
   if (!userData || typeof userData !== "object" || Array.isArray(userData)) {
@@ -253,11 +267,16 @@ export async function getOrCreateAccessToken(
   }
 }
 
-/** Read the New API-family switch from an already-loaded public status. */
+/**
+ * Read the New API-family switch from an already-loaded public status.
+ *
+ * Rix API answers under `enable_checkin`; the New API field keeps precedence so
+ * a deployment that reports both is read exactly as before.
+ */
 export function extractCheckInSupport(
   siteStatus: SiteStatusInfo | null,
 ): boolean | undefined {
-  return siteStatus?.checkin_enabled
+  return siteStatus?.checkin_enabled ?? siteStatus?.enable_checkin
 }
 
 /** Check default New API-family check-in support from public site status. */

@@ -63,4 +63,28 @@ describe("compat user-id headers", () => {
       ]),
     )
   })
+
+  it("keeps the Rix-Api-User header for numeric account identities", () => {
+    expect(buildCompatUserIdHeaders(25983)).toMatchObject({
+      "Rix-Api-User": "25983",
+    })
+    expect(buildCompatUserIdHeaders("25983")).toMatchObject({
+      "Rix-Api-User": "25983",
+    })
+  })
+
+  it("omits the Rix-Api-User header for non-numeric account identities", () => {
+    // Rix API validates this header as the account id on token-authenticated
+    // requests: a non-numeric value is rejected with a format error and a
+    // mismatched integer is rejected as another user's id. White-label
+    // deployments that only expose `username` must therefore not send it, while
+    // every other compatibility header keeps fanning out the identity.
+    const headers = buildCompatUserIdHeaders("white-label-owner")
+
+    expect(headers).not.toHaveProperty("Rix-Api-User")
+    expect(headers).toMatchObject({
+      "New-API-User": "white-label-owner",
+      "User-id": "white-label-owner",
+    })
+  })
 })

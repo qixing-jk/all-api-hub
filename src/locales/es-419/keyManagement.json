@@ -369,6 +369,8 @@
       "allowWallet": "Permitir uso del saldo",
       "allowWalletHelp": "Permite que esta clave siga funcionando con el saldo de la cuenta cuando se agote la cuota del plan.",
       "channel": "Canal",
+      "excludeIps": "IP excluidas",
+      "excludeIpsPlaceholder": "Una por línea (compatible con CIDR)",
       "expiryDays": "Vence en (días)",
       "feedback": {
         "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
@@ -378,6 +380,8 @@
         "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
         "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
       },
+      "groupOnly": "Usar solo el grupo seleccionado",
+      "groupOnlyHelp": "Mantiene la clave en el grupo seleccionado en lugar de cambiar a otros.",
       "issues": {
         "inconsistentValue": "Revisa este valor e inténtalo de nuevo.",
         "invalidValue": "Introduce un valor válido.",
@@ -391,11 +395,20 @@
         "retry": "Intentar de nuevo"
       },
       "quotaUsd": "Cuota (USD)",
+      "remainingCount": "Llamadas restantes",
+      "remainingCountPlaceholder": "Cuántas llamadas más permite esta clave",
+      "storageLocation": "Ubicación de almacenamiento",
+      "storageLocationGlobal": "Nodo global",
+      "storageLocationHelp": "Dónde se guardan los medios que genera esta clave.",
+      "storageLocationNone": "No almacenar (usar los enlaces originales)",
+      "storageLocationUnconfigured": "Valor predeterminado del despliegue",
       "title": {
         "create": "Crear clave API",
         "edit": "Editar clave API"
       },
       "totalQuotaUsd": "Cuota total (USD)",
+      "unlimitedCount": "Llamadas ilimitadas",
+      "unlimitedCountHelp": "Si se desactiva, la clave se detiene al agotar las llamadas restantes; las llamadas y el saldo se miden por separado.",
       "unsaved": {
         "description": "Al cerrar, se descartarán tus cambios.",
         "discard": "Descartar cambios",

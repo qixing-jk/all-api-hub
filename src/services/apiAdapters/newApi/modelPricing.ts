@@ -10,6 +10,10 @@ import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 
 import { applyFamilyGroupEvidence } from "./groupEvidence"
+import {
+  fetchRixApiModelPricing,
+  normalizeRixApiModelPricingResponse,
+} from "./rixApiModelPricing"
 
 /**
  * Create account model-pricing operations bound to the New API-family site type.
@@ -43,9 +47,13 @@ export function createNewApiModelPricing(
   const normalizePricingResponse =
     siteType === SITE_TYPES.V_API
       ? normalizeVApiModelPricingResponse
-      : normalizeNewApiModelPricingResponse
+      : siteType === SITE_TYPES.RIX_API
+        ? normalizeRixApiModelPricingResponse
+        : normalizeNewApiModelPricingResponse
   const fetchModelPricing =
-    modelPricing.defaultModelPricingImplementation.fetchModelPricing
+    siteType === SITE_TYPES.RIX_API
+      ? fetchRixApiModelPricing
+      : modelPricing.defaultModelPricingImplementation.fetchModelPricing
 
   return {
     fetchPricing: async (request) =>

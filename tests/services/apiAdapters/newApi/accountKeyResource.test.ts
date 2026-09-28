@@ -238,6 +238,234 @@ describe("New API account key resources", () => {
     )
   })
 
+  it("keeps the deployment-managed Rix token fields when editing a name", async () => {
+    const rixToken = {
+      ...token({}),
+      unlimited_count: true,
+      remain_count: 0,
+      exclude_ips: "10.9.9.9",
+      rate_limits: "5,60",
+      group_only: true,
+      group_sort: "price",
+      storage_location: "global",
+      max_channel_cost: 3,
+      mj_mode: "默认",
+    } as NewApiToken & Record<string, unknown>
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([rixToken])
+      .mockResolvedValueOnce([rixToken])
+      .mockResolvedValueOnce([{ ...rixToken, name: "Renamed" }])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.RIX_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.RIX_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.RIX_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+
+    expect(mockUpdateApiToken).toHaveBeenCalledTimes(1)
+    const body = mockUpdateApiToken.mock.calls[0]?.[2] as Record<
+      string,
+      unknown
+    >
+    expect(body).toMatchObject({
+      name: "Renamed",
+      unlimited_count: true,
+      exclude_ips: "10.9.9.9",
+      rate_limits: "5,60",
+      group_only: true,
+      group_sort: "price",
+      storage_location: "global",
+      max_channel_cost: 3,
+      mj_mode: "默认",
+    })
+    // The secret and the bookkeeping columns never travel back upstream.
+    expect(body).not.toHaveProperty("key")
+    expect(body).not.toHaveProperty("id")
+    expect(body).not.toHaveProperty("used_quota")
+    expect(body).not.toHaveProperty("created_time")
+  })
+
+  it("writes the Rix call limit, deny list, storage node and group pin", async () => {
+    const rixToken = {
+      ...token({ group: "openai" }),
+      unlimited_count: true,
+      remain_count: 0,
+      exclude_ips: "",
+      storage_location: "",
+      group_only: false,
+    } as NewApiToken & Record<string, unknown>
+    const updated = {
+      ...rixToken,
+      unlimited_count: false,
+      remain_count: 250,
+      exclude_ips: "10.9.9.9",
+      storage_location: "global",
+      group_only: true,
+    }
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([rixToken])
+      .mockResolvedValueOnce([rixToken])
+      .mockResolvedValueOnce([updated])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.RIX_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.RIX_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.RIX_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+
+    await editor.submit({
+      ...editor.initialValues,
+      unlimited_count: false,
+      remain_count: 250,
+      exclude_ips: "10.9.9.9",
+      storage_location: "global",
+      group_only: true,
+    })
+
+    expect(mockUpdateApiToken).toHaveBeenCalledTimes(1)
+    expect(mockUpdateApiToken.mock.calls[0]?.[2]).toMatchObject({
+      unlimited_count: false,
+      remain_count: 250,
+      exclude_ips: "10.9.9.9",
+      storage_location: "global",
+      group_only: true,
+    })
+  })
+
+  it("keeps the Rix fields out of other site types", async () => {
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([token({ id: 1 })])
+      .mockResolvedValueOnce([token({ id: 1 })])
+      .mockResolvedValueOnce([token({ id: 1, name: "Renamed" })])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+
+    const body = mockUpdateApiToken.mock.calls[0]?.[2] as Record<
+      string,
+      unknown
+    >
+    expect(body.name).toBe("Renamed")
+    for (const field of [
+      "unlimited_count",
+      "remain_count",
+      "exclude_ips",
+      "storage_location",
+      "group_only",
+    ]) {
+      expect(body).not.toHaveProperty(field)
+    }
+  })
+
+  it("does not write deployment columns an older Rix generation never reported", async () => {
+    // A pre-6.x row carries only the New API columns, so the editor must not
+    // introduce the newer ones on write.
+    const olderRixToken = token({ name: "Legacy key" })
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([olderRixToken])
+      .mockResolvedValueOnce([olderRixToken])
+      .mockResolvedValueOnce([{ ...olderRixToken, name: "Renamed" }])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.RIX_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.RIX_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.RIX_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+
+    const body = mockUpdateApiToken.mock.calls[0]?.[2] as Record<
+      string,
+      unknown
+    >
+    expect(body.name).toBe("Renamed")
+    for (const field of [
+      "unlimited_count",
+      "remain_count",
+      "exclude_ips",
+      "storage_location",
+      "group_only",
+    ]) {
+      expect(body).not.toHaveProperty(field)
+    }
+  })
+
+  it("creates a Rix key with unlimited calls by default", async () => {
+    const created = {
+      ...token({ id: 2, name: "Created", unlimited_quota: true }),
+      unlimited_count: true,
+      remain_count: 0,
+      exclude_ips: "",
+      storage_location: "",
+      group_only: false,
+    } as NewApiToken & Record<string, unknown>
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([created])
+    mockCreateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.RIX_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.RIX_API },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+
+    await editor.submit({
+      ...editor.initialValues,
+      name: "Created",
+      group: "default",
+    })
+
+    expect(mockCreateApiToken).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      expect.objectContaining({
+        name: "Created",
+        unlimited_count: true,
+        group_only: false,
+      }),
+    )
+  })
+
   it("rejects concurrent edits to the same field before dispatch", async () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([token({ name: "Original" })])

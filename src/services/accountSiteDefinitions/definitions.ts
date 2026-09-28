@@ -848,8 +848,22 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         redeemPath: "/topup",
         loginPath: "/login",
         adminCredentialsPath: NEW_API_CHECKIN_PATH,
-        accessTokenPath: null,
+        // Rix API 6.x issues its account credential from the console's admin-keys
+        // page, which is also where the site states its two-factor / passkey /
+        // phone requirement for that action.
+        accessTokenPath: "/admin-keys",
         siteAnnouncementsPath: "/",
+      },
+    },
+    productProfile: {
+      identity: {
+        usernameRequired: true,
+        // Rix API 6.x omits `id` from its self DTO (observed 2026-09-26 on
+        // platform.ephone.ai and the vendor demo platform.rixapi.com), so a
+        // manually added account has no numeric id to supply. `id` stays first
+        // because older deployments still expose it.
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
       },
     },
   },

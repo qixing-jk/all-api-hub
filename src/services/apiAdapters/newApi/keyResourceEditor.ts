@@ -13,8 +13,10 @@ import type {
   NewApiToken,
   NewApiTokenWrite,
 } from "~/services/apiService/newApiFamily/tokenTypes"
+import { reportsRixApiV6TokenColumns } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
+import { readPreservedTokenFields } from "./tokenPreservedFields"
 import type { NewApiFamilyTokenTransport } from "./tokenTransport"
 
 const NEW_API_KEY_FIELD_IDS = {
@@ -26,18 +28,69 @@ const NEW_API_KEY_FIELD_IDS = {
   ModelLimitsEnabled: "model_limits_enabled",
   Models: "model_limits",
   AllowIps: "allow_ips",
+  /**
+   * Rix API 6.x columns this editor exposes on top of the New API projection.
+   * The deployment keeps a count quota next to the amount quota, an IP deny
+   * list next to the allow list, the media storage node and whether the key may
+   * fail over to other groups.
+   */
+  CountUnlimited: "unlimited_count",
+  RemainingCount: "remain_count",
+  ExcludeIps: "exclude_ips",
+  StorageLocation: "storage_location",
+  GroupOnly: "group_only",
 } as const
+
+/** Storage nodes a Rix API token can pin; an unset column keeps the default. */
+const RIX_API_STORAGE_LOCATIONS = ["global", "none"] as const
 
 const field = NEW_API_KEY_FIELD_IDS
 const quotaPerUsd = QUOTA_PER_USD
 
-export type NewApiKeyEditCommand = {
-  baseline: NewApiTokenWrite
-  values: NewApiTokenWrite
+/** Reads a deployment-owned boolean that this editor now presents. */
+const readOwnedBoolean = (body: NewApiTokenWriteBody, key: string): boolean =>
+  body[key] === true
+
+/** Reads a deployment-owned number that a row may deliver as a decimal string. */
+const readOwnedNumber = (
+  body: NewApiTokenWriteBody,
+  key: string,
+): number | undefined => {
+  const value = body[key]
+  const coerced = typeof value === "string" ? Number(value.trim()) : value
+
+  return typeof coerced === "number" && Number.isFinite(coerced)
+    ? coerced
+    : undefined
 }
 
-/** Preserve optional upstream settings that the ordinary editor does not own. */
-export const toNewApiTokenWrite = (token: NewApiToken): NewApiTokenWrite => ({
+/** Reads a deployment-owned string column. */
+const readOwnedString = (body: NewApiTokenWriteBody, key: string): string =>
+  typeof body[key] === "string" ? (body[key] as string) : ""
+
+export type NewApiKeyEditCommand = {
+  baseline: NewApiTokenWriteBody
+  values: NewApiTokenWriteBody
+}
+
+/**
+ * Token write body: the canonical projection plus the deployment-managed fields
+ * the editor does not own, so an update cannot clear them.
+ */
+export type NewApiTokenWriteBody = NewApiTokenWrite & Record<string, unknown>
+
+/**
+ * Preserve optional upstream settings that the ordinary editor does not own.
+ * @param token Row as the deployment returned it.
+ * @param siteType Site type the write targets, which decides how much of the row
+ *   travels back (see `readPreservedTokenFields`).
+ * @returns Write body shared by the create, update and comparison paths.
+ */
+export const toNewApiTokenWrite = (
+  token: NewApiToken,
+  siteType?: AccountSiteType,
+): NewApiTokenWriteBody => ({
+  ...readPreservedTokenFields(siteType, token),
   name: token.name,
   remain_quota: token.remain_quota,
   expired_time: token.expired_time,
@@ -65,8 +118,8 @@ export function createNewApiKeyEditor(
   const initialGroup =
     intent?.preferredGroup ??
     (intent?.allowedGroups?.length === 1 ? intent.allowedGroups[0] ?? "" : "")
-  const baseline: NewApiTokenWrite = token
-    ? toNewApiTokenWrite(token)
+  const baseline: NewApiTokenWriteBody = token
+    ? toNewApiTokenWrite(token, siteType)
     : {
         name:
           intent?.nameHint?.trim() || getDefaultAccountKeyName(initialGroup),
@@ -79,6 +132,32 @@ export function createNewApiKeyEditor(
         group: initialGroup,
       }
   const allowedGroups = token ? undefined : intent?.allowedGroups
+  // Rix API 6.x owns columns this editor presents; a probed older generation
+  // keeps the New API projection only.
+  const exposesDeploymentFields =
+    siteType === SITE_TYPES.RIX_API &&
+    reportsRixApiV6TokenColumns(request.baseUrl)
+  // A generation that never reported a column does not get it written back: a
+  // new key takes this editor's defaults, an existing row only carries the
+  // columns its own deployment returned.
+  const ownsBaselineField = (key: string): boolean =>
+    token === undefined || Object.hasOwn(baseline, key)
+  const deploymentFieldEntries = (
+    entries: Partial<Record<string, unknown>>,
+  ): Partial<Record<string, unknown>> => {
+    if (!exposesDeploymentFields) return {}
+
+    const owned: Partial<Record<string, unknown>> = {}
+    for (const [key, value] of Object.entries(entries)) {
+      if (ownsBaselineField(key)) owned[key] = value
+    }
+    return owned
+  }
+  // A new key keeps unlimited counts: the deployment's own create default, and
+  // the only value that cannot exhaust the key's call quota before first use.
+  const unlimitedCount = token
+    ? readOwnedBoolean(baseline, field.CountUnlimited)
+    : true
   const initialValues: EditableResourceProjection = {
     [field.Name]: baseline.name,
     [field.Quota]: Math.max(0, baseline.remain_quota) / quotaPerUsd,
@@ -94,6 +173,17 @@ export function createNewApiKeyEditor(
       .map((id) => id.trim())
       .filter(Boolean),
     [field.AllowIps]: baseline.allow_ips,
+    ...(exposesDeploymentFields
+      ? {
+          [field.CountUnlimited]: unlimitedCount,
+          [field.RemainingCount]:
+            readOwnedNumber(baseline, field.RemainingCount) ?? 0,
+          [field.ExcludeIps]: readOwnedString(baseline, field.ExcludeIps),
+          [field.StorageLocation]:
+            readOwnedString(baseline, field.StorageLocation) || null,
+          [field.GroupOnly]: readOwnedBoolean(baseline, field.GroupOnly),
+        }
+      : {}),
   }
   return {
     fields: [
@@ -134,6 +224,30 @@ export function createNewApiKeyEditor(
         optionLoader: { dependsOn: [] },
       },
       { fieldId: field.AllowIps, type: RESOURCE_FIELD_TYPES.Textarea },
+      ...(exposesDeploymentFields
+        ? ([
+            {
+              fieldId: field.CountUnlimited,
+              type: RESOURCE_FIELD_TYPES.Boolean,
+            },
+            {
+              fieldId: field.RemainingCount,
+              type: RESOURCE_FIELD_TYPES.Number,
+              min: 0,
+              step: 1,
+            },
+            { fieldId: field.ExcludeIps, type: RESOURCE_FIELD_TYPES.Textarea },
+            {
+              fieldId: field.StorageLocation,
+              type: RESOURCE_FIELD_TYPES.Select,
+              options: RIX_API_STORAGE_LOCATIONS.map((value) => ({
+                value,
+                displayLabel: value,
+              })),
+            },
+            { fieldId: field.GroupOnly, type: RESOURCE_FIELD_TYPES.Boolean },
+          ] as const)
+        : []),
     ],
     initialValues,
     validate(values) {
@@ -184,6 +298,43 @@ export function createNewApiKeyEditor(
       }
       if (typeof values[field.AllowIps] !== "string")
         issues.push({ fieldId: field.AllowIps, code: "invalid_value" })
+      if (exposesDeploymentFields) {
+        for (const id of [field.CountUnlimited, field.GroupOnly]) {
+          if (typeof values[id] !== "boolean")
+            issues.push({ fieldId: id, code: "invalid_value" })
+        }
+        const remainingCount = values[field.RemainingCount]
+        if (
+          values[field.CountUnlimited] !== true &&
+          (typeof remainingCount !== "number" ||
+            !Number.isSafeInteger(remainingCount) ||
+            remainingCount < 0)
+        ) {
+          issues.push({
+            fieldId: field.RemainingCount,
+            code: "out_of_range",
+          })
+        }
+        if (typeof values[field.ExcludeIps] !== "string")
+          issues.push({ fieldId: field.ExcludeIps, code: "invalid_value" })
+        const storageLocation = values[field.StorageLocation]
+        if (
+          storageLocation != null &&
+          (typeof storageLocation !== "string" ||
+            !RIX_API_STORAGE_LOCATIONS.includes(
+              storageLocation as (typeof RIX_API_STORAGE_LOCATIONS)[number],
+            ))
+        ) {
+          issues.push({
+            fieldId: field.StorageLocation,
+            code: "unsupported_option",
+          })
+        }
+        // Pinning a key to its group leaves no fallback, so it needs one.
+        if (values[field.GroupOnly] === true && !String(group ?? "").trim()) {
+          issues.push({ fieldId: field.Group, code: "required" })
+        }
+      }
       return issues.length ? { valid: false, issues } : { valid: true }
     },
     async loadOptions(fieldId, _values, options) {
@@ -231,6 +382,16 @@ export function createNewApiKeyEditor(
             ? baseline.model_limits
             : (values[field.Models] as string[]).join(","),
           allow_ips: values[field.AllowIps] as string,
+          ...deploymentFieldEntries({
+            unlimited_count: values[field.CountUnlimited] === true,
+            remain_count:
+              values[field.CountUnlimited] === true
+                ? readOwnedNumber(baseline, field.RemainingCount) ?? 0
+                : Math.round(values[field.RemainingCount] as number),
+            exclude_ips: String(values[field.ExcludeIps] ?? ""),
+            storage_location: String(values[field.StorageLocation] ?? ""),
+            group_only: values[field.GroupOnly] === true,
+          }),
         },
       }
     },

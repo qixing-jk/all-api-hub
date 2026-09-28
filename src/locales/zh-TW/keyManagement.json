@@ -349,6 +349,8 @@
       "allowWallet": "允許使用餘額",
       "allowWalletHelp": "套餐額度用完後，此金鑰仍可從帳戶餘額扣費繼續使用。",
       "channel": "管道",
+      "excludeIps": "排除 IP",
+      "excludeIpsPlaceholder": "一行一個（支援 CIDR）",
       "expiryDays": "有效期限（天）",
       "feedback": {
         "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
@@ -358,6 +360,8 @@
         "unavailable": "服務暫時無法使用，請稍後重試。",
         "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
       },
+      "groupOnly": "僅使用選定分組",
+      "groupOnlyHelp": "開啟後此金鑰只在選定分組上呼叫，不再自動切換到其他分組。",
       "issues": {
         "inconsistentValue": "請檢查此值後重試。",
         "invalidValue": "請輸入有效值。",
@@ -371,11 +375,20 @@
         "retry": "重試"
       },
       "quotaUsd": "額度（美元）",
+      "remainingCount": "剩餘次數",
+      "remainingCountPlaceholder": "此金鑰還能呼叫多少次",
+      "storageLocation": "儲存地域",
+      "storageLocationGlobal": "全球節點",
+      "storageLocationHelp": "此金鑰生成的圖片、影片等內容的存放節點。",
+      "storageLocationNone": "不轉存（使用原始連結）",
+      "storageLocationUnconfigured": "跟隨部署預設",
       "title": {
         "create": "建立 API 金鑰",
         "edit": "編輯 API 金鑰"
       },
       "totalQuotaUsd": "總額度（美元）",
+      "unlimitedCount": "不限呼叫次數",
+      "unlimitedCountHelp": "關閉後依「剩餘次數」計滿即停；次數與額度分開計算。",
       "unsaved": {
         "description": "關閉後，本次修改不會儲存。",
         "discard": "捨棄變更",

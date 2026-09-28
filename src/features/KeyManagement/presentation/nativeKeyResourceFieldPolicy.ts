@@ -10,6 +10,7 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/regi
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
+import { rixApiDeploymentFields } from "./rixApiKeyResourceFieldPolicy"
 
 const issues = {
   required: (t: TFunction) => t("keyManagement:native.editor.issues.required"),
@@ -146,123 +147,187 @@ const groupAutomaticName =
       : getDefaultAccountKeyName(groupName)
   }
 
+const buildSub2ApiFields = (
+  mode: "create" | "edit",
+): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName: EditorPresentation["getAutomaticName"]
+} => ({
+  getAutomaticName: groupAutomaticName("group_id", true),
+  fields: [
+    name,
+    group("group_id"),
+    ...quota("quota", "unlimited", true),
+    mode === "edit"
+      ? expiry
+      : {
+          fieldId: "expires_in_days",
+          section: "lifecycle",
+          order: 0,
+          renderer: "number",
+          resolveLabel: (t) => t("keyManagement:native.editor.expiryDays"),
+          resolveHelp: (t) => t("keyManagement:dialog.expirationPlaceholder"),
+          issueLabelResolvers: issues,
+        },
+    ...(mode === "edit" ? [enabled("enabled")] : []),
+    ips("ip_whitelist"),
+  ],
+})
+
+const buildVoApiV2Fields = (): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName: EditorPresentation["getAutomaticName"]
+} => ({
+  getAutomaticName: groupAutomaticName("groups", true),
+  fields: [
+    name,
+    group("groups", true),
+    ...quota("amount", "boundlessAmount"),
+    expiry,
+    enabled("enable"),
+    {
+      fieldId: "note",
+      section: "advanced",
+      order: 30,
+      renderer: "textarea",
+      resolveLabel: (t) => t("keyManagement:keyDetails.note"),
+      issueLabelResolvers: issues,
+    },
+  ],
+})
+
+const buildRightCodeFields = (
+  mode: "create" | "edit",
+): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName: EditorPresentation["getAutomaticName"]
+} => ({
+  getAutomaticName: groupAutomaticName("channel", true),
+  fields: [
+    name,
+    {
+      fieldId: "channel",
+      section: "basic",
+      order: 10,
+      renderer: "select",
+      resolveLabel: (t) => t("keyManagement:native.editor.channel"),
+      issueLabelResolvers: issues,
+    },
+    ...quota("quotaUsd", "unlimited_quota"),
+    expiry,
+    ...(mode === "edit" ? [enabled("is_active")] : []),
+    models("models"),
+    {
+      fieldId: "allow_wallet",
+      section: "spending",
+      order: 20,
+      renderer: "boolean",
+      resolveLabel: (t) => t("keyManagement:native.editor.allowWallet"),
+      resolveHelp: (t) => t("keyManagement:native.editor.allowWalletHelp"),
+      issueLabelResolvers: issues,
+    },
+  ],
+})
+
+const buildAiHubMixFields = (): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName?: EditorPresentation["getAutomaticName"]
+} => ({
+  fields: [
+    name,
+    ...quota("quotaUsd", "unlimited_quota"),
+    expiry,
+    models("models"),
+    {
+      fieldId: "subnet",
+      section: "advanced",
+      order: 20,
+      renderer: "textarea",
+      resolveLabel: (t) => t("keyManagement:dialog.subnetLimits"),
+      resolvePlaceholder: (t) => t("keyManagement:dialog.subnetPlaceholder"),
+      issueLabelResolvers: issues,
+    },
+  ],
+})
+
+const buildNewApiFamilyFields = (
+  siteType: string | undefined,
+  describedFieldIds?: readonly string[],
+): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName: EditorPresentation["getAutomaticName"]
+} => {
+  const isOneApi = siteType === SITE_TYPES.ONE_API
+  const isModelFlare = siteType === SITE_TYPES.MODELFLARE
+
+  const candidateFields: ResourceFieldPresentation[] = [
+    name,
+    ...(isOneApi ? [] : [group("group", false, true, !isModelFlare)]),
+    ...quota("quotaUsd", "unlimited_quota"),
+    expiry,
+    {
+      fieldId: "model_limits_enabled",
+      section: "advanced",
+      order: 0,
+      renderer: "boolean",
+      resolveLabel: (t) => t("keyManagement:dialog.modelLimits"),
+      issueLabelResolvers: issues,
+    },
+    {
+      ...models("model_limits"),
+      visibleWhen: (values) => values.model_limits_enabled === true,
+    },
+    ips("allow_ips"),
+    ...(siteType === SITE_TYPES.RIX_API ? rixApiDeploymentFields(issues) : []),
+  ]
+
+  const fields = describedFieldIds
+    ? candidateFields.filter((f) => describedFieldIds.includes(f.fieldId))
+    : candidateFields
+
+  return {
+    getAutomaticName: groupAutomaticName("group"),
+    fields,
+  }
+}
+
+const resolveSiteFields = (
+  siteType: string | undefined,
+  mode: "create" | "edit",
+  describedFieldIds?: readonly string[],
+): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName?: EditorPresentation["getAutomaticName"]
+} => {
+  if (siteType === SITE_TYPES.SUB2API) return buildSub2ApiFields(mode)
+  if (siteType === SITE_TYPES.VO_API_V2) return buildVoApiV2Fields()
+  if (siteType === SITE_TYPES.RIGHT_CODE) return buildRightCodeFields(mode)
+  if (siteType === SITE_TYPES.AIHUBMIX) return buildAiHubMixFields()
+  if (
+    getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+  ) {
+    return buildNewApiFamilyFields(siteType, describedFieldIds)
+  }
+  return { fields: [] }
+}
+
 /** Frontend-owned field policies are selected by provider, never by upstream labels. */
 export function getNativeKeyResourceEditorPresentation(
   siteType: string | undefined,
   mode: "create" | "edit",
+  options?: { readonly describedFieldIds?: readonly string[] },
 ): EditorPresentation {
-  if (siteType === SITE_TYPES.OPENROUTER)
+  if (siteType === SITE_TYPES.OPENROUTER) {
     return getOpenRouterKeyResourceEditorPresentation(mode)
-  let fields: ResourceFieldPresentation[]
-  let getAutomaticName: EditorPresentation["getAutomaticName"]
-  if (siteType === SITE_TYPES.SUB2API) {
-    getAutomaticName = groupAutomaticName("group_id", true)
-    fields = [
-      name,
-      group("group_id"),
-      ...quota("quota", "unlimited", true),
-      mode === "edit"
-        ? expiry
-        : {
-            fieldId: "expires_in_days",
-            section: "lifecycle",
-            order: 0,
-            renderer: "number",
-            resolveLabel: (t) => t("keyManagement:native.editor.expiryDays"),
-            resolveHelp: (t) => t("keyManagement:dialog.expirationPlaceholder"),
-            issueLabelResolvers: issues,
-          },
-      ...(mode === "edit" ? [enabled("enabled")] : []),
-      ips("ip_whitelist"),
-    ]
-  } else if (siteType === SITE_TYPES.VO_API_V2) {
-    getAutomaticName = groupAutomaticName("groups", true)
-    fields = [
-      name,
-      group("groups", true),
-      ...quota("amount", "boundlessAmount"),
-      expiry,
-      enabled("enable"),
-      {
-        fieldId: "note",
-        section: "advanced",
-        order: 30,
-        renderer: "textarea",
-        resolveLabel: (t) => t("keyManagement:keyDetails.note"),
-        issueLabelResolvers: issues,
-      },
-    ]
-  } else if (siteType === SITE_TYPES.RIGHT_CODE) {
-    getAutomaticName = groupAutomaticName("channel", true)
-    fields = [
-      name,
-      {
-        fieldId: "channel",
-        section: "basic",
-        order: 10,
-        renderer: "select",
-        resolveLabel: (t) => t("keyManagement:native.editor.channel"),
-        issueLabelResolvers: issues,
-      },
-      ...quota("quotaUsd", "unlimited_quota"),
-      expiry,
-      ...(mode === "edit" ? [enabled("is_active")] : []),
-      models("models"),
-      {
-        fieldId: "allow_wallet",
-        section: "spending",
-        order: 20,
-        renderer: "boolean",
-        resolveLabel: (t) => t("keyManagement:native.editor.allowWallet"),
-        resolveHelp: (t) => t("keyManagement:native.editor.allowWalletHelp"),
-        issueLabelResolvers: issues,
-      },
-    ]
-  } else if (siteType === SITE_TYPES.AIHUBMIX) {
-    fields = [
-      name,
-      ...quota("quotaUsd", "unlimited_quota"),
-      expiry,
-      models("models"),
-      {
-        fieldId: "subnet",
-        section: "advanced",
-        order: 20,
-        renderer: "textarea",
-        resolveLabel: (t) => t("keyManagement:dialog.subnetLimits"),
-        resolvePlaceholder: (t) => t("keyManagement:dialog.subnetPlaceholder"),
-        issueLabelResolvers: issues,
-      },
-    ]
-  } else if (
-    getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===
-    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
-  ) {
-    getAutomaticName = groupAutomaticName("group")
-    fields = [
-      name,
-      ...(siteType === SITE_TYPES.ONE_API
-        ? []
-        : [group("group", false, true, siteType !== SITE_TYPES.MODELFLARE)]),
-      ...quota("quotaUsd", "unlimited_quota"),
-      expiry,
-      {
-        fieldId: "model_limits_enabled",
-        section: "advanced",
-        order: 0,
-        renderer: "boolean",
-        resolveLabel: (t) => t("keyManagement:dialog.modelLimits"),
-        issueLabelResolvers: issues,
-      },
-      {
-        ...models("model_limits"),
-        visibleWhen: (values) => values.model_limits_enabled === true,
-      },
-      ips("allow_ips"),
-    ]
-  } else {
-    fields = []
   }
+
+  const { fields, getAutomaticName } = resolveSiteFields(
+    siteType,
+    mode,
+    options?.describedFieldIds,
+  )
+
   return {
     getAutomaticName,
     policy: defineResourceEditorFieldPolicy({ fields, hiddenFields: [] }),

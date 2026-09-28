@@ -349,6 +349,8 @@
       "allowWallet": "允许使用余额",
       "allowWalletHelp": "套餐额度用完后，该密钥仍可从账户余额扣费继续使用。",
       "channel": "渠道",
+      "excludeIps": "排除 IP",
+      "excludeIpsPlaceholder": "一行一个（支持 CIDR）",
       "expiryDays": "有效期（天）",
       "feedback": {
         "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
@@ -358,6 +360,8 @@
         "unavailable": "服务暂时不可用，请稍后重试。",
         "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
       },
+      "groupOnly": "仅使用选定分组",
+      "groupOnlyHelp": "开启后该密钥只在选定分组上调用，不再自动切换到其它分组。",
       "issues": {
         "inconsistentValue": "请检查此值后重试。",
         "invalidValue": "请输入有效值。",
@@ -371,11 +375,20 @@
         "retry": "重试"
       },
       "quotaUsd": "额度（美元）",
+      "remainingCount": "剩余次数",
+      "remainingCountPlaceholder": "该密钥还能调用多少次",
+      "storageLocation": "存储地域",
+      "storageLocationGlobal": "全球节点",
+      "storageLocationHelp": "该密钥生成的图片、视频等内容的存放节点。",
+      "storageLocationNone": "不转存（使用原始链接）",
+      "storageLocationUnconfigured": "跟随部署默认",
       "title": {
         "create": "创建 API 密钥",
         "edit": "编辑 API 密钥"
       },
       "totalQuotaUsd": "总额度（美元）",
+      "unlimitedCount": "不限调用次数",
+      "unlimitedCountHelp": "关闭后按「剩余次数」计满即停；次数与额度是两套计量。",
       "unsaved": {
         "description": "关闭后，本次修改不会保存。",
         "discard": "放弃更改",

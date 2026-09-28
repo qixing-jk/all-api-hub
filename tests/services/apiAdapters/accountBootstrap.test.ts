@@ -170,6 +170,58 @@ describe("account bootstrap adapters", () => {
     ).resolves.toBe(path)
   })
 
+  it.each([
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Login, "/sign-in"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage, "/logs"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn, "/profile"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials, "/profile"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem, "/billing"],
+  ])(
+    "resolves the Rix API 6.x console %s to its own account page",
+    async (route, path) => {
+      const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.RIX_API)
+      mockFetchSiteStatus.mockResolvedValue({ rix_version_message: "6.5.17" })
+
+      await expect(
+        bootstrap.resolveRoutePath(
+          {
+            baseUrl: "https://rix6.example.invalid",
+            siteType: SITE_TYPES.RIX_API,
+          },
+          route,
+        ),
+      ).resolves.toBe(path)
+    },
+  )
+
+  it("keeps the legacy Rix console layout when no core version is reported", async () => {
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.RIX_API)
+    mockFetchSiteStatus.mockResolvedValue({ system_name: "Rix API" })
+
+    await expect(
+      bootstrap.resolveRoutePath(
+        {
+          baseUrl: "https://legacy-rix.example.invalid",
+          siteType: SITE_TYPES.RIX_API,
+        },
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem,
+      ),
+    ).resolves.toBe("/topup")
+  })
+
+  it("records the Rix API core version into dialect memory during bootstrap", async () => {
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.RIX_API)
+    mockFetchSiteStatus.mockResolvedValue({
+      system_name: "ePhone AI",
+      rix_version_message: "6.5.17",
+    })
+    mockExtractDefaultExchangeRate.mockReturnValue(null)
+
+    await expect(bootstrap.loadBootstrapFacts(request)).resolves.toEqual({
+      displayName: "ePhone AI",
+    })
+  })
+
   it("resolves static account route paths from shared route kinds", () => {
     const target = {
       baseUrl: "https://sub2.example.invalid",

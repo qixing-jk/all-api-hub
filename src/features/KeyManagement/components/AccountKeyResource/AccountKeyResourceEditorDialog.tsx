@@ -369,6 +369,7 @@ function AccountKeyResourceEditorDialogSession({
   const presentation = getNativeKeyResourceEditorPresentation(
     editor.siteType,
     editor.mode,
+    { describedFieldIds: editor.fields.map((field) => field.fieldId) },
   )
   const [values, setValues] = useState<EditableResourceProjection>(() =>
     toEditorValues(editor.values, editor.fields),
