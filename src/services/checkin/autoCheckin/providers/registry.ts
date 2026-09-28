@@ -1,4 +1,5 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
@@ -260,6 +261,21 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "小白Code",
+    },
+    supportsStatusReadback: true,
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    // The protocol is served by one enumerated deployment on a different origin
+    // than the dashboard, so it is gated by origin instead of probed on every
+    // other Sub2API site.
+    origins: AI_ROUTER_ORIGINS,
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "AI-ROUTER",
     },
     supportsStatusReadback: true,
     legacy: false,

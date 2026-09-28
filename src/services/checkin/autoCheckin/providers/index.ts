@@ -5,6 +5,7 @@ import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import type { CheckInMethodId } from "~/types/checkIn"
 
+import { aiRouterProvider } from "./aiRouter"
 import { anyrouterProvider } from "./anyrouter"
 import type { AutoCheckinProvider } from "./contracts"
 import { denxioProvider } from "./denxio"
@@ -29,6 +30,7 @@ const PROVIDER_BY_METHOD_ID = {
     geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,
   [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: xiaobaiCodeProvider,
+  [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: aiRouterProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

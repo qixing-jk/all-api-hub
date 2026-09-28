@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
+import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRouter"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
@@ -56,7 +57,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(10)
+    expect(registrationContracts).toHaveLength(11)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -98,6 +99,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "xiaobai-code:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: xiaobaiCodeProvider,
+        },
+        {
+          id: "ai-router:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: aiRouterProvider,
         },
       ]),
     )
@@ -275,6 +281,30 @@ describe("autoCheckinMethodRegistry", () => {
     ).toContain(AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn)
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.SUB2API)).toEqual([])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+  })
+
+  it("gates the AI-ROUTER method on its registered deployment origins", () => {
+    const candidatesFor = (siteUrl?: string) =>
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API, siteUrl)
+        .map(({ id }) => id)
+
+    expect(candidatesFor("https://ai-router.dev")).toContain(
+      AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+    )
+    expect(candidatesFor("https://www.ai-router.dev/dashboard")).toContain(
+      AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+    )
+    for (const siteUrl of [
+      "https://any-deployment.example",
+      "https://api.ai-router.dev",
+      "https://vip.ai-router.dev",
+      undefined,
+    ]) {
+      expect(candidatesFor(siteUrl)).not.toContain(
+        AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+      )
+    }
   })
 
   it("reports the third-party source of the custom-page method", () => {
