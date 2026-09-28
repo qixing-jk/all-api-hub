@@ -227,6 +227,21 @@ describe("adapter-owned account login", () => {
     expect(dependencies.createBrowser).not.toHaveBeenCalled()
   })
 
+  it("rejects malformed account URLs and unrelated AgentRouter hosts", async () => {
+    const capability = createNewApiAccountLogin(SITE_TYPES.NEW_API)!
+    expect(capability.supports({ ...account, site_url: "not a URL" })).toBe(
+      false,
+    )
+    expect(
+      await agentRouterAccountLogin.login({
+        account: { ...account, site_url: "https://other.example" },
+        methodId: "github",
+        requestId: "wrong-host",
+      }),
+    ).toEqual({ status: "unsupported" })
+    expect(dependencies.createBrowser).not.toHaveBeenCalled()
+  })
+
   it("checks the canonical deployment's system name during read-only discovery", async () => {
     const target = { ...account, site_url: "https://agentrouter.org" }
     await expect(agentRouterAccountLogin.discover(target)).resolves.toEqual([])
@@ -238,6 +253,16 @@ describe("adapter-owned account login", () => {
       { id: "github", label: "GitHub" },
     ])
     expect(dependencies.createBrowser).not.toHaveBeenCalled()
+  })
+
+  it("fails AgentRouter discovery when public status rejects its envelope", async () => {
+    dependencies.status.mockResolvedValue({ success: false })
+    await expect(
+      agentRouterAccountLogin.discover({
+        ...account,
+        site_url: "https://agentrouter.org",
+      }),
+    ).rejects.toThrow("Login methods could not be discovered")
   })
 
   it("accepts only the selected provider's authorize route and matching LinuxDO consent", () => {

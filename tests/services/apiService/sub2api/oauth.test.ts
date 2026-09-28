@@ -367,6 +367,16 @@ describe("Sub2API OAuth protocol", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("rejects completion when the cached account identity has disappeared", async () => {
+    await reachCompletion()
+    localStorage.removeItem("auth_user")
+    expect(await invoke(handleCompleteSub2ApiOAuth)).toEqual({
+      success: false,
+      reason: "identity_mismatch",
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it.each([18, "", null, {}, "not-a-user-id"])(
     "rejects server identity %j instead of trusting cached auth_user",
     async (id) => {

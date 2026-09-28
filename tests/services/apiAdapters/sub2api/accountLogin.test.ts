@@ -72,6 +72,25 @@ describe("Sub2API adapter-owned OAuth login", () => {
     expect(dependencies.createBrowser).not.toHaveBeenCalled()
   })
 
+  it("preserves a non-authenticated browser result", async () => {
+    dependencies.authenticate.mockResolvedValue({
+      status: "interaction_required",
+    })
+    expect(
+      await sub2ApiAccountLogin.login({
+        account,
+        methodId: "google",
+        requestId: "needs-interaction",
+      }),
+    ).toEqual({ status: "interaction_required" })
+  })
+
+  it("rejects an unparsable Sub2API account URL", () => {
+    expect(
+      sub2ApiAccountLogin.supports({ ...account, site_url: "not a URL" }),
+    ).toBe(false)
+  })
+
   it("registers the real native capability without New API protocol metadata", () => {
     expect(getAccountLoginCapability(account)).toBe(sub2ApiAccountLogin)
     expect(
@@ -286,6 +305,7 @@ describe("Sub2API adapter-owned OAuth login", () => {
     expect(flow.parsePreparation({ reason: "uncertain" })).toMatchObject({
       status: "uncertain",
     })
+    expect(flow.parsePreparation({ success: false })).toBeNull()
     expect(flow.parseCompletion({ reason: "identity_mismatch" })).toEqual({
       status: "identity_mismatch",
     })

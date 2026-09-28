@@ -337,6 +337,39 @@ describe("New API OAuth protocol", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it("rejects a modern callback whose bundle has no user ID before reading self", async () => {
+    history.replaceState({}, "", "/dashboard")
+    storeFlow(true)
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      ok({
+        access_token: "token",
+        token_type: "Bearer",
+        access_expires_at: Date.now() / 1000 + 300,
+        user: {},
+        session: { sid: "session", current: true },
+      }),
+    )
+    expect(await run(handleCompleteNewApiOAuth)).toEqual({
+      success: false,
+      reason: "identity_mismatch",
+    })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects an empty OAuth state before storing a callback flow", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(ok(status))
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(ok({ flow_token: "" }))
+    expect(await run(handlePrepareNewApiOAuth)).toEqual({
+      success: false,
+      reason: "request_failed",
+    })
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(sessionStorage.getItem("all-api-hub:oauth")).toBeNull()
+  })
+
   it("revokes only the unchanged modern session after failed verification", async () => {
     history.replaceState({}, "", "/dashboard")
     storeFlow(true)
@@ -501,6 +534,7 @@ describe("OAuth provider discovery", () => {
   })
 
   it.each([
+    "not a URL",
     "javascript:alert(1)",
     "http://idp.example/auth",
     "https://user:secret@idp.example/auth",
