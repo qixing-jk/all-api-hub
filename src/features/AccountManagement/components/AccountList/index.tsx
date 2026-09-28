@@ -84,6 +84,7 @@ import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import {
   groupAccountListResults,
   moveAccountId,
+  orderAccountsByDisplayOrder,
   projectAccountsByIdOrder,
   replaceVisibleAccountOrder,
   type AccountListDisplayItem,
@@ -432,6 +433,12 @@ export default function AccountList({
     () => displayData.filter((account) => selectedIdSet.has(account.id)),
     [displayData, selectedIdSet],
   )
+  // Copies follow the rendered rows, so pasted output matches what the user
+  // sees; selections hidden by search or filters stay at the end.
+  const selectedAccountsInDisplayOrder = useMemo(
+    () => orderAccountsByDisplayOrder(selectedAccounts, groupedDisplayItems),
+    [groupedDisplayItems, selectedAccounts],
+  )
   const selectedVisibleCount = useMemo(
     () =>
       selectedAccounts.filter((account) => visibleAccountIdSet.has(account.id))
@@ -656,7 +663,7 @@ export default function AccountList({
     setIsBulkCopyingInviteLinks(true)
     try {
       const result = await runInviteLinkCopyWorkflow({
-        accounts: selectedAccounts,
+        accounts: selectedAccountsInDisplayOrder,
         format: "labeled",
         signal: controller.signal,
         ...BULK_INVITE_LINK_COPY_POLICY,
@@ -792,7 +799,9 @@ export default function AccountList({
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
     })
-    const result = await runSiteUrlCopyWorkflow({ accounts: selectedAccounts })
+    const result = await runSiteUrlCopyWorkflow({
+      accounts: selectedAccountsInDisplayOrder,
+    })
     const insights = {
       itemCount: result.itemCount,
       selectedCount: result.selectedCount,

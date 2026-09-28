@@ -2936,6 +2936,112 @@ describe("AccountList", () => {
     })
   })
 
+  it("copies site addresses in the order the list sorts them", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    const zebra = buildDisplaySiteData({
+      id: "order-zebra",
+      name: "Zebra Order",
+      baseUrl: "https://zebra-order.example.invalid",
+    })
+    const alpha = buildDisplaySiteData({
+      id: "order-alpha",
+      name: "Alpha Order",
+      baseUrl: "https://alpha-order.example.invalid",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        // The user sorts the list, so the rendered rows are not the storage order.
+        sortedData: [alpha, zebra],
+        displayData: [zebra, alpha],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("order-zebra"),
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("order-alpha"),
+      ),
+    )
+    await user.click(await getBulkAction(user, "copySiteUrls"))
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+        "https://alpha-order.example.invalid\nhttps://zebra-order.example.invalid",
+      )
+    })
+  })
+
+  it("copies invite links in the order the list sorts them", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    const zebra = buildDisplaySiteData({
+      id: "invite-order-zebra",
+      name: "Zebra Order",
+      siteType: "new-api",
+      baseUrl: "https://zebra-invite-order.example.invalid",
+    })
+    const alpha = buildDisplaySiteData({
+      id: "invite-order-alpha",
+      name: "Alpha Order",
+      siteType: "new-api",
+      baseUrl: "https://alpha-invite-order.example.invalid",
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [alpha, zebra],
+        displayData: [zebra, alpha],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-order-zebra"),
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("invite-order-alpha"),
+      ),
+    )
+    await user.click(await getBulkAction(user, "copyInviteLinks"))
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+        [
+          "Alpha Order: https://alpha-invite-order.example.invalid/register?aff=invite-order-alpha",
+          "Zebra Order: https://zebra-invite-order.example.invalid/register?aff=invite-order-zebra",
+        ].join("\n"),
+      )
+    })
+  })
+
   it("reports a blocked clipboard for bulk site-address copy", async () => {
     const user = userEvent.setup()
     Object.defineProperty(navigator, "clipboard", {

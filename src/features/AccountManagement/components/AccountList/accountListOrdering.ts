@@ -65,6 +65,24 @@ export function replaceVisibleAccountOrder(
   })
 }
 
+/**
+ * Orders accounts the way the list renders them, keeping accounts that the
+ * current search or filters hide at the end in their incoming order, so
+ * generated output follows what the user can see.
+ */
+export function orderAccountsByDisplayOrder(
+  accounts: DisplaySiteData[],
+  displayItems: AccountListDisplayItem[],
+): DisplaySiteData[] {
+  const displayIndexById = new Map(
+    displayItems.map((item, index) => [item.result.account.id, index]),
+  )
+  const displayIndex = (account: DisplaySiteData) =>
+    displayIndexById.get(account.id) ?? Number.MAX_SAFE_INTEGER
+
+  return accounts.slice().sort((a, b) => displayIndex(a) - displayIndex(b))
+}
+
 /** Groups rows by display priority while retaining input order within each tier. */
 export function groupAccountListResults(
   results: AccountListResultItem[],

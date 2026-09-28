@@ -91,6 +91,7 @@ Select accounts in Account Management to use the actions below. Search and tag c
 - **Exit Bulk Mode**: Leave bulk-operation mode.
 
 - Actions are unavailable when no account is selected and become available after selection.
+- Copy actions output rows in the order shown in the list; selected accounts hidden by the current search or filters come last.
 - "Import from Bookmarks" is a separate entry point and is not part of the selection-based bulk toolbar. See [Add Accounts](./add-account.md) for that flow.
 
 ---
