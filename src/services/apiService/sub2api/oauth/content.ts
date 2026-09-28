@@ -206,6 +206,8 @@ export function handleCompleteSub2ApiOAuth(
     if (identity !== cachedIdentity) {
       return { success: false, reason: "identity_mismatch" }
     }
+    observedSession = undefined
+    sessionStorage.removeItem(FLOW_KEY)
     return { success: true, identity }
   })
 }

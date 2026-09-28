@@ -8,7 +8,7 @@ import { discoverNewApiLoginMethods } from "./discovery"
 export async function fetchNewApiLoginMethods(
   baseUrl: string,
   providers: readonly NewApiOAuthProvider[],
-  systemName?: string,
+  matchesSystemName?: (value: unknown) => boolean,
 ) {
   const response = await newApiFamilyRequests.envelope<Record<string, unknown>>(
     { baseUrl, auth: { authType: AuthTypeEnum.None } },
@@ -16,7 +16,8 @@ export async function fetchNewApiLoginMethods(
   )
   if (response.success !== true || !response.data)
     throw new Error("Login methods could not be discovered")
-  if (systemName && response.data.system_name !== systemName) return []
+  if (matchesSystemName && !matchesSystemName(response.data.system_name))
+    return []
   return discoverNewApiLoginMethods(response.data, providers).map(
     ({ provider, label }) => ({ provider, label }),
   )

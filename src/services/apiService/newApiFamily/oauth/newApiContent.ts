@@ -245,41 +245,46 @@ export function handleClearNewApiOAuthEvidence(
     if (flow?.requestId === requestId) {
       sessionStorage.removeItem(FLOW_KEY)
       const observed = observedSession
-      if (observed?.requestId === requestId) {
-        if (observed.modern) {
-          const current = parseNewApiDashboardAuthBundleResponse(
-            await envelope(
-              await requestApi(NEW_API_DASHBOARD_AUTH_REFRESH_PATH, "POST"),
-            ),
-          )
-          const currentUserId =
-            current.kind === "valid" ? String(current.bundle.user.id) : null
-          if (
-            current.kind === "valid" &&
-            current.bundle.sessionId === observed.sessionId &&
-            currentUserId === observed.userId
-          ) {
-            await envelope(await requestApi("/api/user/auth/logout", "POST"))
-          }
-        } else {
-          const currentUserId = String(
-            JSON.parse(localStorage.getItem("user") || "null")?.id ?? "",
-          )
-          if (currentUserId === observed.userId) {
-            await envelope(
-              await requestApi(
-                "/api/user/logout",
-                "GET",
-                undefined,
-                undefined,
-                true,
-              ),
+      try {
+        if (observed?.requestId === requestId) {
+          if (observed.modern) {
+            const refresh = await requestApi(
+              NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
+              "POST",
             )
+            const current = refresh.ok
+              ? parseNewApiDashboardAuthBundleResponse(await refresh.json())
+              : ({ kind: "unrelated" } as const)
+            const currentUserId =
+              current.kind === "valid" ? String(current.bundle.user.id) : null
+            if (
+              current.kind === "valid" &&
+              current.bundle.sessionId === observed.sessionId &&
+              currentUserId === observed.userId
+            ) {
+              await envelope(await requestApi("/api/user/auth/logout", "POST"))
+            }
+          } else {
+            const currentUserId = String(
+              JSON.parse(localStorage.getItem("user") || "null")?.id ?? "",
+            )
+            if (currentUserId === observed.userId) {
+              await envelope(
+                await requestApi(
+                  "/api/user/logout",
+                  "GET",
+                  undefined,
+                  undefined,
+                  true,
+                ),
+              )
+            }
           }
         }
+      } finally {
+        localStorage.removeItem("user")
+        observedSession = undefined
       }
-      localStorage.removeItem("user")
-      observedSession = undefined
     }
     return { success: true }
   })

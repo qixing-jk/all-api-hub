@@ -1,6 +1,9 @@
 import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
+import {
+  isAgentRouterLoginUrl,
+  isAgentRouterSystemName,
+} from "~/services/accountLogin/providers/agentrouter/config"
 import { AGENT_ROUTER_ACCOUNT_LOGIN } from "~/services/accountSiteDefinitions/deployments"
 import type {
   AccountLoginCapability,
@@ -57,7 +60,7 @@ export const agentRouterAccountLogin: AccountLoginCapability = {
     const methods = await fetchNewApiLoginMethods(
       account.site_url,
       AGENT_ROUTER_ACCOUNT_LOGIN.methods,
-      AGENT_ROUTER_ACCOUNT_LOGIN.systemName,
+      isAgentRouterSystemName,
     )
     return methods.map(({ provider, label }) => ({ id: provider, label }))
   },

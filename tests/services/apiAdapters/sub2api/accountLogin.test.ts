@@ -57,6 +57,21 @@ describe("Sub2API adapter-owned OAuth login", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it("does not offer OAuth on a split-origin deployment whose content flow needs same-origin API routes", async () => {
+    const target = { ...account, site_url: "https://ai-router.dev/dashboard" }
+    expect(sub2ApiAccountLogin.supports(target)).toBe(false)
+    expect(await sub2ApiAccountLogin.discover(target)).toEqual([])
+    expect(
+      await sub2ApiAccountLogin.login({
+        account: target,
+        methodId: "google",
+        requestId: "split-origin",
+      }),
+    ).toEqual({ status: "unsupported" })
+    expect(dependencies.request).not.toHaveBeenCalled()
+    expect(dependencies.createBrowser).not.toHaveBeenCalled()
+  })
+
   it("registers the real native capability without New API protocol metadata", () => {
     expect(getAccountLoginCapability(account)).toBe(sub2ApiAccountLogin)
     expect(
@@ -246,5 +261,44 @@ describe("Sub2API adapter-owned OAuth login", () => {
         origin,
       ),
     ).toBe(false)
+  })
+
+  it("maps Sub2API preparation and completion outcomes without accepting malformed identity", () => {
+    const flow = createSub2ApiOAuthFlow({
+      origin,
+      provider: "google",
+      requestId: "login",
+      loginPath: "/login",
+    })
+    expect(
+      flow.parsePreparation({
+        success: true,
+        authorizationUrl: "https://idp.example/start",
+      }),
+    ).toEqual({ authorizationUrl: "https://idp.example/start" })
+    expect(flow.parsePreparation({ success: true })).toBeNull()
+    expect(
+      flow.parsePreparation({ reason: "interaction_required" }),
+    ).toMatchObject({ status: "interaction_required" })
+    expect(flow.parsePreparation({ reason: "unsupported" })).toEqual({
+      status: "unsupported",
+    })
+    expect(flow.parsePreparation({ reason: "uncertain" })).toMatchObject({
+      status: "uncertain",
+    })
+    expect(flow.parseCompletion({ reason: "identity_mismatch" })).toEqual({
+      status: "identity_mismatch",
+    })
+    expect(flow.parseCompletion({ reason: "interaction_required" })).toEqual({
+      status: "interaction_required",
+    })
+    expect(
+      flow.parseCompletion({ success: true, identity: "display-name" }),
+    ).toEqual({ status: "invalid" })
+    expect(flow.parseCompletion({ success: true, identity: "17" })).toEqual({
+      status: "verified",
+      identity: "17",
+      evidence: undefined,
+    })
   })
 })

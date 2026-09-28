@@ -399,6 +399,82 @@ describe("New API OAuth protocol", () => {
     ])
     expect(sessionStorage.getItem("all-api-hub:oauth")).toBeNull()
   })
+
+  it("clears local evidence when the rejected modern session has expired", async () => {
+    history.replaceState({}, "", "/dashboard")
+    storeFlow(true)
+    localStorage.setItem("user", JSON.stringify({ id: 17 }))
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        ok({
+          access_token: "token",
+          token_type: "Bearer",
+          access_expires_at: Date.now() / 1000 + 300,
+          user: { id: 17 },
+          session: { sid: "failed-session", current: true },
+        }),
+      )
+      .mockResolvedValueOnce(ok({ id: 18 }))
+      .mockResolvedValueOnce(json({}, 401))
+
+    expect(await run(handleCompleteNewApiOAuth)).toMatchObject({
+      success: false,
+      reason: "identity_mismatch",
+    })
+    expect(await run(handleClearNewApiOAuthEvidence)).toEqual({ success: true })
+    expect(localStorage.getItem("user")).toBeNull()
+    expect(sessionStorage.getItem("all-api-hub:oauth")).toBeNull()
+    expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it("clears local evidence even when modern revocation fails", async () => {
+    history.replaceState({}, "", "/dashboard")
+    storeFlow(true)
+    localStorage.setItem("user", JSON.stringify({ id: 17 }))
+    const bundle = ok({
+      access_token: "token",
+      token_type: "Bearer",
+      access_expires_at: Date.now() / 1000 + 300,
+      user: { id: 17 },
+      session: { sid: "failed-session", current: true },
+    })
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(bundle)
+      .mockResolvedValueOnce(ok({ id: 18 }))
+      .mockResolvedValueOnce(bundle.clone())
+      .mockResolvedValueOnce(json({}, 500))
+
+    expect(await run(handleCompleteNewApiOAuth)).toMatchObject({
+      success: false,
+    })
+    expect(await run(handleClearNewApiOAuthEvidence)).toEqual({
+      success: false,
+      reason: "request_failed",
+    })
+    expect(localStorage.getItem("user")).toBeNull()
+    expect(sessionStorage.getItem("all-api-hub:oauth")).toBeNull()
+  })
+
+  it("revokes only the observed legacy session after failed identity verification", async () => {
+    history.replaceState({}, "", "/dashboard")
+    storeFlow(false)
+    localStorage.setItem("user", JSON.stringify({ id: 17 }))
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(ok({ id: 18 }))
+      .mockResolvedValueOnce(ok())
+
+    expect(await run(handleCompleteNewApiOAuth)).toMatchObject({
+      success: false,
+    })
+    expect(await run(handleClearNewApiOAuthEvidence)).toEqual({ success: true })
+    expect(fetch.mock.calls.map(([path]) => path)).toEqual([
+      "/api/user/self",
+      "/api/user/logout",
+    ])
+    expect(localStorage.getItem("user")).toBeNull()
+  })
 })
 
 describe("OAuth provider discovery", () => {

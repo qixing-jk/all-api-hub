@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import * as siteDefinitions from "~/services/accountSiteDefinitions"
 import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/accountLogin"
 import { agentRouterAccountLogin } from "~/services/apiAdapters/newApi/agentRouterAccountLogin"
+import { createNewApiOAuthFlow } from "~/services/apiAdapters/newApi/browserOAuth"
 
 const dependencies = vi.hoisted(() => ({
   status: vi.fn(),
@@ -48,6 +49,22 @@ describe("adapter-owned account login", () => {
     dependencies.status.mockResolvedValue({ success: true, data: status })
   })
   afterEach(() => vi.restoreAllMocks())
+
+  it.each(["Agent Router", "agentrouter", "Agent  Router"])(
+    "discovers AgentRouter methods for system name %s",
+    async (systemName) => {
+      dependencies.status.mockResolvedValue({
+        success: true,
+        data: { ...status, system_name: systemName },
+      })
+      expect(
+        await agentRouterAccountLogin.discover({
+          ...account,
+          site_url: "https://agentrouter.org",
+        }),
+      ).toEqual([{ id: "github", label: "GitHub" }])
+    },
+  )
 
   it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.SUB2API, SITE_TYPES.UNKNOWN])(
     "does not infer OAuth adoption for %s from the backend family",
@@ -221,5 +238,95 @@ describe("adapter-owned account login", () => {
       { id: "github", label: "GitHub" },
     ])
     expect(dependencies.createBrowser).not.toHaveBeenCalled()
+  })
+
+  it("accepts only the selected provider's authorize route and matching LinuxDO consent", () => {
+    const flow = createNewApiOAuthFlow({
+      provider: "linuxdo",
+      loginPath: "/login",
+      userIdHeader: "New-Api-User",
+      completionPaths: ["/dashboard"],
+    })
+    const requested = new URL(
+      "https://connect.linux.do/oauth2/authorize?client_id=site&state=nonce",
+    )
+    expect(flow.isAuthorizationUrl(requested)).toBe(true)
+    expect(
+      flow.authorizationInteraction?.isInteractionUrl(requested, requested),
+    ).toBe(true)
+    for (const url of [
+      "https://connect.linux.do/oauth2/authorize?client_id=site&state=other",
+      "https://connect.linux.do/oauth2/authorize?client_id=other&state=nonce",
+      "https://evil.example/oauth2/authorize?client_id=site&state=nonce",
+    ]) {
+      expect(
+        flow.authorizationInteraction?.isInteractionUrl(
+          new URL(url),
+          requested,
+        ),
+      ).toBe(false)
+    }
+    expect(
+      flow.isAuthorizationUrl(
+        new URL(
+          "http://connect.linux.do/oauth2/authorize?client_id=site&state=nonce",
+        ),
+      ),
+    ).toBe(false)
+  })
+
+  it("distinguishes provider URLs and invalid callback responses", () => {
+    const flow = createNewApiOAuthFlow({
+      provider: "discord",
+      loginPath: "/login",
+      userIdHeader: "New-Api-User",
+      completionPaths: ["/dashboard"],
+    })
+    expect(
+      flow.isAuthorizationUrl(
+        new URL(
+          "https://discord.com/oauth2/authorize?client_id=site&state=nonce",
+        ),
+      ),
+    ).toBe(true)
+    expect(
+      flow.isAuthorizationUrl(
+        new URL(
+          "https://github.com/login/oauth/authorize?client_id=site&state=nonce",
+        ),
+      ),
+    ).toBe(false)
+    expect(flow.parseCompletion({ reason: "identity_mismatch" })).toEqual({
+      status: "identity_mismatch",
+    })
+    expect(
+      flow.parseCompletion({ success: false, message: "expired" }),
+    ).toEqual({ status: "invalid", message: "expired" })
+    expect(
+      flow.parseCompletion({ success: true, userId: " 17 ", checkedIn: true }),
+    ).toEqual({
+      status: "verified",
+      identity: "17",
+      evidence: { checkedIn: true },
+    })
+    expect(flow.parseCompletion(null)).toEqual({ status: "invalid" })
+    expect(
+      flow.parsePreparation({
+        success: true,
+        authorizationUrl: "https://idp.example/start",
+      }),
+    ).toEqual({ authorizationUrl: "https://idp.example/start" })
+    expect(flow.parsePreparation({ success: true })).toBeNull()
+    const oidc = createNewApiOAuthFlow({
+      provider: "oidc",
+      loginPath: "/login",
+      userIdHeader: "New-Api-User",
+      completionPaths: ["/dashboard"],
+    })
+    expect(
+      oidc.isAuthorizationUrl(
+        new URL("https://idp.example/start?client_id=site&state=nonce"),
+      ),
+    ).toBe(true)
   })
 })

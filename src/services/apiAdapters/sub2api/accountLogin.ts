@@ -1,3 +1,4 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type {
@@ -35,7 +36,8 @@ function supportsSub2ApiAccountLogin(account: AccountLoginTarget): boolean {
     return (
       ["https:", "http:"].includes(url.protocol) &&
       !url.username &&
-      !url.password
+      !url.password &&
+      resolveDeploymentApiOrigin(url.origin) === url.origin
     )
   } catch {
     return false

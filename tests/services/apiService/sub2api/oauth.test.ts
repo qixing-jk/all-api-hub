@@ -321,6 +321,17 @@ describe("Sub2API OAuth protocol", () => {
     )
   })
 
+  it("keeps the verified website session if evidence cleanup arrives after success", async () => {
+    await reachCompletion()
+    expect(await invoke(handleCompleteSub2ApiOAuth)).toEqual({
+      success: true,
+      identity: "17",
+    })
+    await invoke(handleClearSub2ApiOAuthEvidence)
+    expect(localStorage.getItem("auth_token")).toBe("fresh-access")
+    expect(sessionStorage.getItem(flowKey)).toBeNull()
+  })
+
   it.each([
     "/dashboard",
     "/dashboard?all_api_hub_login=other-request",
