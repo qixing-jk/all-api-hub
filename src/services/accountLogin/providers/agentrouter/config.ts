@@ -26,7 +26,10 @@ export function isAgentRouterSystemName(value: unknown): boolean {
 export function isAgentRouterLoginUrl(value: unknown): boolean {
   if (typeof value !== "string") return false
   try {
-    return AGENT_ROUTER_ORIGIN_SET.has(new URL(value).origin)
+    const url = new URL(value)
+    return (
+      !url.username && !url.password && AGENT_ROUTER_ORIGIN_SET.has(url.origin)
+    )
   } catch {
     return false
   }

@@ -43,6 +43,12 @@ export const RuntimeMessageTypes = {
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
+  ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
+  ContentCompleteNewApiOAuth: "completeNewApiOAuth",
+  ContentClearNewApiOAuthEvidence: "clearNewApiOAuthEvidence",
+  ContentPrepareSub2ApiOAuth: "prepareSub2ApiOAuth",
+  ContentCompleteSub2ApiOAuth: "completeSub2ApiOAuth",
+  ContentClearSub2ApiOAuthEvidence: "clearSub2ApiOAuthEvidence",
   AccountBrowserIdentityGetCooldown: composeRuntimeAction(
     RuntimeActionPrefixes.AccountBrowserIdentity,
     "getCooldown",

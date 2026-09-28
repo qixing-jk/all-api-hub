@@ -707,6 +707,31 @@ describe("account site definition registry", () => {
     ).toBe(ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix)
   })
 
+  it("isolates login configuration and nested arrays between callers and site types", () => {
+    const first = getAccountSiteDefinition(SITE_TYPES.NEW_API)!.accountLogin!
+    first.protocols!.newApi!.userIdHeader = "Changed-User"
+    ;(first.methods as string[]).pop()
+    ;(first.protocols!.newApi!.completionPaths as string[]).push("/changed")
+
+    const second = getAccountSiteDefinition(SITE_TYPES.NEW_API)!.accountLogin!
+    expect(second.protocols!.newApi!.userIdHeader).toBe("New-Api-User")
+    expect(second.methods).toContain("oidc")
+    expect(second.protocols!.newApi!.completionPaths).not.toContain("/changed")
+
+    const compatible = getAccountSiteDefinition(
+      SITE_TYPES.SUPER_API,
+    )!.accountLogin!
+    ;(compatible.methods as string[]).pop()
+    ;(compatible.protocols!.newApi!.completionPaths as string[]).push(
+      "/changed",
+    )
+    const other = getAccountSiteDefinition(
+      SITE_TYPES.WONG_GONGYI,
+    )!.accountLogin!
+    expect(other.methods).toContain("linuxdo")
+    expect(other.protocols!.newApi!.completionPaths).not.toContain("/changed")
+  })
+
   it("returns defensive RegExp copies for onboarding detection", () => {
     const firstDefinition = getAccountSiteDefinition(SITE_TYPES.SUB2API)
     const secondDefinition = getAccountSiteDefinition(SITE_TYPES.SUB2API)

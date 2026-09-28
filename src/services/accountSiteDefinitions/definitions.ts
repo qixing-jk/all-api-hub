@@ -53,6 +53,7 @@ import {
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
   MANAGED_RESOURCE_KINDS,
   type AccountSiteDefinition,
+  type AccountSiteLoginConfig,
   type ManagedResourceProductPolicy,
   type RegisteredAccountSiteDefinition,
 } from "./contracts"
@@ -88,6 +89,24 @@ const NEW_API_USAGE_PATH = "/console/log"
 const NEW_API_CHECKIN_PATH = "/console/personal"
 // https://github.com/QuantumNous/new-api/blob/387a40914853310d69adc2f52474134ced5f4811/web/src/features/security/index.tsx
 const NEW_API_ACCESS_TOKEN_PATH = "/security#security-access"
+
+// Preserve the existing compatibility allowlist for forks without a recorded
+// callback source. Verified upstreams below declare their own completion paths.
+const NEW_API_COMPATIBLE_LOGIN = {
+  methods: ["github", "linuxdo"],
+  protocols: {
+    newApi: {
+      userIdHeader: "New-Api-User",
+      completionPaths: [
+        "/console",
+        "/console/token",
+        "/dashboard",
+        "/app/tokens",
+      ],
+    },
+  },
+} as const satisfies AccountSiteLoginConfig
+
 const SHAREDCHAT_CODEX_DASHBOARD_PATH =
   "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex"
 
@@ -186,6 +205,18 @@ const ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.NEW_API,
     tokenKey: { optionalSkPrefix: true },
+    accountLogin: {
+      ...NEW_API_COMPATIBLE_LOGIN,
+      methods: ["github", "linuxdo", "discord", "oidc"],
+      // QuantumNous/new-api: v1.0.0-rc.37 web/src/routes/oauth/$provider.tsx;
+      // earlier web/src/components/OAuth2Callback.js completes under /console.
+      protocols: {
+        newApi: {
+          ...NEW_API_COMPATIBLE_LOGIN.protocols.newApi,
+          completionPaths: ["/console", "/console/token", "/dashboard"],
+        },
+      },
+    },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
@@ -293,6 +324,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.SUB2API,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
+    accountLogin: {
+      // Wei-Shaw/sub2api@881f320: public settings and native OAuth start routes.
+      methods: ["github", "google", "linuxdo", "oidc", "dingtalk", "wechat"],
+    },
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/admin/accounts", tokens: "/keys" },
@@ -693,6 +728,18 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
   {
     siteType: SITE_TYPES.VELOERA,
     tokenKey: { optionalSkPrefix: true },
+    accountLogin: {
+      ...NEW_API_COMPATIBLE_LOGIN,
+      methods: ["github", "linuxdo", "oidc"],
+      // github.com/Veloera/Veloera: middleware/auth.go and
+      // web/src/components/OAuth2Callback.js own this session/header contract.
+      protocols: {
+        newApi: {
+          userIdHeader: "Veloera-User",
+          completionPaths: ["/app/tokens"],
+        },
+      },
+    },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
@@ -775,6 +822,15 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.V_API,
     tokenKey: { optionalSkPrefix: true },
+    accountLogin: {
+      ...NEW_API_COMPATIBLE_LOGIN,
+      protocols: {
+        newApi: {
+          ...NEW_API_COMPATIBLE_LOGIN.protocols.newApi,
+          userIdHeader: "X-Api-User",
+        },
+      },
+    },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -817,6 +873,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.SUPER_API,
     tokenKey: { optionalSkPrefix: true },
+    accountLogin: NEW_API_COMPATIBLE_LOGIN,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -835,6 +892,16 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.RIX_API,
     tokenKey: { optionalSkPrefix: true },
+    // Retains the existing Rix session contract; no canonical source is recorded.
+    accountLogin: {
+      ...NEW_API_COMPATIBLE_LOGIN,
+      protocols: {
+        newApi: {
+          ...NEW_API_COMPATIBLE_LOGIN.protocols.newApi,
+          userIdHeader: "Rix-Api-User",
+        },
+      },
+    },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -870,6 +937,16 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.NEO_API,
     tokenKey: { optionalSkPrefix: true },
+    // Retains the existing Neo session contract; no canonical source is recorded.
+    accountLogin: {
+      ...NEW_API_COMPATIBLE_LOGIN,
+      protocols: {
+        newApi: {
+          ...NEW_API_COMPATIBLE_LOGIN.protocols.newApi,
+          userIdHeader: "neo-api-user",
+        },
+      },
+    },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -891,6 +968,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.WONG_GONGYI,
     tokenKey: { optionalSkPrefix: true },
+    accountLogin: NEW_API_COMPATIBLE_LOGIN,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {

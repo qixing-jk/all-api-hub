@@ -4,12 +4,6 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
-/**
- * Sub2API API overrides.
- *
- * Sub2API differs from One-API/New-API backends in that authenticated endpoints
- * live under `/api/v1/*` and require a dashboard JWT.
- */
 import {
   DEPLOYMENT_API_ROLES,
   resolveDeploymentApiOrigin,
@@ -40,7 +34,6 @@ import {
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
-  AuthTypeEnum,
   SiteHealthStatus,
   type AccountTodayMetricReason,
   type CheckInConfig,
@@ -75,6 +68,7 @@ import {
   parseSub2ApiNativeKey,
   parseSub2ApiTodayUsage,
 } from "./parsing"
+import { fetchSub2ApiPublicSettings } from "./publicSettings"
 import { getSafeErrorMessage } from "./redaction"
 import { decodeSub2ApiResponseError } from "./responseError"
 import { Sub2ApiTokenRefreshError } from "./tokenRefresh"
@@ -85,7 +79,6 @@ import {
   SUB2API_AVAILABLE_GROUPS_ENDPOINT,
   SUB2API_GROUP_RATES_ENDPOINT,
   SUB2API_KEYS_ENDPOINT,
-  SUB2API_PUBLIC_SETTINGS_ENDPOINT,
   SUB2API_USAGE_STATS_ENDPOINT,
   type Sub2ApiAffiliateData,
   type Sub2ApiAnnouncementData,
@@ -95,10 +88,11 @@ import {
   type Sub2ApiKeyData,
   type Sub2ApiKeyListData,
   type Sub2ApiNativeKey,
-  type Sub2ApiPublicSettingsData,
   type Sub2ApiUpdateKeyPayload,
   type Sub2ApiUsageStatsData,
 } from "./type"
+
+export { fetchSub2ApiPublicSettings }
 
 /**
  * Unified logger scoped to Sub2API site API overrides.
@@ -255,33 +249,6 @@ export async function performSub2ApiProDailyCheckIn(
     }
     throw error
   }
-}
-
-/**
- * Fetch deployment-owned settings that Sub2API exposes without authentication.
- * Source: https://github.com/Wei-Shaw/sub2api/blob/2bc139ab527b4a687546d145dc7bb9063cf14510/backend/internal/handler/dto/settings.go
- * `PublicSettings.site_name` is the canonical public deployment name.
- */
-export const fetchSub2ApiPublicSettings = async (
-  request: ApiServiceRequest,
-): Promise<Sub2ApiPublicSettingsData | undefined> => {
-  const body = await fetchApi<unknown>(
-    {
-      ...request,
-      auth: { authType: AuthTypeEnum.None },
-    },
-    {
-      endpoint: SUB2API_PUBLIC_SETTINGS_ENDPOINT,
-      options: { method: "GET", cache: "no-store" },
-      errorResponseDecoder: decodeSub2ApiResponseError,
-    },
-  )
-
-  return parseSub2ApiEnvelope<Sub2ApiPublicSettingsData>(
-    body,
-    SUB2API_PUBLIC_SETTINGS_ENDPOINT,
-    { allowMissingData: true },
-  )
 }
 
 /**

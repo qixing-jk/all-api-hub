@@ -1,4 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
@@ -7,6 +8,10 @@ import {
 import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
 
 import { aihubmixCapabilities } from "./aihubmix"
+import type {
+  AccountLoginCapability,
+  AccountLoginTarget,
+} from "./contracts/accountLogin"
 import type { ManagedSiteCapabilities } from "./contracts/managedSiteCapabilities"
 import type {
   SiteType,
@@ -21,6 +26,7 @@ import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
 import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
+import { agentRouterAccountLogin } from "./newApi/agentRouterAccountLogin"
 import { openRouterCapabilities } from "./openrouter"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
@@ -93,6 +99,28 @@ export function getSiteTypeCapabilities(
   }
 
   return { siteType }
+}
+
+/** Resolves a deployment override before the optional site-type login capability. */
+export function getAccountLoginCapability(
+  account: AccountLoginTarget,
+): AccountLoginCapability | undefined {
+  let hostname: string
+  try {
+    hostname = new URL(account.site_url).hostname
+  } catch {
+    return undefined
+  }
+  // Reserve the deployment even for an invalid scheme/port so it cannot fall
+  // through to a generic New API protocol with different session semantics.
+  const capability = AGENT_ROUTER_ORIGINS.some(
+    (origin) => new URL(origin).hostname === hostname,
+  )
+    ? agentRouterAccountLogin
+    : account.site_type
+      ? getSiteTypeCapabilities(account.site_type).account?.login
+      : undefined
+  return capability?.supports(account) ? capability : undefined
 }
 
 /** Returns the registered managed-site capabilities without remapping their interfaces. */

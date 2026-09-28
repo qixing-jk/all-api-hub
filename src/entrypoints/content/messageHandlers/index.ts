@@ -16,6 +16,16 @@ import {
   handleWaitAndGetUserInfo,
   handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
+import {
+  handleClearNewApiOAuthEvidence,
+  handleCompleteNewApiOAuth,
+  handlePrepareNewApiOAuth,
+} from "~/services/apiService/newApiFamily/oauth/newApiContent"
+import {
+  handleClearSub2ApiOAuthEvidence,
+  handleCompleteSub2ApiOAuth,
+  handlePrepareSub2ApiOAuth,
+} from "~/services/apiService/sub2api/oauth/content"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 /**
@@ -25,6 +35,18 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentPrepareSub2ApiOAuth)
+      return handlePrepareSub2ApiOAuth(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentCompleteSub2ApiOAuth)
+      return handleCompleteSub2ApiOAuth(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentClearSub2ApiOAuthEvidence)
+      return handleClearSub2ApiOAuthEvidence(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentPrepareNewApiOAuth)
+      return handlePrepareNewApiOAuth(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentCompleteNewApiOAuth)
+      return handleCompleteNewApiOAuth(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentClearNewApiOAuthEvidence)
+      return handleClearNewApiOAuthEvidence(request, sendResponse)
     if (request.action === RuntimeActionIds.ContentPrepareAgentRouterOAuth) {
       return handlePrepareAgentRouterOAuth(request, sendResponse)
     }

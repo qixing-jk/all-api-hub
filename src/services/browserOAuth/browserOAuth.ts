@@ -3,6 +3,7 @@ import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import {
   createWindow,
   getTab,
+  isMessageReceiverUnavailableError,
   onTabRemoved,
   onTabUpdated,
   onWindowRemoved,
@@ -65,21 +66,31 @@ interface BrowserOAuthInput {
   attended?: boolean
 }
 
-export type BrowserOAuthFailureStatus =
+type BrowserOAuthProtocolFailureStatus =
+  | "unsupported"
   | typeof BROWSER_OAUTH_STATUS.Cancelled
   | typeof BROWSER_OAUTH_STATUS.Failed
   | typeof BROWSER_OAUTH_STATUS.IdentityMismatch
   | typeof BROWSER_OAUTH_STATUS.InteractionRequired
+  | typeof BROWSER_OAUTH_STATUS.Uncertain
+
+type BrowserOAuthFailure = {
+  status: BrowserOAuthProtocolFailureStatus
+  message?: string
+}
+
+export type BrowserOAuthFailureStatus =
+  | BrowserOAuthProtocolFailureStatus
   | typeof BROWSER_OAUTH_STATUS.SessionBusy
 
-export type BrowserOAuthResult<Evidence> =
+type BrowserOAuthResult<Evidence> =
   | {
       status: typeof BROWSER_OAUTH_STATUS.Authenticated
       evidence: Evidence
       identity: string
     }
   | {
-      status: BrowserOAuthFailureStatus | typeof BROWSER_OAUTH_STATUS.Uncertain
+      status: BrowserOAuthFailureStatus
       message?: string
     }
 
@@ -96,14 +107,14 @@ export interface BrowserOAuthContextOptions {
   sessionWaitTimeoutMs?: number
 }
 
-export interface BrowserOAuthPreparation {
-  authorizationUrl: string
-}
+export type BrowserOAuthPreparation =
+  | { authorizationUrl: string }
+  | BrowserOAuthFailure
 
 export type BrowserOAuthCompletion<Evidence> =
   | { status: "verified"; identity: string; evidence: Evidence }
-  | { status: typeof BROWSER_OAUTH_STATUS.IdentityMismatch }
   | { status: "invalid"; message?: string }
+  | BrowserOAuthFailure
 
 export interface BrowserOAuthFlow<Evidence> {
   id: string
@@ -271,6 +282,8 @@ async function sendContentMessage<T>(
     tabId,
     { ...details, action, requestId },
     {
+      // Retry only when the receiver is unavailable, before the action can run.
+      // The shared helper never replays a dispatched action after a lost response.
       maxAttempts: 8,
       delayMs: 400,
     },
@@ -299,12 +312,13 @@ async function authenticateBrowserOAuth<Evidence>(
       context.tabId,
       flow.prepareAction,
       input.requestId,
-      flow.prepareDetails,
+      { ...flow.prepareDetails, origin: input.origin },
     )
     const prepared = flow.parsePreparation(prepareResponse)
     if (!prepared) {
       throw new Error(`${flow.displayName} OAuth could not be prepared.`)
     }
+    if ("status" in prepared) return prepared
     const authorizationUrl = new URL(prepared.authorizationUrl)
     if (!flow.isAuthorizationUrl(authorizationUrl)) {
       throw new Error(`${flow.displayName} returned an invalid OAuth URL.`)
@@ -345,7 +359,9 @@ async function authenticateBrowserOAuth<Evidence>(
             input.requestId,
             { authorizationUrl: authorizationUrl.href },
           ).catch((error) => {
-            handledInteractionUrls.delete(currentUrl.href)
+            if (isMessageReceiverUnavailableError(error)) {
+              handledInteractionUrls.delete(currentUrl.href)
+            }
             logger.warn(
               `${flow.displayName} OAuth authorization interaction failed`,
               {
@@ -366,10 +382,11 @@ async function authenticateBrowserOAuth<Evidence>(
       context.tabId,
       flow.completeAction,
       input.requestId,
+      { origin: input.origin },
     )
     const completed = flow.parseCompletion(completionResponse)
-    if (completed.status === BROWSER_OAUTH_STATUS.IdentityMismatch) {
-      return { status: BROWSER_OAUTH_STATUS.IdentityMismatch }
+    if (completed.status !== "verified" && completed.status !== "invalid") {
+      return completed
     }
     if (completed.status === "invalid") {
       throw new Error(
@@ -420,6 +437,7 @@ async function authenticateBrowserOAuth<Evidence>(
             context.tabId,
             flow.clearEvidenceAction,
             input.requestId,
+            { origin: input.origin },
           )
         } catch {
           // The tab may still be on the identity provider or already be closed.
@@ -453,11 +471,15 @@ async function authenticateWithinSessionWait<Evidence>(
     }, sessionWaitTimeoutMs)
   })
 
-  const queued = authenticationQueue.run(flow.concurrencyKey, async () => {
-    globalThis.clearTimeout(timeoutId)
-    if (waitExpired) return SESSION_WAIT_EXPIRED
-    return await authenticateBrowserOAuth(flow, input)
-  })
+  // Origins do not share a site session, so only one origin waits on this key.
+  const queued = authenticationQueue.run(
+    `${flow.concurrencyKey}:${input.origin}`,
+    async () => {
+      globalThis.clearTimeout(timeoutId)
+      if (waitExpired) return SESSION_WAIT_EXPIRED
+      return await authenticateBrowserOAuth(flow, input)
+    },
+  )
 
   const outcome = await Promise.race([queued, waitBound])
   if (outcome === SESSION_WAIT_EXPIRED) {

@@ -52,6 +52,15 @@ export type Sub2ApiAuthMeResponse = Sub2ApiEnvelope<Sub2ApiAuthMeData>
 export type Sub2ApiPublicSettingsData = {
   affiliate_enabled?: boolean | null
   site_name?: string | null
+  github_oauth_enabled?: boolean | null
+  google_oauth_enabled?: boolean | null
+  linuxdo_oauth_enabled?: boolean | null
+  oidc_oauth_enabled?: boolean | null
+  oidc_oauth_provider_name?: string | null
+  dingtalk_oauth_enabled?: boolean | null
+  wechat_oauth_open_enabled?: boolean | null
+  tencent_captcha_enabled?: boolean | null
+  aliyun_captcha_enabled?: boolean | null
 }
 
 export type Sub2ApiAffiliateData = {

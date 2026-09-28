@@ -5,6 +5,7 @@ import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
 import type { AccountDataCapability } from "./accountData"
 import type { AccountKeyResourceCapability } from "./accountKeyResource"
+import type { AccountLoginCapability } from "./accountLogin"
 import type { AccountPersistenceCapability } from "./accountPersistence"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
@@ -30,6 +31,7 @@ export type SiteTypeCapabilities = {
     notice?: SiteNoticeCapability
   }
   account?: {
+    login?: AccountLoginCapability
     announcements?: SiteAnnouncementsCapability
     modelCatalog?: ModelCatalogCapability
     providerModelCatalog?: ProviderModelCatalogCapability

@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  agentRouterGithubOAuthFlow,
-  agentRouterLinuxDoOAuthFlow,
-  buildAgentRouterGithubAuthorizeUrl,
-  buildAgentRouterLinuxDoAuthorizeUrl,
-} from "~/services/accountLogin/providers/agentrouter/browserOAuth"
-import {
   isAgentRouterLoginUrl,
   isAgentRouterSystemName,
 } from "~/services/accountLogin/providers/agentrouter/config"
+import { createAgentRouterOAuthFlow } from "~/services/apiAdapters/newApi/agentRouterAccountLogin"
+import {
+  buildGithubAuthorizeUrl as buildAgentRouterGithubAuthorizeUrl,
+  buildLinuxDoAuthorizeUrl as buildAgentRouterLinuxDoAuthorizeUrl,
+} from "~/services/apiService/newApiFamily/oauth/discovery"
+
+const agentRouterGithubOAuthFlow = createAgentRouterOAuthFlow("github")
+const agentRouterLinuxDoOAuthFlow = createAgentRouterOAuthFlow("linuxdo")
 
 describe("AgentRouter GitHub OAuth adapter", () => {
   it.each([undefined, false])(
@@ -72,7 +74,10 @@ describe("AgentRouter GitHub OAuth adapter", () => {
   })
 
   it.each([
-    ["https://github.com/login/oauth/authorize?client_id=client", true],
+    [
+      "https://github.com/login/oauth/authorize?client_id=client&state=test",
+      true,
+    ],
     ["https://github.com/login", false],
     ["http://github.com/login/oauth/authorize", false],
     ["https://example.invalid/login/oauth/authorize", false],
@@ -128,13 +133,13 @@ describe("AgentRouter GitHub OAuth adapter", () => {
       "https://connect.linux.do/oauth2/authorize?response_type=code&client_id=linuxdo_client&state=signed-state",
     )
     expect(
-      agentRouterLinuxDoOAuthFlow.authorizationInteraction.isInteractionUrl(
+      agentRouterLinuxDoOAuthFlow.authorizationInteraction!.isInteractionUrl(
         new URL(requested),
         requested,
       ),
     ).toBe(true)
     expect(
-      agentRouterLinuxDoOAuthFlow.authorizationInteraction.isInteractionUrl(
+      agentRouterLinuxDoOAuthFlow.authorizationInteraction!.isInteractionUrl(
         new URL(
           "https://connect.linux.do/oauth2/authorize?response_type=code&client_id=linuxdo_client&state=other-state",
         ),
@@ -177,7 +182,9 @@ describe("AgentRouter GitHub OAuth adapter", () => {
   it("restricts Linux DO authorization and completion to the fixed provider and account", () => {
     expect(
       agentRouterLinuxDoOAuthFlow.isAuthorizationUrl(
-        new URL("https://connect.linux.do/oauth2/authorize"),
+        new URL(
+          "https://connect.linux.do/oauth2/authorize?client_id=client&state=test",
+        ),
       ),
     ).toBe(true)
     expect(

@@ -39,6 +39,8 @@ export type SiteType = (typeof SITE_TYPES)[keyof typeof SITE_TYPES]
 
 export const APIYI_HOSTNAME = "api.apiyi.com"
 
+export const AGENT_ROUTER_ORIGIN = "https://agentrouter.org"
+
 export const MODELFLARE_HOSTNAME = "modelflare.dev"
 
 /**

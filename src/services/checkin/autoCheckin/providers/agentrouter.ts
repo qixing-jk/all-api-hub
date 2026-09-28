@@ -148,7 +148,7 @@ export function createAgentRouterProvider(
       // the browser context also compares it with this saved account.
       const result = await deps.loginAccount({
         account,
-        provider,
+        methodId: provider,
         requestId: deps.createRequestId(),
         // A scheduled or retry run opens a popup nobody is looking at, so it
         // must not hold the shared session for the whole interactive budget.
@@ -167,7 +167,7 @@ export function createAgentRouterProvider(
         })
       }
       if (result.status === BROWSER_OAUTH_STATUS.Authenticated) {
-        return result.evidence.checkedIn
+        return result.evidence?.checkedIn
           ? {
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               messageKey:

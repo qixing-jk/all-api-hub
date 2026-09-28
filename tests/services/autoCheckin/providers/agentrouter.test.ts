@@ -80,7 +80,7 @@ describe("AgentRouter login check-in", () => {
       expect(saved).toEqual(before)
       expect(authenticate).toHaveBeenCalledWith({
         account: saved,
-        provider: "github",
+        methodId: "github",
         requestId: "checkin-request",
         attended: false,
       })
@@ -92,7 +92,7 @@ describe("AgentRouter login check-in", () => {
     await provider.checkIn(saved, context)
     expect(authenticate).toHaveBeenCalledWith({
       account: saved,
-      provider: "linuxdo",
+      methodId: "linuxdo",
       requestId: "checkin-request",
       attended: false,
     })
@@ -231,6 +231,14 @@ describe("AgentRouter login check-in", () => {
       reasonCode: "upstream_error",
     })
   })
+  it("treats authentication without optional evidence as an uncertain check-in", async () => {
+    const { provider, authenticate } = setup()
+    authenticate.mockResolvedValue({ status: "authenticated", identity: "1" })
+    await expect(provider.checkIn(account(), context)).resolves.toMatchObject({
+      status: "uncertain",
+      reasonCode: "checkin_unconfirmed",
+    })
+  })
   it("reports required browser interaction", async () => {
     const { provider, authenticate } = setup()
     authenticate.mockResolvedValue({
@@ -365,7 +373,7 @@ describe("AgentRouter login check-in", () => {
     expect(liveDependencies.login).toHaveBeenCalledWith(
       expect.objectContaining({
         account: saved,
-        provider: "github",
+        methodId: "github",
         requestId: expect.any(String),
       }),
     )

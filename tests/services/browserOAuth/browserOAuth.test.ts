@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
+import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/browserOAuth"
+import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
 import {
   createBrowserOAuthContext,
   type BrowserOAuthFlow,
@@ -39,7 +41,14 @@ const browserApi = vi.hoisted(() => ({
 }))
 const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
 
-vi.mock("~/utils/browser/browserApi", () => browserApi)
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...browserApi,
+    isMessageReceiverUnavailableError: actual.isMessageReceiverUnavailableError,
+  }
+})
 vi.mock("~/utils/browser/cookieHelper", () => ({
   hasCookieReadPermissionForUrl,
 }))
@@ -166,6 +175,152 @@ describe("browser OAuth context", () => {
       status: BROWSER_OAUTH_STATUS.Authenticated,
       identity: "user-1",
     })
+  })
+
+  it.each(["unsupported", "interaction_required", "uncertain"] as const)(
+    "preserves a preparation outcome of %s without navigating or completing",
+    async (status) => {
+      const context = createBrowserOAuthContext({
+        ...testFlow,
+        parsePreparation: () => ({ status }),
+      })
+      await expect(
+        context.authenticate({
+          origin,
+          requestId: "blocked",
+          expectedIdentity: "user-1",
+        }),
+      ).resolves.toEqual({ status })
+      expect(browserApi.updateTab).not.toHaveBeenCalled()
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.map(
+          ([, message]) => message.action,
+        ),
+      ).toEqual([actions.prepare, actions.clear])
+      expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
+    },
+  )
+
+  it.each([true, false])(
+    "runs Sub2API backend-owned redirects and checks the saved identity (matches: %s)",
+    async (matching) => {
+      const requestId = "sub2api-login"
+      const startUrl = buildSub2ApiOAuthStartUrl(origin, "google", requestId)
+      const flow = createSub2ApiOAuthFlow({
+        origin,
+        requestId,
+        provider: "google",
+        loginPath: "/login",
+      })
+      browserApi.getTab.mockImplementation(async () =>
+        browserApi.updateTab.mock.calls.length
+          ? {
+              ...loginTab,
+              url: origin + "/dashboard?all_api_hub_login=" + requestId,
+            }
+          : loginTab,
+      )
+      browserApi.sendTabMessageWithRetry
+        .mockReset()
+        .mockResolvedValueOnce({ success: true, authorizationUrl: startUrl })
+        .mockResolvedValueOnce({ success: true, identity: "17" })
+        .mockResolvedValue({ success: true })
+
+      await expect(
+        createBrowserOAuthContext(flow).authenticate({
+          origin,
+          requestId,
+          expectedIdentity: matching ? "17" : "18",
+        }),
+      ).resolves.toMatchObject({
+        status: matching ? "authenticated" : "identity_mismatch",
+      })
+      expect(browserApi.updateTab).toHaveBeenCalledExactlyOnceWith(11, {
+        url: startUrl,
+        active: true,
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.map(
+          ([, message]) => message.action,
+        ),
+      ).toEqual([
+        flow.prepareAction,
+        flow.completeAction,
+        ...(matching ? [] : [flow.clearEvidenceAction]),
+      ])
+    },
+  )
+
+  it("preserves an interactive completion without marking the browser login verified", async () => {
+    const context = createBrowserOAuthContext({
+      ...testFlow,
+      parseCompletion: () => ({ status: "interaction_required" }),
+    })
+    await expect(
+      context.authenticate({
+        origin,
+        requestId: "pending-completion",
+        expectedIdentity: "user-1",
+      }),
+    ).resolves.toEqual({ status: "interaction_required" })
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.map(
+        ([, message]) => message.action,
+      ),
+    ).toEqual([actions.prepare, actions.complete, actions.clear])
+  })
+
+  it("waits for an unavailable content receiver before preparing OAuth", async () => {
+    vi.useFakeTimers()
+    const actual = await vi.importActual<
+      typeof import("~/utils/browser/browserApi")
+    >("~/utils/browser/browserApi")
+    const sendMessage = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        ),
+      )
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+    vi.stubGlobal("browser", { tabs: { sendMessage } })
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(actual.sendTabMessageWithRetry)
+
+    const result = authenticate()
+    await vi.advanceTimersByTimeAsync(400)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    expect(sendMessage).toHaveBeenCalledTimes(3)
+  })
+
+  it("does not replay preparation after a dispatched message loses its response", async () => {
+    const actual = await vi.importActual<
+      typeof import("~/utils/browser/browserApi")
+    >("~/utils/browser/browserApi")
+    const sendMessage = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error("The message port closed before a response was received."),
+      )
+      .mockResolvedValue({ success: true })
+    vi.stubGlobal("browser", { tabs: { sendMessage } })
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation(actual.sendTabMessageWithRetry)
+
+    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    expect(
+      sendMessage.mock.calls.filter(
+        ([, message]) => message.action === actions.prepare,
+      ),
+    ).toHaveLength(1)
+    expect(browserApi.updateTab).not.toHaveBeenCalled()
   })
 
   it("runs a configured interaction only on the matching authorization page", async () => {
@@ -671,6 +826,32 @@ describe("browser OAuth context", () => {
       requestId: "edge-case",
     })
 
+  it("does not block a different account origin while a popup is opening", async () => {
+    let resolveWindow: ((value: null) => void) | undefined
+    browserApi.createWindow
+      .mockImplementationOnce(
+        () =>
+          new Promise<null>((resolve) => {
+            resolveWindow = resolve
+          }),
+      )
+      .mockResolvedValueOnce(null)
+    const first = authenticate()
+
+    try {
+      await expect(
+        browserOAuthContext.authenticate({
+          origin: "https://another-account.example.invalid",
+          requestId: "another-origin",
+        }),
+      ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Failed })
+      expect(browserApi.createWindow).toHaveBeenCalledTimes(2)
+    } finally {
+      resolveWindow?.(null)
+      await first
+    }
+  })
+
   it("rejects a login path outside the account origin before opening a popup", async () => {
     const context = createBrowserOAuthContext({
       ...testFlow,
@@ -839,7 +1020,11 @@ describe("browser OAuth context", () => {
     browserApi.sendTabMessageWithRetry
       .mockReset()
       .mockResolvedValueOnce({ success: true, authorizationUrl })
-      .mockRejectedValueOnce(new Error("Content script not ready"))
+      .mockRejectedValueOnce(
+        new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        ),
+      )
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({
         success: true,
@@ -861,5 +1046,44 @@ describe("browser OAuth context", () => {
     await expect(result).resolves.toMatchObject({
       status: BROWSER_OAUTH_STATUS.Authenticated,
     })
+  })
+
+  it("does not click authorization again after losing its response", async () => {
+    vi.useFakeTimers()
+    const context = createBrowserOAuthContext({
+      ...testFlow,
+      authorizationInteraction: {
+        action: actions.authorize,
+        isInteractionUrl: (current: URL, requested: URL) =>
+          current.href === requested.href,
+      },
+    })
+    browserApi.getTab.mockImplementation(async () =>
+      browserApi.updateTab.mock.calls.length
+        ? { ...loginTab, url: authorizationUrl }
+        : loginTab,
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockRejectedValueOnce(
+        new Error("The message port closed before a response was received."),
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+
+    const result = context.authenticate({ origin, requestId: "lost-response" })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.action === actions.authorize,
+      ),
+    ).toHaveLength(1)
+    browserApi.getTab.mockResolvedValue(completedTab)
+    await vi.advanceTimersByTimeAsync(20_000)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
   })
 })

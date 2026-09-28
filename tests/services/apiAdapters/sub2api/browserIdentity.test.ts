@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import * as sub2ApiContentSession from "~/services/accountSiteOnboarding/contentSession/sub2api"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
+import * as sub2ApiBrowserSession from "~/services/apiService/sub2api/browserSession"
 
 describe("sub2ApiBrowserIdentity", () => {
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe("sub2ApiBrowserIdentity", () => {
 
   it("returns null when the browser token is absent", () => {
     vi.spyOn(
-      sub2ApiContentSession,
+      sub2ApiBrowserSession,
       "readSub2ApiBrowserToken",
     ).mockReturnValueOnce({ token: "", expiresAt: undefined })
 
@@ -43,7 +43,7 @@ describe("sub2ApiBrowserIdentity", () => {
 
   it("verifies the session against the account origin", async () => {
     vi.spyOn(
-      sub2ApiContentSession,
+      sub2ApiBrowserSession,
       "readSub2ApiBrowserToken",
     ).mockReturnValueOnce({ token: "test-token", expiresAt: undefined })
 
@@ -66,7 +66,7 @@ describe("sub2ApiBrowserIdentity", () => {
   // See .scratch/ai-router-adaptation/research.md.
   it("verifies a split-origin deployment against its API origin", async () => {
     vi.spyOn(
-      sub2ApiContentSession,
+      sub2ApiBrowserSession,
       "readSub2ApiBrowserToken",
     ).mockReturnValueOnce({ token: "test-token", expiresAt: undefined })
 

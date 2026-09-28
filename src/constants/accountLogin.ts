@@ -1,4 +1,7 @@
-/** Identity providers supported by browser-based account login. */
+/** Adapter-owned login method identifier, including native and custom OAuth methods. */
+export type AccountLoginMethodId = string
+
+/** Known OAuth providers used by existing integrations and saved check-in settings. */
 export const ACCOUNT_LOGIN_PROVIDERS = {
   Github: "github",
   LinuxDo: "linuxdo",

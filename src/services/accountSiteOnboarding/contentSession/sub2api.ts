@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { readIdentityStorageString } from "~/services/accountBrowserSession/localIdentityState"
+import { SUB2API_AUTH_STORAGE_KEYS } from "~/services/apiService/sub2api/browserSession"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
 
 import type { ContentSessionExtractor } from "../contracts"
@@ -15,13 +15,6 @@ import type { ContentSessionExtractor } from "../contracts"
  * - Never log tokens.
  * - Only refresh when expiry info exists (avoid unnecessary refresh-token rotation).
  */
-const SUB2API_AUTH_STORAGE_KEYS = {
-  accessToken: "auth_token",
-  refreshToken: "refresh_token",
-  tokenExpiresAt: "token_expires_at",
-  authUser: "auth_user",
-} as const
-
 // Match upstream buffer: refresh ~2 minutes before expiry.
 const SUB2API_TOKEN_REFRESH_BUFFER_MS = 120 * 1000
 
@@ -50,17 +43,6 @@ const tryParseTimestamp = (value: string | null): number | null => {
   if (!value) return null
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : null
-}
-
-/** Reads the website token and expiry without invoking the onboarding refresh flow. */
-export function readSub2ApiBrowserToken() {
-  return {
-    token: readIdentityStorageString(SUB2API_AUTH_STORAGE_KEYS.accessToken),
-    expiresAt:
-      tryParseTimestamp(
-        readIdentityStorageString(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
-      ) ?? undefined,
-  }
 }
 
 const readStoredTokenState = () => ({

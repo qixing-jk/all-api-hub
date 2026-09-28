@@ -3,6 +3,7 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
+import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/accountLogin"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
@@ -26,6 +27,7 @@ export const createNewApiCapabilities = (
     notice: newApiSiteNotice,
   },
   account: {
+    login: createNewApiAccountLogin(siteType),
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: createNewApiAccountCompletion(siteType),

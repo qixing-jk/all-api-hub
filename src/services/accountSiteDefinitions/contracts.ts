@@ -1,6 +1,8 @@
+import type { AccountLoginMethodId } from "~/constants/accountLogin"
 import type { AccountSiteProductProfileOverride } from "~/services/accounts/accountSiteProfile/contracts"
 
 import type { SiteType } from "./identifiers"
+import type { NewApiAccountLoginProtocolConfig } from "./loginProtocols/newApi"
 
 type AccountSitePagePath = `/${string}`
 
@@ -110,12 +112,22 @@ export interface AccountSiteDefinitionOnboardingMetadata {
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
+/** Static login adoption; methods and their execution semantics belong to the registered adapter. */
+export interface AccountSiteLoginConfig {
+  methods: readonly AccountLoginMethodId[]
+  /** Only protocols needing per-site overrides declare options here. */
+  protocols?: {
+    newApi?: NewApiAccountLoginProtocolConfig
+  }
+}
+
 export interface AccountSiteDefinition {
   siteType: SiteType
   scopes: readonly AccountSiteDefinitionScope[]
   adapterFamily: AccountSiteBackendFamily
   /** Token identity/auth formatting; absent means opaque keys with no prefix rewriting. */
   tokenKey?: { optionalSkPrefix: boolean }
+  accountLogin?: AccountSiteLoginConfig
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
   productProfile?: AccountSiteProductProfileOverride

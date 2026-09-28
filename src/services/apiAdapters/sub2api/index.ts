@@ -5,6 +5,7 @@ import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { sub2ApiAccountCompletion } from "./accountCompletion"
 import { sub2ApiAccountData } from "./accountData"
 import { sub2ApiAccountKeyResources } from "./accountKeyResource"
+import { sub2ApiAccountLogin } from "./accountLogin"
 import { sub2ApiAccountRefresh } from "./accountRefresh"
 import { sub2ApiInviteLink } from "./inviteLink"
 import { sub2ApiModelCatalog } from "./modelCatalog"
@@ -14,6 +15,7 @@ export const sub2ApiCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.SUB2API,
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
   account: {
+    login: sub2ApiAccountLogin,
     announcements: sub2ApiSiteAnnouncements,
     modelCatalog: sub2ApiModelCatalog,
     data: sub2ApiAccountData,

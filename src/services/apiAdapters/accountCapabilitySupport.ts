@@ -7,6 +7,7 @@ import type {
 type AccountSiteCapabilityId = keyof AccountSiteCapabilities
 
 const ACCOUNT_SITE_CAPABILITY_INVENTORY = {
+  login: true,
   announcements: true,
   modelCatalog: true,
   providerModelCatalog: true,
