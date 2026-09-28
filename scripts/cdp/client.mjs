@@ -1,0 +1,144 @@
+/* global chrome */
+import path from "node:path"
+import { chromium } from "@playwright/test"
+
+const DEFAULT_CDP_URL = "http://127.0.0.1:9222"
+
+/**
+ * Connect to running dev browser over CDP and locate the current worktree's extension.
+ */
+export async function connectDevExtension({
+  cdpUrl = process.env.CDP_URL || DEFAULT_CDP_URL,
+} = {}) {
+  let browser
+  try {
+    browser = await chromium.connectOverCDP(cdpUrl)
+  } catch (err) {
+    throw new Error(
+      `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
+    )
+  }
+
+  const contexts = browser.contexts()
+  if (contexts.length === 0) {
+    await browser.close().catch(() => {})
+    throw new Error("未找到任何浏览器 Context。")
+  }
+  const context = contexts[0]
+
+  let targetExtId = null
+  const currentWorktree = path.basename(process.cwd()).toLowerCase()
+
+  // 1. 通过 CDP Target 探测匹配当前 worktree 的扩展
+  try {
+    const session = await browser.newBrowserCDPSession()
+    const { targetInfos } = await session.send("Target.getTargets")
+    for (const t of targetInfos) {
+      if (t.url && t.url.startsWith("chrome-extension://")) {
+        const id = new URL(t.url).hostname
+        const lowerTitle = (t.title || "").toLowerCase()
+        const isAah =
+          lowerTitle.includes("all api hub") ||
+          lowerTitle.includes("all-api-hub")
+
+        if (isAah) {
+          const isDev = lowerTitle.includes("dev")
+          if (isDev && !lowerTitle.includes(currentWorktree)) {
+            continue
+          }
+          targetExtId = id
+          break
+        }
+      }
+    }
+    await session.detach().catch(() => {})
+  } catch {
+    // 忽略异常并降级
+  }
+
+  // 2. 若未探测到，检查 Service Workers
+  if (!targetExtId) {
+    const workers = context.serviceWorkers()
+    for (const sw of workers) {
+      const swUrl = sw.url()
+      if (swUrl.startsWith("chrome-extension://")) {
+        try {
+          const id = new URL(swUrl).hostname
+          const manifestName = await sw.evaluate(() => {
+            try {
+              return chrome.runtime.getManifest()?.name || ""
+            } catch {
+              return ""
+            }
+          })
+          const lowerName = manifestName.toLowerCase()
+          const isAah =
+            lowerName.includes("all api hub") ||
+            lowerName.includes("all-api-hub")
+
+          if (isAah) {
+            const isDev = lowerName.includes("dev")
+            if (isDev && !lowerName.includes(currentWorktree)) {
+              continue
+            }
+            targetExtId = id
+            break
+          }
+        } catch {
+          // 忽略
+        }
+      }
+    }
+  }
+
+  // 3. 唤醒并最后重试
+  if (!targetExtId) {
+    const dummy = await context.newPage()
+    await dummy.goto("edge://extensions").catch(() => {})
+    await dummy.waitForTimeout(600)
+    await dummy.close().catch(() => {})
+
+    try {
+      const session = await browser.newBrowserCDPSession()
+      const { targetInfos } = await session.send("Target.getTargets")
+      for (const t of targetInfos) {
+        if (t.url && t.url.startsWith("chrome-extension://")) {
+          targetExtId = new URL(t.url).hostname
+          break
+        }
+      }
+      await session.detach().catch(() => {})
+    } catch {
+      // 忽略
+    }
+  }
+
+  if (!targetExtId) {
+    await browser.close().catch(() => {})
+    throw new Error(
+      "未找到已挂载的 All API Hub 扩展实例！请确认扩展已在浏览器中加载。",
+    )
+  }
+
+  // 确保 Service Worker 活跃
+  let sw = context.serviceWorkers().find((w) => w.url().includes(targetExtId))
+  if (!sw) {
+    const dummy = await context.newPage()
+    await dummy
+      .goto(`chrome-extension://${targetExtId}/options.html`)
+      .catch(() => {})
+    await dummy.waitForTimeout(600)
+    await dummy.close().catch(() => {})
+    sw = context.serviceWorkers().find((w) => w.url().includes(targetExtId))
+  }
+
+  return {
+    browser,
+    context,
+    extensionId: targetExtId,
+    serviceWorker: sw,
+    async close() {
+      await browser.close().catch(() => {})
+    },
+  }
+}
