@@ -39,6 +39,7 @@
     "modelManagement": "Lista de modelos",
     "openAllExternalCheckIn": "Abrir todos los check-ins externos",
     "openAllExternalCheckInHint": "Abrir check-ins externos pendientes. Ctrl/Cmd: abrir todos. Shift: abrir en ventana nueva. Ctrl/Cmd+Shift: abrir todos en una ventana nueva.",
+    "openSite": "Abrir sitio",
     "pin": "Fijar cuenta",
     "pinned": "Fijada",
     "quickCheckin": "Check-in rápido",

@@ -39,6 +39,7 @@
     "modelManagement": "Modellliste",
     "openAllExternalCheckIn": "Alle externen Check-ins öffnen",
     "openAllExternalCheckInHint": "Öffnen Sie ungeprüfte externe Check-ins. Ctrl/Cmd: alle öffnen. Shift: in neuem Fenster öffnen. Ctrl/Cmd+Shift: Alles in neuem Fenster öffnen.",
+    "openSite": "Website öffnen",
     "pin": "Konto anheften",
     "pinned": "Angepinnt",
     "quickCheckin": "Schneller Check-in",

@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import Tooltip from "~/components/Tooltip"
 import { Badge, BodySmall, Button, IconButton } from "~/components/ui"
 import { SiteInfoCheckInIndicators } from "~/features/AccountManagement/components/AccountList/SiteInfoCheckInIndicators"
@@ -87,6 +88,10 @@ export default function SiteInfo({
   const isAccountDisabled = site.disabled === true
   const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
   const siteTypeLabel = t("list.site.siteType")
+  const openSiteTooltip =
+    site.name && site.name.trim() !== (site.baseUrl ?? "").trim()
+      ? `${t("actions.openSite")}: ${site.name} (${site.baseUrl})`
+      : `${t("actions.openSite")}: ${site.baseUrl}`
 
   const handleOpenAccountSite = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -182,7 +187,7 @@ export default function SiteInfo({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1">
+        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
           <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">
             {(contextBoost || isDetectedAccount) && (
               <Tooltip content={contextHint} anchorAsChild position="top">
@@ -221,24 +226,31 @@ export default function SiteInfo({
             </Tooltip>
           </div>
 
-          <div className="gap-y-density-1 sm:gap-y-density-1-5 flex min-w-0 items-center gap-x-1 sm:gap-x-1.5">
+          <div className="gap-y-density-1 flex min-w-0 items-center gap-x-0.5 sm:gap-x-1">
             {/* Keep the site URL clickable even when the account is disabled so users can still open the provider site. */}
             {/* Avoid `bleed`/non-shrinking button layout that can overflow into the action buttons column. */}
             <Button
               type="button"
               variant="link"
               size="sm"
-              className="h-auto min-h-0 min-w-0 flex-1 shrink justify-start p-0 text-left"
-              title={site.name}
+              className="group/site-link h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-x-0.5 p-0 text-left has-[>svg]:p-0 has-[>svg]:px-0"
+              title={openSiteTooltip}
               onClick={handleOpenAccountSite}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowOpenButton}
             >
-              <BodySmall weight="medium" className="truncate">
+              <BodySmall
+                weight="medium"
+                className="group-hover/site-link:text-primary min-w-0 truncate transition-colors"
+              >
                 <SiteInfoHighlightedText
                   fragments={highlights?.name}
                   fallback={site.name}
                 />
               </BodySmall>
+              <WorkflowTransitionIcon
+                className="text-muted-foreground group-hover/site-link:text-primary group-focus-visible/site-link:text-primary h-3 w-3 shrink-0 opacity-40 transition-all group-hover/site-link:opacity-100 group-focus-visible/site-link:opacity-100"
+                aria-hidden="true"
+              />
             </Button>
 
             <SiteInfoCheckInIndicators

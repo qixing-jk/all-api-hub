@@ -344,6 +344,35 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("renders an external link indicator and open-site tooltip description on the site button", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          name: "My Provider",
+          baseUrl: "https://provider.example.com",
+        })}
+      />,
+    )
+
+    const siteLinkButton = await screen.findByRole("button", {
+      name: "My Provider",
+    })
+    expect(siteLinkButton).toHaveAccessibleDescription(
+      "account:actions.openSite: My Provider (https://provider.example.com)",
+    )
+
+    const icon = siteLinkButton.querySelector("svg")
+    expect(icon).toBeInTheDocument()
+    expect(icon).toHaveAttribute("aria-hidden", "true")
+
+    await user.click(siteLinkButton)
+    expect(mockOpenAccountBaseUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://provider.example.com" }),
+    )
+  })
+
   it("shows the raw site type in the account row", () => {
     render(<SiteInfo site={buildSite({ siteType: SITE_TYPES.SUB2API })} />)
 

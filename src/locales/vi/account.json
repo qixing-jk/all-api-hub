@@ -39,6 +39,7 @@
     "modelManagement": "Danh sách mô hình",
     "openAllExternalCheckIn": "Mở điểm danh bên ngoài bằng một cú nhấp chuột",
     "openAllExternalCheckInHint": "Mặc định chỉ mở những mục chưa điểm danh; Ctrl/Cmd để mở tất cả; Shift để mở trong cửa sổ mới; Ctrl/Cmd+Shift để áp dụng đồng thời.",
+    "openSite": "Mở trang web",
     "pin": "Ghim tài khoản",
     "pinned": "Đã ghim",
     "quickCheckin": "Điểm danh nhanh",

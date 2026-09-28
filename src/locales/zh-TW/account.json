@@ -39,6 +39,7 @@
     "modelManagement": "模型列表",
     "openAllExternalCheckIn": "一鍵開啟外部簽到",
     "openAllExternalCheckInHint": "預設僅開啟未簽到；Ctrl/Cmd 開啟全部；Shift 在新視窗開啟；Ctrl/Cmd+Shift 同時生效。",
+    "openSite": "開啟網站",
     "pin": "置頂帳號",
     "pinned": "已置頂",
     "quickCheckin": "快速簽到",
