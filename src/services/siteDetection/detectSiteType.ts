@@ -275,35 +275,100 @@ async function detectVoApiV2FromProtectedEndpoint(
 }
 
 /**
- * Reads the operator-configured site name from the public New API-family status
- * endpoint.
+ * Public status fields that only RixAPI deployments report.
  *
- * `system_name` carries the deployment's own brand, so it still identifies a
- * fork when the front-end shell serves a generic title. The endpoint is rooted at
- * the origin, and an absent or unreachable status is not an error: the caller
- * keeps title detection. The caller's bypass context is forwarded so a shielded
- * deployment still answers; whether it applies is the bypass policy's call.
+ * RixAPI is a closed-source New API fork that keeps its licence state in the
+ * public status payload, so these fields identify the backend regardless of the
+ * operator's own brand. They are the only structural signal available for
+ * white-label deployments: the shell title carries the operator's name, and a
+ * logged-in deployment answers `/api/user/self` without an auth error, so neither
+ * the title rules nor the compat-header error fallback can classify them.
+ *
+ * Source: https://github.com/RixAPI/Rix-API. Observed 2026-09-26 on
+ * https://platform.ephone.ai (RixAPI 6.5.17, all three fields) and on the vendor
+ * demo https://platform.rixapi.com (all three fields).
  */
-async function fetchPublicSiteStatusName(
+const RIX_API_STATUS_SIGNATURE_FIELDS = [
+  "rix_version_message",
+  "rixapi_license_type",
+  "rix_license_enabled",
+] as const
+
+interface PublicSiteStatusSignals {
+  /** Operator-configured brand, used by the shared title rules. */
+  systemName?: string
+  /** Whether the deployment reports the RixAPI licence signature. */
+  identifiesRixApi: boolean
+}
+
+/**
+ * Reads the public status signals used for site-type detection.
+ *
+ * Both signals come from one request to the New API-family status endpoint. The
+ * endpoint is rooted at the origin, and an absent or unreachable status is not an
+ * error: the caller keeps title detection. The caller's bypass context is
+ * forwarded so a shielded deployment still answers; whether it applies is the
+ * bypass policy's call.
+ */
+async function fetchPublicSiteStatusSignals(
   url: string,
   protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<string | undefined> {
-  try {
+): Promise<PublicSiteStatusSignals> {
+  const noSignals: PublicSiteStatusSignals = { identifiesRixApi: false }
+
+  const readSignals = async (attempt?: ProtectionBypassExecution) => {
     const siteStatus = await fetchSiteStatus({
       baseUrl: new URL("/", url).toString(),
       auth: { authType: AuthTypeEnum.None },
-      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+      ...(attempt ? { protectionBypassExecution: attempt } : {}),
     })
-    const systemName = siteStatus?.system_name
+    if (!siteStatus) return noSignals
 
-    return typeof systemName === "string" && systemName.trim()
-      ? systemName
-      : undefined
-  } catch (error) {
-    logger.debug("public site status name probe failed", { url, error })
+    const rawStatus = siteStatus as unknown as Record<string, unknown>
+    const systemName =
+      typeof siteStatus.system_name === "string" &&
+      siteStatus.system_name.trim()
+        ? siteStatus.system_name
+        : undefined
+
+    return {
+      ...(systemName ? { systemName } : {}),
+      identifiesRixApi: RIX_API_STATUS_SIGNATURE_FIELDS.some((field) =>
+        Object.hasOwn(rawStatus, field),
+      ),
+    }
   }
 
-  return undefined
+  // Detection outcomes are the first thing a site-support report needs, and this
+  // probe is otherwise invisible outside the network panel.
+  const logSignals = (signals: PublicSiteStatusSignals) => {
+    logger.info("public site status signals", {
+      url,
+      systemName: signals.systemName,
+      identifiesRixApi: signals.identifiesRixApi,
+    })
+    return signals
+  }
+
+  try {
+    return logSignals(await readSignals(protectionBypassExecution))
+  } catch (error) {
+    logger.debug("public site status probe failed", { url, error })
+  }
+
+  if (!protectionBypassExecution) return noSignals
+
+  // A shielded attempt needs a browser context that some deployments never let
+  // load, and a plain read is enough for this public endpoint.
+  try {
+    return logSignals(await readSignals())
+  } catch (error) {
+    logger.warn("public site status probe failed without bypass", {
+      url,
+      error,
+    })
+    return noSignals
+  }
 }
 
 /**
@@ -344,14 +409,20 @@ export const getAccountSiteType = async (
   }
 
   // The public status name is operator-configured while a white-label shell keeps
-  // the stock title, so resolve both and let the name win over the title.
-  const [title, publicSiteName] = await Promise.all([
+  // the stock title, so resolve both and let the name win over the title. The same
+  // response carries the RixAPI licence signature, which outranks both: a branded
+  // status name only helps when the operator kept the fork's own brand.
+  const [title, publicSiteStatus] = await Promise.all([
     fetchSiteOriginalTitle(url, protectionBypassExecution),
-    fetchPublicSiteStatusName(url, protectionBypassExecution),
+    fetchPublicSiteStatusSignals(url, protectionBypassExecution),
   ])
 
+  if (publicSiteStatus.identifiesRixApi) {
+    return SITE_TYPES.RIX_API
+  }
+
   const identifyingTextSiteType = matchFirstIdentifyingText(
-    publicSiteName,
+    publicSiteStatus.systemName,
     title,
   )
   if (identifyingTextSiteType !== SITE_TYPES.UNKNOWN) {

@@ -3,8 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { fetchSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
 import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock(
   "~/services/apiService/newApiFamily/default/accountBootstrap",
@@ -57,5 +63,47 @@ describe("public site status name probe", () => {
       SITE_TYPES.ONE_API,
     )
     expect(fetchSiteStatusMock).toHaveBeenCalled()
+  })
+
+  it("retries the public status probe without the bypass context", async () => {
+    fetchSiteStatusMock
+      .mockRejectedValueOnce(new Error("shielded attempt could not load"))
+      .mockResolvedValueOnce({
+        system_name: "White Label Portal",
+        rix_version_message: "6.5.17",
+      })
+
+    await expect(
+      getAccountSiteType(
+        "https://example.com",
+        automaticExecution(
+          PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          TEMP_WINDOW_REQUEST_SOURCES.Options,
+        ),
+      ),
+    ).resolves.toBe(SITE_TYPES.RIX_API)
+
+    expect(fetchSiteStatusMock).toHaveBeenCalledTimes(2)
+    expect(fetchSiteStatusMock.mock.calls[1]?.[0]).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
+  })
+
+  it("reports no signals when neither status probe attempt answers", async () => {
+    fetchSiteStatusMock.mockRejectedValue(new Error("status unavailable"))
+
+    await expect(
+      getAccountSiteType(
+        "https://example.com",
+        automaticExecution(
+          PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          TEMP_WINDOW_REQUEST_SOURCES.Options,
+        ),
+      ),
+    ).resolves.toBe(SITE_TYPES.ONE_API)
+
+    expect(fetchSiteStatusMock).toHaveBeenCalledTimes(2)
   })
 })
