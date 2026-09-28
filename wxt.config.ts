@@ -64,6 +64,16 @@ export default defineConfig({
   publicDir: "src/public",
   // Locale changes restart dev so the local module can regenerate runtime assets.
   modulesDir: "src/locales",
+  // Node resolves "localhost" to ::1, so the dev server would bind IPv6
+  // loopback only while the browser resolves the same name to 127.0.0.1 and
+  // gets ERR_CONNECTION_REFUSED for every dev-server URL (blank extension
+  // pages). Pin both the bind address and the URLs baked into the build.
+  dev: {
+    server: {
+      host: "127.0.0.1",
+      origin: "http://127.0.0.1",
+    },
+  },
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   webExt: {

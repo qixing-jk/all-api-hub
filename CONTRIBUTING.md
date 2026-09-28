@@ -59,6 +59,8 @@ For Firefox:
 pnpm dev:firefox
 ```
 
+The dev server listens on `http://127.0.0.1:3000`, and the pages it generates load their scripts from that exact address. Pass `--host` to bind elsewhere. If the browser reaches a different loopback address than the server bound (for example it resolves `localhost` to IPv6 `::1`), or a system proxy intercepts loopback requests, every extension page stays blank with `net::ERR_CONNECTION_REFUSED`.
+
 4. **Load the extension in your browser**
 
 - Chrome: Navigate to `chrome://extensions/`, enable "Developer mode", click "Load unpacked", and select the `.output/chrome-mv3-dev` directory.
