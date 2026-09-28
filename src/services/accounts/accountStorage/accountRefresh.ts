@@ -183,6 +183,9 @@ class AccountRefresh {
           if (supplementalAuth.sub2apiAuth) {
             updateData.sub2apiAuth = supplementalAuth.sub2apiAuth
           }
+          if (authUpdate.kimiOpenPlatformAuth) {
+            updateData.kimiOpenPlatformAuth = authUpdate.kimiOpenPlatformAuth
+          }
         }
 
         try {

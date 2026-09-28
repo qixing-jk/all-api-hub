@@ -38,6 +38,11 @@ export type ContentSessionExtractionResult = {
     refreshToken: string
     tokenExpiresAt?: number
   }
+  kimiOpenPlatformAuth?: {
+    refreshToken: string
+    organizationId: string
+    tokenExpiresAt?: number
+  }
 }
 
 /** Untrusted session payload context; probe permission never implies permission to persist auth. */

@@ -71,6 +71,7 @@ interface ValidateAndUpdateAccountOptions {
   deferDataRefresh?: boolean
   selectionChanged?: boolean
   discoveryBaseSelection?: CheckInMethodSelection
+  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
 }
 
 /**
@@ -217,6 +218,7 @@ export async function validateAndUpdateAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })
   const { fields, manualQuota, requestAccountIdentity, requestBaseUrl } =

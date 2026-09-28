@@ -41,6 +41,7 @@ const collectedRequests = {
   rightCodeAccount: 0,
   rightCodeTodayStats: 0,
   rightCodeOverall: 0,
+  kimiAccount: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -331,6 +332,44 @@ const producerFixturesByFamily = {
       expect(collectedRequests.rightCodeOverall).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform]: {
+    baseUrl: "https://platform.kimi.ai",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://platform.kimi.ai/api", ({ request }) => {
+        collectedRequests.kimiAccount += 1
+        const endpoint = new URL(request.url).searchParams.get("endpoint")
+        if (endpoint !== "organizationAccountInfo") {
+          return HttpResponse.json(
+            { code: 404, message: "unexpected" },
+            { status: 404 },
+          )
+        }
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            cur: 1,
+            voucher_cur: 0,
+            acc: 0,
+            voucher_acc: 0,
+            voucher_expired: 0,
+            recharge_bonus_percent: 0,
+            use: 0,
+            today_consume: 0.25,
+          },
+        })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.kimiAccount).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -353,6 +392,16 @@ const createRequest = (siteType: AccountSiteType) => {
     },
     checkIn: buildCheckInConfig(),
     includeTodayCashflow: true,
+    ...(getSiteTypeCapabilities(siteType).family ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform
+      ? {
+          kimiOpenPlatformAuth: {
+            accessToken: "account-token",
+            refreshToken: "refresh-token",
+            organizationId: "org-1",
+          },
+        }
+      : {}),
   }
 }
 
@@ -370,6 +419,7 @@ describe("AccountData availability producer conformance", () => {
       rightCodeAccount: 0,
       rightCodeTodayStats: 0,
       rightCodeOverall: 0,
+      kimiAccount: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

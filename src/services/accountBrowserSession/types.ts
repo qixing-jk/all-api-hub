@@ -25,6 +25,7 @@ export type AccountBrowserSession = {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
   fetchContext?: AccountBrowserSessionFetchContext
 }
 

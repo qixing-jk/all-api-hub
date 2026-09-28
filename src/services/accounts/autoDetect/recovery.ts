@@ -20,6 +20,7 @@ export interface AccountAutoDetectRecoveryData {
   cookieAuthSessionCookie?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
 }
 
@@ -30,6 +31,7 @@ interface DetectedAccountRecoverySource {
   accessToken?: unknown
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
 }
 
@@ -75,6 +77,9 @@ export function createDetectedAccountRecoveryData(params: {
       ? { transientAuth: detected.transientAuth }
       : {}),
     ...(detected.sub2apiAuth ? { sub2apiAuth: detected.sub2apiAuth } : {}),
+    ...(detected.kimiOpenPlatformAuth
+      ? { kimiOpenPlatformAuth: detected.kimiOpenPlatformAuth }
+      : {}),
     ...(detected.fetchContext ? { fetchContext: detected.fetchContext } : {}),
   }
 }

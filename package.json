@@ -69,6 +69,7 @@
     "e2e:cdp": "node scripts/e2e-cdp-control.mjs",
     "e2e:cdp:ai-router": "node scripts/test-ai-router-e2e-live.mjs",
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
+    "e2e:cdp:kimi": "node scripts/test-kimi-e2e-live.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

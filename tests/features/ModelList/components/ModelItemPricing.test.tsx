@@ -26,6 +26,55 @@ import {
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
+it.each([true, false])(
+  "shows published CNY rates while browsing (CNY=%s)",
+  (showRealPrice) => {
+    const rate = (amount: number) => ({
+      amount,
+      currency: "CNY" as const,
+      per: 1000000,
+      unit: "token" as const,
+    })
+    const model = createModel({
+      pricingPlan: {
+        rates: { input: rate(20), output: rate(100), cacheRead: rate(2) },
+        rules: [],
+        issues: [],
+        source: { kind: "catalog" },
+        groupMultiplier: "included",
+      },
+      price_metadata: {
+        source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+        precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+        unavailable_reason:
+          MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+      },
+    })
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+          billingMode: "token",
+          isComparisonActive: false,
+        }}
+        exchangeRate={5}
+        showRealPrice={showRealPrice}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(
+      screen.getByText(showRealPrice ? "CNY:20/M" : "USD:4/M"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+    if (!showRealPrice) expect(screen.getByText("estimatedPrice")).toBeVisible()
+  },
+)
+
 const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
     (price: number, currency?: string) => `${currency}:${price}`,
@@ -153,7 +202,7 @@ describe("Model item pricing and description", () => {
     it("formats token-billing prices in USD and appends the per-million suffix", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1.25, output: 2.5 }}
+          prices={{ input: 1.25, output: 2.5 }}
           exchangeRate={7.2}
           showRealPrice={false}
           tokenBillingType={true}
@@ -173,7 +222,7 @@ describe("Model item pricing and description", () => {
     it("formats real prices in CNY without token suffixes and dims unavailable models", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1.25, output: 2.5 }}
+          prices={{ input: 1.25, output: 2.5 }}
           exchangeRate={7.2}
           showRealPrice={true}
           tokenBillingType={false}
@@ -192,7 +241,7 @@ describe("Model item pricing and description", () => {
     it("conditionally renders cache prices including an explicit free meter", () => {
       render(
         <PriceView
-          usdPrices={{
+          prices={{
             input: 1,
             output: 2,
             cacheRead: 0,
@@ -215,7 +264,7 @@ describe("Model item pricing and description", () => {
     it("omits cache labels when no cache meters are supplied", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1, output: 2 }}
+          prices={{ input: 1, output: 2 }}
           exchangeRate={8}
           showRealPrice={false}
           tokenBillingType={true}

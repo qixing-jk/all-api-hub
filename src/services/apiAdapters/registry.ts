@@ -17,6 +17,7 @@ import type {
   SiteType,
   SiteTypeCapabilities,
 } from "./contracts/siteTypeCapabilities"
+import { createKimiOpenPlatformCapabilities } from "./kimiOpenPlatform"
 import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "./managedSites/claudeCodeHub"
 import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
@@ -84,6 +85,9 @@ export function getSiteTypeCapabilities(
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
   if (siteType === SITE_TYPES.RIGHT_CODE) return rightCodeCapabilities
   if (siteType === SITE_TYPES.OPENROUTER) return openRouterCapabilities
+  if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
+    return createKimiOpenPlatformCapabilities(siteType)
+  }
 
   if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {
     return withManagedSites(

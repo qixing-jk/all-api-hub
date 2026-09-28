@@ -51,6 +51,7 @@ export interface AccountDialogDraft {
   sub2apiUseRefreshToken: boolean
   sub2apiRefreshToken: string
   sub2apiTokenExpiresAt: number | null
+  kimiOpenPlatformAuth: import("~/types").KimiOpenPlatformAuthConfig | null
 }
 
 /** Form state carried from a popup into manual New API token recovery. */
@@ -117,6 +118,7 @@ export function createEmptyAccountDialogDraft(
     sub2apiUseRefreshToken: false,
     sub2apiRefreshToken: "",
     sub2apiTokenExpiresAt: null,
+    kimiOpenPlatformAuth: null,
   }
 }
 

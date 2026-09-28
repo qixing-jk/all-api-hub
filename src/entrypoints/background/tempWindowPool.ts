@@ -2107,6 +2107,9 @@ async function getSiteDataFromTab(
       accessToken: userResponse.data?.accessToken,
       transientAuth: userResponse.data?.transientAuth,
       sub2apiAuth: userResponse.data?.sub2apiAuth,
+      ...(userResponse.data?.kimiOpenPlatformAuth
+        ? { kimiOpenPlatformAuth: userResponse.data.kimiOpenPlatformAuth }
+        : {}),
       siteTypeHint: userResponse.data?.siteTypeHint,
     }
   } catch (error) {

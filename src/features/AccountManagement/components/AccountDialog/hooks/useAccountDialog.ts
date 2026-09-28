@@ -1361,6 +1361,7 @@ export function useAccountDialog({
                 sub2apiTokenExpiresAt: hasActiveSub2ApiRefreshToken
                   ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
                   : null,
+                kimiOpenPlatformAuth: siteAccount.kimiOpenPlatformAuth ?? null,
               },
               policy,
             }),
@@ -2633,6 +2634,9 @@ export function useAccountDialog({
                 skipAutoProvisionKeyOnAccountAdd:
                   options?.skipAutoProvisionKeyOnAccountAdd === true ||
                   shouldDeferSuccessForSitePolicy,
+                ...(draft.kimiOpenPlatformAuth
+                  ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
+                  : {}),
               },
             )
           : validateAndUpdateAccount(
@@ -2655,6 +2659,9 @@ export function useAccountDialog({
               sub2apiAuth,
               {
                 deferDataRefresh: true,
+                ...(draft.kimiOpenPlatformAuth
+                  ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
+                  : {}),
                 selectionChanged: checkInSelectionChangedRef.current,
                 ...(checkInDiscoveryBaseSelectionRef.current
                   ? {

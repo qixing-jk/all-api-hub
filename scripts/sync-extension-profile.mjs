@@ -336,9 +336,19 @@ async function main() {
 
   for (const id of targetIds) {
     const targetDir = path.join(dstSettingsBase, id)
-    fs.rmSync(targetDir, { recursive: true, force: true })
-    copyRecursive(bestSource.extPath, targetDir)
-    console.log(`   -> 成功同步到开发扩展: ${id}`)
+    try {
+      fs.rmSync(targetDir, { recursive: true, force: true })
+    } catch {
+      /* ignore if locked */
+    }
+    try {
+      copyRecursive(bestSource.extPath, targetDir)
+      console.log(`   -> 成功同步到开发扩展: ${id}`)
+    } catch (err) {
+      console.warn(
+        `   ⚠️ 同步到开发扩展 ${id} 受阻（可能正在被调试浏览器锁定）: ${err.message}`,
+      )
+    }
   }
 
   console.log(`\n🎉 扩展账户数据同步成功！所有中转站配置已写入共享开发沙盒。`)
@@ -371,9 +381,57 @@ async function main() {
         `提示：如需同步 Cookies，可短暂关闭日常浏览器 2 秒后再带 --cookies 运行。`,
       )
     }
-  } else {
+  }
+
+  // 3. 网页 Local Storage 同步（可选：Kimi 等无 Cookie、纯 Token 的站点）
+  if (
+    includeCookies ||
+    args.includes("--storage") ||
+    args.includes("--local-storage")
+  ) {
+    console.log(`\n正在尝试同步网页 Local Storage（Token 登录态）...`)
+    const srcLocalStorage = path.join(
+      bestSource.rootPath,
+      bestSource.profileName,
+      "Local Storage",
+      "leveldb",
+    )
+    const dstLocalStorage = path.join(devProfileDir, "Local Storage", "leveldb")
+
+    try {
+      if (fs.existsSync(srcLocalStorage)) {
+        fs.mkdirSync(dstLocalStorage, { recursive: true })
+        const files = fs.readdirSync(srcLocalStorage)
+        let count = 0
+        for (const file of files) {
+          if (file !== "LOCK") {
+            try {
+              fs.copyFileSync(
+                path.join(srcLocalStorage, file),
+                path.join(dstLocalStorage, file),
+              )
+              count++
+            } catch {
+              /* ignore busy files */
+            }
+          }
+        }
+        console.log(
+          `✅ 网页 Local Storage 同步完成（共复制 ${count} 个数据文件）！`,
+        )
+      }
+    } catch (err) {
+      console.warn(`⚠️ 无法读取 Local Storage: ${err.message}`)
+    }
+  }
+
+  if (
+    !includeCookies &&
+    !args.includes("--storage") &&
+    !args.includes("--local-storage")
+  ) {
     console.log(
-      `\n💡 提示：如需连同网页端 Cookie 登录态一并同步，请加参数: --cookies`,
+      `\n💡 提示：如需连同网页端 Cookie 和 Local Storage 登录态一并同步，请加参数: --cookies`,
     )
   }
 }

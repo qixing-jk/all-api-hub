@@ -3,19 +3,44 @@
  */
 export async function dismissModals(page) {
   try {
-    const dialog = page.locator('[role="dialog"]').first()
-    if (await dialog.isVisible({ timeout: 1200 }).catch(() => false)) {
-      const closeBtn = dialog
-        .getByRole("button")
-        .filter({ hasText: /关闭|Close|知道了|Got it|好的|稍后/i })
-        .first()
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const modalElements = page.locator(
+        '[role="dialog"], [data-slot="modal-overlay"], [data-slot="modal-panel"]',
+      )
+      const count = await modalElements.count().catch(() => 0)
+      if (count === 0) break
 
-      if (await closeBtn.isVisible({ timeout: 500 }).catch(() => false)) {
-        await closeBtn.click().catch(() => {})
+      const closeButtons = page.locator(
+        '[role="dialog"] button:has-text("关闭"), [role="dialog"] button:has-text("Close"), [role="dialog"] [aria-label="关闭"], [role="dialog"] [aria-label="Close"], button[aria-label="Close"], button[aria-label="关闭"]',
+      )
+      const btnCount = await closeButtons.count().catch(() => 0)
+      if (btnCount > 0) {
+        for (let i = 0; i < btnCount; i++) {
+          await closeButtons
+            .nth(i)
+            .click({ force: true, timeout: 800 })
+            .catch(() => {})
+        }
         await page.waitForTimeout(300)
       } else {
         await page.keyboard.press("Escape").catch(() => {})
         await page.waitForTimeout(300)
+      }
+
+      const stillVisible = await page
+        .locator('[role="dialog"], [data-slot="modal-overlay"]')
+        .first()
+        .isVisible({ timeout: 500 })
+        .catch(() => false)
+      if (stillVisible) {
+        await page
+          .evaluate(() => {
+            document
+              .querySelectorAll('[role="dialog"], [data-slot="modal-overlay"]')
+              .forEach((el) => el.remove())
+          })
+          .catch(() => {})
+        await page.waitForTimeout(200)
       }
     }
   } catch {
