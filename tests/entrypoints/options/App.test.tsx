@@ -44,10 +44,19 @@ vi.mock("~/features/OptionsMenu/OptionsPageTransition", () => ({
   OptionsPageTransition: ({
     children,
     fallback,
+    arrivalAnchor,
   }: {
     children: ReactNode
     fallback: ReactNode
-  }) => <Suspense fallback={fallback}>{children}</Suspense>,
+    arrivalAnchor?: boolean
+  }) => (
+    <div data-testid="options-page-transition">
+      <span data-testid="options-page-transition-arrival-anchor">
+        {String(Boolean(arrivalAnchor))}
+      </span>
+      <Suspense fallback={fallback}>{children}</Suspense>
+    </div>
+  ),
 }))
 
 vi.mock("~/contexts/FeatureGuidanceContext", () => ({
@@ -404,6 +413,27 @@ describe("options App", () => {
       if (activeMenuItem === "unknown-menu-id") {
         expect(mockedPreloadOptionsPage).not.toHaveBeenCalled()
       }
+    },
+  )
+
+  it.each([
+    [{ source: "test" }, "false"],
+    [{ source: "test", anchor: "bookmarks" }, "true"],
+    [{ source: "test", highlight: "webdav" }, "true"],
+  ])(
+    "tells the page transition whether route params %o target an anchor",
+    async (routeParams, expected) => {
+      mockUseHashNavigationState.routeParams = routeParams
+
+      render(<App />, {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      })
+
+      expect(
+        screen.getByTestId("options-page-transition-arrival-anchor"),
+      ).toHaveTextContent(expected)
     },
   )
 })

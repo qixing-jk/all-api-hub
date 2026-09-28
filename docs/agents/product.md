@@ -18,6 +18,7 @@ Read the section that matches the change.
 - For independently animated list cards, use `data-page-motion-list` on the list and `data-page-motion-item` on each row. Only rows intersecting the viewport participate; a long list must not create animations for every record.
 - During initial data/layout loading, expose `data-options-page-pending` and remove it when the content is ready. The shared transition waits before entering, shows the loader only after 700 ms, and fades it out before entry. Later data updates do not replay the page entrance.
 - If loaded data precedes deferred row rendering, set `data-page-motion-wait-for` to a descendant selector (existing lists use `[data-page-motion-ready-item]`). Keep it absent for empty lists. This render wait is bounded and complements the data-loading marker.
+- An arrival already carrying an `anchor` or `highlight` param (deep link, settings-search result, overview action) scrolls to that target while it mounts, so it fades in place instead of sliding: a vertical offset would be measured by the landing scroll and leave the target shifted once the page settles.
 - Keep the native `framer-motion/mini` playback path: it preserves final styles before clearing keyframes. Avoid another animation or CSS transition controlling the same container's transform/opacity concurrently; animate a separate outer container when needed.
 - When changing this contract, use the focused browser checks in `e2e/optionsPageMotion.spec.ts`, including fast navigation, refresh, data-heavy cards, scrolled exits, and reduced motion.
 

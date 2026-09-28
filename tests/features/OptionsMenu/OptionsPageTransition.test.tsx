@@ -271,6 +271,26 @@ describe("OptionsPageTransition", () => {
     )
   })
 
+  it("fades an anchored arrival in without moving its scroll target", async () => {
+    render(
+      <OptionsPageTransition
+        pageId={MENU_ITEM_IDS.ACCOUNT}
+        arrivalAnchor
+        fallback={null}
+      >
+        <TestPage label="account" />
+      </OptionsPageTransition>,
+    )
+    await flushReadyAndFrames()
+
+    const accountItem = screen.getByTestId("account-item")
+    expect(motionMocks.animate).toHaveBeenCalledWith(
+      accountItem,
+      { opacity: [0, 1] },
+      expect.objectContaining({ duration: 0.3, delay: 0 }),
+    )
+  })
+
   it("keeps only the latest page when navigation changes during an exit", async () => {
     const { rerender } = renderPage(
       MENU_ITEM_IDS.OVERVIEW,

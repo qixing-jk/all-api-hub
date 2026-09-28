@@ -16,6 +16,12 @@ interface OptionsPageTransitionProps {
   pageId: string
   fallback: ReactNode
   children: ReactNode
+  /**
+   * True when the arrival already targets an in-page anchor. The landing scroll
+   * measures the target while the page mounts, so this arrival may only fade:
+   * a vertical offset would land the scroll where the page no longer is.
+   */
+  arrivalAnchor?: boolean
 }
 
 const ENTER_DURATION = 0.3
@@ -40,6 +46,7 @@ export function OptionsPageTransition({
   pageId,
   fallback,
   children,
+  arrivalAnchor,
 }: OptionsPageTransitionProps) {
   const [displayed, setDisplayed] = useState({
     pageId,
@@ -80,6 +87,7 @@ export function OptionsPageTransition({
     <AnimatedOptionsPage
       key={`${displayed.pageId}:${displayed.sequence}`}
       direction={isExiting ? exitDirection : displayed.direction}
+      arrivalAnchor={arrivalAnchor}
       fallback={page.fallback}
       isPresent={!isExiting}
       onExitComplete={finishExit}
@@ -108,12 +116,14 @@ function ReadyPage({
 /** Animates one route and controls when it may unmount. */
 function AnimatedOptionsPage({
   direction,
+  arrivalAnchor,
   fallback,
   isPresent,
   onExitComplete,
   children,
 }: {
   direction: number
+  arrivalAnchor?: boolean
   fallback: ReactNode
   isPresent: boolean
   onExitComplete: () => void
@@ -153,6 +163,9 @@ function AnimatedOptionsPage({
       const targets = getPageMotionTargets(content.current)
       const interval = staggerInterval(targets.length, 0.06, 0.24)
       const ordered = direction > 0 ? targets : [...targets].reverse()
+      // A pending anchor scroll aligns the target against the final layout, so
+      // this arrival fades in place instead of sliding out from under it.
+      const offset = arrivalAnchor ? 0 : direction * PAGE_MOTION_OFFSET
 
       // Read the original transforms together before writing hidden styles.
       targets.forEach((target) => {
@@ -171,13 +184,12 @@ function AnimatedOptionsPage({
           const base = baseTransforms.current.get(target) ?? "none"
           const control = animate(
             target,
-            {
-              opacity: [0, 1],
-              transform: [
-                translatedTransform(base, direction * PAGE_MOTION_OFFSET),
-                base,
-              ],
-            },
+            offset === 0
+              ? { opacity: [0, 1] }
+              : {
+                  opacity: [0, 1],
+                  transform: [translatedTransform(base, offset), base],
+                },
             {
               duration: ENTER_DURATION,
               ease: ENTER_EASE,
@@ -192,7 +204,7 @@ function AnimatedOptionsPage({
         setContentVisible(true)
       })
     })
-  }, [animate, direction, isPresent, shouldReduceMotion])
+  }, [animate, arrivalAnchor, direction, isPresent, shouldReduceMotion])
 
   const finishPageReady = useCallback(() => {
     if (ready.current || !isPresent) return

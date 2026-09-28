@@ -11,6 +11,10 @@ import { useAppearanceSave } from "~/features/Appearance/useAppearanceSave"
 import { DevPanel, DevPanelProvider } from "~/features/DevPanel"
 import { OptionsPageTransition } from "~/features/OptionsMenu/OptionsPageTransition"
 import { hasOptionalPermissions } from "~/features/OptionsSearch/basicSettingsMeta"
+import {
+  OPTIONS_SEARCH_ANCHOR_PARAM,
+  OPTIONS_SEARCH_HIGHLIGHT_PARAM,
+} from "~/features/OptionsSearch/navigation"
 import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
 import { useOptionsSearchContext } from "~/features/OptionsSearch/useOptionsSearch"
 import { useSearchHotkeys } from "~/features/OptionsSearch/useSearchHotkeys"
@@ -124,6 +128,13 @@ function OptionsPage() {
     menuItems.find((item) => item.id === activeMenuItem)?.component ||
     BasicSettings
 
+  // A deep link or search result that targets a setting scrolls on arrival, so
+  // that page must not slide into place underneath its own landing position.
+  const arrivalAnchor = Boolean(
+    routeParams[OPTIONS_SEARCH_ANCHOR_PARAM] ??
+      routeParams[OPTIONS_SEARCH_HIGHLIGHT_PARAM],
+  )
+
   useEffect(() => {
     const selected = menuItems.find((item) => item.id === activeMenuItem)
     if (selected) void preloadOptionsPage(selected.id).catch(() => undefined)
@@ -217,6 +228,7 @@ function OptionsPage() {
                 >
                   <OptionsPageTransition
                     pageId={activeMenuItem}
+                    arrivalAnchor={arrivalAnchor}
                     fallback={<OptionsPageContentFallback />}
                   >
                     <ActiveComponent
