@@ -11,14 +11,17 @@ concurrency:
 
 jobs:
   chrome-compat:
-    name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/2)
+    name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    # Leave time for setup and failure artifacts after Playwright stops.
-    timeout-minutes: 40
+    # Covers the 35-minute test budget plus setup, the failure report, and
+    # artifact upload, so a timeout never truncates the evidence.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        # Only the per-job setup duplicates when this count grows: the budget
+        # and the CI minutes are set by the tests, which are split evenly.
+        shard: [1, 2, 3]
         chrome_version:
           # 114 is the current Chromium support floor for this build: the
           # manifest declares sidePanel, and chrome.sidePanel starts at 114.
@@ -68,14 +71,19 @@ jobs:
           install-dependencies: true
 
       - name: Run browser compatibility E2E
-        timeout-minutes: 30
+        timeout-minutes: 40
         env:
           AAH_E2E_CHROME_EXECUTABLE_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
           AAH_SKIP_E2E_BUILD: "1"
           AAH_E2E_SMOKE_ONLY: "1"
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/2 --global-timeout=1500000 --reporter=list,github,html
+        # Three shards put the heaviest one at ~19 minutes of the ~47 this
+        # suite needs per Chrome version, so the budget only covers a night that
+        # runs far longer than planned. Exhausting it fails the job while every
+        # test that never started only reads as "did not run", which hides the
+        # real cause.
+        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --global-timeout=2100000 --reporter=list,github,html
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
