@@ -10,6 +10,7 @@ import {
   CLI_PROXY_API_DETAIL_FIELDS,
   CLI_PROXY_API_TABLE_FIELDS,
 } from "~/constants/cliProxyApi"
+import { AI_ROUTER_HOSTNAMES } from "~/constants/deploymentApiOrigins"
 import {
   DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -308,7 +309,13 @@ const ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       displayName: "Sub2API",
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.Sub2Api,
-      detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
+      detection: {
+        titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)],
+        // AI-ROUTER is a split-origin fork: its browser origin answers neither
+        // the title match nor the `/api/v1/auth/me` shape probe, so the hostname
+        // has to be registered explicitly.
+        hostnames: AI_ROUTER_HOSTNAMES,
+      },
       routes: {
         // https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/router/index.ts
         pricingPath: "/model-plaza",
@@ -340,6 +347,12 @@ const ACCOUNT_SITE_DEFINITIONS = [
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+      },
+      urls: {
+        // Only enumerated deployments are recognized by hostname; other Sub2API
+        // forks stay title/probe detected so a self-hosted install is never
+        // mistaken for a registered one.
+        recognizedHostnames: AI_ROUTER_HOSTNAMES,
       },
     },
   },

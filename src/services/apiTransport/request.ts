@@ -1,3 +1,4 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
@@ -614,7 +615,11 @@ const _fetchApiWithMapper = async <T, TResult>(
   const { baseUrl, accountId } = request
   const userId = request.auth?.userId
 
-  const url = joinUrl(baseUrl, options.endpoint)
+  // Split-origin deployments answer their API on a different origin than the
+  // dashboard they are addressed by. `request.baseUrl` keeps the browser origin:
+  // session reading, temporary-window fallback and the current-tab origin guard
+  // all depend on it.
+  const url = joinUrl(resolveDeploymentApiOrigin(baseUrl), options.endpoint)
 
   const resolvedAuth: NormalizedAuthContext = {
     authType: request.auth?.authType ?? AuthTypeEnum.None,

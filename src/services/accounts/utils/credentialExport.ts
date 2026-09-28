@@ -1,4 +1,5 @@
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   hasUsableApiTokenKey,
@@ -31,15 +32,29 @@ const getCredentialCacheKey = (
     ]),
   )
 
+/**
+ * Endpoint an external caller must use for this account. The account keeps its
+ * own browser origin; an integration, managed site, or verification profile
+ * needs the deployment's API origin instead.
+ */
+export const resolveAccountExternalApiBaseUrl = (
+  account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
+): string =>
+  normalizeAccountSiteProfileUrlForManagedChannel({
+    siteType: account.siteType,
+    url: account.baseUrl,
+  })
+
 /** Keep runtime-key identity and source-specific secret recovery in accounts. */
 export function createAccountRuntimeKeyExportSource(
   account: DisplaySiteData,
   runtimeKey: AccountRuntimeKey,
   { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
 ): CredentialExportSource {
+  // The key inherits the account endpoint unless it carries its own.
   const baseUrl =
     runtimeKey.baseUrl === runtimeKey.account.baseUrl
-      ? account.baseUrl
+      ? resolveAccountExternalApiBaseUrl(account)
       : runtimeKey.baseUrl
   return {
     id: runtimeKey.id,

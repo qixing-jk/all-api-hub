@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  DEPLOYMENT_API_ROLES,
+  resolveDeploymentApiOrigin,
+} from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
@@ -80,6 +84,15 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => {
     ...actual,
     fetchApi: vi.fn(),
     notifyApiTransportObserver: vi.fn(),
+  }
+})
+
+vi.mock("~/constants/deploymentApiOrigins", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/constants/deploymentApiOrigins")>()
+  return {
+    ...actual,
+    resolveDeploymentApiOrigin: vi.fn(actual.resolveDeploymentApiOrigin),
   }
 })
 
@@ -2659,6 +2672,66 @@ describe("apiService sub2api exported operations", () => {
       )
       expect(fetchApi).not.toHaveBeenCalled()
       expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    })
+
+    // The gateway is reached with an API key, so it resolves the inference role
+    // rather than the account API the transport defaults to.
+    it("resolves the gateway model list through the inference role", async () => {
+      vi.mocked(resolveDeploymentApiOrigin).mockClear()
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ object: "list", data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ) as any,
+      )
+
+      await fetchSub2ApiRuntimeModels(createRuntimeRequest())
+
+      expect(resolveDeploymentApiOrigin).toHaveBeenCalledWith(
+        "https://sub2.example.com",
+        DEPLOYMENT_API_ROLES.Inference,
+      )
+    })
+
+    // ai-router.dev answers /v1/models on its API origin, not on the dashboard
+    // origin the account is addressed by.
+    // See .scratch/ai-router-adaptation/research.md.
+    it("fetches runtime models from the API origin of a split-origin deployment", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              {
+                id: "example-runtime-model",
+                object: "model",
+                created: 1_700_000_000,
+                owned_by: "example",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      await expect(
+        fetchSub2ApiRuntimeModels(
+          createRuntimeRequest({ baseUrl: "https://ai-router.dev" }),
+        ),
+      ).resolves.toEqual(["example-runtime-model"])
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.ai-router.dev/v1/models",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer runtime-api-key",
+          }),
+        }),
+      )
     })
 
     it("fetches Sub2API-style runtime models and normalizes IDs", async () => {

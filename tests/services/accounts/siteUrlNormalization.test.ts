@@ -55,6 +55,38 @@ describe("siteUrlNormalization", () => {
     ).toBe("https://aihubmix.com")
   })
 
+  // Split-origin deployments serve their API on a different origin than the
+  // dashboard, so anything exported for an external caller needs the API origin.
+  // See .scratch/ai-router-adaptation/research.md.
+  it("resolves split-origin deployments to the API origin for external callers", () => {
+    expect(
+      normalizeAccountSiteProfileUrlForManagedChannel({
+        siteType: SITE_TYPES.SUB2API,
+        url: "https://ai-router.dev",
+      }),
+    ).toBe("https://api.ai-router.dev")
+    expect(
+      normalizeAccountSiteProfileUrlForManagedChannel({
+        siteType: SITE_TYPES.SUB2API,
+        url: " https://www.ai-router.dev/dashboard ",
+      }),
+    ).toBe("https://api.ai-router.dev")
+    expect(
+      normalizeAccountSiteProfileUrlForManagedChannel({
+        url: "https://ai-router.dev/keys",
+      }),
+    ).toBe("https://api.ai-router.dev")
+  })
+
+  it("keeps unregistered Sub2API deployments on the stored URL", () => {
+    expect(
+      normalizeAccountSiteProfileUrlForManagedChannel({
+        siteType: SITE_TYPES.SUB2API,
+        url: " https://sub2.example.com/path ",
+      }),
+    ).toBe("https://sub2.example.com/path")
+  })
+
   it("matches AIHubMix account-site origins across main and console hostnames", () => {
     expect(
       isSameAccountSiteOrigin(

@@ -134,4 +134,74 @@ describe("account credential exports", () => {
       expect(changed.cacheKey).not.toBe(source.cacheKey)
     },
   )
+
+  // A split-origin deployment answers its API on a different origin than the
+  // dashboard, so an exported credential must carry the API origin even though
+  // the account keeps the dashboard URL.
+  // See .scratch/ai-router-adaptation/research.md.
+  it("exports the API origin when the key uses the account endpoint", () => {
+    const splitOriginAccount = buildDisplaySiteData({
+      id: "ai-router-account",
+      name: "Split Origin Account",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://ai-router.dev",
+    })
+    const splitOriginKey = buildAccountKeyResourceRuntimeKey(
+      splitOriginAccount,
+      {
+        ref: {
+          accountId: splitOriginAccount.id,
+          siteType: splitOriginAccount.siteType,
+          scopeKey: "workspace:team-a",
+          resourceId: "key/opaque-id",
+        },
+        label: "Native key",
+        secret: "",
+      },
+    )
+
+    expect(
+      createAccountRuntimeKeyExportSource(splitOriginAccount, splitOriginKey)
+        .baseUrl,
+    ).toBe("https://api.ai-router.dev")
+  })
+
+  it("keeps an explicit per-key endpoint and unregistered account URLs", () => {
+    const explicitEndpointKey = {
+      ...runtimeKey,
+      baseUrl: "https://custom-endpoint.example.invalid/v1",
+    }
+
+    expect(
+      createAccountRuntimeKeyExportSource(account, explicitEndpointKey).baseUrl,
+    ).toBe("https://custom-endpoint.example.invalid/v1")
+    expect(
+      createAccountRuntimeKeyExportSource(account, runtimeKey).baseUrl,
+    ).toBe(account.baseUrl)
+  })
+
+  // AIHubMix accounts are stored against the console origin, so exports used to
+  // hand external callers the dashboard instead of the API origin.
+  it("exports the AIHubMix API origin for an account stored on the console", () => {
+    const consoleAccount = buildDisplaySiteData({
+      id: "aihubmix-console-account",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://console.aihubmix.com",
+    })
+    const consoleKey = buildAccountKeyResourceRuntimeKey(consoleAccount, {
+      ref: {
+        accountId: consoleAccount.id,
+        siteType: consoleAccount.siteType,
+        scopeKey: "workspace:team-a",
+        resourceId: "key/opaque-id",
+      },
+      label: "Native key",
+      secret: "",
+    })
+
+    expect(
+      createAccountRuntimeKeyExportSource(consoleAccount, consoleKey).baseUrl,
+    ).toBe("https://aihubmix.com")
+  })
 })

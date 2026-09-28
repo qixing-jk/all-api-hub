@@ -1,3 +1,12 @@
+/**
+ * Registered site-type names and the addresses the site definitions need.
+ *
+ * IMPORTANT: `wxt.config.ts` imports this module by relative path, so it is
+ * evaluated by jiti before the bundler resolves aliases. This module must stay
+ * free of `~/` imports — adding one breaks `pnpm dev` and `pnpm build` while
+ * unit tests and `tsc` stay green. Per-deployment addresses live in
+ * `~/constants/deploymentApiOrigins`, which consumers import directly.
+ */
 export const SITE_TYPES = {
   ONE_API: "one-api",
   NEW_API: "new-api",

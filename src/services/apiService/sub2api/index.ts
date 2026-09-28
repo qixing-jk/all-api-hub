@@ -10,6 +10,10 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
+import {
+  DEPLOYMENT_API_ROLES,
+  resolveDeploymentApiOrigin,
+} from "~/constants/deploymentApiOrigins"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -418,8 +422,14 @@ const readRuntimeModelsBusinessError = async (
   }
 }
 
+/**
+ * The runtime model list bypasses the shared transport, so it resolves the
+ * deployment's API origin itself instead of assuming the account URL answers it.
+ * It is a gateway endpoint reached with an API key, so it resolves the
+ * inference role; both roles name the same origin until a deployment splits them.
+ */
 const createRuntimeModelsUrl = (baseUrl: string): string =>
-  `${baseUrl.replace(/\/+$/, "")}${SUB2API_RUNTIME_MODELS_ENDPOINT}`
+  `${resolveDeploymentApiOrigin(baseUrl, DEPLOYMENT_API_ROLES.Inference).replace(/\/+$/, "")}${SUB2API_RUNTIME_MODELS_ENDPOINT}`
 
 const fetchAvailableGroupsInternal = async (request: ApiServiceRequest) =>
   fetchSub2ApiData<unknown[]>(request, SUB2API_AVAILABLE_GROUPS_ENDPOINT, {

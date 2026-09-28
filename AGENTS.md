@@ -23,6 +23,7 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 - Persistent stores, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
 - Translation keys, resources, or language behavior: [i18n guidance](docs/agents/i18n.md). Use `add-app-language` only when adding a supported application language.
 - Sponsor catalog changes or audits use the project `sponsor-catalog` skill, not ordinary documentation edits.
+- Live dev extension UI automation, real accounts, or CDP control: use project skill `live-extension-ui-automation`.
 - Development setup, test harnesses, or hook troubleshooting: [CONTRIBUTING.md](CONTRIBUTING.md). Commands and versions belong to `package.json`, `.nvmrc`, and hooks.
 
 ## Project boundaries

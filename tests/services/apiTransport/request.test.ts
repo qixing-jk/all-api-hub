@@ -280,6 +280,81 @@ describe("apiTransport request helpers", () => {
     expect(result).toEqual(data)
   })
 
+  // ai-router.dev serves its dashboard and its Sub2API API from different
+  // origins, so the account URL cannot be used as the request base.
+  // See .scratch/ai-router-adaptation/research.md.
+  it("routes split-origin deployments to their API origin without rewriting baseUrl", async () => {
+    const accountUrl = "https://ai-router.dev"
+    const apiOriginUrl = "https://api.ai-router.dev/api/v1/keys"
+    const webOriginCalls: string[] = []
+    let apiOriginCalls = 0
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(apiOriginUrl, ({ request }) => {
+        apiOriginCalls += 1
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({ success: true, data: [], message: "ok" })
+      }),
+      http.get("https://ai-router.dev/api/v1/keys", ({ request }) => {
+        webOriginCalls.push(request.url)
+        return HttpResponse.json({ success: true, data: [], message: "ok" })
+      }),
+    )
+
+    const request = {
+      baseUrl: accountUrl,
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 7,
+        origin: accountUrl,
+      },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "123",
+        accessToken: "token",
+      },
+    } as const
+
+    const result = await fetchApiData<unknown[]>(request, {
+      endpoint: "/api/v1/keys",
+    })
+
+    expect(apiOriginCalls).toBe(1)
+    expect(webOriginCalls).toEqual([])
+    expect(capturedAuthorization).toBe("Bearer token")
+    expect(result).toEqual([])
+    // The browser origin stays on the request: session reading, current-tab
+    // dispatch and temporary-window fallback must keep opening the dashboard.
+    expect(request.baseUrl).toBe(accountUrl)
+    expect(request.fetchContext.origin).toBe(accountUrl)
+  })
+
+  it("leaves unregistered request origins byte-for-byte unchanged", async () => {
+    const calls: string[] = []
+
+    server.use(
+      http.get("https://other.example.com/base/api/test", ({ request }) => {
+        calls.push(request.url)
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApiData<{ ok: boolean }>(
+      {
+        baseUrl: "https://other.example.com/base/",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      },
+      { endpoint: ENDPOINT },
+    )
+
+    expect(calls).toEqual(["https://other.example.com/base/api/test"])
+  })
+
   it("fetchApiData merges custom headers without dropping auth headers", async () => {
     let capturedAccept: string | null = null
     let capturedAuthorization: string | null = null

@@ -1,3 +1,4 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import { getAccountSiteRouteMetadata } from "~/services/accountSiteOnboarding/metadata"
@@ -116,7 +117,14 @@ export function normalizeAccountSiteProfileUrlForStorage(params: {
 }
 
 /**
- * Resolves the API origin to use when an account is exported into a managed site.
+ * Resolves the API origin to hand to an external caller — a managed site, a
+ * verification profile, or a desktop integration — while the account keeps its
+ * own browser origin for session reading and navigation.
+ *
+ * A site profile pins the origin for integrations that only ever live on one.
+ * Deployments that split their dashboard and API origins are registered
+ * individually instead, so the deployment table is the fallback; every
+ * unregistered URL keeps the value it was given.
  */
 export function normalizeAccountSiteProfileUrlForManagedChannel(params: {
   siteType?: AccountSiteType | string
@@ -124,7 +132,10 @@ export function normalizeAccountSiteProfileUrlForManagedChannel(params: {
 }): string {
   const profile = resolveProfileForUrl(params)
 
-  return profile?.urls.managedChannelOrigin ?? params.url.trim()
+  return (
+    profile?.urls.managedChannelOrigin ??
+    resolveDeploymentApiOrigin(params.url.trim())
+  )
 }
 
 /**

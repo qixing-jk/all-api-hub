@@ -350,6 +350,73 @@ describe("detectSiteType", () => {
           getAccountSiteType("https://api.sharedchat.cc"),
         ).resolves.toBe(SITE_TYPES.UNKNOWN)
       })
+      it("detects AI-ROUTER from the browser origin without probe or title fetch", async () => {
+        let probed = false
+        server.use(
+          http.get("https://ai-router.dev", () => {
+            probed = true
+            return new HttpResponse(
+              "<html><title>AI-ROUTER - AI API Gateway</title></html>",
+              { headers: { "Content-Type": "text/html" } },
+            )
+          }),
+          http.get("https://ai-router.dev/api/user/self", () => {
+            probed = true
+            return new HttpResponse("not found", { status: 404 })
+          }),
+          http.get("https://api.ai-router.dev/api/v1/auth/me", () => {
+            probed = true
+            return HttpResponse.json(
+              {
+                code: "UNAUTHORIZED",
+                message: "Authorization header is required",
+              },
+              { status: 401 },
+            )
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://ai-router.dev/dashboard"),
+        ).resolves.toBe(SITE_TYPES.SUB2API)
+        expect(probed).toBe(false)
+      })
+
+      it("detects AI-ROUTER hostnames case-insensitively, including www", async () => {
+        await expect(
+          getAccountSiteType("https://www.ai-router.dev/keys"),
+        ).resolves.toBe(SITE_TYPES.SUB2API)
+        await expect(
+          getAccountSiteType("https://AI-ROUTER.DEV/"),
+        ).resolves.toBe(SITE_TYPES.SUB2API)
+      })
+
+      it("does not generalize AI-ROUTER detection to unregistered sibling hostnames", async () => {
+        server.use(
+          http.get("https://vip.ai-router.dev", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              { headers: { "Content-Type": "text/html" } },
+            )
+          }),
+          http.get("https://vip.ai-router.dev/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+          http.get("https://vip.ai-router.dev/api/v1/auth/me", () => {
+            return HttpResponse.json({ message: "not found" }, { status: 404 })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://vip.ai-router.dev"),
+        ).resolves.toBe(SITE_TYPES.UNKNOWN)
+      })
     })
 
     describe("Title-based detection", () => {
