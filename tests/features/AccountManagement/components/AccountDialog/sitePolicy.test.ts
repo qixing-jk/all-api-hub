@@ -80,6 +80,22 @@ describe("Account Dialog site policy", () => {
     ).toBe(false)
   })
 
+  it("uses the browser session for a Windhub check-in account", () => {
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.WINDHUB)
+    const draft = createDraft({ siteType: SITE_TYPES.WINDHUB })
+    const normalized = normalizeAccountDialogDraftForSitePolicy({
+      draft,
+      policy,
+    })
+
+    expect(policy.forceBrowserSessionAuth).toBe(true)
+    expect(policy.canonicalSiteUrl).toBe("https://windhub.cc")
+    expect(policy.defaultSiteName).toBe("Windhub")
+    expect(policy.requireUserId).toBe(true)
+    expect(normalized.authType).toBe(AuthTypeEnum.None)
+    expect(normalized.cookieAuthSessionCookie).toBe("")
+  })
+
   it.each([SITE_TYPES.SUB2API, SITE_TYPES.SHAREDCHAT, SITE_TYPES.VO_API_V2])(
     "does not require a username for %s",
     (siteType) => {

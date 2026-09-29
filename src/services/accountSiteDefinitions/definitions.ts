@@ -113,6 +113,7 @@ const SHAREDCHAT_CODEX_DASHBOARD_PATH =
 const ACCOUNT_SITE_AUTH_TYPES = {
   AccessToken: AuthTypeEnum.AccessToken,
   Cookie: AuthTypeEnum.Cookie,
+  None: AuthTypeEnum.None,
 } as const
 
 const ACCOUNT_SCOPE = [ACCOUNT_SITE_DEFINITION_SCOPES.Account] as const
@@ -154,6 +155,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.RIX_API,
   SITE_TYPES.NEO_API,
   SITE_TYPES.WONG_GONGYI,
+  SITE_TYPES.WINDHUB,
   SITE_TYPES.SUB2API,
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
@@ -982,6 +984,41 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         redeemPath: "/console/topup",
         siteAnnouncementsPath: "/",
       },
+    },
+  },
+  {
+    siteType: SITE_TYPES.WINDHUB,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    onboarding: {
+      displayName: "Windhub",
+      accountForm: {
+        fixedSiteUrl: "https://windhub.cc",
+        defaultSiteName: "Windhub",
+      },
+      detection: { hostnames: ["windhub.cc"] },
+      routes: {
+        loginPath: "/login",
+        usagePath: null,
+        checkInPath: "/console/personal",
+        adminCredentialsPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.None],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.None,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: true,
+        storedUserIdentityFields: ["id"],
+      },
+      urls: { recognizedHostnames: ["windhub.cc"] },
     },
   },
   {

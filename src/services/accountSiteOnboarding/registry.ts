@@ -15,6 +15,7 @@ import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/brows
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
+import { windhubBrowserIdentity } from "~/services/apiAdapters/windhub/browserIdentity"
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
@@ -36,6 +37,7 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  { identity: windhubBrowserIdentity },
   {
     sessionExtractor: sub2ApiContentSessionExtractor,
     identity: sub2ApiBrowserIdentity,

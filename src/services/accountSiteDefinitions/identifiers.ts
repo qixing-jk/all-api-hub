@@ -23,6 +23,7 @@ export const SITE_TYPES = {
   RIX_API: "Rix-Api",
   NEO_API: "neo-Api",
   WONG_GONGYI: "wong-gongyi",
+  WINDHUB: "windhub",
   SUB2API: "sub2api",
   OCTOPUS: "octopus",
   AXON_HUB: "axonhub",

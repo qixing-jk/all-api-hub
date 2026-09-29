@@ -81,6 +81,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.RIX_API
   | typeof SITE_TYPES.NEO_API
   | typeof SITE_TYPES.WONG_GONGYI
+  | typeof SITE_TYPES.WINDHUB
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.AIHUBMIX
   | typeof SITE_TYPES.SHAREDCHAT
@@ -346,6 +347,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.RIX_API,
       SITE_TYPES.NEO_API,
       SITE_TYPES.WONG_GONGYI,
+      SITE_TYPES.WINDHUB,
       SITE_TYPES.SUB2API,
       SITE_TYPES.AIHUBMIX,
       SITE_TYPES.SHAREDCHAT,

@@ -309,7 +309,8 @@
     "authMethodSelectedForSite": "Die Authentifizierungsmethode wurde automatisch basierend auf den {{siteType}}-Anforderungen ausgewählt.",
     "authType": {
       "accessToken": "Zugriffstoken-Authentifizierung",
-      "cookieAuth": "Cookie-Authentifizierung"
+      "cookieAuth": "Cookie-Authentifizierung",
+      "browserSession": "Browsersitzung"
     },
     "cookieWarning": "Bevorzugen Sie Zugriffstoken. Die Cookie-Authentifizierung erfordert den Import eines Sitzungscookies. Das Cookie kann ablaufen oder erneuert werden und dadurch ungültig werden, sodass es erneut importiert werden muss. Importieren Sie für mehrere Konten auf derselben Website jeweils ein Sitzungscookie. Verwenden Sie diese Methode nur bei Bedarf.",
     "currentLoginAlreadyAdded": "Aktueller Login bereits hinzugefügt",

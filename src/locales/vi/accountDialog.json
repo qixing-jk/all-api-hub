@@ -308,7 +308,8 @@
     "authMethodSelectedForSite": "Phương thức xác thực đã được tự động chọn theo yêu cầu của {{siteType}}.",
     "authType": {
       "accessToken": "Xác thực Access Token",
-      "cookieAuth": "Xác thực Cookie"
+      "cookieAuth": "Xác thực Cookie",
+      "browserSession": "Phiên trình duyệt"
     },
     "cookieWarning": "Khuyến nghị ưu tiên sử dụng Access Token. Xác thực Cookie yêu cầu nhập Session Cookie và có thể không hợp lệ do hết hạn/gia hạn, bạn cần nhập lại sau khi không hợp lệ; nhiều tài khoản trên cùng một trang web cần được nhập riêng cho mỗi tài khoản, không khuyến nghị sử dụng trừ khi cần thiết.",
     "currentLoginAlreadyAdded": "Tài khoản đăng nhập hiện tại đã được thêm",

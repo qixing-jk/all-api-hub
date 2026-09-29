@@ -310,7 +310,8 @@
     "authMethodSelectedForSite": "O método de autenticação foi selecionado automaticamente conforme os requisitos de {{siteType}}.",
     "authType": {
       "accessToken": "Autenticação por token de acesso",
-      "cookieAuth": "Autenticação por cookie"
+      "cookieAuth": "Autenticação por cookie",
+      "browserSession": "Sessão do navegador"
     },
     "cookieWarning": "Prefira tokens de acesso. A autenticação de cookie requer a importação de um cookie de sessão, e ele pode expirar/renovar e parar de funcionar, exigindo reimportação; para várias contas no mesmo site, importe um cookie de sessão por conta. Use somente quando necessário.",
     "currentLoginAlreadyAdded": "Login atual já adicionado",

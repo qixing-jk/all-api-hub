@@ -35,6 +35,14 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentWindhubCheckin) {
+      void import("~/services/apiAdapters/windhub/pageCheckin")
+        .then(({ handleWindhubCheckin }) =>
+          handleWindhubCheckin(request, sendResponse),
+        )
+        .catch(() => sendResponse({ kind: "unavailable" }))
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentPrepareSub2ApiOAuth)
       return handlePrepareSub2ApiOAuth(request, sendResponse)
     if (request.action === RuntimeActionIds.ContentCompleteSub2ApiOAuth)

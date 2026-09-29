@@ -32,6 +32,7 @@ import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
+import { windhubCapabilities } from "./windhub"
 
 const managedSitesBySiteType = {
   [SITE_TYPES.CLI_PROXY_API]: cliProxyApiCapabilities,
@@ -72,6 +73,7 @@ const isManagedSiteCapabilityType = (
 export function getSiteTypeCapabilities(
   siteType: SiteType,
 ): SiteTypeCapabilities {
+  if (siteType === SITE_TYPES.WINDHUB) return windhubCapabilities
   const adapterFamily =
     getAccountSiteDefinition(siteType as AccountSiteType)?.adapterFamily ??
     ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported

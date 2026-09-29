@@ -6,6 +6,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   NewApiDailyCheckIn: "new-api:daily-checkin",
   VeloeraDailyCheckIn: "veloera:daily-checkin",
   WongGongyiDailyCheckIn: "wong-gongyi:daily-checkin",
+  WindhubDailyCheckIn: "windhub:daily-checkin",
   AnyrouterDailyCheckIn: "anyrouter:daily-checkin",
   AgentRouterLoginCheckIn: "agentrouter:login-checkin",
   VoApiV2DailyCheckIn: "voapi-v2:daily-checkin",

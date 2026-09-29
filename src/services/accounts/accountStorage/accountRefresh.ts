@@ -69,6 +69,12 @@ class AccountRefresh {
         return { account, refreshed: false, skippedReason: "account_disabled" }
       }
 
+      // Windhub is a browser-session check-in integration; no balance adapter
+      // is declared for this site type.
+      if (account.site_type === SITE_TYPES.WINDHUB) {
+        return { account, refreshed: false, skippedReason: "unsupported" }
+      }
+
       account = await this.refreshSiteMetadataIfNeeded(
         account,
         options?.protectionBypassExecution,

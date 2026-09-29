@@ -59,6 +59,7 @@ type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "siteTypeLabel"
   | "forceAccessTokenAuth"
+  | "forceBrowserSessionAuth"
   | "allowCookieAuthSession"
   | "allowSub2ApiRefreshTokenState"
   | "requireUsername"
@@ -190,7 +191,8 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
-  const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
+  const isAuthTypeLocked =
+    sitePolicy.forceAccessTokenAuth || sitePolicy.forceBrowserSessionAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
@@ -309,6 +311,11 @@ export default function AccountForm({
               <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
             </SelectTrigger>
             <SelectContent align="end" className="min-w-48">
+              {sitePolicy.forceBrowserSessionAuth && (
+                <SelectItem value={AuthTypeEnum.None}>
+                  {t("siteInfo.authType.browserSession")}
+                </SelectItem>
+              )}
               <SelectItem value={AuthTypeEnum.AccessToken}>
                 <div className="gap-y-density-2 flex items-center gap-x-2">
                   <KeyRound className="h-4 w-4" />

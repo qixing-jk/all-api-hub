@@ -309,7 +309,8 @@
     "authMethodSelectedForSite": "The authentication method was selected automatically based on {{siteType}} requirements.",
     "authType": {
       "accessToken": "Access Token Authentication",
-      "cookieAuth": "Cookie Authentication"
+      "cookieAuth": "Cookie Authentication",
+      "browserSession": "Browser session"
     },
     "cookieWarning": "Prefer access tokens. Cookie auth requires importing a session cookie, and it may expire/renew and stop working, requiring re-import; for multiple accounts on the same site, import a session cookie per account. Use only when necessary.",
     "currentLoginAlreadyAdded": "Current login already added",

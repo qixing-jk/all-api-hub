@@ -308,7 +308,8 @@
     "authMethodSelectedForSite": "{{siteType}} の要件に基づいて認証方法が自動的に選択されました。",
     "authType": {
       "accessToken": "Access Token 認証",
-      "cookieAuth": "Cookie 認証"
+      "cookieAuth": "Cookie 認証",
+      "browserSession": "ブラウザーセッション"
     },
     "cookieWarning": "Access Token を優先してください。Cookie 認証ではセッション Cookie の取り込みが必要で、有効期限切れや更新で使えなくなる場合があり、再取り込みが必要です。同じサイトで複数アカウントを使う場合は、アカウントごとにセッション Cookie を取り込んでください。必要な場合にのみ使用してください。",
     "currentLoginAlreadyAdded": "現在のログインはすでに追加されています",

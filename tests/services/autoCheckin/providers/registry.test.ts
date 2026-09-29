@@ -27,6 +27,7 @@ import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
+import { windhubProvider } from "~/services/checkin/autoCheckin/providers/windhub"
 import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
 import type { CheckInMethodId } from "~/types/checkIn"
 
@@ -57,9 +58,14 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(11)
+    expect(registrationContracts).toHaveLength(12)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
+        {
+          id: "windhub:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.WINDHUB],
+          provider: windhubProvider,
+        },
         {
           id: "anyrouter:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.ANYROUTER],

@@ -31,6 +31,7 @@ type SiteInfoInputPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "siteTypeLabel"
   | "forceAccessTokenAuth"
+  | "forceBrowserSessionAuth"
   | "allowCookieAuthSession"
   | "allowSub2ApiRefreshTokenState"
   | "lockSiteUrl"
@@ -96,7 +97,9 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     onEditAccount,
   } = props
   const { t } = useTranslation(["accountDialog", "common"])
-  const isAuthTypeLocked = props.sitePolicy.forceAccessTokenAuth
+  const isAuthTypeLocked =
+    props.sitePolicy.forceAccessTokenAuth ||
+    props.sitePolicy.forceBrowserSessionAuth
   const canUseCookieAuth = props.sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken =
     props.sitePolicy.allowSub2ApiRefreshTokenState
@@ -168,6 +171,11 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                   />
                 </SelectTrigger>
                 <SelectContent align="end" className="min-w-48">
+                  {props.sitePolicy.forceBrowserSessionAuth && (
+                    <SelectItem value={AuthTypeEnum.None}>
+                      {t("siteInfo.authType.browserSession")}
+                    </SelectItem>
+                  )}
                   <SelectItem value={AuthTypeEnum.AccessToken}>
                     <div className="gap-y-density-2 flex items-center gap-x-2">
                       <KeyRound className="h-4 w-4" />

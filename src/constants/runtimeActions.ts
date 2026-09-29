@@ -43,6 +43,7 @@ export const RuntimeMessageTypes = {
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
+  ContentWindhubCheckin: "windhub:checkin",
   ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
   ContentCompleteNewApiOAuth: "completeNewApiOAuth",
   ContentClearNewApiOAuthEvidence: "clearNewApiOAuthEvidence",

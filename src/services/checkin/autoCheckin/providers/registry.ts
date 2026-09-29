@@ -1,6 +1,7 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { WINDHUB_ORIGIN } from "~/constants/windhub"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
@@ -54,7 +55,7 @@ interface AutoCheckinMethodDefinitionBase {
 
 /** Methods whose same-day check-in must not be replayed. Empty until observed. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
-  new Set()
+  new Set([AUTO_CHECKIN_METHOD_IDS.WindhubDailyCheckIn])
 
 /**
  * Candidate support and pre-registry compatibility are separate decisions.
@@ -171,6 +172,15 @@ export function createAutoCheckinMethodMetadata(
 
 /** All method definitions, including post-registry discovery candidates. */
 export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
+  [AUTO_CHECKIN_METHOD_IDS.WindhubDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.WindhubDailyCheckIn,
+    siteTypes: [SITE_TYPES.WINDHUB],
+    origins: [WINDHUB_ORIGIN],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],

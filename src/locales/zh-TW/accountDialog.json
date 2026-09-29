@@ -308,7 +308,8 @@
     "authMethodSelectedForSite": "已根據 {{siteType}} 的要求自動選擇認證方式。",
     "authType": {
       "accessToken": "訪問令牌認證",
-      "cookieAuth": "Cookie 認證"
+      "cookieAuth": "Cookie 認證",
+      "browserSession": "瀏覽器工作階段"
     },
     "cookieWarning": "推薦優先使用訪問令牌。Cookie 認證需要匯入會話 Cookie，且可能因過期/續期導致失效，需要失效後重新匯入；同站點多帳號需為每個帳號分別匯入，非必要不建議使用。",
     "currentLoginAlreadyAdded": "當前登入帳號已新增",

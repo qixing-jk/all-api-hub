@@ -15,10 +15,12 @@ import {
   createAutoCheckinMethodRegistry,
 } from "./registry"
 import { veloeraProvider } from "./veloera"
+import { windhubProvider } from "./windhub"
 import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.WindhubDailyCheckIn]: windhubProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: veloeraProvider,

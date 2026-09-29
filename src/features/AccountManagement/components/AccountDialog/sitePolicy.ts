@@ -21,6 +21,7 @@ export interface AccountDialogSitePolicy {
   defaultSiteName?: string
   lockSiteUrl: boolean
   forceAccessTokenAuth: boolean
+  forceBrowserSessionAuth: boolean
   allowCookieAuthSession: boolean
   allowCookieAutoImport: boolean
   allowSub2ApiRefreshTokenState: boolean
@@ -54,6 +55,9 @@ export function getAccountDialogSitePolicy(
     forceAccessTokenAuth:
       productProfile.auth.allowedAuthTypes.length === 1 &&
       productProfile.auth.allowedAuthTypes[0] === AuthTypeEnum.AccessToken,
+    forceBrowserSessionAuth:
+      productProfile.auth.allowedAuthTypes.length === 1 &&
+      productProfile.auth.allowedAuthTypes[0] === AuthTypeEnum.None,
     requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: allowsCookieAuth,
     allowCookieAutoImport: allowsCookieAuth,
@@ -75,9 +79,11 @@ export function normalizeAccountDialogDraftForSitePolicy(params: {
   const { draft, policy } = params
   const nextDraft: AccountDialogDraft = {
     ...draft,
-    authType: policy.forceAccessTokenAuth
-      ? AuthTypeEnum.AccessToken
-      : draft.authType,
+    authType: policy.forceBrowserSessionAuth
+      ? AuthTypeEnum.None
+      : policy.forceAccessTokenAuth
+        ? AuthTypeEnum.AccessToken
+        : draft.authType,
     cookieAuthSessionCookie: policy.allowCookieAuthSession
       ? draft.cookieAuthSessionCookie
       : "",

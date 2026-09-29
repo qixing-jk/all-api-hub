@@ -218,7 +218,11 @@ export function buildDraftFromAutoDetectResult(params: {
     siteType: nextSiteType,
     authType:
       resultData.authType ??
-      (policy.forceAccessTokenAuth ? AuthTypeEnum.AccessToken : draft.authType),
+      (policy.forceBrowserSessionAuth
+        ? AuthTypeEnum.None
+        : policy.forceAccessTokenAuth
+          ? AuthTypeEnum.AccessToken
+          : draft.authType),
     cookieAuthSessionCookie: policy.allowCookieAuthSession
       ? draft.cookieAuthSessionCookie
       : "",

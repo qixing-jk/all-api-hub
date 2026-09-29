@@ -793,10 +793,15 @@ export function useAccountDialog({
     (siteUrl: string) => {
       if (hasExplicitAuthTypeRef.current) return
 
-      updateDraft((prev) => ({
-        ...prev,
-        authType: resolveDefaultAccountAuthType({ siteUrl }),
-      }))
+      updateDraft((prev) =>
+        normalizeAccountDialogDraftForSitePolicy({
+          draft: {
+            ...prev,
+            authType: resolveDefaultAccountAuthType({ siteUrl }),
+          },
+          policy: getAccountDialogSitePolicy(prev.siteType),
+        }),
+      )
     },
     [updateDraft],
   )
