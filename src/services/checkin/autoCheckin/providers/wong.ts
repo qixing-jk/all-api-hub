@@ -216,19 +216,30 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     endpoint: ENDPOINT,
     options: { method: "GET", cache: "no-store", signal },
   })
+  const enabled = response.data?.enabled
+  const checkedIn = response.data?.checked_in
   if (
-    typeof response.data?.enabled !== "boolean" ||
-    typeof response.data.checked_in !== "boolean" ||
-    (!response.success && response.data.checked_in !== true)
+    (enabled !== undefined && typeof enabled !== "boolean") ||
+    (checkedIn !== undefined && typeof checkedIn !== "boolean")
   )
     return undefined
+  // Some WONG deployments omit `enabled` or return an already-checked
+  // business response. Never infer unchecked from copy alone.
+  const alreadyChecked =
+    checkedIn === true ||
+    (checkedIn === undefined &&
+      isAlreadyCheckedMessage(normalizeCheckinMessage(response.message)) &&
+      !/\bnot\s+already\b/i.test(response.message ?? ""))
+  const knownUnchecked =
+    checkedIn === false && (response.success || enabled === false)
+  if (!alreadyChecked && !knownUnchecked) return undefined
   return {
     outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
     availability:
-      response.data.enabled === false
+      enabled === false
         ? CHECK_IN_METHOD_AVAILABILITIES.Disabled
         : CHECK_IN_METHOD_AVAILABILITIES.Enabled,
-    today: response.data.checked_in
+    today: alreadyChecked
       ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
       : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
     evidence: {

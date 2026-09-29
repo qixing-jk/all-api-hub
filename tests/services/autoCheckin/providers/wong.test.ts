@@ -157,6 +157,54 @@ describe("wongGongyiProvider", () => {
     })
   })
 
+  it("recognizes checked status when the deployment omits enabled", async () => {
+    const { newApiFamilyRequests } = await import(
+      "~/services/apiService/newApiFamily/request"
+    )
+    vi.mocked(newApiFamilyRequests.envelope)
+      .mockResolvedValueOnce({
+        success: false,
+        message: "今天已经签到",
+        data: undefined,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { checked_in: true },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { checked_in: false },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "not already checked in",
+        data: undefined,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "already checked in",
+        data: { checked_in: false },
+      })
+
+    await expect(
+      wongGongyiProvider.getStatus!({ account: mockAccount, observedAt: 1 }),
+    ).resolves.toMatchObject({ outcome: "known", today: "checked" })
+    await expect(
+      wongGongyiProvider.getStatus!({ account: mockAccount, observedAt: 2 }),
+    ).resolves.toMatchObject({ outcome: "known", today: "checked" })
+    await expect(
+      wongGongyiProvider.getStatus!({ account: mockAccount, observedAt: 3 }),
+    ).resolves.toMatchObject({ outcome: "known", today: "not_checked" })
+    await expect(
+      wongGongyiProvider.getStatus!({ account: mockAccount, observedAt: 4 }),
+    ).resolves.toBeUndefined()
+    await expect(
+      wongGongyiProvider.getStatus!({ account: mockAccount, observedAt: 5 }),
+    ).resolves.toMatchObject({ outcome: "known", today: "not_checked" })
+  })
+
   describe("checkIn", () => {
     it("propagates the popup source when POST indicates checked_in true", async () => {
       const { newApiFamilyRequests } = await import(
