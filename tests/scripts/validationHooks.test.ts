@@ -140,29 +140,32 @@ afterEach(() => {
 })
 
 describe("staged i18n validation", () => {
+  const EXTRACT_AND_STATUS = [
+    ["run", "i18n:extract:ci"],
+    ["run", "i18n:status"],
+  ]
+  // Locale inputs additionally run the static registry key integrity test.
+  const EXTRACT_STATUS_AND_INTEGRITY = [
+    ...EXTRACT_AND_STATUS,
+    ["run", "i18n:integrity"],
+  ]
+
   it.each([
-    ["src/example.ts", true],
-    ["src/component.tsx", true],
-    ["src/locales/zh_CN/common.json", true],
-    ["src/public/_locales/en/messages.json", true],
-    ["src/assets/icon.svg", false],
-    ["src/styles/example.css", false],
-    ["docs/docs/guide.md", false],
-    ["i18next.config.ts", true],
-  ])("selects checks for %s", (file, shouldCheck) => {
+    ["src/example.ts", EXTRACT_AND_STATUS],
+    ["src/component.tsx", EXTRACT_AND_STATUS],
+    ["src/locales/zh_CN/common.json", EXTRACT_STATUS_AND_INTEGRITY],
+    ["src/public/_locales/en/messages.json", EXTRACT_AND_STATUS],
+    ["src/assets/icon.svg", []],
+    ["src/styles/example.css", []],
+    ["docs/docs/guide.md", []],
+    ["i18next.config.ts", EXTRACT_AND_STATUS],
+  ])("selects checks for %s", (file, expectedCalls) => {
     const repo = createRepository()
     repo.write(file)
     repo.git("add", ".")
     const result = repo.run("run-i18n-check-if-staged.mjs")
     expect(result.status, result.stderr).toBe(0)
-    expect(result.calls).toEqual(
-      shouldCheck
-        ? [
-            ["run", "i18n:extract:ci"],
-            ["run", "i18n:status"],
-          ]
-        : [],
-    )
+    expect(result.calls).toEqual(expectedCalls)
   })
 
   it.each(["delete", "rename"])(

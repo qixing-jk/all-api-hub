@@ -46,6 +46,21 @@ function shouldRunI18nCheck(stagedFiles) {
   })
 }
 
+/**
+ * Determine whether any staged file should trigger the search registry integrity test.
+ * @param stagedFiles Normalized staged file paths.
+ * @returns True when staged files affect locales, search definitions, or options search.
+ */
+function shouldRunRegistryCheck(stagedFiles) {
+  return stagedFiles.some(
+    (file) =>
+      file.startsWith("src/locales/") ||
+      file.endsWith(".search.ts") ||
+      file.startsWith("src/features/OptionsSearch/") ||
+      file === "tests/features/OptionsSearch/searchRegistryKeys.test.ts",
+  )
+}
+
 const stagedFiles = getStagedFiles()
 
 if (stagedFiles.length === 0) {
@@ -65,3 +80,8 @@ runPnpm(["run", "i18n:extract:ci"])
 
 console.log("🌐 Running staged i18n status check...")
 runPnpm(["run", "i18n:status"])
+
+if (shouldRunRegistryCheck(stagedFiles)) {
+  console.log("🌐 Running static registry i18n key integrity check...")
+  runPnpm(["run", "i18n:integrity"])
+}
