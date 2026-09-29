@@ -98,6 +98,12 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       scopes.find((scope) => scope.isDefault)?.scopeKey ??
       scopes[0]?.scopeKey ??
       "",
+    runtimeKey: {
+      resolve: async () => ({
+        kind: "unavailable",
+        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable },
+      }),
+    },
     encodeLocator: (id: string) => id,
     decodeLocator: (id: string) => id,
     locatorFromListItem: (key: KeyRecord) => key.key,

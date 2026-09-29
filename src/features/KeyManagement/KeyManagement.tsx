@@ -936,6 +936,31 @@ export default function KeyManagement(props: {
           facts.ref.resourceId === nativeKeys.deleteState.ref?.resourceId,
       )
     : null
+  const deleteAccount = useMemo(
+    () =>
+      nativeKeys.deleteState.ref
+        ? displayData.find(
+            (a) => a.id === nativeKeys.deleteState.ref?.accountId,
+          )
+        : null,
+    [displayData, nativeKeys.deleteState.ref],
+  )
+  const canResolveDeleteKeySecret = useMemo(() => {
+    if (!nativeKeys.deleteState.ref || !deleteAccount) return false
+    if (supportsRecoverableAccountRuntimeKeySecrets(deleteAccount.siteType)) {
+      return true
+    }
+    const profile = getProfileForLocator({
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+      ref: nativeDeleteFacts?.ref ?? nativeKeys.deleteState.ref,
+    })
+    return Boolean(profile?.apiKey?.trim())
+  }, [
+    deleteAccount,
+    getProfileForLocator,
+    nativeDeleteFacts?.ref,
+    nativeKeys.deleteState.ref,
+  ])
   const nativeOneTimeSaveAction = nativeKeys.createdSecret
     ? buildOneTimeApiKeyProfileSaveAction({
         result: nativeKeys.createdSecret,
@@ -1460,15 +1485,19 @@ export default function KeyManagement(props: {
         onConfirm={() =>
           nativeDeleteIsUncertain
             ? void nativeKeys.refresh()
-            : void nativeKeys.confirmDelete(nativeCleanupLinkedChannels)
+            : void nativeKeys.confirmDelete(
+                canResolveDeleteKeySecret && nativeCleanupLinkedChannels,
+              )
         }
         details={
           <>
-            <LinkedChannelCleanupOption
-              checked={nativeCleanupLinkedChannels}
-              onCheckedChange={setNativeCleanupLinkedChannels}
-              disabled={nativeKeys.deleteState.isExecuting}
-            />
+            {canResolveDeleteKeySecret ? (
+              <LinkedChannelCleanupOption
+                checked={nativeCleanupLinkedChannels}
+                onCheckedChange={setNativeCleanupLinkedChannels}
+                disabled={nativeKeys.deleteState.isExecuting}
+              />
+            ) : null}
             {nativeKeys.deleteState.failure ? (
               <Alert
                 variant="warning"

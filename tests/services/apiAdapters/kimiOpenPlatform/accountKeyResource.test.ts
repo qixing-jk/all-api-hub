@@ -154,4 +154,19 @@ describe("kimiOpenPlatformKeyResources", () => {
       "ak-123",
     )
   })
+
+  it("marks runtime key resolution as unavailable", async () => {
+    mockFetchKimiProjects.mockResolvedValueOnce([
+      { id: "proj-1", name: "Default Project", is_default: true },
+    ])
+    const session = await capability.open(openInput)
+    const ref = {
+      accountId: "kimi-acc",
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      scopeKey: "proj-1",
+      resourceId: "ak-123",
+    }
+    const resolution = await session.runtimeKey?.resolve(ref)
+    expect(resolution?.kind).toBe("unavailable")
+  })
 })
