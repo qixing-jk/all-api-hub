@@ -25,6 +25,7 @@ interface KeyInventoryListProps {
   ) => void
   canCreateDefaultKey?: boolean
   isCreating?: boolean
+  isOpeningEditor?: boolean
   createError?: string | null
   onCreateDefaultKey?: () => void
   onOpenAddTokenDialog?: () => void
@@ -45,6 +46,7 @@ export function KeyInventoryList({
   onOpenDeeplinkExport,
   canCreateDefaultKey = false,
   isCreating = false,
+  isOpeningEditor = false,
   createError,
   onCreateDefaultKey,
   onOpenAddTokenDialog,
@@ -65,7 +67,8 @@ export function KeyInventoryList({
                   loadingLabel: t("dialog.copyKey.creatingKey"),
                   onClick: onCreateDefaultKey,
                   icon: <Plus className="h-4 w-4" />,
-                  disabled: !canCreateDefaultKey || isCreating,
+                  disabled:
+                    !canCreateDefaultKey || isCreating || isOpeningEditor,
                   loading: isCreating,
                 },
               ]
@@ -77,7 +80,8 @@ export function KeyInventoryList({
                   onClick: onOpenAddTokenDialog,
                   icon: <SquarePen className="h-4 w-4" />,
                   variant: "outline" as const,
-                  disabled: !canCreateDefaultKey || isCreating,
+                  disabled:
+                    !canCreateDefaultKey || isCreating || isOpeningEditor,
                 },
               ]
             : []),

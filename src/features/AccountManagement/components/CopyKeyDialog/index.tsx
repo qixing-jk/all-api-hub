@@ -6,7 +6,7 @@ import {
   type DeeplinkExportRequest,
   type DeeplinkExportTarget,
 } from "~/components/DeeplinkExportDialog"
-import { Alert, Modal } from "~/components/ui"
+import { Alert, Modal, Spinner } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
@@ -43,6 +43,7 @@ export default function CopyKeyDialog({
 }: CopyKeyDialogProps) {
   const keyManagementT = useTranslation("keyManagement").t
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
+  const [isCreateEditorReady, setIsCreateEditorReady] = useState(false)
   const [deeplinkExportRequest, setDeeplinkExportRequest] =
     useState<DeeplinkExportRequest | null>(null)
   const {
@@ -67,7 +68,10 @@ export default function CopyKeyDialog({
     account,
     canCreate: canCreateDefaultKey,
     onCreated: refreshRuntimeKeysAfterCreate,
-    onInputRequired: () => setIsAddTokenDialogOpen(true),
+    onInputRequired: () => {
+      setIsCreateEditorReady(false)
+      setIsAddTokenDialogOpen(true)
+    },
   })
   const {
     selection: defaultTokenGroupSelection,
@@ -87,13 +91,16 @@ export default function CopyKeyDialog({
   const showCreateResponseOnlyWarning =
     account !== null &&
     !supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
+  const isOpeningCreateEditor = isAddTokenDialogOpen && !isCreateEditorReady
 
   const handleOpenAddTokenDialog = () => {
     defaultTokenQuickCreate.reset()
+    setIsCreateEditorReady(false)
     setIsAddTokenDialogOpen(true)
   }
   const handleCloseAddTokenDialog = () => {
     setIsAddTokenDialogOpen(false)
+    setIsCreateEditorReady(false)
   }
   const handleAddTokenSuccess = (createdToken: AccountKeyCreationResult) => {
     return refreshRuntimeKeysAfterCreate(createdToken)
@@ -102,6 +109,7 @@ export default function CopyKeyDialog({
   useEffect(() => {
     if (!isOpen || !account) {
       setIsAddTokenDialogOpen(false)
+      setIsCreateEditorReady(false)
     }
   }, [account, isOpen])
 
@@ -142,6 +150,7 @@ export default function CopyKeyDialog({
         onOpenDeeplinkExport={handleOpenDeeplinkExport}
         canCreateDefaultKey={canCreateDefaultKey}
         isCreating={isDefaultTokenQuickCreateBusy}
+        isOpeningEditor={isOpeningCreateEditor}
         createError={
           defaultTokenGroupSelection
             ? null
@@ -182,6 +191,16 @@ export default function CopyKeyDialog({
             />
           ) : null}
           {renderContent()}
+          {isOpeningCreateEditor ? (
+            <div
+              role="status"
+              aria-label={keyManagementT("native.editor.opening.loading")}
+              className="text-muted-foreground flex items-center gap-2 text-sm"
+            >
+              <Spinner size="sm" aria-hidden="true" />
+              {keyManagementT("native.editor.opening.loading")}
+            </div>
+          ) : null}
         </div>
       </Modal>
       {deeplinkExportRequest && (
@@ -197,6 +216,7 @@ export default function CopyKeyDialog({
           availableAccounts={[account]}
           preSelectedAccountId={account.id}
           onSuccess={handleAddTokenSuccess}
+          onEditorReady={() => setIsCreateEditorReady(true)}
           showOneTimeKeyDialog={false}
         />
       ) : null}

@@ -46,6 +46,7 @@ interface AddTokenDialogProps {
   }
   prefillNotice?: string
   onSuccess?: (result: AccountKeyCreationResult) => void | Promise<void>
+  onEditorReady?: () => void
   /** False transfers the response-only secret to onSuccess's owner. */
   showOneTimeKeyDialog?: boolean
 }
@@ -68,10 +69,14 @@ function AccountKeyCreateSession({
   prefillNotice,
   onClose,
   onSuccess,
+  onEditorReady,
   showOneTimeKeyDialog = true,
 }: AddTokenDialogProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const accounts = availableAccounts.filter(canListAccountKeyResources)
+  const hasPreselectedAccount = accounts.some(
+    (account) => account.id === preSelectedAccountId,
+  )
   const [accountId, setAccountId] = useState(() =>
     accounts.some((account) => account.id === preSelectedAccountId)
       ? preSelectedAccountId!
@@ -125,6 +130,9 @@ function AccountKeyCreateSession({
     Boolean(controller.editor || controller.terminalCloseEditor) ||
     controller.editorOpening.status !== "idle"
   useEffect(() => {
+    if (controller.editor) onEditorReady?.()
+  }, [controller.editor, onEditorReady])
+  useEffect(() => {
     if (
       !accountId ||
       hasEditor ||
@@ -149,32 +157,38 @@ function AccountKeyCreateSession({
   return (
     <>
       <Modal
-        isOpen={!hasEditor && !completed}
+        isOpen={
+          !hasEditor &&
+          !completed &&
+          (!hasPreselectedAccount || Boolean(failure))
+        }
         onClose={onClose}
         size="sm"
         title={t("keyManagement:native.editor.title.create")}
         header={<h2>{t("keyManagement:native.editor.title.create")}</h2>}
       >
-        <FormField
-          label={t("keyManagement:dialog.accountSelect")}
-          htmlFor="create-key-account"
-        >
-          <SearchableSelect
-            id="create-key-account"
-            options={accounts.map((account) => ({
-              value: account.id,
-              label: account.name,
-            }))}
-            value={accountId}
-            onChange={(value) => {
-              setAccountId(value)
-              setRoute({ params: {} })
-            }}
-            placeholder={t("keyManagement:pleaseSelectAccount")}
-            disabled={controller.isLoading}
-          />
-        </FormField>
-        {controller.isLoading ? (
+        {!hasPreselectedAccount ? (
+          <FormField
+            label={t("keyManagement:dialog.accountSelect")}
+            htmlFor="create-key-account"
+          >
+            <SearchableSelect
+              id="create-key-account"
+              options={accounts.map((account) => ({
+                value: account.id,
+                label: account.name,
+              }))}
+              value={accountId}
+              onChange={(value) => {
+                setAccountId(value)
+                setRoute({ params: {} })
+              }}
+              placeholder={t("keyManagement:pleaseSelectAccount")}
+              disabled={controller.isLoading}
+            />
+          </FormField>
+        ) : null}
+        {controller.isLoading && !hasPreselectedAccount ? (
           <p role="status">{t("common:status.loading")}</p>
         ) : null}
         {failure ? (
