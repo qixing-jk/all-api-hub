@@ -19,7 +19,6 @@ import {
 } from "~/types/autoCheckin"
 import {
   createTab,
-  getAllTabs,
   removeTab,
   sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
@@ -41,22 +40,12 @@ function isWindhub(account: SiteAccount): boolean {
   }
 }
 
-/** Reuse a logged-in page or open an inactive tab; never change its account. */
+/** Use a fresh inactive tab so old content scripts cannot affect the run. */
 async function withPage(
   action: (tabId: number) => Promise<WindhubPageResult>,
   retainOnError = false,
 ): Promise<WindhubPageResult> {
-  const existing = (await getAllTabs()).find((tab) => {
-    try {
-      const url = new URL(tab.url ?? "")
-      return (
-        url.origin === WINDHUB_ORIGIN && url.pathname === "/console/personal"
-      )
-    } catch {
-      return false
-    }
-  })
-  const tab = existing ?? (await createTab(WINDHUB_CHECKIN_PAGE, false))
+  const tab = await createTab(WINDHUB_CHECKIN_PAGE, false)
   if (typeof tab?.id !== "number") throw new Error("Windhub page unavailable")
   let close = true
   try {
@@ -67,7 +56,7 @@ async function withPage(
     if (retainOnError) close = false
     throw error
   } finally {
-    if (!existing && close) await removeTab(tab.id)
+    if (close) await removeTab(tab.id).catch(() => undefined)
   }
 }
 
