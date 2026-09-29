@@ -1237,6 +1237,88 @@ describe("newApiProvider", () => {
       })
     })
 
+    it("does not trust a success-shaped assisted response without a Turnstile token", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        headers: {},
+        data: { success: true, message: "签到成功" },
+        turnstile: { status: "timeout", hasTurnstile: true },
+      })
+      mockCheckInStatusSequence(false, false)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("failed")
+      expect(result.reasonCode).toBe("manual_verification_required")
+    })
+
+    it("does not trust a normal-context fallback response without a Turnstile token", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
+      vi.mocked(tempWindowTurnstileFetch)
+        .mockResolvedValueOnce({
+          success: false,
+          turnstile: { status: "timeout", hasTurnstile: true },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          status: 200,
+          headers: {},
+          data: { success: true, message: "签到成功" },
+          turnstile: { status: "timeout", hasTurnstile: true },
+        })
+      mockCheckInStatusSequence(false, false)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("failed")
+      expect(result.reasonCode).toBe("manual_verification_required")
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not trust an incognito retry response without a Turnstile token", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
+      vi.mocked(tempWindowTurnstileFetch)
+        .mockResolvedValueOnce({
+          success: false,
+          turnstile: { status: "not_present", hasTurnstile: false },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          status: 200,
+          headers: {},
+          data: { success: true, message: "签到成功" },
+          turnstile: { status: "timeout", hasTurnstile: true },
+        })
+      mockCheckInStatusSequence(false, false)
+
+      const result = await checkInForTest({
+        ...mockAccount,
+        authType: AuthTypeEnum.Cookie,
+        cookieAuth: { sessionCookie: "session=abc" },
+        account_info: { ...mockAccount.account_info, access_token: "" },
+      })
+
+      expect(result.status).toBe("failed")
+      expect(result.reasonCode).toBe("manual_verification_required")
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
+    })
+
     it("returns already-checked when assisted success payload still shows a non-token-obtained Turnstile status", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,

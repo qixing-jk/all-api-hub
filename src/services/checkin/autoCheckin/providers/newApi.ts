@@ -515,7 +515,10 @@ async function maybeRetryTurnstileInIncognito(params: {
     useIncognito: true,
   })
 
-  if (!incognitoAssisted.success) {
+  if (
+    !incognitoAssisted.success ||
+    incognitoAssisted.turnstile?.status !== "token_obtained"
+  ) {
     return null
   }
 
@@ -804,10 +807,13 @@ async function resolveTurnstileAssistedCheckinResult(params: {
             | NewApiCheckInResponse
             | undefined
           const normalMessage = normalizeCheckinMessage(normalPayload?.message)
-          const normalResult = resolveStandardCheckinResult({
-            payload: normalPayload,
-            message: normalMessage,
-          })
+          const normalResult =
+            normalAssisted.turnstile?.status === "token_obtained"
+              ? resolveStandardCheckinResult({
+                  payload: normalPayload,
+                  message: normalMessage,
+                })
+              : null
 
           if (normalResult) {
             return normalResult
@@ -882,10 +888,16 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   const assistedPayload = assisted.data as NewApiCheckInResponse | undefined
   const assistedMessage = normalizeCheckinMessage(assistedPayload?.message)
 
-  const assistedResult = resolveStandardCheckinResult({
-    payload: assistedPayload,
-    message: assistedMessage,
-  })
+  // A response can carry a success-shaped payload even when the widget never
+  // yielded a token. Only the confirmed status read below may establish an
+  // already-completed check-in in that case.
+  const assistedResult =
+    assisted.turnstile?.status === "token_obtained"
+      ? resolveStandardCheckinResult({
+          payload: assistedPayload,
+          message: assistedMessage,
+        })
+      : null
   if (assistedResult) {
     return assistedResult
   }
