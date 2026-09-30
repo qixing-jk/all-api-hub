@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.2.0](https://github.com/qixing-jk/all-api-hub/compare/v4.1.0...v4.2.0) (2026-09-30)
+
+
+### Features
+
+* **accounts:** copy site addresses in bulk mode and improve toolbar affordances ([#1557](https://github.com/qixing-jk/all-api-hub/issues/1557)) ([aa9ccd5](https://github.com/qixing-jk/all-api-hub/commit/aa9ccd522083059ab12d8b1c09e01894460f030c))
+* **auth:** add adapter-owned OAuth for New API family and Sub2API ([#1558](https://github.com/qixing-jk/all-api-hub/issues/1558)) ([875f0d3](https://github.com/qixing-jk/all-api-hub/commit/875f0d35549895bae85187a3569bd484bd50e8e3))
+* **checkin:** support 小白Code daily check-in ([#1548](https://github.com/qixing-jk/all-api-hub/issues/1548)) ([ba5a78b](https://github.com/qixing-jk/all-api-hub/commit/ba5a78b3855b3433284fad682de4bab7bcb8148c))
+* **credentials:** improve library guidance and desktop browsing ([#1547](https://github.com/qixing-jk/all-api-hub/issues/1547)) ([07a5aec](https://github.com/qixing-jk/all-api-hub/commit/07a5aec7fd04b03fda25aef81b807e74f3134966))
+* **rix-api:** adapt 6.x deployments, tokens, model pricing, and routes ([#1379](https://github.com/qixing-jk/all-api-hub/issues/1379)) ([#1555](https://github.com/qixing-jk/all-api-hub/issues/1555)) ([c512e67](https://github.com/qixing-jk/all-api-hub/commit/c512e6776bf1a8f04f8f16cbc50e3351e81cb911))
+* **sub2api:** support split-origin AI-ROUTER deployment, daily check-in, and live extension UI automation ([#1552](https://github.com/qixing-jk/all-api-hub/issues/1552)) ([3dc3a6e](https://github.com/qixing-jk/all-api-hub/commit/3dc3a6eb00c43073ab10a996d1a52071ecc77c52))
+* **ui:** add restrained motion to options page navigation ([#1546](https://github.com/qixing-jk/all-api-hub/issues/1546)) ([f3a50f3](https://github.com/qixing-jk/all-api-hub/commit/f3a50f37af67734a505b9f6c20347bfb83eba055))
+* **uninstall-survey:** add post-uninstall feedback survey and dev controls ([#1542](https://github.com/qixing-jk/all-api-hub/issues/1542)) ([9e521d3](https://github.com/qixing-jk/all-api-hub/commit/9e521d35b445441302c474a785d66d53799c6810))
+
+
+### Bug Fixes
+
+* **accounts:** restore income from zero-quota logs ([#1549](https://github.com/qixing-jk/all-api-hub/issues/1549)) ([c589f67](https://github.com/qixing-jk/all-api-hub/commit/c589f67c201122d7ab02b56b6e50ddf114f0c1d8))
+* **background:** reclaim temporary pages left behind after an interrupted close ([#1551](https://github.com/qixing-jk/all-api-hub/issues/1551)) ([8d2c812](https://github.com/qixing-jk/all-api-hub/commit/8d2c8120dafe13e2c07982e94cbb3c48ec814717))
+* **checkin:** align retry reasons and login wait budgets ([#1543](https://github.com/qixing-jk/all-api-hub/issues/1543)) ([b3f0a39](https://github.com/qixing-jk/all-api-hub/commit/b3f0a39f98de9654f1a2c363ba52ac2f406f1d9c))
+* **ui:** align options and popup surfaces with the theme roles ([#1550](https://github.com/qixing-jk/all-api-hub/issues/1550)) ([df94d59](https://github.com/qixing-jk/all-api-hub/commit/df94d59c664787af6b05f3d149184edfa4d3f05c))
+* **ui:** land anchored options arrivals without a vertical slide ([#1554](https://github.com/qixing-jk/all-api-hub/issues/1554)) ([53b4f6f](https://github.com/qixing-jk/all-api-hub/commit/53b4f6fd8f8eb04a2bd0cb359d59bd01f74457ba))
+
 ## [4.1.0](https://github.com/qixing-jk/all-api-hub/compare/v4.0.0...v4.1.0) (2026-09-25)
 
 
