@@ -7,6 +7,11 @@ import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+import {
+  E2E_ACCESS_TOKEN_NAME,
+  revokeStaleE2eAccessTokens,
+} from "./newApiAccessTokens"
+
 /**
  * Follow the same manual-token recovery offered to a user after auto-detection.
  * Only the token endpoint's expected 403 is allowed through the console guard;
@@ -22,6 +27,9 @@ export function createNewApiAccountRecovery(params: {
   prepareDetectedDialog: (dialog: AccountAddDialog) => Promise<void>
 } {
   const baseUrl = `${params.config.baseUrl.replace(/\/+$/u, "")}/`
+  // Older builds refuse the rotating token call until the browser session passes
+  // their own security check. Newer builds never reach that refusal here: the
+  // extension reads their contract instead of attempting creation.
   const tokenUrl = new URL("api/user/token", baseUrl).href
   const dialogReadyTimeoutMs = params.dialogReadyTimeoutMs ?? 30_000
 
@@ -69,9 +77,6 @@ export function createNewApiAccountRecovery(params: {
       await expect(dialog.accessTokenInput).toBeEmpty()
 
       const context = params.page.context()
-      await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-        origin: new URL(baseUrl).origin,
-      })
       const [securityPage] = await Promise.all([
         context.waitForEvent("page"),
         dialog.dialog
@@ -114,18 +119,108 @@ export function createNewApiAccountRecovery(params: {
 }
 
 /**
- * New API's security UI owns verification and one-time token display.
- * https://github.com/QuantumNous/new-api/tree/bee45b58a3c0b77e8dc81e6b5aeb4474aa9058d1/web/src/features/security
+ * Reads the account credential out of whichever token UI the deployment serves.
+ *
+ * rc.41 replaced the single dashboard token card with a scoped access-token
+ * list: the card is titled "Access tokens", creating one opens a dialog asking
+ * for a name, a permission selection and an expiry, and the plaintext is shown
+ * once in a follow-up dialog. Older builds keep the one card whose
+ * "Generate"/"Regenerate" button rotated the dashboard token.
+ * https://github.com/QuantumNous/new-api/tree/v1.0.0-rc.41/web/src/features/security
  */
 async function copyNewApiAccessToken(
   page: Page,
   config: CompatibleApiRealSiteConfig,
 ) {
-  const tokenCard = page.locator('[data-slot="card"]').filter({
-    has: page.getByRole("heading", { name: /^(Access Token|访问令牌)$/u }),
+  const createButton = page.getByRole("button", {
+    name: /^(Create access token|创建访问令牌)$/u,
   })
-  const generateButton = tokenCard.getByRole("button", {
+  const generateButton = page.getByRole("button", {
     name: /^(Generate|Regenerate|生成|重新生成)$/u,
+  })
+
+  await expect(createButton.or(generateButton).first()).toBeVisible({
+    timeout: 30_000,
+  })
+
+  return (await createButton.count()) > 0
+    ? await createScopedTokenOnSecurityPage(page, createButton.first(), config)
+    : await regenerateDashboardTokenOnSecurityPage(
+        page,
+        generateButton.first(),
+        config,
+      )
+}
+
+/** Creates a scoped access token in the rc.41 security page. */
+async function createScopedTokenOnSecurityPage(
+  page: Page,
+  createButton: Locator,
+  config: CompatibleApiRealSiteConfig,
+) {
+  // A deployment caps a user at 20 access tokens and shows each plaintext once,
+  // so a run that cannot clean up would eventually be refused a new one.
+  await revokeStaleE2eAccessTokens(config)
+
+  await createButton.click()
+
+  const createDialog = page.getByRole("dialog").last()
+  await createDialog.locator('input[name="name"]').fill(E2E_ACCESS_TOKEN_NAME)
+  // All API Hub cannot choose the grant for the user, and the deployment offers
+  // these permissions as one catalog the user already holds. Selecting all of
+  // them keeps the fixture independent of how the catalog is laid out.
+  await createDialog
+    .getByRole("button", { name: /^(Select all|全选)$/u })
+    .click()
+  await createDialog
+    .getByRole("button", { name: /^(Never expires|永不过期)$/u })
+    .click()
+  await createDialog
+    .getByRole("button", { name: /^(Create access token|创建访问令牌)$/u })
+    .click()
+
+  const verificationDialog = page.getByRole("dialog", {
+    name: /^(Security verification|安全验证)$/u,
+  })
+  const tokenDialog = page.getByRole("dialog", {
+    name: /^(Access tokens|访问令牌)$/u,
+  })
+  await expect(verificationDialog.or(tokenDialog).first()).toBeVisible()
+  if (!(await tokenDialog.isVisible())) {
+    await completeNewApiSecurityVerification(verificationDialog, config)
+  }
+
+  await expect(tokenDialog).toBeVisible()
+  await expect(tokenDialog).toContainText(
+    /will not be shown again|不会再次显示/u,
+  )
+  // The plaintext is shown once in the deployment's own field; read it directly
+  // rather than through the clipboard, whose copy control is icon-only.
+  const token = (await tokenDialog.locator("input").first().inputValue()).trim()
+  if (!token) {
+    throw new Error("New API access token dialog did not expose a token")
+  }
+  await tokenDialog
+    .getByRole("button", { name: /^(Close|关闭)$/u })
+    .first()
+    .click()
+  return token
+}
+
+/**
+ * Copies the token older builds rotate in place.
+ *
+ * The token is displayed once in plaintext, and the deployment's own copy
+ * control is what reaches the clipboard, so the flow waits for that write to
+ * land rather than reading the field.
+ */
+async function regenerateDashboardTokenOnSecurityPage(
+  page: Page,
+  generateButton: Locator,
+  config: CompatibleApiRealSiteConfig,
+) {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(page.url()).origin,
   })
   await expect(generateButton).toBeEnabled({ timeout: 30_000 })
   const regenerating = /^(Regenerate|重新生成)$/u.test(

@@ -74,13 +74,22 @@ In the extension popup, click **"Continue in side panel"** to carry your current
 
    **5.2 Finding the Access Token**
 
-   If you have already saved a valid, complete Access Token, you can enter it directly. Otherwise, open **Security → Access Token** on newer New API sites (usually `/security`), generate a token, and complete the site's security verification. The full token is shown only once. Copy it immediately and paste it into the extension's **Access Token** field.
+   If you have already saved a valid, complete Access Token, you can enter it directly.
 
-   Generating a new Access Token invalidates the old one. Update any other tools that use the old token. This token manages your account; API keys from Token Management are used for model calls.
+   Check the token page and buttons on your deployment before choosing a workflow below. The release version is only a guide: forks and backports may use a different workflow.
 
-   Older versions usually place Access Token in the Security section near the bottom of the profile page, as shown below.
+   Newer New API sites (from `v1.0.0-rc.41`) keep every token on the **Security → Access Tokens** page (usually `/security`): choose **Create access token**, pick the permissions and expiry the site asks for, and complete its security verification. The full token is shown only once. Copy it immediately and paste it into the extension's **Access Token** field. Grant all the permissions the dialog lists — a token with too few returns 403 later, when reading usage, balance or managing API keys. Each token is a separate entry that can be revoked on its own, and creating one does **not** invalidate the others.
+
+   <details>
+   <summary>Sites with only Generate / Regenerate buttons (usually rc.40 and earlier)</summary>
+
+   Older versions keep a single token in the Security section near the bottom of the profile page: choose **Generate**, or **Regenerate** when a token already exists. **Regenerating invalidates the old Access Token**, so update any other tools that use it.
 
    ![Access Token in the Security section](../static/image/manual/new-api/access-token.png)
+
+   </details>
+
+   This token manages your account; API keys from Token Management are used for model calls.
 
 6. Enter a **Recharge Amount Ratio** (`CNY/USD`, greater than 0), then save the account. Check the actual site for its recharge ratio and enter the value used by that site.
 

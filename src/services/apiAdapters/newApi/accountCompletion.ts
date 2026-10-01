@@ -16,6 +16,18 @@ const MODERN_AUTH_INVALID_MESSAGE =
   "New API dashboard authentication is invalid"
 const MODERN_AUTH_EXCHANGE_FAILED_MESSAGE =
   "New API dashboard authentication could not be exchanged"
+/**
+ * Message shown when the deployment issues account credentials only to a
+ * browser session that passed its own step-up verification.
+ *
+ * New API rc.41 replaced the dashboard personal access token with scoped access
+ * tokens, and creating one requires an `X-Security-Proof` that only a verified
+ * browser session can produce. The user completes the same creation on the
+ * deployment's own security page.
+ * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.41/service/security_verification.go
+ */
+const SCOPED_ACCESS_TOKEN_VERIFICATION_REQUIRED_MESSAGE =
+  "This deployment issues an access token only after a security check"
 const EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE =
   "Existing account access token could not be verified"
 const ACCESS_TOKEN_FETCH_FAILED_MESSAGE =
@@ -355,6 +367,25 @@ export const createNewApiAccountCompletion = (
               createSafeCredentialError(
                 error,
                 MODERN_AUTH_EXCHANGE_FAILED_MESSAGE,
+              ),
+            )
+          }
+          // rc.41 issues access tokens only to a browser session that passed a
+          // step-up verification, which this request cannot produce. The
+          // completion layer decides that from the deployment's contract, so the
+          // user is sent to create the token on the site instead.
+          // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.41/service/security_verification.go
+          if (
+            siteType === SITE_TYPES.NEW_API &&
+            error instanceof ApiError &&
+            error.code === API_ERROR_CODES.ACCESS_TOKEN_VERIFICATION_REQUIRED
+          ) {
+            helpers.captureRecoveryData({ authType: AuthTypeEnum.AccessToken })
+            throw helpers.createCompletionError(
+              AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+              createSafeCredentialError(
+                error,
+                SCOPED_ACCESS_TOKEN_VERIFICATION_REQUIRED_MESSAGE,
               ),
             )
           }
