@@ -205,6 +205,35 @@ describe("useRuntimeKeyIntegrationActions", () => {
     })
   })
 
+  it("exports an inherited key through the current account endpoint after an account address edit", async () => {
+    const inheritedKey = buildNewApiRuntimeKey(account, token)
+    const editedAccount = {
+      ...account,
+      baseUrl: "https://edited.example.invalid",
+    }
+    resolveSecretMock.mockResolvedValue({
+      ...inheritedKey,
+      secret: "sk-example",
+    })
+    const { result } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account: editedAccount,
+        enabled: true,
+        runtimeKey: inheritedKey,
+      }),
+    )
+    await act(async () => {
+      await result.current.exportActions.openCherryStudio()
+      await result.current.exportActions.openKelivo()
+    })
+    expect(vi.mocked(OpenInCherryStudio)).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: editedAccount.baseUrl }),
+    )
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: editedAccount.baseUrl,
+    })
+  })
+
   it("exports a key-specific gateway URL through Cherry Studio and Kelivo", async () => {
     const kimiAccount = {
       ...account,

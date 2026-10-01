@@ -243,6 +243,7 @@ export function useRuntimeKeyIntegrationActions({
         baseUrl: resolveAccountRuntimeKeyExternalApiBaseUrl(
           account,
           resolvedKey.baseUrl,
+          runtimeKey.account.baseUrl,
         ),
         apiKey: resolvedKey.secret,
       })
@@ -287,6 +288,7 @@ export function useRuntimeKeyIntegrationActions({
         baseUrl: resolveAccountRuntimeKeyExternalApiBaseUrl(
           account,
           resolvedKey.baseUrl,
+          runtimeKey.account.baseUrl,
         ),
         apiKey: resolvedKey.secret,
       })

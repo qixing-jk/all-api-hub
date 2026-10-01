@@ -59,4 +59,43 @@ describe("kimiOpenPlatformContentSessionExtractor", () => {
       }),
     ).toBe(false)
   })
+
+  it.each([undefined, "", "invalid-url", "https://platform.kimi.ai"])(
+    "rejects incomplete console identity at %j",
+    async (url) => {
+      await expect(
+        kimiOpenPlatformContentSessionExtractor.extract({ url }),
+      ).resolves.toBeNull()
+      localStorage.setItem("token", "invalid.payload.signature")
+      await expect(
+        kimiOpenPlatformContentSessionExtractor.extract({ url }),
+      ).resolves.toBeNull()
+    },
+  )
+
+  it.each([undefined, " raw-org ", "123"])(
+    "accepts console identity without inventing an incomplete refresh session: %j",
+    async (organization) => {
+      localStorage.setItem("token", token({ sub: "user" }))
+      localStorage.setItem("rtoken", " refresh ")
+      if (organization !== undefined)
+        localStorage.setItem("currentOrganizationId", organization)
+      const result = await kimiOpenPlatformContentSessionExtractor.extract({
+        url: "https://platform.kimi.com",
+      })
+      expect(result).toMatchObject({
+        userId: "user",
+        siteTypeHint: SITE_TYPES.KIMI,
+      })
+      if (organization === undefined)
+        expect(result).not.toHaveProperty("kimiOpenPlatformAuth")
+      else
+        expect(result).toMatchObject({
+          kimiOpenPlatformAuth: {
+            refreshToken: "refresh",
+            organizationId: organization.trim(),
+          },
+        })
+    },
+  )
 })

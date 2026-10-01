@@ -26,6 +26,7 @@ export const kimiOpenPlatformBrowserIdentity: AccountBrowserIdentityCapability =
               Accept: "application/json",
             },
           })
+          if (body?.code !== 0) return null
           const data = body?.data
           if (!data || typeof data !== "object" || Array.isArray(data))
             return null

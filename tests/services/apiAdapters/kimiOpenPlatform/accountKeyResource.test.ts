@@ -66,6 +66,65 @@ describe("kimiOpenPlatformKeyResources", () => {
     vi.resetAllMocks()
   })
 
+  it.each(["", "   ", "a".repeat(33)])(
+    "rejects invalid names before key creation %j",
+    async (name) => {
+      mockFetchKimiProjects.mockResolvedValue([
+        { id: "proj-1", name: "Project" },
+      ])
+      const session = await capability.open(openInput)
+      const editor = await session.openCreateEditor("proj-1")
+      expect(editor.validate({ name })).toMatchObject({ valid: false })
+      await expect(editor.submit({ name })).rejects.toThrow()
+      expect(mockCreateKimiKey).not.toHaveBeenCalled()
+    },
+  )
+
+  it("retains unchanged names without sending a rename", async () => {
+    mockFetchKimiProjects.mockResolvedValue([{ id: "proj-1", name: "Project" }])
+    mockFetchKimiKeys.mockResolvedValue([
+      { key: "ak", auth: "sk-masked…", name: "Name", project_id: "proj-1" },
+    ])
+    const session = await capability.open(openInput)
+    const collection = await session.openCollection("proj-1")
+    const editor = await collection.openEditEditor({
+      accountId: openInput.account.id,
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      scopeKey: "proj-1",
+      resourceId: "ak",
+    })
+    await expect(editor.submit({ name: " Name " })).resolves.toMatchObject({
+      facts: { displayName: "Name" },
+    })
+    expect(mockRenameKimiKey).not.toHaveBeenCalled()
+  })
+
+  it("uses safe key identifiers and project metadata for unnamed inventory entries", async () => {
+    mockFetchKimiProjects.mockResolvedValue([{ id: "proj-1", name: "Project" }])
+    mockFetchKimiKeys.mockResolvedValue([
+      {
+        key: "ak",
+        auth: "sk-plaintext",
+        name: "",
+        project_id: "proj-1",
+        created_at: "not-a-date",
+      },
+      { key: "other", auth: "masked…", name: "Other", project_id: "different" },
+    ])
+    const session = await capability.open(openInput)
+    const collection = await session.openCollection("proj-1")
+    const page = await collection.list()
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]).toMatchObject({
+      displayName: "ak",
+      maskedLabel: "ak",
+      runtimeKey: { createdAt: undefined },
+      fields: expect.arrayContaining([
+        expect.objectContaining({ fieldId: "project", value: "proj-1" }),
+      ]),
+    })
+  })
+
   it("uses the shared authentication failure classification", async () => {
     mockFetchKimiProjects.mockRejectedValueOnce(
       new ApiError("expired", 401, "listProjects", API_ERROR_CODES.HTTP_401),

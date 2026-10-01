@@ -49,6 +49,59 @@ const personalizedRequest = {
 }
 
 describe("kimiOpenPlatform provider model catalog", () => {
+  it("preserves published cache TTL rates and context limits", async () => {
+    vi.mocked(kimiService.fetchKimiPricingDoc).mockResolvedValueOnce([
+      {
+        ...usdEntry("kimi-k3", 3, 15, 0.3),
+        cacheWritePrice: 3,
+        cacheWrite1hPrice: 6,
+        contextLength: 1048576,
+      },
+    ])
+    const capability = createKimiOpenPlatformProviderModelCatalog(
+      SITE_TYPES.KIMI_GLOBAL,
+    )
+    const response = await capability.fetchPricing({})
+    expect(response.data[0]).toMatchObject({
+      token_price_usd_per_million: { cache_write: 3 },
+      pricingPlan: {
+        rates: {
+          cacheWrite: { amount: 3, currency: "USD" },
+          cacheWrite1h: { amount: 6, currency: "USD" },
+        },
+        limits: { totalTokens: 1048576 },
+      },
+    })
+  })
+
+  it("redacts network error credentials while preserving TypeError classification", async () => {
+    vi.mocked(kimiService.fetchKimiAccountModelCatalog).mockRejectedValueOnce(
+      new TypeError("cannot fetch console-jwt"),
+    )
+    const capability = createKimiOpenPlatformProviderModelCatalog(
+      SITE_TYPES.KIMI_GLOBAL,
+    )
+    await expect(
+      capability.personalized!.fetchPricing(personalizedRequest),
+    ).rejects.toMatchObject({
+      name: "TypeError",
+      message: "cannot fetch [REDACTED]",
+    })
+  })
+
+  it("propagates pricing cancellation instead of returning a fallback catalog", async () => {
+    const error = new DOMException("aborted", "AbortError")
+    vi.mocked(kimiService.fetchKimiAccountModelCatalog).mockResolvedValueOnce([
+      { id: "kimi-k3" },
+    ])
+    vi.mocked(kimiService.fetchKimiPricingDoc).mockRejectedValueOnce(error)
+    const capability = createKimiOpenPlatformProviderModelCatalog(
+      SITE_TYPES.KIMI_GLOBAL,
+    )
+    await expect(
+      capability.personalized!.fetchPricing(personalizedRequest),
+    ).rejects.toBe(error)
+  })
   it("redacts account credentials from disclosed catalog failures while preserving classification", async () => {
     vi.mocked(kimiService.fetchKimiAccountModelCatalog).mockRejectedValueOnce(
       new ApiError(

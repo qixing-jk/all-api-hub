@@ -5,9 +5,14 @@ import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import {
   isMaskedKimiSecret,
   kimiAmountToQuota,
+  parseKimiAccountInfo,
   parseKimiCreatedKey,
   parseKimiInferenceBalance,
+  parseKimiKeys,
+  parseKimiOpenGatewayModels,
+  parseKimiProjects,
   parseKimiRefresh,
+  parseKimiUserInfo,
 } from "~/services/apiService/kimiOpenPlatform/parsing"
 import {
   KIMI_OPEN_PLATFORM_DEPLOYMENTS,
@@ -83,6 +88,92 @@ describe("kimi open platform deployments", () => {
 })
 
 describe("kimi open platform parsing", () => {
+  it.each([null, [], {}, { code: 401, data: {} }, { code: 0 }])(
+    "rejects malformed or unsuccessful envelopes %j",
+    (payload) => {
+      expect(() => parseKimiUserInfo(payload)).toThrow("invalid_kimi_envelope")
+    },
+  )
+  it.each([null, [], {}, { uid: " " }])(
+    "rejects missing user identity %j",
+    (data) => {
+      expect(() => parseKimiUserInfo({ code: 0, data })).toThrow(
+        "invalid_kimi_user_info",
+      )
+    },
+  )
+  it("normalizes user identity and discards malformed organizations", () => {
+    expect(
+      parseKimiUserInfo({
+        code: 0,
+        data: {
+          uid: " user ",
+          name: " User ",
+          organizations: [
+            null,
+            {},
+            { organization: {} },
+            { organization: { id: " " } },
+            { organization: { id: " org " }, role: "owner" },
+          ],
+        },
+      }),
+    ).toEqual({
+      uid: "user",
+      name: "User",
+      organizations: [{ organization: { id: "org" }, role: "owner" }],
+    })
+    expect(parseKimiUserInfo({ code: 0, data: { uid: "user" } })).toEqual({
+      uid: "user",
+      name: "",
+      organizations: [],
+    })
+  })
+  it("preserves project defaults and key metadata while dropping malformed rows", () => {
+    expect(
+      parseKimiProjects({
+        code: 0,
+        data: [
+          null,
+          {},
+          { id: "p", name: "Project", is_default: true },
+          { id: "other", name: "Other" },
+        ],
+      }),
+    ).toEqual([
+      { id: "p", name: "Project", is_default: true },
+      { id: "other", name: "Other" },
+    ])
+    const key = {
+      key: "ak",
+      auth: "sk-masked…",
+      name: "Key",
+      project_id: "p",
+      project_name: "Project",
+      created_at: "2026-01-01",
+    }
+    expect(parseKimiKeys({ code: 0, data: [null, {}, key] })).toEqual([key])
+  })
+  it("rejects malformed inventory, account and model payloads", () => {
+    expect(() => parseKimiProjects({ code: 0, data: {} })).toThrow(
+      "invalid_kimi_projects",
+    )
+    expect(() => parseKimiKeys({ code: 0, data: {} })).toThrow(
+      "invalid_kimi_keys",
+    )
+    expect(() =>
+      parseKimiAccountInfo({ code: 0, data: { cur: "1", today_consume: 0 } }),
+    ).toThrow("invalid_kimi_account_info")
+    expect(() => parseKimiOpenGatewayModels({ code: 0, data: [] })).toThrow(
+      "invalid_kimi_model_catalog",
+    )
+    expect(
+      parseKimiOpenGatewayModels({
+        code: 0,
+        data: { data: [null, {}, { id: " " }, { id: " kimi-k2 " }] },
+      }),
+    ).toEqual([{ id: "kimi-k2" }])
+  })
   it.each(["", "   "])("rejects an empty create-response secret %j", (auth) => {
     expect(() =>
       parseKimiCreatedKey({

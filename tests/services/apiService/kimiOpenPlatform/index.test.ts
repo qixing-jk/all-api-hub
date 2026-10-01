@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  createKimiKey,
+  deleteKimiKey,
   fetchKimiAccountData,
   fetchKimiAccountModelCatalog,
+  fetchKimiKeys,
   fetchKimiProjects,
+  fetchKimiUserInfo,
+  renameKimiKey,
   resolveKimiOrganizationId,
 } from "~/services/apiService/kimiOpenPlatform"
 import * as transport from "~/services/apiService/kimiOpenPlatform/transport"
@@ -33,7 +38,91 @@ const accountRequest = () => ({
 
 describe("kimiOpenPlatform service index", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+  })
+
+  it("learns an organization and uses the uid when the user has no display name", async () => {
+    const state = { ...consoleSession, organizationId: "" }
+    vi.mocked(transport.readKimiAuthState).mockReturnValue(state)
+    vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+      code: 0,
+      data: {
+        uid: " user ",
+        organizations: [{ organization: { id: " org " } }],
+      },
+    })
+    await expect(fetchKimiUserInfo(accountRequest())).resolves.toEqual({
+      id: "user",
+      username: "user",
+      access_token: "token-1",
+      organizationId: "org",
+    })
+    expect(state.organizationId).toBe("org")
+  })
+
+  it("rejects accounts without an organization", async () => {
+    vi.mocked(transport.fetchKimiConsole).mockResolvedValue({
+      code: 0,
+      data: { uid: "user" },
+    })
+    await expect(resolveKimiOrganizationId(accountRequest())).rejects.toThrow(
+      "missing_kimi_organization",
+    )
+    expect(transport.persistKimiAuthState).not.toHaveBeenCalled()
+  })
+
+  it("routes list, creation, rename and deletion to the selected organization and project", async () => {
+    const request = accountRequest()
+    vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)
+    const key = {
+      key: "ak-key",
+      auth: "sk-secret",
+      name: "Key",
+      project_id: "project",
+    }
+    vi.mocked(transport.fetchKimiConsole)
+      .mockResolvedValueOnce({ code: 0, data: [key] })
+      .mockResolvedValueOnce({ code: 0, data: key })
+      .mockResolvedValue({ code: 0 })
+    await expect(fetchKimiKeys(request)).resolves.toEqual([key])
+    await expect(createKimiKey(request, "project", "Key")).resolves.toEqual(key)
+    await renameKimiKey(request, "project", "ak-key", "Renamed")
+    await deleteKimiKey(request, "project", "ak-key")
+    expect(transport.fetchKimiConsole).toHaveBeenNthCalledWith(
+      1,
+      request,
+      "organizationKeys",
+      { query: { oid: "org-xyz" } },
+    )
+    expect(transport.fetchKimiConsole).toHaveBeenNthCalledWith(
+      2,
+      request,
+      "createApiKey",
+      {
+        method: "POST",
+        query: { pid: "project", oid: "org-xyz" },
+        body: { name: "Key" },
+      },
+    )
+    expect(transport.fetchKimiConsole).toHaveBeenNthCalledWith(
+      3,
+      request,
+      "updateApiKey",
+      {
+        method: "PUT",
+        query: { pid: "project", oid: "org-xyz", id: "ak-key" },
+        body: { name: "Renamed" },
+      },
+    )
+    expect(transport.fetchKimiConsole).toHaveBeenNthCalledWith(
+      4,
+      request,
+      "deleteApiKey",
+      {
+        method: "DELETE",
+        query: { pid: "project", oid: "org-xyz", id: "ak-key" },
+      },
+    )
   })
 
   it.each([

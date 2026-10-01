@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -48,6 +49,33 @@ const { helpers, captureRecoveryData } = createAccountCompletionHelpersMock(
 )
 
 describe("kimiOpenPlatformAccountBootstrap", () => {
+  it("returns trimmed existing tokens without creating credentials and disables check-in", async () => {
+    const { kimiOpenPlatformAccountBootstrap: bootstrap } =
+      await vi.importActual<
+        typeof import("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
+      >("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
+    await expect(
+      bootstrap.getOrCreateAccessToken({
+        baseUrl: "https://platform.kimi.ai",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: " token " },
+      }),
+    ).resolves.toEqual({ username: "", access_token: "token" })
+    await expect(
+      bootstrap.getOrCreateAccessToken({
+        baseUrl: "https://platform.kimi.ai",
+        auth: { authType: AuthTypeEnum.AccessToken },
+      }),
+    ).resolves.toEqual({ username: "", access_token: "" })
+    await expect(
+      bootstrap.fetchCheckInSupport(
+        {
+          baseUrl: "https://platform.kimi.ai",
+          auth: { authType: AuthTypeEnum.AccessToken },
+        },
+        {},
+      ),
+    ).resolves.toBe(false)
+  })
   it.each([
     ["https://api.moonshot.cn/v1", KIMI_DISPLAY_NAME],
     ["https://api.moonshot.ai/v1", KIMI_GLOBAL_DISPLAY_NAME],
@@ -90,6 +118,69 @@ describe("kimiOpenPlatformAccountBootstrap", () => {
 describe("kimiOpenPlatformAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchUserInfo.mockReset()
+    mockLoadBootstrapFacts.mockReset()
+  })
+
+  it.each(["missing-token", "user-fetch", "missing-user", "bootstrap"])(
+    "preserves completion failure reasons for %s",
+    async (scenario) => {
+      const cause = new Error("upstream failed")
+      mockFetchUserInfo.mockResolvedValueOnce({
+        id: scenario === "missing-user" ? " " : "user",
+        organizationId: "org",
+      })
+      if (scenario === "user-fetch")
+        mockFetchUserInfo.mockReset().mockRejectedValueOnce(cause)
+      if (scenario === "bootstrap")
+        mockLoadBootstrapFacts.mockRejectedValueOnce(cause)
+      const reason =
+        scenario === "missing-token"
+          ? AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing
+          : scenario === "user-fetch"
+            ? AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed
+            : scenario === "missing-user"
+              ? AUTO_DETECT_FAILURE_REASONS.UserIdMissing
+              : AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed
+      await expect(
+        kimiOpenPlatformAccountCompletion.complete(
+          {
+            url: "https://platform.kimi.com",
+            requestedAuthType: AuthTypeEnum.AccessToken,
+            detected: {
+              siteType: SITE_TYPES.KIMI,
+              accessToken: scenario === "missing-token" ? " " : "token",
+            },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({ reason })
+    },
+  )
+
+  it("uses fallback user and exchange rate without inventing a refresh session", async () => {
+    mockFetchUserInfo
+      .mockReset()
+      .mockResolvedValueOnce({ id: "user", username: " " })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({})
+    const result = await kimiOpenPlatformAccountCompletion.complete(
+      {
+        url: "https://platform.kimi.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        existingAccessToken: " token ",
+        detected: { siteType: SITE_TYPES.KIMI },
+        context: {},
+      },
+      helpers,
+    )
+    expect(result).toMatchObject({
+      username: "user",
+      userId: "user",
+      accessToken: "token",
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
+    })
+    expect(result).not.toHaveProperty("kimiOpenPlatformAuth")
   })
 
   it("returns the rotated console session from onboarding verification", async () => {
