@@ -1,3 +1,7 @@
+import {
+  normalizeOmniRouteComparableUrl,
+  resolveOmniRouteBuiltinProvider,
+} from "~/constants/omniroute"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
@@ -22,6 +26,7 @@ import {
   fetchOmniRouteChannelSecretKey,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/omniroute"
+import type { OmniRouteConnection } from "~/types/omniroute"
 import type { OmniRouteConfig } from "~/types/omnirouteConfig"
 
 import { createManagedSiteConfigCapability } from "./config"
@@ -29,6 +34,26 @@ import { createManagedSiteConfigCapability } from "./config"
 const readMatchingInventory = sharePendingConfigRead(
   listAllOmniRouteConnections,
 )
+
+/**
+ * Whether a connection represents the same upstream as the searched address.
+ *
+ * A source whose address is a known first-party endpoint imports the provider
+ * with no connection-level override (the gateway uses the provider's own
+ * endpoint), so the empty override is compared by provider identity instead.
+ * An override connection matches only the exact normalized address, never a
+ * longer address that merely starts with it.
+ */
+function omniRouteConnectionMatchesSource(
+  connection: OmniRouteConnection,
+  searchTarget: string,
+): boolean {
+  const override = readOmniRouteConnectionBaseUrl(connection)
+  if (override) {
+    return normalizeOmniRouteComparableUrl(override) === searchTarget
+  }
+  return resolveOmniRouteBuiltinProvider(searchTarget) === connection.provider
+}
 
 const omniRouteManagedSiteConfig: ManagedSiteConfigCapability<OmniRouteConfig> =
   createManagedSiteConfigCapability(
@@ -52,9 +77,10 @@ const matching: ManagedResourceMatchingCapability<OmniRouteConfig> = {
   exactMatchBasis: "url-key",
   search: async (config, baseUrl, options) => {
     const connections = await readMatchingInventory(config, options)
+    const searchTarget = normalizeOmniRouteComparableUrl(baseUrl)
     const items = connections
       .filter((connection) =>
-        readOmniRouteConnectionBaseUrl(connection).includes(baseUrl),
+        omniRouteConnectionMatchesSource(connection, searchTarget),
       )
       .map((connection) => {
         const sanitized = toOmniRouteSanitizedConnection(connection)

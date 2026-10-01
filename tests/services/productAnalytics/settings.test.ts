@@ -76,6 +76,36 @@ describe("settings product analytics snapshots", () => {
     )
     expect(JSON.stringify(events)).not.toContain("private")
   })
+  it("reports OmniRoute and Sub2API as their own managed site types", () => {
+    const events = buildSettingsSnapshotEvents(
+      createPreferences({
+        managedSiteType: SITE_TYPES.OMNIROUTE,
+        omniroute: { baseUrl: "https://gateway.example", token: "oma_secret" },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { managedSiteType: SITE_TYPES.OMNIROUTE },
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+        managed_site_type: SITE_TYPES.OMNIROUTE,
+        omniroute_configured: true,
+      }),
+    )
+
+    const sub2ApiEvents = buildSettingsSnapshotEvents(
+      createPreferences({ managedSiteType: SITE_TYPES.SUB2API }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { managedSiteType: SITE_TYPES.SUB2API },
+    )
+    expect(sub2ApiEvents).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+        managed_site_type: SITE_TYPES.SUB2API,
+      }),
+    )
+    expect(JSON.stringify(events)).not.toContain("oma_secret")
+  })
   it("includes the creation mode in changed and aggregate account settings snapshots", () => {
     const preferences = createPreferences({
       autoProvisionKeyOnAccountAddMode:

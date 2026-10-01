@@ -115,6 +115,68 @@ describe("OmniRoute managed-site capabilities", () => {
     )
   })
 
+  it("matches a first-party channel whose connection stores no override", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json({
+          connections: [
+            connection({
+              id: "conn-1",
+              name: "OpenAI",
+              provider: "openai",
+              // Imported from a known first-party endpoint, so the gateway
+              // serves the provider's own URL and no override is stored.
+              providerSpecificData: {},
+            }),
+          ],
+        }),
+      ),
+    )
+
+    const result = await omniRouteManagedSiteCapabilities.matching.search(
+      config,
+      "https://api.openai.com/v1",
+    )
+
+    expect(result?.items).toHaveLength(1)
+    expect(result?.items[0]).toMatchObject({
+      ref: {
+        siteType: SITE_TYPES.OMNIROUTE,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        scopeKey: BASE_URL,
+        resourceId: "conn-1",
+      },
+      name: "OpenAI",
+      type: "openai",
+    })
+  })
+
+  it("does not match a channel whose address merely starts with the search target", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json({
+          connections: [
+            connection({
+              id: "conn-1",
+              name: "Relay",
+              // The searched baseUrl is a URL prefix, not the stored address.
+              providerSpecificData: {
+                baseUrl: "https://relay.example.invalid/v1-proxy",
+              },
+            }),
+          ],
+        }),
+      ),
+    )
+
+    const result = await omniRouteManagedSiteCapabilities.matching.search(
+      config,
+      "https://relay.example.invalid/v1",
+    )
+
+    expect(result?.items).toEqual([])
+  })
+
   it("offers the deployment's model catalogue without a group concept", async () => {
     server.use(
       http.get(`${BASE_URL}/api/models`, () =>

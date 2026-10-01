@@ -128,7 +128,8 @@ export const OMNIROUTE_BUILTIN_PROVIDER_BASE_URLS: Readonly<
   ],
 }
 
-const normalizeComparableUrl = (value: string): string =>
+/** Normalizes a URL for address comparison: trimmed, lower-cased, no trailing slash. */
+export const normalizeOmniRouteComparableUrl = (value: string): string =>
   value.trim().toLowerCase().replace(/\/+$/, "")
 
 /**
@@ -139,7 +140,7 @@ const normalizeComparableUrl = (value: string): string =>
 export function resolveOmniRouteBuiltinProvider(
   baseUrl: string,
 ): string | null {
-  const candidate = normalizeComparableUrl(baseUrl)
+  const candidate = normalizeOmniRouteComparableUrl(baseUrl)
   if (!candidate) return null
 
   let best: { providerId: string; length: number } | null = null
@@ -147,7 +148,7 @@ export function resolveOmniRouteBuiltinProvider(
     OMNIROUTE_BUILTIN_PROVIDER_BASE_URLS,
   )) {
     for (const root of roots) {
-      const normalizedRoot = normalizeComparableUrl(root)
+      const normalizedRoot = normalizeOmniRouteComparableUrl(root)
       if (
         candidate !== normalizedRoot &&
         !candidate.startsWith(`${normalizedRoot}/`)

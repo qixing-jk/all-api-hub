@@ -180,7 +180,9 @@ function isManagedSiteType(
     value === SITE_TYPES.OCTOPUS ||
     value === SITE_TYPES.AXON_HUB ||
     value === SITE_TYPES.CLAUDE_CODE_HUB ||
-    value === SITE_TYPES.CLI_PROXY_API
+    value === SITE_TYPES.CLI_PROXY_API ||
+    value === SITE_TYPES.SUB2API ||
+    value === SITE_TYPES.OMNIROUTE
   )
 }
 
