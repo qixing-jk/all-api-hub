@@ -144,7 +144,7 @@ test("creates, renames and deletes a connection through the gateway's own routes
   expect(getOmniRouteDeletedConnectionIds()).toHaveLength(1)
 })
 
-test("builds a provider node for a prefix-addressed channel and reclaims it on delete", async ({
+test("builds a provider node for a prefix-addressed channel and retains it on delete", async ({
   context,
   page,
   extensionId,
@@ -200,9 +200,8 @@ test("builds a provider node for a prefix-addressed channel and reclaims it on d
 
   await deleteChannelFromRow(page, channelName)
 
-  // The node was created for this channel alone, so deleting it reclaims the
-  // node rather than leaving it behind where the workspace cannot see it.
-  await expect
-    .poll(() => getOmniRouteDeletedNodeIds())
-    .toEqual(["node-created-1"])
+  // Channel deletion retains the node because gateway-side node deletion could
+  // cascade into other connections created after this channel.
+  expect(getOmniRouteDeletedConnectionIds()).toHaveLength(1)
+  expect(getOmniRouteDeletedNodeIds()).toEqual([])
 })
