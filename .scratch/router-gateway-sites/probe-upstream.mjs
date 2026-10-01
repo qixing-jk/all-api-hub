@@ -338,7 +338,7 @@ function describeCredential(connection) {
   const apiKey = connection.apiKey
   if (apiKey === undefined) return "field omitted"
   if (apiKey === null) return "null"
-  if (looksMasked(apiKey)) return `masked (${apiKey})`
+  if (looksMasked(apiKey)) return `masked (${present(apiKey)})`
   return `PLAINTEXT (${present(apiKey)})`
 }
 

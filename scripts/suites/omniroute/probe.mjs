@@ -214,6 +214,11 @@ export async function runOmniRouteProbe({
         throw new Error(`POST /api/providers 失败: HTTP ${created.status}`)
       }
       createdId = created.payload?.connection?.id ?? null
+      if (!createdId) {
+        throw new Error(
+          `POST /api/providers 成功但未返回渠道 id（同步为未知状态，需手动按名称清理）: ${probeName}`,
+        )
+      }
       console.log("  [创建]:", { status: created.status, id: createdId })
 
       const detail = await call({

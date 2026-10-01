@@ -97,16 +97,26 @@ const createApi = (baseUrl, token) => {
       const doomed = (await this.listConnections()).filter(
         (connection) => connection?.name === name,
       )
+      // Report only the deletes the gateway actually accepted: this runs as
+      // cleanup, so a failed request must not be logged as a reclaimed channel.
+      let removed = 0
       for (const connection of doomed) {
-        await fetch(
+        const response = await fetch(
           `${root}/api/providers/${encodeURIComponent(connection.id)}`,
           {
             method: "DELETE",
             headers,
           },
         )
+        if (response.ok) {
+          removed += 1
+        } else {
+          console.warn(
+            `  ⚠️ 删除临时渠道失败 (${connection.id}): HTTP ${response.status}`,
+          )
+        }
       }
-      return doomed.length
+      return removed
     },
   }
 }
