@@ -5,12 +5,46 @@ import {
   revokeStaleE2eAccessTokens,
 } from "~~/e2e/utils/realSite/newApiAccessTokens"
 
+const { dispose } = vi.hoisted(() => ({ dispose: vi.fn() }))
+
+vi.mock("@playwright/test", () => ({
+  request: {
+    newContext: vi.fn(async () => {
+      const send = async (
+        method: string,
+        url: string,
+        options?: { headers?: Record<string, string>; data?: unknown },
+      ) => {
+        const response = await fetch(url, {
+          method,
+          headers: options?.headers,
+          body: options?.data ? JSON.stringify(options.data) : undefined,
+        })
+        return { ok: () => response.ok, json: () => response.json() }
+      }
+      return {
+        get: (url: string, options?: { headers?: Record<string, string> }) =>
+          send("GET", url, options),
+        post: (
+          url: string,
+          options?: { headers?: Record<string, string>; data?: unknown },
+        ) => send("POST", url, options),
+        delete: (url: string, options?: { headers?: Record<string, string> }) =>
+          send("DELETE", url, options),
+        dispose,
+      }
+    }),
+  },
+}))
+
 const ORIGIN = "https://panel.example.invalid"
 const NOW = new Date("2026-10-01T12:00:00Z").getTime()
 const HOUR_SECONDS = 3_600
 
 const config = {
   baseUrl: ORIGIN,
+  loginApiUrl: `${ORIGIN}/api/user/login`,
+  login2faApiUrl: `${ORIGIN}/api/user/login/2fa`,
   username: "example-user",
   password: "example-password",
 }
@@ -84,9 +118,71 @@ const stubSite = (
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  dispose.mockClear()
 })
 
 describe("revokeStaleE2eAccessTokens", () => {
+  it("warns and stops when a second factor cannot be completed", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const fetchMock = stubSite([])
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ success: true, data: { require_2fa: true } }),
+    )
+    await expect(revokeStaleE2eAccessTokens(config, NOW)).resolves.toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("TOTP"))
+    expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the configured login endpoint", async () => {
+    const fetchMock = stubSite([
+      tokenRow(7, E2E_ACCESS_TOKEN_NAME, 2 * HOUR_SECONDS),
+    ])
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: { access_token: "dashboard-session" },
+      }),
+    )
+    await expect(
+      revokeStaleE2eAccessTokens(
+        { ...config, loginApiUrl: `${ORIGIN}/custom/login` },
+        NOW,
+      ),
+    ).resolves.toEqual([7])
+    expect(fetchMock.mock.calls[0][0]).toBe(`${ORIGIN}/custom/login`)
+  })
+
+  it("completes the configured 2FA challenge before listing tokens", async () => {
+    const fetchMock = stubSite([
+      tokenRow(7, E2E_ACCESS_TOKEN_NAME, 2 * HOUR_SECONDS),
+    ])
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ success: true, data: { require_2fa: true } }),
+    )
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: { access_token: "dashboard-session" },
+      }),
+    )
+    await expect(
+      revokeStaleE2eAccessTokens(
+        {
+          ...config,
+          login2faApiUrl: `${ORIGIN}/custom/2fa`,
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        },
+        NOW,
+      ),
+    ).resolves.toEqual([7])
+    expect(fetchMock.mock.calls[1][0]).toBe(`${ORIGIN}/custom/2fa`)
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body)).code).toMatch(
+      /^\d{6}$/,
+    )
+  })
+
   it("deletes a token an earlier run left behind", async () => {
     const fetchMock = stubSite([
       tokenRow(7, E2E_ACCESS_TOKEN_NAME, 2 * HOUR_SECONDS),

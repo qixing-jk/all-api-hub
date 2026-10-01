@@ -55,8 +55,8 @@ export type NewApiAccessTokenDialect =
 const dialectMemory = createDeploymentProbeMemory<NewApiAccessTokenDialect>()
 
 /**
- * Whether an error says the deployment does not own the route at all, as opposed
- * to refusing this attempt on a route it does own.
+ * Whether a legacy mint failure warrants probing the replacement contract.
+ * A 403 alone is not proof of absence: a scoped credential may lack permission.
  *
  * Only a definite answer may replace a remembered dialect: a transport failure
  * leaves the deployment's contract unknown, and treating it as "the old route is
@@ -89,7 +89,8 @@ async function probeAccessTokenDialect(
     })
     return NEW_API_ACCESS_TOKEN_DIALECTS.SCOPED_ACCESS_TOKENS
   } catch (error) {
-    return isAccessTokenContractAbsent(error)
+    return error instanceof ApiError &&
+      (error.statusCode === 404 || error.statusCode === 405)
       ? NEW_API_ACCESS_TOKEN_DIALECTS.DASHBOARD_PAT
       : undefined
   }

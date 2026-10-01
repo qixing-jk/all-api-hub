@@ -19,7 +19,7 @@
     "popupHint": "Continúa en el panel lateral para conservar este formulario mientras verificas tu identidad y copias el token en el sitio. Si no se puede abrir el panel lateral, el formulario se abrirá en una página completa.",
     "prepareFailed": "No se pudo conservar este formulario. Copia los datos que necesites antes de volver a abrir el formulario de cuenta en el panel lateral.",
     "restoreFailed": "No se pudo recuperar el formulario sin terminar. Es posible que haya vencido. Vuelve a abrir el formulario de cuenta.",
-    "rotationWarning": "Generar un Access Token nuevo invalida el anterior. Actualiza las otras herramientas que usen el token anterior.",
+    "rotationWarning": "Solo en sitios antiguos con Generate / Regenerate: regenerar invalida el token anterior; actualiza las herramientas que lo usen. Crear un token de acceso con permisos no invalida los tokens existentes.",
     "title": "Ingresa un Access Token manualmente"
   },
   "actions": {

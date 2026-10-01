@@ -19,7 +19,7 @@
     "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点完成验证、复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
     "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从侧边栏重新打开账号表单。",
     "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
-    "rotationWarning": "重新生成会使旧 Access Token 失效，其他使用旧令牌的工具也需要更新。",
+    "rotationWarning": "仅适用于显示 Generate / Regenerate 的旧版站点：重新生成会使旧令牌失效，其他使用旧令牌的工具也需要更新。创建带权限的访问令牌不会使已有令牌失效。",
     "title": "手动填写 Access Token"
   },
   "actions": {

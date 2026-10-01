@@ -1,5 +1,11 @@
 import {
-  DEFAULT_LOGIN_API_PATH,
+  request,
+  type APIRequestContext,
+  type APIResponse,
+} from "@playwright/test"
+
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
+import {
   extractCompatibleApiPayload,
   type CompatibleApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/compatibleApi"
@@ -31,8 +37,8 @@ interface AccessTokenRow {
 }
 
 /** Reads the envelope payload, or undefined for any non-success answer. */
-async function readPayload<T>(response: Response): Promise<T | undefined> {
-  if (!response.ok) return undefined
+async function readPayload<T>(response: APIResponse): Promise<T | undefined> {
+  if (!response.ok()) return undefined
   try {
     return (
       (extractCompatibleApiPayload(await response.json()) as T) ?? undefined
@@ -44,10 +50,11 @@ async function readPayload<T>(response: Response): Promise<T | undefined> {
 
 /** Lists the caller's scoped access tokens, or nothing when the site is older. */
 async function listAccessTokens(
+  api: APIRequestContext,
   baseUrl: string,
   authorization: string,
 ): Promise<AccessTokenRow[] | undefined> {
-  const response = await fetch(`${baseUrl}${ACCESS_TOKENS_PATH}`, {
+  const response = await api.get(`${baseUrl}${ACCESS_TOKENS_PATH}`, {
     headers: { authorization, accept: "application/json" },
   })
 
@@ -60,24 +67,24 @@ async function listAccessTokens(
  * A scoped token cannot manage tokens, so this always uses a browser session.
  */
 async function requestRevokeProof(
+  api: APIRequestContext,
   baseUrl: string,
   authorization: string,
   password: string,
   tokenId: number,
 ): Promise<string | undefined> {
-  const response = await fetch(`${baseUrl}/api/verify`, {
-    method: "POST",
+  const response = await api.post(`${baseUrl}/api/verify`, {
     headers: {
       authorization,
       "content-type": "application/json",
       accept: "application/json",
     },
-    body: JSON.stringify({
+    data: {
       method: "password",
       scope: ACCESS_TOKEN_REVOKE_SCOPE,
       context: { token_id: tokenId },
       password,
-    }),
+    },
   })
 
   const payload = await readPayload<{ proof_token?: string }>(response)
@@ -85,21 +92,24 @@ async function requestRevokeProof(
 }
 
 async function revokeAccessToken(
+  api: APIRequestContext,
   baseUrl: string,
   authorization: string,
   tokenId: number,
   proof: string,
 ): Promise<boolean> {
-  const response = await fetch(`${baseUrl}${ACCESS_TOKENS_PATH}/${tokenId}`, {
-    method: "DELETE",
-    headers: {
-      authorization,
-      accept: "application/json",
-      "X-Security-Proof": proof,
+  const response = await api.delete(
+    `${baseUrl}${ACCESS_TOKENS_PATH}/${tokenId}`,
+    {
+      headers: {
+        authorization,
+        accept: "application/json",
+        "X-Security-Proof": proof,
+      },
     },
-  })
+  )
 
-  return response.ok
+  return response.ok()
 }
 
 /**
@@ -115,31 +125,60 @@ async function revokeAccessToken(
 export async function revokeStaleE2eAccessTokens(
   config: Pick<
     CompatibleApiRealSiteConfig,
-    "baseUrl" | "username" | "password"
+    | "baseUrl"
+    | "username"
+    | "password"
+    | "loginApiUrl"
+    | "login2faApiUrl"
+    | "totpSecret"
   >,
   now: number = Date.now(),
 ): Promise<number[]> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const revoked: number[] = []
+  let api: APIRequestContext | undefined
 
   try {
-    const login = await fetch(`${baseUrl}${DEFAULT_LOGIN_API_PATH}`, {
-      method: "POST",
+    // Keep challenge cookies in an isolated jar; native fetch does not carry
+    // the login session into the second-factor request in Node.
+    api = await request.newContext()
+    const login = await api.post(config.loginApiUrl, {
       headers: {
         "content-type": "application/json",
         accept: "application/json",
       },
-      body: JSON.stringify({
+      data: {
         username: config.username,
         password: config.password,
-      }),
+      },
     })
-    const session = await readPayload<{ access_token?: string }>(login)
+    let session = await readPayload<{
+      access_token?: string
+      require_2fa?: boolean
+    }>(login)
+    if (session?.require_2fa) {
+      if (!config.totpSecret) {
+        console.warn(
+          "Access-token cleanup skipped: login requires a configured TOTP secret.",
+        )
+        return revoked
+      }
+      session = await readPayload(
+        await api.post(config.login2faApiUrl, {
+          data: { code: generateNewApiTotpCode(config.totpSecret) },
+        }),
+      )
+    }
     const token = session?.access_token?.trim()
-    if (!token) return revoked
+    if (!token) {
+      console.warn(
+        "Access-token cleanup skipped: login did not provide a session token.",
+      )
+      return revoked
+    }
 
     const authorization = `Bearer ${token}`
-    const tokens = await listAccessTokens(baseUrl, authorization)
+    const tokens = await listAccessTokens(api, baseUrl, authorization)
     if (!tokens) return revoked
 
     const staleBeforeSeconds = Math.floor(
@@ -155,6 +194,7 @@ export async function revokeStaleE2eAccessTokens(
       }
 
       const proof = await requestRevokeProof(
+        api,
         baseUrl,
         authorization,
         config.password,
@@ -163,13 +203,24 @@ export async function revokeStaleE2eAccessTokens(
       if (!proof) continue
 
       if (
-        await revokeAccessToken(baseUrl, authorization, candidate.id, proof)
+        await revokeAccessToken(
+          api,
+          baseUrl,
+          authorization,
+          candidate.id,
+          proof,
+        )
       ) {
         revoked.push(candidate.id)
       }
     }
   } catch {
+    console.warn(
+      "Access-token cleanup skipped: a request or authentication step failed.",
+    )
     return revoked
+  } finally {
+    await api?.dispose()
   }
 
   return revoked

@@ -76,10 +76,12 @@ In the extension popup, click **"Continue in side panel"** to carry your current
 
    If you have already saved a valid, complete Access Token, you can enter it directly.
 
+   Check the token page and buttons on your deployment before choosing a workflow below. The release version is only a guide: forks and backports may use a different workflow.
+
    Newer New API sites (from `v1.0.0-rc.41`) keep every token on the **Security → Access Tokens** page (usually `/security`): choose **Create access token**, pick the permissions and expiry the site asks for, and complete its security verification. The full token is shown only once. Copy it immediately and paste it into the extension's **Access Token** field. Grant all the permissions the dialog lists — a token with too few returns 403 later, when reading usage, balance or managing API keys. Each token is a separate entry that can be revoked on its own, and creating one does **not** invalidate the others.
 
    <details>
-   <summary>Older New API versions (rc.40 and earlier)</summary>
+   <summary>Sites with only Generate / Regenerate buttons (usually rc.40 and earlier)</summary>
 
    Older versions keep a single token in the Security section near the bottom of the profile page: choose **Generate**, or **Regenerate** when a token already exists. **Regenerating invalidates the old Access Token**, so update any other tools that use it.
 

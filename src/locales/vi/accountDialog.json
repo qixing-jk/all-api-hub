@@ -19,7 +19,7 @@
     "popupHint": "Tiếp tục trong thanh bên để giữ biểu mẫu này trong khi xác minh danh tính và sao chép mã trên trang web. Nếu không mở được thanh bên, biểu mẫu sẽ mở trong trang đầy đủ.",
     "prepareFailed": "Không thể giữ biểu mẫu này. Hãy sao chép thông tin cần giữ trước khi mở lại biểu mẫu tài khoản trong thanh bên.",
     "restoreFailed": "Không khôi phục được biểu mẫu chưa hoàn tất. Biểu mẫu có thể đã hết hạn. Hãy mở lại biểu mẫu tài khoản.",
-    "rotationWarning": "Tạo Access Token mới sẽ làm mã cũ mất hiệu lực. Hãy cập nhật các công cụ khác đang sử dụng mã cũ.",
+    "rotationWarning": "Chỉ áp dụng cho trang cũ có Generate / Regenerate: tạo lại sẽ làm mã cũ mất hiệu lực; hãy cập nhật các công cụ đang dùng mã đó. Tạo mã truy cập có phạm vi quyền không làm các mã hiện có mất hiệu lực.",
     "title": "Nhập Access Token thủ công"
   },
   "actions": {

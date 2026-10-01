@@ -142,6 +142,7 @@ describe("New API access token dialect", () => {
   it.each([
     ["an unauthorized probe", statusError(401)],
     ["a refused probe", statusError(403)],
+    ["a scope-limited probe", statusError(403, "AUTH_INSUFFICIENT_PRIVILEGE")],
     ["a server failure", statusError(500)],
     ["a transport failure", new Error("network down")],
   ])(
