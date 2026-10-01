@@ -45,12 +45,18 @@ const resolveAccountExternalApiBaseUrl = (
     url: account.baseUrl,
   })
 
-/** Prefer a key's own gateway address over the account's browser address. */
+/**
+ * Prefer a key's own gateway address over the account's browser address.
+ * `accountBaseUrl` is the address the key was created against; pass the key's
+ * account snapshot (not the live account) when the key inherits the account
+ * endpoint, so an account address change is still followed by the export.
+ */
 export const resolveAccountRuntimeKeyExternalApiBaseUrl = (
   account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
   runtimeKeyBaseUrl?: string,
+  accountBaseUrl?: string,
 ): string =>
-  runtimeKeyBaseUrl && runtimeKeyBaseUrl !== account.baseUrl
+  runtimeKeyBaseUrl && runtimeKeyBaseUrl !== (accountBaseUrl ?? account.baseUrl)
     ? runtimeKeyBaseUrl
     : resolveAccountExternalApiBaseUrl(account)
 
@@ -60,10 +66,13 @@ export function createAccountRuntimeKeyExportSource(
   runtimeKey: AccountRuntimeKey,
   { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
 ): CredentialExportSource {
-  // The key inherits the account endpoint unless it carries its own.
+  // The key inherits the account endpoint unless it carries its own. Compare
+  // against the key's account snapshot so a live account address change is still
+  // followed rather than pinned to the creation-time key URL.
   const baseUrl = resolveAccountRuntimeKeyExternalApiBaseUrl(
     account,
     runtimeKey.baseUrl,
+    runtimeKey.account.baseUrl,
   )
   return {
     id: runtimeKey.id,

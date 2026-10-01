@@ -180,6 +180,28 @@ describe("account credential exports", () => {
     ).toBe(account.baseUrl)
   })
 
+  // The key carries the endpoint it was created against (account snapshot). If
+  // the live account later changes address, the export must follow the account
+  // rather than pin the creation-time key URL. The comparison is made against
+  // the key's account snapshot, not the live account.
+  // See cd032543f regression in KiloCodeExportDialog "runtime facts change".
+  it("follows a live account address change when the key inherits the account endpoint", () => {
+    const originalBaseUrl = runtimeKey.account.baseUrl
+    const movedAccount = {
+      ...account,
+      baseUrl: "https://new.example.invalid",
+    }
+    const inheritedKey = {
+      ...runtimeKey,
+      baseUrl: originalBaseUrl,
+      account: { ...runtimeKey.account, baseUrl: originalBaseUrl },
+    }
+
+    expect(
+      createAccountRuntimeKeyExportSource(movedAccount, inheritedKey).baseUrl,
+    ).toBe("https://new.example.invalid")
+  })
+
   // AIHubMix accounts are stored against the console origin, so exports used to
   // hand external callers the dashboard instead of the API origin.
   it("exports the AIHubMix API origin for an account stored on the console", () => {
