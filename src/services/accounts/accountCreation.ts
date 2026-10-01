@@ -34,6 +34,7 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
@@ -45,7 +46,7 @@ import { t } from "~/utils/i18n/core"
 interface ValidateAndSaveAccountOptions {
   skipAutoProvisionKeyOnAccountAdd?: boolean
   deferDataRefresh?: boolean
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 /**

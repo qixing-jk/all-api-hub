@@ -27,6 +27,7 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
@@ -71,7 +72,7 @@ interface ValidateAndUpdateAccountOptions {
   deferDataRefresh?: boolean
   selectionChanged?: boolean
   discoveryBaseSelection?: CheckInMethodSelection
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 /**

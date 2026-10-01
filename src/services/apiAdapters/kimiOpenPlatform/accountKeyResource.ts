@@ -3,7 +3,12 @@ import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyN
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
-import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
+import {
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  AccountKeyResourceError,
+  type AccountKeyResourceRef,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   RESOURCE_DISPLAY_FACT_KINDS,
@@ -31,10 +36,10 @@ type KeyRecord = KimiApiKey & { baseUrl: string }
 type Config = {
   account: { id: string; name?: string; siteType: AccountSiteType }
   request: ApiServiceRequest
-  baseUrl: string
 }
 
 type Command = { name: string }
+const MAX_KEY_NAME_LENGTH = 32
 
 const nameOf = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
@@ -49,18 +54,26 @@ const editor = (name = "") => ({
   ],
   initialValues: { name },
   validate(values: { name?: unknown }) {
-    return nameOf(values.name)
-      ? ({ valid: true } as const)
-      : {
-          valid: false as const,
-          issues: [
-            { fieldId: "name", code: RESOURCE_FIELD_ISSUE_CODES.Required },
-          ],
-        }
+    const name = nameOf(values.name)
+    if (!name || name.length > MAX_KEY_NAME_LENGTH) {
+      return {
+        valid: false as const,
+        issues: [
+          {
+            fieldId: "name",
+            code: name
+              ? RESOURCE_FIELD_ISSUE_CODES.OutOfRange
+              : RESOURCE_FIELD_ISSUE_CODES.Required,
+          },
+        ],
+      }
+    }
+    return { valid: true } as const
   },
   buildCommand(values: { name?: unknown }): Command {
     const name = nameOf(values.name)
-    if (!name || name.length > 32) throw new Error("invalid_kimi_key_name")
+    if (!name || name.length > MAX_KEY_NAME_LENGTH)
+      throw new Error("invalid_kimi_key_name")
     return { name }
   },
 })
@@ -69,6 +82,31 @@ const withBase = (request: ApiServiceRequest, key: KimiApiKey): KeyRecord => ({
   ...key,
   baseUrl:
     resolveKimiOpenPlatformDeployment(request.baseUrl)?.openaiBaseUrl ?? "",
+})
+
+/** Projects the same safe metadata for inventory and detail views. */
+const keyFacts = (key: KeyRecord, ref: AccountKeyResourceRef) => ({
+  ref,
+  displayName: key.name || key.key,
+  maskedLabel: isMaskedKimiSecret(key.auth) ? key.auth : key.key,
+  status: "enabled" as const,
+  runtimeKey: {
+    modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
+    baseUrl: key.baseUrl,
+  },
+  fields: [
+    {
+      fieldId: "project",
+      kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
+      value: key.project_name || key.project_id,
+    },
+    {
+      fieldId: "key",
+      kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
+      value: key.auth,
+    },
+  ],
+  actions: { canUpdate: true, canDelete: true },
 })
 
 /** One capability definition per site type; the protocol is shared. */
@@ -83,9 +121,6 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       return {
         account: input.account,
         request: input.request,
-        baseUrl:
-          resolveKimiOpenPlatformDeployment(input.request.baseUrl)
-            ?.openaiBaseUrl ?? "",
       }
     },
     listScopes: async (config) =>
@@ -119,59 +154,27 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       const key = (await fetchKimiKeys(config.request)).find(
         (item) => item.key === id && item.project_id === scope.scopeKey,
       )
-      if (!key) throw new Error("kimi_key_not_found")
+      if (!key)
+        throw new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound,
+          message: "kimi_key_not_found",
+        })
       return withBase(config.request, key)
     },
-    toListFacts: (key, ref) => ({
-      ref,
-      displayName: key.name || key.key,
-      maskedLabel: isMaskedKimiSecret(key.auth) ? key.auth : key.key,
-      status: "enabled" as const,
-      runtimeKey: {
-        modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
-        baseUrl: key.baseUrl,
-        ...(key.created_at
-          ? { createdAt: Date.parse(key.created_at) || undefined }
-          : {}),
-      },
-      fields: [
-        {
-          fieldId: "project",
-          kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
-          value: key.project_name || key.project_id,
+    toListFacts: (key, ref) => {
+      const facts = keyFacts(key, ref)
+      return {
+        ...facts,
+        runtimeKey: {
+          ...facts.runtimeKey,
+          ...(key.created_at
+            ? { createdAt: Date.parse(key.created_at) || undefined }
+            : {}),
         },
-        {
-          fieldId: "key",
-          kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
-          value: key.auth,
-        },
-      ],
-      searchValues: [key.name, key.key, key.auth],
-      actions: { canUpdate: true, canDelete: true },
-    }),
-    toDetailFacts: (key, ref) => ({
-      ref,
-      displayName: key.name || key.key,
-      maskedLabel: isMaskedKimiSecret(key.auth) ? key.auth : key.key,
-      status: "enabled" as const,
-      runtimeKey: {
-        modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
-        baseUrl: key.baseUrl,
-      },
-      fields: [
-        {
-          fieldId: "project",
-          kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
-          value: key.project_name || key.project_id,
-        },
-        {
-          fieldId: "key",
-          kind: RESOURCE_DISPLAY_FACT_KINDS.Text,
-          value: key.auth,
-        },
-      ],
-      actions: { canUpdate: true, canDelete: true },
-    }),
+        searchValues: [key.name, key.key, key.auth],
+      }
+    },
+    toDetailFacts: keyFacts,
     createEditor: async (_config, _scope, _options, _inventory, intent) =>
       editor(intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME),
     editEditor: (_config, _scope, detail) => editor(detail.name),
@@ -227,9 +230,6 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       await deleteKimiKey(config.request, scope.scopeKey, id)
       return { certainty: "applied" as const, value: undefined }
     },
-    mapFailure: (error: unknown) => ({
-      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-      message: error instanceof Error ? error.message : undefined,
-    }),
+    mapFailure: mapAccountKeyResourceFailure,
   })
 }

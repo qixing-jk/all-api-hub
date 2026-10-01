@@ -41,6 +41,19 @@ describe("kimi open platform deployments", () => {
 })
 
 describe("kimi open platform parsing", () => {
+  it.each(["", "   "])("rejects an empty create-response secret %j", (auth) => {
+    expect(() =>
+      parseKimiCreatedKey({
+        code: 0,
+        data: {
+          key: "ak-example",
+          auth,
+          name: "probe",
+          project_id: "proj-example",
+        },
+      }),
+    ).toThrow("invalid_kimi_created_key")
+  })
   it("converts USD directly and CNY through the account exchange rate", () => {
     expect(kimiAmountToQuota(2, "USD")).toBe(2 * QUOTA_PER_USD)
     expect(kimiAmountToQuota(7.2, "CNY", 7.2)).toBe(QUOTA_PER_USD)

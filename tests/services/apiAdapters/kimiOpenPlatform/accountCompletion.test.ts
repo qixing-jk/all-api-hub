@@ -48,6 +48,23 @@ const { helpers, captureRecoveryData } = createAccountCompletionHelpersMock(
 )
 
 describe("kimiOpenPlatformAccountBootstrap", () => {
+  it.each([
+    ["https://api.moonshot.cn/v1", KIMI_DISPLAY_NAME],
+    ["https://api.moonshot.ai/v1", KIMI_GLOBAL_DISPLAY_NAME],
+  ])(
+    "resolves bootstrap facts for inference address %s",
+    async (baseUrl, displayName) => {
+      const { kimiOpenPlatformAccountBootstrap: actualBootstrap } =
+        await vi.importActual<
+          typeof import("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
+        >("~/services/apiAdapters/kimiOpenPlatform/accountBootstrap")
+      const facts = await actualBootstrap.loadBootstrapFacts({
+        baseUrl,
+        auth: { authType: AuthTypeEnum.AccessToken },
+      })
+      expect(facts.displayName).toBe(displayName)
+    },
+  )
   it("provides defaultExchangeRate and display names for CN and Global", async () => {
     const { kimiOpenPlatformAccountBootstrap: actualBootstrap } =
       await vi.importActual<

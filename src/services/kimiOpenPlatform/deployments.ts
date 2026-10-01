@@ -1,10 +1,10 @@
 import {
   KIMI_CONSOLE_ORIGIN,
   KIMI_GLOBAL_CONSOLE_ORIGIN,
+  KIMI_GLOBAL_HOSTNAMES,
+  KIMI_HOSTNAMES,
+  SITE_TYPES,
 } from "~/services/accountSiteDefinitions/identifiers"
-
-const KIMI_SITE_TYPE = "kimi"
-const KIMI_GLOBAL_SITE_TYPE = "kimi-global"
 
 /**
  * Kimi Open Platform is one protocol with two account universes.
@@ -13,18 +13,18 @@ const KIMI_GLOBAL_SITE_TYPE = "kimi-global"
  */
 export const KIMI_OPEN_PLATFORM_DEPLOYMENTS = {
   cn: {
-    siteType: KIMI_SITE_TYPE,
+    siteType: SITE_TYPES.KIMI,
     consoleOrigin: KIMI_CONSOLE_ORIGIN,
-    hostnames: ["platform.kimi.com"] as const,
+    hostnames: KIMI_HOSTNAMES,
     inferenceOrigin: "https://api.moonshot.cn",
     openaiBaseUrl: "https://api.moonshot.cn/v1",
     anthropicBaseUrl: "https://api.moonshot.cn/anthropic",
     currency: "CNY",
   },
   global: {
-    siteType: KIMI_GLOBAL_SITE_TYPE,
+    siteType: SITE_TYPES.KIMI_GLOBAL,
     consoleOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
-    hostnames: ["platform.kimi.ai"] as const,
+    hostnames: KIMI_GLOBAL_HOSTNAMES,
     inferenceOrigin: "https://api.moonshot.ai",
     openaiBaseUrl: "https://api.moonshot.ai/v1",
     anthropicBaseUrl: "https://api.moonshot.ai/anthropic",

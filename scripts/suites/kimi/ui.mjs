@@ -109,9 +109,10 @@ export async function runKimiUiTest({
         .locator('input[type="number"]')
         .evaluateAll((els) => els.map((e) => e.value))
       const hasDefaultRate = numberInputs.includes("7.2")
+      const hasKimiSiteType = /kimi/i.test(detectedType)
 
       console.log("  - 自动识别断言检查:", {
-        站点类型匹配: detectedType.includes("kimi")
+        站点类型匹配: hasKimiSiteType
           ? `✅ [${detectedType.trim()}]`
           : `❌ [${detectedType}]`,
         用户名获取: detectedUsername
@@ -120,7 +121,7 @@ export async function runKimiUiTest({
         默认汇率7点2: hasDefaultRate ? "✅ 7.2" : "❌ 未找到 7.2",
       })
 
-      if (!detectedType.includes("kimi") || !hasDefaultRate) {
+      if (!hasKimiSiteType || !hasDefaultRate) {
         throw new Error(
           `自动识别未达到预期: 站点类型=[${detectedType}], 汇率包含7.2=[${hasDefaultRate}]`,
         )

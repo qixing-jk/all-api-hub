@@ -6,7 +6,7 @@ import {
 } from "~/services/accountSiteDefinitions/identifiers"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { fetchKimiUserInfo } from "~/services/apiService/kimiOpenPlatform"
-import { getKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
+import { resolveKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
 
@@ -17,9 +17,7 @@ export const kimiOpenPlatformAccountBootstrap: AccountBootstrapCapability = {
     access_token: request.auth.accessToken?.trim() ?? "",
   }),
   loadBootstrapFacts: async (request) => {
-    const deployment = getKimiOpenPlatformDeployment(
-      resolveKimiSiteType(request.baseUrl),
-    )
+    const deployment = resolveKimiOpenPlatformDeployment(request.baseUrl)
     return {
       displayName:
         deployment?.siteType === SITE_TYPES.KIMI
@@ -32,16 +30,4 @@ export const kimiOpenPlatformAccountBootstrap: AccountBootstrapCapability = {
   fetchCheckInSupport: async () => false,
   resolveRoutePath: async (target, route) =>
     resolveStaticAccountRoutePath(target, route),
-}
-
-/** Maps a console URL to the China or Global site type. */
-function resolveKimiSiteType(baseUrl: string) {
-  try {
-    const hostname = new URL(baseUrl).hostname
-    return hostname === "platform.kimi.com"
-      ? SITE_TYPES.KIMI
-      : SITE_TYPES.KIMI_GLOBAL
-  } catch {
-    return SITE_TYPES.KIMI_GLOBAL
-  }
 }

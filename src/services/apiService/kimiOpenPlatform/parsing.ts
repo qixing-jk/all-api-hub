@@ -135,6 +135,7 @@ export function parseKimiCreatedKey(payload: unknown): KimiApiKey {
     typeof data.auth !== "string" ||
     typeof data.name !== "string" ||
     typeof data.project_id !== "string" ||
+    !data.auth.trim() ||
     isMaskedKimiSecret(data.auth)
   ) {
     throw new Error("invalid_kimi_created_key")

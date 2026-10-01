@@ -1,7 +1,12 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
-import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "~/types"
+import type {
+  AuthTypeEnum,
+  CheckInConfig,
+  KimiOpenPlatformAuthConfig,
+  Sub2ApiAuthConfig,
+} from "~/types"
 
 /**
  * Private, local-only account fields retained when auto-detection cannot finish.
@@ -20,7 +25,7 @@ export interface AccountAutoDetectRecoveryData {
   cookieAuthSessionCookie?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
 }
 
@@ -31,7 +36,7 @@ interface DetectedAccountRecoverySource {
   accessToken?: unknown
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
 }
 

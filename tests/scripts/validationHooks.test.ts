@@ -159,6 +159,15 @@ describe("staged i18n validation", () => {
     ["src/styles/example.css", []],
     ["docs/docs/guide.md", []],
     ["i18next.config.ts", EXTRACT_AND_STATUS],
+    [
+      "src/features/ImportExport/DataBackup.search.ts",
+      EXTRACT_STATUS_AND_INTEGRITY,
+    ],
+    [
+      "tests/features/OptionsSearch/searchRegistryKeys.test.ts",
+      [["run", "i18n:integrity"]],
+    ],
+    ["scripts/run-i18n-check-if-staged.mjs", EXTRACT_STATUS_AND_INTEGRITY],
   ])("selects checks for %s", (file, expectedCalls) => {
     const repo = createRepository()
     repo.write(file)

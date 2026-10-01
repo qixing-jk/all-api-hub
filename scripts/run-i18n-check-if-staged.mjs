@@ -57,7 +57,8 @@ function shouldRunRegistryCheck(stagedFiles) {
       file.startsWith("src/locales/") ||
       file.endsWith(".search.ts") ||
       file.startsWith("src/features/OptionsSearch/") ||
-      file === "tests/features/OptionsSearch/searchRegistryKeys.test.ts",
+      file === "tests/features/OptionsSearch/searchRegistryKeys.test.ts" ||
+      file === "scripts/run-i18n-check-if-staged.mjs",
   )
 }
 
@@ -68,20 +69,25 @@ if (stagedFiles.length === 0) {
   process.exit(0)
 }
 
-if (!shouldRunI18nCheck(stagedFiles)) {
+const runExtraction = shouldRunI18nCheck(stagedFiles)
+const runRegistry = shouldRunRegistryCheck(stagedFiles)
+
+if (!runExtraction && !runRegistry) {
   console.log(
     "⏭️  No i18n-relevant staged files detected, skipping i18n check.",
   )
   process.exit(0)
 }
 
-console.log("🌐 Running staged i18n extract check...")
-runPnpm(["run", "i18n:extract:ci"])
+if (runExtraction) {
+  console.log("🌐 Running staged i18n extract check...")
+  runPnpm(["run", "i18n:extract:ci"])
 
-console.log("🌐 Running staged i18n status check...")
-runPnpm(["run", "i18n:status"])
+  console.log("🌐 Running staged i18n status check...")
+  runPnpm(["run", "i18n:status"])
+}
 
-if (shouldRunRegistryCheck(stagedFiles)) {
+if (runRegistry) {
   console.log("🌐 Running static registry i18n key integrity check...")
   runPnpm(["run", "i18n:integrity"])
 }

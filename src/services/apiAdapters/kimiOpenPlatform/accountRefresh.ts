@@ -2,6 +2,7 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import type { AccountRefreshCapability } from "~/services/apiAdapters/contracts/accountRefresh"
 import { fetchKimiAccountData } from "~/services/apiService/kimiOpenPlatform"
 import { readKimiAuthState } from "~/services/apiService/kimiOpenPlatform/transport"
+import { getKimiOpenPlatformAuthConfig } from "~/services/kimiOpenPlatform/auth"
 import { SiteHealthStatus } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -21,13 +22,7 @@ export const kimiOpenPlatformAccountRefresh: AccountRefreshCapability = {
           ? {
               authUpdate: {
                 accessToken: state.accessToken,
-                kimiOpenPlatformAuth: {
-                  refreshToken: state.refreshToken,
-                  organizationId: state.organizationId,
-                  ...(state.tokenExpiresAt !== undefined
-                    ? { tokenExpiresAt: state.tokenExpiresAt }
-                    : {}),
-                },
+                kimiOpenPlatformAuth: getKimiOpenPlatformAuthConfig(state),
               },
             }
           : {}),

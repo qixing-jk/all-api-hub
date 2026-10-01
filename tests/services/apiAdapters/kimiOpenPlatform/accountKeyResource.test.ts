@@ -7,6 +7,7 @@ import {
 } from "~/services/accounts/accountKeyCreation"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import { createKimiOpenPlatformKeyResources } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
@@ -59,6 +60,47 @@ describe("kimiOpenPlatformKeyResources", () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+  })
+
+  it("uses the shared authentication failure classification", async () => {
+    mockFetchKimiProjects.mockRejectedValueOnce(
+      new ApiError("expired", 401, "listProjects", API_ERROR_CODES.HTTP_401),
+    )
+    const session = await capability.open(openInput)
+    await expect(session.listScopes()).rejects.toMatchObject({
+      failure: { code: "authentication_failed" },
+    })
+  })
+
+  it("reports an overlong name as a field validation issue before sending a mutation", async () => {
+    mockFetchKimiProjects.mockResolvedValueOnce([
+      { id: "proj-1", name: "Default Project", is_default: true },
+    ])
+    const session = await capability.open(openInput)
+    const editor = await session.openCreateEditor("proj-1")
+    expect(editor.validate({ name: "a".repeat(33) })).toMatchObject({
+      valid: false,
+      issues: [{ fieldId: "name", code: "out_of_range" }],
+    })
+    expect(editor.validate({ name: "a".repeat(32) })).toEqual({ valid: true })
+    expect(mockCreateKimiKey).not.toHaveBeenCalled()
+  })
+
+  it("classifies an absent key as not_found for interrupted deletion recovery", async () => {
+    mockFetchKimiProjects.mockResolvedValueOnce([
+      { id: "proj-1", name: "Default Project", is_default: true },
+    ])
+    mockFetchKimiKeys.mockResolvedValueOnce([])
+    const session = await capability.open(openInput)
+    const collection = await session.openCollection("proj-1")
+    await expect(
+      collection.get({
+        accountId: openInput.account.id,
+        siteType: openInput.account.siteType,
+        scopeKey: "proj-1",
+        resourceId: "gone",
+      }),
+    ).rejects.toMatchObject({ failure: { code: "not_found" } })
   })
 
   it.each([SITE_TYPES.KIMI, SITE_TYPES.KIMI_GLOBAL])(

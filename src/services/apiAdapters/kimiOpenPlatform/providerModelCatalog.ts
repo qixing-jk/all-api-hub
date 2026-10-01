@@ -206,11 +206,10 @@ function toRows(
   entries: readonly KimiPricingDocEntry[],
 ): KimiCatalogRow[] {
   const byId = new Map(entries.map((entry) => [entry.modelId, entry]))
-  const byModelId = (modelId: string): KimiCatalogRow[] => {
+  return modelIds.map((modelId) => {
     const entry = byId.get(modelId)
-    return [entry === undefined ? { modelId } : { modelId, entry }]
-  }
-  return modelIds.flatMap(byModelId)
+    return entry === undefined ? { modelId } : { modelId, entry }
+  })
 }
 
 /**

@@ -27,21 +27,8 @@ export async function dismissModals(page) {
         await page.waitForTimeout(300)
       }
 
-      const stillVisible = await page
-        .locator('[role="dialog"], [data-slot="modal-overlay"]')
-        .first()
-        .isVisible({ timeout: 500 })
-        .catch(() => false)
-      if (stillVisible) {
-        await page
-          .evaluate(() => {
-            document
-              .querySelectorAll('[role="dialog"], [data-slot="modal-overlay"]')
-              .forEach((el) => el.remove())
-          })
-          .catch(() => {})
-        await page.waitForTimeout(200)
-      }
+      // Keep application state intact when a dialog cannot be dismissed.
+      // The caller's normal interaction must expose any remaining blocker.
     }
   } catch {
     // 弹窗处理非核心阻塞，忽略

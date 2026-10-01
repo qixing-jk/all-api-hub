@@ -7,7 +7,12 @@ import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDete
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "~/types"
+import type {
+  AuthTypeEnum,
+  CheckInConfig,
+  KimiOpenPlatformAuthConfig,
+  Sub2ApiAuthConfig,
+} from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
 export interface DetectedAccountIdentity {
@@ -20,7 +25,7 @@ export interface DetectedAccountIdentity {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
 }
 
@@ -48,7 +53,7 @@ export interface AutoDetectCompletionData {
   checkIn: CheckInConfig
   siteType: AccountSiteType
   sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
   autoDetectContext?: AutoDetectAnalyticsContext
 }

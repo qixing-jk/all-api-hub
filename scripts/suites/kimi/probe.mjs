@@ -1,4 +1,11 @@
-#!/usr/bin/env node
+/** Require both transport and console-envelope success before trusting probe data. */
+async function readProbeData(response, endpoint) {
+  if (!response.ok) throw new Error(`${endpoint}: HTTP ${response.status}`)
+  const payload = await response.json()
+  if (payload?.code !== 0)
+    throw new Error(`${endpoint}: invalid or failed console response`)
+  return payload.data
+}
 
 /**
  * Pure protocol and backend API probe for Kimi Open Platform.
@@ -41,8 +48,7 @@ export async function runKimiProbe({
   if (!userRes.ok) {
     throw new Error(`获取 Kimi 用户信息失败: HTTP ${userRes.status}`)
   }
-  const userJson = await userRes.json()
-  const userData = userJson?.data || {}
+  const userData = (await readProbeData(userRes, "userInfo")) || {}
   const orgs = userData.organizations || []
   const primaryOrgId = orgs[0]?.organization?.id || ""
   console.log(
@@ -61,9 +67,11 @@ export async function runKimiProbe({
       { headers },
     )
     if (balRes.ok) {
-      const balJson = await balRes.json()
-      balanceData = balJson?.data || {}
-      balanceOk = true
+      balanceData =
+        (await readProbeData(balRes, "organizationAccountInfo")) || {}
+      balanceOk =
+        Number.isFinite(balanceData.cur) &&
+        Number.isFinite(balanceData.today_consume)
       console.log("  - 账户资产:", {
         总余额: balanceData.cur,
         可用余额: balanceData.available_amount,
@@ -83,10 +91,8 @@ export async function runKimiProbe({
   if (!projRes.ok) {
     throw new Error(`获取 Kimi 项目列表失败: HTTP ${projRes.status}`)
   }
-  const projJson = await projRes.json()
-  const projects = Array.isArray(projJson?.data)
-    ? projJson.data
-    : projJson?.data?.items || []
+  const projectData = await readProbeData(projRes, "listProjects")
+  const projects = Array.isArray(projectData) ? projectData : []
   const defaultProj = projects.find((p) => p.is_default) || projects[0]
   console.log(
     `  - 成功拉取 ${projects.length} 个项目，默认项目: [${defaultProj?.name || "无"}] (${defaultProj?.id || ""})`,
@@ -112,9 +118,9 @@ export async function runKimiProbe({
         body: JSON.stringify({ name: testKeyName }),
       },
     )
-    const createJson = await createRes.json()
-    const createdKey = createJson?.data?.key
-    const createdSecret = createJson?.data?.auth
+    const created = await readProbeData(createRes, "createApiKey")
+    const createdKey = created?.key
+    const createdSecret = created?.auth
 
     if (createdKey) {
       console.log(
@@ -129,10 +135,8 @@ export async function runKimiProbe({
           `${normalizedBase}/api?${listParams.toString()}`,
           { headers },
         )
-        const listJson = await listRes.json()
-        const keys = Array.isArray(listJson?.data)
-          ? listJson.data
-          : listJson?.data?.items || []
+        const keyData = await readProbeData(listRes, "organizationKeys")
+        const keys = Array.isArray(keyData) ? keyData : []
         const found = keys.some((k) => k.key === createdKey)
         keyCrudOk = found
         console.log(
@@ -145,10 +149,14 @@ export async function runKimiProbe({
           pid: defaultProj.id,
           oid: primaryOrgId,
         })
-        await fetch(`${normalizedBase}/api?${deleteParams.toString()}`, {
-          method: "DELETE",
-          headers,
-        }).catch(() => {})
+        const deleteRes = await fetch(
+          `${normalizedBase}/api?${deleteParams.toString()}`,
+          {
+            method: "DELETE",
+            headers,
+          },
+        )
+        await readProbeData(deleteRes, "deleteApiKey")
         console.log("  - 临时测试密钥已及时清理删除。")
       }
     }
@@ -171,8 +179,10 @@ export async function runKimiProbe({
       },
     )
     if (refreshRes.ok) {
-      const refreshJson = await refreshRes.json()
-      tokenRefreshOk = Boolean(refreshJson?.data?.access_token)
+      const refreshed = await readProbeData(refreshRes, "refreshToken")
+      tokenRefreshOk = Boolean(
+        refreshed?.access_token && refreshed?.refresh_token,
+      )
       console.log(
         `  - Refresh Token 换票验证: ${tokenRefreshOk ? "✅ 换票成功" : "❌ 换票失败"}`,
       )
@@ -180,7 +190,13 @@ export async function runKimiProbe({
   }
 
   return {
-    ok: Boolean(userData.uid && balanceOk && projects.length > 0 && keyCrudOk),
+    ok: Boolean(
+      userData.uid &&
+        balanceOk &&
+        projects.length > 0 &&
+        keyCrudOk &&
+        (!refreshToken || tokenRefreshOk),
+    ),
     userInfoOk: Boolean(userData.uid),
     balanceOk,
     projectsOk: projects.length > 0,
@@ -205,6 +221,7 @@ if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
           "\n✅ Kimi 开放平台探针执行结果:",
           res.ok ? "全部正常" : "部分异常",
         )
+        if (!res.ok) process.exitCode = 1
       }
     })
     .catch((err) => {

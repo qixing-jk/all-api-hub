@@ -8,7 +8,11 @@ import {
   getNewAccountAutomaticExecutionDefault,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
-import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import {
+  AuthTypeEnum,
+  type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
+} from "~/types"
 import type {
   CheckInDiscoveryDecision,
   CheckInMethodUnknownReason,
@@ -51,7 +55,7 @@ export interface AccountDialogDraft {
   sub2apiUseRefreshToken: boolean
   sub2apiRefreshToken: string
   sub2apiTokenExpiresAt: number | null
-  kimiOpenPlatformAuth: import("~/types").KimiOpenPlatformAuthConfig | null
+  kimiOpenPlatformAuth: KimiOpenPlatformAuthConfig | null
 }
 
 /** Form state carried from a popup into manual New API token recovery. */

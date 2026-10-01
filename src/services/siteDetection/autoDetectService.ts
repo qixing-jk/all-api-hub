@@ -34,7 +34,11 @@ import {
 } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
+import {
+  AuthTypeEnum,
+  type KimiOpenPlatformAuthConfig,
+  type Sub2ApiAuthConfig,
+} from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   getActiveOrAllTabs,
@@ -86,7 +90,7 @@ interface UserDataResult {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: import("~/types").KimiOpenPlatformAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   siteTypeHint?: AccountSiteType
   fetchContext?: AutoDetectFetchContext
 }

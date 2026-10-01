@@ -4,7 +4,10 @@ import {
   readKimiAuthState,
   withKimiOpenPlatformAuth,
 } from "~/services/apiService/kimiOpenPlatform/transport"
-import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
+import {
+  getKimiOpenPlatformAuthConfig,
+  normalizeKimiOpenPlatformAuth,
+} from "~/services/kimiOpenPlatform/auth"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
@@ -17,8 +20,7 @@ import { kimiOpenPlatformAccountBootstrap } from "./accountBootstrap"
 export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
   async complete(request, helpers) {
     const detectedAuth = normalizeKimiOpenPlatformAuth(
-      (request.detected as { kimiOpenPlatformAuth?: unknown })
-        .kimiOpenPlatformAuth,
+      request.detected.kimiOpenPlatformAuth,
     )
     const accessToken =
       helpers.trimString(request.detected.accessToken) ||
@@ -52,6 +54,11 @@ export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
     )
     // Transport rotates its attached session during verification.
     const authState = readKimiAuthState(serviceRequest) ?? initialAuthState
+    const authFields = () => {
+      return authState.refreshToken && authState.organizationId
+        ? { kimiOpenPlatformAuth: getKimiOpenPlatformAuthConfig(authState) }
+        : {}
+    }
 
     const initialUserId = helpers.trimString(request.detected.userId)
     helpers.captureRecoveryData({
@@ -59,17 +66,7 @@ export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
       accessToken: authState.accessToken,
       authType: AuthTypeEnum.AccessToken,
       exchangeRate: DEFAULT_USD_TO_CNY_RATE,
-      ...(authState.refreshToken && authState.organizationId
-        ? {
-            kimiOpenPlatformAuth: {
-              refreshToken: authState.refreshToken,
-              organizationId: authState.organizationId,
-              ...(authState.tokenExpiresAt !== undefined
-                ? { tokenExpiresAt: authState.tokenExpiresAt }
-                : {}),
-            },
-          }
-        : {}),
+      ...authFields(),
     })
 
     let userInfo
@@ -94,17 +91,7 @@ export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
       accessToken: authState.accessToken,
       authType: AuthTypeEnum.AccessToken,
       exchangeRate: DEFAULT_USD_TO_CNY_RATE,
-      ...(authState.refreshToken && authState.organizationId
-        ? {
-            kimiOpenPlatformAuth: {
-              refreshToken: authState.refreshToken,
-              organizationId: authState.organizationId,
-              ...(authState.tokenExpiresAt !== undefined
-                ? { tokenExpiresAt: authState.tokenExpiresAt }
-                : {}),
-            },
-          }
-        : {}),
+      ...authFields(),
     })
     if (!userId) {
       throw helpers.createCompletionError(
@@ -140,17 +127,7 @@ export const kimiOpenPlatformAccountCompletion: AccountCompletionCapability = {
       exchangeRate,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({ supported: false }),
-      ...(authState.refreshToken && authState.organizationId
-        ? {
-            kimiOpenPlatformAuth: {
-              refreshToken: authState.refreshToken,
-              organizationId: authState.organizationId,
-              ...(authState.tokenExpiresAt !== undefined
-                ? { tokenExpiresAt: authState.tokenExpiresAt }
-                : {}),
-            },
-          }
-        : {}),
+      ...authFields(),
     }
   },
 }

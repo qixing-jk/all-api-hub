@@ -1,9 +1,9 @@
 import fs from "node:fs"
 import path from "node:path"
+import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { OPTIONS_SEARCH_REGISTRY } from "~/features/OptionsSearch/registry"
-import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 function loadZhCnLocales(): Record<string, Record<string, unknown>> {
   const localesDir = path.resolve(process.cwd(), "src/locales/zh-CN")
@@ -73,44 +73,22 @@ describe("OptionsSearch registry i18n keys integrity", () => {
   it("verifies that all search item keys exist in the primary locale (zh-CN)", () => {
     const errors: string[] = []
 
-    for (const item of OPTIONS_SEARCH_REGISTRY as OptionsSearchItemDefinition[]) {
-      // 1. Check titleKey
-      const titleCheck = resolveKeyPath(locales, item.titleKey)
-      if (!titleCheck.exists) {
-        errors.push(
-          `[Item: ${item.id}] titleKey "${item.titleKey}" is invalid: ${titleCheck.reason}`,
-        )
-      }
-
-      // 2. Check descriptionKey (if present)
-      if (item.descriptionKey) {
-        const descCheck = resolveKeyPath(locales, item.descriptionKey)
-        if (!descCheck.exists) {
-          errors.push(
-            `[Item: ${item.id}] descriptionKey "${item.descriptionKey}" is invalid: ${descCheck.reason}`,
-          )
-        }
-      }
-
-      // 3. Check breadcrumbsKeys
-      if (item.breadcrumbsKeys) {
-        for (const breadcrumbKey of item.breadcrumbsKeys) {
-          const breadcrumbCheck = resolveKeyPath(locales, breadcrumbKey)
-          if (!breadcrumbCheck.exists) {
+    for (const item of OPTIONS_SEARCH_REGISTRY) {
+      const fields = [
+        { field: "titleKey", keys: [item.titleKey] },
+        {
+          field: "descriptionKey",
+          keys: item.descriptionKey ? [item.descriptionKey] : [],
+        },
+        { field: "breadcrumbsKey", keys: item.breadcrumbsKeys ?? [] },
+        { field: "keywordKey", keys: item.keywordKeys ?? [] },
+      ]
+      for (const { field, keys } of fields) {
+        for (const key of keys) {
+          const check = resolveKeyPath(locales, key)
+          if (!check.exists) {
             errors.push(
-              `[Item: ${item.id}] breadcrumbsKey "${breadcrumbKey}" is invalid: ${breadcrumbCheck.reason}`,
-            )
-          }
-        }
-      }
-
-      // 4. Check keywordKeys (if present)
-      if (item.keywordKeys) {
-        for (const keywordKey of item.keywordKeys) {
-          const keywordCheck = resolveKeyPath(locales, keywordKey)
-          if (!keywordCheck.exists) {
-            errors.push(
-              `[Item: ${item.id}] keywordKey "${keywordKey}" is invalid: ${keywordCheck.reason}`,
+              `[Item: ${item.id}] ${field} "${key}" is invalid: ${check.reason}`,
             )
           }
         }
@@ -152,7 +130,7 @@ describe("OptionsSearch registry i18n keys integrity", () => {
     )
 
     const errors: string[] = []
-    const mockT = ((key: string) => key) as any
+    const mockT = ((key: string) => key) as TFunction
 
     for (const permission of Object.values(OPTIONAL_PERMISSION_IDS)) {
       const titleKey = getOptionalPermissionTitle(mockT, permission)

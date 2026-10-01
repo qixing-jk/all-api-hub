@@ -11,6 +11,7 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 import {
+  getKimiOpenPlatformAuthConfig,
   readJwtExpiry,
   type KimiOpenPlatformAuthConfig,
 } from "~/services/kimiOpenPlatform/auth"
@@ -128,20 +129,15 @@ export async function persistKimiAuthState(
 ) {
   const accountId = request.accountId?.trim()
   if (!accountId) return
-  await accountMutations.updateAccount(
+  const saved = await accountMutations.updateAccount(
     accountId,
     {
       account_info: { access_token: state.accessToken },
-      kimiOpenPlatformAuth: {
-        refreshToken: state.refreshToken,
-        organizationId: state.organizationId,
-        ...(state.tokenExpiresAt !== undefined
-          ? { tokenExpiresAt: state.tokenExpiresAt }
-          : {}),
-      },
+      kimiOpenPlatformAuth: getKimiOpenPlatformAuthConfig(state),
     },
     { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
   )
+  if (!saved) throw new Error("kimi_auth_state_write_failed")
 }
 
 /** Rotates the access and refresh tokens. Both must be present. */
@@ -172,9 +168,33 @@ async function refreshConsoleSession(
   await persistKimiAuthState(request, state)
 }
 
+/** A successful console mutation needs code 0, even when no data is returned. */
+function requireConsoleSuccess(
+  response: ApiTransportResponse,
+  endpoint: string,
+): ApiTransportResponse {
+  const status = consoleStatus(response)
+  if (!response.ok || status === 401)
+    throw httpError(status, endpoint, response.body)
+  const body = response.body
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("code" in body) ||
+    typeof body.code !== "number"
+  )
+    throw new Error("invalid_kimi_envelope")
+  if (body.code !== 0) {
+    const error = httpError(response.status, endpoint, body)
+    error.code = API_ERROR_CODES.BUSINESS_ERROR
+    error.upstreamCode = String(body.code)
+    throw error
+  }
+  return response
+}
+
 /**
- * Sends one console request, rotating the session once on a 401.
- *
+ * Retries only authentication failures; business failures must remain failures.
  * Verified 2026-09-29: refresh uses `Msh-Authorization`, and the rotated pair is
  * written back to the saved account before the request is retried.
  */
@@ -198,7 +218,8 @@ async function sendKimiConsoleRequest(
 
   const first = await send(accessToken)
   const firstStatus = consoleStatus(first)
-  if (first.ok && firstStatus !== 401) return first
+  if (first.ok && firstStatus !== 401)
+    return requireConsoleSuccess(first, endpoint)
   const canRefresh =
     firstStatus === 401 &&
     Boolean(state?.refreshToken) &&
@@ -206,10 +227,7 @@ async function sendKimiConsoleRequest(
   if (!canRefresh || !state) throw httpError(firstStatus, endpoint, first.body)
   await refreshConsoleSession(request, deployment, state)
   const second = await send(state.accessToken)
-  const secondStatus = consoleStatus(second)
-  if (!second.ok || secondStatus === 401)
-    throw httpError(secondStatus, endpoint, second.body)
-  return second
+  return requireConsoleSuccess(second, endpoint)
 }
 
 /**

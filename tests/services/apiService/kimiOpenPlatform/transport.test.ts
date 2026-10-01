@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import {
   fetchKimiConsole,
   fetchKimiConsolePath,
@@ -32,6 +33,63 @@ describe("kimi console transport", () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
+
+  it("stops the retry when the rotated session could not be persisted", async () => {
+    vi.mocked(accountMutations.updateAccount).mockResolvedValueOnce(false)
+    vi.mocked(requestExecution.fetchPreparedJsonResponse)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: {},
+        body: { code: 401 },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {},
+        body: {
+          code: 0,
+          data: { access_token: "next", refresh_token: "next-refresh" },
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {},
+        body: { code: 0, data: {} },
+      })
+    await expect(
+      fetchKimiConsole(
+        { ...structuredClone(request), accountId: "saved" },
+        "userInfo",
+      ),
+    ).rejects.toThrow("kimi_auth_state_write_failed")
+    expect(requestExecution.fetchPreparedJsonResponse).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(["updateApiKey", "deleteApiKey"])(
+    "rejects a business failure from %s even when HTTP succeeds",
+    async (endpoint) => {
+      vi.mocked(
+        requestExecution.fetchPreparedJsonResponse,
+      ).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {},
+        body: { code: 403, message: "permission denied" },
+      })
+      await expect(
+        fetchKimiConsole(structuredClone(request), endpoint),
+      ).rejects.toMatchObject({
+        code: "BUSINESS_ERROR",
+        upstreamCode: "403",
+        message: "permission denied",
+      })
+      expect(requestExecution.fetchPreparedJsonResponse).toHaveBeenCalledTimes(
+        1,
+      )
+    },
+  )
 
   it("refreshes a REST gateway's HTTP 400 with code 401 and preserves its route", async () => {
     const sessionRequest = structuredClone(request)

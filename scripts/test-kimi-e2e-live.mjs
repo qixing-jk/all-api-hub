@@ -1,9 +1,11 @@
-#!/usr/bin/env node
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
 import { connectDevExtension } from "./cdp/client.mjs"
 import { runKimiProbe } from "./suites/kimi/probe.mjs"
 import { runKimiUiTest } from "./suites/kimi/ui.mjs"
 
-function parseArgs(args) {
+export function parseArgs(args) {
   let token = process.env.KIMI_ACCESS_TOKEN || ""
   let refreshToken = process.env.KIMI_REFRESH_TOKEN || ""
   let organizationId = process.env.KIMI_ORGANIZATION_ID || ""
@@ -20,6 +22,8 @@ function parseArgs(args) {
       suite = arg.slice(8).toLowerCase()
     } else if (arg.startsWith("--cdp=")) {
       cdpUrl = arg.slice(6)
+    } else if (arg.startsWith("--site=")) {
+      site = arg.slice(7).toLowerCase()
     } else if (arg === "--cn") {
       site = "cn"
     } else if (arg === "--global") {
@@ -45,6 +49,11 @@ Kimi 开放平台现场端到端测试运行器 (CDP & Protocol Probe)
       process.exit(0)
     }
   }
+
+  if (!["cn", "global"].includes(site))
+    throw new Error("invalid Kimi site selection")
+  if (!["all", "probe", "ui"].includes(suite))
+    throw new Error("invalid Kimi suite selection")
 
   const siteUrl =
     site === "cn" ? "https://platform.kimi.com" : "https://platform.kimi.ai"
@@ -175,7 +184,12 @@ async function main() {
   console.log("========================================================")
 }
 
-main().catch((err) => {
-  console.error("\n❌ 测试运行失败:", err.message)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((err) => {
+    console.error("\n❌ 测试运行失败:", err.message)
+    process.exit(1)
+  })
+}
