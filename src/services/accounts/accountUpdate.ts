@@ -73,6 +73,11 @@ interface ValidateAndUpdateAccountOptions {
   selectionChanged?: boolean
   discoveryBaseSelection?: CheckInMethodSelection
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
+  loadedKimiAuth?: {
+    accessToken: string
+    refreshToken?: string
+    organizationId?: string
+  }
 }
 
 /**
@@ -239,6 +244,7 @@ export async function validateAndUpdateAccount(
       selectionChanged: options.selectionChanged,
       discoveryBaseSelection: options.discoveryBaseSelection,
       guard: loginProviderGuard,
+      loadedKimiAuth: options.loadedKimiAuth,
     })
     if (!save.ok) {
       return { success: false, message: save.message }
@@ -335,6 +341,7 @@ export async function validateAndUpdateAccount(
       discoveryBaseSelection: options.discoveryBaseSelection,
       refreshed: freshAccountData.checkIn,
       guard: loginProviderGuard,
+      loadedKimiAuth: options.loadedKimiAuth,
     })
     if (!save.ok) {
       return { success: false, message: save.message }
@@ -400,6 +407,7 @@ export async function validateAndUpdateAccount(
         selectionChanged: options.selectionChanged,
         discoveryBaseSelection: options.discoveryBaseSelection,
         guard: loginProviderGuard,
+        loadedKimiAuth: options.loadedKimiAuth,
       },
     )
     if (!save.ok) {

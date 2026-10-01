@@ -489,6 +489,10 @@ export function useAccountDialog({
     userId: string
   } | null>(null)
   const selectedSiteUrlRef = useRef("")
+  const loadedKimiAuthRef = useRef<
+    | { accessToken: string; refreshToken?: string; organizationId?: string }
+    | undefined
+  >(undefined)
   const accountCredentialScopeRef = useRef<{
     url: string
     siteType: AccountSiteType
@@ -1251,6 +1255,7 @@ export function useAccountDialog({
       const nextUrl = nextPrefill?.siteUrl ?? ""
       selectedSiteUrlRef.current = nextUrl
       accountCredentialScopeRef.current = null
+      loadedKimiAuthRef.current = undefined
       resetOpenRouterOnboardingSession({
         url: nextUrl,
         siteType: nextSiteType,
@@ -1299,6 +1304,13 @@ export function useAccountDialog({
       try {
         const siteAccount = await accountQueries.getAccountById(accountId)
         if (siteAccount) {
+          loadedKimiAuthRef.current = siteAccount.kimiOpenPlatformAuth
+            ? {
+                accessToken: siteAccount.account_info.access_token,
+                refreshToken: siteAccount.kimiOpenPlatformAuth.refreshToken,
+                organizationId: siteAccount.kimiOpenPlatformAuth.organizationId,
+              }
+            : undefined
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
           const normalizedSiteType = resolveStoredSiteType(
@@ -2663,6 +2675,7 @@ export function useAccountDialog({
                   ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
                   : {}),
                 selectionChanged: checkInSelectionChangedRef.current,
+                loadedKimiAuth: loadedKimiAuthRef.current,
                 ...(checkInDiscoveryBaseSelectionRef.current
                   ? {
                       discoveryBaseSelection:

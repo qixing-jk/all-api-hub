@@ -244,6 +244,42 @@ describe("useRuntimeKeyIntegrationActions", () => {
     })
   })
 
+  it("clears an open export and discards a pending export when the key endpoint changes", async () => {
+    let key = {
+      ...buildNewApiRuntimeKey(account, token),
+      baseUrl: "https://first.example/v1",
+    }
+    resolveSecretMock.mockResolvedValue(key)
+    const { result, rerender } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account,
+        enabled: true,
+        runtimeKey: key,
+      }),
+    )
+    await act(() => result.current.exportActions.openKelivo())
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: key.baseUrl,
+    })
+    let finish!: (value: typeof key) => void
+    resolveSecretMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    const pending = result.current.exportActions.openKelivo()
+    const oldKey = key
+    key = { ...key, baseUrl: "https://second.example/v1" }
+    rerender()
+    expect(result.current.dialogs.kelivo.input).toBeNull()
+    await act(async () => {
+      finish(oldKey)
+      await pending
+    })
+    expect(result.current.dialogs.kelivo.input).toBeNull()
+  })
+
   it("isolates a rejecting post-import callback", async () => {
     const callbackError = new Error("refresh failed")
     const onManagedSiteImportSuccess = vi.fn().mockRejectedValue(callbackError)

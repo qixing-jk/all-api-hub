@@ -252,7 +252,38 @@ function requireClosedBrowsers() {
           { encoding: "utf8", windowsHide: true },
         )
       : execFileSync("ps", ["-A", "-o", "comm="], { encoding: "utf8" })
-  if (/Microsoft Edge|msedge|chrome|chromium|brave/i.test(processes))
+  assertBrowsersClosed(processes)
+}
+
+/** Reject snapshots while a browser process can still write the database. */
+export function assertBrowsersClosed(processes) {
+  const browserNames = new Set([
+    "msedge",
+    "microsoft-edge",
+    "microsoft-edge-stable",
+    "microsoft-edge-beta",
+    "microsoft-edge-dev",
+    "microsoft edge",
+    "chrome",
+    "google-chrome",
+    "google-chrome-stable",
+    "google-chrome-beta",
+    "google-chrome-unstable",
+    "google chrome",
+    "google chrome canary",
+    "chromium",
+    "chromium-browser",
+    "brave",
+    "brave-browser",
+    "brave browser",
+  ])
+  if (
+    processes
+      .split(/\r?\n/)
+      .some((line) =>
+        browserNames.has(path.basename(line.trim()).toLowerCase()),
+      )
+  )
     throw new Error("请先关闭日常浏览器和开发浏览器，再同步数据库。")
 }
 

@@ -205,6 +205,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     manualBalanceUsd: overrides.manualBalanceUsd,
     cookieAuth: overrides.cookieAuth,
     sub2apiAuth: overrides.sub2apiAuth,
+    kimiOpenPlatformAuth: overrides.kimiOpenPlatformAuth,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
@@ -230,6 +231,57 @@ const availabilityReplacementCases =
   buildTodayStatsAvailabilityReplacementCases()
 
 describe("accountStorage core behaviors", () => {
+  it.each([false, true])(
+    "preserves a rotated Kimi pair while saving an unchanged draft (explicit replacement=%s)",
+    async (replace) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.KIMI_GLOBAL,
+        site_url: "https://platform.kimi.ai",
+        account_info: {
+          ...createAccount().account_info,
+          id: "user",
+          access_token: "rotated-access",
+          username: "user",
+        },
+        kimiOpenPlatformAuth: {
+          refreshToken: "rotated-refresh",
+          organizationId: "org",
+        },
+      })
+      seedStorage([account])
+      const saved = await accountCheckInState.updateAccountWithCheckInDraft(
+        account.id,
+        {
+          notes: "edited note",
+          account_info: {
+            access_token: replace ? "replacement-access" : "loaded-access",
+          },
+          kimiOpenPlatformAuth: {
+            refreshToken: replace ? "replacement-refresh" : "loaded-refresh",
+            organizationId: "org",
+          },
+        },
+        account.checkIn,
+        {
+          loadedKimiAuth: {
+            accessToken: "loaded-access",
+            refreshToken: "loaded-refresh",
+            organizationId: "org",
+          },
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        },
+      )
+      expect(saved).toBe(true)
+      const latest = await accountStorage.getAccountById(account.id)
+      expect(latest?.notes).toBe("edited note")
+      expect(latest?.account_info.access_token).toBe(
+        replace ? "replacement-access" : "rotated-access",
+      )
+      expect(latest?.kimiOpenPlatformAuth?.refreshToken).toBe(
+        replace ? "replacement-refresh" : "rotated-refresh",
+      )
+    },
+  )
   beforeEach(() => {
     storageData.clear()
     storageHooks.beforeGet = async () => {}

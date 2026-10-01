@@ -16,10 +16,11 @@ export async function testModelCatalogFlow({
   await page.waitForFunction(
     (expectedSource) => {
       const root = document.querySelector('[data-testid="model-list-page"]')
+      const display = root?.querySelector('[data-testid="model-list-display"]')
       return (
         root?.getAttribute("data-model-source") === expectedSource &&
         !root.hasAttribute("data-options-page-pending") &&
-        Boolean(root.querySelector('[data-testid="model-list-display"] h3'))
+        (!display || Boolean(display.querySelector("h3")))
       )
     },
     `account:${accountId}`,

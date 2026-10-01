@@ -109,6 +109,7 @@ export function useRuntimeKeyIntegrationActions({
     account.userId,
     enabled,
     runtimeKey.accountId,
+    runtimeKey.baseUrl,
     runtimeKey.id,
     runtimeKey.secret,
     runtimeKey.label,

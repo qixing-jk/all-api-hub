@@ -13,7 +13,9 @@ afterEach(() =>
 )
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "aah-copy-test-"))
+  const root = fs.mkdtempSync(
+    path.join(fs.realpathSync(os.tmpdir()), "aah-copy-test-"),
+  )
   roots.push(root)
   const source = path.join(root, "source")
   const target = path.join(root, "target")

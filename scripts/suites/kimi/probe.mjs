@@ -119,6 +119,10 @@ export async function runKimiProbe({
     const created = await readProbeData(createRes, "createApiKey")
     const createdKey = created?.key
     const createdSecret = created?.auth
+    if (typeof createdKey !== "string" || !createdKey.trim())
+      throw new Error(
+        "createApiKey: missing key ID; verify probe key cleanup in the console",
+      )
 
     if (createdKey) {
       console.log(

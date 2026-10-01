@@ -12,6 +12,29 @@ describe("live model catalog assertions", () => {
     accountName: "Fixture",
     accountId: "fixture-id",
   }
+  it("reports an empty completed catalog without timing out", async () => {
+    const root = {
+      getAttribute: () => "account:fixture-id",
+      hasAttribute: () => false,
+      querySelector: () => null,
+    }
+    vi.stubGlobal("document", { querySelector: () => root })
+    const page = {
+      goto: vi.fn(),
+      waitForLoadState: vi.fn(),
+      waitForFunction: vi.fn(async (predicate, source) => {
+        if (!predicate(source)) throw new Error("catalog wait timed out")
+      }),
+      locator: () => ({ locator: () => ({ allTextContents: async () => [] }) }),
+    } as unknown as Page
+    try {
+      await expect(testModelCatalogFlow({ ...options, page })).rejects.toThrow(
+        "model_catalog_has_no_rendered_models",
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
   it("does not report success when the requested source never loads", async () => {
     const page = {
       goto: vi.fn(),

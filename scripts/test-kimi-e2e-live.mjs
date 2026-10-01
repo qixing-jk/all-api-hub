@@ -70,8 +70,8 @@ Kimi 开放平台现场端到端测试运行器 (CDP & Protocol Probe)
   }
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2))
+export async function main(args = process.argv.slice(2)) {
+  const options = parseArgs(args)
   let {
     token,
     refreshToken,
@@ -132,7 +132,7 @@ async function main() {
         )
       }
     } catch {
-      console.log("ℹ️ 暂未连接到调试浏览器读取 Token，将仅使用离线模拟凭证。")
+      console.log("ℹ️ 未能从调试浏览器读取 Token。")
     }
   }
 
@@ -158,6 +158,7 @@ async function main() {
 
   // 3. 扩展 UI 端到端实测 (需要 CDP 驱动扩展)
   if (suite === "all" || suite === "ui") {
+    if (!token.trim()) throw new Error("kimi_live_ui_requires_access_token")
     console.log(`\n正在连接 CDP 调试浏览器: ${cdpUrl}...`)
     const dev = await connectDevExtension({ cdpUrl })
     console.log(`✅ 成功连接已挂载扩展: ID [${dev.extensionId}]`)
@@ -167,7 +168,7 @@ async function main() {
         context: dev.context,
         extensionId: dev.extensionId,
         serviceWorker: dev.serviceWorker,
-        token: token || "mock-temp-kimi-token",
+        token,
         refreshToken,
         organizationId,
         siteUrl,

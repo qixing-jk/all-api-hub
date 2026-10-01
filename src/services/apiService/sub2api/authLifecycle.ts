@@ -20,6 +20,7 @@ import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
   type Sub2ApiAuthPersistenceResult,
   type Sub2ApiAuthSession,
+  type Sub2ApiPersistAuthUpdate,
 } from "./authSession"
 import {
   recoverSub2ApiBrowserAuth,
@@ -63,6 +64,7 @@ type HydratedSub2ApiAuth<
 > = {
   request: TRequest
   authSession?: Sub2ApiAuthSession
+  storedAuth?: Sub2ApiPersistAuthUpdate["expectedAuth"]
 }
 
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
@@ -186,6 +188,7 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
   )
   let userId = request.auth?.userId
   const authSession = getSub2ApiAuthSession(request)
+  let storedPair: Sub2ApiPersistAuthUpdate["expectedAuth"]
 
   if (request.accountId && authSession) {
     const storedAuth = await authSession.getLatestAuth(request.accountId)
@@ -214,6 +217,10 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
       const storedTokenExpiresAt = normalizeSub2ApiTokenExpiresAt(
         storedAuth.sub2apiAuth?.tokenExpiresAt,
       )
+      storedPair = {
+        accessToken: storedAccessToken,
+        refreshToken: storedRefreshToken || undefined,
+      }
       if (storedAccessToken) accessToken = storedAccessToken
       if (storedRefreshToken) refreshToken = storedRefreshToken
       if (typeof storedTokenExpiresAt === "number") {
@@ -236,6 +243,7 @@ const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
       },
     } as TRequest,
     authSession,
+    storedAuth: storedPair,
   }
 }
 
@@ -243,7 +251,7 @@ const persistSub2ApiAuthUpdate = async (
   request: ApiServiceRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
   authSession: Sub2ApiAuthSession | undefined,
-  expectedRequest: ApiServiceRequest,
+  expectedAuth: Sub2ApiPersistAuthUpdate["expectedAuth"],
 ) => {
   if (!request.accountId || !authSession) {
     return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED } as const
@@ -262,10 +270,7 @@ const persistSub2ApiAuthUpdate = async (
       ...authUpdate,
       expectedOrigin: request.baseUrl,
       expectedUserId,
-      expectedAuth: {
-        accessToken: expectedRequest.auth.accessToken ?? "",
-        refreshToken: expectedRequest.auth.refreshToken,
-      },
+      ...(expectedAuth ? { expectedAuth } : {}),
     })
   } catch (error) {
     logger.warn("Failed to persist Sub2API auth update", {
@@ -474,7 +479,7 @@ const refreshSub2ApiRequestAuth = async <
       refreshedRequest,
       verifiedRefresh,
       latestAuthSession,
-      latestRequest,
+      latestHydrated.storedAuth,
     )
     return {
       request: refreshedRequest,
@@ -535,7 +540,7 @@ const recoverSub2ApiRequestAuth = async <
       browserBoundRequest,
       resyncedUpdate,
       latestAuthSession,
-      latestRequest,
+      latestHydrated.storedAuth,
     )
     return browserBoundRequest
   })

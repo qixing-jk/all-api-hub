@@ -353,6 +353,34 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   }
 
+  it("passes the loaded Kimi pair to the edit transaction", async () => {
+    const savedAccount = buildSiteAccount({
+      id: "kimi-edit",
+      site_type: SITE_TYPES.KIMI_GLOBAL,
+      site_url: "https://platform.kimi.ai",
+      kimiOpenPlatformAuth: {
+        refreshToken: "loaded-refresh",
+        organizationId: "org",
+      },
+    })
+    const display = accountStorage.convertToDisplayData(savedAccount)
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+    const { result } = renderEditHook({ account: display })
+    await waitFor(() =>
+      expect(result.current.state.siteType).toBe(SITE_TYPES.KIMI_GLOBAL),
+    )
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+    expect(mockValidateAndUpdateAccount.mock.calls[0]?.[17]).toMatchObject({
+      loadedKimiAuth: {
+        accessToken: savedAccount.account_info.access_token,
+        refreshToken: "loaded-refresh",
+        organizationId: "org",
+      },
+    })
+  })
+
   const buildDisplayAccount = (
     overrides: Partial<DisplaySiteData> = {},
   ): DisplaySiteData =>
