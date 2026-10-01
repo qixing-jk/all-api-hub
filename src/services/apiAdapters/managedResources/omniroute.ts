@@ -130,7 +130,10 @@ const throwIfAborted = (options?: ResourceOperationOptions) => {
 const mapOmniRouteFailureCode = (
   error: OmniRouteApiError,
 ): ResourceFailure["code"] => {
-  if (error.code === "ABORT_ERR") {
+  if (
+    error.code === "ABORT_ERR" ||
+    (error.raw instanceof Error && error.raw.name === "AbortError")
+  ) {
     return MANAGED_RESOURCE_FAILURE_CODES.Aborted
   }
   if (error.status === 401) {

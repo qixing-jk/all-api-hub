@@ -6,6 +6,7 @@ import { OMNIROUTE_ACCESS_TOKEN_PREFIX } from "~/constants/omniroute"
 import OmniRouteSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OmniRouteSettings"
 import toast from "~/lib/notify"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import * as browserApi from "~/utils/browser/browserApi"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -116,6 +117,115 @@ describe("OmniRoute settings", () => {
       omniroute: { token: "" },
     })
   })
+
+  it("reports missing fields before attempting validation", async () => {
+    const user = userEvent.setup()
+    render(<OmniRouteSettings />)
+    await user.click(await validateButton())
+    expect(toast.error).toHaveBeenCalledWith(
+      "settings:omniroute.validation.missingFields",
+    )
+  })
+
+  it.each([
+    [401, "invalidCredential"],
+    [503, "failed"],
+  ])(
+    "reports a gateway failure %s and permits retry",
+    async (status, messageKey) => {
+      const user = userEvent.setup()
+      server.use(
+        http.get(`${BASE_URL}/api/cli/whoami`, () =>
+          HttpResponse.json({ error: "gateway failure" }, { status }),
+        ),
+      )
+      const { container } = render(<OmniRouteSettings />)
+      await user.type(
+        await fieldInput(container, "omniroute-base-url"),
+        BASE_URL,
+      )
+      await user.type(
+        await fieldInput(container, "omniroute-credential"),
+        MINTED_TOKEN,
+      )
+      await user.click(await validateButton())
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining(
+            `settings:omniroute.validation.${messageKey}`,
+          ),
+        ),
+      )
+      expect(await validateButton()).toBeEnabled()
+      expect(toast.success).not.toHaveBeenCalledWith(
+        "settings:omniroute.validation.success",
+      )
+    },
+  )
+
+  it("reports a failed verified-token write instead of validation success", async () => {
+    const user = userEvent.setup()
+    acceptToken()
+    await userPreferences.savePreferences({
+      omniroute: { baseUrl: BASE_URL, token: MINTED_TOKEN },
+    })
+    const { container } = render(<OmniRouteSettings />)
+    await fieldInput(container, "omniroute-credential")
+    const save = vi
+      .spyOn(userPreferences, "savePreferencesWithResult")
+      .mockResolvedValue({
+        ok: false,
+        reason: {
+          type: "storage-error",
+          error: new Error("storage unavailable"),
+        },
+      })
+    try {
+      await user.click(await validateButton())
+      await waitFor(() => expect(toast.error).toHaveBeenCalled())
+      expect(toast.success).not.toHaveBeenCalledWith(
+        "settings:omniroute.validation.success",
+      )
+    } finally {
+      save.mockRestore()
+    }
+  })
+
+  it.each([false, true])(
+    "opens the gateway token console with browser fallback=%s",
+    async (fallback) => {
+      const user = userEvent.setup()
+      await userPreferences.savePreferences({
+        omniroute: { baseUrl: BASE_URL, token: MINTED_TOKEN },
+      })
+      const tab = vi.spyOn(browserApi, "createTab")
+      if (fallback) tab.mockRejectedValue(new Error("tabs unavailable"))
+      else tab.mockResolvedValue({} as never)
+      const open = vi.spyOn(window, "open").mockReturnValue(null)
+      try {
+        render(<OmniRouteSettings />)
+        await user.click(
+          await screen.findByRole("button", {
+            name: "settings:omniroute.accessTokens.open",
+          }),
+        )
+        expect(tab).toHaveBeenCalledWith(
+          `${BASE_URL}/dashboard/api-manager`,
+          true,
+        )
+        if (fallback)
+          expect(open).toHaveBeenCalledWith(
+            `${BASE_URL}/dashboard/api-manager`,
+            "_blank",
+            "noopener,noreferrer",
+          )
+        else expect(open).not.toHaveBeenCalled()
+      } finally {
+        tab.mockRestore()
+        open.mockRestore()
+      }
+    },
+  )
 
   it("keeps a pasted access token, which needs no exchange", async () => {
     const user = userEvent.setup()

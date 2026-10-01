@@ -105,6 +105,11 @@ const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
 }
 
 describe("ManagedSiteChannels RowActions", () => {
+  it("shows no action separator for a view-only channel", () => {
+    setup({ capabilities: { canView: true } })
+    expect(screen.getByRole("menuitem", { name: labels.view })).toBeVisible()
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

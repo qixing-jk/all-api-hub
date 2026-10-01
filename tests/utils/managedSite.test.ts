@@ -4,11 +4,13 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
+  getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
   getManagedSiteContextForType,
   getManagedSiteLabel,
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
+  getManagedSiteNoChannelsToSyncMessage,
   getManagedSiteUnsupportedModelSyncMessage,
 } from "~/services/managedSites/utils/managedSite"
 import {
@@ -17,6 +19,15 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
+  it("uses OmniRoute recovery messages", () => {
+    const t = ((key: string) => key) as TFunction
+    expect(getManagedSiteConfigMissingMessage(t, "omniroute")).toBe(
+      "messages:omniroute.configMissing",
+    )
+    expect(getManagedSiteNoChannelsToSyncMessage(t, "omniroute")).toBe(
+      "messages:omniroute.noChannelsToSync",
+    )
+  })
   it.each([
     [SITE_TYPES.NEW_API, "settings:managedSite.newApi", "newapi"],
     [SITE_TYPES.VELOERA, "settings:managedSite.veloera", "veloera"],

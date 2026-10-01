@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -62,6 +63,320 @@ const connection = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+describe("OmniRoute workspace failure and editor contracts", () => {
+  const ref = {
+    siteType: SITE_TYPES.OMNIROUTE,
+    kind: MANAGED_RESOURCE_KINDS.Channel,
+    scopeKey: BASE_URL,
+    resourceId: "conn-1",
+  }
+  beforeEach(() => {
+    vi.resetAllMocks()
+    server.resetHandlers()
+    mocks.getPreferences.mockResolvedValue({ omniroute: config })
+    server.use(
+      http.get(`${BASE_URL}/api/providers/conn-1`, () =>
+        HttpResponse.json({ connection: connection({ priority: 1 }) }),
+      ),
+    )
+  })
+
+  it.each([
+    "not a url",
+    "ftp://gateway.invalid",
+    "https://user:password@gateway.invalid",
+  ])("rejects unsafe deployment URL %s", async (baseUrl) => {
+    mocks.getPreferences.mockResolvedValue({
+      omniroute: { ...config, baseUrl },
+    })
+    await expect(
+      omniRouteManagedResourceRegistration.open(),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration },
+    })
+  })
+
+  it.each([
+    [401, MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed],
+    [403, MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied],
+    [404, MANAGED_RESOURCE_FAILURE_CODES.NotFound],
+    [409, MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected],
+    [503, MANAGED_RESOURCE_FAILURE_CODES.Unavailable],
+  ])(
+    "maps read HTTP %s without disclosing the management token",
+    async (status, code) => {
+      server.use(
+        http.get(`${BASE_URL}/api/providers`, () =>
+          HttpResponse.json(
+            { error: `failed ${config.token}`, code: "PROVIDER_FAILURE" },
+            { status },
+          ),
+        ),
+      )
+      const workspace = await omniRouteManagedResourceRegistration.open()
+      await expect(workspace.list()).rejects.toMatchObject({
+        failure: { code, upstreamCode: "PROVIDER_FAILURE" },
+      })
+      const error = await workspace.list().catch((error) => error)
+      expect(error.message).not.toContain(config.token)
+    },
+  )
+
+  it("refuses cancelled workspace operations before dispatch", async () => {
+    const workspace = await omniRouteManagedResourceRegistration.open()
+    const signal = AbortSignal.abort()
+    await expect(workspace.list(undefined, { signal })).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted },
+    })
+    await expect(
+      omniRouteManagedResourceRegistration.open({ signal }),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted },
+    })
+  })
+
+  it("honors cancellation that arrives while a successful read is finishing", async () => {
+    const controller = new AbortController()
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      controller.abort()
+      return new Response(JSON.stringify({ connections: [] }))
+    })
+    try {
+      const workspace = await omniRouteManagedResourceRegistration.open()
+      await expect(
+        workspace.list(undefined, { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted },
+      })
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
+  it("reports preference storage failures separately from missing configuration", async () => {
+    mocks.getPreferences.mockRejectedValue(new Error("storage unavailable"))
+    await expect(
+      omniRouteManagedResourceRegistration.open(),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
+  it("maps operational read cancellation and network loss", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch")
+    try {
+      const workspace = await omniRouteManagedResourceRegistration.open()
+      fetch.mockRejectedValue(
+        Object.assign(new Error("cancelled"), { code: "ABORT_ERR" }),
+      )
+      await expect(workspace.list()).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted },
+      })
+      fetch.mockRejectedValue(new DOMException("Aborted", "AbortError"))
+      await expect(workspace.list()).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted },
+      })
+      fetch.mockRejectedValue(new TypeError("network lost"))
+      await expect(workspace.list()).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable },
+      })
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
+  it("validates create fields together before any write", async () => {
+    const editor = await (
+      await omniRouteManagedResourceRegistration.open()
+    ).openCreateEditor()
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [fields.Name]: "",
+        [fields.Provider]: "",
+        [fields.BaseUrl]: "invalid",
+        [fields.Prefix]: "bad/prefix",
+        [fields.Key]: { kind: "clear" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        {
+          fieldId: fields.Name,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+        {
+          fieldId: fields.Provider,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+        {
+          fieldId: fields.BaseUrl,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+        },
+        {
+          fieldId: fields.Prefix,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+        },
+        {
+          fieldId: fields.Key,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+      ]),
+    })
+    expect(
+      editor.validate({ ...editor.initialValues, [fields.Key]: undefined }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it("validates edits and refuses clearing or replacing a key with a masked value", async () => {
+    const editor = await (
+      await omniRouteManagedResourceRegistration.open()
+    ).openEditEditor(ref)
+    for (const key of [
+      { kind: "clear" },
+      { kind: "replace", value: "sk-a****z" },
+    ]) {
+      expect(
+        editor.validate({
+          ...editor.initialValues,
+          [fields.Name]: "",
+          [fields.Status]: "other",
+          [fields.BaseUrl]: "invalid",
+          [fields.Key]: key,
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          {
+            fieldId: fields.Name,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+          },
+          {
+            fieldId: fields.Status,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+          },
+          {
+            fieldId: fields.BaseUrl,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+          },
+          {
+            fieldId: fields.Key,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+          },
+        ]),
+      })
+    }
+  })
+
+  it("creates through the editor with trimmed fields and deletes the scoped resource", async () => {
+    const writes: unknown[] = []
+    server.use(
+      http.post(`${BASE_URL}/api/providers`, async ({ request }) => {
+        writes.push(await request.json())
+        return HttpResponse.json(
+          { connection: connection({ isActive: false, apiKey: undefined }) },
+          { status: 201 },
+        )
+      }),
+      http.delete(
+        `${BASE_URL}/api/providers/conn-1`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    const workspace = await omniRouteManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const result = await editor.submit({
+      ...editor.initialValues,
+      [fields.Name]: " Created ",
+      [fields.Key]: { kind: "replace", value: " sk-source " },
+    })
+    expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
+    expect(writes).toEqual([
+      { name: "Created", provider: "openai", apiKey: "sk-source" },
+    ])
+    expect((await workspace.delete(ref)).outcome).toBe(
+      MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    )
+  })
+
+  it("updates an override, clears the default model and replaces a credential explicitly", async () => {
+    let patch: unknown
+    server.use(
+      http.patch(`${BASE_URL}/api/providers/conn-1`, async ({ request }) => {
+        patch = await request.json()
+        return HttpResponse.json({ connection: connection() })
+      }),
+    )
+    const editor = await (
+      await omniRouteManagedResourceRegistration.open()
+    ).openEditEditor(ref)
+    await editor.submit({
+      ...editor.initialValues,
+      [fields.BaseUrl]: "https://new.invalid/v1",
+      [fields.DefaultModel]: "",
+      [fields.Key]: { kind: "replace", value: " sk-new " },
+    })
+    expect(patch).toEqual({
+      providerSpecificData: { baseUrl: "https://new.invalid/v1" },
+      defaultModel: null,
+      apiKey: "sk-new",
+    })
+  })
+
+  it("loads provider choices and reads secrets only for their declared fields", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/models`, () =>
+        HttpResponse.json({ models: [{ provider: "custom-provider" }] }),
+      ),
+      http.get(`${BASE_URL}/api/providers/client`, () =>
+        HttpResponse.json({
+          connections: [connection({ apiKey: "sk-readable" })],
+        }),
+      ),
+    )
+    const workspace = await omniRouteManagedResourceRegistration.open()
+    const create = await workspace.openCreateEditor()
+    expect(
+      await create.loadOptions!(fields.Provider, create.initialValues),
+    ).toContainEqual({
+      value: "custom-provider",
+      displayLabel: "custom-provider",
+    })
+    await expect(
+      create.loadOptions!(fields.Name, create.initialValues),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    const edit = await workspace.openEditEditor(ref)
+    await expect(edit.loadSecret!(fields.Key)).resolves.toBe("sk-readable")
+    await expect(edit.loadSecret!(fields.Name)).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    await expect(
+      workspace.openEditEditor({ ...ref, resourceId: "" }),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+  })
+
+  it("deletes even when detail lookup is unavailable", async () => {
+    server.use(
+      http.get(
+        `${BASE_URL}/api/providers/conn-1`,
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+      http.delete(
+        `${BASE_URL}/api/providers/conn-1`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    expect(
+      (await (await omniRouteManagedResourceRegistration.open()).delete(ref))
+        .outcome,
+    ).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
+  })
+})
+
 describe("OmniRoute native managed resource", () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -90,6 +405,24 @@ describe("OmniRoute native managed resource", () => {
         MANAGED_RESOURCE_KINDS.Channel,
       ),
     ).toBe(omniRouteManagedResourceRegistration)
+  })
+
+  it("provides translated guidance for every OmniRoute editor help field", () => {
+    const t = ((key: string) => key) as TFunction
+    for (const mode of [
+      MANAGED_RESOURCE_EDITOR_MODES.Create,
+      MANAGED_RESOURCE_EDITOR_MODES.Edit,
+    ]) {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.OMNIROUTE,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )!
+      for (const field of policy.fields) {
+        if (field.resolveHelp)
+          expect(field.resolveHelp(t)).toMatch(/^managedSiteChannels:/)
+      }
+    }
   })
 
   it("projects list facts without reading or exposing a credential", async () => {
@@ -805,6 +1138,10 @@ describe("OmniRoute native managed resource", () => {
   it("touches no provider node when the channel has none", async () => {
     const deletedNodes: string[] = []
     server.use(
+      http.delete(
+        `${BASE_URL}/api/providers/conn-1`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
       http.delete(`${BASE_URL}/api/provider-nodes/:id`, ({ params }) => {
         deletedNodes.push(String(params.id))
         return new HttpResponse(null, { status: 204 })

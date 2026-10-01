@@ -88,6 +88,127 @@ describe("OmniRoute migration capability", () => {
     )
   })
 
+  it("validates selection scope and blocks foreign selections without reading them", async () => {
+    const selection = {
+      selectionId: "conn-1",
+      displayName: "Primary",
+      ref: ref("conn-1"),
+    }
+    const foreign = {
+      ...selection,
+      ref: { ...selection.ref, scopeKey: "https://foreign.invalid" },
+    }
+    const context =
+      await omniRouteManagedSiteMigrationCapability.source!
+        .createSelectionValidationContext!()
+    expect(context.isValid(selection)).toBe(true)
+    expect(context.isValid(foreign)).toBe(false)
+    await expect(
+      omniRouteManagedSiteMigrationCapability.source!.prepare(foreign),
+    ).resolves.toMatchObject({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    await expect(
+      omniRouteManagedSiteMigrationCapability.source!.resolveCredential(
+        foreign,
+      ),
+    ).resolves.toMatchObject({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("propagates cancellation rather than reporting a blocked credential", async () => {
+    const selection = {
+      selectionId: "conn-1",
+      displayName: "Primary",
+      ref: ref("conn-1"),
+    }
+    const options = { signal: AbortSignal.abort() }
+    await expect(
+      omniRouteManagedSiteMigrationCapability.source!.prepare(
+        selection,
+        options,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    await expect(
+      omniRouteManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+        options,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    await expect(
+      omniRouteManagedSiteMigrationCapability.target!.create(
+        command(newApiSource(), "openai"),
+        options,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
+
+  it("normalizes a transport cancellation during the source read", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new DOMException("Aborted", "AbortError"))
+    try {
+      await expect(
+        omniRouteManagedSiteMigrationCapability.source!.prepare({
+          selectionId: "conn-1",
+          displayName: "Primary",
+          ref: ref("conn-1"),
+        }),
+      ).rejects.toMatchObject({ name: "AbortError" })
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
+  it.each([
+    undefined,
+    { baseUrl: "ftp://gateway.invalid", token: config.token },
+  ])(
+    "reports an unavailable migration target for bad configuration %j",
+    async (omniroute) => {
+      mocks.getPreferences.mockResolvedValue({ omniroute })
+      await expect(
+        omniRouteManagedSiteMigrationCapability.target!.create(
+          command(newApiSource(), "openai"),
+        ),
+      ).resolves.toEqual({
+        status: "failed",
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
+      })
+    },
+  )
+
+  it("reports unexpected preference failures separately", async () => {
+    mocks.getPreferences.mockRejectedValue(new Error("storage unavailable"))
+    await expect(
+      omniRouteManagedSiteMigrationCapability.target!.create(
+        command(newApiSource(), "openai"),
+      ),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode: MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
+    })
+  })
+
+  it("rejects commands for another target before dispatch", async () => {
+    await expect(
+      omniRouteManagedSiteMigrationCapability.target!.create({
+        ...command(newApiSource(), "openai"),
+        targetSiteType: SITE_TYPES.NEW_API,
+      }),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode:
+        MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+    })
+  })
+
   it("prepares a built-in provider connection as a migration source", async () => {
     server.use(
       http.get(`${BASE_URL}/api/providers/conn-1`, () =>

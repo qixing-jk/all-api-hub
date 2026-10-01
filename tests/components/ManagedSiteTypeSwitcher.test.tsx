@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -75,6 +76,26 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("ManagedSiteTypeSwitcher", () => {
+  it("shows the OmniRoute brand for the selected configured gateway", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.OMNIROUTE,
+        preferences: {
+          ...createPreferences(SITE_TYPES.OMNIROUTE),
+          omniroute: { baseUrl: "https://gateway.invalid", token: "oma_test" },
+        },
+      }),
+    )
+    render(
+      <>
+        <ManagedSiteTypeSwitcher configuredOnly />
+        <ManagedSiteIcon siteType={SITE_TYPES.OMNIROUTE} />
+      </>,
+    )
+    expect(
+      await screen.findByRole("img", { name: "OmniRoute logo" }),
+    ).toBeVisible()
+  })
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
     showUpdateToastMock.mockReset()

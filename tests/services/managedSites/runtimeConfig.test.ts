@@ -31,6 +31,28 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 
 describe("managed-site runtime config resolver", () => {
   it.each([
+    { baseUrl: "", token: "" },
+    { baseUrl: "https://gateway.invalid", token: "" },
+    { baseUrl: "", token: "oma_test" },
+  ])(
+    "distinguishes partial OmniRoute input from usable configuration %j",
+    (omniroute) => {
+      const preferences = buildUserPreferences({ omniroute })
+      expect(
+        hasManagedSiteRuntimeConfigInputForType(
+          preferences,
+          SITE_TYPES.OMNIROUTE,
+        ),
+      ).toBe(Boolean(omniroute.baseUrl || omniroute.token))
+      expect(
+        resolveManagedSiteRuntimeConfigForType(
+          preferences,
+          SITE_TYPES.OMNIROUTE,
+        ),
+      ).toBeNull()
+    },
+  )
+  it.each([
     [{ baseUrl: "", adminToken: "" }, false],
     [{ baseUrl: "http://localhost:8317", adminToken: "" }, true],
     [{ baseUrl: "", adminToken: "saved-key" }, true],

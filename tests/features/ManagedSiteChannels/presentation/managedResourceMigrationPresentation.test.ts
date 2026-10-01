@@ -441,6 +441,9 @@ describe("managedResourceMigrationPresentation", () => {
   it.each([
     [SITE_TYPES.SUB2API, "openai", "OpenAI"],
     [SITE_TYPES.SUB2API, "anthropic", "Anthropic"],
+    [SITE_TYPES.OMNIROUTE, " openai ", "openai"],
+    [SITE_TYPES.OMNIROUTE, "", "Unsupported type"],
+    [SITE_TYPES.OMNIROUTE, 14, "Unsupported type"],
     [SITE_TYPES.SUB2API, "gemini", "Gemini"],
     [SITE_TYPES.SUB2API, "grok", "Grok"],
     [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, "DeepSeek"],

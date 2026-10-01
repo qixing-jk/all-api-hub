@@ -96,10 +96,13 @@ export function toOmniRouteDisclosureError(
 const toUnreachable = (
   error: unknown,
   input: OmniRouteCredentialInput,
+  extraSecrets: readonly string[] = [],
 ): OmniRouteCredentialValidation => ({
   status: "unreachable",
-  message: toOmniRouteDisclosureError(error, { token: "" }, [input.credential])
-    .message,
+  message: toOmniRouteDisclosureError(error, { token: "" }, [
+    input.credential,
+    ...extraSecrets,
+  ]).message,
 })
 
 /**
@@ -144,13 +147,15 @@ export async function validateOmniRouteCredential(
       if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.DefaultPasswordRejected) {
         return {
           status: "default-password-rejected",
-          message: readOmniRouteFailureMessage(error),
+          message: toOmniRouteDisclosureError(error, { token: credential })
+            .message,
         }
       }
       if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential) {
         return {
           status: "invalid-credential",
-          message: readOmniRouteFailureMessage(error),
+          message: toOmniRouteDisclosureError(error, { token: credential })
+            .message,
         }
       }
       return toUnreachable(error, { ...input, credential })
@@ -182,16 +187,18 @@ export async function validateOmniRouteCredential(
         status: "insufficient-scope",
         have: shortfall?.have ?? "",
         need: shortfall?.need ?? OMNIROUTE_REQUIRED_SCOPE,
-        message: readOmniRouteFailureMessage(error),
+        message: toOmniRouteDisclosureError(error, { token }, [credential])
+          .message,
       }
     }
     if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential) {
       return {
         status: "invalid-credential",
-        message: readOmniRouteFailureMessage(error),
+        message: toOmniRouteDisclosureError(error, { token }, [credential])
+          .message,
       }
     }
-    return toUnreachable(error, { ...input, credential })
+    return toUnreachable(error, { ...input, credential }, [token])
   }
 }
 

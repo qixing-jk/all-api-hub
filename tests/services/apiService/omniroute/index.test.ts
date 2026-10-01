@@ -13,11 +13,16 @@ import {
   hasOmniRouteAdminScope,
   mintOmniRouteAccessToken,
   OMNIROUTE_AUTH_FAILURE_REASONS,
+  readOmniRouteFailureMessage,
   readOmniRouteScopeShortfall,
 } from "~/services/apiService/omniroute"
-import { listOmniRouteModelProviderIds } from "~/services/apiService/omniroute/models"
+import {
+  listOmniRouteModelIds,
+  listOmniRouteModelProviderIds,
+} from "~/services/apiService/omniroute/models"
 import {
   createOmniRouteConnection,
+  createOmniRouteProviderNode,
   deleteOmniRouteConnection,
   getOmniRouteConnection,
   listAllOmniRouteConnections,
@@ -283,6 +288,102 @@ describe("OmniRoute transport", () => {
       "openai",
     ])
   })
+
+  it("accepts bare connection and model arrays and discards malformed entries", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json([connection(), null, { id: 7 }]),
+      ),
+      http.get(`${BASE_URL}/api/models`, () =>
+        HttpResponse.json([
+          { provider: "openai" },
+          { model: "anthropic/claude" },
+          { model: "unqualified" },
+          null,
+        ]),
+      ),
+    )
+    await expect(listOmniRouteConnections(config)).resolves.toMatchObject({
+      connections: [{ id: "conn-1" }],
+    })
+    await expect(listOmniRouteModelProviderIds(config)).resolves.toEqual([
+      "openai",
+    ])
+    await expect(listOmniRouteModelIds(config)).resolves.toEqual([
+      "anthropic/claude",
+      "unqualified",
+    ])
+  })
+
+  it("ends an inventory walk when the declared total exceeds the returned rows", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json({ connections: [], total: 5 }),
+      ),
+    )
+    await expect(listAllOmniRouteConnections(config)).resolves.toEqual([])
+  })
+
+  it.each(["create", "update"])(
+    "keeps malformed %s success responses uncertain",
+    async (operation) => {
+      server.use(
+        http.post(`${BASE_URL}/api/providers`, () =>
+          HttpResponse.json({ ok: true }),
+        ),
+        http.patch(`${BASE_URL}/api/providers/conn-1`, () =>
+          HttpResponse.json({ ok: true }),
+        ),
+      )
+      const result =
+        operation === "create"
+          ? createOmniRouteConnection(config, {
+              name: "Test",
+              provider: "openai",
+              apiKey: "sk-test",
+            })
+          : updateOmniRouteConnection(config, "conn-1", { name: "Test" })
+      await expect(result).rejects.toMatchObject({
+        confirmedNonApplication: false,
+        responseReceived: true,
+        dispatch: "dispatched",
+      })
+    },
+  )
+
+  it.each([null, "invalid", { node: {} }])(
+    "keeps invalid provider node success %j uncertain",
+    async (payload) => {
+      server.use(
+        http.post(`${BASE_URL}/api/provider-nodes`, () =>
+          HttpResponse.json(payload),
+        ),
+      )
+      await expect(
+        createOmniRouteProviderNode(config, {
+          name: "Relay",
+          prefix: "relay",
+          apiType: "chat",
+          baseUrl: BASE_URL,
+          type: "openai-compatible",
+        }),
+      ).rejects.toMatchObject({
+        confirmedNonApplication: false,
+        responseReceived: true,
+      })
+    },
+  )
+
+  it("uses the display name or id when a connection has no name", () => {
+    expect(
+      toOmniRouteSanitizedConnection(
+        connection({ name: "", displayName: "Display" }),
+      ).name,
+    ).toBe("Display")
+    expect(toOmniRouteSanitizedConnection(connection({ name: "" })).name).toBe(
+      "conn-1",
+    )
+  })
 })
 
 describe("OmniRoute authentication", () => {
@@ -417,6 +518,47 @@ describe("OmniRoute authentication", () => {
     )
 
     expect(classifyOmniRouteAuthFailure(error, "token")).toBeNull()
+  })
+
+  it("reads non-transport auth failure messages without claiming an auth classification", () => {
+    expect(readOmniRouteFailureMessage({ detail: "problem" })).toBe("problem")
+    expect(
+      classifyOmniRouteAuthFailure(new Error("offline"), "token"),
+    ).toBeNull()
+    for (const message of ["No password configured", "onboarding required"]) {
+      expect(
+        classifyOmniRouteAuthFailure(
+          new OmniRouteApiError(message, 403),
+          "password",
+        ),
+      ).toBe(OMNIROUTE_AUTH_FAILURE_REASONS.DefaultPasswordRejected)
+    }
+  })
+
+  it("passes a token lifetime and refuses an exchange without a usable token", async () => {
+    let body: unknown
+    server.use(
+      http.post(`${BASE_URL}/api/cli/connect`, async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json({ success: true })
+      }),
+    )
+    await expect(
+      mintOmniRouteAccessToken({
+        baseUrl: BASE_URL,
+        password: "panel-password",
+        name: "Test",
+        expiresInDays: 7,
+      }),
+    ).rejects.toMatchObject({
+      message: "OmniRoute did not return an access token",
+    })
+    expect(body).toEqual({
+      password: "panel-password",
+      name: "Test",
+      scope: "admin",
+      expiresInDays: 7,
+    })
   })
 })
 

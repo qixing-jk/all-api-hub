@@ -25,6 +25,27 @@ const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
 describe("userPreferences managed-site helpers", () => {
   const storage = new Storage({ area: "local" })
 
+  it("updates and resets OmniRoute without replacing other site configuration", async () => {
+    await expectSuccessfulWrite(
+      userPreferences.updateManagedSiteType(SITE_TYPES.OMNIROUTE),
+    )
+    await expectSuccessfulWrite(
+      userPreferences.updateOmniRouteConfig({
+        baseUrl: "https://gateway.invalid",
+        token: "oma_test",
+      }),
+    )
+    const before = await userPreferences.getPreferences()
+    await expect(userPreferences.getManagedSiteConfig()).resolves.toEqual({
+      siteType: SITE_TYPES.OMNIROUTE,
+      config: { baseUrl: "https://gateway.invalid", token: "oma_test" },
+    })
+    await expectSuccessfulWrite(userPreferences.resetOmniRouteConfig())
+    const after = await userPreferences.getPreferences()
+    expect(after.omniroute).toEqual(DEFAULT_PREFERENCES.omniroute)
+    expect(after.newApi).toEqual(before.newApi)
+  })
+
   beforeEach(async () => {
     vi.useFakeTimers()
     await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)

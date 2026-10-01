@@ -66,6 +66,54 @@ describe("OmniRoute credential validation", () => {
     })
   })
 
+  it.each([
+    [401, "invalid-credential"],
+    [503, "unreachable"],
+  ])(
+    "classifies token failure %s and redacts the credential",
+    async (status, expected) => {
+      const credential = "oma_live_secret"
+      server.use(
+        http.get(`${BASE_URL}/api/cli/whoami`, () =>
+          HttpResponse.json({ error: `failed ${credential}` }, { status }),
+        ),
+      )
+      const result = await validateOmniRouteCredential({
+        baseUrl: BASE_URL,
+        credential,
+      })
+      expect(result.status).toBe(expected)
+      expect(JSON.stringify(result)).not.toContain(credential)
+    },
+  )
+
+  it.each([401, 403, 503])(
+    "redacts a minted token and password from validation failure %s",
+    async (status) => {
+      const credential = "panel-password-secret"
+      const token = "oma_minted_secret"
+      server.use(
+        http.post(`${BASE_URL}/api/cli/connect`, () =>
+          HttpResponse.json({ token }),
+        ),
+        http.get(`${BASE_URL}/api/cli/whoami`, () =>
+          HttpResponse.json(
+            {
+              error: `${status === 403 ? "Access token scope 'read' is insufficient; 'admin' required." : "gateway failure"} ${credential} ${token}`,
+            },
+            { status },
+          ),
+        ),
+      )
+      const result = await validateOmniRouteCredential({
+        baseUrl: BASE_URL,
+        credential,
+      })
+      expect(JSON.stringify(result)).not.toContain(credential)
+      expect(JSON.stringify(result)).not.toContain(token)
+    },
+  )
+
   it("reports an under-scoped token without calling the exchange route", async () => {
     let exchangeCalls = 0
     server.use(
@@ -238,6 +286,11 @@ describe("OmniRoute saved config checks", () => {
     mocks.getPreferences.mockResolvedValue({
       omniroute: { baseUrl: "", token: "" },
     })
+    await expect(checkValidOmniRouteConfig()).resolves.toBe(false)
+  })
+
+  it("returns false when preferences cannot be read", async () => {
+    mocks.getPreferences.mockRejectedValue(new Error("storage unavailable"))
     await expect(checkValidOmniRouteConfig()).resolves.toBe(false)
   })
 

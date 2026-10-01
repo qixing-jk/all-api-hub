@@ -56,6 +56,31 @@ describe("OmniRoute managed-site capabilities", () => {
     )
   })
 
+  it("checks scope before reading an opaque channel credential", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers/client`, () =>
+        HttpResponse.json({
+          connections: [connection({ apiKey: "sk-readable" })],
+        }),
+      ),
+    )
+    const ref = {
+      siteType: SITE_TYPES.OMNIROUTE,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: BASE_URL,
+      resourceId: "conn-1",
+    }
+    await expect(
+      omniRouteManagedSiteCapabilities.matching.fetchSecretKey!(config, ref),
+    ).resolves.toBe("sk-readable")
+    await expect(
+      omniRouteManagedSiteCapabilities.matching.fetchSecretKey!(config, {
+        ...ref,
+        scopeKey: "https://foreign.invalid",
+      }),
+    ).rejects.toThrow()
+  })
+
   it("matches channels by their connection-level address without a credential", async () => {
     const readPaths: string[] = []
     server.use(

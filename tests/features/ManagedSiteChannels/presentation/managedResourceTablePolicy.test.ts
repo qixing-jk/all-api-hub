@@ -6,6 +6,7 @@ import { MANAGED_CHANNELS_COLUMN_IDS } from "~/features/ManagedSiteChannels/pres
 import {
   createManagedResourceColumns,
   getDefaultManagedResourceSorting,
+  getManagedResourcePresentationSemantics,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
@@ -35,6 +36,19 @@ const ID_FIELD_ID_BY_SITE_TYPE: Partial<Record<string, string>> = {
 }
 
 describe("native managed-resource table policy", () => {
+  it("labels OmniRoute failed and unsupported test states", () => {
+    const semantics = getManagedResourcePresentationSemantics(
+      SITE_TYPES.OMNIROUTE,
+    )
+    const labels =
+      semantics.fieldValuePresentations!["testStatus"]!.optionLabelResolvers!
+    expect(labels.error!(resolveLabel)).toBe(
+      "managedSiteChannels:editor.options.omnirouteTestStatus.failed",
+    )
+    expect(labels.unavailable!(resolveLabel)).toBe(
+      "managedSiteChannels:editor.options.omnirouteTestStatus.unsupported",
+    )
+  })
   it("finds native definitions to check", () => {
     expect(nativeDefinitions.length).toBeGreaterThan(0)
   })
