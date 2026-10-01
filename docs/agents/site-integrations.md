@@ -15,6 +15,18 @@ When working on a site type:
 3. Verify upstream behavior before making definitive claims when backend differences matter.
 4. If missing upstream evidence blocks a protocol decision, ask for the target deployment, fork, version, or a redacted trace. State assumptions and continue independent work; do not repeatedly request evidence already supplied.
 
+## Managed-channel display contract
+
+A native channel workspace renders two surfaces from one accepted projection: the table columns named by `tableFieldIds` and the detail dialog's rows named by `detailFieldIds`. A field in either list renders only when all three of these exist, so adding one to a list is a promise:
+
+1. **A fact.** The adapter must project a `ResourceDisplayFact` for the field id. A declared field with no fact silently never appears.
+2. **A label.** Table columns and editor field policies carry most labels. A field with no editor control — a read-only mirror, a value the gateway reports about itself — needs an entry in `getManagedResourcePresentationSemantics(siteType).detailFieldLabels`; a raw field id never becomes visible copy.
+3. **A cell.** Detail rows read cells from the union of both lists, so a field does not need a table column to be readable, and its value presentation (`fieldValuePresentations`) may target any displayed field.
+
+Upstream message text is display data only when the upstream sanitizes it for disclosure; a backend whose messages arrive unsanitized keeps them out of the projection.
+
+`tests/features/ManagedSiteChannels/` locks these rules across every registered site type; extend those cases instead of adding a parallel suite.
+
 ## Relationships
 
 - **One API (`one-api`)** is the original upstream family. One API/New API-family account types share capability construction under `src/services/apiAdapters/newApi/` and protocol transports under `src/services/apiService/newApiFamily/`.

@@ -175,6 +175,9 @@
         "help": "AxonHub updates enabled channels from the provider API at the frequency configured in AxonHub system settings.",
         "label": "Automatically sync supported models"
       },
+      "channelStatusReason": {
+        "label": "Disabled reason"
+      },
       "concurrency": {
         "help": "Maximum simultaneous requests allowed for this account.",
         "label": "Concurrency"
@@ -188,6 +191,9 @@
         "help": "Configure extra model prefixes to allow access to this channel using prefixed model names. For example, with the prefix 'deepseek', both 'deepseek/deepseek-chat' and 'deepseek-chat' can access this channel.",
         "label": "Extra model prefix",
         "placeholder": "e.g., deepseek"
+      },
+      "manualModels": {
+        "label": "Manual models"
       },
       "notes": {
         "help": "Optional notes about this upstream account.",

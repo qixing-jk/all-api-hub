@@ -74,7 +74,7 @@ const CANONICAL_NATIVE_CHANNEL_FIELD_IDS = {
 
 const defaultNativeTablePresentationPolicy: NativeTablePresentationPolicy = {
   semantics: DEFAULT_MANAGED_RESOURCE_PRESENTATION_SEMANTICS,
-  defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true }],
+  defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
   columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
 }
 
@@ -117,9 +117,7 @@ const nativeTablePresentationPolicies: Partial<
           ),
       },
     },
-    defaultSorting: [
-      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
-    ],
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
   },
   [SITE_TYPES.AXON_HUB]: {
@@ -132,10 +130,14 @@ const nativeTablePresentationPolicies: Partial<
           AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
         ),
       },
+      detailFieldLabels: {
+        // The manual model list is a read-only mirror of the model selector, so
+        // the editor offers no control and this is its only label source.
+        [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: (t) =>
+          t("managedSiteChannels:editor.fields.manualModels.label"),
+      },
     },
-    defaultSorting: [
-      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
-    ],
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
   },
   [SITE_TYPES.NEW_API]: {
@@ -148,6 +150,12 @@ const nativeTablePresentationPolicies: Partial<
             SITE_TYPES.NEW_API,
             NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
           ),
+      },
+      detailFieldLabels: {
+        // The gateway records this reason itself when it disables a channel, and
+        // its own list shows the same string in the status tooltip.
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.StatusReason]: (t) =>
+          t("managedSiteChannels:editor.fields.channelStatusReason.label"),
       },
     },
     defaultSorting: [{ id: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
@@ -166,6 +174,10 @@ const nativeTablePresentationPolicies: Partial<
             VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
           ),
       },
+      detailFieldLabels: {
+        [VELOERA_MANAGED_RESOURCE_FIELD_IDS.StatusReason]: (t) =>
+          t("managedSiteChannels:editor.fields.channelStatusReason.label"),
+      },
     },
     defaultSorting: [{ id: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
@@ -181,6 +193,10 @@ const nativeTablePresentationPolicies: Partial<
             SITE_TYPES.DONE_HUB,
             DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
           ),
+      },
+      detailFieldLabels: {
+        [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.StatusReason]: (t) =>
+          t("managedSiteChannels:editor.fields.channelStatusReason.label"),
       },
     },
     defaultSorting: [
@@ -212,9 +228,7 @@ const nativeTablePresentationPolicies: Partial<
           ),
       },
     },
-    defaultSorting: [
-      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
-    ],
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
   },
 }
@@ -406,8 +420,35 @@ const createSub2ApiColumns = ({
   ]
 }
 
+/**
+ * Resolves the label of a native column that has no canonical equivalent.
+ *
+ * The editor's field policy is the only owner of translated field vocabulary,
+ * so a table field without an entry there has no honest label at all; the
+ * column is refused instead of rendering the raw field id as its header.
+ */
+const requireFieldLabel = (
+  siteType: ManagedSiteType,
+  policy: ManagedResourceProductPolicy,
+  fieldId: string,
+) => {
+  for (const mode of [
+    MANAGED_RESOURCE_EDITOR_MODES.Edit,
+    MANAGED_RESOURCE_EDITOR_MODES.Create,
+  ]) {
+    const field = getManagedResourceFieldPolicy(
+      siteType,
+      policy.primaryKind,
+      mode,
+    )?.fields.find((candidate) => candidate.fieldId === fieldId)
+    if (field) return field.resolveLabel
+  }
+  throw new Error("missing managed resource field label")
+}
+
 const createCanonicalColumns = ({
   t,
+  siteType,
   policy,
   visibility,
 }: ColumnBuilderOptions): ManagedChannelsColumn[] => {
@@ -420,28 +461,6 @@ const createCanonicalColumns = ({
   ) => createValueColumn(visibility, id, label, fieldId, options)
   return [
     selectionColumn,
-    {
-      id: MANAGED_CHANNELS_COLUMN_IDS.Identifier,
-      label: t("managedSiteChannels:table.columns.id"),
-      renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Identifier,
-      accessor: {
-        kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifier,
-      },
-      canHide: true,
-      defaultVisible: true,
-      visible: visibility[MANAGED_CHANNELS_COLUMN_IDS.Identifier] !== false,
-      sort: {
-        accessor: {
-          kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifierSort,
-        },
-        defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Descending,
-        missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
-      },
-      size: 40,
-      extension: {
-        kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common,
-      },
-    },
     createChannelColumn(t, MANAGED_CHANNELS_COLUMN_IDS.Name, 300),
     ...(hasField(CANONICAL_NATIVE_CHANNEL_FIELD_IDS.Type)
       ? [
@@ -494,7 +513,13 @@ const createCanonicalColumns = ({
             fieldId as (typeof CANONICAL_NATIVE_CHANNEL_FIELD_IDS)[keyof typeof CANONICAL_NATIVE_CHANNEL_FIELD_IDS],
           ),
       )
-      .map((fieldId) => valueColumn(fieldId, fieldId, fieldId)),
+      .map((fieldId) =>
+        valueColumn(
+          fieldId,
+          requireFieldLabel(siteType, policy, fieldId)(t),
+          fieldId,
+        ),
+      ),
     createActionsColumn(t),
   ]
 }

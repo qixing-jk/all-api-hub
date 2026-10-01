@@ -175,6 +175,9 @@
         "help": "AxonHub はシステム設定で指定された頻度で、プロバイダー API から有効なチャネルのモデル一覧を更新します。",
         "label": "対応モデルを自動同期"
       },
+      "channelStatusReason": {
+        "label": "無効化の理由"
+      },
       "concurrency": {
         "help": "このアカウントで同時に処理できるリクエストの最大数です。",
         "label": "同時実行数"
@@ -188,6 +191,9 @@
         "help": "モデル名に追加のプレフィックスを付けて、このチャネルにアクセスできるようにします。たとえばプレフィックスを 'deepseek' にすると、'deepseek/deepseek-chat' と 'deepseek-chat' の両方でこのチャネルにアクセスできます。",
         "label": "追加モデルプレフィックス",
         "placeholder": "例: deepseek"
+      },
+      "manualModels": {
+        "label": "手動モデル"
       },
       "notes": {
         "help": "このアップストリームアカウントに関する任意のメモです。",

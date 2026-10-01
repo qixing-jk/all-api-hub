@@ -175,6 +175,9 @@
         "help": "AxonHub aktualisiert aktivierte Kanäle von der Anbieter-API mit der in den AxonHub-Systemeinstellungen konfigurierten Häufigkeit.",
         "label": "Unterstützte Modelle automatisch synchronisieren"
       },
+      "channelStatusReason": {
+        "label": "Grund der Deaktivierung"
+      },
       "concurrency": {
         "help": "Maximale Anzahl gleichzeitiger Anfragen für dieses Konto.",
         "label": "Parallelität"
@@ -188,6 +191,9 @@
         "help": "Konfigurieren Sie zusätzliche Modellpräfixe, um den Zugriff auf diesen Kanal mithilfe vorangestellter Modellnamen zu ermöglichen. Mit dem Präfix „deepseek“ können beispielsweise sowohl „deepseek/deepseek-chat“ als auch „deepseek-chat“ auf diesen Kanal zugreifen.",
         "label": "Zusätzliches Modellpräfix",
         "placeholder": "z. B. deepseek"
+      },
+      "manualModels": {
+        "label": "Manuelle Modelle"
       },
       "notes": {
         "help": "Optionale Hinweise zu diesem Upstream-Konto.",

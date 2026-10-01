@@ -96,6 +96,12 @@ export type ManagedResourcePresentationSemantics = {
       }
     >
   >
+  /**
+   * Labels for detail rows that no editor control owns — a gateway-reported
+   * status, a read-only mirror of an editable field. Declaring the label here
+   * keeps a read-only row displayable without inventing an editor field for it.
+   */
+  detailFieldLabels?: Readonly<Record<string, ManagedResourceTextResolver>>
 }
 
 export const DEFAULT_MANAGED_RESOURCE_PRESENTATION_SEMANTICS = {

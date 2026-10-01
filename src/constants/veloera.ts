@@ -104,6 +104,8 @@ export const VELOERA_MANAGED_RESOURCE_FIELD_IDS = {
   Groups: "veloera.groups",
   Priority: "veloera.priority",
   Weight: "veloera.weight",
+  /** `other_info.status_reason` the gateway writes when it disables a channel. */
+  StatusReason: "veloera.statusReason",
 } as const
 
 export const VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
@@ -129,6 +131,8 @@ export const VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
   VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups,
   VELOERA_MANAGED_RESOURCE_FIELD_IDS.Priority,
   VELOERA_MANAGED_RESOURCE_FIELD_IDS.Weight,
+  // The gateway's own reason for disabling a channel; read-only.
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.StatusReason,
 ] as const
 /** Native Veloera status codes: https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/common/constants.go */
 export const VeloeraChannelStatus = {

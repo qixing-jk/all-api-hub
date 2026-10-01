@@ -24,6 +24,7 @@ type NewApiFamilyResourceFieldIds = {
   readonly Groups: string
   readonly Priority: string
   readonly Weight: string
+  readonly StatusReason: string
 }
 
 type NativeChannelStatusCodes = {
@@ -54,6 +55,26 @@ const secretState = (
     return MANAGED_RESOURCE_SECRET_STATES.Available
   }
   return key?.trim() ? MANAGED_RESOURCE_SECRET_STATES.Masked : emptyState
+}
+
+/**
+ * Reads the reason the gateway recorded when it disabled a channel.
+ *
+ * The reason is written as `err.MaskSensitiveErrorWithStatusCode()`, so the
+ * gateway has already masked credential material before storing it, and its own
+ * channel list shows the same string in the status tooltip.
+ */
+const readStatusReason = (channel: NewApiFamilyChannelFields): string => {
+  if (!channel.other_info) return ""
+  try {
+    const parsed: unknown = JSON.parse(channel.other_info)
+    if (typeof parsed !== "object" || parsed === null) return ""
+    const reason = (parsed as { status_reason?: unknown }).status_reason
+    return typeof reason === "string" ? reason.trim() : ""
+  } catch {
+    // A gateway that writes a non-JSON blob just has no reason to show.
+    return ""
+  }
 }
 
 /** Builds display facts from the native fields shared by these provider editors. */
@@ -92,6 +113,7 @@ export function createNewApiFamilyResourceFacts(policy: {
     const { models, groups, searchValues } = getSearchData(channel)
     const rawType = String(channel.type)
     const status = statusToDisplay(channel.status, policy.statusCodes)
+    const statusReason = readStatusReason(channel)
     const emptySecretState = options.inventory
       ? policy.emptyInventorySecretState
       : MANAGED_RESOURCE_SECRET_STATES.Unavailable
@@ -151,6 +173,17 @@ export function createNewApiFamilyResourceFacts(policy: {
         kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
         value: channel.weight,
       },
+      // Only a channel the gateway disabled carries a reason, so an enabled
+      // channel has no row to show rather than an empty one.
+      ...(statusReason
+        ? [
+            {
+              fieldId: policy.fields.StatusReason,
+              kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
+              value: statusReason,
+            } satisfies ResourceDisplayFact,
+          ]
+        : []),
     ]
     return {
       ref,

@@ -175,6 +175,9 @@
         "help": "AxonHub actualiza los canales habilitados desde la API del proveedor con la frecuencia configurada en los ajustes del sistema de AxonHub.",
         "label": "Sincronizar automáticamente los modelos compatibles"
       },
+      "channelStatusReason": {
+        "label": "Motivo de desactivación"
+      },
       "concurrency": {
         "help": "Cantidad máxima de solicitudes simultáneas permitidas para esta cuenta.",
         "label": "Concurrencia"
@@ -188,6 +191,9 @@
         "help": "Configura prefijos adicionales para permitir el acceso a este canal con nombres de modelo prefijados. Por ejemplo, con el prefijo 'deepseek', tanto 'deepseek/deepseek-chat' como 'deepseek-chat' pueden acceder al canal.",
         "label": "Prefijo adicional de modelo",
         "placeholder": "p. ej., deepseek"
+      },
+      "manualModels": {
+        "label": "Modelos manuales"
       },
       "notes": {
         "help": "Notas opcionales sobre esta cuenta upstream.",

@@ -18,7 +18,6 @@ export const MANAGED_CHANNELS_CELL_KINDS = {
 
 export const MANAGED_CHANNELS_COLUMN_RENDERERS = {
   Select: "select",
-  Identifier: "identifier",
   Channel: "channel",
   Value: "value",
   Actions: "actions",
@@ -28,8 +27,6 @@ export type ManagedChannelsColumnRenderer =
   (typeof MANAGED_CHANNELS_COLUMN_RENDERERS)[keyof typeof MANAGED_CHANNELS_COLUMN_RENDERERS]
 
 export const MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS = {
-  DisplayIdentifier: "displayIdentifier",
-  DisplayIdentifierSort: "displayIdentifierSort",
   Name: "name",
   Cell: "cell",
   CellSortValue: "cellSortValue",
@@ -64,7 +61,6 @@ export const MANAGED_CHANNELS_ROUTE_QUERY_KEYS = {
 
 export const MANAGED_CHANNELS_COLUMN_IDS = {
   Select: "select",
-  Identifier: "id",
   Name: "name",
   BaseUrl: "base_url",
   Type: "type",
@@ -101,8 +97,6 @@ export type ManagedChannelsRowViewModel = {
   rowKey: string
   /** Sanitized, non-sensitive token used only to build stable test ids. */
   testToken: string
-  displayIdentifier: string
-  displayIdentifierSort: string | number
   name: string
   baseURL: string
   /** Controller-supplied, display-safe text used by the generic search filter. */
@@ -124,10 +118,6 @@ export type ManagedChannelsRowViewModel = {
 export type ManagedChannelsColumnId = string
 
 export type ManagedChannelsColumnAccessor =
-  | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifier }
-  | {
-      kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifierSort
-    }
   | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Name }
   | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell; key: string }
   | {

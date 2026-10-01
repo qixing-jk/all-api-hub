@@ -407,7 +407,10 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
   ).toBeVisible()
-  await expect(page.getByRole("columnheader", { name: "ID" })).toBeVisible()
+  // Canonical tables carry no placeholder ID column: the value was hard-coded
+  // to an empty string, so the column is gone rather than rendering "—" on
+  // every row.
+  await expect(page.getByRole("columnheader", { name: "ID" })).toHaveCount(0)
   await expect(
     page.getByRole("columnheader", { name: "Channel" }),
   ).toBeVisible()

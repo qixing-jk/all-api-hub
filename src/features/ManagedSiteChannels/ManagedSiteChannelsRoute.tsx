@@ -79,6 +79,11 @@ import type {
   ManagedChannelsPresentationState,
   ManagedSiteMigrationLabels,
 } from "./presentation/contracts"
+import {
+  buildManagedResourceDetailFields,
+  createManagedResourceDetailLabels,
+  createManagedResourceDisplayFieldIds,
+} from "./presentation/managedResourceDetailPresentation"
 import { ManagedResourceEditorBody } from "./presentation/ManagedResourceEditorBody"
 import { presentManagedResourceFailure } from "./presentation/managedResourceFailurePresentation"
 import {
@@ -351,6 +356,10 @@ function NativeManagedSiteChannels({
   )
   const presentationSemantics =
     getManagedResourcePresentationSemantics(siteType)
+  const displayFieldIds = useMemo(
+    () => createManagedResourceDisplayFieldIds(policy),
+    [policy],
+  )
   const list = useManagedResourceListController({
     registration,
     scopeKey: config?.baseUrl ?? `${siteType}:configuration-missing`,
@@ -361,7 +370,7 @@ function NativeManagedSiteChannels({
     onResourcesAccepted: (itemCount) => {
       if (itemCount > 0) recordGatewayGuidanceCompletion()
     },
-    fieldIds: policy.tableFieldIds,
+    fieldIds: displayFieldIds,
     semantics: presentationSemantics,
     analytics,
   })
@@ -876,23 +885,25 @@ function NativeManagedSiteChannels({
     onDeleteCancel: mutation.cancelDelete,
   }
 
-  const detailPolicy = getManagedResourceFieldPolicy(
-    siteType,
-    policy.primaryKind,
-    MANAGED_RESOURCE_EDITOR_MODES.Edit,
-  )
-  const detailLabels = new Map(
-    detailPolicy?.fields.map((field) => [field.fieldId, field.resolveLabel]),
-  )
   const detailRow = mutation.detail
     ? presentManagedResourceRow(mutation.detail, t, presentationSemantics)
     : null
+  const detailLabels = useMemo(
+    () =>
+      createManagedResourceDetailLabels(
+        siteType,
+        policy.primaryKind,
+        columns,
+        t,
+      ),
+    [columns, policy.primaryKind, siteType, t],
+  )
   const detailFields = detailRow
-    ? policy.detailFieldIds.flatMap((fieldId) => {
-        const value = detailRow.cells[fieldId]
-        const resolveLabel = detailLabels.get(fieldId)
-        return value && resolveLabel ? [{ label: resolveLabel(t), value }] : []
-      })
+    ? buildManagedResourceDetailFields(
+        detailRow,
+        policy.detailFieldIds,
+        detailLabels,
+      )
     : []
   const pageExperience = useManagedSiteChannelPageExperience({
     siteType,

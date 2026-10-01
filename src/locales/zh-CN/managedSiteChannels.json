@@ -175,6 +175,9 @@
         "help": "AxonHub 会按其系统设置的频率，从提供商 API 更新已启用渠道的模型列表。",
         "label": "自动同步支持的模型"
       },
+      "channelStatusReason": {
+        "label": "停用原因"
+      },
       "concurrency": {
         "help": "该账号允许同时处理的最大请求数。",
         "label": "并发数"
@@ -188,6 +191,9 @@
         "help": "配置额外的模型前缀，允许使用带前缀的模型名称访问该渠道。例如：配置前缀为 'deepseek'，则 'deepseek/deepseek-chat' 和 'deepseek-chat' 都可以访问该渠道。",
         "label": "额外模型前缀",
         "placeholder": "例如：deepseek"
+      },
+      "manualModels": {
+        "label": "手动模型"
       },
       "notes": {
         "help": "可选备注，用于记录此上游账号的用途或其他说明。",

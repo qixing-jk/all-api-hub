@@ -175,6 +175,9 @@
         "help": "AxonHub cập nhật các kênh đang bật từ API của nhà cung cấp theo tần suất được cấu hình trong phần cài đặt hệ thống AxonHub.",
         "label": "Tự động đồng bộ các mô hình được hỗ trợ"
       },
+      "channelStatusReason": {
+        "label": "Lý do vô hiệu hóa"
+      },
       "concurrency": {
         "help": "Số yêu cầu đồng thời tối đa được phép cho tài khoản này.",
         "label": "Số yêu cầu đồng thời"
@@ -188,6 +191,9 @@
         "help": "Cấu hình tiền tố mô hình bổ sung để cho phép truy cập kênh này bằng tên mô hình có tiền tố. Ví dụ: với tiền tố 'deepseek', cả 'deepseek/deepseek-chat' và 'deepseek-chat' đều có thể truy cập kênh này.",
         "label": "Tiền tố mô hình bổ sung",
         "placeholder": "Ví dụ: deepseek"
+      },
+      "manualModels": {
+        "label": "Model thủ công"
       },
       "notes": {
         "help": "Ghi chú tùy chọn về tài khoản thượng nguồn này.",

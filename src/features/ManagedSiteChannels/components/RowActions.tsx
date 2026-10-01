@@ -134,6 +134,20 @@ export default function RowActions({
             </>
           ) : (
             <>
+              {canView ? (
+                <DropdownMenuItem onClick={() => onView(rowKey)}>
+                  {labels.view}
+                </DropdownMenuItem>
+              ) : null}
+              {canView &&
+              (canEdit ||
+                canFilter ||
+                canOpenSync ||
+                canSync ||
+                showUnavailableSync ||
+                canDelete) ? (
+                <DropdownMenuSeparator />
+              ) : null}
               {canEdit ? (
                 <DropdownMenuItem
                   data-testid={testIds.edit}

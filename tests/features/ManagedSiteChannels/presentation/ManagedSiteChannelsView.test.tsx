@@ -25,13 +25,12 @@ const rows = [
   {
     rowKey: "opaque:first",
     testToken: "Example primary",
-    displayIdentifier: "101",
-    displayIdentifierSort: 101,
     name: "Example primary",
     baseURL: "https://primary.example.invalid/v1",
     searchText:
       "101 Example primary https://primary.example.invalid/v1 default",
     cells: {
+      id: { kind: "text" as const, value: "101", sortValue: 101 },
       type: { kind: "text" as const, value: "OpenAI", sortValue: "OpenAI" },
       models: { kind: "text" as const, value: "2", sortValue: 2 },
       group: {
@@ -123,14 +122,14 @@ const columns = [
   {
     id: "id" as const,
     label: "ID",
-    renderer: "identifier" as const,
-    accessor: { kind: "displayIdentifier" as const },
+    renderer: "value" as const,
+    accessor: { kind: "cell" as const, key: "id" },
     routeFilter: { kind: "exact" as const, queryKey: "channelId" as const },
     canHide: true,
     defaultVisible: true,
     visible: true,
     sort: {
-      accessor: { kind: "displayIdentifierSort" as const },
+      accessor: { kind: "cellSortValue" as const, key: "id" },
       defaultDirection: "desc" as const,
       missing: "last" as const,
     },
