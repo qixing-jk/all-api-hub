@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ensureAccountKey,
+  prepareDefaultAccountKeyCreation,
+} from "~/services/accounts/accountKeyCreation"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import { createKimiOpenPlatformKeyResources } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const {
   mockFetchKimiProjects,
@@ -10,12 +16,21 @@ const {
   mockCreateKimiKey,
   mockRenameKimiKey,
   mockDeleteKimiKey,
+  mockAccountContext,
+  mockRuntimeKeys,
 } = vi.hoisted(() => ({
   mockFetchKimiProjects: vi.fn(),
   mockFetchKimiKeys: vi.fn(),
   mockCreateKimiKey: vi.fn(),
   mockRenameKimiKey: vi.fn(),
   mockDeleteKimiKey: vi.fn(),
+  mockAccountContext: vi.fn(),
+  mockRuntimeKeys: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  createDisplayAccountApiContext: mockAccountContext,
+  fetchDisplayAccountRuntimeKeys: mockRuntimeKeys,
 }))
 
 vi.mock("~/services/apiService/kimiOpenPlatform", () => ({
@@ -43,7 +58,66 @@ describe("kimiOpenPlatformKeyResources", () => {
   const capability = createKimiOpenPlatformKeyResources(SITE_TYPES.KIMI_GLOBAL)
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+  })
+
+  it.each([SITE_TYPES.KIMI, SITE_TYPES.KIMI_GLOBAL])(
+    "creates a default %s key in the designated project and retains its one-time secret",
+    async (siteType) => {
+      const owner = buildDisplaySiteData({
+        ...openInput.account,
+        siteType,
+        baseUrl:
+          siteType === SITE_TYPES.KIMI
+            ? "https://platform.kimi.com"
+            : "https://platform.kimi.ai",
+      })
+      mockAccountContext.mockReturnValue({
+        accountKeyResources: createKimiOpenPlatformKeyResources(siteType),
+        request: { ...openInput.request, baseUrl: owner.baseUrl },
+      })
+      mockFetchKimiProjects.mockResolvedValueOnce([
+        { id: "other", name: "Other project" },
+        { id: "default", name: "Default project", is_default: true },
+      ])
+      mockCreateKimiKey.mockResolvedValueOnce({
+        key: "ak-default",
+        auth: "sk-created-secret",
+        name: DEFAULT_AUTO_PROVISION_KEY_NAME,
+        project_id: "default",
+      })
+      const plan = await prepareDefaultAccountKeyCreation(owner)
+      expect(plan.kind).toBe("ready")
+      if (plan.kind !== "ready") throw new Error("Expected default creation")
+      const result = await plan.create()
+      expect(mockCreateKimiKey).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl: owner.baseUrl }),
+        "default",
+        DEFAULT_AUTO_PROVISION_KEY_NAME,
+      )
+      expect(result.createdSecret?.secret).toBe("sk-created-secret")
+      expect(result.createdSecret?.secretAvailability).toBe(
+        "create-response-only",
+      )
+      expect(result.ref?.scopeKey).toBe("default")
+    },
+  )
+
+  it("requires foreground handling instead of losing a background-created secret", async () => {
+    const owner = buildDisplaySiteData({
+      ...openInput.account,
+      id: "kimi-background",
+    })
+    mockAccountContext.mockReturnValue({
+      accountKeyResources: capability,
+      request: openInput.request,
+    })
+    mockRuntimeKeys.mockResolvedValueOnce([])
+    await expect(ensureAccountKey(owner)).resolves.toEqual({
+      kind: "input-required",
+      reason: "one-time-secret",
+    })
+    expect(mockCreateKimiKey).not.toHaveBeenCalled()
   })
 
   it("lists scopes and keys across projects, marking masked secrets", async () => {

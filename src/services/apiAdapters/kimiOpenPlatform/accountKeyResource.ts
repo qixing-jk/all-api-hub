@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
@@ -76,7 +77,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
     siteType,
     inventorySecretAvailability:
       INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-    defaultCreation: "requires-input",
+    defaultCreation: "editor-defaults",
     openConfig: async (input): Promise<Config> => {
       await ensureKimiAuthState(input.request)
       return {
@@ -172,7 +173,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
       actions: { canUpdate: true, canDelete: true },
     }),
     createEditor: async (_config, _scope, _options, _inventory, intent) =>
-      editor(intent?.nameHint),
+      editor(intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME),
     editEditor: (_config, _scope, detail) => editor(detail.name),
     create: async (config, scope, command) => {
       const created = await createKimiKey(
