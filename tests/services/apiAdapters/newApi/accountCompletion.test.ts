@@ -354,6 +354,50 @@ describe("newApiAccountCompletion", () => {
     expect(String(completionError.cause)).not.toContain(reflectedMessage)
   })
 
+  it("asks for verification when the deployment only issues tokens after one", async () => {
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(
+      new ApiError(
+        "The deployment issues an access token only after a security check",
+        undefined,
+        "/api/user/access_tokens",
+        API_ERROR_CODES.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      ),
+    )
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "rc41 portal",
+      checkInSupported: false,
+    })
+
+    const error = await newApiAccountCompletion
+      .complete(
+        {
+          url: "https://panel.example.invalid",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "42",
+            siteType: SITE_TYPES.NEW_API,
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "dashboard-jwt",
+              expiresAt: 4_102_444_800,
+              sessionId: "session-example",
+              origin: "https://panel.example.invalid",
+            },
+          },
+          context: {},
+        },
+        helpers,
+      )
+      .catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(AutoDetectCompletionError)
+    expect(error as AutoDetectCompletionError).toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+      message:
+        "This deployment issues an access token only after a security check",
+    })
+  })
+
   it("classifies an invalid rc22 target URL without retaining parser details", async () => {
     const error = await newApiAccountCompletion
       .complete(
