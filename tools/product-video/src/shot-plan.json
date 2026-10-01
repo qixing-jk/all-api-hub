@@ -1,0 +1,123 @@
+[
+  {
+    "id": "AccountsHero",
+    "file": "01_账号聚合",
+    "start": 2.7,
+    "end": 5.3,
+    "frames": 192,
+    "motionEnd": 95,
+    "feature": "账号管理",
+    "action": "账号局部拉开至完整列表",
+    "source": "features/AccountManagement/components/AccountList"
+  },
+  {
+    "id": "CheckinPeek",
+    "file": "02_签到状态",
+    "start": 7.5,
+    "end": 8.35,
+    "frames": 87,
+    "motionEnd": 38,
+    "feature": "自动签到",
+    "action": "定时计划保持，单个账号确认今日已签到",
+    "source": "features/AutoCheckin; locales/zh-CN/autoCheckin.json"
+  },
+  {
+    "id": "CheckinBatch",
+    "file": "03_批量签到",
+    "start": 11.6,
+    "end": 15.0,
+    "frames": 240,
+    "motionEnd": 120,
+    "feature": "自动签到执行结果",
+    "action": "三个适配账号逐一确认完成，一个不支持账号保留未执行",
+    "source": "features/AutoCheckin/components; locales/zh-CN/autoCheckin.json"
+  },
+  {
+    "id": "PriceScene",
+    "file": "04_模型比价",
+    "start": 18.35,
+    "end": 20.65,
+    "frames": 174,
+    "motionEnd": 98,
+    "feature": "模型价格比较",
+    "action": "同模型报价依次显现，突出本次比较最低",
+    "source": "features/ModelList/components/PriceComparisonControls.tsx; components/ModelItem/ModelPriceQuote.tsx"
+  },
+  {
+    "id": "AccountsList",
+    "file": "05_多账号列表",
+    "start": 22.75,
+    "end": 25.0,
+    "frames": 171,
+    "motionEnd": 78,
+    "feature": "账号管理",
+    "action": "四个账号卡片收拢，统一按余额展示",
+    "source": "features/AccountManagement/components/AccountList; AccountListItem/BalanceDisplay.tsx"
+  },
+  {
+    "id": "AccountsSummary",
+    "file": "06_余额收支汇总",
+    "start": 26.9,
+    "end": 28.5,
+    "frames": 132,
+    "motionEnd": 65,
+    "feature": "账号汇总",
+    "action": "总余额、今日消费、今日收入计数落定",
+    "source": "features/AccountManagement/components/AccountList/index.tsx; locales/zh-CN/account.json"
+  },
+  {
+    "id": "AddAccountScene",
+    "file": "07_自动识别账号",
+    "start": 30.7,
+    "end": 32.35,
+    "frames": 135,
+    "motionEnd": 88,
+    "feature": "添加账号",
+    "action": "已登录演示站点的识别结果填入表单，等待确认添加",
+    "source": "features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts; AccountForm.tsx"
+  },
+  {
+    "id": "AnnouncementsScene",
+    "file": "08_网站公告",
+    "start": 35.75,
+    "end": 37.55,
+    "frames": 144,
+    "motionEnd": 90,
+    "feature": "网站公告",
+    "action": "汇集多站点公告，首条公告自然展开",
+    "source": "features/SiteAnnouncements/components/SiteAnnouncementCard.tsx"
+  },
+  {
+    "id": "UsageScene",
+    "file": "09_模型花费分析",
+    "start": 41.8,
+    "end": 44.2,
+    "frames": 180,
+    "motionEnd": 96,
+    "feature": "用量分析",
+    "action": "近七天模型花费柱图逐项增长并停留",
+    "source": "features/UsageAnalytics/UsageAnalytics.tsx; locales/zh-CN/usageAnalytics.json"
+  },
+  {
+    "id": "GatewayScene",
+    "file": "10_网关渠道管理",
+    "start": 47.8,
+    "end": 49.5,
+    "frames": 138,
+    "motionEnd": 84,
+    "feature": "网关渠道管理",
+    "action": "已配置网关的真实渠道行展开连接与路由配置",
+    "source": "features/ManagedSiteChannels; services/apiAdapters/managedResources/newApiFamilyChannelFields.ts"
+  },
+  {
+    "id": "CredentialsScene",
+    "file": "11_API凭据收束",
+    "start": 49.6,
+    "end": 51.65,
+    "frames": 159,
+    "motionEnd": 83,
+    "feature": "API 凭据与配置导出",
+    "action": "Base URL 与遮罩 Key 聚合，默认模型和 Kilo 导出入口展开",
+    "source": "features/ApiCredentialProfiles; components/dialogs/KiloCodeProfileExportDialog.tsx"
+  }
+]

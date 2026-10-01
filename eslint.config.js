@@ -183,6 +183,8 @@ const siteTypeImportOwners = [
 export default defineConfig([
   {
     ignores: [
+      // Standalone Remotion project; validated with its own npm run check.
+      "tools/product-video/**",
       "node_modules/**",
       "dist/**",
       "build/**",
