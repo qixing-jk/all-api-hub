@@ -156,103 +156,117 @@ export async function runKimiUiTest({
     site_name: siteType === "kimi" ? "Kimi" : "Kimi Global",
     site_url: siteUrl,
     site_type: siteType,
+    authType: "access_token",
     exchange_rate: 7.2,
-    auth_token: token,
     account_info: {
       id: "sandbox-kimi-user-id",
       access_token: token,
       username: "kimi-sandbox-user",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
     },
-    balance: 88.88,
-    active_balance: 88.88,
     kimiOpenPlatformAuth: {
       refreshToken,
       organizationId,
       tokenExpiresAt: Date.now() + 3600 * 1000,
     },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    },
+    created_at: Date.now(),
+    updated_at: Date.now(),
+    user_updated_at: Date.now(),
   }
 
-  await withTemporaryAccount(serviceWorker, accountFixture, async () => {
-    const page = await openExtensionPage({
-      context,
-      extensionId,
-      route: "options.html#account",
-    })
-
-    try {
-      // 2.1 账户卡片展示流
-      const cardResult = await testAccountCardFlow({
-        page,
+  await withTemporaryAccount(
+    serviceWorker,
+    accountFixture,
+    async (accountFixture) => {
+      const page = await openExtensionPage({
+        context,
         extensionId,
-        accountName: accountFixture.site_name,
-      })
-      if (!cardResult?.ok) {
-        throw new Error(
-          `Kimi 账户卡片流校验失败: [${accountFixture.site_name}] 未能正常展示`,
-        )
-      }
-
-      // 2.2 原生密钥管理页面渲染 (#keys?accountId=...)
-      console.log("  [UI 步骤 2.2] 验证原生密钥管理页面渲染 (#keys)...")
-      await page.goto(
-        `chrome-extension://${extensionId}/options.html#keys?accountId=${accountFixture.id}`,
-      )
-      await page.waitForLoadState("domcontentloaded")
-      await page.waitForTimeout(2000)
-      await dismissModals(page)
-
-      const keyPageText = await page.innerText("body")
-      const hasKeyLoadError =
-        keyPageText.includes("无法加载作用域") ||
-        keyPageText.includes("加载密钥列表失败") ||
-        keyPageText.includes("missing_kimi_organization")
-      if (hasKeyLoadError) {
-        throw new Error(
-          `密钥管理页面加载失败，检测到错误信息: ${keyPageText.slice(0, 300)}`,
-        )
-      }
-
-      const addKeyBtn = page
-        .locator(
-          '[data-testid="key-management-add-token-button"], button:has-text("添加 Key"), button:has-text("创建 Key")',
-        )
-        .first()
-      const isKeyPageReady = await addKeyBtn
-        .isVisible({ timeout: 6000 })
-        .catch(() => false)
-
-      console.log(
-        `  - 密钥管理交互入口渲染: ${isKeyPageReady ? "✅ 正常 (创建按钮可见且无错误)" : "❌ 未找到创建按钮"}`,
-      )
-      if (!isKeyPageReady) {
-        throw new Error("密钥管理入口未能在规定时间内渲染！")
-      }
-
-      // 2.3 模型目录 (#models)
-      console.log("  [UI 步骤 2.3] 验证 #models 页面数据源切换与模型渲染...")
-      const modelResult = await testModelCatalogFlow({
-        page,
-        extensionId,
-        accountName: accountFixture.site_name,
-        accountId: accountFixture.id,
+        route: "options.html#account",
       })
 
-      console.log(
-        `  - 模型目录检查: ${modelResult.ok ? `✅ 正常展示 (${modelResult.countLine})` : "❌ 模型列表为空或未渲染"}`,
-      )
-      if (!modelResult.ok) {
-        throw new Error(
-          `模型目录未能展示有效模型条目！实际渲染统计: "${modelResult.countLine}"`,
-        )
-      }
+      try {
+        // 2.1 账户卡片展示流
+        const cardResult = await testAccountCardFlow({
+          page,
+          extensionId,
+          accountName: accountFixture.site_name,
+        })
+        if (!cardResult?.ok) {
+          throw new Error(
+            `Kimi 账户卡片流校验失败: [${accountFixture.site_name}] 未能正常展示`,
+          )
+        }
 
-      console.log(
-        "  ✅ Kimi UI 端到端全套流程校验通过，沙盒临时账号已安全复原！",
-      )
-    } finally {
-      await page.close().catch(() => {})
-    }
-  })
+        // 2.2 原生密钥管理页面渲染 (#keys?accountId=...)
+        console.log("  [UI 步骤 2.2] 验证原生密钥管理页面渲染 (#keys)...")
+        await page.goto(
+          `chrome-extension://${extensionId}/options.html#keys?accountId=${accountFixture.id}`,
+        )
+        await page.waitForLoadState("domcontentloaded")
+        await page.waitForTimeout(2000)
+        await dismissModals(page)
+
+        const keyPageText = await page.innerText("body")
+        const hasKeyLoadError =
+          keyPageText.includes("无法加载作用域") ||
+          keyPageText.includes("加载密钥列表失败") ||
+          keyPageText.includes("missing_kimi_organization")
+        if (hasKeyLoadError) {
+          throw new Error(
+            `密钥管理页面加载失败，检测到错误信息: ${keyPageText.slice(0, 300)}`,
+          )
+        }
+
+        const addKeyBtn = page
+          .locator(
+            '[data-testid="key-management-add-token-button"], button:has-text("添加 Key"), button:has-text("创建 Key")',
+          )
+          .first()
+        const isKeyPageReady = await addKeyBtn
+          .isVisible({ timeout: 6000 })
+          .catch(() => false)
+
+        console.log(
+          `  - 密钥管理交互入口渲染: ${isKeyPageReady ? "✅ 正常 (创建按钮可见且无错误)" : "❌ 未找到创建按钮"}`,
+        )
+        if (!isKeyPageReady) {
+          throw new Error("密钥管理入口未能在规定时间内渲染！")
+        }
+
+        // 2.3 模型目录 (#models)
+        console.log("  [UI 步骤 2.3] 验证 #models 页面数据源切换与模型渲染...")
+        const modelResult = await testModelCatalogFlow({
+          page,
+          extensionId,
+          accountName: accountFixture.site_name,
+          accountId: accountFixture.id,
+        })
+
+        console.log(
+          `  - 模型目录检查: ${modelResult.ok ? `✅ 正常展示 (${modelResult.countLine})` : "❌ 模型列表为空或未渲染"}`,
+        )
+        if (!modelResult.ok) {
+          throw new Error(
+            `模型目录未能展示有效模型条目！实际渲染统计: "${modelResult.countLine}"`,
+          )
+        }
+
+        console.log(
+          "  ✅ Kimi UI 端到端全套流程校验通过，沙盒临时账号已安全复原！",
+        )
+      } finally {
+        await page.close().catch(() => {})
+      }
+    },
+  )
 }

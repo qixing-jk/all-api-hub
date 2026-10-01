@@ -6,7 +6,7 @@ import {
   type NativeResourceEditorOpeningState,
 } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
   createDisplayAccountApiContext,
@@ -35,10 +35,6 @@ import {
 } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
-  resolveAssociatedProfileSecret,
-} from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
 import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -2398,35 +2394,22 @@ export function useAccountKeyResourceController({
             typeof deleteWithLinkedChannelCleanup
           >[0] = null
           if (cleanup) {
-            let secret = ""
-            const resolution = await actionContext.session.runtimeKey?.resolve(
-              ref,
-              { signal: controller.signal },
-            )
-            if (resolution?.kind === "resolved") {
-              secret = resolution.secret
-            } else if (account) {
-              const associated = await resolveAssociatedProfileSecret({
-                source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
-                ref,
-              })
-              if (
-                associated.status ===
-                ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES.Resolved
-              ) {
-                secret = associated.secret
-              }
-            }
-
-            if (!account || !secret)
+            const keyBaseUrl = acceptedRowsRef.current.find(
+              (row) => refIdentity(row.ref) === refIdentity(ref),
+            )?.runtimeKey?.baseUrl
+            if (!account)
               throw new AccountKeyResourceError({
                 code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
               })
-            cleanupInput = {
-              source: { accountId: account.id, ref },
-              baseUrl: account.baseUrl,
-              key: secret,
-            }
+            cleanupInput = await buildAccountKeyResourceLinkedCleanupInput({
+              account,
+              ref,
+              runtimeKeyBaseUrl: keyBaseUrl,
+              resolveProvider: () =>
+                actionContext.session.runtimeKey?.resolve(ref, {
+                  signal: controller.signal,
+                }) ?? Promise.resolve(undefined),
+            })
           }
           await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
             await actionContext.collection.delete(ref, {

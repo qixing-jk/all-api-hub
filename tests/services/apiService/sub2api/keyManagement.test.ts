@@ -485,96 +485,121 @@ describe("apiService sub2api key management service", () => {
     expect(token.user_id).toBe("42")
   })
 
-  it("serializes concurrent refreshes for group fetches and reuses rotated auth", async () => {
-    const now = 1_772_713_600_000
-    vi.spyOn(Date, "now").mockReturnValue(now)
+  it.each([false, true])(
+    "serializes concurrent refreshes and reuses rotated auth (separate contexts=%s)",
+    async (separateContexts) => {
+      const now = 1_772_713_600_000
+      vi.spyOn(Date, "now").mockReturnValue(now)
 
-    let currentAccount = {
-      accessToken: "stored-jwt",
-      userId: "1",
-      sub2apiAuth: {
-        refreshToken: "stored-refresh",
-        tokenExpiresAt: now + 30_000,
-      },
-    }
-
-    getLatestAuthMock.mockImplementation(async () =>
-      structuredClone(currentAccount),
-    )
-    persistAuthUpdateMock.mockImplementation(async (_id, updates) => {
-      currentAccount = {
-        ...currentAccount,
-        accessToken: updates.accessToken,
-        sub2apiAuth: updates.refreshToken
-          ? {
-              ...(currentAccount.sub2apiAuth ?? {}),
-              refreshToken: updates.refreshToken,
-              ...(typeof updates.tokenExpiresAt === "number"
-                ? { tokenExpiresAt: updates.tokenExpiresAt }
-                : {}),
-            }
-          : currentAccount.sub2apiAuth,
+      let currentAccount = {
+        accessToken: "stored-jwt",
+        userId: "1",
+        sub2apiAuth: {
+          refreshToken: "stored-refresh",
+          tokenExpiresAt: now + 30_000,
+        },
       }
 
-      return { status: "persisted" }
-    })
+      getLatestAuthMock.mockImplementation(async () =>
+        structuredClone(currentAccount),
+      )
+      persistAuthUpdateMock.mockImplementation(async (_id, updates) => {
+        currentAccount = {
+          ...currentAccount,
+          accessToken: updates.accessToken,
+          sub2apiAuth: updates.refreshToken
+            ? {
+                ...(currentAccount.sub2apiAuth ?? {}),
+                refreshToken: updates.refreshToken,
+                ...(typeof updates.tokenExpiresAt === "number"
+                  ? { tokenExpiresAt: updates.tokenExpiresAt }
+                  : {}),
+              }
+            : currentAccount.sub2apiAuth,
+        }
 
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          code: 0,
-          message: "ok",
-          data: {
-            access_token: "new-jwt",
-            refresh_token: "rotated-refresh",
-            expires_in: 3600,
+        return { status: "persisted" }
+      })
+
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "new-jwt",
+              refresh_token: "rotated-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      fetchApiMock.mockImplementation(async (_request, options) => {
+        if (options?.endpoint === "/api/v1/auth/me") {
+          return {
+            code: 0,
+            message: "ok",
+            data: { id: 1, username: "example-user", balance: 1 },
+          }
+        }
+
+        if (options?.endpoint === "/api/v1/groups/available") {
+          return {
+            code: 0,
+            message: "ok",
+            data: [{ id: "1", name: "default", description: "Default plan" }],
+          }
+        }
+
+        if (options?.endpoint === "/api/v1/groups/rates") {
+          return {
+            code: 0,
+            message: "ok",
+            data: { "1": 1 },
+          }
+        }
+
+        throw new Error(`Unexpected endpoint: ${options?.endpoint}`)
+      })
+
+      let queue = Promise.resolve()
+      vi.stubGlobal("navigator", {
+        locks: {
+          request: async (
+            _name: string,
+            _options: unknown,
+            callback: () => Promise<unknown>,
+          ) => {
+            const run = queue.then(callback)
+            queue = run.then(
+              () => undefined,
+              () => undefined,
+            )
+            return run
           },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-    vi.stubGlobal("fetch", fetchMock as any)
+        },
+      })
+      vi.resetModules()
+      const otherContext = separateContexts
+        ? (await import("~/services/apiService/sub2api"))
+            .fetchSub2ApiGroupDescriptors
+        : fetchSub2ApiGroupDescriptors
+      const [firstGroups, secondGroups] = await Promise.all([
+        fetchSub2ApiGroupDescriptors(createRequest()),
+        otherContext(createRequest()),
+      ])
 
-    fetchApiMock.mockImplementation(async (_request, options) => {
-      if (options?.endpoint === "/api/v1/auth/me") {
-        return {
-          code: 0,
-          message: "ok",
-          data: { id: 1, username: "example-user", balance: 1 },
-        }
-      }
-
-      if (options?.endpoint === "/api/v1/groups/available") {
-        return {
-          code: 0,
-          message: "ok",
-          data: [{ id: "1", name: "default", description: "Default plan" }],
-        }
-      }
-
-      if (options?.endpoint === "/api/v1/groups/rates") {
-        return {
-          code: 0,
-          message: "ok",
-          data: { "1": 1 },
-        }
-      }
-
-      throw new Error(`Unexpected endpoint: ${options?.endpoint}`)
-    })
-
-    const [firstGroups, secondGroups] = await Promise.all([
-      fetchSub2ApiGroupDescriptors(createRequest()),
-      fetchSub2ApiGroupDescriptors(createRequest()),
-    ])
-
-    expect(firstGroups).toEqual([
-      expect.objectContaining({ id: 1, displayName: "default" }),
-    ])
-    expect(secondGroups).toEqual(firstGroups)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(persistAuthUpdateMock).toHaveBeenCalledTimes(1)
-  })
+      expect(firstGroups).toEqual([
+        expect.objectContaining({ id: 1, displayName: "default" }),
+      ])
+      expect(secondGroups).toEqual(firstGroups)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(persistAuthUpdateMock).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("retries key requests with refresh-token recovery and persists rotated auth", async () => {
     const now = 1_772_713_600_000
@@ -643,6 +668,10 @@ describe("apiService sub2api key management service", () => {
     expect(atIndex(tokens, 0).key).toBe("retried-key")
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "new-jwt",
+      expectedAuth: {
+        accessToken: "stored-jwt",
+        refreshToken: "stored-refresh",
+      },
       refreshToken: "rotated-refresh",
       tokenExpiresAt: now + 3600 * 1000,
       userId: "1",
@@ -699,6 +728,7 @@ describe("apiService sub2api key management service", () => {
     )
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "resynced-jwt",
+      expectedAuth: { accessToken: "old-jwt", refreshToken: undefined },
       clearRefreshCredentials: true,
       userId: "1",
       expectedOrigin: "https://sub2.example.com",

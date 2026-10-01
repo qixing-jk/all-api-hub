@@ -9,6 +9,7 @@ import {
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -242,6 +243,7 @@ const persistSub2ApiAuthUpdate = async (
   request: ApiServiceRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
   authSession: Sub2ApiAuthSession | undefined,
+  expectedRequest: ApiServiceRequest,
 ) => {
   if (!request.accountId || !authSession) {
     return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED } as const
@@ -260,6 +262,10 @@ const persistSub2ApiAuthUpdate = async (
       ...authUpdate,
       expectedOrigin: request.baseUrl,
       expectedUserId,
+      expectedAuth: {
+        accessToken: expectedRequest.auth.accessToken ?? "",
+        refreshToken: expectedRequest.auth.refreshToken,
+      },
     })
   } catch (error) {
     logger.warn("Failed to persist Sub2API auth update", {
@@ -319,6 +325,12 @@ const withSub2ApiAuthMutationLock = async <T>(
   request: ApiServiceRequest,
   runner: () => Promise<T>,
 ): Promise<T> => {
+  if (request.accountId) {
+    return withExtensionStorageWriteLock(
+      `all-api-hub:sub2api-session-auth:${request.accountId}`,
+      runner,
+    )
+  }
   const lockKey = createSub2ApiAuthMutationLockKey(request)
   const previous = sub2ApiAuthMutationLocks.get(lockKey) ?? Promise.resolve()
   let releaseCurrent!: () => void
@@ -462,6 +474,7 @@ const refreshSub2ApiRequestAuth = async <
       refreshedRequest,
       verifiedRefresh,
       latestAuthSession,
+      latestRequest,
     )
     return {
       request: refreshedRequest,
@@ -522,6 +535,7 @@ const recoverSub2ApiRequestAuth = async <
       browserBoundRequest,
       resyncedUpdate,
       latestAuthSession,
+      latestRequest,
     )
     return browserBoundRequest
   })

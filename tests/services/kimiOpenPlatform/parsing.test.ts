@@ -6,12 +6,54 @@ import {
   isMaskedKimiSecret,
   kimiAmountToQuota,
   parseKimiCreatedKey,
+  parseKimiInferenceBalance,
   parseKimiRefresh,
 } from "~/services/apiService/kimiOpenPlatform/parsing"
 import {
   KIMI_OPEN_PLATFORM_DEPLOYMENTS,
   resolveKimiOpenPlatformDeployment,
 } from "~/services/kimiOpenPlatform/deployments"
+
+describe("inference balance envelope", () => {
+  it("reads the documented API-key balance independently of console sessions", () => {
+    expect(
+      parseKimiInferenceBalance({
+        code: 0,
+        status: true,
+        scode: "0x0",
+        data: {
+          available_balance: -1.5,
+          cash_balance: -1.5,
+          voucher_balance: 0,
+        },
+      }),
+    ).toBe(-1.5)
+  })
+  it.each([false, undefined, "true"])(
+    "rejects unsuccessful or missing request status %s",
+    (status) => {
+      expect(() =>
+        parseKimiInferenceBalance({
+          code: 0,
+          status,
+          data: { available_balance: 100 },
+        }),
+      ).toThrow("invalid_kimi_balance")
+    },
+  )
+  it.each([NaN, Infinity])(
+    "rejects nonfinite balances %s",
+    (available_balance) => {
+      expect(() =>
+        parseKimiInferenceBalance({
+          code: 0,
+          status: true,
+          data: { available_balance },
+        }),
+      ).toThrow("invalid_kimi_balance")
+    },
+  )
+})
 
 describe("kimi open platform deployments", () => {
   it("keeps the two consoles on one family and separate origins", () => {

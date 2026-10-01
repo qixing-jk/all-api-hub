@@ -13,7 +13,6 @@ async function readProbeData(response, endpoint) {
  */
 export async function runKimiProbe({
   token,
-  refreshToken = "",
   baseUrl = "https://platform.kimi.ai",
 }) {
   if (!token) {
@@ -24,7 +23,6 @@ export async function runKimiProbe({
       balanceOk: false,
       projectsOk: false,
       keyCrudOk: false,
-      tokenRefreshOk: false,
       skipped: true,
     }
   }
@@ -162,57 +160,25 @@ export async function runKimiProbe({
     }
   }
 
-  // 5. 可选：刷新令牌探测 (Token Refresh)
-  let tokenRefreshOk = false
-  if (refreshToken) {
-    console.log(
-      "  [可选 5/5] Refresh Token 轮换探针 (GET /api?endpoint=refreshToken)...",
-    )
-    const refreshRes = await fetch(
-      `${normalizedBase}/api?endpoint=refreshToken`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Msh-Authorization": refreshToken,
-        },
-      },
-    )
-    if (refreshRes.ok) {
-      const refreshed = await readProbeData(refreshRes, "refreshToken")
-      tokenRefreshOk = Boolean(
-        refreshed?.access_token && refreshed?.refresh_token,
-      )
-      console.log(
-        `  - Refresh Token 换票验证: ${tokenRefreshOk ? "✅ 换票成功" : "❌ 换票失败"}`,
-      )
-    }
-  }
+  // Connectivity probes must not rotate browser-owned refresh credentials.
 
   return {
-    ok: Boolean(
-      userData.uid &&
-        balanceOk &&
-        projects.length > 0 &&
-        keyCrudOk &&
-        (!refreshToken || tokenRefreshOk),
-    ),
+    ok: Boolean(userData.uid && balanceOk && projects.length > 0 && keyCrudOk),
     userInfoOk: Boolean(userData.uid),
     balanceOk,
     projectsOk: projects.length > 0,
     keyCrudOk,
-    tokenRefreshOk,
   }
 }
 
-// 允许单独作为 CLI 运行: node scripts/suites/kimi/probe.mjs [token] [refreshToken] [baseUrl]
+// Legacy positional refreshToken is ignored; baseUrl stays in position 4 for compatibility.
+// node scripts/suites/kimi/probe.mjs [token] [ignoredRefreshToken] [baseUrl]
 if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
   const token = process.argv[2] || process.env.KIMI_ACCESS_TOKEN || ""
-  const refreshToken = process.argv[3] || process.env.KIMI_REFRESH_TOKEN || ""
   const baseUrl =
     process.argv[4] || process.env.KIMI_BASE_URL || "https://platform.kimi.ai"
 
-  runKimiProbe({ token, refreshToken, baseUrl })
+  runKimiProbe({ token, baseUrl })
     .then((res) => {
       if (res.skipped) {
         console.log("ℹ️ 探针已跳过。如需探测请提供 Token。")

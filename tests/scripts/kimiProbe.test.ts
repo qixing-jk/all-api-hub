@@ -8,6 +8,26 @@ afterEach(() => {
 })
 
 describe("Kimi protocol probe", () => {
+  it("does not rotate a browser-owned refresh token just to check connectivity", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {})
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ code: 0, data: [] }),
+    }))
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ code: 0, data: { uid: "user" } }) as never,
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    await runKimiProbe({ token: "session", refreshToken: "browser-owned" })
+    expect(
+      fetchMock.mock.calls.some((args) =>
+        String(args[0]).includes("refreshToken"),
+      ),
+    ).toBe(false)
+  })
   it.each([false, true])(
     "does not claim cleanup when deletion fails (HTTP succeeds=%s)",
     async (ok) => {

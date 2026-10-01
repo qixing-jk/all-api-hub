@@ -114,12 +114,7 @@ class AccountRefresh {
           })
         : createMissingAccountRefreshResult(account.site_type)
 
-      const updateData: Partial<
-        Omit<
-          SiteAccount,
-          "id" | "created_at" | "updated_at" | "user_updated_at"
-        >
-      > = {
+      const updateData: DeepPartial<SiteAccount> = {
         health: {
           status: result.healthStatus.status,
           reason: result.healthStatus.message,
@@ -145,7 +140,6 @@ class AccountRefresh {
 
         refreshedCheckIn = result.data.checkIn
         updateData.account_info = {
-          ...account.account_info,
           quota: manualQuota ?? result.data.quota,
           today_prompt_tokens: result.data.today_prompt_tokens,
           today_completion_tokens: result.data.today_completion_tokens,
@@ -162,7 +156,7 @@ class AccountRefresh {
         const authUpdate = result.authUpdate
         if (authUpdate) {
           updateData.account_info = {
-            ...(updateData.account_info || account.account_info),
+            ...updateData.account_info,
             ...(typeof authUpdate.accessToken === "string" &&
             authUpdate.accessToken.trim()
               ? { access_token: authUpdate.accessToken.trim() }
@@ -212,6 +206,7 @@ class AccountRefresh {
         id,
         updateData,
         refreshedCheckIn,
+        account,
       )
       const updatedAccount = didPersist
         ? await accountQueries.getAccountById(id)

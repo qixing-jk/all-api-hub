@@ -7,7 +7,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { resolveAccountExternalApiBaseUrl } from "~/services/accounts/utils/credentialExport"
+import { resolveAccountRuntimeKeyExternalApiBaseUrl } from "~/services/accounts/utils/credentialExport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
@@ -239,7 +239,10 @@ export function useRuntimeKeyIntegrationActions({
       OpenInCherryStudio({
         providerId: account.id,
         providerName: account.name,
-        baseUrl: resolveAccountExternalApiBaseUrl(account),
+        baseUrl: resolveAccountRuntimeKeyExternalApiBaseUrl(
+          account,
+          resolvedKey.baseUrl,
+        ),
         apiKey: resolvedKey.secret,
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -280,7 +283,10 @@ export function useRuntimeKeyIntegrationActions({
           fallbackAccountName: runtimeKey.accountName,
           tokenName: runtimeKey.label,
         }),
-        baseUrl: resolveAccountExternalApiBaseUrl(account),
+        baseUrl: resolveAccountRuntimeKeyExternalApiBaseUrl(
+          account,
+          resolvedKey.baseUrl,
+        ),
         apiKey: resolvedKey.secret,
       })
     } catch (error) {

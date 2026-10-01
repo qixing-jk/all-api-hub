@@ -60,7 +60,12 @@ class Sub2ApiAuthPersistence {
             !actualUserId ||
             actualOrigin !== expectedOrigin ||
             actualUserId !== expectedUserId ||
-            (update.userId !== undefined && updateUserId !== expectedUserId)
+            (update.userId !== undefined && updateUserId !== expectedUserId) ||
+            (update.expectedAuth !== undefined &&
+              (account.account_info.access_token.trim() !==
+                update.expectedAuth.accessToken.trim() ||
+                (account.sub2apiAuth?.refreshToken?.trim() ?? "") !==
+                  (update.expectedAuth.refreshToken?.trim() ?? "")))
           ) {
             return {
               result: {

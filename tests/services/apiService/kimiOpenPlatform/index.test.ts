@@ -8,6 +8,7 @@ import {
 } from "~/services/apiService/kimiOpenPlatform"
 import * as transport from "~/services/apiService/kimiOpenPlatform/transport"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiService/kimiOpenPlatform/transport", () => ({
   ensureKimiAuthState: vi.fn(),
@@ -34,6 +35,42 @@ describe("kimiOpenPlatform service index", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
+  it.each([
+    ["https://platform.kimi.com", 72, 7.2, 5_000_000],
+    ["https://platform.kimi.ai", 10, 7.2, 5_000_000],
+  ])(
+    "uses API-key-only balance on the correct deployment %s",
+    async (baseUrl, available, exchangeRate, quota) => {
+      vi.mocked(transport.readKimiAuthState).mockReturnValue(undefined)
+      vi.mocked(transport.fetchKimiInference).mockResolvedValue({
+        code: 0,
+        status: true,
+        scode: "0x0",
+        data: { available_balance: available },
+      })
+      const request = {
+        ...accountRequest(),
+        baseUrl,
+        exchangeRate,
+        checkIn: buildCheckInConfig(),
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "sk-inference-key",
+        },
+      }
+      await expect(fetchKimiAccountData(request)).resolves.toMatchObject({
+        quota,
+        today_quota_consumption: 0,
+      })
+      expect(transport.fetchKimiInference).toHaveBeenCalledWith(
+        request,
+        "/v1/users/me/balance",
+        "sk-inference-key",
+      )
+      expect(transport.fetchKimiConsole).not.toHaveBeenCalled()
+    },
+  )
 
   it("rejects a malformed gateway list instead of accepting it as empty", async () => {
     vi.mocked(transport.ensureKimiAuthState).mockResolvedValue(consoleSession)

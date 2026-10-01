@@ -8,6 +8,7 @@ import {
   reconcileAccountKeyInventory,
   type AccountKeyInventoryReconciliationResult,
 } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
 import {
   buildAccountKeyResourceRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
@@ -971,21 +972,27 @@ class AccountKeyRepairRunner {
         let cleanupInput: Parameters<typeof deleteWithLinkedChannelCleanup>[0] =
           null
         if (request.cleanupLinkedChannels) {
-          const resolution = await runAbortableTask(
+          const facts = await runAbortableTask(
             (signal) =>
-              session.runtimeKey?.resolve(resource.ref, { signal }) ??
-              Promise.resolve(undefined),
+              collection.get(resource.ref, signal ? { signal } : undefined),
             { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
           )
-          if (resolution?.kind !== "resolved")
-            throw new AccountKeyResourceError({
-              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
-            })
-          cleanupInput = {
-            source: { accountId: account.id, ref: resource.ref },
-            baseUrl: account.site_url,
-            key: resolution.secret,
-          }
+          cleanupInput = await buildAccountKeyResourceLinkedCleanupInput({
+            account: {
+              id: account.id,
+              siteType: account.site_type,
+              baseUrl: account.site_url,
+            },
+            ref: resource.ref,
+            runtimeKeyBaseUrl: facts.runtimeKey?.baseUrl,
+            resolveProvider: () =>
+              runAbortableTask(
+                (signal) =>
+                  session.runtimeKey?.resolve(resource.ref, { signal }) ??
+                  Promise.resolve(undefined),
+                { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+              ),
+          })
         }
         await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
           await runAbortableTask(

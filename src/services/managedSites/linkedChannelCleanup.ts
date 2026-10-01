@@ -35,6 +35,8 @@ const bounded = <T>(
 ) => runAbortableTask((signal) => action({ signal }), { timeoutMs: 30_000 })
 type Source = {
   accountId: string
+  /** Browser/account origin at deletion time; the gateway URL may differ. */
+  accountBaseUrl?: string
   ref?: AccountKeyResourceRef
   tokenId?: number
 }
@@ -241,7 +243,11 @@ async function sourceIsAbsent(
   const account = (await accountQueries.getAllAccounts()).find(
     (item) => item.id === task.source.accountId,
   )
-  if (!account || !matchesUrl([account.site_url], task.baseUrl)) return false
+  if (
+    !account ||
+    !matchesUrl([account.site_url], task.source.accountBaseUrl ?? task.baseUrl)
+  )
+    return false
   const { request } = createAccountApiRequestFromStoredAccount(account)
   const capability = getSiteTypeCapabilities(account.site_type).account
   if (task.source.ref) {

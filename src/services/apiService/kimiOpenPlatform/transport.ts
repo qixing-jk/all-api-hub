@@ -1,6 +1,5 @@
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
-import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { persistKimiOpenPlatformAuth } from "~/services/accounts/accountStorage/kimiAuthPersistence"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   executePreparedRequest,
@@ -10,6 +9,7 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   getKimiOpenPlatformAuthConfig,
   readJwtExpiry,
@@ -19,6 +19,7 @@ import {
   resolveKimiOpenPlatformDeployment,
   type KimiOpenPlatformDeployment,
 } from "~/services/kimiOpenPlatform/deployments"
+import type { SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -32,6 +33,8 @@ export type KimiAuthState = KimiOpenPlatformAuthConfig & {
 type KimiRequest = ApiServiceRequest & {
   kimiOpenPlatformAuth?: KimiAuthState
 }
+
+const savedSessions = new WeakMap<ApiServiceRequest, SiteAccount>()
 
 const asKimiRequest = (request: ApiServiceRequest): KimiRequest =>
   request as KimiRequest
@@ -98,18 +101,35 @@ export async function ensureKimiAuthState(
   request: ApiServiceRequest,
 ): Promise<KimiAuthState | undefined> {
   const existing = readKimiAuthState(request)
-  if (existing) return existing
   const accountId = request.accountId?.trim()
-  if (!accountId) return undefined
+  if (!accountId) return existing
   const account = await accountQueries.getAccountById(accountId)
+  if (!account) throw new Error("kimi_auth_account_missing")
+  const deployment = resolveKimiOpenPlatformDeployment(request.baseUrl)
+  const previous = savedSessions.get(request)
+  if (
+    !deployment ||
+    account.site_type !== deployment.siteType ||
+    resolveKimiOpenPlatformDeployment(account.site_url)?.siteType !==
+      deployment.siteType ||
+    (request.auth?.userId !== undefined &&
+      String(request.auth.userId) !== String(account.account_info.id)) ||
+    (previous &&
+      (previous.account_info.id !== account.account_info.id ||
+        previous.kimiOpenPlatformAuth?.organizationId !==
+          account.kimiOpenPlatformAuth?.organizationId))
+  ) {
+    throw new Error("kimi_auth_identity_mismatch")
+  }
+  savedSessions.set(request, structuredClone(account))
   const refreshToken = account?.kimiOpenPlatformAuth?.refreshToken?.trim()
   const organizationId =
     account?.kimiOpenPlatformAuth?.organizationId?.trim() || ""
-  const accessToken =
-    account?.account_info?.access_token?.trim() ||
-    request.auth?.accessToken?.trim() ||
-    ""
-  if (!account || !refreshToken || !accessToken) return undefined
+  const accessToken = account.account_info.access_token.trim()
+  if (!refreshToken || !accessToken) {
+    delete asKimiRequest(request).kimiOpenPlatformAuth
+    return undefined
+  }
   const state: KimiAuthState = {
     accessToken,
     refreshToken,
@@ -118,8 +138,12 @@ export async function ensureKimiAuthState(
       ? { tokenExpiresAt: account.kimiOpenPlatformAuth.tokenExpiresAt }
       : {}),
   }
-  asKimiRequest(request).kimiOpenPlatformAuth = state
-  return state
+  if (existing) {
+    Object.assign(existing, state)
+    if (state.tokenExpiresAt === undefined) delete existing.tokenExpiresAt
+  }
+  asKimiRequest(request).kimiOpenPlatformAuth = existing ?? state
+  return existing ?? state
 }
 
 /** Writes rotated tokens back to the saved account without touching user edit time. */
@@ -129,15 +153,15 @@ export async function persistKimiAuthState(
 ) {
   const accountId = request.accountId?.trim()
   if (!accountId) return
-  const saved = await accountMutations.updateAccount(
-    accountId,
-    {
-      account_info: { access_token: state.accessToken },
-      kimiOpenPlatformAuth: getKimiOpenPlatformAuthConfig(state),
-    },
-    { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-  )
-  if (!saved) throw new Error("kimi_auth_state_write_failed")
+  const snapshot = savedSessions.get(request)
+  if (!snapshot) throw new Error("kimi_auth_identity_mismatch")
+  const auth = getKimiOpenPlatformAuthConfig(state)
+  await persistKimiOpenPlatformAuth(snapshot, state.accessToken, auth)
+  savedSessions.set(request, {
+    ...snapshot,
+    account_info: { ...snapshot.account_info, access_token: state.accessToken },
+    kimiOpenPlatformAuth: auth,
+  })
 }
 
 /** Rotates the access and refresh tokens. Both must be present. */
@@ -164,6 +188,7 @@ async function refreshConsoleSession(
   state.refreshToken = refreshed.refreshToken
   const expiry = readJwtExpiry(refreshed.accessToken)
   if (expiry !== undefined) state.tokenExpiresAt = expiry
+  else delete state.tokenExpiresAt
   if (request.auth) request.auth.accessToken = refreshed.accessToken
   await persistKimiAuthState(request, state)
 }
@@ -225,7 +250,21 @@ async function sendKimiConsoleRequest(
     Boolean(state?.refreshToken) &&
     endpoint !== "refreshToken"
   if (!canRefresh || !state) throw httpError(firstStatus, endpoint, first.body)
-  await refreshConsoleSession(request, deployment, state)
+  const rotate = async () => {
+    const latest = await ensureKimiAuthState(request)
+    if (!latest) throw httpError(401, endpoint, first.body)
+    // Another context may have persisted a rotation while this request waited.
+    if (state.accessToken !== accessToken) return
+    await refreshConsoleSession(request, deployment, state)
+  }
+  if (request.accountId?.trim()) {
+    await withExtensionStorageWriteLock(
+      `all-api-hub:kimi-session-refresh:${deployment.siteType}:${request.accountId.trim()}`,
+      rotate,
+    )
+  } else {
+    await rotate()
+  }
   const second = await send(state.accessToken)
   return requireConsoleSuccess(second, endpoint)
 }

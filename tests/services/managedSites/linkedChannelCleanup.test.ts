@@ -161,6 +161,37 @@ beforeEach(() => {
 })
 
 describe("linked channel cleanup", () => {
+  it("reconciles a deleted source when its gateway differs from the account URL", async () => {
+    const task = await prepareLinkedChannelCleanup({
+      ...input,
+      source: {
+        accountId: "account",
+        accountBaseUrl: "https://console.example",
+        ref: {
+          accountId: "account",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "7",
+        },
+      },
+    })
+    mocks.accounts.mockResolvedValue([
+      {
+        id: "account",
+        site_url: "https://console.example",
+        site_type: SITE_TYPES.NEW_API,
+      },
+    ])
+    mocks.sourceGet.mockRejectedValue(
+      new AccountKeyResourceError({ code: "not_found" }),
+    )
+
+    await runLinkedChannelCleanup(task!)
+
+    expect(mocks.sourceGet).toHaveBeenCalled()
+    expect(await getLinkedChannelCleanupTasks()).toEqual([])
+  })
+
   it("retains pending work when source identity no longer matches its account", async () => {
     const task = await prepare()
     task!.source = {

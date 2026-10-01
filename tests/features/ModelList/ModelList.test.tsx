@@ -495,6 +495,18 @@ describe("ModelList", () => {
     },
   )
 
+  it("exposes the selected source identity for live model-catalog verification", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      selectedSourceValue: "account:live-fixture",
+    })
+    render(<ModelList />)
+    expect(screen.getByTestId(MODEL_LIST_TEST_IDS.page)).toHaveAttribute(
+      "data-model-source",
+      "account:live-fixture",
+    )
+  })
+
   it("does not show the key-management title shortcut for non-account sources", () => {
     mockUseModelListData.mockReturnValue({
       ...createModelListData(),

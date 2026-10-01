@@ -163,8 +163,15 @@ export function parseKimiAccountInfo(payload: unknown): KimiAccountInfo {
 
 /** Parses the inference balance endpoint. */
 export function parseKimiInferenceBalance(payload: unknown): number {
+  // Inference has its own documented status flag, separate from the console BFF.
+  if (!isRecord(payload) || payload.status !== true)
+    throw new Error("invalid_kimi_balance")
   const data = readEnvelopeData(payload)
-  if (!isRecord(data) || typeof data.available_balance !== "number") {
+  if (
+    !isRecord(data) ||
+    typeof data.available_balance !== "number" ||
+    !Number.isFinite(data.available_balance)
+  ) {
     throw new Error("invalid_kimi_balance")
   }
   return data.available_balance

@@ -16,6 +16,8 @@ export type Sub2ApiPersistAuthUpdate = {
   clearRefreshCredentials?: boolean
   expectedOrigin: string
   expectedUserId: AccountIdentity
+  /** Reject a network result if the account's credential pair changed in flight. */
+  expectedAuth?: { accessToken: string; refreshToken?: string }
 }
 
 export const SUB2API_AUTH_PERSISTENCE_STATUSES = {

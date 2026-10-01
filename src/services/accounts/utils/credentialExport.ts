@@ -37,13 +37,22 @@ const getCredentialCacheKey = (
  * own browser origin; an integration, managed site, or verification profile
  * needs the deployment's API origin instead.
  */
-export const resolveAccountExternalApiBaseUrl = (
+const resolveAccountExternalApiBaseUrl = (
   account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
 ): string =>
   normalizeAccountSiteProfileUrlForManagedChannel({
     siteType: account.siteType,
     url: account.baseUrl,
   })
+
+/** Prefer a key's own gateway address over the account's browser address. */
+export const resolveAccountRuntimeKeyExternalApiBaseUrl = (
+  account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
+  runtimeKeyBaseUrl?: string,
+): string =>
+  runtimeKeyBaseUrl && runtimeKeyBaseUrl !== account.baseUrl
+    ? runtimeKeyBaseUrl
+    : resolveAccountExternalApiBaseUrl(account)
 
 /** Keep runtime-key identity and source-specific secret recovery in accounts. */
 export function createAccountRuntimeKeyExportSource(
@@ -52,10 +61,10 @@ export function createAccountRuntimeKeyExportSource(
   { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
 ): CredentialExportSource {
   // The key inherits the account endpoint unless it carries its own.
-  const baseUrl =
-    runtimeKey.baseUrl === runtimeKey.account.baseUrl
-      ? resolveAccountExternalApiBaseUrl(account)
-      : runtimeKey.baseUrl
+  const baseUrl = resolveAccountRuntimeKeyExternalApiBaseUrl(
+    account,
+    runtimeKey.baseUrl,
+  )
   return {
     id: runtimeKey.id,
     providerId: account.id,

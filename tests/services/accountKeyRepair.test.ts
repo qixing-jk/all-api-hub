@@ -1222,7 +1222,12 @@ describe("accountKeyRepair", () => {
           activeDeletions--
         }
       })
-      const openCollection = vi.fn(async () => ({ delete: deleteResource }))
+      const openCollection = vi.fn(async () => ({
+        delete: deleteResource,
+        get: vi.fn(async () => ({
+          runtimeKey: { baseUrl: "https://key.example.invalid/v1" },
+        })),
+      }))
       mocks.sessionsByAccountId.set(account.id, {
         ...createSession(),
         openCollection,
@@ -1275,6 +1280,12 @@ describe("accountKeyRepair", () => {
       )
       if (cleanupLinkedChannels)
         expect(mocks.finishCleanup).toHaveBeenCalledWith({ id: "pending-task" })
+      if (cleanupLinkedChannels)
+        expect(mocks.prepareCleanup).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseUrl: "https://key.example.invalid/v1",
+          }),
+        )
       expect(deleteResource).toHaveBeenNthCalledWith(
         1,
         atIndex(resources, 0).ref,
@@ -1353,7 +1364,10 @@ describe("accountKeyRepair", () => {
                   },
                 }
               : {}),
-          openCollection: vi.fn(async () => ({ delete: deleteResource })),
+          openCollection: vi.fn(async () => ({
+            delete: deleteResource,
+            get: vi.fn(async () => ({ runtimeKey: {} })),
+          })),
         })
         mocks.getAllAccounts.mockResolvedValue([account])
         mocks.storageMap.set(

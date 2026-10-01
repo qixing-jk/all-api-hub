@@ -58,6 +58,7 @@ export type AccountSiteUrlProfile = {
   storageOrigin?: string
   /** Canonical browser/API origin used by automatic account detection. */
   autoDetectOrigin?: string
+  /** Client-facing API base URL; it may include a required path prefix. */
   managedChannelOrigin?: string
   duplicateOrigin?: string
 }

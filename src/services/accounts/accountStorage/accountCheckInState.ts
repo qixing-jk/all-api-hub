@@ -245,9 +245,45 @@ class AccountCheckInState {
     id: string,
     updates: DeepPartial<SiteAccount>,
     refreshedCheckIn?: SiteAccount["checkIn"],
+    requestSnapshot?: SiteAccount,
   ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
+        if (
+          requestSnapshot &&
+          !hasSameCheckInIdentity(account, requestSnapshot)
+        ) {
+          return { nextAccount: account, result: false, changed: false }
+        }
+        const effectiveUpdates = {
+          ...updates,
+          account_info: { ...updates.account_info },
+        }
+        if (
+          requestSnapshot &&
+          account.account_info.username !==
+            requestSnapshot.account_info.username
+        ) {
+          delete effectiveUpdates.account_info.username
+        }
+        if (
+          requestSnapshot &&
+          (account.authType !== requestSnapshot.authType ||
+            account.account_info.access_token !==
+              requestSnapshot.account_info.access_token ||
+            account.cookieAuth?.sessionCookie !==
+              requestSnapshot.cookieAuth?.sessionCookie ||
+            account.sub2apiAuth?.refreshToken !==
+              requestSnapshot.sub2apiAuth?.refreshToken ||
+            account.kimiOpenPlatformAuth?.refreshToken !==
+              requestSnapshot.kimiOpenPlatformAuth?.refreshToken)
+        ) {
+          delete effectiveUpdates.account_info.access_token
+          delete effectiveUpdates.account_info.id
+          delete effectiveUpdates.account_info.username
+          delete effectiveUpdates.sub2apiAuth
+          delete effectiveUpdates.kimiOpenPlatformAuth
+        }
         let checkIn = account.checkIn
         if (refreshedCheckIn) {
           checkIn = mergeRefreshedCheckInStatus({
@@ -276,7 +312,7 @@ class AccountCheckInState {
         return {
           nextAccount: applySiteAccountUpdates({
             account,
-            updates: { ...updates, checkIn },
+            updates: { ...effectiveUpdates, checkIn },
             now: Date.now(),
             userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
           }),

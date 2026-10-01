@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { persistKimiOpenPlatformAuth } from "~/services/accounts/accountStorage/kimiAuthPersistence"
 import {
   fetchKimiConsole,
   fetchKimiConsolePath,
@@ -15,8 +16,8 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
 }))
-vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
-  accountMutations: { updateAccount: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/kimiAuthPersistence", () => ({
+  persistKimiOpenPlatformAuth: vi.fn(),
 }))
 
 const request = {
@@ -34,8 +35,95 @@ describe("kimi console transport", () => {
     vi.resetAllMocks()
   })
 
+  it("reuses the saved rotation when concurrent requests receive 401", async () => {
+    const saved = {
+      id: "saved",
+      site_type: "kimi-global",
+      site_url: "https://platform.kimi.ai",
+      account_info: { id: "user", access_token: "expired-access" },
+      kimiOpenPlatformAuth: {
+        refreshToken: "refresh-1",
+        organizationId: "org-1",
+      },
+    }
+    vi.mocked(accountQueries.getAccountById).mockImplementation(
+      async () => structuredClone(saved) as never,
+    )
+    vi.mocked(persistKimiOpenPlatformAuth).mockImplementation(
+      async (_snapshot, accessToken, auth) => {
+        saved.account_info.access_token = accessToken
+        saved.kimiOpenPlatformAuth = auth
+      },
+    )
+    vi.mocked(requestExecution.fetchPreparedJsonResponse).mockImplementation(
+      async (_request, prepared) => {
+        if (prepared.url.includes("refreshToken"))
+          return {
+            ok: true,
+            status: 200,
+            headers: {},
+            body: {
+              code: 0,
+              data: { access_token: "next", refresh_token: "next-refresh" },
+            },
+          }
+        const headers = prepared.options.headers as Record<string, string>
+        return headers.Authorization === "Bearer next"
+          ? { ok: true, status: 200, headers: {}, body: { code: 0, data: {} } }
+          : { ok: false, status: 401, headers: {}, body: { code: 401 } }
+      },
+    )
+    await Promise.all(
+      [1, 2].map(() =>
+        fetchKimiConsole(
+          { ...structuredClone(request), accountId: "saved" },
+          "userInfo",
+        ),
+      ),
+    )
+    expect(
+      vi
+        .mocked(requestExecution.fetchPreparedJsonResponse)
+        .mock.calls.filter(([, prepared]) =>
+          prepared.url.includes("refreshToken"),
+        ),
+    ).toHaveLength(1)
+  })
+
+  it("rejects saved credentials belonging to another deployment before dispatch", async () => {
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue({
+      id: "saved",
+      site_type: "kimi",
+      site_url: "https://platform.kimi.com",
+      account_info: { id: "user", access_token: "cn-access" },
+      kimiOpenPlatformAuth: {
+        refreshToken: "cn-refresh",
+        organizationId: "cn-org",
+      },
+    } as never)
+    await expect(
+      fetchKimiConsole(
+        { ...structuredClone(request), accountId: "saved" },
+        "userInfo",
+      ),
+    ).rejects.toThrow("kimi_auth_identity_mismatch")
+    expect(requestExecution.fetchPreparedJsonResponse).not.toHaveBeenCalled()
+  })
+
   it("stops the retry when the rotated session could not be persisted", async () => {
-    vi.mocked(accountMutations.updateAccount).mockResolvedValueOnce(false)
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue({
+      id: "saved",
+      site_type: "kimi-global",
+      site_url: "https://platform.kimi.ai",
+      account_info: { id: "user", access_token: "expired-access" },
+      kimiOpenPlatformAuth: {
+        refreshToken: "refresh-1",
+        organizationId: "org-1",
+      },
+    } as never)
+    vi.mocked(persistKimiOpenPlatformAuth).mockRejectedValueOnce(
+      new Error("kimi_auth_state_write_failed"),
+    )
     vi.mocked(requestExecution.fetchPreparedJsonResponse)
       .mockResolvedValueOnce({
         ok: false,

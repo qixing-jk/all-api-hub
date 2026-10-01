@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -201,6 +202,45 @@ describe("useRuntimeKeyIntegrationActions", () => {
     })
     expect(result.current.dialogs.kelivo.input).toMatchObject({
       baseUrl: "https://api.ai-router.dev",
+    })
+  })
+
+  it("exports a key-specific gateway URL through Cherry Studio and Kelivo", async () => {
+    const kimiAccount = {
+      ...account,
+      siteType: SITE_TYPES.KIMI,
+      baseUrl: "https://platform.kimi.com",
+    } satisfies DisplaySiteData
+    const kimiKey = buildAccountKeyResourceRuntimeKey(kimiAccount, {
+      ref: {
+        accountId: kimiAccount.id,
+        siteType: SITE_TYPES.KIMI,
+        scopeKey: "project-1",
+        resourceId: "key-1",
+      },
+      label: "Kimi key",
+      secret: "",
+      baseUrl: "https://api.moonshot.cn/v1",
+    })
+    resolveSecretMock.mockResolvedValue({ ...kimiKey, secret: "sk-example" })
+    const { result } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account: kimiAccount,
+        enabled: true,
+        runtimeKey: kimiKey,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.exportActions.openCherryStudio()
+      await result.current.exportActions.openKelivo()
+    })
+
+    expect(vi.mocked(OpenInCherryStudio)).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://api.moonshot.cn/v1" }),
+    )
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: "https://api.moonshot.cn/v1",
     })
   })
 

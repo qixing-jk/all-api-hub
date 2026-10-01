@@ -1,5 +1,6 @@
 export function runKimiProbe(options: {
   token: string
+  /** Accepted for old callers; connectivity probes never rotate this credential. */
   refreshToken?: string
   baseUrl?: string
 }): Promise<{
@@ -8,6 +9,5 @@ export function runKimiProbe(options: {
   balanceOk: boolean
   projectsOk: boolean
   keyCrudOk: boolean
-  tokenRefreshOk: boolean
   skipped?: boolean
 }>

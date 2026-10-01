@@ -204,4 +204,46 @@ describe("account credential exports", () => {
       createAccountRuntimeKeyExportSource(consoleAccount, consoleKey).baseUrl,
     ).toBe("https://aihubmix.com")
   })
+
+  it("exports the OpenRouter gateway URL for an existing native key", () => {
+    const openRouterAccount = buildDisplaySiteData({
+      siteType: SITE_TYPES.OPENROUTER,
+      baseUrl: "https://openrouter.ai",
+    })
+    const key = buildAccountKeyResourceRuntimeKey(openRouterAccount, {
+      ref: {
+        accountId: openRouterAccount.id,
+        siteType: SITE_TYPES.OPENROUTER,
+        scopeKey: "default",
+        resourceId: "hash-1",
+      },
+      label: "Existing key",
+      secret: "",
+    })
+
+    expect(
+      createAccountRuntimeKeyExportSource(openRouterAccount, key).baseUrl,
+    ).toBe("https://openrouter.ai/api/v1")
+  })
+
+  it("exports the Kimi gateway URL when a native key inherits the console address", () => {
+    const kimiAccount = buildDisplaySiteData({
+      siteType: SITE_TYPES.KIMI,
+      baseUrl: "https://platform.kimi.com",
+    })
+    const key = buildAccountKeyResourceRuntimeKey(kimiAccount, {
+      ref: {
+        accountId: kimiAccount.id,
+        siteType: SITE_TYPES.KIMI,
+        scopeKey: "project-1",
+        resourceId: "key-1",
+      },
+      label: "Kimi key",
+      secret: "",
+    })
+
+    expect(createAccountRuntimeKeyExportSource(kimiAccount, key).baseUrl).toBe(
+      "https://api.moonshot.cn/v1",
+    )
+  })
 })

@@ -677,6 +677,10 @@ describe("apiService sub2api refreshAccountData", () => {
     )
     expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
       accessToken: "browser-jwt",
+      expectedAuth: {
+        accessToken: "old-jwt",
+        refreshToken: "must-not-be-submitted",
+      },
       clearRefreshCredentials: true,
       expectedOrigin: "https://sub2.example.com",
       expectedUserId: "1",
@@ -1728,6 +1732,10 @@ describe("apiService sub2api refreshAccountData", () => {
     )
     expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
       accessToken: "new-jwt",
+      expectedAuth: {
+        accessToken: "stored-jwt",
+        refreshToken: "stored-refresh",
+      },
       refreshToken: "new-refresh",
       tokenExpiresAt: now + 3600 * 1000,
       expectedOrigin: "https://sub2.example.com",

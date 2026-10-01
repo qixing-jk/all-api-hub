@@ -42,6 +42,10 @@ vi.mock("~/services/apiService/kimiOpenPlatform", () => ({
   deleteKimiKey: mockDeleteKimiKey,
 }))
 
+vi.mock("~/services/apiService/kimiOpenPlatform/transport", () => ({
+  ensureKimiAuthState: vi.fn(),
+}))
+
 const openInput = {
   account: {
     id: "kimi-acc",

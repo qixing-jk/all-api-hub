@@ -38,7 +38,7 @@ Kimi 开放平台现场端到端测试运行器 (CDP & Protocol Probe)
 
 选项:
   --token=<token>           Kimi Access Token (默认自动从调试浏览器 localStorage 提取)
-  --refresh-token=<rtoken>  Kimi Refresh Token (用于探针测试自动轮换换票)
+  --refresh-token=<rtoken>  Kimi Refresh Token (供扩展 UI 正常鉴权恢复，探针不主动换票)
   --suite=<type>            运行套件: 'all' (默认), 'probe' (纯后端协议), 'ui' (纯界面)
   --site=<cn|global>        选择站点环境 (默认: global)
   --cn                      测试国内版 (https://platform.kimi.com)
@@ -141,7 +141,6 @@ async function main() {
     if (token) {
       const probeResult = await runKimiProbe({
         token,
-        refreshToken,
         baseUrl: siteUrl,
       })
       console.log(

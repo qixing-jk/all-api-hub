@@ -573,6 +573,7 @@ export default function ModelList(props: {
     <div
       className="py-density-4 sm:py-density-6 px-4 sm:px-6"
       data-testid={MODEL_LIST_TEST_IDS.page}
+      data-model-source={selectedSourceValue}
       data-options-page-pending={
         isSourceLoading || (selectedSource && isLoading && !hasModelData)
           ? ""
