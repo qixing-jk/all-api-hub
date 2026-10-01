@@ -155,10 +155,22 @@ describe("GitHub real-site E2E matrix selection", () => {
       "octopus-managed-site",
       "axonhub-managed-site",
       "claude-code-hub-managed-site",
+      "omniroute-managed-site",
     ])
     expect(idsForResourceGroup("sub2api-account")).toEqual([
       "sub2api-account",
       "sub2api-managed-site",
+    ])
+  })
+
+  it("serializes the OmniRoute import target with its New API source account", () => {
+    const output = runMatrixWithOutput("managed-site", "omniroute-managed-site")
+
+    expect(atIndex(output, "has_parallel")).toBe("false")
+    expect(atIndex(output, "has_new_api")).toBe("true")
+    expect(output.has_sub2api).toBe("false")
+    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
+      "omniroute-managed-site",
     ])
   })
 

@@ -25,6 +25,7 @@ describe("getManagedSiteStatusSourceAccountType", () => {
     SITE_TYPES.DONE_HUB,
     SITE_TYPES.AXON_HUB,
     SITE_TYPES.CLAUDE_CODE_HUB,
+    SITE_TYPES.OMNIROUTE,
   ])("provides a New API source account for %s imports", (siteType) => {
     expect(getManagedSiteStatusSourceAccountType(siteType)).toBe(
       SITE_TYPES.NEW_API,
@@ -61,5 +62,18 @@ describe("shouldEditModelsInManagedSiteCrudScenario", () => {
     expect(shouldSeedModelsInManagedSiteCrudScenario(SITE_TYPES.SUB2API)).toBe(
       false,
     )
+  })
+
+  it("skips generic model edits for the OmniRoute connection editor", () => {
+    expect(
+      shouldEditModelsInManagedSiteCrudScenario(SITE_TYPES.OMNIROUTE),
+    ).toBe(false)
+  })
+
+  it("does not seed a create model for OmniRoute connections", () => {
+    // A connection stores one `defaultModel`; it has no per-channel model list.
+    expect(
+      shouldSeedModelsInManagedSiteCrudScenario(SITE_TYPES.OMNIROUTE),
+    ).toBe(false)
   })
 })

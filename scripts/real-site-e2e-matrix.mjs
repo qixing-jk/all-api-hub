@@ -124,6 +124,18 @@ const REAL_SITE_E2E_MATRIX = [
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
+    id: "omniroute-managed-site",
+    category: REAL_SITE_E2E_CATEGORIES.managedSite,
+    label: "Managed Site / OmniRoute Channels",
+    env_prefix: "OMNIROUTE",
+    kind: "managed-site",
+    managed_site_target: "omniroute",
+    // The token-import status scenario reads a New API account as its source, so
+    // this target shares that account with the other New API-family sites.
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
+    spec: "e2e/realSite/managedSiteChannels.spec.ts",
+  },
+  {
     id: "cli-proxy-api",
     category: REAL_SITE_E2E_CATEGORIES.managedSite,
     label: "Managed Site / CLIProxyAPI Providers",

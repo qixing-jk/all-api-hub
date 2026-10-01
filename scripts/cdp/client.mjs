@@ -5,6 +5,69 @@ import { chromium } from "@playwright/test"
 const DEFAULT_CDP_URL = "http://127.0.0.1:9222"
 
 /**
+ * Wake a specific extension's service worker and wrap the connection.
+ *
+ * Several worktrees can have their extension loaded in the same debug browser
+ * at once, so a suite that must exercise one exact build pins its id instead of
+ * relying on title-based discovery.
+ */
+export async function connectExtensionById({
+  cdpUrl = process.env.CDP_URL || DEFAULT_CDP_URL,
+  extensionId,
+} = {}) {
+  if (!extensionId) {
+    throw new Error("connectExtensionById 需要一个扩展 ID。")
+  }
+
+  let browser
+  try {
+    browser = await chromium.connectOverCDP(cdpUrl)
+  } catch (err) {
+    throw new Error(
+      `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
+    )
+  }
+
+  const contexts = browser.contexts()
+  if (contexts.length === 0) {
+    await browser.close().catch(() => {})
+    throw new Error("未找到任何浏览器 Context。")
+  }
+  const context = contexts[0]
+
+  // A dormant MV3 worker is not listed until something addresses the extension.
+  let sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
+  if (!sw) {
+    const dummy = await context.newPage()
+    await dummy
+      .goto(`chrome-extension://${extensionId}/options.html`)
+      .catch(() => {})
+    await dummy.waitForTimeout(600)
+    await dummy.close().catch(() => {})
+    sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
+  }
+
+  if (!sw) {
+    await browser.close().catch(() => {})
+    throw new Error(
+      `扩展 ${extensionId} 未挂载或 Service Worker 未激活。请确认该 ID 的扩展已加载到调试浏览器。`,
+    )
+  }
+
+  return {
+    browser,
+    context,
+    extensionId,
+    serviceWorker: sw,
+    // For a CDP connection this detaches Playwright without closing the
+    // operator's browser: `Browser.close` is only sent on the launch path.
+    async close() {
+      await browser.close().catch(() => {})
+    },
+  }
+}
+
+/**
  * Connect to running dev browser over CDP and locate the current worktree's extension.
  */
 export async function connectDevExtension({
