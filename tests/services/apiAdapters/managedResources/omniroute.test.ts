@@ -934,6 +934,9 @@ describe("OmniRoute native managed resource", () => {
       defaultModel: "",
     })
     expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Rejected)
+    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
+      throw new Error("Expected the original create rejection")
+    }
     expect(result.diagnostic?.message).toBe("name conflict")
   })
 

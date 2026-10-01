@@ -36,6 +36,9 @@ describe("OmniRoute mutation evidence", () => {
         },
       })
       expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Rejected)
+      if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
+        throw new Error("Expected a confirmed rejection")
+      }
       expect(result.diagnostic).toMatchObject({
         code,
         statusCode: 409,
@@ -57,6 +60,9 @@ describe("OmniRoute mutation evidence", () => {
       },
     })
     expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Uncertain)
+    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Uncertain) {
+      throw new Error("Expected an uncertain mutation")
+    }
     expect(result.diagnostic).not.toHaveProperty("statusCode")
   })
 })
