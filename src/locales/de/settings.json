@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "Nach einer Momentaufnahme der GitHub-Sterne sortiert.",
     "siteTypeDesc": "Wählen Sie die Plattform aus, die für die Kanalverwaltung und Modellsynchronisierung verwendet wird",
     "siteTypeLabel": "Gateway-Typ",
@@ -413,6 +414,43 @@
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
       "success": "Verbindung erfolgreich",
       "title": "Verbindung prüfen",
+      "validate": "Verbindung prüfen",
+      "validating": "Wird geprüft…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "Verwalte die Zugriffstoken im Dashboard des Gateways und widerrufe jederzeit das, welches diese Erweiterung nutzt.",
+      "missingBaseUrl": "Trage zuerst die Deployment-Adresse ein, um die Token-Seite des Gateways zu öffnen.",
+      "open": "Token-Seite öffnen",
+      "title": "Zugriffstoken des Gateways verwalten"
+    },
+    "description": "Konfiguriere die Verbindung zu deinem selbst gehosteten OmniRoute-Gateway.",
+    "fields": {
+      "baseUrlDesc": "Die Adresse, unter der du das OmniRoute-Dashboard im Browser öffnest.",
+      "baseUrlLabel": "Deployment-Adresse",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "Füge ein Zugriffstoken mit dem Scope admin aus Settings → Access Tokens des Gateways ein oder gib das Dashboard-Passwort ein: die Erweiterung tauscht es sofort gegen ein Token und speichert das Passwort nie.",
+      "credentialLabel": "Zugriffstoken oder Dashboard-Passwort",
+      "credentialPlaceholder": "oma_… oder Dashboard-Passwort",
+      "hideCredential": "Anmeldedaten verbergen",
+      "showCredential": "Anmeldedaten anzeigen"
+    },
+    "securityNote": {
+      "description": "Ein Token mit dem Scope admin entspricht allen Zugangsdaten der Upstream-Kanäle des Gateways; speichere es nur in einer vertrauenswürdigen Umgebung. Beim Tausch des Passworts legt das Gateway ein Zugriffstoken namens All API Hub an.",
+      "title": "Rechte des Tokens"
+    },
+    "title": "OmniRoute-Integrationseinstellungen",
+    "validation": {
+      "defaultPassword": "Das Gateway nutzt noch das bekannte Standardpasswort und gibt deshalb kein Token aus. Ändere das Passwort zuerst auf dem Gateway-Host.",
+      "description": "Prüft, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Site erlaubt.",
+      "failed": "Prüfung der OmniRoute-Konfiguration fehlgeschlagen: {{error}}",
+      "insufficientScope": "Der Scope des Tokens reicht nicht: vorhanden ist {{have}}, benötigt wird {{need}}. Lege unter Settings → Access Tokens des Gateways ein neues Token mit dem Scope admin an.",
+      "invalidCredential": "Die Anmeldedaten sind falsch oder abgelaufen: {{error}}",
+      "missingFields": "Alle Pflichtfelder ausfüllen",
+      "success": "Verbindung erfolgreich",
+      "title": "Verbindung prüfen",
+      "unknownScope": "unbekannt",
       "validate": "Verbindung prüfen",
       "validating": "Wird geprüft…"
     }

@@ -152,6 +152,7 @@
 | AxonHub | 开源 AI Gateway，可通过任意 SDK 调用 100+ LLM，内置故障切换、负载均衡、成本控制与全链路追踪。 | [官网](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 | Claude Code Hub | 面向团队的多供应商 AI API 代理与运营平台，统一接入 Claude、OpenAI Compatible、Codex 与 Gemini，并支持弹性调度、监控与价格管理。 | [GitHub](https://github.com/ding113/claude-code-hub) |
 | Octopus | 面向个人的 LLM API 聚合服务。 | [GitHub](https://github.com/bestruirui/octopus) |
+| [OmniRoute](./omniroute-integration.md) | 自建 AI 网关，内置大量 provider，支持作用域访问令牌与连接级上游地址覆盖。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
 | Veloera | 本项目已停止维护。 | [GitHub](https://github.com/Veloera/Veloera) |
 | DoneHub | 本项目是基于 one-hub 二次开发而来的。 | [GitHub](https://github.com/deanxv/done-hub) |
 

@@ -211,8 +211,14 @@ const fetchRecoverableCandidateSecretKey = async (
       throw error
     }
 
+    // Only a provider with an interactive verification workflow can turn a
+    // failed secret read into "complete verification and retry". For every other
+    // provider the read simply is not available, so the comparison degrades to
+    // address-and-name instead of promising a step the user cannot take.
     throw new MatchResolutionUnresolvedError(
-      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      params.managedSite.matching.secretVerification
+        ? MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED
+        : MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
     )
   }
 }

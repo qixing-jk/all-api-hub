@@ -200,6 +200,30 @@
         "label": "Notas",
         "placeholder": "Agregar notas sobre esta cuenta..."
       },
+      "omnirouteBaseUrl": {
+        "help": "Déjalo vacío para conservar el endpoint predeterminado del provider elegido; el gateway enviará las solicitudes de este canal a la dirección que escribas. Una dirección guardada no se puede borrar: escribe una nueva en lugar de quitarla."
+      },
+      "omnirouteDefaultModel": {
+        "help": "Se usa cuando una solicitud no indica modelo. El canal no guarda una lista de modelos: los modelos provienen del catálogo de providers y los alias del gateway.",
+        "label": "Modelo predeterminado"
+      },
+      "omnirouteLastError": {
+        "label": "Último error"
+      },
+      "omniroutePrefix": {
+        "help": "Si lo completas, se crea un provider node en el gateway y el canal se direcciona como prefijo/modelo; si lo dejas vacío se usa el provider integrado. Un prefijo exige una dirección.",
+        "label": "Prefijo de modelo propio"
+      },
+      "omniroutePriority": {
+        "help": "El gateway elige los canales en orden ascendente, así que un número menor se usa primero. El gateway coloca una conexión recién creada al final.",
+        "label": "Prioridad"
+      },
+      "omnirouteProvider": {
+        "help": "El identificador del provider integrado del gateway. Un relay propio puede mantener openai y sobrescribir la dirección. Usa el botón de carga para leer los providers que este gateway realmente sirve."
+      },
+      "omnirouteTestStatus": {
+        "label": "Prueba de conexión"
+      },
       "orderingWeight": {
         "help": "Los valores más altos tienen preferencia cuando AxonHub selecciona un canal; los valores iguales tienen la misma prioridad.",
         "label": "Peso de ordenación"
@@ -267,6 +291,12 @@
         "unsupported": "Tipo de canal no compatible",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "Falló",
+        "ok": "Correcto",
+        "pending": "Sin probar",
+        "unsupported": "No comprobable"
       },
       "status": {
         "archived": "Archivado",

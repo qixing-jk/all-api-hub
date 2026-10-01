@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "GitHub スター数のスナップショット順。",
     "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
     "siteTypeLabel": "ゲートウェイ種別",
@@ -415,6 +416,43 @@
       "title": "接続を確認",
       "validate": "接続を確認",
       "validating": "確認中…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "ゲートウェイのダッシュボードでアクセストークンを管理し、この拡張機能が使うトークンはいつでも失効できます。",
+      "missingBaseUrl": "先にデプロイ先アドレスを入力すると、ゲートウェイのアクセストークン画面を開けます。",
+      "open": "アクセストークン画面を開く",
+      "title": "ゲートウェイのアクセストークン管理"
+    },
+    "description": "セルフホストの OmniRoute ゲートウェイへの接続情報を設定します。",
+    "fields": {
+      "baseUrlDesc": "ブラウザで OmniRoute のダッシュボードを開くときのアドレスを入力します。",
+      "baseUrlLabel": "デプロイ先アドレス",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "ゲートウェイの Settings → Access Tokens で作成した admin スコープのアクセストークンを貼り付けるか、ダッシュボードのパスワードを入力します。パスワードはその場でトークンと交換され、保存されません。",
+      "credentialLabel": "アクセストークンまたはパスワード",
+      "credentialPlaceholder": "oma_… またはダッシュボードのパスワード",
+      "hideCredential": "認証情報を隠す",
+      "showCredential": "認証情報を表示"
+    },
+    "securityNote": {
+      "description": "admin スコープのトークンはゲートウェイ上のすべての上流チャネルの資格情報と同等です。信頼できる環境でのみ保存してください。パスワードを交換すると、ゲートウェイに All API Hub という名前のアクセストークンが作成されます。",
+      "title": "トークンの権限"
+    },
+    "title": "OmniRoute 統合設定",
+    "validation": {
+      "defaultPassword": "ゲートウェイが既知の初期パスワードのままのため、トークンを発行できません。先にゲートウェイのホスト側でパスワードを変更してください。",
+      "description": "現在の設定でサイトに接続して管理できるかを確認します。",
+      "failed": "OmniRoute の設定検証に失敗しました：{{error}}",
+      "insufficientScope": "トークンのスコープが不足しています：現在は {{have}}、必要は {{need}} です。ゲートウェイの Settings → Access Tokens で admin スコープのトークンを作り直してください。",
+      "invalidCredential": "認証情報が正しくないか失効しています：{{error}}",
+      "missingFields": "必須項目をすべて入力してください",
+      "success": "接続に成功しました",
+      "title": "接続を検証",
+      "unknownScope": "不明",
+      "validate": "接続を検証",
+      "validating": "検証中…"
     }
   },
   "permissions": {

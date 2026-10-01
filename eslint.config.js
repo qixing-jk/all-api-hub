@@ -154,6 +154,7 @@ const siteTypeImportOwners = [
   "src/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/OmniRouteSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings.tsx", // Provider settings.

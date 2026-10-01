@@ -69,6 +69,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       adminToken: "cliproxy-management-key",
     },
   },
+  {
+    siteType: SITE_TYPES.OMNIROUTE,
+    config: {
+      baseUrl: "http://omniroute.example.invalid:20128/",
+      token: "oma_live_placeholder",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -98,6 +105,8 @@ const getRawTargetValues = (
         "admin",
         runtimeConfig.config.adminToken,
       ]
+    case SITE_TYPES.OMNIROUTE:
+      return [runtimeConfig.config.baseUrl, "admin", runtimeConfig.config.token]
     default:
       return [
         runtimeConfig.config.baseUrl,
@@ -130,6 +139,7 @@ const changeCompatibleIdentity = (
     case SITE_TYPES.CLAUDE_CODE_HUB:
     case SITE_TYPES.SUB2API:
     case SITE_TYPES.CLI_PROXY_API:
+    case SITE_TYPES.OMNIROUTE:
       return null
     default:
       return {

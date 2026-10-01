@@ -164,6 +164,7 @@ describe("ManagedSiteTypeSwitcher", () => {
       "settings:managedSite.octopus",
       "settings:managedSite.veloera",
       "settings:managedSite.doneHub",
+      "settings:managedSite.omniroute",
     ])
   })
 

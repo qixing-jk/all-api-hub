@@ -74,6 +74,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.axonHub"
   | "settings:managedSite.claudeCodeHub"
   | "settings:managedSite.sub2api"
+  | "settings:managedSite.omniroute"
 
 export type ManagedSiteMessagesKey =
   | "cliProxyApi"
@@ -84,6 +85,7 @@ export type ManagedSiteMessagesKey =
   | "axonhub"
   | "claudecodehub"
   | "sub2api"
+  | "omniroute"
 
 export interface ManagedResourceProductPolicy {
   /** Official upstream installation or quick-start guide. */

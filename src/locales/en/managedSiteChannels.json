@@ -200,6 +200,30 @@
         "label": "Notes",
         "placeholder": "Add notes about this account..."
       },
+      "omnirouteBaseUrl": {
+        "help": "Leave this empty to keep the selected provider's default endpoint; the gateway then sends this channel's requests to the address you enter. A stored address cannot be cleared, so enter a new one instead of removing it."
+      },
+      "omnirouteDefaultModel": {
+        "help": "Used when a request names no model. A channel stores no model list: models come from the gateway's provider catalogue and aliases.",
+        "label": "Default model"
+      },
+      "omnirouteLastError": {
+        "label": "Last error"
+      },
+      "omniroutePrefix": {
+        "help": "Filling this creates a provider node on the gateway and addresses the channel as prefix/model; leaving it empty uses the built-in provider directly. A prefix requires a base URL.",
+        "label": "Custom model prefix"
+      },
+      "omniroutePriority": {
+        "help": "The gateway tries a provider's connections in ascending order, so a smaller number is used first. A newly created connection is ranked last by the gateway.",
+        "label": "Priority"
+      },
+      "omnirouteProvider": {
+        "help": "The gateway's built-in provider id. A custom relay can keep openai and override the address. Use the load button to read the providers this gateway actually serves."
+      },
+      "omnirouteTestStatus": {
+        "label": "Connection test"
+      },
       "orderingWeight": {
         "help": "Higher values are preferred when AxonHub selects a channel; equal values have equal ordering priority.",
         "label": "Ordering weight"
@@ -267,6 +291,12 @@
         "unsupported": "Unsupported channel type",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "Failed",
+        "ok": "OK",
+        "pending": "Not tested",
+        "unsupported": "Not testable"
       },
       "status": {
         "archived": "Archived",

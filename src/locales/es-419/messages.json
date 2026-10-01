@@ -137,6 +137,10 @@
     "corsError": "Esto puede deberse a la configuración de CORS. Revisa la lista de permitidos de CORS en la configuración de Octopus.",
     "noChannelsToSync": "No hay canales para sincronizar"
   },
+  "omniroute": {
+    "configMissing": "Configura primero la dirección y el token de acceso de OmniRoute en los ajustes",
+    "noChannelsToSync": "No hay canales para sincronizar"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "La creación de la clave de OpenRouter se canceló antes de crear nada.",

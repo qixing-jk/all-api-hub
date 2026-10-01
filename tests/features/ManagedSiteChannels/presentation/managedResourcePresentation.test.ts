@@ -1,8 +1,11 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
+import { OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/omniroute"
+import { SITE_TYPES } from "~/constants/siteType"
 import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
+import { getManagedResourcePresentationSemantics } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
 import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import zhCnCommon from "~/locales/zh-CN/common.json"
@@ -52,6 +55,57 @@ const createManagedResourcePresentationMapper = (
   })
 
 describe("managedResourcePresentation", () => {
+  it("renders the gateway's connection-test state in the active language", async () => {
+    const resourceI18n = await createResourceTestI18n({
+      en: { common: enCommon, managedSiteChannels: enManagedSiteChannels },
+      "zh-CN": {
+        common: zhCnCommon,
+        managedSiteChannels: zhCnManagedSiteChannels,
+      },
+    })
+    const semantics = getManagedResourcePresentationSemantics(
+      SITE_TYPES.OMNIROUTE,
+    )
+    const mapper = createManagedResourceRowMapper({
+      fieldIds: [OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.TestStatus],
+      semantics,
+    })
+    const present = (value: string, language: "en" | "zh-CN") =>
+      presentManagedResourceRow(
+        atIndex(
+          mapper.accept([
+            {
+              ...createManagedResourceFacts("private-ref", "Gateway channel"),
+              fields: [
+                {
+                  fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.TestStatus,
+                  kind: "text",
+                  value,
+                },
+              ],
+            } as ResourceDisplayFacts,
+          ]),
+          0,
+        ),
+        resourceI18n.getFixedT(language),
+        semantics,
+      ).cells[OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.TestStatus]
+
+    expect(present("error", "zh-CN")).toMatchObject({
+      value: zhCnManagedSiteChannels.editor.options.omnirouteTestStatus.failed,
+    })
+    expect(present("error", "en")).toMatchObject({
+      value: enManagedSiteChannels.editor.options.omnirouteTestStatus.failed,
+    })
+    expect(present("active", "zh-CN")).toMatchObject({
+      value: zhCnManagedSiteChannels.editor.options.omnirouteTestStatus.ok,
+    })
+    // A state the gateway adds later stays visible as it reported itself.
+    expect(present("warming-up", "zh-CN")).toMatchObject({
+      value: "warming-up",
+    })
+  })
+
   it("retranslates accepted status, boolean, secret and option values without changing safe row data", async () => {
     const resourceI18n = await createResourceTestI18n({
       en: { common: enCommon, managedSiteChannels: enManagedSiteChannels },

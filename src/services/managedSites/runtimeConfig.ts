@@ -13,6 +13,10 @@ import {
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
+import {
+  normalizeOmniRouteBaseUrl,
+  type OmniRouteConfig,
+} from "~/types/omnirouteConfig"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
@@ -28,6 +32,7 @@ export type ManagedSiteRuntimeConfig =
       config: ClaudeCodeHubConfig
     }
   | { siteType: typeof SITE_TYPES.SUB2API; config: Sub2ApiManagedSiteConfig }
+  | { siteType: typeof SITE_TYPES.OMNIROUTE; config: OmniRouteConfig }
 
 export type ManagedSiteRuntimeConfigValue = ManagedSiteRuntimeConfig["config"]
 export type ManagedSiteRuntimeConfigForType<TSiteType extends ManagedSiteType> =
@@ -48,6 +53,7 @@ export function getManagedSiteRuntimePrincipal(
     case SITE_TYPES.CLAUDE_CODE_HUB:
     case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.SUB2API:
+    case SITE_TYPES.OMNIROUTE:
       return "admin"
     default:
       return runtimeConfig.config.userId.trim()
@@ -89,6 +95,11 @@ export function hasManagedSiteRuntimeConfigInputForType(
   if (siteType === SITE_TYPES.SUB2API) {
     const config = preferences.sub2apiManagedSite
     return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
+  }
+
+  if (siteType === SITE_TYPES.OMNIROUTE) {
+    const config = preferences.omniroute
+    return Boolean(config && [config.baseUrl, config.token].some(hasText))
   }
 
   if (
@@ -186,6 +197,17 @@ export function resolveManagedSiteRuntimeConfigForType<
       return null
     }
     return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
+  }
+
+  if (siteType === SITE_TYPES.OMNIROUTE) {
+    const config = preferences.omniroute
+    if (!config || !hasText(config.baseUrl) || !hasText(config.token)) {
+      return null
+    }
+    return {
+      siteType,
+      config: { ...config, baseUrl: normalizeOmniRouteBaseUrl(config.baseUrl) },
+    } as ManagedSiteRuntimeConfigForType<TSiteType>
   }
 
   if (siteType === SITE_TYPES.DONE_HUB) {

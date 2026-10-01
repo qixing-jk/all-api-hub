@@ -133,6 +133,10 @@
     "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",
     "noChannelsToSync": "沒有可同步的渠道"
   },
+  "omniroute": {
+    "configMissing": "請先在設定中設定 OmniRoute 部署位址和存取權杖",
+    "noChannelsToSync": "沒有可同步的通道"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "OpenRouter 金鑰建立已在建立前取消。",

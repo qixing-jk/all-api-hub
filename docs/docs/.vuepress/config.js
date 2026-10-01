@@ -115,6 +115,7 @@ export default defineUserConfig({
               '/managed-site-model-sync',
               '/self-hosted-site-management',
               '/cliproxyapi-integration',
+              '/omniroute-integration',
               '/model-redirect',
               '/new-api-security-verification',
             ]
@@ -212,6 +213,7 @@ export default defineUserConfig({
               '/en/managed-site-model-sync',
               '/en/self-hosted-site-management',
               '/en/cliproxyapi-integration',
+              '/en/omniroute-integration',
               '/en/model-redirect',
               '/en/new-api-security-verification',
             ]
@@ -309,6 +311,7 @@ export default defineUserConfig({
               '/ja/managed-site-model-sync',
               '/ja/self-hosted-site-management',
               '/ja/cliproxyapi-integration',
+              '/ja/omniroute-integration',
               '/ja/model-redirect',
               '/ja/new-api-security-verification',
             ]

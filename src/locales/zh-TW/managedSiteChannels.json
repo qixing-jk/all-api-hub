@@ -200,6 +200,30 @@
         "label": "備註",
         "placeholder": "新增此帳號的備註..."
       },
+      "omnirouteBaseUrl": {
+        "help": "留空時沿用所選 provider 的預設位址；填入後閘道會改用這個位址存取該通道。已儲存的位址覆寫無法清空，需要變更時請填寫新的位址。"
+      },
+      "omnirouteDefaultModel": {
+        "help": "請求未指定模型時使用。通道本身不儲存模型清單，模型來自閘道的 provider 目錄與別名。",
+        "label": "預設模型"
+      },
+      "omnirouteLastError": {
+        "label": "最近錯誤"
+      },
+      "omniroutePrefix": {
+        "help": "填寫後會在閘道新建一個 provider node，並以「前綴/模型」定址；留空則直接使用內建 provider。填寫前綴時必須同時填寫位址。",
+        "label": "自訂模型前綴"
+      },
+      "omniroutePriority": {
+        "help": "閘道依這個數字升序選擇渠道，數字越小越先被使用。新建的連線由閘道自動排到最後。",
+        "label": "優先級"
+      },
+      "omnirouteProvider": {
+        "help": "閘道內建 provider 的標識。自訂中轉可保留 openai 並以位址覆寫；點擊載入按鈕可讀取該閘道實際在用的 provider。"
+      },
+      "omnirouteTestStatus": {
+        "label": "連線測試"
+      },
       "orderingWeight": {
         "help": "AxonHub 選擇渠道時會優先使用較大的值；相同值具有相同的排序優先順序。",
         "label": "排序權重"
@@ -267,6 +291,12 @@
         "unsupported": "不支援的渠道類型",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "失敗",
+        "ok": "正常",
+        "pending": "未測試",
+        "unsupported": "不支援測試"
       },
       "status": {
         "archived": "已封存",

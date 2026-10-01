@@ -135,6 +135,10 @@
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
     "noChannelsToSync": "No channels to sync"
   },
+  "omniroute": {
+    "configMissing": "Configure the OmniRoute deployment address and access token in settings first",
+    "noChannelsToSync": "No channels to sync"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "OpenRouter key creation was cancelled before anything was created.",

@@ -10,6 +10,7 @@ import {
   type IconSize,
 } from "~/components/icons/iconSizes"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
+import { OmniRouteIcon } from "~/components/icons/OmniRouteIcon"
 import { Sub2ApiIcon } from "~/components/icons/Sub2ApiIcon"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
@@ -49,6 +50,10 @@ export function ManagedSiteIcon({
 
   if (siteType === SITE_TYPES.SUB2API) {
     return <Sub2ApiIcon size={size} />
+  }
+
+  if (siteType === SITE_TYPES.OMNIROUTE) {
+    return <OmniRouteIcon size={size} />
   }
 
   if (siteType === SITE_TYPES.CLI_PROXY_API) {

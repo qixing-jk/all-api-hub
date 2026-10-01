@@ -226,6 +226,10 @@ function isCliProxyApiConfigured(
   )
 }
 
+function isOmniRouteConfigured(config: UserPreferences["omniroute"]): boolean {
+  return Boolean(config && hasText(config.baseUrl) && hasText(config.token))
+}
+
 function isClaudeCodeRouterConfigured(
   config: UserPreferences["claudeCodeRouter"],
 ): boolean {
@@ -448,6 +452,7 @@ function buildManagedSiteSnapshot(
       preferences.claudeCodeHub,
     ),
     cli_proxy_configured: isCliProxyApiConfigured(preferences.cliProxyApi),
+    omniroute_configured: isOmniRouteConfigured(preferences.omniroute),
     claude_code_router_configured: isClaudeCodeRouterConfigured(
       preferences.claudeCodeRouter,
     ),
@@ -746,6 +751,7 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
     "octopus" in patch ||
     "axonHub" in patch ||
     "claudeCodeHub" in patch ||
+    "omniroute" in patch ||
     "cliProxyApi" in patch ||
     "claudeCodeRouter" in patch
   ) {

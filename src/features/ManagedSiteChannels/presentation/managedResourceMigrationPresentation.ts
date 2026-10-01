@@ -369,7 +369,17 @@ const getTypeText = (
   const catalog = catalogs[siteType]
   const catalogLabel =
     catalog && hasOwn(catalog, type) ? catalog[type] : undefined
-  return catalogLabel ?? resolveUnsupportedChannelTypeLabel(t)
+  if (catalogLabel) return catalogLabel
+  // OmniRoute channel types are built-in provider slugs; the gateway publishes
+  // no display vocabulary for them, so the slug is the label.
+  if (
+    siteType === SITE_TYPES.OMNIROUTE &&
+    typeof type === "string" &&
+    type.trim()
+  ) {
+    return type.trim()
+  }
+  return resolveUnsupportedChannelTypeLabel(t)
 }
 
 const getStatusText = (

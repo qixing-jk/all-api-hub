@@ -133,6 +133,10 @@
     "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
+  "omniroute": {
+    "configMissing": "Hãy cấu hình địa chỉ triển khai và token truy cập OmniRoute trong cài đặt trước",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "Đã hủy tạo khóa OpenRouter trước khi có khóa nào được tạo.",

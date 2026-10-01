@@ -14,6 +14,7 @@ All API Hub is deeply adapted to the following open-source/self-hosted AI distri
 | **AxonHub**                     | Channel                | High-performance AI gateway, supporting 15+ channel types, with a simple interface and efficient configuration.                            |
 | **Claude Code Hub**             | Provider               | Focused on multi-vendor access and elastic scheduling, with clear provider management logic and adaptation to multiple response protocols. |
 | **Octopus**                     | Channel                | Lightweight aggregation service for individuals, supporting 6 mainstream channel types.                                                    |
+| **[OmniRoute](./omniroute-integration.md)**           | Channel                | Self-hosted AI gateway with a large built-in provider catalogue, scoped access tokens, and connection-level address overrides.               |
 
 ## Features at a Glance
 
@@ -37,7 +38,7 @@ Open the extension settings page, go to **"Basic Settings"** in the left menu, a
 | Option                         | Description                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Base URL**                   | Your self-hosted system's backend address (usually the web access address).                                                                                                                                                                                                                                                                      |
-| **Authentication Credentials** | **CLIProxyAPI**: Management key.<br>**New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
+| **Authentication Credentials** | **CLIProxyAPI**: Management key.<br>**New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password.<br>**OmniRoute**: `admin`-scoped access token, or the dashboard password used to exchange for one. |
 
 ### 3. Verify Connection
 

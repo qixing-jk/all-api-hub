@@ -5,6 +5,10 @@ import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCo
 import { DONE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/doneHub"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
 import { OCTOPUS_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/octopus"
+import {
+  OMNIROUTE_CONNECTION_TEST_STATUSES,
+  OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS,
+} from "~/constants/omniroute"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
 import { VELOERA_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/veloera"
@@ -226,6 +230,45 @@ const nativeTablePresentationPolicies: Partial<
             SITE_TYPES.CLAUDE_CODE_HUB,
             CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
           ),
+      },
+    },
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
+  },
+  [SITE_TYPES.OMNIROUTE]: {
+    semantics: {
+      baseUrlFieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Status,
+      // Provider values are gateway slugs, so the raw id is the label. No
+      // translated vocabulary is invented for them.
+      fieldValuePresentations: {
+        [OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.TestStatus]: {
+          optionLabelResolvers: {
+            [OMNIROUTE_CONNECTION_TEST_STATUSES.Active]: (t) =>
+              t("managedSiteChannels:editor.options.omnirouteTestStatus.ok"),
+            [OMNIROUTE_CONNECTION_TEST_STATUSES.Error]: (t) =>
+              t(
+                "managedSiteChannels:editor.options.omnirouteTestStatus.failed",
+              ),
+            [OMNIROUTE_CONNECTION_TEST_STATUSES.Unavailable]: (t) =>
+              t(
+                "managedSiteChannels:editor.options.omnirouteTestStatus.unsupported",
+              ),
+            [OMNIROUTE_CONNECTION_TEST_STATUSES.Unknown]: (t) =>
+              t(
+                "managedSiteChannels:editor.options.omnirouteTestStatus.pending",
+              ),
+          },
+          // A state the gateway adds later stays visible as it reported itself.
+        },
+      },
+      detailFieldLabels: {
+        // The gateway's connection test has no editor control, so its labels are
+        // declared here rather than on a field the editor would render.
+        [OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.TestStatus]: (t) =>
+          t("managedSiteChannels:editor.fields.omnirouteTestStatus.label"),
+        [OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.LastError]: (t) =>
+          t("managedSiteChannels:editor.fields.omnirouteLastError.label"),
       },
     },
     defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],

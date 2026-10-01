@@ -45,6 +45,7 @@ const expectedManagedSiteTypes = [
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.SUB2API,
   SITE_TYPES.CLI_PROXY_API,
+  SITE_TYPES.OMNIROUTE,
 ] as const
 
 describe("managed-site mutation conformance", () => {

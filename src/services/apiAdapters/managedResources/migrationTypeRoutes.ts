@@ -24,6 +24,7 @@ const {
   CLAUDE_CODE_HUB,
   SUB2API,
   CLI_PROXY_API,
+  OMNIROUTE,
 } = SITE_TYPES
 
 type NativeChannelTypeBySite = {
@@ -35,6 +36,9 @@ type NativeChannelTypeBySite = {
   [CLAUDE_CODE_HUB]: ClaudeCodeHubProviderType
   [SUB2API]: Sub2ApiApiKeyAccountPlatform
   [CLI_PROXY_API]: CliProxyApiProviderKind
+  // OmniRoute channel types are built-in provider slugs or compatible node ids,
+  // so the native vocabulary is open-ended rather than a fixed enum.
+  [OMNIROUTE]: string
 }
 
 /**
@@ -72,6 +76,7 @@ const routes: readonly TypeRoute[] = [
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.OPENAI,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
     [SUB2API]: "openai",
+    [OMNIROUTE]: "openai",
   },
   {
     [NEW_API]: { targetType: NewApiType.OpenAI, remappedType: true },
@@ -87,11 +92,13 @@ const routes: readonly TypeRoute[] = [
       targetType: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
       remappedType: true,
     },
+    [OMNIROUTE]: { targetType: "openai", remappedType: true },
   },
   {
     [NEW_API]: { targetType: NewApiType.OpenAI, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.OpenAI, remappedType: true },
     [DONE_HUB]: { targetType: DoneHubType.OpenAI, remappedType: true },
+    [OMNIROUTE]: { targetType: "openai", remappedType: true },
     [OCTOPUS]: OctopusType.OpenAIEmbedding,
     [AXON_HUB]: {
       targetType: AXON_HUB_CHANNEL_TYPE.OPENAI,
@@ -125,6 +132,7 @@ const routes: readonly TypeRoute[] = [
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
     [SUB2API]: "anthropic",
+    [OMNIROUTE]: "anthropic",
   },
   {
     [NEW_API]: { targetType: NewApiType.Anthropic, remappedType: true },
@@ -144,6 +152,7 @@ const routes: readonly TypeRoute[] = [
       targetType: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
       remappedType: true,
     },
+    [OMNIROUTE]: { targetType: "anthropic", remappedType: true },
   },
   {
     [NEW_API]: NewApiType.Gemini,
@@ -154,6 +163,7 @@ const routes: readonly TypeRoute[] = [
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.GEMINI,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
     [SUB2API]: "gemini",
+    [OMNIROUTE]: "gemini",
   },
   {
     [NEW_API]: { targetType: NewApiType.Gemini, remappedType: true },
@@ -172,6 +182,7 @@ const routes: readonly TypeRoute[] = [
       targetType: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
       remappedType: true,
     },
+    [OMNIROUTE]: { targetType: "gemini", remappedType: true },
   },
   {
     [NEW_API]: NewApiType.VertexAi,
@@ -185,12 +196,14 @@ const routes: readonly TypeRoute[] = [
       targetType: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
       remappedType: true,
     },
+    [OMNIROUTE]: { targetType: "gemini", remappedType: true },
   },
   {
     [NEW_API]: NewApiType.DeepSeek,
     [VELOERA]: VeloeraType.DeepSeek,
     [DONE_HUB]: DoneHubType.DeepSeek,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
+    [OMNIROUTE]: "deepseek",
   },
   {
     [NEW_API]: { targetType: NewApiType.DeepSeek, remappedType: true },
@@ -254,6 +267,7 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Baidu,
     [VELOERA]: VeloeraType.Baidu,
     [DONE_HUB]: DoneHubType.Baidu,
+    [OMNIROUTE]: "baidu",
   },
   {
     [NEW_API]: NewApiType.Zhipu,
@@ -264,6 +278,7 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Ali,
     [VELOERA]: VeloeraType.Ali,
     [DONE_HUB]: DoneHubType.Ali,
+    [OMNIROUTE]: "alibaba",
   },
   {
     [NEW_API]: NewApiType.Xunfei,
@@ -280,6 +295,7 @@ const routes: readonly TypeRoute[] = [
     [VELOERA]: VeloeraType.OpenRouter,
     [DONE_HUB]: DoneHubType.OpenRouter,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
+    [OMNIROUTE]: "openrouter",
   },
   {
     [NEW_API]: NewApiType.AIProxyLibrary,
@@ -298,12 +314,14 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Moonshot,
     [VELOERA]: VeloeraType.Moonshot,
     [DONE_HUB]: DoneHubType.Moonshot,
+    [OMNIROUTE]: "moonshot",
   },
   {
     [NEW_API]: NewApiType.Zhipu_v4,
   },
   {
     [NEW_API]: NewApiType.Perplexity,
+    [OMNIROUTE]: "perplexity",
   },
   {
     [NEW_API]: NewApiType.LingYiWanWu,
@@ -318,11 +336,13 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Cohere,
     [VELOERA]: VeloeraType.Cohere,
     [DONE_HUB]: DoneHubType.Cohere,
+    [OMNIROUTE]: "cohere",
   },
   {
     [NEW_API]: NewApiType.MiniMax,
     [VELOERA]: VeloeraType.MiniMax,
     [DONE_HUB]: DoneHubType.MiniMax,
+    [OMNIROUTE]: "minimax",
   },
   {
     [NEW_API]: NewApiType.SunoAPI,
@@ -353,6 +373,7 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Mistral,
     [VELOERA]: VeloeraType.Mistral,
     [DONE_HUB]: DoneHubType.Mistral,
+    [OMNIROUTE]: "mistral",
   },
   {
     [NEW_API]: NewApiType.MokaAI,
@@ -379,10 +400,12 @@ const routes: readonly TypeRoute[] = [
     [DONE_HUB]: DoneHubType.XAI,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.XAI,
     [SUB2API]: "grok",
+    [OMNIROUTE]: "xai",
   },
   {
     [NEW_API]: NewApiType.Coze,
     [DONE_HUB]: DoneHubType.Coze,
+    [OMNIROUTE]: "coze",
   },
   {
     [NEW_API]: NewApiType.Kling,

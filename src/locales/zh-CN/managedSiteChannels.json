@@ -200,6 +200,30 @@
         "label": "备注",
         "placeholder": "添加关于此账号的备注..."
       },
+      "omnirouteBaseUrl": {
+        "help": "留空时沿用所选 provider 的默认地址；填入后网关会改用这个地址访问该渠道。已保存的地址覆盖无法清空，需要改动时请填写新的地址。"
+      },
+      "omnirouteDefaultModel": {
+        "help": "请求未指定模型时使用。渠道本身不保存模型清单，模型来自网关的 provider 目录与别名。",
+        "label": "默认模型"
+      },
+      "omnirouteLastError": {
+        "label": "最近错误"
+      },
+      "omniroutePrefix": {
+        "help": "填写后会在网关新建一个 provider node，并用「前缀/模型」寻址；留空则直接使用内置 provider。填写前缀时必须同时填写地址。",
+        "label": "自定义模型前缀"
+      },
+      "omniroutePriority": {
+        "help": "网关按这个数字升序选择渠道，数字越小越先被使用。新建的连接由网关自动排到最后。",
+        "label": "优先级"
+      },
+      "omnirouteProvider": {
+        "help": "网关内置 provider 的标识。自定义中转可保留 openai 并用地址覆盖；点击加载按钮可读取该网关实际在用的 provider。"
+      },
+      "omnirouteTestStatus": {
+        "label": "连接测试"
+      },
       "orderingWeight": {
         "help": "AxonHub 选择渠道时会优先使用较大的值；相同值具有相同的排序优先级。",
         "label": "排序权重"
@@ -267,6 +291,12 @@
         "unsupported": "不支持的渠道类型",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "失败",
+        "ok": "正常",
+        "pending": "未测试",
+        "unsupported": "不支持测试"
       },
       "status": {
         "archived": "已归档",

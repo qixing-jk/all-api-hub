@@ -24,6 +24,7 @@ import {
   OCTOPUS_MANAGED_RESOURCE_FIELD_IDS,
   OctopusOutboundTypeNames,
 } from "~/constants/octopus"
+import { OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/omniroute"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
@@ -1091,6 +1092,135 @@ const claudeCodeHubManagedResourceFieldPolicy =
     },
   })
 
+const omniRouteProviderField = {
+  fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Provider,
+  section: MANAGED_RESOURCE_SECTIONS.Basic,
+  order: 20,
+  resolveLabel: (t) => t("channelDialog:fields.type.label"),
+  resolveHelp: (t) =>
+    t("managedSiteChannels:editor.fields.omnirouteProvider.help"),
+  // Provider ids are slugs, so the adapter supplies each label as the id
+  // itself and no translated vocabulary exists to resolve here.
+  renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+  channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+} as const satisfies ManagedResourceFieldPresentation
+
+/**
+ * The provider is chosen at creation and fixed afterwards: `PATCH
+ * /api/providers/{id}` cannot change it, so only the create editor offers it.
+ */
+const omniRouteConnectionFields = [
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.omnirouteBaseUrl.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl,
+  },
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Key,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.key.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.secret.keepExistingHint"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
+  },
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.DefaultModel,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 10,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.omnirouteDefaultModel.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.omnirouteDefaultModel.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+  },
+] as const satisfies readonly ManagedResourceFieldPresentation[]
+
+/** The gateway has no per-channel model list, so no models field is offered. */
+const omniRouteCreateFields = [
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Name,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.name.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+  },
+  omniRouteProviderField,
+  ...omniRouteConnectionFields,
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Prefix,
+    section: MANAGED_RESOURCE_SECTIONS.Advanced,
+    order: 10,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.omniroutePrefix.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.omniroutePrefix.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+  },
+] as const satisfies readonly ManagedResourceFieldPresentation[]
+
+/**
+ * The create route always persists `isActive: false` and rejects the field, so
+ * status only becomes editable once the gateway's own connection test has run.
+ */
+const omniRouteEditFields = [
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Name,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.name.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+  },
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Status,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 30,
+    resolveLabel: (t) => t("channelDialog:fields.status.label"),
+    optionLabelResolvers: nativeChannelStatusOptionLabelResolvers,
+    resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
+  },
+  ...omniRouteConnectionFields,
+  {
+    fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Priority,
+    section: MANAGED_RESOURCE_SECTIONS.Routing,
+    order: 10,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.omniroutePriority.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.omniroutePriority.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+  },
+] as const satisfies readonly ManagedResourceFieldPresentation[]
+
+const omniRouteManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
+  siteType: SITE_TYPES.OMNIROUTE,
+  kind: MANAGED_RESOURCE_KINDS.Channel,
+  modes: {
+    [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
+      fields: omniRouteCreateFields,
+      hiddenFields: [],
+      // A dedicated model prefix is an advanced case; it stays collapsed so the
+      // common import path is a single built-in provider plus a base URL.
+      sections: {
+        [MANAGED_RESOURCE_SECTIONS.Advanced]: { defaultOpen: false },
+      },
+    },
+    [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
+      fields: omniRouteEditFields,
+      hiddenFields: [],
+    },
+  },
+})
+
 const octopusFields = createNativeChannelFields(
   OCTOPUS_MANAGED_RESOURCE_FIELD_IDS,
   Object.fromEntries(
@@ -1168,6 +1298,7 @@ const managedResourceFieldPolicyRegistry =
     doneHubManagedResourceFieldPolicy,
     axonHubManagedResourceFieldPolicy,
     sub2ApiManagedResourceFieldPolicy,
+    omniRouteManagedResourceFieldPolicy,
     claudeCodeHubManagedResourceFieldPolicy,
     octopusManagedResourceFieldPolicy,
   ])
