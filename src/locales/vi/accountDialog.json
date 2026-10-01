@@ -12,7 +12,7 @@
     "description": "Trang này yêu cầu xác minh bảo mật trước khi tạo Access Token nên tiện ích chưa thể tự động lấy mã. Thông tin tài khoản đã nhận diện được giữ lại. Hãy nhập Access Token quản lý tài khoản để tiếp tục.",
     "destinationBusy": "Ở đây đã có biểu mẫu tài khoản chưa hoàn tất. Hãy lưu hoặc đóng biểu mẫu đó để tiếp tục với biểu mẫu từ cửa sổ bật lên.",
     "fullPageHint": "Tiếp tục trong trang đầy đủ để giữ biểu mẫu mở trong khi sao chép mã trên trang web.",
-    "generateStep": "Nếu đã có Access Token đầy đủ và còn hiệu lực, bạn có thể dùng trực tiếp. Nếu chưa có, hãy mở Bảo mật → Access Token trên trang web, hoàn tất xác minh và tạo mã.",
+    "generateStep": "Nếu đã có Access Token đầy đủ và còn hiệu lực, bạn có thể dùng trực tiếp. Nếu chưa có, hãy mở Bảo mật → Access Token trên trang web, hoàn tất xác minh và tạo mã. Các bản mới cũng yêu cầu chọn quyền và thời hạn; hãy cấp toàn bộ quyền được đưa ra.",
     "openSecurity": "Mở cài đặt bảo mật của trang",
     "openSecurityFailed": "Không mở được trang. Hãy tự mở Bảo mật → Access Token trên trang web rồi quay lại đây để dán mã.",
     "pasteStep": "Sao chép ngay toàn bộ Access Token, dán vào trường Access Token bên dưới, kiểm tra thông tin tài khoản rồi lưu.",

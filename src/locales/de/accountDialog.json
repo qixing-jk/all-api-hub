@@ -12,7 +12,7 @@
     "description": "Diese Website verlangt vor dem Erstellen eines Access Tokens eine Sicherheitsprüfung. Das Token kann daher nicht automatisch abgerufen werden. Erkannte Kontodaten bleiben erhalten. Gib ein Access Token zur Kontoverwaltung ein.",
     "destinationBusy": "Hier ist bereits ein Kontoformular geöffnet. Speichere oder schließe es, um mit dem Formular aus dem Popup fortzufahren.",
     "fullPageHint": "Auf einer vollständigen Seite bleibt dieses Formular geöffnet, während du das Token auf der Website kopierst.",
-    "generateStep": "Verwende einen vorhandenen gültigen, vollständigen Access Token. Andernfalls öffne auf der Website Sicherheit → Access Token, schließe die Verifizierung ab und erstelle einen Token.",
+    "generateStep": "Verwende einen vorhandenen gültigen, vollständigen Access Token. Andernfalls öffne auf der Website Sicherheit → Access Token, schließe die Verifizierung ab und erstelle einen Token. Neuere Builds fragen zusätzlich nach Berechtigungen und Laufzeit; erteile alle angebotenen Berechtigungen.",
     "openSecurity": "Sicherheitseinstellungen der Website öffnen",
     "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
     "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
