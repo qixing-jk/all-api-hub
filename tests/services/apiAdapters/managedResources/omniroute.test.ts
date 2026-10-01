@@ -912,6 +912,49 @@ describe("OmniRoute native managed resource", () => {
     expect(deletedNodes).toEqual([])
   })
 
+  it("preserves the connection rejection when compensation of the newly created node fails", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/provider-nodes`, () =>
+        HttpResponse.json({ id: "new-node" }),
+      ),
+      http.post(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json({ error: "name conflict" }, { status: 409 }),
+      ),
+      http.delete(`${BASE_URL}/api/provider-nodes/new-node`, () =>
+        HttpResponse.json({ error: "cleanup failed" }, { status: 503 }),
+      ),
+    )
+    const operations = await openOmniRouteNativeResourceOperations()
+    const result = await operations.create({
+      name: "Relay",
+      provider: "openai",
+      apiKey: "sk-source",
+      prefix: "relay",
+      baseUrl: "https://relay.invalid/v1",
+      defaultModel: "",
+    })
+    expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Rejected)
+    expect(result.diagnostic?.message).toBe("name conflict")
+  })
+
+  it("opens a disabled connection for editing without enabling it", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/providers/conn-1`, () =>
+        HttpResponse.json({ connection: connection({ isActive: false }) }),
+      ),
+    )
+    const workspace = await omniRouteManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor({
+      siteType: SITE_TYPES.OMNIROUTE,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: BASE_URL,
+      resourceId: "conn-1",
+    })
+    expect(editor.initialValues[fields.Status]).toBe(
+      MANAGED_RESOURCE_STATUSES.Disabled,
+    )
+  })
+
   it("patches only the fields the editor changed", async () => {
     let patch: Record<string, unknown> | undefined
     server.use(
@@ -1103,14 +1146,14 @@ describe("OmniRoute native managed resource", () => {
     return deletedNodes
   }
 
-  it("removes the provider node a prefix-addressed channel owned", async () => {
+  it("preserves a prefix-backed provider node when its ownership is unknown", async () => {
     const deletedNodes = useNodeDeleteSpy([])
 
     const operations = await openOmniRouteNativeResourceOperations()
     const result = await operations.delete("conn-1")
 
     expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
-    expect(deletedNodes).toEqual([NODE_ID])
+    expect(deletedNodes).toEqual([])
   })
 
   it("keeps a provider node another channel still uses", async () => {
@@ -1125,14 +1168,19 @@ describe("OmniRoute native managed resource", () => {
     expect(deletedNodes).toEqual([])
   })
 
-  it("reports a confirmed deletion even when the node cleanup fails", async () => {
+  it("does not delete a provider node based on an incomplete inventory", async () => {
     const deletedNodes = useNodeDeleteSpy([], 500)
+    server.use(
+      http.get(`${BASE_URL}/api/providers`, () =>
+        HttpResponse.json({ connections: [], total: 201 }),
+      ),
+    )
 
     const operations = await openOmniRouteNativeResourceOperations()
     const result = await operations.delete("conn-1")
 
     expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
-    expect(deletedNodes).toEqual([NODE_ID])
+    expect(deletedNodes).toEqual([])
   })
 
   it("touches no provider node when the channel has none", async () => {

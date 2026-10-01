@@ -786,51 +786,6 @@ export async function openOmniRouteNativeResourceOperations(
       }),
     )
 
-  /**
-   * Reads the provider node behind a prefix-addressed connection, or null.
-   *
-   * Cleanup bookkeeping must never block the deletion itself, so an unreadable
-   * connection simply means "nothing to clean up".
-   */
-  const readOwnedProviderNodeId = async (
-    locator: string,
-    readOptions?: ResourceOperationOptions,
-  ): Promise<string | null> => {
-    try {
-      const sanitized = toOmniRouteSanitizedConnection(
-        await getOmniRouteConnection(config, locator, {
-          signal: readOptions?.signal,
-        }),
-      )
-      // Only a connection created against a compatible provider node carries the
-      // node's prefix, and that node's id is the connection's provider.
-      return sanitized.nodePrefix ? sanitized.provider : null
-    } catch {
-      return null
-    }
-  }
-
-  /**
-   * Deletes a provider node that no connection references any more.
-   *
-   * Prefix-addressed connections are backed by a node this integration created,
-   * and the gateway keeps the node once the connection is gone. Nothing in this
-   * workspace manages nodes, so an orphan would only be visible in the gateway's
-   * dashboard; a node two connections share is left alone.
-   */
-  const deleteUnreferencedProviderNode = async (
-    nodeId: string,
-    operationOptions?: ResourceOperationOptions,
-  ): Promise<void> => {
-    const connections = await listAllOmniRouteConnections(config, {
-      signal: operationOptions?.signal,
-    })
-    if (connections.some((connection) => connection.provider === nodeId)) return
-    await deleteOmniRouteProviderNode(config, nodeId, {
-      signal: operationOptions?.signal,
-    })
-  }
-
   const create = async (
     command: OmniRouteNativeCreateCommand,
     operationOptions?: ResourceOperationOptions,
@@ -972,10 +927,13 @@ export async function openOmniRouteNativeResourceOperations(
     update,
     delete: async (locator, operationOptions) => {
       throwIfAborted(operationOptions)
-      // Read the node while the connection still exists: only the connection
-      // knows which provider node backs it.
-      const nodeId = await readOwnedProviderNodeId(locator, operationOptions)
-      const result = await runOmniRouteMutation<void, void>({
+      // A prefix identifies a node, not its owner. The upstream node DELETE
+      // cascades to all its connections and aliases; even an inventory read
+      // cannot prevent a sibling being created between that read and deletion.
+      // Delete only the requested connection. In-flight create compensation
+      // separately retains the authoritative id returned by node creation.
+      // OmniRoute release/v3.8.51: src/app/api/provider-nodes/[id]/route.ts
+      return await runOmniRouteMutation<void, void>({
         effect: omniRouteChannelEffect("resource-deleted", locator),
         execute: async () =>
           await deleteOmniRouteConnection(config, locator, {
@@ -983,17 +941,6 @@ export async function openOmniRouteNativeResourceOperations(
           }),
         successData: () => undefined,
       })
-      if (
-        result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded &&
-        nodeId
-      ) {
-        // Best-effort: a leftover node is invisible clutter, while a deletion the
-        // user asked for must not be reported as failed because of cleanup.
-        await deleteUnreferencedProviderNode(nodeId, operationOptions).catch(
-          () => undefined,
-        )
-      }
-      return result
     },
   }
 }

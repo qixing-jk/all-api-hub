@@ -41,7 +41,7 @@ Channel fields:
 
 **Address override**: a connection-level address overrides the provider's static configuration, so any relay can be added in one step. Pick the OpenAI-compatible provider and enter the relay address; there is no need to create a provider node first.
 
-**Model prefix (advanced)**: if you need the channel addressed under its own prefix (`prefix/model`), expand **Advanced** while creating it and fill in **Custom model prefix**. The extension creates a provider node first and then a connection that references it, and reclaims the new node if the gateway clearly rejects the connection. Deleting such a channel also removes the provider node it created, as long as no other connection still uses it. This path also requires an address.
+**Model prefix (advanced)**: if you need the channel addressed under its own prefix (`prefix/model`), expand **Advanced** while creating it and fill in **Custom model prefix**. The extension creates a provider node first and then a connection that references it, and reclaims the new node if the gateway clearly rejects the connection. Deleting a channel preserves its provider node to avoid deleting other channels or model aliases along with it. Clean up nodes in the gateway dashboard when needed. This path also requires an address.
 
 **About status**: the gateway's create route does not accept an enabled state, so a new connection starts disabled until the gateway's own connection test decides otherwise. The create form therefore offers no status field, and a successful import does not mean the channel is connected.
 
