@@ -151,7 +151,7 @@ describe("revokeStaleE2eAccessTokens", () => {
         NOW,
       ),
     ).resolves.toEqual([7])
-    expect(fetchMock.mock.calls[0][0]).toBe(`${ORIGIN}/custom/login`)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${ORIGIN}/custom/login`)
   })
 
   it("completes the configured 2FA challenge before listing tokens", async () => {
@@ -177,8 +177,8 @@ describe("revokeStaleE2eAccessTokens", () => {
         NOW,
       ),
     ).resolves.toEqual([7])
-    expect(fetchMock.mock.calls[1][0]).toBe(`${ORIGIN}/custom/2fa`)
-    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body)).code).toMatch(
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`${ORIGIN}/custom/2fa`)
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).code).toMatch(
       /^\d{6}$/,
     )
   })
