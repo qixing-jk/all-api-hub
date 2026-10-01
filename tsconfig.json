@@ -26,6 +26,7 @@
     "noFallthroughCasesInSwitch": true,
   },
   "exclude": [
+    "tools/product-video",
     "node_modules",
     ".output",
     "coverage",
