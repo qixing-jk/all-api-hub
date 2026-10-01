@@ -56,14 +56,12 @@ it.each([true, false])(
           MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
       },
     })
+    const price = calculateModelPrice(model, 1)
+    expect(price.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
     render(
       <ModelItemPricing
         model={model}
-        calculatedPrice={{
-          kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
-          billingMode: "token",
-          isComparisonActive: false,
-        }}
+        calculatedPrice={{ ...price, isComparisonActive: false }}
         exchangeRate={5}
         showRealPrice={showRealPrice}
         showPricing
@@ -91,7 +89,7 @@ it.each([true, false])(
 describe("published CNY catalog prices", () => {
   const CNY_RATES = {
     modelId: "kimi-k3",
-    currencySymbol: "¥",
+    currency: "CNY" as const,
     inputPrice: 20,
     outputPrice: 100,
   }

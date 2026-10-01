@@ -21,49 +21,18 @@ import {
 } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,
-  PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
-  PRICING_GROUP_MULTIPLIERS,
-  TOKENS_PER_MILLION,
 } from "~/services/modelPricing/pricingConstants"
 import {
   formatPriceCompact,
   isTokenBillingType,
+  projectTokenPrices,
   type CalculatedPrice,
-  type TokenPricesUSD,
 } from "~/services/models/utils/modelPricing"
 
 import { ModelItemPerCallPricingView } from "./ModelItemPerCallPricingView"
 import { PriceView } from "./ModelItemPicingView"
 import { ModelPriceQuote } from "./ModelPriceQuote"
-
-/** Keeps native flat CNY rates visible without treating them as exact USD. */
-function readFlatCnyPrices(model: ModelPricing): TokenPricesUSD | undefined {
-  const plan = model.pricingPlan
-  if (
-    !plan ||
-    plan.rules.length ||
-    plan.issues.length ||
-    plan.groupMultiplier !== PRICING_GROUP_MULTIPLIERS.INCLUDED
-  )
-    return undefined
-  const rates = plan.rates
-  const amount = (rate: typeof rates.input) =>
-    rate?.currency === "CNY" && rate.unit === PRICE_RATE_UNITS.TOKEN
-      ? (rate.amount / rate.per) * TOKENS_PER_MILLION
-      : undefined
-  const input = amount(rates.input),
-    output = amount(rates.output)
-  if (input === undefined || output === undefined) return undefined
-  const cacheRead = amount(rates.cacheRead),
-    cacheWrite = amount(rates.cacheWrite)
-  return {
-    input,
-    output,
-    ...(cacheRead === undefined ? {} : { cacheRead }),
-    ...(cacheWrite === undefined ? {} : { cacheWrite }),
-  }
-}
 
 interface ModelItemPricingProps {
   sourceLabel?: string
@@ -314,17 +283,20 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       />
     )
 
-  const nativePrices = readFlatCnyPrices(model)
+  // Native flat rates in the plan's own currency stay visible when no
+  // price-sort mode is active; the published currency flows through the calc.
+  const nativeRates = calculatedPrice.perMillionTokens
+  const nativePrices = nativeRates ? projectTokenPrices(nativeRates) : undefined
   if (
     nativePrices &&
-    calculatedPrice.isComparisonActive === false &&
+    calculatedPrice.isComparisonActive !== true &&
     (showRealPrice || (Number.isFinite(exchangeRate) && exchangeRate > 0))
   ) {
     return (
       <div className="mt-density-2 flex flex-wrap items-center gap-3">
         <PriceView
-          prices={nativePrices}
-          sourceCurrency="CNY"
+          prices={nativePrices.prices}
+          sourceCurrency={nativePrices.currency}
           exchangeRate={exchangeRate}
           showRealPrice={showRealPrice}
           tokenBillingType={true}

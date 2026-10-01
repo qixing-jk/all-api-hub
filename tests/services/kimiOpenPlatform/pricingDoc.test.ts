@@ -30,7 +30,7 @@ describe("parseKimiPricingDoc", () => {
     ])
     expect(byId(entries, "kimi-k3")).toEqual({
       modelId: "kimi-k3",
-      currencySymbol: "$",
+      currency: "USD",
       inputPrice: 3,
       outputPrice: 15,
       cacheReadPrice: 0.3,
@@ -40,7 +40,7 @@ describe("parseKimiPricingDoc", () => {
     })
     expect(byId(entries, "kimi-k2.6")).toEqual({
       modelId: "kimi-k2.6",
-      currencySymbol: "$",
+      currency: "USD",
       inputPrice: 0.95,
       outputPrice: 4,
       cacheReadPrice: 0.16,
@@ -59,7 +59,7 @@ describe("parseKimiPricingDoc", () => {
     ])
     expect(byId(entries, "kimi-k3")).toEqual({
       modelId: "kimi-k3",
-      currencySymbol: "¥",
+      currency: "CNY",
       inputPrice: 20,
       outputPrice: 100,
       cacheReadPrice: 2,
@@ -117,6 +117,19 @@ describe("parseKimiPricingDoc", () => {
     const doc =
       '<DocTable columns={[{ title: "Model" }, { title: "Unit" }, { title: "Input Price" }, { title: "Output Price" }]} rows={[["kimi-k3", "1M tokens", "$1.00", "$2.00"]]} />'
     expect(parseKimiPricingDoc(doc.replace(from, to))).toEqual([])
+  })
+
+  it("reads both yuan glyphs as CNY in one entry", () => {
+    const doc =
+      '<DocTable columns={[{ title: "Model" }, { title: "Unit" }, { title: "Input Price" }, { title: "Output Price" }]} rows={[["kimi-k3", "1M tokens", "￥20.00", "¥100.00"]]} />'
+    expect(parseKimiPricingDoc(doc)).toEqual([
+      {
+        modelId: "kimi-k3",
+        currency: "CNY",
+        inputPrice: 20,
+        outputPrice: 100,
+      },
+    ])
   })
 
   it("does not choose a price from conflicting rows for the same model", () => {

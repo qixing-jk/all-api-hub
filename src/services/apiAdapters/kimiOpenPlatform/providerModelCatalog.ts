@@ -43,8 +43,6 @@ import { AuthTypeEnum } from "~/types"
 const KIMI_PRICING_DOC_CACHE_TTL_MS = 6 * 60 * 60 * 1000
 /** A project's model list follows the account's plan, so it stays short-lived. */
 const KIMI_PERSONALIZED_CACHE_TTL_MS = 5 * 60 * 1000
-/** USD is the only currency the canonical price field can represent. */
-const KIMI_USD_SYMBOL = "$"
 
 /** Catalog errors are retained for fallback disclosure, so scrub credentials. */
 async function withSafeCatalogErrors<T>(
@@ -78,7 +76,7 @@ type KimiCatalogRow = {
 
 /** Whether a published row can be quoted in the canonical USD price field. */
 const isUsdPricedEntry = (entry: KimiPricingDocEntry | undefined): boolean =>
-  entry !== undefined && entry.currencySymbol === KIMI_USD_SYMBOL
+  entry !== undefined && entry.currency === "USD"
 
 /**
  * Converts one catalogue row into the provider-catalogue shape.
@@ -141,7 +139,7 @@ function createPricingPlan(
 ): PricingPlan {
   const rate = (amount: number): PriceRate => ({
     amount,
-    currency: entry.currencySymbol === "$" ? "USD" : "CNY",
+    currency: entry.currency,
     unit: PRICE_RATE_UNITS.TOKEN,
     per: TOKENS_PER_MILLION,
   })

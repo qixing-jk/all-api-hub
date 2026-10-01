@@ -22,7 +22,7 @@ describe("Kimi catalog routing and public fallback", () => {
     vi.mocked(kimi.fetchKimiPricingDoc).mockResolvedValue([
       {
         modelId: "kimi-k3",
-        currencySymbol: "$",
+        currency: "USD",
         inputPrice: 3,
         outputPrice: 15,
       },

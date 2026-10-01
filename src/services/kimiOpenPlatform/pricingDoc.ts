@@ -13,11 +13,13 @@
  * guessed prices.
  */
 
+import type { CurrencyType } from "~/types"
+
 /** One priced model as published by the platform, in the document's currency. */
 export type KimiPricingDocEntry = {
   modelId: string
-  /** Currency symbol written next to the published prices, such as `$` or `¥`. */
-  currencySymbol: string
+  /** Currency the published prices are written in, such as `USD` or `CNY`. */
+  currency: CurrencyType
   inputPrice: number
   outputPrice: number
   cacheReadPrice?: number
@@ -132,26 +134,33 @@ function readRowCells(block: string): string[][] {
 }
 
 /**
- * Reads a published number, keeping the currency symbol written beside it.
+ * The document writes amounts with a currency symbol rather than a code, and
+ * both yuan glyphs mean CNY. This is the only place that reads the symbol, so
+ * nothing downstream has to interpret one.
+ */
+const CURRENCY_BY_SYMBOL: Record<string, CurrencyType> = {
+  $: "USD",
+  "¥": "CNY",
+  "￥": "CNY",
+}
+
+/**
+ * Reads a published number, keeping the currency it was written in.
  * Thousands separators are dropped so context windows read as plain integers.
  */
 function readPriceCell(
   value: string | undefined,
-): { amount: number; symbol: string } | null {
+): { amount: number; currency: CurrencyType } | null {
   if (value === undefined) return null
   const match =
     /^\s*([$¥￥])\s*(\d+(?:\.\d+)?|\d{1,3}(?:,\d{3})+(?:\.\d+)?)\s*$/.exec(
       value,
     )
   if (!match) return null
+  const currency = CURRENCY_BY_SYMBOL[match[1] ?? ""]
   const amount = Number((match[2] ?? "").replace(/,/g, ""))
-  if (
-    !Number.isFinite(amount) ||
-    amount < 0 ||
-    !["$", "¥", "￥"].includes(match[1] ?? "")
-  )
-    return null
-  return { amount, symbol: match[1] ?? "" }
+  if (!currency || !Number.isFinite(amount) || amount < 0) return null
+  return { amount, currency }
 }
 
 /** Reads an integer cell, ignoring a trailing unit such as `262,144 tokens`. */
@@ -207,7 +216,7 @@ export function parseKimiPricingDoc(markdown: string): KimiPricingDocEntry[] {
         !output
       )
         continue
-      if (input.symbol !== output.symbol) continue
+      if (input.currency !== output.currency) continue
 
       const cacheReadIndex = indexes.cachedInput ?? indexes.inputCacheHit
       const cacheRead =
@@ -226,9 +235,11 @@ export function parseKimiPricingDoc(markdown: string): KimiPricingDocEntry[] {
         indexes.cacheWrite1h === undefined
           ? null
           : readPriceCell(cells[indexes.cacheWrite1h])
+      // A row whose cached prices are written in another currency is not a row
+      // this parser trusts; both yuan glyphs remain one currency.
       if (
         [cacheRead, cacheWrite, cacheWrite1h].some(
-          (price) => price && price.symbol !== input.symbol,
+          (price) => price && price.currency !== input.currency,
         )
       )
         continue
@@ -241,7 +252,7 @@ export function parseKimiPricingDoc(markdown: string): KimiPricingDocEntry[] {
 
       entries.push({
         modelId,
-        currencySymbol: input.symbol,
+        currency: input.currency,
         inputPrice: input.amount,
         outputPrice: output.amount,
         ...(cacheRead ? { cacheReadPrice: cacheRead.amount } : {}),

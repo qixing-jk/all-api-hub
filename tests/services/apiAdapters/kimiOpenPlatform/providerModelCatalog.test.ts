@@ -26,7 +26,7 @@ const usdEntry = (
   cacheReadPrice?: number,
 ): KimiPricingDocEntry => ({
   modelId,
-  currencySymbol: "$",
+  currency: "USD",
   inputPrice,
   outputPrice,
   ...(cacheReadPrice === undefined ? {} : { cacheReadPrice }),
@@ -38,7 +38,7 @@ const cnyEntry = (
   outputPrice: number,
 ): KimiPricingDocEntry => ({
   modelId,
-  currencySymbol: "¥",
+  currency: "CNY",
   inputPrice,
   outputPrice,
 })
