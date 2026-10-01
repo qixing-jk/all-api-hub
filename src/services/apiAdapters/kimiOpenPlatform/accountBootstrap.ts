@@ -1,9 +1,5 @@
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
-import {
-  KIMI_DISPLAY_NAME,
-  KIMI_GLOBAL_DISPLAY_NAME,
-} from "~/services/accountSiteDefinitions/identifiers"
+import { KIMI_GLOBAL_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { fetchKimiUserInfo } from "~/services/apiService/kimiOpenPlatform"
 import { resolveKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
@@ -19,10 +15,7 @@ export const kimiOpenPlatformAccountBootstrap: AccountBootstrapCapability = {
   loadBootstrapFacts: async (request) => {
     const deployment = resolveKimiOpenPlatformDeployment(request.baseUrl)
     return {
-      displayName:
-        deployment?.siteType === SITE_TYPES.KIMI
-          ? KIMI_DISPLAY_NAME
-          : KIMI_GLOBAL_DISPLAY_NAME,
+      displayName: deployment?.displayName ?? KIMI_GLOBAL_DISPLAY_NAME,
       defaultExchangeRate: DEFAULT_USD_TO_CNY_RATE,
       checkInSupported: false,
     }

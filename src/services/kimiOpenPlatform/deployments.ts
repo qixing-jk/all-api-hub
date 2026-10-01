@@ -1,8 +1,10 @@
 import {
   KIMI_API_BASE_URL,
   KIMI_CONSOLE_ORIGIN,
+  KIMI_DISPLAY_NAME,
   KIMI_GLOBAL_API_BASE_URL,
   KIMI_GLOBAL_CONSOLE_ORIGIN,
+  KIMI_GLOBAL_DISPLAY_NAME,
   KIMI_GLOBAL_HOSTNAMES,
   KIMI_HOSTNAMES,
   SITE_TYPES,
@@ -16,6 +18,7 @@ import {
 export const KIMI_OPEN_PLATFORM_DEPLOYMENTS = {
   cn: {
     siteType: SITE_TYPES.KIMI,
+    displayName: KIMI_DISPLAY_NAME,
     consoleOrigin: KIMI_CONSOLE_ORIGIN,
     hostnames: KIMI_HOSTNAMES,
     inferenceOrigin: "https://api.moonshot.cn",
@@ -25,6 +28,7 @@ export const KIMI_OPEN_PLATFORM_DEPLOYMENTS = {
   },
   global: {
     siteType: SITE_TYPES.KIMI_GLOBAL,
+    displayName: KIMI_GLOBAL_DISPLAY_NAME,
     consoleOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
     hostnames: KIMI_GLOBAL_HOSTNAMES,
     inferenceOrigin: "https://api.moonshot.ai",

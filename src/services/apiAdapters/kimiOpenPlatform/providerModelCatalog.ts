@@ -1,8 +1,4 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import {
-  KIMI_DISPLAY_NAME,
-  KIMI_GLOBAL_DISPLAY_NAME,
-} from "~/services/accountSiteDefinitions/identifiers"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import {
   fetchKimiAccountModelCatalog,
@@ -10,7 +6,10 @@ import {
 } from "~/services/apiService/kimiOpenPlatform"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { getKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
+import {
+  getKimiOpenPlatformDeployment,
+  type KimiOpenPlatformDeployment,
+} from "~/services/kimiOpenPlatform/deployments"
 import type { KimiPricingDocEntry } from "~/services/kimiOpenPlatform/pricingDoc"
 import {
   MODEL_CATALOG_SCOPES,
@@ -173,10 +172,10 @@ function createPricingPlan(
 /** Builds the response both catalogue paths return. */
 function createKimiCatalogResponse(
   rows: readonly KimiCatalogRow[],
-  provider: AccountSiteType,
+  deployment: KimiOpenPlatformDeployment,
   catalogScope: ModelCatalogScope,
 ): ProviderModelCatalogPricingResponse {
-  const pricingUrl = `${getKimiOpenPlatformDeployment(provider)!.consoleOrigin}/docs/pricing`
+  const pricingUrl = `${deployment.consoleOrigin}/docs/pricing`
   return {
     data: rows.map((row) => createKimiCatalogRow(row, pricingUrl)),
     groupRatios: {},
@@ -184,7 +183,7 @@ function createKimiCatalogResponse(
     groupAccess: { kind: "not-applicable" },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
-      provider,
+      provider: deployment.siteType,
       catalogScope,
       supportsRuntimeModelList: false,
       supportsPricing: rows.some((row) => row.entry !== undefined),
@@ -200,7 +199,13 @@ function createKimiCatalogResponse(
   }
 }
 
-/** Joins model ids to the published prices the table carries for them. */
+/** One priced row per published table entry, in the order the document lists. */
+const rowsFromEntries = (
+  entries: readonly KimiPricingDocEntry[],
+): KimiCatalogRow[] =>
+  entries.map((entry) => ({ modelId: entry.modelId, entry }))
+
+/** Joins a model-id list to the published prices the table carries for them. */
 function toRows(
   modelIds: readonly string[],
   entries: readonly KimiPricingDocEntry[],
@@ -233,10 +238,7 @@ export function createKimiOpenPlatformProviderModelCatalog(
     source: {
       id: `kimi-open-platform-pricing-doc-${deployment.siteType}`,
       provider: siteType,
-      displayName:
-        deployment.siteType === "kimi"
-          ? KIMI_DISPLAY_NAME
-          : KIMI_GLOBAL_DISPLAY_NAME,
+      displayName: deployment.displayName,
       cacheTtlMs: KIMI_PRICING_DOC_CACHE_TTL_MS,
     },
     async fetchPricing(request) {
@@ -247,11 +249,8 @@ export function createKimiOpenPlatformProviderModelCatalog(
         })
         if (entries.length === 0) throw new Error("invalid_kimi_pricing_doc")
         return createKimiCatalogResponse(
-          toRows(
-            entries.map((entry) => entry.modelId),
-            entries,
-          ),
-          siteType,
+          rowsFromEntries(entries),
+          deployment,
           MODEL_CATALOG_SCOPES.PROVIDER,
         )
       }, request.abortSignal)
@@ -284,7 +283,7 @@ export function createKimiOpenPlatformProviderModelCatalog(
                 models.map((model) => model.id),
                 entries,
               ),
-              siteType,
+              deployment,
               MODEL_CATALOG_SCOPES.PERSONALIZED,
             )
           },

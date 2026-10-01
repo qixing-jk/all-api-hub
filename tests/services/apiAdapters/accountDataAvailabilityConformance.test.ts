@@ -1,7 +1,7 @@
 import { http, HttpResponse, type HttpHandler } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_TYPES,
@@ -17,9 +17,11 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
   AuthTypeEnum,
+  SiteHealthStatus,
 } from "~/types"
 import type { AccountTodayStatsAvailability } from "~/types/accountTodayStats"
 import { server } from "~~/tests/msw/server"
+import { accountStorageTestSurface } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const complete = { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete } as const
@@ -71,6 +73,15 @@ type ProducerFixture = {
   expectedAvailability: AccountTodayStatsAvailability
   handlers: readonly HttpHandler[]
   expectRequests: (snapshotCount: number) => void
+}
+
+/**
+ * Kimi is one producer family with two consoles, and each site type answers
+ * only on its own account domain, so the family fixture cannot serve both.
+ */
+const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
+  [SITE_TYPES.KIMI]: "https://platform.kimi.com",
+  [SITE_TYPES.KIMI_GLOBAL]: "https://platform.kimi.ai",
 }
 
 const producerFixturesByFamily = {
@@ -342,7 +353,7 @@ const producerFixturesByFamily = {
       income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
     handlers: [
-      http.get("https://platform.kimi.ai/api", ({ request }) => {
+      http.get(/^https:\/\/platform\.kimi\.(?:com|ai)\/api$/, ({ request }) => {
         collectedRequests.kimiAccount += 1
         const endpoint = new URL(request.url).searchParams.get("endpoint")
         if (endpoint !== "organizationAccountInfo") {
@@ -380,10 +391,13 @@ const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
   return producerFixturesByFamily[family]
 }
 
+const resolveConformanceBaseUrl = (siteType: AccountSiteType): string =>
+  kimiConsoleOriginBySiteType[siteType] ?? getProducerFixture(siteType).baseUrl
+
 const createRequest = (siteType: AccountSiteType) => {
   const fixture = getProducerFixture(siteType)
   return {
-    baseUrl: fixture.baseUrl,
+    baseUrl: resolveConformanceBaseUrl(siteType),
     accountId: `account-${siteType}`,
     auth: {
       authType: fixture.authType,
@@ -403,6 +417,58 @@ const createRequest = (siteType: AccountSiteType) => {
         }
       : {}),
   }
+}
+
+/**
+ * Kimi reloads its saved console session by account id and rejects the request
+ * when that account's site type, origin, identity, or session has moved on, so
+ * that path needs the stored account its production callers always have.
+ */
+const createStoredKimiAccount = async (
+  siteType: AccountSiteType,
+  baseUrl: string,
+) =>
+  accountStorageTestSurface.addAccount({
+    site_name: `Conformance ${siteType}`,
+    site_url: baseUrl,
+    site_type: siteType,
+    health: { status: SiteHealthStatus.Healthy },
+    authType: AuthTypeEnum.AccessToken,
+    disabled: false,
+    excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
+    exchange_rate: DEFAULT_USD_TO_CNY_RATE,
+    notes: "",
+    tagIds: [],
+    checkIn: buildCheckInConfig(),
+    last_sync_time: 0,
+    account_info: {
+      id: "user-1",
+      access_token: "account-token",
+      username: "user-1",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    kimiOpenPlatformAuth: {
+      refreshToken: "refresh-token",
+      organizationId: "org-1",
+    },
+  })
+
+const createAccountScopedRequest = async (siteType: AccountSiteType) => {
+  const request = createRequest(siteType)
+  if (
+    getSiteTypeCapabilities(siteType).family !==
+    ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform
+  ) {
+    return request
+  }
+  const accountId = await createStoredKimiAccount(siteType, request.baseUrl)
+  return { ...request, accountId }
 }
 
 describe("AccountData availability producer conformance", () => {
@@ -587,7 +653,7 @@ describe("AccountData availability producer conformance", () => {
     async (siteType) => {
       const capabilities = getSiteTypeCapabilities(siteType)
       const fixture = getProducerFixture(siteType)
-      const request = createRequest(siteType)
+      const request = await createAccountScopedRequest(siteType)
       const fetchData = capabilities.account?.data?.fetchData
       const refreshAccount = capabilities.account?.refresh?.refreshAccount
 
