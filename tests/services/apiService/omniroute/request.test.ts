@@ -13,7 +13,22 @@ const input = {
   body: { name: "Test" },
 }
 
+const signalStaticRestorations: Array<() => void> = []
+
+/** Emulates browsers missing newer AbortSignal methods without replacing cancellation itself. */
+const disableSignalStatic = (method: "any" | "timeout") => {
+  const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, method)!
+  Object.defineProperty(AbortSignal, method, {
+    configurable: true,
+    value: undefined,
+  })
+  signalStaticRestorations.push(() =>
+    Object.defineProperty(AbortSignal, method, descriptor),
+  )
+}
+
 afterEach(() => {
+  for (const restore of signalStaticRestorations.splice(0)) restore()
   vi.restoreAllMocks()
   vi.useRealTimers()
 })
@@ -47,6 +62,7 @@ describe("OmniRoute request failure evidence", () => {
         confirmedNonApplication: false,
         raw: failure,
       })
+      if (!(error instanceof OmniRouteApiError)) throw error
       expect(error.code).toBe(
         typeof code === "string" || code === 42 ? code : undefined,
       )
@@ -75,14 +91,15 @@ describe("OmniRoute request failure evidence", () => {
         confirmedNonApplication: true,
         raw: payload,
       })
+      if (!(error instanceof OmniRouteApiError)) throw error
       if (payload && typeof payload === "object" && "code" in payload)
         expect(error.code).toBe("NAME_CONFLICT")
     },
   )
 
   it("composes caller cancellation on browsers without AbortSignal.any or timeout and removes listeners", async () => {
-    vi.spyOn(AbortSignal, "any", "get").mockReturnValue(undefined as never)
-    vi.spyOn(AbortSignal, "timeout", "get").mockReturnValue(undefined as never)
+    disableSignalStatic("any")
+    disableSignalStatic("timeout")
     const controller = new AbortController()
     const remove = vi.spyOn(controller.signal, "removeEventListener")
     let dispatchedSignal: AbortSignal | undefined
@@ -102,7 +119,7 @@ describe("OmniRoute request failure evidence", () => {
   })
 
   it("supports already aborted caller signals on the fallback path", async () => {
-    vi.spyOn(AbortSignal, "any", "get").mockReturnValue(undefined as never)
+    disableSignalStatic("any")
     const fetch = vi.spyOn(globalThis, "fetch")
     await expect(
       callOmniRoute({ ...input, options: { signal: AbortSignal.abort() } }),
@@ -112,7 +129,7 @@ describe("OmniRoute request failure evidence", () => {
 
   it("times out a dispatched request on the fallback path and clears its timer", async () => {
     vi.useFakeTimers()
-    vi.spyOn(AbortSignal, "timeout", "get").mockReturnValue(undefined as never)
+    disableSignalStatic("timeout")
     vi.spyOn(globalThis, "fetch").mockImplementation(
       (_url, init) =>
         new Promise((_resolve, reject) => {

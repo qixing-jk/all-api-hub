@@ -224,7 +224,7 @@ describe("OmniRoute workspace failure and editor contracts", () => {
       ]),
     })
     expect(
-      editor.validate({ ...editor.initialValues, [fields.Key]: undefined }),
+      editor.validate({ ...editor.initialValues, [fields.Key]: null }),
     ).toMatchObject({ valid: false })
   })
 
@@ -235,7 +235,7 @@ describe("OmniRoute workspace failure and editor contracts", () => {
     for (const key of [
       { kind: "clear" },
       { kind: "replace", value: "sk-a****z" },
-    ]) {
+    ] as const) {
       expect(
         editor.validate({
           ...editor.initialValues,

@@ -276,7 +276,7 @@ describe("UserPreferencesContext", () => {
       expect((await context.updateOmniRouteToken("oma_test")).ok).toBe(true)
     })
     expect(
-      preferencePersistence.getPersistedPreferences().omniroute.token,
+      preferencePersistence.getPersistedPreferences().omniroute?.token,
     ).toBe("oma_test")
     mockedUserPreferences.resetOmniRouteConfig.mockImplementation(async () => {
       const preferences = deepOverride(
