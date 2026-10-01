@@ -1,0 +1,30 @@
+{
+  "name": "all-api-hub-product-video",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "typecheck": "tsc --noEmit",
+    "render": "node scripts/render.mjs",
+    "render:stills": "node scripts/render.mjs --stills",
+    "verify": "node scripts/verify.mjs",
+    "check": "npm run typecheck && node --check scripts/render.mjs && node --check scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.529",
+    "@remotion/cli": "4.0.529",
+    "@remotion/renderer": "4.0.529",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}
