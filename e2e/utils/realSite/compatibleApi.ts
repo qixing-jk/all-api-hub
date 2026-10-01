@@ -1059,7 +1059,7 @@ async function fetchCompatibleApiUser(
   return parseCompatibleApiUser(payload)
 }
 
-function extractCompatibleApiPayload(payload: unknown) {
+export function extractCompatibleApiPayload(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return null
   }

@@ -15,6 +15,15 @@ import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import {
+  forgetNewApiAccessTokenDialect,
+  isAccessTokenContractAbsent,
+  NEW_API_ACCESS_TOKEN_DIALECTS,
+  NEW_API_SCOPED_ACCESS_TOKENS_ENDPOINT,
+  resolveNewApiAccessTokenDialect,
+  type NewApiAccessTokenDialect,
+} from "./accessTokenDialect"
+
 const logger = createLogger("NewApiFamilyAccountBootstrap")
 
 interface SiteStatusInfo {
@@ -228,6 +237,70 @@ export async function createAccessToken(
 }
 
 /**
+ * Error for a deployment that issues access tokens only to a browser session
+ * that passed its own step-up verification.
+ *
+ * `POST /api/user/access_tokens` is refused for every caller here by
+ * construction: the deployment's verification policy offers two-factor, passkey,
+ * password or OAuth, and this request can supply none of them. The message is a
+ * log detail only — the completion layer owns the text the user reads.
+ * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.41/service/security_verification.go
+ */
+function requireScopedAccessTokenVerification(): ApiError {
+  return new ApiError(
+    "The deployment issues an access token only after a security check",
+    undefined,
+    NEW_API_SCOPED_ACCESS_TOKENS_ENDPOINT,
+    API_ERROR_CODES.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+  )
+}
+
+/** Mints the credential one resolved dialect allows, or reports why it cannot. */
+async function mintForDialect(
+  dialect: NewApiAccessTokenDialect,
+  request: ApiServiceRequest,
+): Promise<string> {
+  if (dialect === NEW_API_ACCESS_TOKEN_DIALECTS.SCOPED_ACCESS_TOKENS) {
+    throw requireScopedAccessTokenVerification()
+  }
+
+  return await createAccessToken(request)
+}
+
+/**
+ * Mint the credential this deployment issues, whichever contract it speaks.
+ *
+ * A deployment that owns the scoped access-token routes refuses to issue one to
+ * anything but a browser session that passed a step-up verification, so the
+ * flow reports that instead of sending a request it already knows is refused.
+ * The account is completed by the user creating the token on the deployment's
+ * own security page, which the scoped refusal routes them to.
+ *
+ * A remembered contract is only a preference, so a definite "this deployment
+ * does not own that route" answer makes the contract be resolved again and the
+ * other one tried. Anything less definite keeps the original failure: the
+ * dashboard rotation may already have been dispatched, and resending it would
+ * rotate the account credential twice.
+ */
+async function createAccountAccessToken(
+  request: ApiServiceRequest,
+): Promise<string> {
+  const dialect = await resolveNewApiAccessTokenDialect(request)
+
+  try {
+    return await mintForDialect(dialect, request)
+  } catch (error) {
+    if (!isAccessTokenContractAbsent(error)) throw error
+
+    forgetNewApiAccessTokenDialect(request.baseUrl)
+    const reprobed = await resolveNewApiAccessTokenDialect(request)
+    if (reprobed === dialect) throw error
+
+    return await mintForDialect(reprobed, request)
+  }
+}
+
+/**
  * Return an existing access token or create one for New API-family accounts.
  */
 export async function getOrCreateAccessToken(
@@ -242,7 +315,7 @@ export async function getOrCreateAccessToken(
 
   if (!accessToken) {
     logger.info("访问令牌为空，尝试自动创建")
-    accessToken = await createAccessToken(request)
+    accessToken = await createAccountAccessToken(request)
     await fetchUserInfo(
       {
         ...request,

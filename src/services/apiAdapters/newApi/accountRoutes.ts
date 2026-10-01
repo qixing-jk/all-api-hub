@@ -3,6 +3,10 @@ import {
   resolveRixApiMajorVersion,
   RIX_API_V6_MIN_MAJOR_VERSION,
 } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
+import {
+  createDeploymentProbeMemory,
+  normalizeDeploymentScope,
+} from "~/services/core/deploymentProbeMemory"
 import { AuthTypeEnum } from "~/types"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
@@ -12,8 +16,6 @@ import {
   type AccountBootstrapRouteTarget,
   type AccountBootstrapRouteKind as SiteRouteKind,
 } from "../contracts/accountBootstrap"
-
-const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
 const NEW_API_FRONTEND_THEMES = {
   Default: "default",
@@ -33,7 +35,6 @@ const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<
 }
 
 const SITE_ROUTE_FACTS_CACHE_TTL_MS = 5 * 60 * 1000
-const SITE_ROUTE_FACTS_CACHE_MAX_ENTRIES = 100
 
 /**
  * Rix API console route paths for its 6.x generation.
@@ -56,30 +57,14 @@ const RIX_API_V6_ROUTE_PATHS: Record<
   [SITE_ROUTE_KINDS.Redeem]: "/billing",
 }
 
-interface CachedBootstrapRouteFacts {
-  fetchedAt: number
+interface BootstrapRouteFacts {
   theme?: string
 }
 
-const bootstrapRouteFactsCache = new Map<string, CachedBootstrapRouteFacts>()
-
-/**
- * Store a bootstrap-facts probe result while bounding the short-lived cache.
- * @param baseUrl Normalized account site base URL.
- * @param value Cached probe result.
- */
-function setCachedBootstrapRouteFacts(
-  baseUrl: string,
-  value: CachedBootstrapRouteFacts,
-) {
-  bootstrapRouteFactsCache.set(baseUrl, value)
-
-  while (bootstrapRouteFactsCache.size > SITE_ROUTE_FACTS_CACHE_MAX_ENTRIES) {
-    const oldestKey = bootstrapRouteFactsCache.keys().next().value
-    if (typeof oldestKey !== "string") return
-    bootstrapRouteFactsCache.delete(oldestKey)
-  }
-}
+const bootstrapRouteFactsCache =
+  createDeploymentProbeMemory<BootstrapRouteFacts>({
+    ttlMs: SITE_ROUTE_FACTS_CACHE_TTL_MS,
+  })
 
 /**
  * Fetch the bootstrap facts route selection depends on, cached briefly per base
@@ -91,30 +76,25 @@ function setCachedBootstrapRouteFacts(
 async function fetchCachedBootstrapRouteFacts(
   baseUrl: string,
   accountBootstrap: Pick<AccountBootstrapCapability, "loadBootstrapFacts">,
-): Promise<CachedBootstrapRouteFacts> {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
-  const cached = bootstrapRouteFactsCache.get(normalizedBaseUrl)
-  const now = Date.now()
-  if (cached && now - cached.fetchedAt < SITE_ROUTE_FACTS_CACHE_TTL_MS) {
-    return cached
-  }
+): Promise<BootstrapRouteFacts> {
+  const cached = bootstrapRouteFactsCache.read(baseUrl)
+  if (cached) return cached
 
   try {
     const facts = await accountBootstrap.loadBootstrapFacts({
-      baseUrl: normalizedBaseUrl,
+      baseUrl: normalizeDeploymentScope(baseUrl),
       auth: { authType: AuthTypeEnum.None },
     })
-    const probedFacts: CachedBootstrapRouteFacts = {
-      fetchedAt: now,
+    const probedFacts: BootstrapRouteFacts = {
       ...(typeof facts?.frontendTheme === "string"
         ? { theme: facts.frontendTheme }
         : {}),
     }
-    setCachedBootstrapRouteFacts(normalizedBaseUrl, probedFacts)
+    bootstrapRouteFactsCache.remember(baseUrl, probedFacts)
     return probedFacts
   } catch {
-    const failedProbeFacts: CachedBootstrapRouteFacts = { fetchedAt: now }
-    setCachedBootstrapRouteFacts(normalizedBaseUrl, failedProbeFacts)
+    const failedProbeFacts: BootstrapRouteFacts = {}
+    bootstrapRouteFactsCache.remember(baseUrl, failedProbeFacts)
     return failedProbeFacts
   }
 }

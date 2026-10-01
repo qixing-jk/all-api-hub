@@ -1,3 +1,5 @@
+import { createDeploymentProbeMemory } from "~/services/core/deploymentProbeMemory"
+
 export const API_AUTH_MODES = {
   ApiKey: "api-key",
   Bearer: "bearer",
@@ -23,23 +25,15 @@ type UnauthorizedFallbackFetchParams<TMode extends string> = {
   rememberFallback: () => void
 }
 
-/** Normalize a compatible API URL into a stable session-level auth scope. */
-function normalizeAuthScope(baseUrl: string): string {
-  return baseUrl.trim().replace(/\/+$/, "")
-}
-
 /** Store an auth mode learned for a compatible base URL during this session. */
 export function createAuthModeMemory<TMode extends string>(
   defaultMode: TMode,
 ): AuthModeMemory<TMode> {
-  const modesByBaseUrl = new Map<string, TMode>()
+  const modesByBaseUrl = createDeploymentProbeMemory<TMode>()
 
   return {
-    get: (baseUrl) =>
-      modesByBaseUrl.get(normalizeAuthScope(baseUrl)) ?? defaultMode,
-    remember: (baseUrl, mode) => {
-      modesByBaseUrl.set(normalizeAuthScope(baseUrl), mode)
-    },
+    get: (baseUrl) => modesByBaseUrl.read(baseUrl) ?? defaultMode,
+    remember: (baseUrl, mode) => modesByBaseUrl.remember(baseUrl, mode),
   }
 }
 

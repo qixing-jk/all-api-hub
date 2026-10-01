@@ -12,6 +12,8 @@
  * Source: https://github.com/RixAPI/Rix-API.
  */
 
+import { createDeploymentProbeMemory } from "~/services/core/deploymentProbeMemory"
+
 /** Probeable dialect decisions, one independent memory per deployment. */
 export const RIX_API_DIALECT_KEYS = {
   /** Endpoint family that answers the token group list. */
@@ -25,40 +27,22 @@ export const RIX_API_DIALECT_KEYS = {
 export type RixApiDialectKey =
   (typeof RIX_API_DIALECT_KEYS)[keyof typeof RIX_API_DIALECT_KEYS]
 
-/** Bounds one session's memory of distinct deployments. */
-const RIX_API_DIALECT_CACHE_MAX_ENTRIES = 100
-
-const dialectChoices = new Map<string, Map<RixApiDialectKey, string>>()
-
-const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
+const dialectChoices =
+  createDeploymentProbeMemory<Map<RixApiDialectKey, string>>()
 
 const readChoice = (
   baseUrl: string,
   key: RixApiDialectKey,
-): string | undefined => dialectChoices.get(normalizeBaseUrl(baseUrl))?.get(key)
+): string | undefined => dialectChoices.read(baseUrl)?.get(key)
 
 const rememberChoice = (
   baseUrl: string,
   key: RixApiDialectKey,
   choice: string,
 ) => {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
-  const remembered = dialectChoices.get(normalizedBaseUrl)
-
-  if (remembered) {
-    remembered.set(key, choice)
-    // Re-insert so the least recently updated deployment is evicted first.
-    dialectChoices.delete(normalizedBaseUrl)
-    dialectChoices.set(normalizedBaseUrl, remembered)
-  } else {
-    dialectChoices.set(normalizedBaseUrl, new Map([[key, choice]]))
-  }
-
-  while (dialectChoices.size > RIX_API_DIALECT_CACHE_MAX_ENTRIES) {
-    const oldestKey = dialectChoices.keys().next().value
-    if (typeof oldestKey !== "string") return
-    dialectChoices.delete(oldestKey)
-  }
+  const remembered = dialectChoices.read(baseUrl) ?? new Map()
+  // Copy so the stored map is only ever replaced, never mutated in place.
+  dialectChoices.remember(baseUrl, new Map(remembered).set(key, choice))
 }
 
 /**
@@ -125,18 +109,17 @@ export function readRixApiMajorVersion(
 /** First Rix API core version whose console and tokens use the 6.x dialect. */
 export const RIX_API_V6_MIN_MAJOR_VERSION = 6
 
-const majorVersions = new Map<string, number>()
+const majorVersions = createDeploymentProbeMemory<number>()
 
 /** Record the probed Rix API core major version for a deployment base URL. */
 export function recordRixApiMajorVersion(
   baseUrl: string,
   majorVersion: number | undefined,
 ): void {
-  const normalized = normalizeBaseUrl(baseUrl)
   if (majorVersion === undefined) {
-    majorVersions.delete(normalized)
+    majorVersions.forget(baseUrl)
   } else {
-    majorVersions.set(normalized, majorVersion)
+    majorVersions.remember(baseUrl, majorVersion)
   }
 }
 
@@ -145,7 +128,7 @@ export function resolveRixApiMajorVersion(
   baseUrl: string | undefined,
 ): number | undefined {
   if (!baseUrl) return undefined
-  return majorVersions.get(normalizeBaseUrl(baseUrl))
+  return majorVersions.read(baseUrl)
 }
 
 /**

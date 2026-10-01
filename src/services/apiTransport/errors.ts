@@ -23,6 +23,12 @@ export const API_ERROR_CODES = {
   NETWORK_ERROR: "NETWORK_ERROR",
   TOKEN_SECRET_UNAVAILABLE: "TOKEN_SECRET_UNAVAILABLE",
   ACCOUNT_IDENTITY_MISMATCH: "ACCOUNT_IDENTITY_MISMATCH",
+  /**
+   * The deployment issues an account credential only to a browser session that
+   * passed its own step-up verification, which a background request cannot
+   * produce. The user completes the same action on the deployment itself.
+   */
+  ACCESS_TOKEN_VERIFICATION_REQUIRED: "ACCESS_TOKEN_VERIFICATION_REQUIRED",
   FEATURE_UNSUPPORTED: "FEATURE_UNSUPPORTED",
   UNKNOWN: "UNKNOWN",
 } as const
