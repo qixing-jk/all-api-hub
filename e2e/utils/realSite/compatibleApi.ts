@@ -18,7 +18,7 @@ import {
 } from "./shared"
 
 const DEFAULT_LOGIN_PATH = "/login"
-const DEFAULT_LOGIN_API_PATH = "/api/user/login"
+export const DEFAULT_LOGIN_API_PATH = "/api/user/login"
 const DEFAULT_LOGIN_2FA_API_PATH = "/api/user/login/2fa"
 const AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 const AUTH_LOGOUT_PATH = "/api/user/auth/logout"
@@ -1059,7 +1059,7 @@ async function fetchCompatibleApiUser(
   return parseCompatibleApiUser(payload)
 }
 
-function extractCompatibleApiPayload(payload: unknown) {
+export function extractCompatibleApiPayload(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return null
   }
