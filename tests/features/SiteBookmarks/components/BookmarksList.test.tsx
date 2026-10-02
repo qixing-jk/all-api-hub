@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
+import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -585,7 +586,6 @@ describe("BookmarksList", () => {
   })
 
   it("blocks a new delete selection until the previous deletion reload finishes", async () => {
-    const user = userEvent.setup()
     let finishReload!: () => void
     loadAccountDataMock.mockReturnValueOnce(
       new Promise<void>((resolve) => {
@@ -614,25 +614,24 @@ describe("BookmarksList", () => {
     ]
     render(<BookmarksList />)
     const selectDelete = async (index: number) => {
-      await user.click(
-        atIndex(
-          await screen.findAllByRole("button", { name: "common:actions.more" }),
-          index,
-        ),
+      // Exercise the callback race directly; menu hit testing is covered above.
+      fireEvent.pointerDown(
+        atIndex(await screen.findAllByLabelText("common:actions.more"), index),
+        { button: 0, ctrlKey: false },
       )
-      await user.click(
-        await screen.findByRole("menuitem", { name: "common:actions.delete" }),
+      fireEvent.click(
+        await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem),
       )
     }
     await selectDelete(0)
-    await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "common:actions.delete",
-      }),
+    fireEvent.click(
+      await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.deleteConfirmButton),
     )
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { hidden: true })).toBeNull(),
+    )
     await selectDelete(1)
-    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByRole("dialog", { hidden: true })).toBeNull()
     finishReload()
     await waitFor(() =>
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -640,7 +639,7 @@ describe("BookmarksList", () => {
       ),
     )
     await selectDelete(1)
-    expect(await screen.findByRole("dialog")).toBeVisible()
+    expect(await screen.findByRole("dialog", { hidden: true })).toBeVisible()
     expect(mockDeleteBookmark).toHaveBeenCalledTimes(1)
   })
 
