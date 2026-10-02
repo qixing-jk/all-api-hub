@@ -6,6 +6,11 @@ import { runOmniRouteProbe } from "./suites/omniroute/probe.mjs"
 import { runOmniRouteUiTest } from "./suites/omniroute/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
+/**
+ * Resolve CLI overrides and local environment defaults for a live run.
+ * @param args Command-line options supplied by the operator.
+ * @returns Connection settings and the files available for recovery guidance.
+ */
 function parseArgs(args) {
   const options = {
     suite: "all",
@@ -56,7 +61,8 @@ dev profile 的扩展设置；协议探测默认完全只读。
     }
   }
 
-  loadLocalEnv({ envFile: options.envFile })
+  const { files } = loadLocalEnv({ envFile: options.envFile })
+  options.envSources = files
   options.cdpUrl ??= process.env.CDP_URL || "http://127.0.0.1:9222"
   options.baseUrl =
     options.baseUrl ||
@@ -96,6 +102,7 @@ async function connectLiveExtension(cdpUrl, extensionId) {
   throw lastError
 }
 
+/** Validate configuration before executing the selected protocol and UI suites. */
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   const { suite, cdpUrl, baseUrl, token, allowWrite } = options
@@ -106,8 +113,11 @@ async function main() {
   console.log(`目标部署: ${baseUrl ?? "(未配置)"}`)
 
   if (!baseUrl || !token) {
+    const configSource =
+      options.envFile ??
+      (options.envSources.join(", ") || ".env.local（共享或当前 worktree）")
     console.error(
-      `\n❌ 缺少 OmniRoute 连接参数。请在 ${options.envFile} 中配置 AAH_E2E_OMNIROUTE_BASE_URL 与 AAH_E2E_OMNIROUTE_ADMIN_TOKEN，或用 --base-url/--token 传入。`,
+      `\n❌ 缺少 OmniRoute 连接参数。请在 ${configSource} 中配置 AAH_E2E_OMNIROUTE_BASE_URL 与 AAH_E2E_OMNIROUTE_ADMIN_TOKEN，或用 --base-url/--token 传入。`,
     )
     process.exit(1)
   }

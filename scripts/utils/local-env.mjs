@@ -77,6 +77,11 @@ export function loadLocalEnv(options = {}) {
   return { files, sharedDir }
 }
 
+/**
+ * Find Git's primary checkout while isolating the caller's repository variables.
+ * @param cwd Checkout whose worktree list should be inspected.
+ * @returns Primary checkout path, or null for unavailable or bare repositories.
+ */
 function findPrimaryWorktree(cwd) {
   try {
     // Hooks export repository-local Git variables. Clear Git's own list before

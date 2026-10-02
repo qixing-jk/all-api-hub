@@ -9,6 +9,7 @@ import { loadPlaywrightEnvFiles } from "~~/e2e/utils/playwrightEnv"
 
 const tempDirs: string[] = []
 
+/** Create an isolated environment-file directory registered for test cleanup. */
 async function createTempDir() {
   const tempDir = await fs.mkdtemp(
     path.join(os.tmpdir(), "aah-playwright-env-"),
@@ -66,6 +67,7 @@ describe("loadPlaywrightEnvFiles", () => {
     expect(env.AAH_E2E_BASE_URL).toBe("https://process.example.com")
   })
 
+  /** Create real Git worktrees with distinct branch and shared-local defaults. */
   async function createWorktrees() {
     const root = await createTempDir()
     const primary = path.join(root, "primary checkout")

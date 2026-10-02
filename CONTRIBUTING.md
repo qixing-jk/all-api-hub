@@ -92,6 +92,11 @@ by each consuming command. Prefer absolute paths for shared browser/profile
 locations. Never point a linked checkout's extension output at the primary
 checkout merely because its credentials are shared.
 
+Shared defaults assume trusted local checkout configuration. Service addresses
+and credentials are merged independently; when switching deployments, also
+override the matching credentials rather than inheriting another deployment's
+token.
+
 These controls must be set in the launching shell, not in an env file:
 
 - `AAH_SHARED_ENV=0` disables shared-file loading.
