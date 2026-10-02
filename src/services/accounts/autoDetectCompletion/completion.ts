@@ -26,6 +26,7 @@ import {
   getNewAccountAutomaticExecutionDefault,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -308,6 +309,7 @@ export async function completeAutoDetectedAccount(
         }),
         registry,
         signal: earlyAbortController.signal,
+        observedAt: startedAt,
       }).catch((error) => {
         logger.warn("Early check-in discovery error", {
           error: getErrorMessage(error),
@@ -388,13 +390,17 @@ export async function completeAutoDetectedAccount(
         discoveryResult.decision.outcome ===
         CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
           ? false
-          : discoveryResult.config.automaticExecutionEnabled
+          : completed.checkIn.automaticExecutionEnabled
       completedWithDiscovery = {
         ...completed,
         checkIn: {
-          ...completed.checkIn,
-          methodKnowledge: discoveryResult.config.methodKnowledge,
-          selection: discoveryResult.config.selection,
+          ...mergeCheckInDiscoveryResults({
+            config: completed.checkIn,
+            candidateMethodIds,
+            detections: discoveryResult.detections,
+            statuses: discoveryResult.statuses,
+            completedAt: startedAt,
+          }),
           automaticExecutionEnabled,
         },
       }

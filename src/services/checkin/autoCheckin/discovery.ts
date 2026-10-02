@@ -49,6 +49,7 @@ interface CheckInDiscoveryResult {
   config: CheckInConfig
   decision: CheckInDiscoveryDecision
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
+  statuses?: Partial<Record<CheckInMethodId, CheckInMethodStatus>>
   timedOutMethodIds: CheckInMethodId[]
 }
 
@@ -227,39 +228,19 @@ export async function discoverCheckInMethods(
     if (item.timedOut) timedOutMethodIds.push(item.id)
   }
 
-  let config = mergeCheckInDiscoveryResults({
+  const config = mergeCheckInDiscoveryResults({
     config: input.config,
     candidateMethodIds: registrations.map(({ id }) => id),
     detections,
+    statuses,
     completedAt: observedAt,
   })
-  if (Object.keys(statuses).length > 0) {
-    config = {
-      ...config,
-      methodKnowledge: {
-        ...config.methodKnowledge,
-        methods: Object.fromEntries(
-          Object.entries(config.methodKnowledge.methods).map(
-            ([methodId, knowledge]) => [
-              methodId,
-              statuses[methodId as CheckInMethodId]
-                ? {
-                    ...knowledge,
-                    status: statuses[methodId as CheckInMethodId],
-                  }
-                : knowledge,
-            ],
-          ),
-        ),
-      },
-    }
-  }
   const decision: CheckInDiscoveryDecision = inspectCheckInMethods({
     config,
     candidateMethodIds: registrations.map(({ id }) => id),
   }).decision
 
-  return { config, decision, detections, timedOutMethodIds }
+  return { config, decision, detections, statuses, timedOutMethodIds }
 }
 
 /** Applies a user-owned manual choice or restores automatic selection. */

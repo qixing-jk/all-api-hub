@@ -22,6 +22,7 @@ import type {
   CheckInMethodDetection,
   CheckInMethodId,
   CheckInMethodSelection,
+  CheckInMethodStatus,
   CheckInSelectionState,
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
@@ -409,6 +410,7 @@ export function mergeCheckInDiscoveryResults(input: {
   config: CheckInConfig
   candidateMethodIds: readonly CheckInMethodId[]
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
+  statuses?: Partial<Record<CheckInMethodId, CheckInMethodStatus>>
   completedAt: number
 }): CheckInConfig {
   const candidateMethodIds = uniqueCandidateMethodIds(input.candidateMethodIds)
@@ -424,10 +426,11 @@ export function mergeCheckInDiscoveryResults(input: {
       reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
       attemptedAt: input.completedAt,
     }
+    const status = input.statuses?.[methodId] ?? previous?.status
 
     methods[methodId] = {
       detection: mergeDiscoveryDetection(previous?.detection, incoming),
-      ...(previous?.status ? { status: previous.status } : {}),
+      ...(status ? { status } : {}),
     }
   }
 

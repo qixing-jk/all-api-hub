@@ -573,4 +573,27 @@ describe("auto-detect completion", () => {
 
     expect(result.checkIn.automaticExecutionEnabled).toBe(false)
   })
+
+  it("keeps the adapter-confirmed selection when the early probe cannot classify", async () => {
+    fetchCheckInStatusMock.mockRejectedValueOnce(new Error("network down"))
+    accountCompletionMock.complete.mockResolvedValueOnce({
+      ...completedAccountData,
+      accessToken: "early-token",
+    })
+
+    const result = await completeAutoDetectedAccount({
+      url: "https://unknown-early.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected: {
+        userId: "7",
+        accessToken: "early-token",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    expect(result.checkIn.selection).toEqual({
+      mode: "automatic",
+      methodId: "new-api:daily-checkin",
+    })
+  })
 })
