@@ -163,6 +163,50 @@ afterEach(() => {
 })
 
 describe("automatic check-in preparation", () => {
+  it("discards a match and status returned after discovery is cancelled", async () => {
+    const account = createAccount()
+    const controller = new AbortController()
+    const started = createDeferred<AutoCheckinProviderReadContext>()
+    const release = createDeferred<void>()
+    atIndex(detectors, 0).mockImplementation(
+      async (read: AutoCheckinProviderReadContext) => {
+        started.resolve(read)
+        await release.promise
+        return {
+          detection: detection("matched"),
+          status: {
+            outcome: "known",
+            today: "checked",
+            evidence: { source: "probe", observedAt: NOW },
+          },
+        }
+      },
+    )
+
+    const pending = discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+      signal: controller.signal,
+      observedAt: NOW,
+    })
+    const read = await started.promise
+    controller.abort()
+    expect(read.signal?.aborted).toBe(true)
+    release.resolve()
+
+    const result = await pending
+    expect(result.detections[PRO]).toEqual({
+      outcome: "unknown",
+      reason: "timeout",
+      attemptedAt: NOW,
+    })
+    expect(result.statuses?.[PRO]).toBeUndefined()
+    expect(result.config.methodKnowledge.methods[PRO]?.status).toBeUndefined()
+    expect(result.config.selection).toEqual({ mode: "automatic" })
+    expect(result.timedOutMethodIds).toContain(PRO)
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
   it("reserves the cooldown before bounded reads, saves a unique choice, and never checks in", async () => {
     const account = saveAccount()
     atIndex(detectors, 0).mockImplementation(

@@ -208,11 +208,21 @@ export async function discoverCheckInMethods(
           // The signal belongs to this one adapter invocation.
           abortController.abort()
         }
+        if (input.signal?.aborted) {
+          return {
+            id: registration.id,
+            detection: unknownDetection(
+              CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
+              observedAt,
+            ),
+            timedOut: true,
+          }
+        }
         return {
           id: registration.id,
           detection: result.detection,
           status: result.status,
-          timedOut: result.timedOut || Boolean(input.signal?.aborted),
+          timedOut: result.timedOut,
         }
       } finally {
         if (input.signal) {
