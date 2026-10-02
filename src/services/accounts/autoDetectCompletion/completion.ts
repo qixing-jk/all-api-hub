@@ -26,9 +26,10 @@ import {
   getNewAccountAutomaticExecutionDefault,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { SiteHealthStatus } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -38,6 +39,8 @@ import {
   type AutoDetectCompletionRequest,
   type DetectedAccountIdentity,
 } from "./types"
+
+const COORDINATED_DISCOVERY_GRACE_PERIOD_MS = 3_500
 
 export { AutoDetectCompletionError }
 
@@ -195,6 +198,10 @@ const createAccountCompletionHelpers = (params: {
  */
 export async function completeAutoDetectedAccount(
   request: AutoDetectCompletionRequest,
+  options?: {
+    coordinatedGracePeriodMs?: number
+    registry?: AutoCheckinMethodRegistry
+  },
 ): Promise<AutoDetectCompletionData> {
   const {
     url,
@@ -220,46 +227,210 @@ export async function completeAutoDetectedAccount(
     )
   }
 
-  const completed = await accountCompletion.complete(
-    {
-      url,
-      requestedAuthType,
-      ...(request.existingAccessToken
-        ? { existingAccessToken: request.existingAccessToken }
-        : {}),
-      ...(request.loadSavedAccessTokens
-        ? { loadSavedAccessTokens: request.loadSavedAccessTokens }
-        : {}),
-      detected,
-      autoDetectContext,
-      context: completionContext,
-    },
-    createAccountCompletionHelpers({
-      url,
-      siteType,
-      onRecoveryData: request.onRecoveryData,
-    }),
+  const earlyUserId = trimString(detected.userId)
+  const earlyAccessToken = trimString(
+    detected.accessToken ?? request.existingAccessToken,
   )
+  const earlyHasAuth = Boolean(
+    earlyAccessToken ||
+      cookieAuthSessionCookie ||
+      requestedAuthType === AuthTypeEnum.Cookie ||
+      requestedAuthType === AuthTypeEnum.None,
+  )
+  const registry = options?.registry ?? autoCheckinMethodRegistry
+  const candidateMethodIds = registry
+    .getCandidates(siteType, url)
+    .map(({ id }) => id)
+  const canProbeEarly =
+    candidateMethodIds.length > 0 && Boolean(earlyUserId) && earlyHasAuth
+
+  const earlyAbortController = new AbortController()
+  const startedAt = Date.now()
+  const gracePeriodMs =
+    options?.coordinatedGracePeriodMs ?? COORDINATED_DISCOVERY_GRACE_PERIOD_MS
+  const earlyAuthType =
+    requestedAuthType ??
+    (earlyAccessToken ? AuthTypeEnum.AccessToken : AuthTypeEnum.None)
+
+  const initialCheckIn = createInitialCheckInConfig({
+    supported: false,
+    siteType,
+    siteUrl: url,
+  })
+
+  const earlyDiscoveryPromise = canProbeEarly
+    ? discoverCheckInMethods({
+        account: createPersistedSiteAccount({
+          id: `auto-detect:${earlyUserId}`,
+          now: startedAt,
+          account: {
+            site_name: "",
+            site_url: url,
+            site_type: siteType,
+            exchange_rate: 0,
+            account_info: {
+              id: earlyUserId,
+              access_token: earlyAccessToken,
+              username: "",
+              quota: 0,
+              today_prompt_tokens: 0,
+              today_completion_tokens: 0,
+              today_quota_consumption: 0,
+              today_requests_count: 0,
+              today_income: 0,
+            },
+            authType: earlyAuthType,
+            ...(cookieAuthSessionCookie
+              ? { cookieAuth: { sessionCookie: cookieAuthSessionCookie } }
+              : {}),
+            checkIn: initialCheckIn,
+            health: { status: SiteHealthStatus.Unknown },
+            notes: "",
+            tagIds: [],
+            disabled: false,
+            excludeFromTotalBalance: false,
+            excludeFromTodayIncome: false,
+            last_sync_time: 0,
+          },
+        }),
+        config: initialCheckIn,
+        request: createAutoDetectApiRequest({
+          baseUrl: url,
+          auth: {
+            authType: earlyAuthType,
+            userId: earlyUserId,
+            accessToken: earlyAccessToken,
+          },
+          cookieAuthSessionCookie,
+          fetchContext: completionContext.fetchContext,
+          protectionBypassExecution:
+            completionContext.protectionBypassExecution,
+        }),
+        registry,
+        signal: earlyAbortController.signal,
+      }).catch((error) => {
+        logger.warn("Early check-in discovery error", {
+          error: getErrorMessage(error),
+        })
+        return null
+      })
+    : null
+
+  let completed: AccountCompletionAdapterResult
+  try {
+    completed = await accountCompletion.complete(
+      {
+        url,
+        requestedAuthType,
+        ...(request.existingAccessToken
+          ? { existingAccessToken: request.existingAccessToken }
+          : {}),
+        ...(request.loadSavedAccessTokens
+          ? { loadSavedAccessTokens: request.loadSavedAccessTokens }
+          : {}),
+        detected,
+        autoDetectContext,
+        context: completionContext,
+      },
+      createAccountCompletionHelpers({
+        url,
+        siteType,
+        onRecoveryData: request.onRecoveryData,
+      }),
+    )
+  } catch (error) {
+    if (canProbeEarly) {
+      earlyAbortController.abort()
+    }
+    throw error
+  }
 
   request.onRecoveryData?.(completed)
 
-  const completedWithDiscovery = await discoverCompletedCheckIn({
-    url,
-    siteType,
-    completed,
-    cookieAuthSessionCookie,
-    request: createAutoDetectApiRequest({
-      baseUrl: url,
-      auth: {
-        authType: completed.authType,
-        userId: completed.userId,
-        accessToken: completed.accessToken,
-      },
-      cookieAuthSessionCookie,
-      fetchContext: completionContext.fetchContext,
-      protectionBypassExecution: completionContext.protectionBypassExecution,
-    }),
-  })
+  const elapsedMs = Date.now() - startedAt
+  const remainingGraceMs = Math.max(0, gracePeriodMs - elapsedMs)
+
+  const credentialsMatch =
+    canProbeEarly &&
+    trimString(completed.userId) === earlyUserId &&
+    trimString(completed.accessToken) === earlyAccessToken &&
+    (!cookieAuthSessionCookie || completed.authType === earlyAuthType)
+
+  let completedWithDiscovery: AccountCompletionAdapterResult
+
+  if (credentialsMatch && earlyDiscoveryPromise) {
+    let discoveryResult: Awaited<typeof earlyDiscoveryPromise> = null
+    if (remainingGraceMs > 0) {
+      let graceTimer: ReturnType<typeof setTimeout> | undefined
+      try {
+        discoveryResult = await Promise.race([
+          earlyDiscoveryPromise,
+          new Promise<null>((resolve) => {
+            graceTimer = setTimeout(() => {
+              earlyAbortController.abort()
+              resolve(null)
+            }, remainingGraceMs)
+          }),
+        ])
+      } finally {
+        if (graceTimer) clearTimeout(graceTimer)
+      }
+    } else {
+      earlyAbortController.abort()
+      discoveryResult = await Promise.race([
+        earlyDiscoveryPromise,
+        Promise.resolve(null),
+      ])
+    }
+
+    if (discoveryResult) {
+      const automaticExecutionEnabled =
+        discoveryResult.decision.outcome ===
+        CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+          ? false
+          : discoveryResult.config.automaticExecutionEnabled
+      completedWithDiscovery = {
+        ...completed,
+        checkIn: {
+          ...completed.checkIn,
+          methodKnowledge: discoveryResult.config.methodKnowledge,
+          selection: discoveryResult.config.selection,
+          automaticExecutionEnabled,
+        },
+      }
+    } else {
+      completedWithDiscovery = completed
+    }
+  } else {
+    if (canProbeEarly) {
+      earlyAbortController.abort()
+    }
+
+    if (candidateMethodIds.length > 0 && remainingGraceMs > 0) {
+      completedWithDiscovery = await discoverCompletedCheckIn({
+        url,
+        siteType,
+        completed,
+        cookieAuthSessionCookie,
+        registry,
+        deadlineMs: remainingGraceMs,
+        request: createAutoDetectApiRequest({
+          baseUrl: url,
+          auth: {
+            authType: completed.authType,
+            userId: completed.userId,
+            accessToken: completed.accessToken,
+          },
+          cookieAuthSessionCookie,
+          fetchContext: completionContext.fetchContext,
+          protectionBypassExecution:
+            completionContext.protectionBypassExecution,
+        }),
+      })
+    } else {
+      completedWithDiscovery = completed
+    }
+  }
 
   return {
     ...completedWithDiscovery,

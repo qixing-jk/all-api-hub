@@ -42,6 +42,7 @@ interface CheckInDiscoveryInput {
   observedAt?: number
   perAdapterTimeoutMs?: number
   deadlineMs?: number
+  signal?: AbortSignal
 }
 
 interface CheckInDiscoveryResult {
@@ -174,7 +175,7 @@ export async function discoverCheckInMethods(
   const results = await Promise.all(
     registrations.map(async (registration) => {
       const now = Date.now()
-      if (now >= deadlineAt) {
+      if (now >= deadlineAt || input.signal?.aborted) {
         return {
           id: registration.id,
           detection: unknownDetection(
@@ -185,6 +186,10 @@ export async function discoverCheckInMethods(
         }
       }
       const abortController = new AbortController()
+      const onAbort = () => abortController.abort()
+      if (input.signal) {
+        input.signal.addEventListener("abort", onAbort, { once: true })
+      }
       const context: AutoCheckinProviderReadContext = {
         account: input.account,
         ...(input.request ? { request: input.request } : {}),
@@ -192,20 +197,26 @@ export async function discoverCheckInMethods(
         signal: abortController.signal,
       }
       const remaining = Math.max(1, deadlineAt - now)
-      const result = await runDetection(
-        registration,
-        context,
-        Math.min(perAdapterTimeoutMs, remaining),
-      )
-      if (result.timedOut) {
-        // The signal belongs to this one adapter invocation.
-        abortController.abort()
-      }
-      return {
-        id: registration.id,
-        detection: result.detection,
-        status: result.status,
-        timedOut: result.timedOut,
+      try {
+        const result = await runDetection(
+          registration,
+          context,
+          Math.min(perAdapterTimeoutMs, remaining),
+        )
+        if (result.timedOut || input.signal?.aborted) {
+          // The signal belongs to this one adapter invocation.
+          abortController.abort()
+        }
+        return {
+          id: registration.id,
+          detection: result.detection,
+          status: result.status,
+          timedOut: result.timedOut || Boolean(input.signal?.aborted),
+        }
+      } finally {
+        if (input.signal) {
+          input.signal.removeEventListener("abort", onAbort)
+        }
       }
     }),
   )

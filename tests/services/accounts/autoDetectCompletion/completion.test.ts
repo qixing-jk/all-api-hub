@@ -493,4 +493,84 @@ describe("auto-detect completion", () => {
       }),
     ).rejects.toBe(completionError)
   })
+
+  it("starts check-in discovery early when credentials are available in detected identity", async () => {
+    accountCompletionMock.complete.mockResolvedValueOnce({
+      ...completedAccountData,
+      accessToken: "early-token",
+    })
+
+    const result = await completeAutoDetectedAccount({
+      url: "https://early.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected: {
+        userId: "7",
+        accessToken: "early-token",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    expect(fetchCheckInStatusMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://early.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "7",
+          accessToken: "early-token",
+        },
+      }),
+      expect.anything(),
+    )
+    expect(result.checkIn.selection).toEqual({
+      mode: "automatic",
+      methodId: "new-api:daily-checkin",
+    })
+  })
+
+  it("times out early check-in discovery when exceeding coordinated grace period without hanging", async () => {
+    fetchCheckInStatusMock.mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(resolve, 500)),
+    )
+    accountCompletionMock.complete.mockResolvedValueOnce(completedAccountData)
+
+    const result = await completeAutoDetectedAccount(
+      {
+        url: "https://hanging-probe.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "7",
+          accessToken: "service-token",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      },
+      {
+        coordinatedGracePeriodMs: 25,
+      },
+    )
+
+    expect(result).toBeDefined()
+    expect(result.userId).toBe("7")
+    // When early probe times out, completed.checkIn is preserved
+    expect(result.checkIn).toBeDefined()
+  })
+
+  it("disables automatic execution when early discovery confirms unsupported", async () => {
+    fetchCheckInStatusMock.mockRejectedValueOnce({ statusCode: 404 })
+    accountCompletionMock.complete.mockResolvedValueOnce({
+      ...completedAccountData,
+      accessToken: "early-token",
+    })
+
+    const result = await completeAutoDetectedAccount({
+      url: "https://unsupported-early.example.com",
+      requestedAuthType: AuthTypeEnum.AccessToken,
+      detected: {
+        userId: "7",
+        accessToken: "early-token",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    expect(result.checkIn.automaticExecutionEnabled).toBe(false)
+  })
 })
