@@ -22,7 +22,6 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - "knip.ts"
       - "i18next.config.ts"
       - "scripts/run-i18n-check-if-staged.mjs"
       - "scripts/run-push-check-if-needed.mjs"
@@ -31,6 +30,7 @@ on:
       - "vitest.config.ts"
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
+      - ".github/actions/setup/**"
   pull_request:
     paths:
       - "src/**"
@@ -49,7 +49,6 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - "knip.ts"
       - "i18next.config.ts"
       - "scripts/run-i18n-check-if-staged.mjs"
       - "scripts/run-push-check-if-needed.mjs"
@@ -58,6 +57,7 @@ on:
       - "vitest.config.ts"
       - "wxt.config.ts"
       - ".github/workflows/test.yml"
+      - ".github/actions/setup/**"
   workflow_dispatch: {}
 
 concurrency:
@@ -67,45 +67,6 @@ concurrency:
 jobs:
   release-changes:
     uses: ./.github/workflows/release-pr-check.yml
-
-  quality:
-    needs: release-changes
-    if: needs.release-changes.outputs.release-only != 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Run type check
-        run: pnpm compile
-
-      - name: Run lint
-        run: pnpm lint
-
-      - name: Run knip
-        run: pnpm knip
-
-      - name: Run i18n extract check
-        run: pnpm run i18n:extract:ci
-
-      - name: Run i18n status check
-        run: pnpm run i18n:status
 
   unit-tests:
     needs: release-changes
@@ -128,20 +89,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version-file: .nvmrc
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -189,20 +138,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version-file: .nvmrc
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
 
       - name: Download Vitest blob reports
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7

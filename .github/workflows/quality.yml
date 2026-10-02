@@ -1,0 +1,92 @@
+name: Quality
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "src/**"
+      - "public/**"
+      - "plugins/**"
+      - "tests/**"
+      - "!tests/docs_assistant/**"
+      - ".github/workflows/release-pr-check.yml"
+      - "scripts/release-pr-check.mjs"
+      - "tests/scripts/release-pr-check.test.mjs"
+      - "eslint.config.js"
+      - "tsconfig.eslint.json"
+      - "scripts/check-typography.mjs"
+      - "scripts/check-color-tokens.mjs"
+      - "scripts/run-i18n-check-if-staged.mjs"
+      - "scripts/utils/run-pnpm.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "knip.ts"
+      - "i18next.config.ts"
+      - "tsconfig.json"
+      - "wxt.config.ts"
+      - ".github/workflows/quality.yml"
+      - ".github/actions/setup/**"
+  pull_request:
+    paths:
+      - "src/**"
+      - "public/**"
+      - "plugins/**"
+      - "tests/**"
+      - "!tests/docs_assistant/**"
+      - ".github/workflows/release-pr-check.yml"
+      - "scripts/release-pr-check.mjs"
+      - "tests/scripts/release-pr-check.test.mjs"
+      - "eslint.config.js"
+      - "tsconfig.eslint.json"
+      - "scripts/check-typography.mjs"
+      - "scripts/check-color-tokens.mjs"
+      - "scripts/run-i18n-check-if-staged.mjs"
+      - "scripts/utils/run-pnpm.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "knip.ts"
+      - "i18next.config.ts"
+      - "tsconfig.json"
+      - "wxt.config.ts"
+      - ".github/workflows/quality.yml"
+      - ".github/actions/setup/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-changes:
+    uses: ./.github/workflows/release-pr-check.yml
+
+  quality:
+    needs: release-changes
+    if: needs.release-changes.outputs.release-only != 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup
+
+      - name: Run type check
+        run: pnpm compile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run knip
+        run: pnpm knip
+
+      - name: Run i18n extract check
+        run: pnpm run i18n:extract:ci
+
+      - name: Run i18n status check
+        run: pnpm run i18n:status

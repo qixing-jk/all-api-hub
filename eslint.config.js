@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { relative } from "node:path"
 import eslint from "@eslint/js"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
 import jsdoc from "eslint-plugin-jsdoc"
@@ -86,6 +87,105 @@ const newApiAdapterLegacyApiServiceImportPattern = {
   message:
     "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or other apiService modules.",
 }
+
+// Runtime `import()` is a deliberate lazy-loading or cycle-breaking boundary.
+// Keep the owners of those boundaries explicit so new call sites get reviewed
+// instead of proliferating by accident. Type-only `typeof import(...)` is
+// unaffected; only runtime `import()` expressions are gated.
+//
+// Each entry also lists the allowed import targets as prefix matches, so a
+// new dynamic import inside an allowlisted file still needs a config diff.
+const dynamicImportAllowlist = [
+  // UI code splitting: lazy pages, sections, dialogs, and locale data.
+  {
+    file: "src/components/ui/datePickerLocale.ts",
+    imports: ["date-fns/locale/"],
+  },
+  {
+    file: "src/entrypoints/options/constants.ts",
+    imports: ["./pages/"],
+  },
+  {
+    file: "src/entrypoints/popup/viewRegistry.tsx",
+    imports: ["./components/", "~/features/"],
+  },
+  {
+    file: "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
+    imports: ["./AccountListDndRuntime"],
+  },
+  {
+    file: "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
+    imports: [
+      "~/components/KiloCodeExportDialog",
+      "~/features/ApiCredentialProfiles/components/",
+      "~/services/integrations/cherryStudio",
+    ],
+  },
+  {
+    file: "src/features/BasicSettings/BasicSettings.tsx",
+    imports: ["./components/tabs/"],
+  },
+  {
+    file: "src/features/CheckInFeedback/useCheckInFeedback.tsx",
+    imports: ["./CheckInFeedbackDialog"],
+  },
+  {
+    file: "src/utils/i18n/dayjsLocale.ts",
+    imports: ["dayjs/locale/"],
+  },
+  // Content scripts keep React and their toast components out of the eagerly
+  // injected bundle.
+  {
+    file: "src/entrypoints/content/messageHandlers/index.ts",
+    imports: ["~/services/checkin/feedback/pageScan"],
+  },
+  {
+    file: "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",
+    imports: ["../components/", "react"],
+  },
+  {
+    file: "src/entrypoints/content/shared/uiRoot.ts",
+    imports: ["~/entrypoints/content/shared/ContentReactRoot", "react"],
+  },
+  {
+    file: "src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts.ts",
+    imports: ["~/entrypoints/content/webAiApiCheck/components/", "react"],
+  },
+  // Background and service boundaries keep heavy provider graphs off the
+  // startup path or break module cycles.
+  {
+    file: "src/entrypoints/background/runtimeMessages.ts",
+    imports: ["~/services/managedSites/newApiOwnedSession/background"],
+  },
+  {
+    file: "src/services/accountLogin/index.ts",
+    imports: ["~/services/apiAdapters/registry"],
+  },
+  {
+    file: "src/services/checkin/autoCheckin/refresh.ts",
+    imports: ["~/services/checkin/autoCheckin/providers"],
+  },
+  {
+    file: "src/services/managedSites/providers/newApiProtectionBypassResource.ts",
+    imports: ["~/services/apiAdapters/registry"],
+  },
+  {
+    file: "src/services/managedSites/providers/newApiSession.ts",
+    imports: ["~/utils/browser/tempWindowFetch"],
+  },
+  {
+    file: "src/services/productAnalytics/client.ts",
+    imports: ["posthog-js/dist/module.no-external"],
+  },
+  {
+    file: "src/services/redemption/redemptionAssist.ts",
+    imports: ["~/services/redemption/accountCandidate"],
+  },
+  {
+    file: "src/utils/browser/tempWindowFetch.ts",
+    imports: ["~/entrypoints/background/protectionBypassCoordinator"],
+  },
+]
 const workflowTransitionIconRestrictedImports = [
   {
     name: "lucide-react",
@@ -461,6 +561,62 @@ export default defineConfig([
       },
     },
     rules: { "notifications/use-facade": "error" },
+  },
+  // Guardrails: dynamic `import()` is opt-in; only allowlisted boundaries may
+  // use it, and only toward their registered targets. Implementing this as a
+  // custom rule keeps the allowlist in one place instead of multiplying
+  // per-file rule overrides.
+  {
+    files: [srcJsFamilyFilePattern],
+    plugins: {
+      "lazy-boundaries": {
+        rules: {
+          "no-undecided-dynamic-import": {
+            meta: {
+              type: "problem",
+              schema: [],
+              messages: {
+                dynamicImport:
+                  "Dynamic import() is a deliberate lazy-loading or cycle-breaking boundary. If this call site needs one, add the file and its import target to dynamicImportAllowlist in eslint.config.js with a reason.",
+                unregisteredTarget:
+                  "This dynamic import() target is not registered for this file. Add it to the file's entry in dynamicImportAllowlist in eslint.config.js.",
+              },
+            },
+            create(context) {
+              const repositoryRelativeFilename = relative(
+                context.cwd,
+                context.filename ?? "",
+              ).replace(/\\/g, "/")
+              const entry = dynamicImportAllowlist.find(
+                ({ file }) => repositoryRelativeFilename === file,
+              )
+              if (!entry) {
+                return {
+                  ImportExpression(node) {
+                    context.report({ node, messageId: "dynamicImport" })
+                  },
+                }
+              }
+              return {
+                ImportExpression(node) {
+                  if (
+                    node.source.type !== "Literal" ||
+                    !entry.imports.some((prefix) =>
+                      String(node.source.value).startsWith(prefix),
+                    )
+                  ) {
+                    context.report({ node, messageId: "unregisteredTarget" })
+                  }
+                },
+              }
+            },
+          },
+        },
+      },
+    },
+    rules: {
+      "lazy-boundaries/no-undecided-dynamic-import": "error",
+    },
   },
   { rules },
   eslintConfigPrettier,
