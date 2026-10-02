@@ -144,9 +144,12 @@ describe("useProviderModelDiscovery", () => {
           sources: [
             {
               selectionId: "account",
-              cacheKey: changed ? "new" : "old",
+              cacheKey: changed && action === "replace" ? "new" : "old",
               baseUrl: "https://old.test",
-              resolveApiKey: changed ? async () => "new-key" : resolveApiKey,
+              resolveApiKey:
+                changed && action === "replace"
+                  ? async () => "new-key"
+                  : resolveApiKey,
             },
           ],
           fetchModelIds,
