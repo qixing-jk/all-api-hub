@@ -190,7 +190,7 @@ export function formatAllowanceSignalLabel(
   }
 
   const balanceLabel = formatProviderBalance(signal, t)
-  return signal.runwayDays === undefined
+  return signal.runwayDays === undefined || signal.runwayDays <= 0
     ? balanceLabel
     : t("apiCredentialProfiles:telemetry.allowance.balanceRunway", {
         balance: balanceLabel,

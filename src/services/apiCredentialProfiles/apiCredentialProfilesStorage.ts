@@ -1111,10 +1111,17 @@ class ApiCredentialProfilesStorageService {
   async createProfile(
     input: ApiCredentialProfileCreateInput,
   ): Promise<ApiCredentialProfile> {
+    return (await this.createProfileWithCreationStatus(input)).profile
+  }
+
+  /** Reports creation ownership under the identity lock for safe rollback. */
+  async createProfileWithCreationStatus(
+    input: ApiCredentialProfileCreateInput,
+  ): Promise<{ profile: ApiCredentialProfile; isNew: boolean }> {
     const now = Date.now()
     const nextProfile = createNormalizedProfile(input, now)
 
-    const { created, profileIdRemap } = await this.withStorageWriteLock(
+    const { created, isNew, profileIdRemap } = await this.withStorageWriteLock(
       async () => {
         const config = cloneConfig(await this.readConfig())
 
@@ -1123,7 +1130,7 @@ class ApiCredentialProfilesStorageService {
           (p) => getIdentityKey(p) === identityKey,
         )
         if (existing) {
-          return { created: existing, profileIdRemap: null }
+          return { created: existing, isNew: false, profileIdRemap: null }
         }
 
         const { profiles: dedupedProfiles, profileIdRemap } = dedupeProfiles([
@@ -1138,7 +1145,7 @@ class ApiCredentialProfilesStorageService {
         })
 
         await this.saveConfig(nextConfig)
-        return { created: nextProfile, profileIdRemap }
+        return { created: nextProfile, isNew: true, profileIdRemap }
       },
     )
 
@@ -1146,7 +1153,7 @@ class ApiCredentialProfilesStorageService {
       await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
     }
 
-    return created
+    return { profile: created, isNew }
   }
 
   /**

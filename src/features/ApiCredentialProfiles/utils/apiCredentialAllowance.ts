@@ -171,7 +171,7 @@ export function getBalanceRunwayDays(
   }
   if (!hasComparableUnits(balance.unit, todayCost.unit)) return undefined
   if (!Number.isFinite(balance.amount)) return undefined
-  return balance.amount / todayCost.value
+  return Math.max(0, balance.amount / todayCost.value)
 }
 
 /** Classifies a balance runway into an actionable level. */

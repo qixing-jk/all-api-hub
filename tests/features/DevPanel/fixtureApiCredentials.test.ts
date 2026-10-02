@@ -9,19 +9,26 @@ import {
 } from "~/features/DevPanel/fixtureApiCredentials"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
-const { createProfile, deleteProfile, listProfiles, updateTelemetrySnapshot } =
-  vi.hoisted(() => ({
-    createProfile: vi.fn(),
-    deleteProfile: vi.fn(),
-    listProfiles: vi.fn(),
-    updateTelemetrySnapshot: vi.fn(),
-  }))
+const {
+  createProfile,
+  createProfileWithCreationStatus,
+  deleteProfile,
+  listProfiles,
+  updateTelemetrySnapshot,
+} = vi.hoisted(() => ({
+  createProfile: vi.fn(),
+  createProfileWithCreationStatus: vi.fn(),
+  deleteProfile: vi.fn(),
+  listProfiles: vi.fn(),
+  updateTelemetrySnapshot: vi.fn(),
+}))
 
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
     apiCredentialProfilesStorage: {
       createProfile,
+      createProfileWithCreationStatus,
       deleteProfile,
       listProfiles,
       updateTelemetrySnapshot,
@@ -126,6 +133,13 @@ describe("dev allowance fixtures", () => {
       ...input,
       id: `fixture-${input.apiKey}`,
     }))
+    const createdIds = new Set<string>()
+    createProfileWithCreationStatus.mockImplementation(async (input) => {
+      const profile = await createProfile(input)
+      const isNew = !createdIds.has(profile.id)
+      createdIds.add(profile.id)
+      return { profile, isNew }
+    })
     deleteProfile.mockResolvedValue(true)
     updateTelemetrySnapshot.mockImplementation(async (id) => ({ id }))
   })
@@ -185,4 +199,32 @@ describe("dev allowance fixtures", () => {
     )
     expect(deleteProfile).toHaveBeenCalledTimes(1)
   })
+
+  it.each(["snapshot", "registry"])(
+    "preserves a reused fixture after a %s failure",
+    async (failure) => {
+      await addDevAllowanceFixtures()
+      const registered = [
+        ...(storage.get(
+          STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS,
+        ) as string[]),
+      ]
+      // The storage service reports ownership atomically, including reuse by
+      // another context between the caller's reads and creation.
+      createProfile.mockImplementation(async (input) => ({
+        ...input,
+        id: registered[0],
+      }))
+      if (failure === "snapshot")
+        updateTelemetrySnapshot.mockRejectedValueOnce(
+          new Error("snapshot unavailable"),
+        )
+      else storageSetShouldThrow = true
+      await expect(addDevAllowanceFixtures()).rejects.toThrow("unavailable")
+      expect(deleteProfile).not.toHaveBeenCalled()
+      expect(storage.get(STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS)).toEqual(
+        registered,
+      )
+    },
+  )
 })

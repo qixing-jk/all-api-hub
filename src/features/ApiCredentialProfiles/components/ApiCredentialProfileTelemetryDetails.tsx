@@ -119,7 +119,8 @@ export function ApiCredentialProfileTelemetryDetails({
                     ))
                   : missingTelemetryValue}
             </div>
-            {balanceRunway?.runwayDays !== undefined ? (
+            {balanceRunway?.runwayDays !== undefined &&
+            balanceRunway.runwayDays > 0 ? (
               <div
                 className="text-muted-foreground text-3xs mt-density-1"
                 data-testid={

@@ -74,6 +74,25 @@ describe("apiCredentialProfilesStorage", () => {
     expect(await apiCredentialProfilesStorage.listProfiles()).toHaveLength(1)
   })
 
+  it("reports creation ownership atomically when concurrent callers share an identity", async () => {
+    const input = {
+      name: "Fixture",
+      apiType: API_TYPES.OPENAI,
+      baseUrl: "https://example.com/v1",
+      apiKey: "sk-fixture",
+    }
+    const results = await Promise.all([
+      apiCredentialProfilesStorage.createProfileWithCreationStatus(input),
+      apiCredentialProfilesStorage.createProfileWithCreationStatus({
+        ...input,
+        baseUrl: "https://example.com",
+      }),
+    ])
+    expect(results.filter((result) => result.isNew)).toHaveLength(1)
+    expect(results[0]!.profile.id).toBe(results[1]!.profile.id)
+    expect(await apiCredentialProfilesStorage.listProfiles()).toHaveLength(1)
+  })
+
   it("de-dupes profiles when an update causes an identity conflict and unions tag ids", async () => {
     const a = await apiCredentialProfilesStorage.createProfile({
       name: "A",

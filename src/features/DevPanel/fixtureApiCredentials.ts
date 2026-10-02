@@ -126,14 +126,15 @@ export async function addDevAllowanceFixtures(): Promise<number> {
   let seeded = 0
 
   for (const fixture of DEV_ALLOWANCE_FIXTURES) {
-    const profile = await apiCredentialProfilesStorage.createProfile({
-      name: fixture.name,
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: ALLOWANCE_FIXTURE_BASE_URL,
-      apiKey: allowanceFixtureApiKey(fixture.id),
-      notes: fixture.notes,
-      telemetryConfig: { mode: API_CREDENTIAL_TELEMETRY_MODES.Disabled },
-    })
+    const { profile, isNew } =
+      await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+        name: fixture.name,
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: ALLOWANCE_FIXTURE_BASE_URL,
+        apiKey: allowanceFixtureApiKey(fixture.id),
+        notes: fixture.notes,
+        telemetryConfig: { mode: API_CREDENTIAL_TELEMETRY_MODES.Disabled },
+      })
 
     const snapshot = fixture.buildSnapshot(now)
     try {
@@ -146,9 +147,8 @@ export async function addDevAllowanceFixtures(): Promise<number> {
       // The registry de-duplicates, so a refresh does not grow it.
       await updateIds((ids) => [...ids, profile.id])
     } catch (error) {
-      // These ids are fixture-namespaced, so dropping the profile on failure
-      // cannot destroy anything the user made.
-      await apiCredentialProfilesStorage.deleteProfile(profile.id)
+      // A reseed can reuse an existing profile, whose registry entry must survive.
+      if (isNew) await apiCredentialProfilesStorage.deleteProfile(profile.id)
       throw error
     }
     seeded += 1

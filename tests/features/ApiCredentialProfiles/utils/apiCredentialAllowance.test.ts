@@ -91,6 +91,17 @@ describe("getQuotaAllowanceLevel", () => {
 })
 
 describe("getBalanceRunwayDays", () => {
+  it.each([0, -3])(
+    "clamps an exhausted balance of %s to zero runway",
+    (amount) => {
+      expect(
+        getBalanceRunwayDays(buildBalance({ amount }), {
+          value: 3,
+          unit: usdMoney,
+        }),
+      ).toBe(0)
+    },
+  )
   it("divides the remaining balance by today's spend", () => {
     expect(
       getBalanceRunwayDays(buildBalance({ amount: 30 }), {
@@ -109,6 +120,33 @@ describe("getBalanceRunwayDays", () => {
       getBalanceRunwayDays(buildBalance({ amount: 30, unit: usdMoney }), {
         value: 3,
         unit: quotaUnit,
+      }),
+    ).toBeUndefined()
+  })
+
+  it("compares quota codes without assuming all quota amounts are interchangeable", () => {
+    expect(
+      getBalanceRunwayDays(buildBalance({ unit: quotaUnit }), {
+        value: 3,
+        unit: quotaUnit,
+      }),
+    ).toBe(10)
+    expect(
+      getBalanceRunwayDays(buildBalance({ unit: quotaUnit }), {
+        value: 3,
+        unit: { ...quotaUnit, code: "other" },
+      }),
+    ).toBeUndefined()
+    expect(
+      getBalanceRunwayDays(buildBalance(), {
+        value: 3,
+        unit: { ...usdMoney, currency: "CNY" },
+      }),
+    ).toBeUndefined()
+    expect(
+      getBalanceRunwayDays(buildBalance({ amount: NaN }), {
+        value: 3,
+        unit: usdMoney,
       }),
     ).toBeUndefined()
   })
@@ -428,5 +466,18 @@ describe("buildAllowanceOverview", () => {
     ])
 
     expect(overview).toMatchObject({ monitoredCount: 1, criticalCount: 0 })
+  })
+
+  it("counts low profiles and selects the more constrained signal at equal severity", () => {
+    const overview = buildAllowanceOverview([
+      buildProfile("a", "Alpha", {
+        quota: { windows: [buildWindow({ remainingPercent: 45 })] },
+      }),
+      buildProfile("b", "Beta", {
+        quota: { windows: [buildWindow({ remainingPercent: 30 })] },
+      }),
+    ])
+    expect(overview.lowCount).toBe(2)
+    expect(overview.mostUrgent?.profileId).toBe("b")
   })
 })

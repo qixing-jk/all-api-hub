@@ -1067,6 +1067,76 @@ describe("ApiCredentialProfileListItem", () => {
     ).toBeNull()
   })
 
+  it("keeps a quota with an unavailable percentage neutral instead of claiming remaining allowance", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            quota: {
+              windows: [
+                {
+                  type: "monthly",
+                  unit: { kind: "percent" },
+                  remainingPercent: NaN,
+                },
+              ],
+            },
+          },
+        },
+      }),
+    )
+    const quota = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota,
+    )
+    expect(quota).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.notProvided",
+    )
+    expect(quota.querySelector('[data-slot="progress-indicator"]')).toHaveClass(
+      "bg-neutral-indicator",
+    )
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge),
+    ).not.toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.quotaRemaining",
+    )
+  })
+
+  it.each([0, -3])(
+    "omits runway hints for an exhausted balance of %s",
+    (amount) => {
+      renderListItem(
+        buildProfile({
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 1,
+            facts: {
+              balances: [{ amount, unit: USD_MONEY_UNIT, semantics: "cash" }],
+              usage: { todayCost: { value: 3, unit: USD_MONEY_UNIT } },
+            },
+          },
+        }),
+      )
+      expect(
+        screen.queryByTestId(
+          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway,
+        ),
+      ).toBeNull()
+      const badge = screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge,
+      )
+      expect(badge).not.toHaveTextContent(
+        "apiCredentialProfiles:telemetry.allowance.balanceRunway",
+      )
+      expect(badge.querySelector('span[aria-hidden="true"]')).toHaveClass(
+        "bg-destructive-indicator",
+      )
+    },
+  )
+
   it("keeps explicit zero telemetry expanded", () => {
     renderListItem(
       buildProfile({
