@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { relative } from "node:path"
 import eslint from "@eslint/js"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
 import jsdoc from "eslint-plugin-jsdoc"
@@ -582,9 +583,12 @@ export default defineConfig([
               },
             },
             create(context) {
-              const filename = (context.filename ?? "").replace(/\\/g, "/")
-              const entry = dynamicImportAllowlist.find((entry) =>
-                filename.endsWith(entry.file),
+              const repositoryRelativeFilename = relative(
+                context.cwd,
+                context.filename ?? "",
+              ).replace(/\\/g, "/")
+              const entry = dynamicImportAllowlist.find(
+                ({ file }) => repositoryRelativeFilename === file,
               )
               if (!entry) {
                 return {
