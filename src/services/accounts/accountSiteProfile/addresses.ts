@@ -47,15 +47,28 @@ const WELL_KNOWN_INFERENCE_PROVIDER_MAPPINGS: ReadonlyArray<{
   matches: (url: URL) => boolean
   resolve: (url: URL, openAiCompatible: string) => DeclaredInferenceAddresses
 }> = [
-  // Volcengine Ark (火山引擎方舟): OpenAI on /api/v3 or /api/coding/v3, Anthropic on /api/compatible
+  // Volcengine Ark standard API (火山引擎方舟): OpenAI on /api/v3, Anthropic on /api/compatible
   {
     name: "volcengine-ark",
     matches: (url: URL) =>
       /(?:^|\.)volces\.com$/i.test(url.hostname) &&
-      /^\/api(?:\/coding)?\/v3(?:\/|$)/i.test(url.pathname),
+      /^\/api\/v3(?:\/|$)/i.test(url.pathname),
     resolve: (url: URL, openAiCompatible: string) => ({
       openAiCompatible,
       anthropic: `${url.origin}/api/compatible`,
+    }),
+  },
+  // Volcengine Ark Coding Plan (火山方舟 Coding Plan): OpenAI on /api/coding/v3,
+  // Anthropic on /api/coding. A Coding Plan subscription key is only honored on
+  // these reserved paths, not the standard /api/compatible endpoint.
+  {
+    name: "volcengine-ark-coding-plan",
+    matches: (url: URL) =>
+      /(?:^|\.)volces\.com$/i.test(url.hostname) &&
+      /^\/api\/coding\/v3(?:\/|$)/i.test(url.pathname),
+    resolve: (url: URL, openAiCompatible: string) => ({
+      openAiCompatible,
+      anthropic: `${url.origin}/api/coding`,
     }),
   },
 ]

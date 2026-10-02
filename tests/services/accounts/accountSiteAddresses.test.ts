@@ -79,7 +79,7 @@ describe("account site address roles", () => {
       ),
     ).toEqual({
       openAiCompatible: "https://ark.cn-beijing.volces.com/api/coding/v3",
-      anthropic: "https://ark.cn-beijing.volces.com/api/compatible",
+      anthropic: "https://ark.cn-beijing.volces.com/api/coding",
     })
     expect(
       resolveAccountSiteAddresses({
@@ -94,6 +94,21 @@ describe("account site address roles", () => {
       anthropic: {
         root: "https://ark.cn-beijing.volces.com/api/compatible",
         mount: "https://ark.cn-beijing.volces.com/api/compatible/v1",
+      },
+    })
+    expect(
+      resolveAccountSiteAddresses({
+        siteType: SITE_TYPES.UNKNOWN,
+        siteUrl: "https://ark.cn-beijing.volces.com/api/coding/v3",
+      }).inferenceApi,
+    ).toEqual({
+      openAiCompatible: {
+        root: "https://ark.cn-beijing.volces.com/api/coding/v3",
+        mount: "https://ark.cn-beijing.volces.com/api/coding/v3",
+      },
+      anthropic: {
+        root: "https://ark.cn-beijing.volces.com/api/coding",
+        mount: "https://ark.cn-beijing.volces.com/api/coding/v1",
       },
     })
   })
