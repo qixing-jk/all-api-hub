@@ -183,6 +183,19 @@ const renderAddDialog = () =>
     />,
   )
 
+/**
+ * The dialog must release the user before the background account reload, so a
+ * slow `loadAccountData()` cannot hold the modal open after a successful save.
+ */
+const expectDialogClosedBeforeReload = (onClose: ReturnType<typeof vi.fn>) => {
+  const closeOrder = onClose.mock.invocationCallOrder[0]
+  const reloadOrder = loadAccountDataMock.mock.invocationCallOrder[0]
+  if (closeOrder === undefined || reloadOrder === undefined) {
+    throw new Error("Expected both the close callback and the reload to run")
+  }
+  expect(closeOrder).toBeLessThan(reloadOrder)
+}
+
 describe("BookmarkDialog", () => {
   it("validates required fields before submitting", async () => {
     const onClose = vi.fn()
@@ -284,6 +297,7 @@ describe("BookmarkDialog", () => {
       )
       expect(onClose).toHaveBeenCalledTimes(1)
     })
+    expectDialogClosedBeforeReload(onClose)
   })
 
   it("fills name and url from the current page helper in add mode", async () => {
@@ -547,6 +561,7 @@ describe("BookmarkDialog", () => {
       )
       expect(onClose).toHaveBeenCalledTimes(1)
     })
+    expectDialogClosedBeforeReload(onClose)
   })
 
   it("tracks create completion failure when bookmark persistence rejects", async () => {

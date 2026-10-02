@@ -125,6 +125,7 @@ export default function BookmarksList({
   } = useAccountDataContext()
 
   const [deleteTarget, setDeleteTarget] = useState<SiteBookmark | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const normalizedInitialQuery = initialSearchQuery ?? ""
@@ -352,11 +353,13 @@ export default function BookmarksList({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
+    setIsDeleting(true)
     try {
       const success = await bookmarkRepository.deleteBookmark(target.id)
       if (!success) {
         throw new Error(t("messages:toast.error.saveFailed"))
       }
+      setDeleteTarget(null)
       toast.success(
         t("messages:toast.success.bookmarkDeleted", { name: target.name }),
       )
@@ -372,6 +375,7 @@ export default function BookmarksList({
         }),
       )
     } finally {
+      setIsDeleting(false)
       setDeleteTarget(null)
     }
   }
@@ -417,7 +421,9 @@ export default function BookmarksList({
           onOpen={() => void handleOpenBookmark(bookmark)}
           onCopyUrl={() => void handleCopyUrl(bookmark)}
           onEdit={() => openEditBookmark(bookmark)}
-          onDelete={() => setDeleteTarget(bookmark)}
+          onDelete={() => {
+            if (!isDeleting) setDeleteTarget(bookmark)
+          }}
           onTogglePin={() => void handleTogglePin(bookmark)}
           isDragDisabled={dragDisabled}
           handleLabel={handleLabel}
@@ -472,13 +478,19 @@ export default function BookmarksList({
       <ConfirmDialog
         intent="destructive"
         isOpen={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeleteTarget(null)
+          }
+        }}
         title={t("bookmark:delete.title")}
         description={t("bookmark:delete.description", {
           name: deleteTarget?.name ?? "",
         })}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={t("common:actions.delete")}
+        workingLabel={t("common:status.deleting")}
+        isWorking={isDeleting}
         confirmButtonTestId={SITE_BOOKMARKS_TEST_IDS.deleteConfirmButton}
         onConfirm={() => {
           void handleConfirmDelete()

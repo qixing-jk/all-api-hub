@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import {
   NATIVE_RESOURCE_EDITOR_LOADING_REVEALS,
   type NativeResourceEditorOpeningState,
 } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import toast from "~/lib/notify"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
@@ -471,6 +473,7 @@ export function useAccountKeyResourceController({
   routeTransition,
   replaceRoute,
 }: Options) {
+  const { t } = useTranslation()
   const inventoryExecutionRef = useRef(inventoryExecution)
   inventoryExecutionRef.current = inventoryExecution
   const creationIntentRef = useRef(creationIntent)
@@ -2189,8 +2192,18 @@ export function useAccountKeyResourceController({
               ),
             )
           }
-          if (result.createdSecret)
+          if (result.createdSecret) {
             transitionCreatedSecret(result.createdSecret)
+          } else if (submitMode === "edit") {
+            const updatedName = returnedFacts?.displayName
+            toast.success(
+              updatedName
+                ? t("keyManagement:messages.keyUpdated", {
+                    name: updatedName,
+                  })
+                : t("keyManagement:messages.keyUpdatedSimple"),
+            )
+          }
           const activeEditor = editorStateRef.current
           if (activeEditor?.editorId === editorId) {
             transitionTerminalCloseEditor({
@@ -2301,6 +2314,7 @@ export function useAccountKeyResourceController({
       requireFreshRead,
       routeTransitionInstanceId,
       scopes,
+      t,
       transitionCreatedSecret,
       transitionEditor,
       transitionTerminalCloseEditor,
@@ -2343,7 +2357,7 @@ export function useAccountKeyResourceController({
   }, [deleteState.isExecuting])
 
   const confirmDelete = useCallback(
-    async (cleanup = false) => {
+    async (cleanup = false): Promise<boolean> => {
       if (
         mode === "idle" ||
         createdSecretRef.current !== null ||
@@ -2353,17 +2367,17 @@ export function useAccountKeyResourceController({
           ? !isAcceptedResourceRef(deleteState.ref)
           : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
       )
-        return
+        return false
       const current = generation.current
       const ref = deleteState.ref
       const boundary: ActiveResourceBoundary =
         mode === "all"
           ? boundaryFromResourceRef(ref)
           : activeResourceBoundaryRef.current!
-      if (isFreshReadRequiredForBoundary(boundary)) return
+      if (isFreshReadRequiredForBoundary(boundary)) return false
       const mutationIdentity = boundaryIdentity(boundary)
       const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
-      if (existingMutation) return existingMutation.promise
+      if (existingMutation) return Boolean(await existingMutation.promise)
       const account = accountsRef.current.find(
         (candidate) => candidate.id === boundary.accountId,
       )
@@ -2429,16 +2443,24 @@ export function useAccountKeyResourceController({
                 selectedCount: 1,
               },
             })
-            return
+            return true
           }
+          replaceAcceptedRows(
+            acceptedRowsRef.current.filter(
+              (row) => refIdentity(row.ref) !== refIdentity(ref),
+            ),
+          )
           setDeleteState({
             isOpen: false,
             isExecuting: false,
             ref: null,
             failure: null,
           })
-          const accepted = await refreshAfterMutation()
-          if (!accepted) requireFreshRead(boundary)
+          void refreshAfterMutation()
+            .then((accepted) => {
+              if (!accepted) requireFreshRead(boundary)
+            })
+            .catch(() => requireFreshRead(boundary))
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
               mode: mutationAnalyticsMode,
@@ -2448,6 +2470,7 @@ export function useAccountKeyResourceController({
               selectedCount: 1,
             },
           })
+          return true
         })
         .catch(async (error: unknown) => {
           const failure = toFailure(error)
@@ -2467,7 +2490,7 @@ export function useAccountKeyResourceController({
                 selectedCount: 1,
               },
             })
-            return
+            return false
           }
           setDeleteState((state) => ({ ...state, isExecuting: false, failure }))
           if (
@@ -2486,6 +2509,7 @@ export function useAccountKeyResourceController({
               selectedCount: 1,
             },
           })
+          return false
         })
         .finally(() => {
           if (
@@ -2508,6 +2532,7 @@ export function useAccountKeyResourceController({
       mode,
       mutationAnalyticsMode,
       refreshAfterMutation,
+      replaceAcceptedRows,
       requireFreshRead,
       resolveResourceActionContext,
     ],

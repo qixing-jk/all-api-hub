@@ -238,8 +238,8 @@ export default function BookmarkDialog({
         )
       }
 
-      await loadAccountData()
       onClose()
+      await loadAccountData()
     } catch (error) {
       if (!isAnalyticsActionCompleted) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
+import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -532,6 +533,114 @@ describe("BookmarksList", () => {
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
+  })
+
+  it("displays working state during deletion and closes dialog immediately on success", async () => {
+    const user = userEvent.setup()
+    let resolveDelete!: (value: boolean) => void
+    const deletePromise = new Promise<boolean>((resolve) => {
+      resolveDelete = resolve
+    })
+    mockDeleteBookmark.mockReturnValue(deletePromise)
+
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+    bookmarksMock = [bookmark]
+
+    render(<BookmarksList />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    const confirmButton = await within(dialog).findByRole("button", {
+      name: "common:actions.delete",
+    })
+    fireEvent.click(confirmButton)
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole("button", { name: "common:status.deleting" }),
+      ).toHaveAttribute("aria-busy", "true")
+    })
+
+    resolveDelete(true)
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull()
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:toast.success.bookmarkDeleted",
+    )
+  })
+
+  it("blocks a new delete selection until the previous deletion reload finishes", async () => {
+    let finishReload!: () => void
+    loadAccountDataMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishReload = resolve
+      }),
+    )
+    bookmarksMock = [
+      {
+        id: "b1",
+        name: "First",
+        url: "https://example.com/first",
+        tagIds: [],
+        notes: "",
+        created_at: 0,
+        updated_at: 0,
+      },
+      {
+        id: "b2",
+        name: "Second",
+        url: "https://example.com/second",
+        tagIds: [],
+        notes: "",
+        created_at: 0,
+        updated_at: 0,
+      },
+    ]
+    render(<BookmarksList />)
+    const selectDelete = async (index: number) => {
+      // Exercise the callback race directly; menu hit testing is covered above.
+      fireEvent.pointerDown(
+        atIndex(await screen.findAllByLabelText("common:actions.more"), index),
+        { button: 0, ctrlKey: false },
+      )
+      fireEvent.click(
+        await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem),
+      )
+    }
+    await selectDelete(0)
+    fireEvent.click(
+      await screen.findByTestId(SITE_BOOKMARKS_TEST_IDS.deleteConfirmButton),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { hidden: true })).toBeNull(),
+    )
+    await selectDelete(1)
+    expect(screen.queryByRole("dialog", { hidden: true })).toBeNull()
+    finishReload()
+    await waitFor(() =>
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      ),
+    )
+    await selectDelete(1)
+    expect(await screen.findByRole("dialog", { hidden: true })).toBeVisible()
+    expect(mockDeleteBookmark).toHaveBeenCalledTimes(1)
   })
 
   it("offers the unpin action for a pinned bookmark", async () => {

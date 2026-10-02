@@ -20,6 +20,7 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
+import toast from "~/lib/notify"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
@@ -972,6 +973,30 @@ export default function KeyManagement(props: {
   const nativeDeleteIsUncertain =
     nativeKeys.deleteState.failure?.code ===
     ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
+  const handleConfirmDeleteNativeKey = useCallback(async () => {
+    if (nativeDeleteIsUncertain) {
+      await nativeKeys.refresh()
+      return
+    }
+    const keyName = nativeDeleteFacts?.displayName
+    const success = await nativeKeys.confirmDelete(
+      canResolveDeleteKeySecret && nativeCleanupLinkedChannels,
+    )
+    if (success) {
+      toast.success(
+        keyName
+          ? t("keyManagement:messages.keyDeleted", { name: keyName })
+          : t("keyManagement:messages.keyDeletedSimple"),
+      )
+    }
+  }, [
+    canResolveDeleteKeySecret,
+    nativeCleanupLinkedChannels,
+    nativeDeleteFacts?.displayName,
+    nativeDeleteIsUncertain,
+    nativeKeys,
+    t,
+  ])
   const combinedAccountSummaryItems = useMemo(() => {
     const nativeCountByAccount = new Map<string, number>()
     for (const facts of nativeKeys.rows) {
@@ -1480,15 +1505,14 @@ export default function KeyManagement(props: {
             ? t("keyManagement:native.delete.refresh")
             : t("keyManagement:native.delete.confirm")
         }
+        workingLabel={
+          nativeDeleteIsUncertain
+            ? t("common:status.refreshing")
+            : t("common:status.deleting")
+        }
         confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton}
         isWorking={nativeKeys.deleteState.isExecuting}
-        onConfirm={() =>
-          nativeDeleteIsUncertain
-            ? void nativeKeys.refresh()
-            : void nativeKeys.confirmDelete(
-                canResolveDeleteKeySecret && nativeCleanupLinkedChannels,
-              )
-        }
+        onConfirm={() => void handleConfirmDeleteNativeKey()}
         details={
           <>
             {canResolveDeleteKeySecret ? (
