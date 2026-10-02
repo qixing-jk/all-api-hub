@@ -163,6 +163,42 @@ afterEach(() => {
 })
 
 describe("automatic check-in preparation", () => {
+  it("settles cancelled discovery without waiting for a provider that ignores abort", async () => {
+    const account = createAccount()
+    const controller = new AbortController()
+    const started = createDeferred<AutoCheckinProviderReadContext>()
+    atIndex(detectors, 0).mockImplementation(
+      (read: AutoCheckinProviderReadContext) => {
+        started.resolve(read)
+        return new Promise(() => {})
+      },
+    )
+    const settled = vi.fn()
+    const pending = discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+      signal: controller.signal,
+      observedAt: NOW,
+    }).then(settled)
+    const read = await started.promise
+
+    controller.abort()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(read.signal?.aborted).toBe(true)
+    expect(settled).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detections: expect.objectContaining({
+          [PRO]: { outcome: "unknown", reason: "timeout", attemptedAt: NOW },
+        }),
+        config: expect.objectContaining({ selection: { mode: "automatic" } }),
+        timedOutMethodIds: expect.arrayContaining([PRO]),
+      }),
+    )
+    expect(vi.getTimerCount()).toBe(0)
+    await pending
+  })
+
   it("discards a match and status returned after discovery is cancelled", async () => {
     const account = createAccount()
     const controller = new AbortController()

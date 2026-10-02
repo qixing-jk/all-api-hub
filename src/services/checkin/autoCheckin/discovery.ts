@@ -65,9 +65,11 @@ const unknownDetection = (
 const withTimeout = async <T>(
   task: Promise<T>,
   timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<{ timedOut: boolean; value?: T }> => {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return { timedOut: true }
   let timer: ReturnType<typeof setTimeout> | undefined
+  let onAbort: (() => void) | undefined
   try {
     const taskResult = task.then(
       (value) => ({ timedOut: false as const, value }),
@@ -77,12 +79,16 @@ const withTimeout = async <T>(
       taskResult,
       new Promise<{ timedOut: true }>((resolve) => {
         timer = setTimeout(() => resolve({ timedOut: true }), timeoutMs)
+        onAbort = () => resolve({ timedOut: true })
+        if (signal?.aborted) onAbort()
+        else signal?.addEventListener("abort", onAbort, { once: true })
       }),
     ])
     if (!result.timedOut && "error" in result) throw result.error
     return result
   } finally {
     if (timer) clearTimeout(timer)
+    if (onAbort) signal?.removeEventListener("abort", onAbort)
   }
 }
 
@@ -127,6 +133,7 @@ const runDetection = async (
     result = await withTimeout(
       Promise.resolve().then(() => registration.provider.detect!(context)),
       timeoutMs,
+      context.signal,
     )
   } catch (error) {
     return {

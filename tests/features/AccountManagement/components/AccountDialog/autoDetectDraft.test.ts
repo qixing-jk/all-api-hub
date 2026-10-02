@@ -17,6 +17,56 @@ import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 describe("account dialog auto-detect draft mapping", () => {
+  it.each([
+    { changed: true, enabled: true, expected: true },
+    { changed: true, enabled: false, expected: false },
+    { changed: false, enabled: true, expected: false },
+  ])(
+    "maps unsupported discovery with changed=$changed and enabled=$enabled to $expected",
+    ({ changed, enabled, expected }) => {
+      const nextCheckIn = buildCheckInConfig({
+        automaticExecutionEnabled: false,
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+              detection: {
+                outcome: "unsupported",
+                evidence: { source: "probe", observedAt: 1_000 },
+              },
+            },
+          },
+        },
+      })
+      const draft = createEmptyAccountDialogDraft(SITE_TYPES.NEW_API)
+      draft.checkIn.automaticExecutionEnabled = enabled
+
+      const merged = buildDraftFromAutoDetectResult({
+        draft,
+        resultData: {
+          username: "detected-user",
+          siteName: "Detected site",
+          accessToken: "detected-token",
+          userId: "7",
+          exchangeRate: null,
+          authType: AuthTypeEnum.AccessToken,
+          checkIn: nextCheckIn,
+          siteType: SITE_TYPES.NEW_API,
+        },
+        nextSiteType: SITE_TYPES.NEW_API,
+        nextCheckIn,
+        preserveExistingCheckIn: false,
+        automaticExecutionPreferenceChanged: changed,
+        mode: DIALOG_MODES.ADD,
+        policy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
+      })
+
+      expect(merged.checkIn.automaticExecutionEnabled).toBe(expected)
+      expect(merged.checkIn.methodKnowledge).toEqual(
+        nextCheckIn.methodKnowledge,
+      )
+    },
+  )
+
   it("uses a known context site type when recovered data reports unknown", () => {
     expect(
       resolveAutoDetectRecovery({
