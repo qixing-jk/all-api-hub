@@ -1662,84 +1662,97 @@ describe("apiService sub2api refreshAccountData", () => {
     )
   })
 
-  it("hydrates auth from stored account state and persists refreshed credentials", async () => {
-    const now = 1_700_000_000_000
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+  it.each([
+    { accessToken: "stored-jwt", refreshToken: "stored-refresh" },
+    { accessToken: "", refreshToken: "stored-refresh" },
+    { accessToken: "stored-jwt", refreshToken: "" },
+  ])(
+    "persists refreshed credentials against the stored pair %j",
+    async (storedPair) => {
+      const now = 1_700_000_000_000
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
 
-    mockGetLatestAuth.mockResolvedValueOnce({
-      accessToken: "stored-jwt",
-      userId: "9",
-      sub2apiAuth: {
-        refreshToken: "stored-refresh",
-        tokenExpiresAt: now + 60_000,
-      },
-    })
+      mockGetLatestAuth.mockResolvedValue({
+        accessToken: storedPair.accessToken,
+        userId: "9",
+        sub2apiAuth: {
+          refreshToken: storedPair.refreshToken,
+          tokenExpiresAt: now + 60_000,
+        },
+      })
 
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "new-jwt",
+              refresh_token: "new-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock as any)
+
+      vi.mocked(fetchApi)
+        .mockResolvedValueOnce({
           code: 0,
           message: "ok",
-          data: {
-            access_token: "new-jwt",
-            refresh_token: "new-refresh",
-            expires_in: 3600,
+          data: { id: 9, username: "stored-user", balance: 3 },
+        } as any)
+        .mockResolvedValueOnce({
+          code: 0,
+          message: "ok",
+          data: { id: 9, username: "stored-user", balance: 3 },
+        } as any)
+
+      const result = await refreshAccountData(
+        createRequest({
+          accountId: "account-1",
+          sub2apiAuthSession: {
+            getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+            persistAuthUpdate: (...args: any[]) =>
+              mockPersistAuthUpdate(...args),
+          },
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "stale-request-jwt",
+            refreshToken: "request-refresh",
           },
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-    vi.stubGlobal("fetch", fetchMock as any)
+      )
 
-    vi.mocked(fetchApi)
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: { id: 9, username: "stored-user", balance: 3 },
-      } as any)
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: { id: 9, username: "stored-user", balance: 3 },
-      } as any)
-
-    const result = await refreshAccountData(
-      createRequest({
-        accountId: "account-1",
-        sub2apiAuthSession: {
-          getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
-          persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
-        },
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: "stale-request-jwt",
-        },
-      }),
-    )
-
-    expect(mockGetLatestAuth).toHaveBeenCalledWith("account-1")
-    expect((vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth).toMatchObject(
-      {
+      expect(mockGetLatestAuth).toHaveBeenCalledWith("account-1")
+      expect(
+        (vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth,
+      ).toMatchObject({
         accessToken: "new-jwt",
         refreshToken: "new-refresh",
         tokenExpiresAt: now + 3600 * 1000,
         userId: "9",
-      },
-    )
-    expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
-      accessToken: "new-jwt",
-      refreshToken: "new-refresh",
-      tokenExpiresAt: now + 3600 * 1000,
-      expectedOrigin: "https://sub2.example.com",
-      expectedUserId: "9",
-      userId: "9",
-    })
-    expect(result.success).toBe(true)
-    expect(result.authUpdate?.userId).toBe("9")
-    expect(result.authUpdate?.username).toBe("stored-user")
+      })
+      expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
+        accessToken: "new-jwt",
+        expectedAuth: {
+          accessToken: storedPair.accessToken,
+          refreshToken: storedPair.refreshToken || undefined,
+        },
+        refreshToken: "new-refresh",
+        tokenExpiresAt: now + 3600 * 1000,
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
+        userId: "9",
+      })
+      expect(result.success).toBe(true)
+      expect(result.authUpdate?.userId).toBe("9")
+      expect(result.authUpdate?.username).toBe("stored-user")
 
-    nowSpy.mockRestore()
-  })
+      nowSpy.mockRestore()
+    },
+  )
 })
 
 describe("apiService sub2api exported operations", () => {

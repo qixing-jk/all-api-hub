@@ -111,6 +111,7 @@ const siteTypeImportOwners = [
   "src/services/accountSiteDefinitions/**", // Site metadata and identifiers.
   "src/services/apiAdapters/**", // Capability registration and provider protocols.
   "src/services/apiService/**", // Provider transports and legacy dispatch.
+  "src/services/kimiOpenPlatform/deployments.ts", // Provider-owned deployment identities.
   "src/services/siteDetection/detectSiteType.ts", // Detection identifies providers.
   "src/services/siteDetection/siteTypeMismatch.ts", // Detection explains a stored type that no longer matches.
   "src/features/KeyManagement/presentation/accountKeyResourcePresentation.ts", // Provider terminology.

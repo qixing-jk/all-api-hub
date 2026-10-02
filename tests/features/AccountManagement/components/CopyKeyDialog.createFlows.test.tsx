@@ -222,6 +222,30 @@ describe("CopyKeyDialog native creation handoff", () => {
     )
   })
 
+  it("shows progress in the key list until the native editor is ready", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    prepareAccountKeyCreationSpy.mockResolvedValue({ kind: "input-required" })
+    await start()
+
+    expect(
+      await screen.findByRole("status", {
+        name: "keyManagement:native.editor.opening.loading",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
+    ).toBeDisabled()
+
+    await act(async () => {
+      manualProps.mock.lastCall?.[0].onEditorReady()
+    })
+    expect(
+      screen.queryByRole("status", {
+        name: "keyManagement:native.editor.opening.loading",
+      }),
+    ).toBeNull()
+  })
+
   it("drops a late creation handoff when credentials change", async () => {
     fetchAccountTokensMock.mockResolvedValue([])
     const pending = createDeferred<AccountKeyCreationResult>()

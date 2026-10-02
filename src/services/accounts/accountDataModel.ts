@@ -6,6 +6,7 @@ import {
   type AccountUsageRecord,
   type AccountUsageSummary,
   type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type SiteHealthStatus,
   type Sub2ApiAuthConfig,
@@ -79,6 +80,7 @@ type RefreshAuthUpdate = {
   userId?: AccountIdentity
   username?: string
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 type RefreshAccountResultBase = {

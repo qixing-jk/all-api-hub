@@ -6,6 +6,7 @@ import {
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
+import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 const logger = createLogger("ManagedSites.fetchManagedSiteImportModels")
 
@@ -43,7 +44,7 @@ async function fetchUncachedModels(
 ): Promise<ManagedSiteImportModelsResult> {
   try {
     const upstreamModels = await fetchOpenAICompatibleModelIds({
-      baseUrl: source.baseUrl,
+      baseUrl: stripTrailingOpenAIV1(source.baseUrl),
       apiKey: source.apiKey,
       abortSignal: options.signal,
       requestScheduling: options.requestScheduling,

@@ -8,6 +8,7 @@ import type {
   AccountBrowserIdentityCapability,
   AccountBrowserIdentityContext,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
+import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/browserIdentity"
@@ -18,6 +19,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
@@ -47,6 +49,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: voApiV2ContentSessionExtractor,
     identity: voApiV2BrowserIdentity,
+  },
+  {
+    sessionExtractor: kimiOpenPlatformContentSessionExtractor,
+    identity: kimiOpenPlatformBrowserIdentity,
   },
   {
     sessionExtractor: rightCodeContentSessionExtractor,

@@ -12,6 +12,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   AuthTypeEnum,
   type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
@@ -39,6 +40,7 @@ interface AccountPersistenceInput {
   excludeFromTotalBalance: boolean
   excludeFromTodayIncome: boolean
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 export const requireAccountDataCapability = (
@@ -156,6 +158,9 @@ export function buildAccountPersistenceContext(
           ? { sessionCookie: input.sessionCookieHeader.trim() }
           : undefined,
       sub2apiAuth: normalizeSub2ApiAuthInput(input.siteType, input.sub2apiAuth),
+      ...(input.kimiOpenPlatformAuth
+        ? { kimiOpenPlatformAuth: input.kimiOpenPlatformAuth }
+        : {}),
       exchange_rate: resolveExchangeRate(input.exchangeRate),
       notes: input.notes,
       manualBalanceUsd:

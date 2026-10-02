@@ -39,7 +39,7 @@ export const ModelItemPerCallPricingView = ({
   } else {
     return (
       <PriceView
-        usdPrices={perCallPrice}
+        prices={perCallPrice}
         exchangeRate={exchangeRate}
         showRealPrice={showRealPrice}
         tokenBillingType={tokenBillingType}

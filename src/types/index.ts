@@ -120,6 +120,17 @@ export interface CookieAuthConfig {
   sessionCookie: string
 }
 
+export interface KimiOpenPlatformAuthConfig {
+  /**
+   * Console refresh JWT. This is a long-lived secret included in exports.
+   */
+  refreshToken: string
+  /** Organization selected in the console. BFF calls are scoped to it. */
+  organizationId: string
+  /** Access-token expiry in milliseconds since epoch, when the JWT exposes exp. */
+  tokenExpiresAt?: number
+}
+
 export interface Sub2ApiAuthConfig {
   /**
    * Exportable refresh token used for extension-managed Sub2API sessions.
@@ -218,6 +229,11 @@ export interface SiteAccount {
    * dashboard localStorage.
    */
   sub2apiAuth?: Sub2ApiAuthConfig
+  /**
+   * Kimi Open Platform console refresh session.
+   * Absent for API-key-only accounts that never opened the console.
+   */
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   /**
    * 站点签到相关
    */

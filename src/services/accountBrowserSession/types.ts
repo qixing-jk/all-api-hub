@@ -2,7 +2,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { Sub2ApiAuthConfig } from "~/types"
+import type { KimiOpenPlatformAuthConfig, Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 export const ACCOUNT_BROWSER_SESSION_SOURCES = {
@@ -25,6 +25,7 @@ export type AccountBrowserSession = {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: AccountBrowserSessionFetchContext
 }
 

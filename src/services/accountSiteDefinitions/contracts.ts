@@ -44,6 +44,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   SharedChat: "sharedchat",
   RightCode: "rightcode",
   OpenRouter: "openrouter",
+  KimiOpenPlatform: "kimiOpenPlatform",
   Unsupported: "unsupported",
 } as const
 

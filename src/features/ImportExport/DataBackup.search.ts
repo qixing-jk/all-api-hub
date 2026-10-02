@@ -65,7 +65,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
-        "importExport:webdav.gist.title",
+        "importExport:webdav.title",
       ],
       keywords: ["github", "gist", "token", "secret"],
     },
@@ -81,7 +81,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
-        "importExport:webdav.gist.title",
+        "importExport:webdav.title",
       ],
       keywords: ["github", "gist", "id", "url"],
     },
@@ -97,7 +97,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
-        "importExport:webdav.gist.title",
+        "importExport:webdav.title",
       ],
       keywords: ["github", "gist", "create", "upload", "backup"],
     },

@@ -86,6 +86,8 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.SHAREDCHAT
   | typeof SITE_TYPES.RIGHT_CODE
   | typeof SITE_TYPES.OPENROUTER
+  | typeof SITE_TYPES.KIMI
+  | typeof SITE_TYPES.KIMI_GLOBAL
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -351,6 +353,8 @@ describe("account site definition registry", () => {
       SITE_TYPES.SHAREDCHAT,
       SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.OPENROUTER,
+      SITE_TYPES.KIMI,
+      SITE_TYPES.KIMI_GLOBAL,
       SITE_TYPES.UNKNOWN,
     ])
   })

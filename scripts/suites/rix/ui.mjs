@@ -58,20 +58,19 @@ export async function runRixUiTest({
       updated_at: new Date().toISOString(),
     }
 
-    const targetAccountName = testFixture.site_name
-
     // 无论是否注入临时账号，均通过沙盒保证测试后状态完全复原
     let modelCatalogResult
-    await withTemporaryAccount(serviceWorker, testFixture, async () => {
+    await withTemporaryAccount(serviceWorker, testFixture, async (fixture) => {
       modelCatalogResult = await testModelCatalogFlow({
         page,
         extensionId,
-        accountName: targetAccountName,
+        accountName: fixture.site_name,
+        accountId: fixture.id,
       })
     })
     if (!modelCatalogResult?.ok) {
       throw new Error(
-        `Rix 模型目录流校验失败: [${targetAccountName}] 未能渲染模型或模型数为 0`,
+        `Rix 模型目录流校验失败: [${testFixture.site_name}] 未能渲染模型或模型数为 0`,
       )
     }
 

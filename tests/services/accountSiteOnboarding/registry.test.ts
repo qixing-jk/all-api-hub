@@ -159,6 +159,7 @@ describe("account site onboarding registry", () => {
       "sub2api",
       "sharedchat",
       "voapi-v2",
+      "kimi-open-platform",
       "right-code",
       "v-api",
       "apiyi",

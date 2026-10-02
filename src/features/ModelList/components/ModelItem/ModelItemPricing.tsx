@@ -26,6 +26,7 @@ import {
 import {
   formatPriceCompact,
   isTokenBillingType,
+  projectTokenPrices,
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -282,6 +283,35 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       />
     )
 
+  // Native flat rates in the plan's own currency stay visible when no
+  // price-sort mode is active; the published currency flows through the calc.
+  const nativeRates = calculatedPrice.perMillionTokens
+  const nativePrices = nativeRates ? projectTokenPrices(nativeRates) : undefined
+  if (
+    nativePrices &&
+    calculatedPrice.isComparisonActive !== true &&
+    (showRealPrice || (Number.isFinite(exchangeRate) && exchangeRate > 0))
+  ) {
+    return (
+      <div className="mt-density-2 flex flex-wrap items-center gap-3">
+        <PriceView
+          prices={nativePrices.prices}
+          sourceCurrency={nativePrices.currency}
+          exchangeRate={exchangeRate}
+          showRealPrice={showRealPrice}
+          tokenBillingType={true}
+          isAvailableForUser={isAvailableForUser}
+          formatPriceCompact={formatPriceCompact}
+        />
+        {!showRealPrice && (
+          <Badge variant="warning" size="sm" title={t("estimatedPriceTitle")}>
+            {t("estimatedPrice")}
+          </Badge>
+        )}
+      </div>
+    )
+  }
+
   if (unavailableReason) {
     return (
       <div className="mt-density-2">
@@ -307,7 +337,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       {calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
         <div className="gap-y-density-3 sm:gap-y-density-4 md:gap-y-density-6 flex flex-wrap items-center gap-x-3 sm:gap-x-4 md:gap-x-6">
           <PriceView
-            usdPrices={calculatedPrice.usdPerMillionTokens}
+            prices={calculatedPrice.usdPerMillionTokens}
             exchangeRate={exchangeRate}
             showRealPrice={showRealPrice}
             tokenBillingType={tokenBillingType}

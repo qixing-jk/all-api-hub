@@ -34,7 +34,11 @@ import {
 } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
+import {
+  AuthTypeEnum,
+  type KimiOpenPlatformAuthConfig,
+  type Sub2ApiAuthConfig,
+} from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   getActiveOrAllTabs,
@@ -86,6 +90,7 @@ interface UserDataResult {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   siteTypeHint?: AccountSiteType
   fetchContext?: AutoDetectFetchContext
 }
@@ -234,6 +239,9 @@ async function combineUserDataAndSiteType(
           ? { transientAuth: userData.transientAuth }
           : {}),
         sub2apiAuth: userData.sub2apiAuth,
+        ...(userData.kimiOpenPlatformAuth
+          ? { kimiOpenPlatformAuth: userData.kimiOpenPlatformAuth }
+          : {}),
         ...(userData.fetchContext
           ? { fetchContext: userData.fetchContext }
           : {}),
@@ -503,6 +511,9 @@ async function getUserDataViaBackground(
       accessToken: response.data.accessToken,
       ...(transientAuth ? { transientAuth } : {}),
       sub2apiAuth: response.data.sub2apiAuth,
+      ...(response.data.kimiOpenPlatformAuth
+        ? { kimiOpenPlatformAuth: response.data.kimiOpenPlatformAuth }
+        : {}),
       siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
       ...(fetchContext ? { fetchContext } : {}),
     }
@@ -633,6 +644,9 @@ async function getUserDataFromCurrentTab(
             ? { transientAuth: session.transientAuth }
             : {}),
           sub2apiAuth: session.sub2apiAuth,
+          ...(session.kimiOpenPlatformAuth
+            ? { kimiOpenPlatformAuth: session.kimiOpenPlatformAuth }
+            : {}),
           siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
           fetchContext,
         },

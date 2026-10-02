@@ -2728,6 +2728,80 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it("preserves Kimi console refresh credentials from the temp context", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 509 })
+    const defaultSendMessage = sendMessageMock.getMockImplementation() as
+      | ((tabId: number, message: { action: string }) => unknown)
+      | undefined
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentGetUserFromLocalStorage) {
+        return {
+          success: true,
+          data: {
+            userId: "user-2",
+            user: "example-user",
+            kimiOpenPlatformAuth: {
+              refreshToken: "refresh",
+              organizationId: "org",
+              tokenExpiresAt: 123,
+            },
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "placeholder-background-token",
+              expiresAt: 2_000_000_000,
+              sessionId: "placeholder-background-session",
+              origin: "https://platform.kimi.ai",
+            },
+          },
+        }
+      }
+
+      return defaultSendMessage?.(tabId, message)
+    })
+
+    const { handleAutoDetectSite } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://platform.kimi.ai/account",
+        requestId: "req-auto-detect-kimi-auth",
+        siteType: "kimi-global",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        siteType: "kimi-global",
+        userId: "user-2",
+        user: "example-user",
+        kimiOpenPlatformAuth: {
+          refreshToken: "refresh",
+          organizationId: "org",
+          tokenExpiresAt: 123,
+        },
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        siteTypeHint: undefined,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-background-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "https://platform.kimi.ai",
+        },
+      },
+    })
+  })
+
   it("uses an incognito temp context for incognito auto-detect requests", async () => {
     tempContextMode = "window"
     createWindowMock.mockResolvedValueOnce({ id: 608, tabs: [{ id: 609 }] })

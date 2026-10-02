@@ -1,7 +1,10 @@
-#!/usr/bin/env node
+import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+import { replaceProfileDatabase } from "./cdp/profile-database-copy.mjs"
 
 // 已知官方发布的扩展 ID 列表
 const KNOWN_STORE_IDS = [
@@ -234,18 +237,54 @@ function autoDiscoverSourceExtensionData(preferredProfileName, preferredExtId) {
   return results
 }
 
-function copyRecursive(src, dst) {
-  fs.mkdirSync(dst, { recursive: true })
-  const entries = fs.readdirSync(src, { withFileTypes: true })
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name)
-    const dstPath = path.join(dst, entry.name)
-    if (entry.isDirectory()) {
-      copyRecursive(srcPath, dstPath)
-    } else {
-      fs.copyFileSync(srcPath, dstPath)
-    }
-  }
+/** File databases must be copied only after browser processes have closed. */
+function requireClosedBrowsers() {
+  const processes =
+    process.platform === "win32"
+      ? execFileSync(
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-Process -Name msedge,chrome,brave,chromium -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ProcessName; exit 0",
+          ],
+          { encoding: "utf8", windowsHide: true },
+        )
+      : execFileSync("ps", ["-A", "-o", "comm="], { encoding: "utf8" })
+  assertBrowsersClosed(processes)
+}
+
+/** Reject snapshots while a browser process can still write the database. */
+export function assertBrowsersClosed(processes) {
+  const browserNames = new Set([
+    "msedge",
+    "microsoft-edge",
+    "microsoft-edge-stable",
+    "microsoft-edge-beta",
+    "microsoft-edge-dev",
+    "microsoft edge",
+    "chrome",
+    "google-chrome",
+    "google-chrome-stable",
+    "google-chrome-beta",
+    "google-chrome-unstable",
+    "google chrome",
+    "google chrome canary",
+    "chromium",
+    "chromium-browser",
+    "brave",
+    "brave-browser",
+    "brave browser",
+  ])
+  if (
+    processes
+      .split(/\r?\n/)
+      .some((line) =>
+        browserNames.has(path.basename(line.trim()).toLowerCase()),
+      )
+  )
+    throw new Error("请先关闭日常浏览器和开发浏览器，再同步数据库。")
 }
 
 async function main() {
@@ -264,7 +303,6 @@ async function main() {
 
   const devBaseDir = resolveSharedDevProfile()
   const devProfileDir = path.join(devBaseDir, "Default")
-  fs.mkdirSync(devProfileDir, { recursive: true })
 
   console.log(`目标开发 Profile: ${devProfileDir}`)
   console.log("正在全自动探测宿主浏览器中的 All API Hub 数据...")
@@ -315,70 +353,87 @@ async function main() {
     `\n✅ 开始同步源数据: [${bestSource.browser}] -> ${bestSource.profileName} (${bestSource.extId})`,
   )
 
-  // 1. 同步扩展数据
+  requireClosedBrowsers()
   const dstSettingsBase = path.join(devProfileDir, "Local Extension Settings")
   fs.mkdirSync(dstSettingsBase, { recursive: true })
-
-  let targetIds = []
-  try {
-    targetIds = fs
-      .readdirSync(dstSettingsBase, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name)
-  } catch {
-    /* ignore */
-  }
-
-  // 默认补上常用 dev ID
-  if (!targetIds.includes("ilmdkchpeoeeehbkcejjkblilohglfnp")) {
-    targetIds.push("ilmdkchpeoeeehbkcejjkblilohglfnp")
-  }
-
-  for (const id of targetIds) {
-    const targetDir = path.join(dstSettingsBase, id)
-    fs.rmSync(targetDir, { recursive: true, force: true })
-    copyRecursive(bestSource.extPath, targetDir)
-    console.log(`   -> 成功同步到开发扩展: ${id}`)
-  }
-
-  console.log(`\n🎉 扩展账户数据同步成功！所有中转站配置已写入共享开发沙盒。`)
-
-  // 2. Cookie 同步（可选）
-  if (includeCookies) {
-    console.log(`\n正在尝试同步网页 Cookies...`)
-    const srcCookies = path.join(
-      bestSource.rootPath,
-      bestSource.profileName,
-      "Network",
-      "Cookies",
+  const targetIds = fs
+    .readdirSync(dstSettingsBase, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        /^[a-p]{32}$/.test(entry.name) &&
+        (KNOWN_STORE_IDS.includes(entry.name) ||
+          hasAllApiHubData(path.join(dstSettingsBase, entry.name))),
     )
-    const dstCookies = path.join(devProfileDir, "Network", "Cookies")
-    const srcLocalState = path.join(bestSource.rootPath, "Local State")
-    const dstLocalState = path.join(devBaseDir, "Local State")
-
-    try {
-      if (fs.existsSync(srcLocalState)) {
-        fs.copyFileSync(srcLocalState, dstLocalState)
-      }
-      fs.mkdirSync(path.dirname(dstCookies), { recursive: true })
-      fs.copyFileSync(srcCookies, dstCookies)
-      console.log(`✅ 网页 Cookies 同步完成！`)
-    } catch (err) {
-      console.warn(
-        `⚠️ 无法直接读取 Cookies（通常因为日常浏览器正在打开并锁定了该文件）: ${err.message}`,
-      )
-      console.warn(
-        `提示：如需同步 Cookies，可短暂关闭日常浏览器 2 秒后再带 --cookies 运行。`,
-      )
-    }
-  } else {
+    .map((entry) => entry.name)
+  const devId = "ilmdkchpeoeeehbkcejjkblilohglfnp"
+  if (!targetIds.includes(devId)) targetIds.push(devId)
+  for (const id of targetIds) {
+    const backup = replaceProfileDatabase(
+      bestSource.extPath,
+      path.join(dstSettingsBase, id),
+    )
     console.log(
-      `\n💡 提示：如需连同网页端 Cookie 登录态一并同步，请加参数: --cookies`,
+      `   -> 已同步开发扩展 ${id}${backup ? `，备份: ${backup}` : ""}`,
+    )
+  }
+  if (includeCookies) {
+    const sourceProfile = path.join(bestSource.rootPath, bestSource.profileName)
+    const cookies = path.join(sourceProfile, "Network", "Cookies")
+    if (
+      fs.existsSync(`${cookies}-wal`) &&
+      fs.statSync(`${cookies}-wal`).size > 0
+    )
+      throw new Error("cookie_database_has_pending_writes")
+    fs.mkdirSync(path.join(devProfileDir, "Network"), { recursive: true })
+    // Preserve previous encryption metadata and cookie data before replacing them.
+    for (const [source, target] of [
+      [
+        path.join(bestSource.rootPath, "Local State"),
+        path.join(devBaseDir, "Local State"),
+      ],
+      [cookies, path.join(devProfileDir, "Network", "Cookies")],
+    ]) {
+      if (fs.existsSync(target))
+        fs.copyFileSync(target, `${target}.backup-${Date.now()}`)
+      fs.copyFileSync(source, target)
+    }
+  }
+  if (
+    includeCookies ||
+    args.includes("--storage") ||
+    args.includes("--local-storage")
+  ) {
+    replaceProfileDatabase(
+      path.join(
+        bestSource.rootPath,
+        bestSource.profileName,
+        "Local Storage",
+        "leveldb",
+      ),
+      path.join(devProfileDir, "Local Storage", "leveldb"),
+    )
+    console.log("✅ 网页 Local Storage 完整快照已同步。")
+  }
+  console.log("✅ 所有请求的同步步骤已完成；原有目标数据库备份已保留。")
+
+  if (
+    !includeCookies &&
+    !args.includes("--storage") &&
+    !args.includes("--local-storage")
+  ) {
+    console.log(
+      `\n💡 提示：如需连同网页端 Cookie 和 Local Storage 登录态一并同步，请加参数: --cookies`,
     )
   }
 }
 
-main().catch((err) => {
-  console.error("同步失败:", err)
-  process.exit(1)
-})
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((err) => {
+    console.error("同步失败:", err.message)
+    process.exitCode = 1
+  })
+}

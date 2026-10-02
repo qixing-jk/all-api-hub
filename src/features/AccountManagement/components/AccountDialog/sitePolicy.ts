@@ -6,6 +6,7 @@ import {
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
+import { isKimiOpenPlatformSiteType } from "~/services/kimiOpenPlatform/deployments"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   ACCOUNT_KEY_AUTO_PROVISION_MODES,
@@ -89,6 +90,9 @@ export function normalizeAccountDialogDraftForSitePolicy(params: {
       : "",
     sub2apiTokenExpiresAt: policy.allowSub2ApiRefreshTokenState
       ? draft.sub2apiTokenExpiresAt
+      : null,
+    kimiOpenPlatformAuth: isKimiOpenPlatformSiteType(draft.siteType)
+      ? draft.kimiOpenPlatformAuth
       : null,
   }
 
@@ -197,6 +201,12 @@ function arePolicyDraftFieldsEquivalent(
     left.cookieAuthSessionCookie === right.cookieAuthSessionCookie &&
     left.sub2apiUseRefreshToken === right.sub2apiUseRefreshToken &&
     left.sub2apiRefreshToken === right.sub2apiRefreshToken &&
-    left.sub2apiTokenExpiresAt === right.sub2apiTokenExpiresAt
+    left.sub2apiTokenExpiresAt === right.sub2apiTokenExpiresAt &&
+    left.kimiOpenPlatformAuth?.refreshToken ===
+      right.kimiOpenPlatformAuth?.refreshToken &&
+    left.kimiOpenPlatformAuth?.organizationId ===
+      right.kimiOpenPlatformAuth?.organizationId &&
+    left.kimiOpenPlatformAuth?.tokenExpiresAt ===
+      right.kimiOpenPlatformAuth?.tokenExpiresAt
   )
 }
