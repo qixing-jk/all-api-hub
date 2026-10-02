@@ -8,10 +8,8 @@ OmniRoute is a self-hosted AI gateway, so it has no account semantics of its own
 
 1. Open **Settings → Managed Site** and select **OmniRoute**.
 2. Enter the **deployment URL**: the address you open the OmniRoute dashboard at in your browser, such as `http://localhost:20128`.
-3. Enter an **access token or dashboard password**:
-   - **Access token (recommended)**: create one under the gateway's **Settings → Access Tokens** with the `admin` scope. Tokens start with `oma_`.
-   - **Dashboard password**: you can also enter the dashboard password. The extension exchanges it on the gateway for a token and **never stores the password**. This path creates an access token named `All API Hub` on the gateway so you can revoke it later.
-4. Click **Verify connection**. A successful check saves the access token, and **Channel Management** becomes available.
+3. Enter an **access token**: generate an `admin`-scoped token in the gateway's **Settings → Access Tokens** and paste it into the extension. Tokens start with `oma_`.
+4. Click **Verify connection** to check that the token is valid and has the `admin` scope. Once verification succeeds, open **Channel Management**.
 
 OmniRoute authenticates with bearer tokens only and keeps no cookie session, so the extension needs no temporary window and no same-origin access. Remote deployments work directly as long as your browser can reach the address.
 
@@ -79,7 +77,6 @@ A successful import does not mean the channel is connected: the gateway validate
 ## Troubleshooting
 
 - **"Token scope is insufficient"?** Use a token with the `admin` scope. You can create a new one under the dashboard's **Settings → Access Tokens**.
-- **"The gateway still uses its default password"?** The gateway refuses to exchange a well-known default password for a token. Change the dashboard password on the gateway host first, then verify again.
 - **"Name conflict"?** The gateway rejects connections with a duplicate name. Use a different name, or delete the existing connection in the dashboard first.
 - **A private-network relay does not work after import?** OmniRoute guards against SSRF for stored custom addresses and blocks private-network and cloud-metadata addresses by default. The channel is created, but the gateway itself blocks it at request time. Adjust the gateway's guard for that provider, or use an address the gateway can reach.
 - **"Result uncertain" after submitting?** The gateway answered 5xx, so whether the write applied is unknown. Refresh the list to confirm before retrying.

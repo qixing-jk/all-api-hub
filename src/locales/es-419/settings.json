@@ -430,24 +430,19 @@
       "baseUrlDesc": "La dirección con la que abres el panel de OmniRoute en el navegador.",
       "baseUrlLabel": "Dirección de despliegue",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "Pega un token de acceso con alcance admin de Settings → Access Tokens del gateway, o escribe la contraseña del panel: la extensión la canjea al instante por un token y nunca guarda la contraseña.",
-      "credentialLabel": "Token de acceso o contraseña del panel",
-      "credentialPlaceholder": "oma_… o contraseña del panel",
-      "hideCredential": "Ocultar la credencial",
-      "showCredential": "Mostrar la credencial"
-    },
-    "securityNote": {
-      "description": "Un token con alcance admin equivale a todas las credenciales de canales upstream del gateway, así que guárdalo solo en un entorno de confianza. Canjear la contraseña crea en el gateway un token de acceso llamado All API Hub.",
-      "title": "Permisos del token"
+      "credentialDesc": "Genera un token de acceso con alcance admin en Settings → Access Tokens de la puerta de enlace y pégalo aquí.",
+      "credentialLabel": "Token de acceso",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ocultar token de acceso",
+      "showCredential": "Mostrar token de acceso"
     },
     "title": "Ajustes de integración de OmniRoute",
     "validation": {
-      "defaultPassword": "El gateway sigue usando la contraseña predeterminada conocida, por lo que no emite tokens. Cambia antes la contraseña en el propio gateway.",
       "description": "Comprueba si la configuración actual puede conectar y administrar el sitio.",
       "failed": "Falló la verificación de la configuración de OmniRoute: {{error}}",
       "insufficientScope": "El alcance del token no basta: tiene {{have}} y se necesita {{need}}. Crea un token nuevo con alcance admin en Settings → Access Tokens del gateway.",
-      "invalidCredential": "La credencial es incorrecta o caducó: {{error}}",
-      "missingFields": "Completa todos los campos obligatorios",
+      "invalidCredential": "El token de acceso es inválido o ha expirado: {{error}}",
+      "missingFields": "Ingresa la URL de la implementación y el token de acceso",
       "success": "Conexión correcta",
       "title": "Verificar la conexión",
       "unknownScope": "desconocido",

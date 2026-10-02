@@ -1,5 +1,4 @@
 import {
-  isOmniRouteAccessToken,
   OMNIROUTE_DEFAULT_BUILTIN_PROVIDER,
   resolveOmniRouteBuiltinProvider,
 } from "~/constants/omniroute"
@@ -10,7 +9,6 @@ import {
   hasOmniRouteAdminScope,
   listOmniRouteConnections,
   listOmniRouteConnectionSecrets,
-  mintOmniRouteAccessToken,
   OMNIROUTE_AUTH_FAILURE_REASONS,
   readOmniRouteFailureMessage,
   readOmniRouteScopeShortfall,
@@ -36,12 +34,6 @@ import {
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("OmniRouteProvider")
-
-/**
- * Label recorded on the gateway when a password is exchanged for a token, so the
- * user can find and revoke it later under Settings → Access Tokens.
- */
-const OMNIROUTE_TOKEN_NAME = "All API Hub"
 
 /**
  * OmniRoute requires the `admin` scope for channel writes, because
@@ -71,12 +63,11 @@ export type OmniRouteCredentialValidation =
       need: string
       message: string
     }
-  | { status: "default-password-rejected"; message: string }
   | { status: "unreachable"; message: string }
 
 export interface OmniRouteCredentialInput {
   baseUrl: string
-  /** Either an `oma_` access token or the panel password to exchange for one. */
+  /** An existing access token created in the gateway dashboard. */
   credential: string
 }
 
@@ -96,23 +87,16 @@ export function toOmniRouteDisclosureError(
 const toUnreachable = (
   error: unknown,
   input: OmniRouteCredentialInput,
-  extraSecrets: readonly string[] = [],
 ): OmniRouteCredentialValidation => ({
   status: "unreachable",
-  message: toOmniRouteDisclosureError(error, { token: "" }, [
-    input.credential,
-    ...extraSecrets,
-  ]).message,
+  message: toOmniRouteDisclosureError(error, { token: input.credential })
+    .message,
 })
 
 /**
- * Validates one credential against an OmniRoute deployment.
- *
- * A password input is exchanged for a token first, and only the token is
- * returned; callers must never persist the password. The three rejection
- * reasons stay distinct so the settings form can tell a wrong credential from a
- * token that is merely under-scoped, and both from a deployment that has not
- * rotated its well-known default password yet.
+ * Validates an existing access token with read-only gateway requests.
+ * Tokens are opaque: the gateway checks their validity and admin scope.
+ * Validation never creates a token.
  */
 export async function validateOmniRouteCredential(
   input: OmniRouteCredentialInput,
@@ -123,44 +107,11 @@ export async function validateOmniRouteCredential(
   if (!baseUrl || !credential) {
     return {
       status: "invalid-credential",
-      message: "OmniRoute deployment URL and credential are required",
+      message: "OmniRoute deployment URL and access token are required",
     }
   }
 
-  let token = credential
-  if (!isOmniRouteAccessToken(credential)) {
-    // The public exchange route mints an admin-scoped token by default; the
-    // password itself is never stored.
-    try {
-      const minted = await mintOmniRouteAccessToken(
-        {
-          baseUrl,
-          password: credential,
-          name: OMNIROUTE_TOKEN_NAME,
-          scope: OMNIROUTE_REQUIRED_SCOPE,
-        },
-        options,
-      )
-      token = minted.token
-    } catch (error) {
-      const reason = classifyOmniRouteAuthFailure(error, "password")
-      if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.DefaultPasswordRejected) {
-        return {
-          status: "default-password-rejected",
-          message: toOmniRouteDisclosureError(error, { token: credential })
-            .message,
-        }
-      }
-      if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential) {
-        return {
-          status: "invalid-credential",
-          message: toOmniRouteDisclosureError(error, { token: credential })
-            .message,
-        }
-      }
-      return toUnreachable(error, { ...input, credential })
-    }
-  }
+  const token = credential
 
   try {
     const whoAmI = await fetchOmniRouteWhoAmI({ baseUrl, token }, options)
@@ -178,7 +129,7 @@ export async function validateOmniRouteCredential(
     await listOmniRouteConnections({ baseUrl, token }, { limit: 1 }, options)
     return { status: "valid", token, scope }
   } catch (error) {
-    const reason = classifyOmniRouteAuthFailure(error, "token")
+    const reason = classifyOmniRouteAuthFailure(error)
     if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InsufficientScope) {
       const shortfall = readOmniRouteScopeShortfall(
         readOmniRouteFailureMessage(error),
@@ -187,18 +138,16 @@ export async function validateOmniRouteCredential(
         status: "insufficient-scope",
         have: shortfall?.have ?? "",
         need: shortfall?.need ?? OMNIROUTE_REQUIRED_SCOPE,
-        message: toOmniRouteDisclosureError(error, { token }, [credential])
-          .message,
+        message: toOmniRouteDisclosureError(error, { token }).message,
       }
     }
     if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential) {
       return {
         status: "invalid-credential",
-        message: toOmniRouteDisclosureError(error, { token }, [credential])
-          .message,
+        message: toOmniRouteDisclosureError(error, { token }).message,
       }
     }
-    return toUnreachable(error, { ...input, credential }, [token])
+    return toUnreachable(error, { ...input, credential })
   }
 }
 

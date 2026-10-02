@@ -430,24 +430,19 @@
       "baseUrlDesc": "填写你在浏览器里打开 OmniRoute 面板时使用的地址。",
       "baseUrlLabel": "部署地址",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "填写网关 Settings → Access Tokens 生成的 admin 作用域访问令牌，或直接填写面板密码：扩展会用密码现场换取一条令牌，密码本身不会被保存。",
-      "credentialLabel": "访问令牌或面板密码",
-      "credentialPlaceholder": "oma_… 或面板密码",
-      "hideCredential": "隐藏凭据",
-      "showCredential": "显示凭据"
-    },
-    "securityNote": {
-      "description": "admin 作用域令牌等同于网关上全部上游渠道的密钥，请只在可信环境保存。用密码换取令牌会在网关上新建一条名为 All API Hub 的访问令牌。",
-      "title": "令牌权限"
+      "credentialDesc": "在网关 Settings → Access Tokens 中生成 admin 作用域访问令牌，粘贴到此处。",
+      "credentialLabel": "访问令牌",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "隐藏访问令牌",
+      "showCredential": "显示访问令牌"
     },
     "title": "OmniRoute 集成设置",
     "validation": {
-      "defaultPassword": "网关仍在使用出厂默认密码，无法换取令牌。请先在网关本机改掉密码。",
       "description": "检查当前配置能否正常连接并管理站点。",
       "failed": "OmniRoute 配置验证失败：{{error}}",
       "insufficientScope": "令牌作用域不足：当前为 {{have}}，需要 {{need}}。请在网关 Settings → Access Tokens 重新生成一条 admin 作用域的令牌。",
-      "invalidCredential": "凭据不正确或已失效：{{error}}",
-      "missingFields": "请填写所有必填字段",
+      "invalidCredential": "访问令牌不正确或已失效：{{error}}",
+      "missingFields": "请填写部署地址和访问令牌",
       "success": "连接成功",
       "title": "验证连接",
       "unknownScope": "未知",

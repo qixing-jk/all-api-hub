@@ -2,7 +2,6 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import {
-  isOmniRouteAccessToken,
   OMNIROUTE_BUILTIN_PROVIDER_BASE_URLS,
   OMNIROUTE_DEFAULT_BUILTIN_PROVIDER,
   resolveOmniRouteBuiltinProvider,
@@ -11,7 +10,6 @@ import {
   classifyOmniRouteAuthFailure,
   fetchOmniRouteWhoAmI,
   hasOmniRouteAdminScope,
-  mintOmniRouteAccessToken,
   OMNIROUTE_AUTH_FAILURE_REASONS,
   readOmniRouteFailureMessage,
   readOmniRouteScopeShortfall,
@@ -407,60 +405,6 @@ describe("OmniRoute authentication", () => {
     expect(hasOmniRouteAdminScope(whoAmI)).toBe(true)
   })
 
-  it("mints an admin-scoped token from the panel password", async () => {
-    let body: Record<string, unknown> | undefined
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json({
-          success: true,
-          token: "oma_live_minted",
-          id: "tok-1",
-          name: "All API Hub",
-          scope: "admin",
-        })
-      }),
-    )
-
-    const minted = await mintOmniRouteAccessToken({
-      baseUrl: config.baseUrl,
-      password: "panel-password",
-      name: "All API Hub",
-    })
-
-    expect(minted.token).toBe("oma_live_minted")
-    expect(body).toEqual({
-      password: "panel-password",
-      name: "All API Hub",
-      scope: "admin",
-    })
-  })
-
-  it("treats a rejected password exchange as the default-password gate", async () => {
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json(
-          {
-            error:
-              "The management password is still set to the well-known default. " +
-              "Pair the CLI from the host itself (loopback) and rotate the password first.",
-          },
-          { status: 403 },
-        ),
-      ),
-    )
-
-    const error = await mintOmniRouteAccessToken({
-      baseUrl: config.baseUrl,
-      password: "admin",
-      name: "All API Hub",
-    }).catch((failure: unknown) => failure)
-
-    expect(classifyOmniRouteAuthFailure(error, "password")).toBe(
-      OMNIROUTE_AUTH_FAILURE_REASONS.DefaultPasswordRejected,
-    )
-  })
-
   it("distinguishes an insufficient scope from a wrong credential", async () => {
     server.use(
       http.get(`${BASE_URL}/api/providers`, () =>
@@ -478,7 +422,7 @@ describe("OmniRoute authentication", () => {
       (failure: unknown) => failure,
     )
 
-    expect(classifyOmniRouteAuthFailure(error, "token")).toBe(
+    expect(classifyOmniRouteAuthFailure(error)).toBe(
       OMNIROUTE_AUTH_FAILURE_REASONS.InsufficientScope,
     )
     expect(readOmniRouteScopeShortfall((error as Error).message)).toEqual({
@@ -501,7 +445,7 @@ describe("OmniRoute authentication", () => {
       (failure: unknown) => failure,
     )
 
-    expect(classifyOmniRouteAuthFailure(error, "token")).toBe(
+    expect(classifyOmniRouteAuthFailure(error)).toBe(
       OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential,
     )
   })
@@ -517,57 +461,16 @@ describe("OmniRoute authentication", () => {
       (failure: unknown) => failure,
     )
 
-    expect(classifyOmniRouteAuthFailure(error, "token")).toBeNull()
+    expect(classifyOmniRouteAuthFailure(error)).toBeNull()
   })
 
   it("reads non-transport auth failure messages without claiming an auth classification", () => {
     expect(readOmniRouteFailureMessage({ detail: "problem" })).toBe("problem")
-    expect(
-      classifyOmniRouteAuthFailure(new Error("offline"), "token"),
-    ).toBeNull()
-    for (const message of ["No password configured", "onboarding required"]) {
-      expect(
-        classifyOmniRouteAuthFailure(
-          new OmniRouteApiError(message, 403),
-          "password",
-        ),
-      ).toBe(OMNIROUTE_AUTH_FAILURE_REASONS.DefaultPasswordRejected)
-    }
-  })
-
-  it("passes a token lifetime and refuses an exchange without a usable token", async () => {
-    let body: unknown
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, async ({ request }) => {
-        body = await request.json()
-        return HttpResponse.json({ success: true })
-      }),
-    )
-    await expect(
-      mintOmniRouteAccessToken({
-        baseUrl: BASE_URL,
-        password: "panel-password",
-        name: "Test",
-        expiresInDays: 7,
-      }),
-    ).rejects.toMatchObject({
-      message: "OmniRoute did not return an access token",
-    })
-    expect(body).toEqual({
-      password: "panel-password",
-      name: "Test",
-      scope: "admin",
-      expiresInDays: 7,
-    })
+    expect(classifyOmniRouteAuthFailure(new Error("offline"))).toBeNull()
   })
 })
 
 describe("OmniRoute built-in provider catalogue", () => {
-  it("recognises scoped access tokens", () => {
-    expect(isOmniRouteAccessToken("oma_live_example")).toBe(true)
-    expect(isOmniRouteAccessToken("panel-password")).toBe(false)
-  })
-
   it("maps a known provider endpoint to its built-in provider id", () => {
     expect(resolveOmniRouteBuiltinProvider("https://api.deepseek.com")).toBe(
       "deepseek",

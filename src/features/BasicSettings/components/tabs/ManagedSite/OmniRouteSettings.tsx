@@ -10,7 +10,6 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { isOmniRouteAccessToken } from "~/constants/omniroute"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -25,18 +24,12 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
-import {
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/feedback/preferenceFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Configures one self-hosted OmniRoute deployment.
  *
- * Authentication is bearer-only, so the form accepts either an `oma_` scoped
- * access token or the panel password used once to mint one. A password is never
- * persisted: it is exchanged through the gateway's public connect route and only
- * the returned token is stored.
+ * Accepts an existing admin-scoped access token generated in the gateway.
  */
 export default function OmniRouteSettings() {
   const { t } = useTranslation("settings")
@@ -94,9 +87,6 @@ export default function OmniRouteSettings() {
   const handleCredentialChange = async (value: string) => {
     const credential = value.trim()
     if (credential === omniRouteToken) return
-    // A password is a one-time input for minting a token; storing it would keep
-    // the gateway's management password in extension preferences.
-    if (!isOmniRouteAccessToken(credential)) return
     await runPreferenceUpdateWithToast({
       expectedLastUpdated,
       setting: t("omniroute.fields.credentialLabel"),
@@ -119,21 +109,6 @@ export default function OmniRouteSettings() {
       const result = await validateOmniRouteCredential({ baseUrl, credential })
       switch (result.status) {
         case "valid": {
-          // Persist the verified token — for the password path this is the only
-          // chance to keep the minted token, since the password is discarded.
-          const write = await updateOmniRouteConfig(
-            { baseUrl, token: result.token },
-            { expectedLastUpdated },
-          )
-          if (!write.ok) {
-            toast.error(
-              getPreferenceWriteFailureMessage(write.reason, {
-                setting: t("omniroute.fields.credentialLabel"),
-              }),
-            )
-            return
-          }
-          setLocalConfig({ baseUrl, token: result.token })
           toast.success(t("omniroute.validation.success"))
           return
         }
@@ -144,9 +119,6 @@ export default function OmniRouteSettings() {
               need: result.need,
             }),
           )
-          return
-        case "default-password-rejected":
-          toast.error(t("omniroute.validation.defaultPassword"))
           return
         case "invalid-credential":
           toast.error(
@@ -270,12 +242,6 @@ export default function OmniRouteSettings() {
                   : t("omniroute.validation.validate")}
               </Button>
             }
-          />
-
-          <CardItem
-            id={SETTINGS_ANCHORS.OMNIROUTE_SECURITY_NOTE}
-            title={t("omniroute.securityNote.title")}
-            description={t("omniroute.securityNote.description")}
           />
         </CardList>
       </Card>

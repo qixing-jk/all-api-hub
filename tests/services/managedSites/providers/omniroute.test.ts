@@ -40,6 +40,40 @@ describe("OmniRoute credential validation", () => {
     mocks.getPreferences.mockReset()
   })
 
+  it.each(["opaque-access-token", "other-prefix-token"])(
+    "validates token %s without a format check or exchange",
+    async (credential) => {
+      const request = vi.fn(({ request }: { request: Request }) => {
+        expect(request.headers.get("Authorization")).toBe(
+          `Bearer ${credential}`,
+        )
+        return HttpResponse.json({
+          authenticated: true,
+          viaAccessToken: true,
+          scope: "admin",
+          connections: [],
+        })
+      })
+      const exchange = vi.fn(() => HttpResponse.json({}, { status: 500 }))
+      server.use(
+        http.get(`${BASE_URL}/api/cli/whoami`, request),
+        http.get(`${BASE_URL}/api/providers`, request),
+        http.post(`${BASE_URL}/api/cli/connect`, exchange),
+      )
+      const result = await validateOmniRouteCredential({
+        baseUrl: BASE_URL,
+        credential,
+      })
+      expect(result).toEqual({
+        status: "valid",
+        token: credential,
+        scope: "admin",
+      })
+      expect(request).toHaveBeenCalledTimes(2)
+      expect(exchange).not.toHaveBeenCalled()
+    },
+  )
+
   it("accepts an admin-scoped access token", async () => {
     server.use(
       http.get(`${BASE_URL}/api/cli/whoami`, () =>
@@ -68,6 +102,7 @@ describe("OmniRoute credential validation", () => {
 
   it.each([
     [401, "invalid-credential"],
+    [403, "insufficient-scope"],
     [503, "unreachable"],
   ])(
     "classifies token failure %s and redacts the credential",
@@ -75,31 +110,12 @@ describe("OmniRoute credential validation", () => {
       const credential = "oma_live_secret"
       server.use(
         http.get(`${BASE_URL}/api/cli/whoami`, () =>
-          HttpResponse.json({ error: `failed ${credential}` }, { status }),
-        ),
-      )
-      const result = await validateOmniRouteCredential({
-        baseUrl: BASE_URL,
-        credential,
-      })
-      expect(result.status).toBe(expected)
-      expect(JSON.stringify(result)).not.toContain(credential)
-    },
-  )
-
-  it.each([401, 403, 503])(
-    "redacts a minted token and password from validation failure %s",
-    async (status) => {
-      const credential = "panel-password-secret"
-      const token = "oma_minted_secret"
-      server.use(
-        http.post(`${BASE_URL}/api/cli/connect`, () =>
-          HttpResponse.json({ token }),
-        ),
-        http.get(`${BASE_URL}/api/cli/whoami`, () =>
           HttpResponse.json(
             {
-              error: `${status === 403 ? "Access token scope 'read' is insufficient; 'admin' required." : "gateway failure"} ${credential} ${token}`,
+              error:
+                status === 403
+                  ? `Access token scope 'read' is insufficient; 'admin' required. ${credential}`
+                  : `failed ${credential}`,
             },
             { status },
           ),
@@ -109,8 +125,8 @@ describe("OmniRoute credential validation", () => {
         baseUrl: BASE_URL,
         credential,
       })
+      expect(result.status).toBe(expected)
       expect(JSON.stringify(result)).not.toContain(credential)
-      expect(JSON.stringify(result)).not.toContain(token)
     },
   )
 
@@ -175,104 +191,6 @@ describe("OmniRoute credential validation", () => {
       have: "read",
       need: "admin",
     })
-  })
-
-  it("reports the deployment's default-password gate separately", async () => {
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json(
-          {
-            error:
-              "The management password is still set to the well-known default. " +
-              "Pair the CLI from the host itself (loopback) and rotate the password first.",
-          },
-          { status: 403 },
-        ),
-      ),
-    )
-
-    const result = await validateOmniRouteCredential({
-      baseUrl: BASE_URL,
-      credential: "admin",
-    })
-
-    expect(result.status).toBe("default-password-rejected")
-  })
-
-  it("reports a wrong password as a credential problem", async () => {
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json({ error: "Invalid password" }, { status: 401 }),
-      ),
-    )
-
-    const result = await validateOmniRouteCredential({
-      baseUrl: BASE_URL,
-      credential: "not-the-password",
-    })
-
-    expect(result).toMatchObject({ status: "invalid-credential" })
-  })
-
-  it("exchanges a password once and returns only the minted token", async () => {
-    const password = "panel-password-value"
-    let body: Record<string, unknown> | undefined
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json({
-          success: true,
-          token: `${OMNIROUTE_ACCESS_TOKEN_PREFIX}live_minted`,
-          id: "tok-1",
-          name: "All API Hub",
-          scope: "admin",
-        })
-      }),
-      http.get(`${BASE_URL}/api/cli/whoami`, () =>
-        HttpResponse.json({
-          authenticated: true,
-          viaAccessToken: true,
-          scope: "admin",
-        }),
-      ),
-      http.get(`${BASE_URL}/api/providers`, () =>
-        HttpResponse.json({ connections: [], total: 0 }),
-      ),
-    )
-
-    const result = await validateOmniRouteCredential({
-      baseUrl: BASE_URL,
-      credential: password,
-    })
-
-    expect(result).toEqual({
-      status: "valid",
-      token: `${OMNIROUTE_ACCESS_TOKEN_PREFIX}live_minted`,
-      scope: "admin",
-    })
-    expect(body).toEqual({
-      password,
-      name: "All API Hub",
-      scope: "admin",
-    })
-    // The password never appears in the validation result.
-    expect(JSON.stringify(result)).not.toContain(password)
-  })
-
-  it("reports an unreachable deployment without leaking the credential", async () => {
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json({ error: "boom" }, { status: 500 }),
-      ),
-    )
-
-    const result = await validateOmniRouteCredential({
-      baseUrl: BASE_URL,
-      credential: "super-secret-password",
-    })
-
-    expect(result.status).toBe("unreachable")
-    expect(JSON.stringify(result)).not.toContain("super-secret-password")
   })
 })
 

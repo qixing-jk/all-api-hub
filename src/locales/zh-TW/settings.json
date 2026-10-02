@@ -430,24 +430,19 @@
       "baseUrlDesc": "填寫你在瀏覽器開啟 OmniRoute 面板時使用的位址。",
       "baseUrlLabel": "部署位址",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "填寫閘道 Settings → Access Tokens 產生的 admin 作用域存取權杖，或直接填寫面板密碼：擴充功能會用密碼現場換取一條權杖，密碼本身不會被儲存。",
-      "credentialLabel": "存取權杖或面板密碼",
-      "credentialPlaceholder": "oma_… 或面板密碼",
-      "hideCredential": "隱藏憑證",
-      "showCredential": "顯示憑證"
-    },
-    "securityNote": {
-      "description": "admin 作用域權杖等同於閘道上全部上游通道的密鑰，請只在可信環境儲存。用密碼換取權杖會在閘道新建一條名為 All API Hub 的存取權杖。",
-      "title": "權杖權限"
+      "credentialDesc": "在閘道 Settings → Access Tokens 中產生 admin 範圍的存取權杖，貼到此處。",
+      "credentialLabel": "存取權杖",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "隱藏存取權杖",
+      "showCredential": "顯示存取權杖"
     },
     "title": "OmniRoute 整合設定",
     "validation": {
-      "defaultPassword": "閘道仍在使用出廠預設密碼，無法換取權杖。請先在閘道本機更改密碼。",
       "description": "檢查目前設定能否正常連線並管理站點。",
       "failed": "OmniRoute 設定驗證失敗：{{error}}",
       "insufficientScope": "權杖作用域不足：目前為 {{have}}，需要 {{need}}。請在閘道 Settings → Access Tokens 重新產生一條 admin 作用域的權杖。",
-      "invalidCredential": "憑證不正確或已失效：{{error}}",
-      "missingFields": "請填寫所有必填欄位",
+      "invalidCredential": "存取權杖不正確或已失效：{{error}}",
+      "missingFields": "請填寫部署位址和存取權杖",
       "success": "連線成功",
       "title": "驗證連線",
       "unknownScope": "未知",

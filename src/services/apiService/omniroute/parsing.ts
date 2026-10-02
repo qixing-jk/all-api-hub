@@ -9,7 +9,6 @@
 
 import type {
   OmniRouteConnection,
-  OmniRouteMintedToken,
   OmniRouteModelEntry,
   OmniRouteWhoAmI,
 } from "~/types/omniroute"
@@ -64,14 +63,4 @@ export function readOmniRouteModelEntries(
 /** Reads `GET /api/cli/whoami`. */
 export function readOmniRouteWhoAmI(payload: unknown): OmniRouteWhoAmI | null {
   return isRecord(payload) ? (payload as OmniRouteWhoAmI) : null
-}
-
-/** Reads the one-time plaintext token from `POST /api/cli/connect`. */
-export function readOmniRouteMintedToken(
-  payload: unknown,
-): OmniRouteMintedToken | null {
-  if (!isRecord(payload)) return null
-  const token = payload.token
-  if (typeof token !== "string" || !token.trim()) return null
-  return payload as OmniRouteMintedToken
 }

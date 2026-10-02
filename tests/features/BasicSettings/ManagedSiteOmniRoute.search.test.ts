@@ -22,7 +22,6 @@ describe("OmniRoute managed-site settings search definitions", () => {
       SETTINGS_ANCHORS.OMNIROUTE_CREDENTIAL,
       SETTINGS_ANCHORS.OMNIROUTE_TOKENS_LINK,
       SETTINGS_ANCHORS.OMNIROUTE_VALIDATE,
-      SETTINGS_ANCHORS.OMNIROUTE_SECURITY_NOTE,
     ])
   })
 

@@ -81,11 +81,6 @@ export const OMNIROUTE_PRIORITY_RANGE = { min: 1, max: 100_000 } as const
  */
 export const OMNIROUTE_ACCESS_TOKEN_PREFIX = "oma_"
 
-/** Returns whether the value looks like a scoped access token rather than a password. */
-export function isOmniRouteAccessToken(value: string): boolean {
-  return value.trim().startsWith(OMNIROUTE_ACCESS_TOKEN_PREFIX)
-}
-
 /**
  * Fallback built-in provider for a source that matches no known provider
  * endpoint. `openai` is the OpenAI-compatible surface, and the connection-level

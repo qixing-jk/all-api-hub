@@ -419,7 +419,6 @@ describe("BasicSettings tab mounting", () => {
       SETTINGS_ANCHORS.OMNIROUTE_CREDENTIAL,
       SETTINGS_ANCHORS.OMNIROUTE_TOKENS_LINK,
       SETTINGS_ANCHORS.OMNIROUTE_VALIDATE,
-      SETTINGS_ANCHORS.OMNIROUTE_SECURITY_NOTE,
     ]) {
       window.history.replaceState(null, "", `/?anchor=${anchor}#basic`)
 

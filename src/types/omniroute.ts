@@ -48,23 +48,9 @@ export interface OmniRouteWhoAmI {
   [key: string]: unknown
 }
 
-/** `POST /api/cli/connect` — the plaintext token is returned exactly once. */
-export interface OmniRouteMintedToken {
-  success?: boolean | null
-  token: string
-  id?: string | null
-  name?: string | null
-  scope?: string | null
-  expiresAt?: string | null
-  [key: string]: unknown
-}
-
 /** Access-token scopes enforced by the gateway's management authorization. */
 export const OMNIROUTE_ACCESS_TOKEN_SCOPES = {
   Read: "read",
   Write: "write",
   Admin: "admin",
 } as const
-
-export type OmniRouteAccessTokenScope =
-  (typeof OMNIROUTE_ACCESS_TOKEN_SCOPES)[keyof typeof OMNIROUTE_ACCESS_TOKEN_SCOPES]

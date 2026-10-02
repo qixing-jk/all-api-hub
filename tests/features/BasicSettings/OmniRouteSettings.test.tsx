@@ -20,8 +20,8 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 const BASE_URL = "http://omniroute.example.invalid:20128"
-const PASSWORD = "panel-password-value"
-const MINTED_TOKEN = `${OMNIROUTE_ACCESS_TOKEN_PREFIX}live_minted`
+const INVALID_TOKEN = "opaque-invalid-token"
+const ACCESS_TOKEN = `${OMNIROUTE_ACCESS_TOKEN_PREFIX}live_existing`
 
 const acceptToken = () =>
   server.use(
@@ -67,55 +67,78 @@ describe("OmniRoute settings", () => {
     })
   })
 
-  it("exchanges a panel password for a token and never stores the password", async () => {
+  it("reports a rejected token without attempting password exchange", async () => {
     const user = userEvent.setup()
+    const exchange = vi.fn(() => HttpResponse.json({ token: ACCESS_TOKEN }))
+    server.use(http.post(`${BASE_URL}/api/cli/connect`, exchange))
     server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json({
-          success: true,
-          token: MINTED_TOKEN,
-          id: "tok-1",
-          name: "All API Hub",
-          scope: "admin",
-        }),
+      http.get(`${BASE_URL}/api/cli/whoami`, () =>
+        HttpResponse.json({ error: "invalid token" }, { status: 401 }),
       ),
     )
-    acceptToken()
 
     const { container } = render(<OmniRouteSettings />)
     await user.type(await fieldInput(container, "omniroute-base-url"), BASE_URL)
     await user.type(
       await fieldInput(container, "omniroute-credential"),
-      PASSWORD,
+      INVALID_TOKEN,
     )
     await user.click(await validateButton())
 
-    await waitFor(async () =>
-      expect(await userPreferences.getPreferences()).toMatchObject({
-        omniroute: { baseUrl: BASE_URL, token: MINTED_TOKEN },
-      }),
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "settings:omniroute.validation.invalidCredential",
+        ),
+      ),
     )
-    expect(
-      JSON.stringify(await userPreferences.getPreferences()),
-    ).not.toContain(PASSWORD)
-    expect(toast.success).toHaveBeenCalledWith(
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      omniroute: { baseUrl: BASE_URL, token: INVALID_TOKEN },
+    })
+    expect(exchange).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalledWith(
       "settings:omniroute.validation.success",
     )
   })
 
-  it("never persists a pasted password on blur", async () => {
+  it("validates and saves an existing admin token without creating another", async () => {
+    const user = userEvent.setup()
+    const exchange = vi.fn(() => HttpResponse.json({ token: ACCESS_TOKEN }))
+    server.use(http.post(`${BASE_URL}/api/cli/connect`, exchange))
+    acceptToken()
+    const { container } = render(<OmniRouteSettings />)
+    await user.type(await fieldInput(container, "omniroute-base-url"), BASE_URL)
+    await user.type(
+      await fieldInput(container, "omniroute-credential"),
+      ACCESS_TOKEN,
+    )
+    await user.click(await validateButton())
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "settings:omniroute.validation.success",
+      ),
+    )
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      omniroute: { baseUrl: BASE_URL, token: ACCESS_TOKEN },
+    })
+    expect(exchange).not.toHaveBeenCalled()
+  })
+
+  it("persists an opaque access token without checking its prefix", async () => {
     const user = userEvent.setup()
     const { container } = render(<OmniRouteSettings />)
 
     await user.type(
       await fieldInput(container, "omniroute-credential"),
-      PASSWORD,
+      "opaque-access-token",
     )
     await user.tab()
 
-    expect(await userPreferences.getPreferences()).toMatchObject({
-      omniroute: { token: "" },
-    })
+    await waitFor(async () =>
+      expect(await userPreferences.getPreferences()).toMatchObject({
+        omniroute: { token: "opaque-access-token" },
+      }),
+    )
   })
 
   it("reports missing fields before attempting validation", async () => {
@@ -146,7 +169,7 @@ describe("OmniRoute settings", () => {
       )
       await user.type(
         await fieldInput(container, "omniroute-credential"),
-        MINTED_TOKEN,
+        ACCESS_TOKEN,
       )
       await user.click(await validateButton())
       await waitFor(() =>
@@ -163,12 +186,8 @@ describe("OmniRoute settings", () => {
     },
   )
 
-  it("reports a failed verified-token write instead of validation success", async () => {
+  it("reports a failed token save on blur", async () => {
     const user = userEvent.setup()
-    acceptToken()
-    await userPreferences.savePreferences({
-      omniroute: { baseUrl: BASE_URL, token: MINTED_TOKEN },
-    })
     const { container } = render(<OmniRouteSettings />)
     await fieldInput(container, "omniroute-credential")
     const save = vi
@@ -181,8 +200,15 @@ describe("OmniRoute settings", () => {
         },
       })
     try {
-      await user.click(await validateButton())
+      await user.type(
+        await fieldInput(container, "omniroute-credential"),
+        ACCESS_TOKEN,
+      )
+      await user.tab()
       await waitFor(() => expect(toast.error).toHaveBeenCalled())
+      expect(await userPreferences.getPreferences()).toMatchObject({
+        omniroute: { token: "" },
+      })
       expect(toast.success).not.toHaveBeenCalledWith(
         "settings:omniroute.validation.success",
       )
@@ -196,7 +222,7 @@ describe("OmniRoute settings", () => {
     async (fallback) => {
       const user = userEvent.setup()
       await userPreferences.savePreferences({
-        omniroute: { baseUrl: BASE_URL, token: MINTED_TOKEN },
+        omniroute: { baseUrl: BASE_URL, token: ACCESS_TOKEN },
       })
       const tab = vi.spyOn(browserApi, "createTab")
       if (fallback) tab.mockRejectedValue(new Error("tabs unavailable"))
@@ -240,38 +266,6 @@ describe("OmniRoute settings", () => {
         omniroute: { token },
       }),
     )
-  })
-
-  it("reports the deployment's default-password gate and stores nothing", async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.post(`${BASE_URL}/api/cli/connect`, () =>
-        HttpResponse.json(
-          {
-            error:
-              "The management password is still set to the well-known default.",
-          },
-          { status: 403 },
-        ),
-      ),
-    )
-
-    const { container } = render(<OmniRouteSettings />)
-    await user.type(await fieldInput(container, "omniroute-base-url"), BASE_URL)
-    await user.type(
-      await fieldInput(container, "omniroute-credential"),
-      PASSWORD,
-    )
-    await user.click(await validateButton())
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "settings:omniroute.validation.defaultPassword",
-      ),
-    )
-    expect(await userPreferences.getPreferences()).toMatchObject({
-      omniroute: { token: "" },
-    })
   })
 
   it("reports an under-scoped token as a scope problem, not a credential one", async () => {

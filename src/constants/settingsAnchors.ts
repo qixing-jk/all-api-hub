@@ -71,7 +71,6 @@ export const SETTINGS_ANCHORS = {
   OMNIROUTE_CREDENTIAL: "omniroute-credential",
   OMNIROUTE_TOKENS_LINK: "omniroute-tokens-link",
   OMNIROUTE_VALIDATE: "omniroute-validate",
-  OMNIROUTE_SECURITY_NOTE: "omniroute-security-note",
   SUB2API: "sub2api-managed-site",
   SUB2API_BASE_URL: "sub2api-managed-site-base-url",
   SUB2API_ADMIN_CREDENTIALS_LINK: "sub2api-managed-site-admin-credentials-link",

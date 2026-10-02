@@ -430,24 +430,19 @@
       "baseUrlDesc": "Địa chỉ bạn dùng để mở bảng điều khiển OmniRoute trong trình duyệt.",
       "baseUrlLabel": "Địa chỉ triển khai",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "Dán token truy cập có phạm vi admin từ Settings → Access Tokens của gateway, hoặc nhập mật khẩu bảng điều khiển: tiện ích sẽ đổi ngay lấy token và không bao giờ lưu mật khẩu.",
-      "credentialLabel": "Token truy cập hoặc mật khẩu bảng điều khiển",
-      "credentialPlaceholder": "oma_… hoặc mật khẩu bảng điều khiển",
-      "hideCredential": "Ẩn thông tin xác thực",
-      "showCredential": "Hiện thông tin xác thực"
-    },
-    "securityNote": {
-      "description": "Token có phạm vi admin tương đương toàn bộ thông tin xác thực của các kênh thượng nguồn trên gateway, nên chỉ lưu trong môi trường tin cậy. Khi đổi mật khẩu lấy token, gateway sẽ tạo một token truy cập tên All API Hub.",
-      "title": "Quyền của token"
+      "credentialDesc": "Tạo token truy cập có phạm vi admin trong Settings → Access Tokens của gateway rồi dán vào đây.",
+      "credentialLabel": "Token truy cập",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ẩn token truy cập",
+      "showCredential": "Hiện token truy cập"
     },
     "title": "Cài đặt tích hợp OmniRoute",
     "validation": {
-      "defaultPassword": "Gateway vẫn dùng mật khẩu mặc định đã biết nên không cấp token. Hãy đổi mật khẩu ngay trên máy chủ gateway trước.",
       "description": "Kiểm tra xem cấu hình hiện tại có kết nối và quản lý được site không.",
       "failed": "Kiểm tra cấu hình OmniRoute thất bại: {{error}}",
       "insufficientScope": "Phạm vi token không đủ: hiện có {{have}}, cần {{need}}. Hãy tạo token mới với phạm vi admin trong Settings → Access Tokens của gateway.",
-      "invalidCredential": "Thông tin xác thực sai hoặc đã hết hạn: {{error}}",
-      "missingFields": "Hãy điền đầy đủ các trường bắt buộc",
+      "invalidCredential": "Token truy cập không hợp lệ hoặc đã hết hạn: {{error}}",
+      "missingFields": "Nhập địa chỉ triển khai và token truy cập",
       "success": "Kết nối thành công",
       "title": "Kiểm tra kết nối",
       "unknownScope": "không rõ",

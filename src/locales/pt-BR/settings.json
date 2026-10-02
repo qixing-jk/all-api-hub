@@ -430,24 +430,19 @@
       "baseUrlDesc": "O endereço que você usa para abrir o painel do OmniRoute no navegador.",
       "baseUrlLabel": "Endereço da implantação",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "Cole um token de acesso com escopo admin de Settings → Access Tokens do gateway, ou informe a senha do painel: a extensão a troca na hora por um token e nunca guarda a senha.",
-      "credentialLabel": "Token de acesso ou senha do painel",
-      "credentialPlaceholder": "oma_… ou senha do painel",
-      "hideCredential": "Ocultar a credencial",
-      "showCredential": "Mostrar a credencial"
-    },
-    "securityNote": {
-      "description": "Um token com escopo admin equivale a todas as credenciais dos canais upstream do gateway, então guarde-o apenas em um ambiente confiável. Trocar a senha cria no gateway um token de acesso chamado All API Hub.",
-      "title": "Permissões do token"
+      "credentialDesc": "Gere um token de acesso com escopo admin em Settings → Access Tokens do gateway e cole-o aqui.",
+      "credentialLabel": "Token de acesso",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ocultar token de acesso",
+      "showCredential": "Mostrar token de acesso"
     },
     "title": "Configurações de integração do OmniRoute",
     "validation": {
-      "defaultPassword": "O gateway ainda usa a senha padrão conhecida e por isso não emite token. Altere antes a senha no próprio gateway.",
       "description": "Verifica se a configuração atual consegue conectar e gerenciar o site.",
       "failed": "Falha na verificação da configuração do OmniRoute: {{error}}",
       "insufficientScope": "O escopo do token é insuficiente: tem {{have}} e precisa de {{need}}. Gere um novo token com escopo admin em Settings → Access Tokens do gateway.",
-      "invalidCredential": "A credencial está incorreta ou expirou: {{error}}",
-      "missingFields": "Preencha todos os campos obrigatórios",
+      "invalidCredential": "O token de acesso é inválido ou expirou: {{error}}",
+      "missingFields": "Insira a URL da implantação e o token de acesso",
       "success": "Conectado",
       "title": "Verificar a conexão",
       "unknownScope": "desconhecido",

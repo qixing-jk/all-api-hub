@@ -97,7 +97,6 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.OMNIROUTE_CREDENTIAL]: "managedSite",
     [SETTINGS_ANCHORS.OMNIROUTE_TOKENS_LINK]: "managedSite",
     [SETTINGS_ANCHORS.OMNIROUTE_VALIDATE]: "managedSite",
-    [SETTINGS_ANCHORS.OMNIROUTE_SECURITY_NOTE]: "managedSite",
     "cli-proxy": "managedSite",
     "cli-proxy-base-url": "managedSite",
     "cli-proxy-management-key": "managedSite",

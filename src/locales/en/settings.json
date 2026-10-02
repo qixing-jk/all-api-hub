@@ -430,24 +430,19 @@
       "baseUrlDesc": "The address you use to open the OmniRoute dashboard in your browser.",
       "baseUrlLabel": "Deployment address",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "Paste an admin-scoped access token from the gateway's Settings → Access Tokens, or enter the dashboard password: the extension exchanges it for a token on the spot and never stores the password.",
-      "credentialLabel": "Access token or dashboard password",
-      "credentialPlaceholder": "oma_… or dashboard password",
-      "hideCredential": "Hide credential",
-      "showCredential": "Show credential"
-    },
-    "securityNote": {
-      "description": "An admin-scoped token is equivalent to every upstream channel credential on the gateway, so only store it in a trusted environment. Exchanging the password creates an access token named All API Hub on the gateway.",
-      "title": "Token privileges"
+      "credentialDesc": "Generate an admin-scoped access token in the gateway's Settings → Access Tokens and paste it here.",
+      "credentialLabel": "Access token",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Hide access token",
+      "showCredential": "Show access token"
     },
     "title": "OmniRoute Integration Settings",
     "validation": {
-      "defaultPassword": "The gateway still uses its well-known default password, so it refuses to issue a token. Change the password on the gateway host first.",
       "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "OmniRoute configuration check failed: {{error}}",
       "insufficientScope": "The token scope is insufficient: it has {{have}} but needs {{need}}. Create a new token with the admin scope under the gateway's Settings → Access Tokens.",
-      "invalidCredential": "The credential is wrong or expired: {{error}}",
-      "missingFields": "Fill in every required field",
+      "invalidCredential": "The access token is invalid or expired: {{error}}",
+      "missingFields": "Enter the deployment URL and access token",
       "success": "Connected",
       "title": "Verify connection",
       "unknownScope": "unknown",

@@ -430,24 +430,19 @@
       "baseUrlDesc": "ブラウザで OmniRoute のダッシュボードを開くときのアドレスを入力します。",
       "baseUrlLabel": "デプロイ先アドレス",
       "baseUrlPlaceholder": "http://localhost:20128",
-      "credentialDesc": "ゲートウェイの Settings → Access Tokens で作成した admin スコープのアクセストークンを貼り付けるか、ダッシュボードのパスワードを入力します。パスワードはその場でトークンと交換され、保存されません。",
-      "credentialLabel": "アクセストークンまたはパスワード",
-      "credentialPlaceholder": "oma_… またはダッシュボードのパスワード",
-      "hideCredential": "認証情報を隠す",
-      "showCredential": "認証情報を表示"
-    },
-    "securityNote": {
-      "description": "admin スコープのトークンはゲートウェイ上のすべての上流チャネルの資格情報と同等です。信頼できる環境でのみ保存してください。パスワードを交換すると、ゲートウェイに All API Hub という名前のアクセストークンが作成されます。",
-      "title": "トークンの権限"
+      "credentialDesc": "ゲートウェイの Settings → Access Tokens で admin スコープのアクセストークンを作成し、ここに貼り付けてください。",
+      "credentialLabel": "アクセストークン",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "アクセストークンを非表示",
+      "showCredential": "アクセストークンを表示"
     },
     "title": "OmniRoute 統合設定",
     "validation": {
-      "defaultPassword": "ゲートウェイが既知の初期パスワードのままのため、トークンを発行できません。先にゲートウェイのホスト側でパスワードを変更してください。",
       "description": "現在の設定でサイトに接続して管理できるかを確認します。",
       "failed": "OmniRoute の設定検証に失敗しました：{{error}}",
       "insufficientScope": "トークンのスコープが不足しています：現在は {{have}}、必要は {{need}} です。ゲートウェイの Settings → Access Tokens で admin スコープのトークンを作り直してください。",
-      "invalidCredential": "認証情報が正しくないか失効しています：{{error}}",
-      "missingFields": "必須項目をすべて入力してください",
+      "invalidCredential": "アクセストークンが無効か、有効期限が切れています：{{error}}",
+      "missingFields": "デプロイ先アドレスとアクセストークンを入力してください",
       "success": "接続に成功しました",
       "title": "接続を検証",
       "unknownScope": "不明",
