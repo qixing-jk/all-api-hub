@@ -204,6 +204,7 @@ export function buildDraftFromAutoDetectResult(params: {
           currentAutomaticExecutionEnabled:
             mergedCheckIn.automaticExecutionEnabled,
           userPreferenceChanged: automaticExecutionPreferenceChanged,
+          checkIn: mergedCheckIn,
         }),
       }
   const nextDraft: AccountDialogDraft = {

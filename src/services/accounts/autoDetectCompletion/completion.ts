@@ -3,6 +3,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import { setLoginProviderSelection } from "~/services/accountLogin/providerClaims"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
@@ -322,5 +323,16 @@ export async function discoverCompletedCheckIn(params: {
     perAdapterTimeoutMs: params.perAdapterTimeoutMs,
     deadlineMs: params.deadlineMs,
   })
-  return { ...params.completed, checkIn: discovery.config }
+  const automaticExecutionEnabled =
+    discovery.decision.outcome ===
+    CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+      ? false
+      : discovery.config.automaticExecutionEnabled
+  return {
+    ...params.completed,
+    checkIn: {
+      ...discovery.config,
+      automaticExecutionEnabled,
+    },
+  }
 }

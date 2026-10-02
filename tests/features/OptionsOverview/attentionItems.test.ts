@@ -212,6 +212,40 @@ describe("overview attention items", () => {
     })
   })
 
+  it("does not flag check-in setup when discovery outcome is unsupported", () => {
+    const account = buildDisplaySiteData({
+      id: "unsupported-account",
+      name: "Unsupported Relay",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+              detection: {
+                outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
+                evidence: {
+                  source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+                  observedAt: 1,
+                },
+              },
+            },
+          },
+        },
+      }),
+    })
+
+    expect(
+      buildAttentionItems({
+        enabledAccountCount: 1,
+        profileCount: 1,
+        problemAccounts: [],
+        accounts: [account],
+        globalAutomaticExecutionEnabled: true,
+      }).map((item) => item.id),
+    ).not.toContain("checkin:unsupported-account:method-unresolved")
+  })
+
   it("does not flag check-in setup when automatic execution is disabled", () => {
     const account = buildDisplaySiteData({
       id: "manual-account",

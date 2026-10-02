@@ -1,14 +1,20 @@
 import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
+import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
 import {
   getAutoCheckinCandidateMethodIds,
   getNewAccountCompatibilityMethodIds,
 } from "~/services/checkin/autoCheckin/providers/registry"
-import type { CheckInConfig, CustomCheckInConfig } from "~/types/checkIn"
+import type {
+  CheckInConfig,
+  CheckInDiscoveryDecision,
+  CustomCheckInConfig,
+} from "~/types/checkIn"
 
 /**
  * New accounts opt into the account-level automatic intent when the site type
@@ -31,12 +37,27 @@ export function resolveNewAccountAutomaticExecutionEnabled(input: {
   siteUrl?: string
   currentAutomaticExecutionEnabled: boolean
   userPreferenceChanged: boolean
+  decisionOutcome?: CheckInDiscoveryDecision["outcome"]
+  checkIn?: CheckInConfig
 }): boolean {
-  const defaultEnabled = getNewAccountAutomaticExecutionDefault(
+  const candidateMethodIds = getAutoCheckinCandidateMethodIds(
     input.siteType,
     input.siteUrl,
   )
-  return input.userPreferenceChanged && defaultEnabled
+  const hasCandidates = candidateMethodIds.length > 0
+  const decisionOutcome =
+    input.decisionOutcome ??
+    (input.checkIn
+      ? inspectCheckInMethods({
+          config: input.checkIn,
+          candidateMethodIds,
+        }).decision.outcome
+      : undefined)
+  const isUnsupported =
+    decisionOutcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+  const defaultEnabled = hasCandidates && !isUnsupported
+
+  return input.userPreferenceChanged && hasCandidates
     ? input.currentAutomaticExecutionEnabled
     : defaultEnabled
 }

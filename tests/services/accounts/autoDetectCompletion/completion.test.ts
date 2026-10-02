@@ -411,6 +411,9 @@ describe("auto-detect completion", () => {
           candidateMethodIds: [...methodIds],
         }).decision.outcome,
       ).toBe(expectedDecision)
+      if (expectedDecision === "unsupported") {
+        expect(completed.checkIn.automaticExecutionEnabled).toBe(false)
+      }
     },
   )
 

@@ -601,7 +601,7 @@ describe("automatic check-in preparation", () => {
     const account = saveAccount()
     atIndex(detectors, 0).mockImplementation(() => new Promise(() => {}))
     const pending = prepare(account)
-    await vi.advanceTimersByTimeAsync(3_000)
+    await vi.advanceTimersByTimeAsync(5_000)
     await pending
     const saved = (await accountQueries.getAccountById(account.id))!
     expect(saved.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt).toBe(
