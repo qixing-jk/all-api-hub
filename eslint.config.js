@@ -86,6 +86,38 @@ const newApiAdapterLegacyApiServiceImportPattern = {
   message:
     "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or other apiService modules.",
 }
+
+// Runtime `import()` is a deliberate lazy-loading or cycle-breaking boundary.
+// Keep the owners of those boundaries explicit so new call sites get reviewed
+// instead of proliferating by accident. Type-only `typeof import(...)` is
+// unaffected; only runtime `import()` expressions are gated.
+const dynamicImportAllowlist = [
+  // UI code splitting: lazy pages, sections, dialogs, and locale data.
+  "src/components/ui/datePickerLocale.ts",
+  "src/entrypoints/options/constants.ts",
+  "src/entrypoints/popup/viewRegistry.tsx",
+  "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
+  "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
+  "src/features/BasicSettings/BasicSettings.tsx",
+  "src/features/CheckInFeedback/useCheckInFeedback.tsx",
+  "src/utils/i18n/dayjsLocale.ts",
+  // Content scripts keep React and their toast components out of the eagerly
+  // injected bundle.
+  "src/entrypoints/content/messageHandlers/index.ts",
+  "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",
+  "src/entrypoints/content/shared/uiRoot.ts",
+  "src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts.ts",
+  // Background and service boundaries keep heavy provider graphs off the
+  // startup path or break module cycles.
+  "src/entrypoints/background/runtimeMessages.ts",
+  "src/services/accountLogin/index.ts",
+  "src/services/checkin/autoCheckin/refresh.ts",
+  "src/services/managedSites/providers/newApiProtectionBypassResource.ts",
+  "src/services/managedSites/providers/newApiSession.ts",
+  "src/services/productAnalytics/client.ts",
+  "src/services/redemption/redemptionAssist.ts",
+  "src/utils/browser/tempWindowFetch.ts",
+]
 const workflowTransitionIconRestrictedImports = [
   {
     name: "lucide-react",
@@ -461,6 +493,46 @@ export default defineConfig([
       },
     },
     rules: { "notifications/use-facade": "error" },
+  },
+  // Guardrails: dynamic `import()` is opt-in; only allowlisted boundaries may
+  // use it. Implementing this as a custom rule keeps the allowlist in one
+  // place instead of multiplying per-file rule overrides.
+  {
+    files: [srcJsFamilyFilePattern],
+    plugins: {
+      "lazy-boundaries": {
+        rules: {
+          "no-undecided-dynamic-import": {
+            meta: {
+              type: "problem",
+              schema: [],
+              messages: {
+                dynamicImport:
+                  "Dynamic import() is a deliberate lazy-loading or cycle-breaking boundary. If this call site needs one, add the file to dynamicImportAllowlist in eslint.config.js with a reason.",
+              },
+            },
+            create(context) {
+              const filename = (context.filename ?? "").replace(/\\/g, "/")
+              if (
+                !dynamicImportAllowlist.some((entry) =>
+                  filename.endsWith(entry),
+                )
+              ) {
+                return {
+                  ImportExpression(node) {
+                    context.report({ node, messageId: "dynamicImport" })
+                  },
+                }
+              }
+              return {}
+            },
+          },
+        },
+      },
+    },
+    rules: {
+      "lazy-boundaries/no-undecided-dynamic-import": "error",
+    },
   },
   { rules },
   eslintConfigPrettier,
