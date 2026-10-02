@@ -21,6 +21,10 @@ import {
 } from "~/hooks/useProviderModelDiscovery"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import toast from "~/lib/notify"
+import {
+  toProtocolRoot,
+  toVersionedProtocolMount,
+} from "~/services/aiApi/protocolAddress"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import {
   CURSOR_PLUS_PROVIDER_TYPES,
@@ -38,7 +42,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { getErrorMessage } from "~/utils/core/error"
-import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 import { CURSOR_PLUS_EXPORT_TEST_IDS } from "./CursorPlusExportDialog.testIds"
 
@@ -74,6 +77,35 @@ function isValidCursorPlusBaseUrl(value: string) {
   }
 }
 
+/**
+ * Address Cursor++ must be configured with for the selected protocol.
+ *
+ * Cursor++ passes the provider URL straight into that protocol's SDK, and the
+ * SDKs disagree about who owns the version segment: the OpenAI SDK appends only
+ * `/chat/completions` or `/responses` (so it needs the versioned mount), while
+ * the Anthropic and Google SDKs append `/v1/messages` and `/v1beta` themselves
+ * (so they need the protocol root). A declared Anthropic endpoint wins over the
+ * OpenAI address for the Anthropic protocol.
+ *
+ * Verified against cursor++ 0.0.15: `cursor2plus-0.0.15.vsix` builds each client
+ * with `baseURL: provider.baseUrl` and no path of its own.
+ */
+function getProtocolDefaultBaseUrl(
+  baseUrl: string,
+  anthropicBaseUrl: string | undefined,
+  protocol: CursorPlusProviderType,
+): string {
+  if (protocol === CURSOR_PLUS_PROVIDER_TYPES.Anthropic) {
+    return toProtocolRoot("anthropic", anthropicBaseUrl ?? baseUrl) ?? baseUrl
+  }
+
+  if (protocol === CURSOR_PLUS_PROVIDER_TYPES.Gemini) {
+    return toProtocolRoot("google", baseUrl) ?? baseUrl
+  }
+
+  return toVersionedProtocolMount("openai-compatible", baseUrl) ?? baseUrl
+}
+
 /** Copy one OpenAI-compatible runtime key as a Cursor++ provider fragment. */
 export function CursorPlusExportDialog({
   isOpen,
@@ -95,15 +127,18 @@ export function CursorPlusExportDialog({
     }
   }
   const defaultProviderName = `${source.providerName} - ${source.credentialName}`
-  const defaultBaseUrl = useMemo(
-    () => coerceBaseUrlToPathSuffix(source.baseUrl, "/v1"),
-    [source.baseUrl],
-  )
   const [providerName, setProviderName] = useState(defaultProviderName)
-  const [baseUrl, setBaseUrl] = useState(defaultBaseUrl)
   const [protocol, setProtocol] = useState<CursorPlusProviderType>(
     CURSOR_PLUS_PROVIDER_TYPES.OpenAIChat,
   )
+  const [baseUrl, setBaseUrl] = useState(() =>
+    getProtocolDefaultBaseUrl(
+      source.baseUrl,
+      source.anthropicBaseUrl,
+      CURSOR_PLUS_PROVIDER_TYPES.OpenAIChat,
+    ),
+  )
+  const [isBaseUrlCustomized, setIsBaseUrlCustomized] = useState(false)
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([])
   const [hasCustomizedModels, setHasCustomizedModels] = useState(false)
 
@@ -128,11 +163,43 @@ export function CursorPlusExportDialog({
   useEffect(() => {
     if (!isOpen) return
     setProviderName(defaultProviderName)
-    setBaseUrl(defaultBaseUrl)
     setProtocol(CURSOR_PLUS_PROVIDER_TYPES.OpenAIChat)
+    setBaseUrl(
+      getProtocolDefaultBaseUrl(
+        source.baseUrl,
+        source.anthropicBaseUrl,
+        CURSOR_PLUS_PROVIDER_TYPES.OpenAIChat,
+      ),
+    )
+    setIsBaseUrlCustomized(false)
     setSelectedModelIds([])
     setHasCustomizedModels(false)
-  }, [defaultBaseUrl, defaultProviderName, discoveryCacheKey, isOpen])
+  }, [
+    defaultProviderName,
+    discoveryCacheKey,
+    isOpen,
+    source.anthropicBaseUrl,
+    source.baseUrl,
+  ])
+
+  // Cursor++ hands this URL to the SDK of the selected protocol, so switching
+  // protocol rewrites the default until the user edits the field themselves.
+  useEffect(() => {
+    if (!isOpen || isBaseUrlCustomized) return
+    setBaseUrl(
+      getProtocolDefaultBaseUrl(
+        source.baseUrl,
+        source.anthropicBaseUrl,
+        protocol,
+      ),
+    )
+  }, [
+    isBaseUrlCustomized,
+    isOpen,
+    protocol,
+    source.anthropicBaseUrl,
+    source.baseUrl,
+  ])
 
   useEffect(() => {
     if (
@@ -285,7 +352,10 @@ export function CursorPlusExportDialog({
           value={baseUrl}
           data-testid={CURSOR_PLUS_EXPORT_TEST_IDS.baseUrlInput}
           aria-invalid={!hasValidBaseUrl}
-          onChange={(event) => setBaseUrl(event.target.value)}
+          onChange={(event) => {
+            setIsBaseUrlCustomized(true)
+            setBaseUrl(event.target.value)
+          }}
         />
       </FormField>
 

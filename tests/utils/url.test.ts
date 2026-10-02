@@ -9,7 +9,6 @@ import {
   normalizeHttpUrl,
   parseTabFromUrl,
   sanitizeOriginUrl,
-  stripTrailingOpenAIV1,
   updateUrlWithTab,
 } from "~/utils/core/url"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -171,28 +170,6 @@ describe("sanitizeOriginUrl", () => {
 
   it("preserves explicit non-http schemes for parsing and still rejects them", () => {
     expect(sanitizeOriginUrl("mailto:test@example.com")).toBeUndefined()
-  })
-})
-
-describe("stripTrailingOpenAIV1", () => {
-  it("strips a trailing /v1 segment", () => {
-    expect(stripTrailingOpenAIV1("https://x.test/v1")).toBe("https://x.test")
-    expect(stripTrailingOpenAIV1("https://x.test/v1/")).toBe("https://x.test")
-    expect(stripTrailingOpenAIV1("https://x.test/openai/v1")).toBe(
-      "https://x.test/openai",
-    )
-  })
-
-  it("does not strip non-v1 endings", () => {
-    expect(stripTrailingOpenAIV1("https://x.test")).toBe("https://x.test")
-    expect(stripTrailingOpenAIV1("https://x.test/v1beta")).toBe(
-      "https://x.test/v1beta",
-    )
-  })
-
-  it("falls back safely when the input is not an absolute url", () => {
-    expect(stripTrailingOpenAIV1("example.com/v1/")).toBe("example.com")
-    expect(stripTrailingOpenAIV1("example.com/api")).toBe("example.com/api")
   })
 })
 

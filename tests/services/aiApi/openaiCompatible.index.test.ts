@@ -30,7 +30,7 @@ describe("OpenAI-compatible model fetchers", () => {
     apiKey: "synthetic-openai-compatible-key",
   }
   const expectedRequest = {
-    baseUrl: params.baseUrl,
+    baseUrl: `${params.baseUrl}/v1`,
     auth: {
       authType: AuthTypeEnum.AccessToken,
       accessToken: params.apiKey,
@@ -39,6 +39,27 @@ describe("OpenAI-compatible model fetchers", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("requests models once at a complete non-v1 protocol mount", async () => {
+    mockFetchApiData.mockResolvedValueOnce([{ id: "ark-model" }])
+
+    await expect(
+      discoverOpenAICompatibleModels({
+        ...params,
+        baseUrl: "https://ark.example.invalid/api/v3",
+      }),
+    ).resolves.toEqual({
+      models: [{ id: "ark-model" }],
+      resolvedBaseUrl: "https://ark.example.invalid/api/v3",
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+    expect(mockFetchApiData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://ark.example.invalid/api/v3",
+      }),
+      expect.objectContaining({ endpoint: "models" }),
+    )
   })
 
   it("fetches models from the canonical /v1/models endpoint with access-token auth", async () => {
@@ -50,14 +71,14 @@ describe("OpenAI-compatible model fetchers", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
-        baseUrl: "https://openai-compatible.example.com",
+        baseUrl: "https://openai-compatible.example.com/v1",
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: "synthetic-openai-compatible-key",
         },
       },
       {
-        endpoint: "/v1/models",
+        endpoint: "models",
         errorResponseDecoder: decodeOpenAICompatibleResponseError,
       },
     )
@@ -74,7 +95,7 @@ describe("OpenAI-compatible model fetchers", () => {
     },
     {
       baseUrl: "https://ark.example.invalid/api/v3",
-      resolvedBaseUrl: "https://ark.example.invalid/api/v3/v1",
+      resolvedBaseUrl: "https://ark.example.invalid/api/v3",
     },
   ])(
     "returns $resolvedBaseUrl when the canonical route succeeds for $baseUrl",
@@ -87,9 +108,9 @@ describe("OpenAI-compatible model fetchers", () => {
       ).resolves.toEqual({ models, resolvedBaseUrl })
 
       expect(mockFetchApiData).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({ baseUrl: resolvedBaseUrl }),
         {
-          endpoint: "/v1/models",
+          endpoint: "models",
           errorResponseDecoder: decodeOpenAICompatibleResponseError,
         },
       )
@@ -146,28 +167,85 @@ describe("OpenAI-compatible model fetchers", () => {
       })
 
       expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expectedRequest, {
-        endpoint: "/v1/models",
+        endpoint: "models",
         errorResponseDecoder: decodeOpenAICompatibleResponseError,
       })
-      expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expectedRequest, {
-        endpoint: "/models",
-        errorResponseDecoder: decodeOpenAICompatibleResponseError,
-      })
+      expect(mockFetchApiData).toHaveBeenNthCalledWith(
+        2,
+        {
+          ...expectedRequest,
+          baseUrl: params.baseUrl,
+        },
+        {
+          endpoint: "models",
+          errorResponseDecoder: decodeOpenAICompatibleResponseError,
+        },
+      )
     },
   )
 
-  it("normalizes a path-fragment Base URL after fallback discovery", async () => {
-    const pathParams = { ...params, baseUrl: "  /api/v3/  " }
-    const canonicalError = new ApiError("canonical route unavailable", 404)
+  it("tries /v1/models first for a custom proxy subpath, then the subpath itself", async () => {
+    const customBaseUrl = "https://custom.proxy.example/api"
+    const canonicalError = new ApiError("route unavailable", 404)
     const models = [{ id: "custom-model" }]
     mockFetchApiData
       .mockRejectedValueOnce(canonicalError)
       .mockResolvedValueOnce(models)
 
-    await expect(discoverOpenAICompatibleModels(pathParams)).resolves.toEqual({
+    await expect(
+      discoverOpenAICompatibleModels({ ...params, baseUrl: customBaseUrl }),
+    ).resolves.toEqual({
       models,
-      resolvedBaseUrl: "/api/v3",
+      resolvedBaseUrl: "https://custom.proxy.example/api",
     })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        baseUrl: "https://custom.proxy.example/api/v1",
+      }),
+      expect.objectContaining({ endpoint: "models" }),
+    )
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ baseUrl: customBaseUrl }),
+      expect.objectContaining({ endpoint: "models" }),
+    )
+  })
+
+  it("falls back to /models when custom proxy subpath /v1/models returns 404", async () => {
+    const customV1BaseUrl = "https://custom.proxy.example/api/v1"
+    const canonicalError = new ApiError("route unavailable", 404)
+    const models = [{ id: "custom-model" }]
+    mockFetchApiData
+      .mockRejectedValueOnce(canonicalError)
+      .mockResolvedValueOnce(models)
+
+    await expect(
+      discoverOpenAICompatibleModels({ ...params, baseUrl: customV1BaseUrl }),
+    ).resolves.toEqual({
+      models,
+      resolvedBaseUrl: "https://custom.proxy.example/api",
+    })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ baseUrl: customV1BaseUrl }),
+      expect.objectContaining({ endpoint: "models" }),
+    )
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ baseUrl: "https://custom.proxy.example/api" }),
+      expect.objectContaining({ endpoint: "models" }),
+    )
+  })
+
+  it("rejects a path fragment without a host", async () => {
+    const pathParams = { ...params, baseUrl: "  /api/v3/  " }
+    await expect(discoverOpenAICompatibleModels(pathParams)).rejects.toThrow(
+      "Invalid OpenAI-compatible API base URL",
+    )
+    expect(mockFetchApiData).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -203,11 +281,11 @@ describe("OpenAI-compatible model fetchers", () => {
     await expect(fetchOpenAICompatibleModels(params)).resolves.toEqual(models)
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expect.any(Object), {
-      endpoint: "/v1/models",
+      endpoint: "models",
       errorResponseDecoder: decodeOpenAICompatibleResponseError,
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expect.any(Object), {
-      endpoint: "/models",
+      endpoint: "models",
       errorResponseDecoder: decodeOpenAICompatibleResponseError,
     })
   })
@@ -226,14 +304,14 @@ describe("OpenAI-compatible model fetchers", () => {
 
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
-        baseUrl: "https://openai-compatible.example.com",
+        baseUrl: "https://openai-compatible.example.com/v1",
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: "synthetic-openai-compatible-key",
         },
       },
       {
-        endpoint: "/v1/models",
+        endpoint: "models",
         errorResponseDecoder: decodeOpenAICompatibleResponseError,
         options: {
           signal: abortController.signal,

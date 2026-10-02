@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
   hashProviderCatalogValue,
   normalizeProviderCatalogModelIds,
 } from "~/services/integrations/providerCatalogExport"
 import { createLogger } from "~/utils/core/logger"
-import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 const logger = createLogger("ProviderModelDiscovery")
 
@@ -77,7 +84,9 @@ export function useProviderModelDiscovery({
     [sources],
   )
 
-  useEffect(() => {
+  // A credential promise can settle between commit and passive effects. Keep
+  // cancellation refs synchronized with committed state before that can happen.
+  useLayoutEffect(() => {
     const requestIds = requestIdsRef.current
     const activeCacheKeys = activeCacheKeysRef.current
     isMountedRef.current = true
@@ -91,11 +100,11 @@ export function useProviderModelDiscovery({
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     isOpenRef.current = isOpen
   }, [isOpen])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const nextCacheKeys = new Map(
       sources.map((source) => [source.selectionId, source.cacheKey]),
     )
@@ -170,8 +179,23 @@ export function useProviderModelDiscovery({
 
       try {
         const apiKey = await source.resolveApiKey()
+        // Credential recovery may outlive the dialog or its selected source.
+        // Invalidate before sending a request, not only before storing results.
+        if (
+          !isMountedRef.current ||
+          !isOpenRef.current ||
+          activeCacheKeysRef.current.get(selectionId) !== source.cacheKey ||
+          requestIdsRef.current.get(selectionId) !== requestId
+        ) {
+          return
+        }
+        // Discovery derives its own candidate mounts, so it is given the
+        // protocol root: one canonical input regardless of which shape the
+        // caller stored or derived.
         const upstreamModelIds = await fetchModelIds({
-          baseUrl: stripTrailingOpenAIV1(source.baseUrl),
+          baseUrl:
+            toProtocolRoot("openai-compatible", source.baseUrl) ??
+            source.baseUrl,
           apiKey,
         })
         const modelIds = normalizeProviderCatalogModelIds(

@@ -19,6 +19,10 @@ import {
 import toast from "~/lib/notify"
 import { discoverOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import {
+  toProtocolRoot,
+  toVersionedProtocolMount,
+} from "~/services/aiApi/protocolAddress"
+import {
   CCSWITCH_APPS,
   openInCCSwitch,
   type CCSwitchApp,
@@ -42,11 +46,7 @@ import {
 import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import {
-  coerceBaseUrlToPathSuffix,
-  normalizeHttpUrl,
-  stripTrailingOpenAIV1,
-} from "~/utils/core/url"
+import { normalizeHttpUrl } from "~/utils/core/url"
 
 import { CC_SWITCH_EXPORT_TEST_IDS } from "./CCSwitchExportDialog.testIds"
 
@@ -68,15 +68,40 @@ const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 // requests, but skip the wall-clock delay in Vitest.
 const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
-const getConservativeCodexEndpoint = (baseUrl: string) => {
-  const normalizedBaseUrl = normalizeHttpUrl(baseUrl)
-  if (!normalizedBaseUrl) return baseUrl
+/**
+ * Only two CC Switch targets own their version segment: Claude Code and Claude
+ * Desktop hand the endpoint to the Anthropic SDK, and Gemini CLI hands it to the
+ * Google SDK, so both append `/v1` or `/v1beta` themselves. Every other target —
+ * Codex, OpenCode, OpenClaw, Hermes, and Grok — is configured with a versioned
+ * provider base and appends only an operation path, which is also what CC Switch
+ * documents for them (its `https://api.example.com/v1` placeholders, and
+ * `base_url: "https://openrouter.ai/api/v1"` in its Hermes config module).
+ */
+const getAppDefaultEndpoint = (
+  app: CCSwitchApp,
+  baseUrl: string,
+  anthropicBaseUrl: string | undefined,
+): string => {
+  if (app === "claude") {
+    return toProtocolRoot("anthropic", anthropicBaseUrl ?? baseUrl) ?? baseUrl
+  }
 
-  const path = new URL(normalizedBaseUrl).pathname.replace(/\/+$/, "")
-  return path
-    ? normalizedBaseUrl
-    : coerceBaseUrlToPathSuffix(normalizedBaseUrl, "/v1")
+  if (app === "gemini") {
+    return toProtocolRoot("google", baseUrl) ?? baseUrl
+  }
+
+  return getConservativeCodexEndpoint(baseUrl)
 }
+
+/**
+ * Codex is configured with a versioned provider base (its own default is the
+ * canonical `/v1`), so the fallback used when model discovery is inconclusive is
+ * the protocol mount. A root that already carries a path — OpenRouter's
+ * `https://openrouter.ai/api` — must still gain its version segment, which is
+ * why any path present is not taken as-is.
+ */
+const getConservativeCodexEndpoint = (baseUrl: string) =>
+  toVersionedProtocolMount("openai-compatible", baseUrl) ?? baseUrl
 
 const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
@@ -142,10 +167,22 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const formId = useId()
   const limitationNotice = getCCSwitchLimitationNotice(t, app)
+  // Model discovery derives its own candidate mounts, so it is given the
+  // protocol root. Keeping one shape here also means switching to Codex — which
+  // rewrites the endpoint to the discovered versioned mount — does not refetch
+  // the same upstream model list.
+  // Keep automatic discovery on the source OpenAI-compatible address: the Claude
+  // default rewrites the endpoint to the Anthropic address, which a
+  // split-protocol source would reject with no model list. Only a user edit
+  // redirects it.
   const upstreamBaseUrl = useMemo(() => {
-    const normalizedEndpoint = normalizeHttpUrl(endpoint)
-    return normalizedEndpoint ? stripTrailingOpenAIV1(normalizedEndpoint) : ""
-  }, [endpoint])
+    const discoveryEndpoint = isEndpointCustomized ? endpoint : source.baseUrl
+    const normalizedEndpoint = normalizeHttpUrl(discoveryEndpoint)
+    return normalizedEndpoint
+      ? toProtocolRoot("openai-compatible", normalizedEndpoint) ??
+          normalizedEndpoint
+      : ""
+  }, [endpoint, isEndpointCustomized, source.baseUrl])
 
   useEffect(() => {
     if (isOpen) {
@@ -218,7 +255,9 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     if (!isOpen || isEndpointCustomized) return
 
     if (app !== "codex") {
-      setEndpoint(source.baseUrl)
+      setEndpoint(
+        getAppDefaultEndpoint(app, source.baseUrl, source.anthropicBaseUrl),
+      )
       return
     }
 
@@ -229,6 +268,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     setEndpoint(resolvedEndpoint)
   }, [
     source.baseUrl,
+    source.anthropicBaseUrl,
     app,
     codexEndpointDiscovery,
     isEndpointCustomized,

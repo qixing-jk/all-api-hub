@@ -134,34 +134,43 @@ describe("aiApiVerification utils", () => {
     expect(inferStructuredHttpStatus({ statusCode: 401.5 })).toBeUndefined()
   })
 
-  it("normalizes verification base URLs", async () => {
-    const {
-      coerceBaseUrlToAnthropicV1,
-      coerceBaseUrlToGoogleV1beta,
-      coerceBaseUrlToV1,
-    } = await import("~/services/verification/aiApiVerification/utils")
+  it("normalizes verification base URLs to a versioned protocol mount", async () => {
+    const { toVersionedProtocolMount } = await import(
+      "~/services/aiApi/protocolAddress"
+    )
 
-    expect(coerceBaseUrlToV1("https://proxy.example.com/api/")).toBe(
-      "https://proxy.example.com/api/v1",
-    )
-    expect(coerceBaseUrlToAnthropicV1("https://anthropic.example.com/v1")).toBe(
-      "https://anthropic.example.com/v1",
-    )
     expect(
-      coerceBaseUrlToV1(
+      toVersionedProtocolMount(
+        "openai-compatible",
+        "https://proxy.example.com/api/",
+      ),
+    ).toBe("https://proxy.example.com/api/v1")
+    expect(
+      toVersionedProtocolMount("anthropic", "https://anthropic.example.com/v1"),
+    ).toBe("https://anthropic.example.com/v1")
+    expect(
+      toVersionedProtocolMount(
+        "openai-compatible",
         "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
       ),
     ).toBe("https://volcengine-coding-plan.example.invalid/api/coding/v3")
-    expect(coerceBaseUrlToV1("example.invalid/api/coding/v3/")).toBe(
-      "example.invalid/api/coding/v3",
-    )
     expect(
-      coerceBaseUrlToAnthropicV1(
+      toVersionedProtocolMount(
+        "openai-compatible",
+        "example.invalid/api/coding/v3/",
+      ),
+    ).toBe("https://example.invalid/api/coding/v3")
+    expect(
+      toVersionedProtocolMount(
+        "anthropic",
         "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
       ),
     ).toBe("https://volcengine-coding-plan.example.invalid/api/coding/v3/v1")
     expect(
-      coerceBaseUrlToGoogleV1beta("https://generativelanguage.googleapis.com"),
+      toVersionedProtocolMount(
+        "google",
+        "https://generativelanguage.googleapis.com",
+      ),
     ).toBe("https://generativelanguage.googleapis.com/v1beta")
   })
 })

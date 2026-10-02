@@ -52,7 +52,7 @@ describe("captureProfileFromAccountToken", () => {
       profile: {
         name: "Example - Default API Key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: "https://api.example.invalid/v1",
+        baseUrl: "https://api.example.invalid",
         apiKey: "sk-example",
         tagIds: ["tag-a"],
       },

@@ -42,6 +42,7 @@ vi.mock(
 
 const baseRequest = {
   baseUrl: "https://aihubmix.com",
+  managementApiBaseUrl: "https://console.aihubmix.com",
   auth: {
     authType: AuthTypeEnum.AccessToken,
     userId: "7",
@@ -600,6 +601,7 @@ describe("apiService AIHubMix", () => {
     await expect(
       fetchUserInfo({
         baseUrl: "https://console.aihubmix.com",
+        managementApiBaseUrl: "https://console.aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
     ).resolves.toMatchObject({
@@ -654,6 +656,7 @@ describe("apiService AIHubMix", () => {
     await expect(
       fetchUserInfo({
         baseUrl: "https://console.aihubmix.com",
+        managementApiBaseUrl: "https://console.aihubmix.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
           accessToken: "system-access-token",
@@ -817,6 +820,7 @@ describe("apiService AIHubMix", () => {
     await expect(
       getOrCreateAccessToken({
         baseUrl: "https://console.aihubmix.com",
+        managementApiBaseUrl: "https://console.aihubmix.com",
         auth: { authType: AuthTypeEnum.Cookie },
       }),
     ).resolves.toEqual({

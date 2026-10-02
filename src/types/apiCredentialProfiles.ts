@@ -309,9 +309,7 @@ export type ApiCredentialProfile = {
   id: string
   name: string
   apiType: ApiVerificationApiType
-  /**
-   * Canonical, normalized base URL (never includes provider `/v1` or `/v1beta`).
-   */
+  /** Protocol root, without the version segment a consumer adds for itself. */
   baseUrl: string
   /**
    * Secret API key (stored in extension local storage).

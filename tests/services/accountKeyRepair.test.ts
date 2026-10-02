@@ -1283,7 +1283,7 @@ describe("accountKeyRepair", () => {
       if (cleanupLinkedChannels)
         expect(mocks.prepareCleanup).toHaveBeenCalledWith(
           expect.objectContaining({
-            baseUrl: "https://key.example.invalid/v1",
+            baseUrl: "https://key.example.invalid",
           }),
         )
       expect(deleteResource).toHaveBeenNthCalledWith(

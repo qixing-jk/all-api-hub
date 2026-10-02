@@ -1,5 +1,5 @@
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
-import { resolveAccountRuntimeKeyExternalApiBaseUrl } from "~/services/accounts/utils/credentialExport"
+import { resolveAccountExternalApiBaseUrl } from "~/services/accounts/utils/credentialExport"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
@@ -66,7 +66,7 @@ export async function buildAccountKeyResourceLinkedCleanupInput({
       accountBaseUrl: account.baseUrl,
       ref,
     },
-    baseUrl: resolveAccountRuntimeKeyExternalApiBaseUrl(account, keyBaseUrl),
+    baseUrl: resolveAccountExternalApiBaseUrl(account, keyBaseUrl),
     key: secret,
   }
 }

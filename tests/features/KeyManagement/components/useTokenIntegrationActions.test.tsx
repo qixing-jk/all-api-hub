@@ -249,7 +249,7 @@ describe("useRuntimeKeyIntegrationActions", () => {
       },
       label: "Kimi key",
       secret: "",
-      baseUrl: "https://api.moonshot.cn/v1",
+      baseUrl: "https://gateway.example.invalid/v1",
     })
     resolveSecretMock.mockResolvedValue({ ...kimiKey, secret: "sk-example" })
     const { result } = renderHook(() =>
@@ -266,10 +266,10 @@ describe("useRuntimeKeyIntegrationActions", () => {
     })
 
     expect(vi.mocked(OpenInCherryStudio)).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl: "https://api.moonshot.cn/v1" }),
+      expect.objectContaining({ baseUrl: "https://gateway.example.invalid" }),
     )
     expect(result.current.dialogs.kelivo.input).toMatchObject({
-      baseUrl: "https://api.moonshot.cn/v1",
+      baseUrl: "https://gateway.example.invalid",
     })
   })
 
@@ -288,7 +288,7 @@ describe("useRuntimeKeyIntegrationActions", () => {
     )
     await act(() => result.current.exportActions.openKelivo())
     expect(result.current.dialogs.kelivo.input).toMatchObject({
-      baseUrl: key.baseUrl,
+      baseUrl: "https://first.example",
     })
     let finish!: (value: typeof key) => void
     resolveSecretMock.mockImplementationOnce(

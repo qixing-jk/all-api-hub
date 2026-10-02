@@ -70,7 +70,7 @@ describe("aiApiVerification providers", () => {
     expect(
       createModel({
         apiType: "openai-compatible",
-        baseUrl: "https://proxy.example.com/api/",
+        baseUrl: "https://proxy.example.com/api/v1/",
         apiKey: "sk-compatible",
         modelId: "gpt-4.1",
       }),
@@ -134,7 +134,7 @@ describe("aiApiVerification providers", () => {
     expect(
       createModel({
         apiType: "anthropic",
-        baseUrl: "https://anthropic-proxy.example.com/custom",
+        baseUrl: "https://anthropic-proxy.example.com/custom/v1",
         apiKey: "sk-anthropic",
         modelId: "claude-3-7-sonnet",
       }),
@@ -208,7 +208,7 @@ describe("aiApiVerification providers", () => {
     expect(
       createModel({
         apiType: "anthropic",
-        baseUrl: "https://ark.cn-beijing.volces.com/api/compatible",
+        baseUrl: "https://ark.cn-beijing.volces.com/api/compatible/v1",
         apiKey: "sk-cli",
         modelId: "claude-test",
       }),
@@ -292,7 +292,7 @@ describe("aiApiVerification providers", () => {
     )
 
     const openAIProvider = createOpenAIProvider({
-      baseUrl: "https://proxy.example.com/custom/",
+      baseUrl: "https://proxy.example.com/custom/v1/",
       apiKey: "sk-openai",
     })
     const googleProvider = createGoogleProvider({

@@ -1895,7 +1895,9 @@ describe("KiloCodeExportDialog", () => {
       enabledAccounts: [],
       enabledDisplayData: currentDisplayData,
     }))
-    mockFetchAccountTokens.mockResolvedValueOnce([
+    // Updating account facts reloads inventory. Keep the key available in both
+    // reads so discovery at the new address represents an active selection.
+    mockFetchAccountTokens.mockResolvedValue([
       { id: 1, name: "Default", key: "sk-masked********" },
     ])
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])

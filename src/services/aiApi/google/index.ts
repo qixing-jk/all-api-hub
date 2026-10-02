@@ -3,6 +3,7 @@ import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
+import { toVersionedProtocolMount } from "../protocolAddress"
 import {
   createGoogleAuthHeaders,
   getGoogleAuthMode,
@@ -37,8 +38,10 @@ const MAX_MODELS = 2000
 export async function fetchGoogleModelIds(
   params: GoogleAuthParams,
 ): Promise<string[]> {
+  const baseUrl = toVersionedProtocolMount("google", params.baseUrl)
+  if (!baseUrl) throw new Error("Invalid Google API base URL")
   const request = {
-    baseUrl: params.baseUrl,
+    baseUrl,
     auth: { authType: AuthTypeEnum.None },
   }
 
@@ -51,8 +54,8 @@ export async function fetchGoogleModelIds(
     if (nextPageToken) searchParams.set("pageToken", nextPageToken)
 
     const endpoint = searchParams.size
-      ? `/v1beta/models?${searchParams.toString()}`
-      : "/v1beta/models"
+      ? `models?${searchParams.toString()}`
+      : "models"
 
     try {
       const fetchPage = (mode: GoogleAuthMode) =>

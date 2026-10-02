@@ -30,6 +30,10 @@ import {
 } from "~/hooks/useProviderModelDiscovery"
 import toast from "~/lib/notify"
 import {
+  toProtocolRoot,
+  toVersionedProtocolMount,
+} from "~/services/aiApi/protocolAddress"
+import {
   AI_TOOLBOX_API_FORMATS,
   AI_TOOLBOX_APPS,
   openInAiToolbox,
@@ -85,6 +89,38 @@ const API_FORMAT_OPTIONS = [
 ] as const
 
 type ApiFormatOption = (typeof API_FORMAT_OPTIONS)[number]
+
+/** The protocol root an OpenAI-compatible address reduces to. */
+const toOpenAiProtocolRoot = (baseUrl: string): string =>
+  toProtocolRoot("openai-compatible", baseUrl) ?? baseUrl
+
+/**
+ * The address a target app must be configured with.
+ *
+ * AI Toolbox passes the link's `baseUrl` through verbatim — it only re-derives
+ * one when the link claims a `sourceApp` together with `baseUrlStyle`, which
+ * this export deliberately does not claim. Only Claude Code, Claude Desktop, and
+ * Gemini CLI append the version segment themselves (Anthropic and Google SDKs);
+ * every other target is an OpenAI- or AI-SDK-style client that appends only an
+ * operation path, so it needs the versioned mount. AI Toolbox's own share side
+ * states the same split: `root` for Claude/Gemini natively and `versioned` for
+ * Codex, OpenCode, Grok, and Kimi.
+ */
+const getAppDefaultBaseUrl = (
+  baseUrl: string,
+  anthropicBaseUrl: string | undefined,
+  app: AiToolboxApp,
+): string => {
+  if (app === "claude" || app === "claudedesktop") {
+    return toProtocolRoot("anthropic", anthropicBaseUrl ?? baseUrl) ?? baseUrl
+  }
+
+  if (app === "gemini") {
+    return toProtocolRoot("google", baseUrl) ?? baseUrl
+  }
+
+  return toVersionedProtocolMount("openai-compatible", baseUrl) ?? baseUrl
+}
 
 const getAiToolboxAppLabel = (t: TFunction, app: AiToolboxApp) => {
   switch (app) {
@@ -149,24 +185,46 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
   const [notes, setNotes] = useState("")
   const [providerName, setProviderName] = useState(source.providerName)
   const [homepage, setHomepage] = useState(source.baseUrl)
-  // AI Toolbox names the shared connection field `baseUrl` and rebuilds the
-  // tool-specific settings itself, so the stored URL is sent verbatim.
+  // AI Toolbox writes this straight into each target's own config and only
+  // adapts the address when the link claims a `sourceApp` plus `baseUrlStyle`,
+  // which this export deliberately does not claim. The address must therefore
+  // already be the shape the selected app expects.
   // https://github.com/coulsontl/ai-toolbox/blob/v1.1.5/tauri/src/coding/deeplink/provider.rs
-  const [baseUrl, setBaseUrl] = useState(source.baseUrl)
+  const [baseUrl, setBaseUrl] = useState(() =>
+    getAppDefaultBaseUrl(source.baseUrl, source.anthropicBaseUrl, DEFAULT_APP),
+  )
+  const [isBaseUrlCustomized, setIsBaseUrlCustomized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const formId = useId()
 
-  // Model discovery follows the endpoint the export will actually target, not
-  // the stored URL the user may be replacing. Debounced so typing does not
-  // fire a discovery request per keystroke.
-  const [discoveryBaseUrl, setDiscoveryBaseUrl] = useState(source.baseUrl)
+  // Model discovery always reads the OpenAI-compatible list, and derives its own
+  // candidate mounts, so it is given the protocol root: switching to an app with
+  // a different address shape then does not refetch the same upstream list.
+  const discoverySourceKey = buildProviderModelDiscoveryCacheKey([
+    source.id,
+    source.cacheKey,
+    source.baseUrl,
+  ])
+  const [discoveryTarget, setDiscoveryTarget] = useState(() => ({
+    sourceKey: discoverySourceKey,
+    baseUrl: toOpenAiProtocolRoot(source.baseUrl),
+  }))
+  const discoveryBaseUrl = discoveryTarget.baseUrl
+  // Keep automatic discovery on the source OpenAI-compatible address: the Claude
+  // default fills the field with the Anthropic address, which a split-protocol
+  // source would reject with no model list. Only a user edit redirects it.
+  const discoverySourceUrl = isBaseUrlCustomized ? baseUrl : source.baseUrl
   useEffect(() => {
     const handle = setTimeout(
-      () => setDiscoveryBaseUrl(baseUrl),
+      () =>
+        setDiscoveryTarget({
+          sourceKey: discoverySourceKey,
+          baseUrl: toOpenAiProtocolRoot(discoverySourceUrl),
+        }),
       UPSTREAM_MODEL_FETCH_DEBOUNCE_MS,
     )
     return () => clearTimeout(handle)
-  }, [baseUrl])
+  }, [discoverySourceKey, discoverySourceUrl])
 
   // Closing the dialog or swapping the source invalidates an in-flight export
   // so a late credential resolution cannot send the key after a cancel.
@@ -182,8 +240,16 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
     onClose()
   }, [invalidatePendingExport, onClose])
 
-  const discoverySources = useMemo(
-    () => [
+  const discoverySources = useMemo(() => {
+    // Bind the debounced target to its credential source before discovery can
+    // send a key, including when a source change resets a custom endpoint.
+    if (
+      discoveryTarget.sourceKey !== discoverySourceKey ||
+      discoveryBaseUrl !== toOpenAiProtocolRoot(discoverySourceUrl)
+    ) {
+      return []
+    }
+    return [
       {
         selectionId: source.id,
         cacheKey: buildProviderModelDiscoveryCacheKey([
@@ -193,9 +259,14 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
         baseUrl: discoveryBaseUrl,
         resolveApiKey: source.resolveApiKey,
       },
-    ],
-    [source, discoveryBaseUrl],
-  )
+    ]
+  }, [
+    source,
+    discoveryTarget,
+    discoveryBaseUrl,
+    discoverySourceKey,
+    discoverySourceUrl,
+  ])
   const { getInventory, loadModels } = useProviderModelDiscovery({
     isOpen,
     sources: discoverySources,
@@ -224,9 +295,38 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
       setNotes(source.notes ?? "")
       setProviderName(source.providerName)
       setHomepage(source.baseUrl)
-      setBaseUrl(source.baseUrl)
+      setBaseUrl(
+        getAppDefaultBaseUrl(
+          source.baseUrl,
+          source.anthropicBaseUrl,
+          DEFAULT_APP,
+        ),
+      )
+      setIsBaseUrlCustomized(false)
     }
-  }, [source.baseUrl, source.id, source.providerName, source.notes, isOpen])
+  }, [
+    isOpen,
+    source.anthropicBaseUrl,
+    source.baseUrl,
+    source.id,
+    source.notes,
+    source.providerName,
+  ])
+
+  // Follow the app's own address shape until the user edits the field, so an
+  // untouched export never hands a target a shape its client would duplicate.
+  useEffect(() => {
+    if (!isOpen || isBaseUrlCustomized) return
+    setBaseUrl(
+      getAppDefaultBaseUrl(source.baseUrl, source.anthropicBaseUrl, app),
+    )
+  }, [
+    app,
+    isBaseUrlCustomized,
+    isOpen,
+    source.anthropicBaseUrl,
+    source.baseUrl,
+  ])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -386,7 +486,10 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             value={baseUrl}
             className="mt-density-1"
             placeholder={t("ui:dialog.aiToolbox.placeholders.baseUrl")}
-            onChange={(event) => setBaseUrl(event.target.value)}
+            onChange={(event) => {
+              setIsBaseUrlCustomized(true)
+              setBaseUrl(event.target.value)
+            }}
           />
         </div>
 

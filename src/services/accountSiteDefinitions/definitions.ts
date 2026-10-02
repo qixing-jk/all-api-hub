@@ -666,6 +666,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storageOrigin: OPENROUTER_WEB_ORIGIN,
         duplicateOrigin: OPENROUTER_WEB_ORIGIN,
         managedChannelOrigin: OPENROUTER_API_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: OPENROUTER_API_BASE_URL,
+        },
       },
     },
   },
@@ -718,6 +721,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storageOrigin: KIMI_CONSOLE_ORIGIN,
         duplicateOrigin: KIMI_CONSOLE_ORIGIN,
         managedChannelOrigin: KIMI_API_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: KIMI_API_BASE_URL,
+          anthropic: "https://api.moonshot.cn/anthropic",
+        },
       },
     },
   },
@@ -769,6 +776,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storageOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
         duplicateOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
         managedChannelOrigin: KIMI_GLOBAL_API_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: KIMI_GLOBAL_API_BASE_URL,
+          anthropic: "https://api.moonshot.ai/anthropic",
+        },
       },
     },
   },

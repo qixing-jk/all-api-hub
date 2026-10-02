@@ -130,6 +130,8 @@ export interface ApiTransportRequest {
   requestScheduling?: RequestScheduling
   auth: AuthConfig
   baseUrl: string
+  /** Management API address; `baseUrl` remains the browser session address. */
+  managementApiBaseUrl?: string
   data?: Record<string, any>
   accountId?: string
   abortSignal?: AbortSignal

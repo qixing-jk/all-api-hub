@@ -660,7 +660,7 @@ describe("ServiceCredentialCard", () => {
     await selectExportAction(user, "keyManagement:actions.useInCherry")
     expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseUrl: "https://sharedchat.example.invalid/v1",
+        baseUrl: "https://sharedchat.example.invalid",
         providerName: "SharedChat - Codex API Key",
         apiKey: "sk-service-credential",
       }),
@@ -694,7 +694,7 @@ describe("ServiceCredentialCard", () => {
       expect.objectContaining({
         isOpen: true,
         source: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid/v1",
+          baseUrl: "https://sharedchat.example.invalid",
           providerName: "SharedChat - Codex API Key",
           resolveApiKey: expect.any(Function),
         }),
@@ -709,7 +709,7 @@ describe("ServiceCredentialCard", () => {
       expect.objectContaining({
         isOpen: true,
         source: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid/v1",
+          baseUrl: "https://sharedchat.example.invalid",
           providerName: "SharedChat - Codex API Key",
           resolveApiKey: expect.any(Function),
         }),
@@ -744,7 +744,7 @@ describe("ServiceCredentialCard", () => {
           id: "service_credential:sharedchat-account:codex",
           providerName: "SharedChat",
           credentialName: "Codex API Key",
-          baseUrl: "https://sharedchat.example.invalid/v1",
+          baseUrl: "https://sharedchat.example.invalid",
           resolveApiKey: expect.any(Function),
         }),
       }),
@@ -764,7 +764,7 @@ describe("ServiceCredentialCard", () => {
       expect.objectContaining({
         isOpen: true,
         source: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid/v1",
+          baseUrl: "https://sharedchat.example.invalid",
           providerName: "SharedChat - Codex API Key",
           resolveApiKey: expect.any(Function),
         }),

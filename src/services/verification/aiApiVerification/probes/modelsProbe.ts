@@ -1,6 +1,7 @@
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 
 import { nowMs, okLatency } from "../probeTiming"
 import type {
@@ -55,38 +56,6 @@ function pickSuggestedModelId(
 }
 
 /**
- * Strips the query string and hash from a URL.
- */
-function stripQueryAndHash(baseUrl: string): string {
-  const trimmed = (baseUrl || "").trim()
-  if (!trimmed) return trimmed
-
-  let cutoff = trimmed.length
-  const queryIndex = trimmed.indexOf("?")
-  const hashIndex = trimmed.indexOf("#")
-  if (queryIndex >= 0) cutoff = Math.min(cutoff, queryIndex)
-  if (hashIndex >= 0) cutoff = Math.min(cutoff, hashIndex)
-  return trimmed.slice(0, cutoff)
-}
-
-/**
- * Normalizes the models base URL.
- */
-function normalizeModelsBaseUrl(
-  apiType: ApiVerificationApiType,
-  baseUrl: string,
-): string {
-  const trimmed = stripQueryAndHash(baseUrl).replace(/\/+$/, "")
-  if (!trimmed) return trimmed
-
-  const segmentToStrip = apiType === API_TYPES.GOOGLE ? "v1beta" : "v1"
-  const match = new RegExp(`/(?:${segmentToStrip})(?:/|$)`, "i").exec(trimmed)
-  if (!match) return trimmed
-
-  return trimmed.slice(0, match.index).replace(/\/+$/, "")
-}
-
-/**
  * Probe models listing reachability and parseability and return a suggested model id.
  */
 export async function runModelsProbe(
@@ -94,13 +63,12 @@ export async function runModelsProbe(
 ): Promise<{ result: ApiVerificationProbeResult; modelId?: string }> {
   const startedAt = nowMs()
   try {
-    const normalizedBaseUrl = normalizeModelsBaseUrl(
+    const normalizedBaseUrl = toVersionedProtocolMount(
       params.apiType,
       params.baseUrl,
     )
-
-    const endpoint =
-      params.apiType === API_TYPES.GOOGLE ? "/v1beta/models" : "/v1/models"
+    if (!normalizedBaseUrl) throw new Error("Invalid protocol API base URL")
+    const endpoint = "models"
 
     const modelIds = await (async () => {
       if (
@@ -184,11 +152,10 @@ export async function runModelsProbe(
         summaryKey: diagnostics.summaryKey,
         summaryParams: diagnostics.summaryParams,
         input: {
-          endpoint:
-            params.apiType === API_TYPES.GOOGLE
-              ? "/v1beta/models"
-              : "/v1/models",
-          baseUrl: normalizeModelsBaseUrl(params.apiType, params.baseUrl),
+          endpoint: "models",
+          baseUrl:
+            toVersionedProtocolMount(params.apiType, params.baseUrl) ??
+            params.baseUrl.trim(),
           apiType: params.apiType,
         },
         output: diagnostics.output,

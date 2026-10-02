@@ -3,6 +3,8 @@ export interface CredentialExportData {
   providerId: string
   providerName: string
   baseUrl: string
+  /** Target-specific Anthropic SDK address when it differs from `baseUrl`. */
+  anthropicBaseUrl?: string
   apiKey: string
 }
 
@@ -18,6 +20,8 @@ export interface CredentialExportSource {
   providerName: string
   credentialName: string
   baseUrl: string
+  /** Target-specific Anthropic SDK address when available. */
+  anthropicBaseUrl?: string
   notes?: string
   /** Changes when endpoint or credential-resolution inputs change. */
   cacheKey: string

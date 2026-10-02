@@ -26,6 +26,7 @@ export function createOpenRouterManagementRequest(
   return {
     ...request,
     baseUrl: OPENROUTER_API_BASE_URL,
+    managementApiBaseUrl: OPENROUTER_API_BASE_URL,
     auth: {
       ...request.auth,
       authType: AuthTypeEnum.AccessToken,

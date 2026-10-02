@@ -101,6 +101,7 @@ describe("redeemService.redeemCodeForAccount", () => {
     expect(redeem).toHaveBeenCalledWith({
       request: {
         baseUrl: "https://example.com",
+        managementApiBaseUrl: "https://example.com",
         accountId: "account-1",
         auth: {
           authType: "bearer",
@@ -163,6 +164,7 @@ describe("redeemService.redeemCodeForAccount", () => {
     expect(redeem).toHaveBeenCalledWith({
       request: {
         baseUrl: "https://one-api.example.com",
+        managementApiBaseUrl: "https://one-api.example.com",
         accountId: "account-2",
         auth: {
           authType: "token",

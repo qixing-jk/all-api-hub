@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
+import {
+  createAccountRuntimeKeyExportSource,
+  resolveAccountExternalApiBaseUrl,
+} from "~/services/accounts/utils/credentialExport"
 import { resolveCredentialExport } from "~/services/integrations/credentialExport"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
@@ -27,6 +30,8 @@ const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
   secret: "",
 })
 
+// Exports carry the protocol root: the consumer appends the version segment it
+// owns, so a trailing `/v1` here would be appended twice.
 describe("account credential exports", () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -47,7 +52,7 @@ describe("account credential exports", () => {
     await expect(resolveCredentialExport(source)).resolves.toEqual({
       providerId: account.id,
       providerName: account.name,
-      baseUrl: account.baseUrl,
+      baseUrl: "https://example.com",
       apiKey: "sk-current-test-key",
     })
     expect(resolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
@@ -166,6 +171,35 @@ describe("account credential exports", () => {
     ).toBe("https://api.ai-router.dev")
   })
 
+  it("offers both Kimi inference protocols without changing the browser account address", () => {
+    const kimiAccount = buildDisplaySiteData({
+      id: "kimi-account",
+      name: "Kimi",
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      baseUrl: "https://platform.kimi.ai",
+    })
+    const key = buildAccountKeyResourceRuntimeKey(kimiAccount, {
+      ref: {
+        accountId: kimiAccount.id,
+        siteType: kimiAccount.siteType,
+        scopeKey: "organization:test",
+        resourceId: "key:test",
+      },
+      label: "Kimi key",
+      secret: "sk-example",
+    })
+    const source = createAccountRuntimeKeyExportSource(kimiAccount, key)
+    expect(source.baseUrl).toBe("https://api.moonshot.ai")
+    expect(source.anthropicBaseUrl).toBe("https://api.moonshot.ai/anthropic")
+    expect(kimiAccount.baseUrl).toBe("https://platform.kimi.ai")
+  })
+
+  it("retains an unusable explicit key endpoint instead of silently exporting another gateway", () => {
+    expect(resolveAccountExternalApiBaseUrl(account, "  not a url  ")).toBe(
+      "not a url",
+    )
+  })
+
   it("keeps an explicit per-key endpoint and unregistered account URLs", () => {
     const explicitEndpointKey = {
       ...runtimeKey,
@@ -174,10 +208,10 @@ describe("account credential exports", () => {
 
     expect(
       createAccountRuntimeKeyExportSource(account, explicitEndpointKey).baseUrl,
-    ).toBe("https://custom-endpoint.example.invalid/v1")
+    ).toBe("https://custom-endpoint.example.invalid")
     expect(
       createAccountRuntimeKeyExportSource(account, runtimeKey).baseUrl,
-    ).toBe(account.baseUrl)
+    ).toBe("https://example.com")
   })
 
   // The key carries the endpoint it was created against (account snapshot). If
@@ -245,7 +279,7 @@ describe("account credential exports", () => {
 
     expect(
       createAccountRuntimeKeyExportSource(openRouterAccount, key).baseUrl,
-    ).toBe("https://openrouter.ai/api/v1")
+    ).toBe("https://openrouter.ai/api")
   })
 
   it("exports the Kimi gateway URL when a native key inherits the console address", () => {
@@ -265,7 +299,7 @@ describe("account credential exports", () => {
     })
 
     expect(createAccountRuntimeKeyExportSource(kimiAccount, key).baseUrl).toBe(
-      "https://api.moonshot.cn/v1",
+      "https://api.moonshot.cn",
     )
   })
 })

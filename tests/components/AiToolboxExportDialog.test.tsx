@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AiToolboxExportDialog } from "~/components/AiToolboxExportDialog"
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "~/components/AiToolboxExportDialog.testIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { AI_TOOLBOX_API_FORMATS } from "~/services/integrations/aiToolbox"
@@ -21,7 +22,13 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 /** Keep export fixtures valid while making each test's credential inputs explicit. */
 function createAccountExportSource(
@@ -37,6 +44,33 @@ function createAccountExportSource(
     buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
     { preferCurrentSecret: true },
   )
+}
+
+/**
+ * Source whose Anthropic and OpenAI-compatible inference addresses differ
+ * (Kimi Global), so the Claude export field is Anthropic-shaped while model
+ * discovery must keep searching the OpenAI-compatible route.
+ */
+function createKimiExportSource() {
+  const account = buildDisplaySiteData({
+    id: "kimi-account",
+    name: "Kimi",
+    siteType: SITE_TYPES.KIMI_GLOBAL,
+    baseUrl: "https://platform.kimi.ai",
+  })
+  const key = buildAccountKeyResourceRuntimeKey(account, {
+    ref: {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "organization:test",
+      resourceId: "key:test",
+    },
+    label: "Kimi key",
+    secret: "sk-test",
+  })
+  return createAccountRuntimeKeyExportSource(account, key, {
+    preferCurrentSecret: true,
+  })
 }
 
 /** Source whose secret always resolves through the mocked async account read. */
@@ -254,7 +288,7 @@ describe("AiToolboxExportDialog", () => {
 
     expect(
       await screen.findByLabelText("ui:dialog.aiToolbox.fields.baseUrl"),
-    ).toHaveValue("https://x.test/v1")
+    ).toHaveValue("https://x.test")
   })
 
   it("sends the target app, resolved credential, and edited fields", async () => {
@@ -292,19 +326,149 @@ describe("AiToolboxExportDialog", () => {
       expect(mockOpenInAiToolbox).toHaveBeenCalledWith({
         credential: expect.objectContaining({
           providerName: "Profile Provider",
-          baseUrl: "https://x.test/v1",
+          baseUrl: "https://x.test",
           apiKey: "sk-test",
         }),
         app: "opencode",
         model: undefined,
         notes: "token note",
         name: "Profile Provider",
-        homepage: "https://x.test/v1",
+        homepage: "https://x.test",
         endpoint: "https://x.test/v1",
         apiFormat: undefined,
       })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  // Each target app appends its own path to whatever address it receives, so an
+  // untouched export must already carry the shape that app expects: the Anthropic
+  // and Google SDKs add `/v1/messages` and `/v1beta` themselves, while every
+  // OpenAI- or AI-SDK-style target appends only an operation path.
+  it.each([
+    {
+      app: "codex",
+      appLabel: "ui:dialog.aiToolbox.appOptions.codex",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "gemini",
+      appLabel: "ui:dialog.aiToolbox.appOptions.gemini",
+      expectedBaseUrl: "https://x.test",
+    },
+    {
+      app: "opencode",
+      appLabel: "ui:dialog.aiToolbox.appOptions.opencode",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "hermes",
+      appLabel: "ui:dialog.aiToolbox.appOptions.hermes",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "grok",
+      appLabel: "ui:dialog.aiToolbox.appOptions.grok",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+  ])(
+    "hands $app the address shape its client expects",
+    async ({ app, appLabel, expectedBaseUrl }) => {
+      const user = userEvent.setup()
+
+      render(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={createAccountExportSource(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" },
+            { key: "sk-test" },
+          )}
+        />,
+      )
+
+      const appSelect = await screen.findByLabelText(
+        "ui:dialog.aiToolbox.fields.app",
+      )
+      await user.click(appSelect)
+      await user.click(await screen.findByRole("option", { name: appLabel }))
+
+      const baseUrlInput = screen.getByLabelText(
+        "ui:dialog.aiToolbox.fields.baseUrl",
+      )
+      await waitFor(() => {
+        expect(baseUrlInput).toHaveValue(expectedBaseUrl)
+      })
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.aiToolbox.actions.export",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(mockOpenInAiToolbox).toHaveBeenCalledWith(
+          expect.objectContaining({ app, endpoint: expectedBaseUrl }),
+        )
+      })
+    },
+  )
+
+  it("prefers a declared Anthropic endpoint for the Claude targets", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          {
+            id: "acc",
+            name: "Kimi",
+            siteType: SITE_TYPES.KIMI_GLOBAL,
+            baseUrl: "https://platform.kimi.ai",
+          },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.aiToolbox.fields.baseUrl"),
+    ).toHaveValue("https://api.moonshot.ai/anthropic")
+  })
+
+  it("keeps a user-edited address when the target app changes", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const baseUrlInput = await screen.findByLabelText(
+      "ui:dialog.aiToolbox.fields.baseUrl",
+    )
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, "https://custom.example.invalid")
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.aiToolbox.fields.app",
+    )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.aiToolbox.appOptions.codex",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(baseUrlInput).toHaveValue("https://custom.example.invalid")
+    })
   })
 
   it("passes the explicitly selected API format and omits it by default", async () => {
@@ -619,6 +783,99 @@ describe("AiToolboxExportDialog", () => {
       })
     })
   })
+
+  it("discovers models on the OpenAI-compatible address when the export field shows the Anthropic address", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createKimiExportSource()}
+      />,
+    )
+
+    // The default Claude field carries the Anthropic-shaped address; automatic
+    // discovery must not chase it, or a split-protocol source returns no models.
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://api.moonshot.ai",
+        apiKey: "sk-test",
+      })
+    })
+    // Let the 0ms debounced effect run: it must keep the source's OpenAI-compatible
+    // address and never redirect discovery to the Anthropic export field.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(mockFetchModelIds).not.toHaveBeenCalledWith({
+      baseUrl: "https://api.moonshot.ai/anthropic",
+      apiKey: "sk-test",
+    })
+  })
+
+  it.each(["different-source", "same-source", "customized-source"])(
+    "never pairs a replacement credential with the previous discovery endpoint (%s)",
+    async (scenario) => {
+      const user = userEvent.setup()
+      const previous = createAccountExportSource(
+        { id: "acc", baseUrl: "https://old.test" },
+        { key: "sk-old" },
+      )
+      const { rerender } = render(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={previous}
+        />,
+      )
+      await waitFor(() =>
+        expect(mockFetchModelIds).toHaveBeenCalledWith({
+          baseUrl: "https://old.test",
+          apiKey: "sk-old",
+        }),
+      )
+      if (scenario === "customized-source") {
+        const field = await screen.findByLabelText(
+          "ui:dialog.aiToolbox.fields.baseUrl",
+        )
+        await user.clear(field)
+        await user.type(field, "https://custom.test")
+        await waitFor(() =>
+          expect(mockFetchModelIds).toHaveBeenCalledWith({
+            baseUrl: "https://custom.test",
+            apiKey: "sk-old",
+          }),
+        )
+      }
+      const baseUrl =
+        scenario === "customized-source"
+          ? "https://old.test"
+          : "https://new.test"
+      const replacement = createAccountExportSource(
+        { id: scenario === "same-source" ? "acc" : "replacement", baseUrl },
+        { key: "sk-new" },
+      )
+      mockFetchModelIds.mockClear()
+      rerender(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={replacement}
+        />,
+      )
+      await waitFor(() =>
+        expect(mockFetchModelIds).toHaveBeenCalledWith({
+          baseUrl,
+          apiKey: "sk-new",
+        }),
+      )
+      expect(
+        mockFetchModelIds.mock.calls.every(
+          ([request]) =>
+            request.apiKey !== "sk-new" || request.baseUrl === baseUrl,
+        ),
+      ).toBe(true)
+    },
+  )
 
   it("sends the discovered model catalogue with the export", async () => {
     const user = userEvent.setup()
