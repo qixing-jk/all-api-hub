@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  addDevAllowanceFixtures,
   addDevFixtureApiCredentials,
   clearDevFixtureApiCredentials,
   countDevFixtureApiCredentials,
@@ -10,6 +11,7 @@ import { useFixtureApiCredentialsDevSection } from "~/features/DevPanel/sections
 import toast from "~/lib/notify"
 
 vi.mock("~/features/DevPanel/fixtureApiCredentials", () => ({
+  addDevAllowanceFixtures: vi.fn(),
   addDevFixtureApiCredentials: vi.fn(),
   clearDevFixtureApiCredentials: vi.fn(),
   countDevFixtureApiCredentials: vi.fn(),
@@ -19,6 +21,7 @@ vi.mock("~/lib/notify", () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
 
+const addAllowanceFixtures = vi.mocked(addDevAllowanceFixtures)
 const addFixtures = vi.mocked(addDevFixtureApiCredentials)
 const clearFixtures = vi.mocked(clearDevFixtureApiCredentials)
 const countFixtures = vi.mocked(countDevFixtureApiCredentials)
@@ -38,7 +41,27 @@ describe("credential fixture dev section", () => {
     vi.clearAllMocks()
     countFixtures.mockReset().mockResolvedValue(0)
     addFixtures.mockReset().mockResolvedValue(1)
+    addAllowanceFixtures.mockReset().mockResolvedValue(6)
     clearFixtures.mockReset().mockResolvedValue(0)
+  })
+
+  it("seeds the allowance showcase and reports the seeded count", async () => {
+    countFixtures.mockResolvedValueOnce(0).mockResolvedValueOnce(6)
+    const { result } = renderHook(() =>
+      useFixtureApiCredentialsDevSection(true),
+    )
+
+    await waitFor(() =>
+      expect(action(result.current, "clear").label).toContain("(0)"),
+    )
+    await act(async () => action(result.current, "add-allowance").run())
+
+    expect(addAllowanceFixtures).toHaveBeenCalledExactlyOnceWith()
+    expect(notify.success).toHaveBeenCalledWith(
+      "Dev: seeded 6 fixture credential(s)",
+    )
+    expect(action(result.current, "clear").label).toContain("(6)")
+    expect(action(result.current, "add-allowance").disabled).toBe(false)
   })
 
   it("adds a fixture and refreshes the displayed count", async () => {

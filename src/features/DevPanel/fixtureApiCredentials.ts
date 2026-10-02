@@ -8,6 +8,8 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { API_CREDENTIAL_TELEMETRY_MODES } from "~/types/apiCredentialProfiles"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
+import { DEV_ALLOWANCE_FIXTURES } from "./fixtureAllowanceTelemetry"
+
 const storage = new Storage({ area: "local" })
 const registryKey = STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS
 const registryLock = STORAGE_LOCKS.DEV_FIXTURE_API_CREDENTIALS
@@ -92,4 +94,65 @@ export async function clearDevFixtureApiCredentials(): Promise<number> {
   // Remove stale ids left after manual deletion.
   await updateIds((registered) => registered.filter((id) => !staleIds.has(id)))
   return deleted
+}
+
+/** One endpoint for every allowance fixture, so all cards render in one group. */
+const ALLOWANCE_FIXTURE_BASE_URL =
+  "https://fixture-allowance.example.invalid/v1"
+
+/**
+ * Deterministic key per fixture id.
+ *
+ * Profile identity is apiType + baseUrl + apiKey, so a fixed key makes adding
+ * the same fixture twice refresh it in place instead of stacking duplicates.
+ */
+function allowanceFixtureApiKey(fixtureId: string): string {
+  return `dev-allowance-${fixtureId}`
+}
+
+/**
+ * Seed one profile per allowance state.
+ *
+ * Re-running refreshes the snapshots in place, which is what makes iterating on
+ * the allowance UI bearable: reset times move forward instead of expiring, and
+ * the library does not fill up with copies.
+ *
+ * Telemetry stays disabled so a refresh never contacts the unreachable fixture
+ * host; pressing refresh in the credential library does replace these snapshots,
+ * and re-running this action restores them.
+ */
+export async function addDevAllowanceFixtures(): Promise<number> {
+  const now = Date.now()
+  let seeded = 0
+
+  for (const fixture of DEV_ALLOWANCE_FIXTURES) {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: fixture.name,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: ALLOWANCE_FIXTURE_BASE_URL,
+      apiKey: allowanceFixtureApiKey(fixture.id),
+      notes: fixture.notes,
+      telemetryConfig: { mode: API_CREDENTIAL_TELEMETRY_MODES.Disabled },
+    })
+
+    const snapshot = fixture.buildSnapshot(now)
+    try {
+      if (snapshot) {
+        await apiCredentialProfilesStorage.updateTelemetrySnapshot(
+          profile.id,
+          snapshot,
+        )
+      }
+      // The registry de-duplicates, so a refresh does not grow it.
+      await updateIds((ids) => [...ids, profile.id])
+    } catch (error) {
+      // These ids are fixture-namespaced, so dropping the profile on failure
+      // cannot destroy anything the user made.
+      await apiCredentialProfilesStorage.deleteProfile(profile.id)
+      throw error
+    }
+    seeded += 1
+  }
+
+  return seeded
 }
