@@ -5,6 +5,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { replaceProfileDatabase } from "./cdp/profile-database-copy.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // 已知官方发布的扩展 ID 列表
 const KNOWN_STORE_IDS = [
@@ -432,6 +433,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  loadLocalEnv()
   main().catch((err) => {
     console.error("同步失败:", err.message)
     process.exitCode = 1

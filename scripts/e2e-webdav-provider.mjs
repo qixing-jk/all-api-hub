@@ -2,7 +2,10 @@ import { spawnSync } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { loadLocalEnv } from "./utils/local-env.mjs"
 import { resolvePnpmInvocation } from "./utils/run-pnpm.mjs"
+
+loadLocalEnv()
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const webdavSpec = "e2e/realSite/webdavProviderFlow.spec.ts"

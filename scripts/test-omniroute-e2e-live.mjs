@@ -1,54 +1,22 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
 import { connectDevExtension, connectExtensionById } from "./cdp/client.mjs"
 import { runOmniRouteProbe } from "./suites/omniroute/probe.mjs"
 import { runOmniRouteUiTest } from "./suites/omniroute/ui.mjs"
-
-const REPO_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-)
-const DEFAULT_ENV_FILE = path.join(REPO_ROOT, ".env.local")
+import { loadLocalEnv } from "./utils/local-env.mjs"
 
 /**
- * Read `AAH_E2E_OMNIROUTE_*` values from a `.env`-style file.
- *
- * Operators keep every live credential in one checkout, so the runner accepts
- * `--env-file=<path>` and only falls back to its own worktree's `.env.local`.
+ * Resolve CLI overrides and local environment defaults for a live run.
+ * @param args Command-line options supplied by the operator.
+ * @returns Connection settings and the files available for recovery guidance.
  */
-function readEnvFileIfPresent(filePath) {
-  let raw
-  try {
-    raw = readFileSync(filePath, "utf8")
-  } catch {
-    return {}
-  }
-
-  const values = {}
-  for (const line of raw.split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line)
-    if (!match) continue
-    let value = match[2].trim()
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1)
-    }
-    values[match[1]] = value
-  }
-  return values
-}
-
 function parseArgs(args) {
   const options = {
     suite: "all",
-    cdpUrl: process.env.CDP_URL || "http://127.0.0.1:9222",
+    cdpUrl: undefined,
     allowWrite: false,
-    envFile: DEFAULT_ENV_FILE,
+    envFile: undefined,
     baseUrl: undefined,
     token: undefined,
   }
@@ -77,7 +45,7 @@ OmniRoute 现场端到端测试运行器 (CDP & Protocol Probe)
   pnpm e2e:cdp:omniroute -- [选项]
 
 选项:
-  --env-file=<path> 从指定 .env 文件读取 AAH_E2E_OMNIROUTE_* (默认: 本 worktree 的 .env.local)
+  --env-file=<path> 从指定 .env 文件读取 AAH_E2E_OMNIROUTE_* (默认: 统一 worktree 配置)
   --base-url=<url>  覆盖部署地址 (默认读 AAH_E2E_OMNIROUTE_BASE_URL)
   --token=<token>   覆盖 admin 作用域令牌 (默认读 AAH_E2E_OMNIROUTE_ADMIN_TOKEN)
   --suite=<type>    运行套件: 'all' (默认), 'probe' (纯协议), 'ui' (纯界面)
@@ -93,16 +61,16 @@ dev profile 的扩展设置；协议探测默认完全只读。
     }
   }
 
-  const fileValues = readEnvFileIfPresent(options.envFile)
+  const { files } = loadLocalEnv({ envFile: options.envFile })
+  options.envSources = files
+  options.cdpUrl ??= process.env.CDP_URL || "http://127.0.0.1:9222"
   options.baseUrl =
     options.baseUrl ||
     process.env.OMNIROUTE_BASE_URL ||
-    fileValues.AAH_E2E_OMNIROUTE_BASE_URL ||
     process.env.AAH_E2E_OMNIROUTE_BASE_URL
   options.token =
     options.token ||
     process.env.OMNIROUTE_ADMIN_TOKEN ||
-    fileValues.AAH_E2E_OMNIROUTE_ADMIN_TOKEN ||
     process.env.AAH_E2E_OMNIROUTE_ADMIN_TOKEN
 
   return options
@@ -134,6 +102,7 @@ async function connectLiveExtension(cdpUrl, extensionId) {
   throw lastError
 }
 
+/** Validate configuration before executing the selected protocol and UI suites. */
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   const { suite, cdpUrl, baseUrl, token, allowWrite } = options
@@ -144,8 +113,11 @@ async function main() {
   console.log(`目标部署: ${baseUrl ?? "(未配置)"}`)
 
   if (!baseUrl || !token) {
+    const configSource =
+      options.envFile ??
+      (options.envSources.join(", ") || ".env.local（共享或当前 worktree）")
     console.error(
-      `\n❌ 缺少 OmniRoute 连接参数。请在 ${options.envFile} 中配置 AAH_E2E_OMNIROUTE_BASE_URL 与 AAH_E2E_OMNIROUTE_ADMIN_TOKEN，或用 --base-url/--token 传入。`,
+      `\n❌ 缺少 OmniRoute 连接参数。请在 ${configSource} 中配置 AAH_E2E_OMNIROUTE_BASE_URL 与 AAH_E2E_OMNIROUTE_ADMIN_TOKEN，或用 --base-url/--token 传入。`,
     )
     process.exit(1)
   }

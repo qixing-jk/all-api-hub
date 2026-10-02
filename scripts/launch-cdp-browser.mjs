@@ -7,6 +7,10 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { loadLocalEnv } from "./utils/local-env.mjs"
+
+loadLocalEnv()
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, "..")
 
