@@ -1,4 +1,4 @@
-import { KeyRound, Plus, Trash2 } from "lucide-react"
+import { KeyRound, Plus, Sparkles, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -6,20 +6,21 @@ import toast from "~/lib/notify"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
+  addDevAllowanceFixtures,
   addDevFixtureApiCredentials,
   clearDevFixtureApiCredentials,
   countDevFixtureApiCredentials,
 } from "../fixtureApiCredentials"
 import type { DevPanelSection } from "../types"
 
+type FixtureAction = "add" | "allowance" | "clear"
+
 /** Expose local credential fixture actions only on the credential page. */
 export function useFixtureApiCredentialsDevSection(
   isPanelOpen: boolean,
 ): DevPanelSection {
   const [fixtureCount, setFixtureCount] = useState<number | null>(null)
-  const [pendingAction, setPendingAction] = useState<"add" | "clear" | null>(
-    null,
-  )
+  const [pendingAction, setPendingAction] = useState<FixtureAction | null>(null)
 
   const refreshCount = useCallback(async () => {
     try {
@@ -36,18 +37,22 @@ export function useFixtureApiCredentialsDevSection(
   }, [isPanelOpen, refreshCount])
 
   const run = useCallback(
-    async (action: "add" | "clear", count = 0) => {
+    async (action: FixtureAction, count = 0) => {
       setPendingAction(action)
       try {
         const changed =
-          action === "add"
-            ? await addDevFixtureApiCredentials(count)
-            : await clearDevFixtureApiCredentials()
-        toast.success(
-          action === "add"
-            ? `Dev: added ${changed} fixture credential(s)`
-            : `Dev: removed ${changed} fixture credential(s)`,
-        )
+          action === "allowance"
+            ? await addDevAllowanceFixtures()
+            : action === "add"
+              ? await addDevFixtureApiCredentials(count)
+              : await clearDevFixtureApiCredentials()
+        const verb =
+          action === "clear"
+            ? "removed"
+            : action === "allowance"
+              ? "seeded"
+              : "added"
+        toast.success(`Dev: ${verb} ${changed} fixture credential(s)`)
         await refreshCount()
       } catch (error) {
         toast.error(
@@ -67,10 +72,18 @@ export function useFixtureApiCredentialsDevSection(
       title: "Fixture API credentials",
       icon: KeyRound,
       description:
-        "Local sample credentials with unreachable endpoints. Use them to test endpoint groups and credential cards.",
+        "Local sample credentials with unreachable endpoints. Use them to test endpoint groups and credential cards. The allowance fixtures seed one credential per remaining-allowance state; refreshing a credential in the library replaces its snapshot, and re-running restores it.",
       pages: [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES],
       surfaces: ["options"],
       actions: [
+        {
+          id: "add-allowance",
+          label: "Dev: Add allowance fixtures",
+          icon: Sparkles,
+          loading: pendingAction === "allowance",
+          disabled: pendingAction !== null,
+          run: () => run("allowance"),
+        },
         {
           id: "add-five",
           label: "Dev: Add 5 fixture credentials",

@@ -1,16 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEV_ALLOWANCE_FIXTURES } from "~/features/DevPanel/fixtureAllowanceTelemetry"
 import {
+  addDevAllowanceFixtures,
   addDevFixtureApiCredentials,
   clearDevFixtureApiCredentials,
   countDevFixtureApiCredentials,
 } from "~/features/DevPanel/fixtureApiCredentials"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
-const { createProfile, deleteProfile, listProfiles } = vi.hoisted(() => ({
+const {
+  createProfile,
+  createProfileWithCreationStatus,
+  deleteProfile,
+  listProfiles,
+  updateTelemetrySnapshot,
+} = vi.hoisted(() => ({
   createProfile: vi.fn(),
+  createProfileWithCreationStatus: vi.fn(),
   deleteProfile: vi.fn(),
   listProfiles: vi.fn(),
+  updateTelemetrySnapshot: vi.fn(),
 }))
 
 vi.mock(
@@ -18,8 +28,10 @@ vi.mock(
   () => ({
     apiCredentialProfilesStorage: {
       createProfile,
+      createProfileWithCreationStatus,
       deleteProfile,
       listProfiles,
+      updateTelemetrySnapshot,
     },
   }),
 )
@@ -109,4 +121,110 @@ describe("dev fixture API credentials", () => {
       "fixture-Dev Fixture Credential 01",
     )
   })
+})
+
+describe("dev allowance fixtures", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    storage.clear()
+    storageSetShouldThrow = false
+    listProfiles.mockResolvedValue([])
+    createProfile.mockImplementation(async (input) => ({
+      ...input,
+      id: `fixture-${input.apiKey}`,
+    }))
+    const createdIds = new Set<string>()
+    createProfileWithCreationStatus.mockImplementation(async (input) => {
+      const profile = await createProfile(input)
+      const isNew = !createdIds.has(profile.id)
+      createdIds.add(profile.id)
+      return { profile, isNew }
+    })
+    deleteProfile.mockResolvedValue(true)
+    updateTelemetrySnapshot.mockImplementation(async (id) => ({ id }))
+  })
+
+  it("seeds one credential per allowance state and records them for clearing", async () => {
+    await expect(addDevAllowanceFixtures()).resolves.toBe(
+      DEV_ALLOWANCE_FIXTURES.length,
+    )
+
+    const inputs = createProfile.mock.calls.map(([input]) => input)
+    expect(inputs).toHaveLength(DEV_ALLOWANCE_FIXTURES.length)
+    expect(new Set(inputs.map((input) => input.baseUrl)).size).toBe(1)
+    expect(inputs.every((input) => input.baseUrl.includes(".invalid"))).toBe(
+      true,
+    )
+    expect(
+      inputs.every((input) => input.telemetryConfig.mode === "disabled"),
+    ).toBe(true)
+    expect(
+      storage.get(STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS),
+    ).toHaveLength(DEV_ALLOWANCE_FIXTURES.length)
+
+    // The unmonitored state is the point of one fixture, so it seeds no snapshot.
+    const snapshotsWritten = updateTelemetrySnapshot.mock.calls.length
+    expect(snapshotsWritten).toBe(DEV_ALLOWANCE_FIXTURES.length - 1)
+
+    listProfiles.mockResolvedValue(
+      inputs.map((input) => ({ ...input, id: `fixture-${input.apiKey}` })),
+    )
+    await expect(clearDevFixtureApiCredentials()).resolves.toBe(
+      DEV_ALLOWANCE_FIXTURES.length,
+    )
+  })
+
+  it("keys each fixture deterministically so re-running refreshes in place", async () => {
+    await addDevAllowanceFixtures()
+    const firstKeys = createProfile.mock.calls.map(([input]) => input.apiKey)
+
+    createProfile.mockClear()
+    await addDevAllowanceFixtures()
+    const secondKeys = createProfile.mock.calls.map(([input]) => input.apiKey)
+
+    expect(secondKeys).toEqual(firstKeys)
+    // Re-running refreshes the countdowns rather than stacking duplicates.
+    expect(
+      storage.get(STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS),
+    ).toHaveLength(DEV_ALLOWANCE_FIXTURES.length)
+  })
+
+  it("rolls back a fixture when its snapshot cannot be written", async () => {
+    updateTelemetrySnapshot.mockRejectedValue(
+      new Error("Invalid telemetry snapshot."),
+    )
+
+    await expect(addDevAllowanceFixtures()).rejects.toThrow(
+      "Invalid telemetry snapshot.",
+    )
+    expect(deleteProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["snapshot", "registry"])(
+    "preserves a reused fixture after a %s failure",
+    async (failure) => {
+      await addDevAllowanceFixtures()
+      const registered = [
+        ...(storage.get(
+          STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS,
+        ) as string[]),
+      ]
+      // The storage service reports ownership atomically, including reuse by
+      // another context between the caller's reads and creation.
+      createProfile.mockImplementation(async (input) => ({
+        ...input,
+        id: registered[0],
+      }))
+      if (failure === "snapshot")
+        updateTelemetrySnapshot.mockRejectedValueOnce(
+          new Error("snapshot unavailable"),
+        )
+      else storageSetShouldThrow = true
+      await expect(addDevAllowanceFixtures()).rejects.toThrow("unavailable")
+      expect(deleteProfile).not.toHaveBeenCalled()
+      expect(storage.get(STORAGE_KEYS.DEV_FIXTURE_API_CREDENTIAL_IDS)).toEqual(
+        registered,
+      )
+    },
+  )
 })

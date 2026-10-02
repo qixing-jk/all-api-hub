@@ -45,6 +45,7 @@ import {
   buildApiCredentialProfileListModel,
   type ApiCredentialProfileFilterMode,
 } from "../utils/apiCredentialProfileListModel"
+import { ApiCredentialProfilesAllowanceOverview } from "./ApiCredentialProfilesAllowanceOverview"
 import { ApiCredentialProfilesDialogs } from "./ApiCredentialProfilesDialogs"
 import { ApiCredentialProfilesList } from "./ApiCredentialProfilesList"
 
@@ -108,6 +109,10 @@ export function ApiCredentialProfilesListView({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [lastFilterMode, setLastFilterMode] =
     useState<ApiCredentialProfileFilterMode | null>(null)
+  const [localFocusTarget, setLocalFocusTarget] = useState<{
+    profileId: string
+    request: number
+  } | null>(null)
 
   const searchInputSize =
     variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup ? "sm" : "default"
@@ -276,6 +281,24 @@ export function ApiCredentialProfilesListView({
   const handleOpenAssociatedKey = useCallback((associationId: string) => {
     void openKeysPage({ associationId })
   }, [])
+  const handleFocusProfile = useCallback(
+    (profileId: string) => {
+      setSearchTerm("")
+      setApiTypeFilter("")
+      setSelectedTagIds([])
+      setLastFilterMode(null)
+      // A deep-linked target would otherwise keep shadowing the picked row.
+      onClearTargetProfile?.()
+      setLocalFocusTarget((current) => ({
+        profileId,
+        request: (current?.request ?? 0) + 1,
+      }))
+    },
+    [onClearTargetProfile],
+  )
+  const resolvedTargetProfile = targetProfile
+    ? { profileId: targetProfile.id, request: targetProfileRequest || 1 }
+    : localFocusTarget ?? undefined
 
   const targetStatusMessage = isTargetPending
     ? t("apiCredentialProfiles:target.loading")
@@ -414,6 +437,13 @@ export function ApiCredentialProfilesListView({
         </div>
       ) : null}
 
+      {!isInitialLoading && filteredProfiles.length > 0 ? (
+        <ApiCredentialProfilesAllowanceOverview
+          profiles={controller.profiles}
+          onFocusProfile={handleFocusProfile}
+        />
+      ) : null}
+
       {isInitialLoading ? (
         <div
           className="gap-y-density-2 py-density-6 flex items-center gap-x-2"
@@ -479,10 +509,10 @@ export function ApiCredentialProfilesListView({
               : undefined
           }
           targetProfile={
-            targetProfile
+            resolvedTargetProfile
               ? {
-                  profileId: targetProfile.id,
-                  request: targetProfileRequest || 1,
+                  profileId: resolvedTargetProfile.profileId,
+                  request: resolvedTargetProfile.request,
                 }
               : undefined
           }

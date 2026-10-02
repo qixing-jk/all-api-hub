@@ -48,6 +48,7 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   telemetryPanel: "api-credential-telemetry-panel",
   telemetryToggle: "api-credential-telemetry-toggle",
   telemetryTodayUsage: "api-credential-telemetry-today-usage",
+  telemetryBalanceRunway: "api-credential-telemetry-balance-runway",
   telemetryTodayRequests: "api-credential-telemetry-today-requests",
   telemetryModels: "api-credential-telemetry-models",
   toolbar: "api-credential-profile-toolbar",
@@ -58,6 +59,9 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   toolbarManagementGroup: "api-credential-profile-toolbar-management-group",
   associationButton: "api-credential-profile-association-button",
   targetMissingMessage: "api-credential-profile-target-missing-message",
+  allowanceBadge: "api-credential-allowance-badge",
+  allowanceOverview: "api-credential-allowance-overview",
+  allowanceOverviewFocus: "api-credential-allowance-overview-focus",
 } as const
 
 const API_CREDENTIAL_ENDPOINT_OPTION_TEST_ID_PREFIX =

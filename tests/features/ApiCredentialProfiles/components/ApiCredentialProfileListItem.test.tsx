@@ -130,6 +130,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({ currencyType: "USD" }),
 }))
 
+const USD_MONEY_UNIT = {
+  kind: "money",
+  currency: "USD",
+  decimalPlaces: 2,
+} as const
+const PERCENT_UNIT = { kind: "percent" } as const
+
 function buildProfile(
   overrides: Partial<ApiCredentialProfile> = {},
 ): ApiCredentialProfile {
@@ -181,6 +188,7 @@ function renderListItem(
       action: ApiCredentialProfileExportAction,
     ) => void
     focusRequest?: number
+    guidedImportEntryRequest?: number
     associatedKeyState?: ApiCredentialProfileAssociatedKeyState
     onOpenAssociatedKey?: (associationId: string) => void
     onConfirmAssociatedKey?: (associationId: string) => void
@@ -188,7 +196,10 @@ function renderListItem(
   } = {},
 ) {
   const onRefreshTelemetry = overrides.onRefreshTelemetry ?? vi.fn()
-  return render(
+  const buildElement = (requests: {
+    focusRequest?: number
+    guidedImportEntryRequest?: number
+  }) => (
     <ApiCredentialProfileListItem
       profile={profile}
       verificationSummary={null}
@@ -207,7 +218,8 @@ function renderListItem(
       isTelemetryRefreshing={overrides.isTelemetryRefreshing ?? false}
       managedSiteType="new-api"
       managedSiteLabel="New API"
-      focusRequest={overrides.focusRequest}
+      focusRequest={requests.focusRequest}
+      guidedImportEntryRequest={requests.guidedImportEntryRequest}
       associatedKeyState={overrides.associatedKeyState}
       associationAvailability={
         API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
@@ -215,13 +227,27 @@ function renderListItem(
       onOpenAssociatedKey={overrides.onOpenAssociatedKey}
       onConfirmAssociatedKey={overrides.onConfirmAssociatedKey}
       onUnlinkAssociatedKey={overrides.onUnlinkAssociatedKey}
-    />,
+    />
+  )
+
+  const result = render(
+    buildElement({
+      focusRequest: overrides.focusRequest,
+      guidedImportEntryRequest: overrides.guidedImportEntryRequest,
+    }),
     {
       withReleaseUpdateStatusProvider: false,
       withThemeProvider: false,
       withUserPreferencesProvider: false,
     },
   )
+
+  return Object.assign(result, {
+    rerenderWith: (requests: {
+      focusRequest?: number
+      guidedImportEntryRequest?: number
+    }) => result.rerender(buildElement(requests)),
+  })
 }
 
 describe("ApiCredentialProfileListItem", () => {
@@ -314,6 +340,36 @@ describe("ApiCredentialProfileListItem", () => {
       inline: "nearest",
     })
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it("drops the card highlight once the focus request is withdrawn", () => {
+    const profile = buildProfile()
+    const { rerenderWith } = renderListItem(profile, { focusRequest: 1 })
+    const rowTestId = getApiCredentialProfileRowTestId(profile.id)
+
+    expect(screen.getByTestId(rowTestId).className).toContain("ring-theme-500")
+
+    rerenderWith({})
+
+    expect(screen.getByTestId(rowTestId).className).not.toContain(
+      "ring-theme-500",
+    )
+  })
+
+  it("drops the import highlight once the guided import request is withdrawn", () => {
+    const profile = buildProfile()
+    const { rerenderWith } = renderListItem(profile, {
+      guidedImportEntryRequest: 1,
+    })
+    const importButton = screen.getByRole("button", {
+      name: "keyManagement:actions.importToManagedSite",
+    })
+
+    expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
+
+    rerenderWith({})
+
+    expect(importButton).not.toHaveAttribute("data-guidance-highlight")
   })
 
   it("opens the single active Account Runtime Key association", async () => {
@@ -787,7 +843,7 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent(/12\.34/)
   })
 
-  it("shows provider quota windows in the shared telemetry card", () => {
+  it("shows provider quota windows as meters in provider order", () => {
     renderListItem(
       buildProfile({
         telemetrySnapshot: {
@@ -831,13 +887,52 @@ describe("ApiCredentialProfileListItem", () => {
       }),
     )
 
+    const quota = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota,
+    )
     expect(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
-    ).toHaveTextContent(/75%.*80%/)
+      within(quota)
+        .getAllByRole("progressbar")
+        .map((bar) => bar.getAttribute("aria-valuenow")),
+    ).toEqual(["75", "80"])
+    expect(quota).toHaveTextContent(
+      /quotaWindows\.fiveHour.*quotaWindows\.weekly/,
+    )
   })
 
-  it("shows a provider quota window reset time when available", () => {
-    const resetTime = new Date("2026-08-27T00:00:00.000Z").getTime()
+  it("colors a nearly drained quota window as critical", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            quota: {
+              windows: [
+                {
+                  type: "weekly",
+                  remainingPercent: 15,
+                  resetTime: Date.now() + 60 * 60_000,
+                  unit: { kind: "percent" },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    )
+
+    const quota = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota,
+    )
+    expect(quota.querySelector('[data-slot="progress-indicator"]')).toHaveClass(
+      "bg-destructive-indicator",
+    )
+  })
+
+  it("shows a reset countdown and keeps the absolute time as a tooltip", () => {
+    const resetTime = Date.now() + 2 * 3_600_000 + 30 * 60_000
     renderListItem(
       buildProfile({
         telemetrySnapshot: {
@@ -861,13 +956,186 @@ describe("ApiCredentialProfileListItem", () => {
       }),
     )
 
-    expect(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.quotaWindows.resetAt")
-    expect(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
-    ).toHaveTextContent("2026")
+    const quota = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota,
+    )
+    expect(quota).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.quotaWindows.countdown.hoursMinutes",
+    )
+    expect(quota.querySelector("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining(String(new Date(resetTime).getFullYear())),
+    )
   })
+
+  it("surfaces the most urgent allowance on the collapsed header", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            quota: {
+              windows: [
+                { type: "fiveHour", remainingPercent: 90, unit: PERCENT_UNIT },
+                { type: "weekly", remainingPercent: 15, unit: PERCENT_UNIT },
+              ],
+            },
+          },
+        },
+      }),
+    )
+
+    const badge = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge,
+    )
+    expect(badge).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.quotaRemaining",
+    )
+    expect(badge.querySelector('span[aria-hidden="true"]')).toHaveClass(
+      "bg-destructive-indicator",
+    )
+    expect(badge).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining(
+        "apiCredentialProfiles:telemetry.allowance.title",
+      ),
+    )
+  })
+
+  it("keeps the allowance badge quiet without monitored facts", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: { models: { count: 2, preview: [] } },
+        },
+      }),
+    )
+
+    expect(
+      screen.queryByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge),
+    ).toBeNull()
+  })
+
+  it("estimates how long a balance lasts at today's spend", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            balances: [{ amount: 30, unit: USD_MONEY_UNIT, semantics: "cash" }],
+            usage: { todayCost: { value: 3, unit: USD_MONEY_UNIT } },
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway,
+      ),
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.allowance.runwayHint")
+  })
+
+  it("omits the balance runway when today's spend is unknown", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            balances: [{ amount: 30, unit: USD_MONEY_UNIT, semantics: "cash" }],
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).toHaveTextContent(/30\.00/)
+    expect(
+      screen.queryByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway,
+      ),
+    ).toBeNull()
+  })
+
+  it("keeps a quota with an unavailable percentage neutral instead of claiming remaining allowance", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            quota: {
+              windows: [
+                {
+                  type: "monthly",
+                  unit: { kind: "percent" },
+                  remainingPercent: NaN,
+                },
+              ],
+            },
+          },
+        },
+      }),
+    )
+    const quota = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota,
+    )
+    expect(quota).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.notProvided",
+    )
+    expect(quota.querySelector('[data-slot="progress-indicator"]')).toHaveClass(
+      "bg-neutral-indicator",
+    )
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge),
+    ).not.toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.quotaRemaining",
+    )
+  })
+
+  it.each([0, -3])(
+    "omits runway hints for an exhausted balance of %s",
+    (amount) => {
+      renderListItem(
+        buildProfile({
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 1,
+            facts: {
+              balances: [{ amount, unit: USD_MONEY_UNIT, semantics: "cash" }],
+              usage: { todayCost: { value: 3, unit: USD_MONEY_UNIT } },
+            },
+          },
+        }),
+      )
+      expect(
+        screen.queryByTestId(
+          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway,
+        ),
+      ).toBeNull()
+      const badge = screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge,
+      )
+      expect(badge).not.toHaveTextContent(
+        "apiCredentialProfiles:telemetry.allowance.balanceRunway",
+      )
+      expect(badge.querySelector('span[aria-hidden="true"]')).toHaveClass(
+        "bg-destructive-indicator",
+      )
+    },
+  )
 
   it("keeps explicit zero telemetry expanded", () => {
     renderListItem(
