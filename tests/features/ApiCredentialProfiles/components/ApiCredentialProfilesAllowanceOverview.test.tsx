@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
@@ -10,6 +11,15 @@ import pt from "~/locales/pt-BR/apiCredentialProfiles.json"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+import { render } from "~~/tests/test-utils/render"
+
+/** The overview needs i18n, but does not consume stored preferences or theme. */
+function renderOverview(ui: ReactElement) {
+  return render(ui, {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
+}
 
 /** Builds a monitored profile with a known or unknown balance runway. */
 function profile(amount: number, spend?: number): ApiCredentialProfile {
@@ -61,7 +71,7 @@ describe("allowance overview", () => {
         { [lng]: { apiCredentialProfiles: resources } },
         lng,
       )
-      const view = render(
+      const view = renderOverview(
         <I18nextProvider i18n={i18n}>
           <ApiCredentialProfilesAllowanceOverview
             profiles={[profile(1, 1), profile(4, 1)]}
@@ -88,14 +98,14 @@ describe("allowance overview", () => {
   )
 
   it("hides a fully monitored library with only unknown runways", () => {
-    const { container } = render(
+    const { container } = renderOverview(
       <ApiCredentialProfilesAllowanceOverview profiles={[profile(30)]} />,
     )
     expect(container).toBeEmptyDOMElement()
   })
 
   it("shows incomplete monitoring without offering an unknown profile as a focus target", () => {
-    render(
+    renderOverview(
       <I18nextProvider i18n={testI18n}>
         <ApiCredentialProfilesAllowanceOverview
           profiles={[
@@ -119,7 +129,7 @@ describe("allowance overview", () => {
       en: { apiCredentialProfiles: en },
     })
     const focus = vi.fn()
-    const view = render(
+    const view = renderOverview(
       <I18nextProvider i18n={i18n}>
         <ApiCredentialProfilesAllowanceOverview
           profiles={[profile(4, 1)]}
