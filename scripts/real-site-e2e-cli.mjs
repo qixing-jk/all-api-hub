@@ -7,7 +7,10 @@ import {
   filterRealSiteE2eMatrix,
   normalizeRealSiteE2eCategory,
 } from "./real-site-e2e-matrix.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
 import { resolvePnpmInvocation } from "./utils/run-pnpm.mjs"
+
+loadLocalEnv()
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const firstArg = process.argv[2]

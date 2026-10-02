@@ -1,5 +1,8 @@
 import { connectDevExtension } from "./cdp/client.mjs"
 import { openExtensionPage } from "./cdp/ui-driver.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
+
+loadLocalEnv()
 
 const CDP_URL = process.env.CDP_URL || "http://127.0.0.1:9222"
 

@@ -96,8 +96,11 @@ runs can select a single category so the CI job list and artifacts are visibly
 grouped as `Account / ...`, `Cloud Sync / ...`, `Managed Site / ...`, or
 `WebDAV / ...`.
 
-Playwright loads `.env` and `.env.local` from the repo root. Shell or CI
-environment variables take precedence. Each block is optional; specs skip when
+Playwright loads shared defaults from the primary worktree's `.env.local`, then
+this checkout's `.env` and `.env.local`. Shell or CI environment variables take
+precedence; CI never reads another worktree's env files. See
+[local tooling environment configuration](../../CONTRIBUTING.md#local-tooling-environment-configuration)
+for shared-source overrides and `pnpm env:diagnostics`. Each block is optional; specs skip when
 that site's required variables are missing. Use dedicated low-privilege test
 accounts.
 

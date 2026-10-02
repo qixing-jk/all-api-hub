@@ -68,6 +68,58 @@ The dev server listens on `http://127.0.0.1:3000`, and the pages it generates lo
 
 ## Testing
 
+### Local tooling environment configuration
+
+Playwright, real-site E2E runners, CDP launch/control runners, standalone provider
+probes, browser profile sync, and the E2E diagnostics launcher use
+`scripts/utils/local-env.mjs`. Linked worktrees automatically reuse the primary
+checkout's `.env.local`; the primary checkout is identified by Git, independently
+of which branch it has checked out. Shared credentials need only be maintained
+there. Files are read directly and are never copied into other worktrees.
+
+From lowest to highest priority:
+
+1. Primary checkout `.env.local` (shared defaults only).
+2. Current checkout `.env`.
+3. Current checkout `.env.local`.
+4. A runner's explicit `--env-file`, where supported (currently OmniRoute).
+5. Environment variables already present when the command starts, including CI.
+
+An empty value can override a shared default. Keep checkout-specific ports,
+extension output paths, and other runtime differences in the current checkout.
+The loader does not rewrite relative paths: their interpretation remains owned
+by each consuming command. Prefer absolute paths for shared browser/profile
+locations. Never point a linked checkout's extension output at the primary
+checkout merely because its credentials are shared.
+
+Shared defaults assume trusted local checkout configuration. Service addresses
+and credentials are merged independently; when switching deployments, also
+override the matching credentials rather than inheriting another deployment's
+token.
+
+These controls must be set in the launching shell, not in an env file:
+
+- `AAH_SHARED_ENV=0` disables shared-file loading.
+- `AAH_SHARED_ENV_DIR=<directory>` explicitly selects the directory containing
+  the shared `.env.local`. Relative directories resolve against this checkout.
+  A missing explicitly selected file fails with its path; an absent automatically
+  discovered shared file is optional.
+- A nonempty `CI` disables shared-file loading, including explicit shared paths.
+
+Ordinary clones and archives work with their own files. The primary checkout
+loads its own files once. Use `pnpm env:diagnostics` to print the selected shared
+directory and loaded file paths; this command does not print keys or values.
+
+The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multiline
+values, and `export`), with no shell evaluation or `${VAR}` expansion. See the
+[Node environment file specification](https://nodejs.org/api/environment_variables.html#dotenv).
+
+WXT dev/build commands retain native mode/browser-specific env loading. Shared
+defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because
+those prefixes expose variables to extension code. Keep test credentials in
+Node-only variables and env files out of Git; see
+[WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
+
 ### Overview
 
 This project uses [Vitest](https://vitest.dev/) for unit and component testing. The `dom` project runs component and browser-dependent tests in jsdom through `tests/setup.ts`; the `node` project runs other TypeScript tests through `tests/setup.node.ts`. Choose the environment needed by the behavior under test; `vitest.config.ts` owns project selection and both setups provide the applicable shared mocks.
