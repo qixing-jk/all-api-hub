@@ -20,7 +20,7 @@ The complete API key is stored in the extension's local storage. Masking in the 
 
 - **Credential Library Management**: Store name, `Base URL`, API key, tags, and notes without relying on a site account.
 - **Search and Filter**: Supports filtering by name, `Base URL`, tags, notes, and API type.
-- **Health and Usage Overview**: View balance, today's usage, today's requests, available models, last refresh time, and health status when the endpoint provides that data.
+- **Allowance and Usage Overview**: View balance, remaining quota windows, reset countdowns, today's usage, today's requests, available models, last refresh time, and health status when the endpoint provides that data.
 - **Interface Verification**: Supports verifying API availability and separately testing CLI compatibility.
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
 - **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, and Claude Code Router.
@@ -76,6 +76,22 @@ Currently supports classification and verification by API type. Common types inc
 If you are unsure which type to choose, follow the provider's documentation. When it gives no specific guidance, try `OpenAI Compatible` first. If you temporarily use another API type for verification, the interface will clearly indicate that this is only a temporary override and will not change the saved credential type.
 
 ## Balance and Usage Queries
+
+### Allowance Overview
+
+The credential library treats "how much is left" as a first-class concern: coding-plan quota windows and per-endpoint balances are both presented as **allowance**, so you do not have to tell them apart.
+
+- **Overview at the top of the list**: Shows how many credentials returned allowance data and how many of those are low or critical. Clicking the most urgent one locates and highlights that credential; if a filter is active, the filter is cleared first.
+- **Allowance badge on card titles**: The most urgent item is visible without expanding the panel (for example, `5-hour window: 15% left`), colored by urgency.
+- **Quota windows**: Remaining percentage is shown as a progress bar, together with remaining / limit and a reset countdown (for example, "resets in 2 hours 14 minutes"). Hover the countdown to see the exact reset time.
+- **Balances**: Besides the amount itself, if the provider also reports today's spend, the library estimates how many days the balance lasts at today's usage.
+
+Allowance levels are a local presentation aid to help you prioritize; they **do not mean the provider will actually disable or throttle your key**:
+
+- Quota windows: below 20% remaining is critical, below 50% is low.
+- Balances: fewer than 3 days at today's spend is critical, fewer than 7 days is low; without today's spend no estimate is shown, only the balance.
+
+### Displayable Metrics
 
 Each credential card can display a balance and usage overview, with common metrics including:
 

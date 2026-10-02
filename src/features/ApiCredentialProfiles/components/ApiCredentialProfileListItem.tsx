@@ -63,6 +63,7 @@ import {
   getApiCredentialProfileRowTargetId,
   getApiCredentialProfileRowTestId,
 } from "../testIds"
+import { ApiCredentialProfileAllowanceBadge } from "./ApiCredentialProfileAllowanceBadge"
 import { ApiCredentialProfileKeyAssociations } from "./ApiCredentialProfileKeyAssociations"
 import { ApiCredentialProfileRowActions } from "./ApiCredentialProfileRowActions"
 import {
@@ -314,6 +315,9 @@ export function ApiCredentialProfileListItem({
     : t("apiCredentialProfiles:list.expirationStatus.none")
   useEffect(() => {
     if (!focusRequest) {
+      // Withdrawing the request drops the highlight with it, so a target the
+      // user already moved on from never keeps a ring behind on its row.
+      setIsTargetHighlighted(false)
       return
     }
 
@@ -331,6 +335,9 @@ export function ApiCredentialProfileListItem({
 
   useEffect(() => {
     if (!guidedImportEntryRequest) {
+      // Same withdrawal rule as the deep-link highlight: the row only points
+      // at the import entry while its own request is the live one.
+      setIsImportEntryHighlighted(false)
       return
     }
 
@@ -409,6 +416,9 @@ export function ApiCredentialProfileListItem({
                       {tag}
                     </Badge>
                   ))}
+                  <ApiCredentialProfileAllowanceBadge
+                    facts={telemetry?.facts}
+                  />
                 </div>
                 <div className="min-w-0 shrink-0 -translate-y-1">
                   <ApiCredentialProfileKeyAssociations

@@ -1,8 +1,10 @@
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import ApiCredentialProfiles from "~/features/ApiCredentialProfiles/ApiCredentialProfiles"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -687,5 +689,368 @@ describe("ApiCredentialProfilesListView", () => {
     expect(payloadText).not.toContain("secret-tag")
     expect(payloadText).not.toContain("Confidential Team")
     expect(payloadText).not.toContain("private.example.com")
+  })
+
+  it("summarizes the library allowance above the list", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Draining Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-plan",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "weekly", remainingPercent: 12, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+        {
+          id: "profile-2",
+          name: "No Telemetry",
+          apiType: "openai",
+          baseUrl: "https://plain.example.com",
+          apiKey: "sk-plain",
+          tagIds: [],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    const overview = await screen.findByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverview,
+    )
+    expect(overview).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.overview.monitored",
+    )
+    expect(overview).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.overview.critical",
+    )
+    expect(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverviewFocus,
+      ),
+    ).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.quotaRemaining",
+    )
+  })
+
+  it("drops the coverage prefix once every credential reports allowance", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Comfortable Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-plan",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "fiveHour", remainingPercent: 80, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+        {
+          id: "profile-2",
+          name: "Draining Plan",
+          apiType: "anthropic",
+          baseUrl: "https://draining.example.com",
+          apiKey: "sk-draining",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "weekly", remainingPercent: 12, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    const overview = await screen.findByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverview,
+    )
+    expect(overview).not.toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.overview.monitored",
+    )
+    expect(overview).toHaveTextContent(
+      "apiCredentialProfiles:telemetry.allowance.overview.critical",
+    )
+  })
+
+  it("focuses the most urgent credential from the allowance summary", async () => {
+    const user = userEvent.setup()
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Healthy Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-plan",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "fiveHour", remainingPercent: 80, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+        {
+          id: "profile-2",
+          name: "Draining Balance",
+          apiType: "openai",
+          baseUrl: "https://wallet.example.com",
+          apiKey: "sk-wallet",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              balances: [
+                {
+                  amount: 2,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  semantics: "cash",
+                },
+              ],
+              usage: {
+                todayCost: {
+                  value: 1,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                },
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    await user.click(
+      await screen.findByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverviewFocus,
+      ),
+    )
+
+    const list = screen.getByTestId("profiles-list")
+    expect(list).toHaveAttribute("data-target-profile-id", "profile-2")
+    expect(list).toHaveAttribute("data-target-request", "1")
+  })
+
+  it("names the most urgent signal on the allowance focus button", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Draining Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-plan",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "fiveHour", remainingPercent: 80, unit: "percent" },
+                  { type: "weekly", remainingPercent: 12, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    const focusButton = await screen.findByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverviewFocus,
+    )
+
+    // The visible text is truncated, so the accessible name has to carry both
+    // which credential the jump lands on and the signal that made it urgent.
+    expect(focusButton).toHaveAccessibleName(
+      expect.stringContaining(
+        "apiCredentialProfiles:telemetry.allowance.overview.focus",
+      ),
+    )
+    expect(focusButton).toHaveAccessibleName(
+      expect.stringContaining(
+        "apiCredentialProfiles:telemetry.allowance.quotaRemaining",
+      ),
+    )
+  })
+
+  it("keeps the allowance summary out of the way without telemetry", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "No Telemetry",
+          apiType: "openai",
+          baseUrl: "https://plain.example.com",
+          apiKey: "sk-plain",
+          tagIds: [],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    expect(await screen.findByTestId("profiles-list")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverview),
+    ).toBeNull()
+  })
+
+  it("replaces a deep-linked target with the picked credential", async () => {
+    const user = userEvent.setup()
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Healthy Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-plan",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "fiveHour", remainingPercent: 80, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+        {
+          id: "profile-2",
+          name: "Draining Plan",
+          apiType: "anthropic",
+          baseUrl: "https://plan.example.com",
+          apiKey: "sk-draining",
+          tagIds: [],
+          notes: "",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: "healthy" },
+            lastSyncTime: 1,
+            facts: {
+              quota: {
+                windows: [
+                  { type: "weekly", remainingPercent: 10, unit: "percent" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    function Harness() {
+      const [targetProfileId, setTargetProfileId] = useState<
+        string | undefined
+      >("profile-1")
+      return (
+        <ApiCredentialProfilesListView
+          controller={controller}
+          targetProfileId={targetProfileId}
+          onClearTargetProfile={() => setTargetProfileId(undefined)}
+        />
+      )
+    }
+
+    render(<Harness />)
+
+    expect(await screen.findByTestId("profiles-list")).toHaveAttribute(
+      "data-target-profile-id",
+      "profile-1",
+    )
+
+    await user.click(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.allowanceOverviewFocus,
+      ),
+    )
+
+    expect(screen.getByTestId("profiles-list")).toHaveAttribute(
+      "data-target-profile-id",
+      "profile-2",
+    )
   })
 })
