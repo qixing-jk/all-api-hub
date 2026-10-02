@@ -170,6 +170,16 @@ export function useProviderModelDiscovery({
 
       try {
         const apiKey = await source.resolveApiKey()
+        // Credential recovery may outlive the dialog or its selected source.
+        // Invalidate before sending a request, not only before storing results.
+        if (
+          !isMountedRef.current ||
+          !isOpenRef.current ||
+          activeCacheKeysRef.current.get(selectionId) !== source.cacheKey ||
+          requestIdsRef.current.get(selectionId) !== requestId
+        ) {
+          return
+        }
         // Discovery derives its own candidate mounts, so it is given the
         // protocol root: one canonical input regardless of which shape the
         // caller stored or derived.

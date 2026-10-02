@@ -277,7 +277,7 @@ describe("CCSwitchExportDialog", () => {
       )
       await user.click(
         await screen.findByRole("option", {
-          name: "ui:dialog.ccswitch.appOptions.gemini",
+          name: "ui:dialog.ccswitch.appOptions.codex",
         }),
       )
       expect(

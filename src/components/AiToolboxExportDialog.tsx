@@ -200,20 +200,31 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
   // Model discovery always reads the OpenAI-compatible list, and derives its own
   // candidate mounts, so it is given the protocol root: switching to an app with
   // a different address shape then does not refetch the same upstream list.
-  const [discoveryBaseUrl, setDiscoveryBaseUrl] = useState(() =>
-    toOpenAiProtocolRoot(source.baseUrl),
-  )
+  const discoverySourceKey = buildProviderModelDiscoveryCacheKey([
+    source.id,
+    source.cacheKey,
+    source.baseUrl,
+  ])
+  const [discoveryTarget, setDiscoveryTarget] = useState(() => ({
+    sourceKey: discoverySourceKey,
+    baseUrl: toOpenAiProtocolRoot(source.baseUrl),
+  }))
+  const discoveryBaseUrl = discoveryTarget.baseUrl
   // Keep automatic discovery on the source OpenAI-compatible address: the Claude
   // default fills the field with the Anthropic address, which a split-protocol
   // source would reject with no model list. Only a user edit redirects it.
   const discoverySourceUrl = isBaseUrlCustomized ? baseUrl : source.baseUrl
   useEffect(() => {
     const handle = setTimeout(
-      () => setDiscoveryBaseUrl(toOpenAiProtocolRoot(discoverySourceUrl)),
+      () =>
+        setDiscoveryTarget({
+          sourceKey: discoverySourceKey,
+          baseUrl: toOpenAiProtocolRoot(discoverySourceUrl),
+        }),
       UPSTREAM_MODEL_FETCH_DEBOUNCE_MS,
     )
     return () => clearTimeout(handle)
-  }, [baseUrl, discoverySourceUrl, isBaseUrlCustomized, source.baseUrl])
+  }, [discoverySourceKey, discoverySourceUrl])
 
   // Closing the dialog or swapping the source invalidates an in-flight export
   // so a late credential resolution cannot send the key after a cancel.
@@ -229,8 +240,16 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
     onClose()
   }, [invalidatePendingExport, onClose])
 
-  const discoverySources = useMemo(
-    () => [
+  const discoverySources = useMemo(() => {
+    // Bind the debounced target to its credential source before discovery can
+    // send a key, including when a source change resets a custom endpoint.
+    if (
+      discoveryTarget.sourceKey !== discoverySourceKey ||
+      discoveryBaseUrl !== toOpenAiProtocolRoot(discoverySourceUrl)
+    ) {
+      return []
+    }
+    return [
       {
         selectionId: source.id,
         cacheKey: buildProviderModelDiscoveryCacheKey([
@@ -240,9 +259,14 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
         baseUrl: discoveryBaseUrl,
         resolveApiKey: source.resolveApiKey,
       },
-    ],
-    [source, discoveryBaseUrl],
-  )
+    ]
+  }, [
+    source,
+    discoveryTarget,
+    discoveryBaseUrl,
+    discoverySourceKey,
+    discoverySourceUrl,
+  ])
   const { getInventory, loadModels } = useProviderModelDiscovery({
     isOpen,
     sources: discoverySources,

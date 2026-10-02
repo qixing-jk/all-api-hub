@@ -812,6 +812,71 @@ describe("AiToolboxExportDialog", () => {
     })
   })
 
+  it.each(["different-source", "same-source", "customized-source"])(
+    "never pairs a replacement credential with the previous discovery endpoint (%s)",
+    async (scenario) => {
+      const user = userEvent.setup()
+      const previous = createAccountExportSource(
+        { id: "acc", baseUrl: "https://old.test" },
+        { key: "sk-old" },
+      )
+      const { rerender } = render(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={previous}
+        />,
+      )
+      await waitFor(() =>
+        expect(mockFetchModelIds).toHaveBeenCalledWith({
+          baseUrl: "https://old.test",
+          apiKey: "sk-old",
+        }),
+      )
+      if (scenario === "customized-source") {
+        const field = await screen.findByLabelText(
+          "ui:dialog.aiToolbox.fields.baseUrl",
+        )
+        await user.clear(field)
+        await user.type(field, "https://custom.test")
+        await waitFor(() =>
+          expect(mockFetchModelIds).toHaveBeenCalledWith({
+            baseUrl: "https://custom.test",
+            apiKey: "sk-old",
+          }),
+        )
+      }
+      const baseUrl =
+        scenario === "customized-source"
+          ? "https://old.test"
+          : "https://new.test"
+      const replacement = createAccountExportSource(
+        { id: scenario === "same-source" ? "acc" : "replacement", baseUrl },
+        { key: "sk-new" },
+      )
+      mockFetchModelIds.mockClear()
+      rerender(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={replacement}
+        />,
+      )
+      await waitFor(() =>
+        expect(mockFetchModelIds).toHaveBeenCalledWith({
+          baseUrl,
+          apiKey: "sk-new",
+        }),
+      )
+      expect(
+        mockFetchModelIds.mock.calls.every(
+          ([request]) =>
+            request.apiKey !== "sk-new" || request.baseUrl === baseUrl,
+        ),
+      ).toBe(true)
+    },
+  )
+
   it("sends the discovered model catalogue with the export", async () => {
     const user = userEvent.setup()
     mockFetchModelIds.mockResolvedValue(["model-a", "model-b"])

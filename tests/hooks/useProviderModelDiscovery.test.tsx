@@ -74,6 +74,55 @@ describe("useProviderModelDiscovery", () => {
     )
   })
 
+  it.each(["replace", "close", "unmount"])(
+    "does not send a late credential after %s",
+    async (action) => {
+      let resolveKey!: (key: string) => void
+      const pendingKey = new Promise<string>((resolve) => {
+        resolveKey = resolve
+      })
+      const resolveApiKey = vi.fn().mockReturnValue(pendingKey)
+      const fetchModelIds = vi.fn().mockResolvedValue(["model-a"])
+      const { rerender, unmount } = renderHook(
+        ({ isOpen, cacheKey }) =>
+          useProviderModelDiscovery({
+            isOpen,
+            sources: [
+              {
+                selectionId: "account",
+                cacheKey,
+                baseUrl: "https://old.test",
+                resolveApiKey:
+                  cacheKey === "old" ? resolveApiKey : async () => "new-key",
+              },
+            ],
+            fetchModelIds,
+          }),
+        { initialProps: { isOpen: true, cacheKey: "old" } },
+      )
+      await waitFor(() => expect(resolveApiKey).toHaveBeenCalled())
+      if (action === "unmount") unmount()
+      else
+        rerender({
+          isOpen: action !== "close",
+          cacheKey: action === "replace" ? "new" : "old",
+        })
+      await act(async () => {
+        resolveKey("old-key")
+        await pendingKey
+      })
+      expect(fetchModelIds).not.toHaveBeenCalledWith({
+        baseUrl: "https://old.test",
+        apiKey: "old-key",
+      })
+      if (action === "replace")
+        expect(fetchModelIds).toHaveBeenCalledWith({
+          baseUrl: "https://old.test",
+          apiKey: "new-key",
+        })
+    },
+  )
+
   it("keeps the previous inventory on failure and recovers on retry", async () => {
     const fetchModelIds = vi
       .fn()
