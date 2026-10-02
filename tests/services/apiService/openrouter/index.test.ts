@@ -30,6 +30,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const baseRequest = {
   baseUrl: "https://mirror.example.invalid",
+  managementApiBaseUrl: "https://openrouter.ai",
   accountId: "openrouter-account",
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -61,6 +62,7 @@ describe("apiService OpenRouter", () => {
   it("builds canonical management requests without user-id headers", () => {
     expect(createOpenRouterManagementRequest(baseRequest)).toMatchObject({
       baseUrl: OPENROUTER_API_BASE_URL,
+      managementApiBaseUrl: OPENROUTER_API_BASE_URL,
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "management-key-placeholder",

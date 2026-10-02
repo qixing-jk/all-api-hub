@@ -83,6 +83,7 @@ const createAIHubMixApiOriginRequest = (
 ): ApiServiceRequest => ({
   ...request,
   baseUrl: AIHUBMIX_API_ORIGIN,
+  managementApiBaseUrl: AIHUBMIX_API_ORIGIN,
   auth: {
     ...request.auth,
     authType: AuthTypeEnum.Cookie,

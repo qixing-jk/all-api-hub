@@ -29,6 +29,7 @@ import { server } from "~~/tests/msw/server"
 
 const request = {
   baseUrl: "https://mirror.example.invalid",
+  managementApiBaseUrl: "https://openrouter.ai",
   auth: {
     authType: AuthTypeEnum.AccessToken,
     accessToken: "  mgmt-example  ",
