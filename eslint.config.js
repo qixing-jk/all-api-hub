@@ -91,32 +91,99 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Keep the owners of those boundaries explicit so new call sites get reviewed
 // instead of proliferating by accident. Type-only `typeof import(...)` is
 // unaffected; only runtime `import()` expressions are gated.
+//
+// Each entry also lists the allowed import targets as prefix matches, so a
+// new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
-  "src/components/ui/datePickerLocale.ts",
-  "src/entrypoints/options/constants.ts",
-  "src/entrypoints/popup/viewRegistry.tsx",
-  "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
-  "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
-  "src/features/BasicSettings/BasicSettings.tsx",
-  "src/features/CheckInFeedback/useCheckInFeedback.tsx",
-  "src/utils/i18n/dayjsLocale.ts",
+  {
+    file: "src/components/ui/datePickerLocale.ts",
+    imports: ["date-fns/locale/"],
+  },
+  {
+    file: "src/entrypoints/options/constants.ts",
+    imports: ["./pages/"],
+  },
+  {
+    file: "src/entrypoints/popup/viewRegistry.tsx",
+    imports: ["./components/", "~/features/"],
+  },
+  {
+    file: "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
+    imports: ["./AccountListDndRuntime"],
+  },
+  {
+    file: "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
+    imports: [
+      "~/components/KiloCodeExportDialog",
+      "~/features/ApiCredentialProfiles/components/",
+      "~/services/integrations/cherryStudio",
+    ],
+  },
+  {
+    file: "src/features/BasicSettings/BasicSettings.tsx",
+    imports: ["./components/tabs/"],
+  },
+  {
+    file: "src/features/CheckInFeedback/useCheckInFeedback.tsx",
+    imports: ["./CheckInFeedbackDialog"],
+  },
+  {
+    file: "src/utils/i18n/dayjsLocale.ts",
+    imports: ["dayjs/locale/"],
+  },
   // Content scripts keep React and their toast components out of the eagerly
   // injected bundle.
-  "src/entrypoints/content/messageHandlers/index.ts",
-  "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",
-  "src/entrypoints/content/shared/uiRoot.ts",
-  "src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts.ts",
+  {
+    file: "src/entrypoints/content/messageHandlers/index.ts",
+    imports: ["~/services/checkin/feedback/pageScan"],
+  },
+  {
+    file: "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",
+    imports: ["../components/", "react"],
+  },
+  {
+    file: "src/entrypoints/content/shared/uiRoot.ts",
+    imports: ["~/entrypoints/content/shared/ContentReactRoot", "react"],
+  },
+  {
+    file: "src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts.ts",
+    imports: ["~/entrypoints/content/webAiApiCheck/components/", "react"],
+  },
   // Background and service boundaries keep heavy provider graphs off the
   // startup path or break module cycles.
-  "src/entrypoints/background/runtimeMessages.ts",
-  "src/services/accountLogin/index.ts",
-  "src/services/checkin/autoCheckin/refresh.ts",
-  "src/services/managedSites/providers/newApiProtectionBypassResource.ts",
-  "src/services/managedSites/providers/newApiSession.ts",
-  "src/services/productAnalytics/client.ts",
-  "src/services/redemption/redemptionAssist.ts",
-  "src/utils/browser/tempWindowFetch.ts",
+  {
+    file: "src/entrypoints/background/runtimeMessages.ts",
+    imports: ["~/services/managedSites/newApiOwnedSession/background"],
+  },
+  {
+    file: "src/services/accountLogin/index.ts",
+    imports: ["~/services/apiAdapters/registry"],
+  },
+  {
+    file: "src/services/checkin/autoCheckin/refresh.ts",
+    imports: ["~/services/checkin/autoCheckin/providers"],
+  },
+  {
+    file: "src/services/managedSites/providers/newApiProtectionBypassResource.ts",
+    imports: ["~/services/apiAdapters/registry"],
+  },
+  {
+    file: "src/services/managedSites/providers/newApiSession.ts",
+    imports: ["~/utils/browser/tempWindowFetch"],
+  },
+  {
+    file: "src/services/productAnalytics/client.ts",
+    imports: ["posthog-js/dist/module.no-external"],
+  },
+  {
+    file: "src/services/redemption/redemptionAssist.ts",
+    imports: ["~/services/redemption/accountCandidate"],
+  },
+  {
+    file: "src/utils/browser/tempWindowFetch.ts",
+    imports: ["~/entrypoints/background/protectionBypassCoordinator"],
+  },
 ]
 const workflowTransitionIconRestrictedImports = [
   {
@@ -495,8 +562,9 @@ export default defineConfig([
     rules: { "notifications/use-facade": "error" },
   },
   // Guardrails: dynamic `import()` is opt-in; only allowlisted boundaries may
-  // use it. Implementing this as a custom rule keeps the allowlist in one
-  // place instead of multiplying per-file rule overrides.
+  // use it, and only toward their registered targets. Implementing this as a
+  // custom rule keeps the allowlist in one place instead of multiplying
+  // per-file rule overrides.
   {
     files: [srcJsFamilyFilePattern],
     plugins: {
@@ -508,23 +576,35 @@ export default defineConfig([
               schema: [],
               messages: {
                 dynamicImport:
-                  "Dynamic import() is a deliberate lazy-loading or cycle-breaking boundary. If this call site needs one, add the file to dynamicImportAllowlist in eslint.config.js with a reason.",
+                  "Dynamic import() is a deliberate lazy-loading or cycle-breaking boundary. If this call site needs one, add the file and its import target to dynamicImportAllowlist in eslint.config.js with a reason.",
+                unregisteredTarget:
+                  "This dynamic import() target is not registered for this file. Add it to the file's entry in dynamicImportAllowlist in eslint.config.js.",
               },
             },
             create(context) {
               const filename = (context.filename ?? "").replace(/\\/g, "/")
-              if (
-                !dynamicImportAllowlist.some((entry) =>
-                  filename.endsWith(entry),
-                )
-              ) {
+              const entry = dynamicImportAllowlist.find((entry) =>
+                filename.endsWith(entry.file),
+              )
+              if (!entry) {
                 return {
                   ImportExpression(node) {
                     context.report({ node, messageId: "dynamicImport" })
                   },
                 }
               }
-              return {}
+              return {
+                ImportExpression(node) {
+                  if (
+                    node.source.type !== "Literal" ||
+                    !entry.imports.some((prefix) =>
+                      String(node.source.value).startsWith(prefix),
+                    )
+                  ) {
+                    context.report({ node, messageId: "unregisteredTarget" })
+                  }
+                },
+              }
             },
           },
         },
