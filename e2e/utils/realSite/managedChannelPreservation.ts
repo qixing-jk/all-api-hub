@@ -14,7 +14,14 @@ export function extractManagedChannelSnapshot(
   name: string,
 ): Snapshot | null {
   if (!isRecord(body) || body.success === false || body.errors) return null
-  const data = siteType === SITE_TYPES.CLAUDE_CODE_HUB ? body : body.data
+  const data =
+    siteType === SITE_TYPES.CLAUDE_CODE_HUB
+      ? body
+      : siteType === SITE_TYPES.OMNIROUTE
+        ? // OmniRoute wraps a single resource as `{ connection }`, unlike the
+          // `{ data }` envelope the New API family shares.
+          body.connection
+        : body.data
   const candidate =
     siteType === SITE_TYPES.AXON_HUB
       ? isRecord(data)
@@ -28,6 +35,31 @@ export function extractManagedChannelSnapshot(
     (typeof candidate.id === "number" || typeof candidate.id === "string")
     ? candidate
     : null
+}
+
+/**
+ * Recognizes the per-resource read a native editor triggers, which is the
+ * evidence source for the rename-preservation check. Inventory routes are
+ * deliberately excluded: they return masked projections of every channel.
+ *
+ * The caller additionally pins the response to the managed site's own origin,
+ * so these paths only need to distinguish detail from inventory within one site.
+ */
+export function isManagedChannelDetailRead(
+  siteType: ManagedSiteType,
+  method: string,
+  path: string,
+): boolean {
+  if (method !== "GET") return false
+  return (
+    /\/api\/channel\/\d+$/u.test(path) ||
+    /\/api\/v1\/providers\/\d+$/u.test(path) ||
+    /\/api\/v1\/admin\/accounts\/\d+$/u.test(path) ||
+    (siteType === SITE_TYPES.OMNIROUTE &&
+      /\/api\/providers\/[^/]+$/u.test(path)) ||
+    (siteType === SITE_TYPES.OCTOPUS &&
+      /\/api\/v1\/channel\/(?:list|detail\/\d+)$/u.test(path))
+  )
 }
 
 /** Collects a fresh native read triggered by opening the test resource's editor. */
@@ -53,15 +85,14 @@ export async function captureManagedChannelSnapshot(params: {
         )
           return false
       } else {
-        if (request.method() !== "GET") return false
-        const path = url.pathname
-        const isDetail =
-          /\/api\/channel\/\d+$/u.test(path) ||
-          /\/api\/v1\/providers\/\d+$/u.test(path) ||
-          /\/api\/v1\/admin\/accounts\/\d+$/u.test(path) ||
-          (params.siteType === SITE_TYPES.OCTOPUS &&
-            /\/api\/v1\/channel\/(?:list|detail\/\d+)$/u.test(path))
-        if (!isDetail) return false
+        if (
+          !isManagedChannelDetailRead(
+            params.siteType,
+            request.method(),
+            url.pathname,
+          )
+        )
+          return false
       }
       try {
         const candidate = extractManagedChannelSnapshot(
@@ -88,10 +119,15 @@ export function assertManagedChannelPreserved(
   before: Snapshot,
   after: Snapshot,
 ): void {
-  const updateTimestamp =
-    siteType === SITE_TYPES.AXON_HUB || siteType === SITE_TYPES.CLAUDE_CODE_HUB
-      ? "updatedAt"
-      : "updated_at"
+  // A rename always bumps the provider's own row timestamp, and each family
+  // spells it its own way.
+  const updateTimestamp = [
+    SITE_TYPES.AXON_HUB,
+    SITE_TYPES.CLAUDE_CODE_HUB,
+    SITE_TYPES.OMNIROUTE,
+  ].some((candidate) => candidate === siteType)
+    ? "updatedAt"
+    : "updated_at"
   const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
     .filter((field) => field !== "name" && field !== updateTimestamp)
     .filter(

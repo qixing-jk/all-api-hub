@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "Sắp xếp theo số sao GitHub tại thời điểm cập nhật.",
     "siteTypeDesc": "Chọn nền tảng dùng cho quản lý kênh và đồng bộ mô hình",
     "siteTypeLabel": "Loại gateway",
@@ -415,6 +416,38 @@
       "title": "Xác minh kết nối",
       "validate": "Xác minh kết nối",
       "validating": "Đang xác minh…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "Quản lý token truy cập trên bảng điều khiển của gateway và thu hồi bất cứ lúc nào token mà tiện ích này dùng.",
+      "missingBaseUrl": "Hãy nhập địa chỉ triển khai trước để mở trang token của gateway.",
+      "open": "Mở trang token truy cập",
+      "title": "Quản lý token truy cập của gateway"
+    },
+    "description": "Cấu hình kết nối tới gateway OmniRoute tự triển khai.",
+    "fields": {
+      "baseUrlDesc": "Địa chỉ bạn dùng để mở bảng điều khiển OmniRoute trong trình duyệt.",
+      "baseUrlLabel": "Địa chỉ triển khai",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "Tạo token truy cập có phạm vi admin trong Settings → Access Tokens của gateway rồi dán vào đây.",
+      "credentialLabel": "Token truy cập",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ẩn token truy cập",
+      "showCredential": "Hiện token truy cập"
+    },
+    "title": "Cài đặt tích hợp OmniRoute",
+    "validation": {
+      "description": "Kiểm tra xem cấu hình hiện tại có kết nối và quản lý được site không.",
+      "failed": "Kiểm tra cấu hình OmniRoute thất bại: {{error}}",
+      "insufficientScope": "Phạm vi token không đủ: hiện có {{have}}, cần {{need}}. Hãy tạo token mới với phạm vi admin trong Settings → Access Tokens của gateway.",
+      "invalidCredential": "Token truy cập không hợp lệ hoặc đã hết hạn: {{error}}",
+      "missingFields": "Nhập địa chỉ triển khai và token truy cập",
+      "success": "Kết nối thành công",
+      "title": "Kiểm tra kết nối",
+      "unknownScope": "không rõ",
+      "validate": "Kiểm tra kết nối",
+      "validating": "Đang kiểm tra…"
     }
   },
   "permissions": {

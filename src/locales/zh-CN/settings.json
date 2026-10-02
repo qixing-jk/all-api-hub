@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "按 GitHub Star 数快照排序。",
     "siteTypeDesc": "选择用于渠道管理和模型同步的平台",
     "siteTypeLabel": "网关类型",
@@ -413,6 +414,38 @@
       "missingFields": "请填写所有必填字段",
       "success": "连接成功",
       "title": "验证连接",
+      "validate": "验证连接",
+      "validating": "正在验证…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "在网关面板里管理访问令牌，可随时撤销扩展使用的这一条。",
+      "missingBaseUrl": "先填写部署地址，才能打开网关的访问令牌页面。",
+      "open": "打开访问令牌页面",
+      "title": "管理网关访问令牌"
+    },
+    "description": "配置自建 OmniRoute 网关的连接信息。",
+    "fields": {
+      "baseUrlDesc": "填写你在浏览器里打开 OmniRoute 面板时使用的地址。",
+      "baseUrlLabel": "部署地址",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "在网关 Settings → Access Tokens 中生成 admin 作用域访问令牌，粘贴到此处。",
+      "credentialLabel": "访问令牌",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "隐藏访问令牌",
+      "showCredential": "显示访问令牌"
+    },
+    "title": "OmniRoute 集成设置",
+    "validation": {
+      "description": "检查当前配置能否正常连接并管理站点。",
+      "failed": "OmniRoute 配置验证失败：{{error}}",
+      "insufficientScope": "令牌作用域不足：当前为 {{have}}，需要 {{need}}。请在网关 Settings → Access Tokens 重新生成一条 admin 作用域的令牌。",
+      "invalidCredential": "访问令牌不正确或已失效：{{error}}",
+      "missingFields": "请填写部署地址和访问令牌",
+      "success": "连接成功",
+      "title": "验证连接",
+      "unknownScope": "未知",
       "validate": "验证连接",
       "validating": "正在验证…"
     }

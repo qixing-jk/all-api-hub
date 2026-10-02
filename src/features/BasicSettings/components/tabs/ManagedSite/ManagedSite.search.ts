@@ -28,6 +28,10 @@ import {
   managedSiteOctopusSearchSections,
 } from "./ManagedSiteOctopus.search"
 import {
+  managedSiteOmniRouteSearchControls,
+  managedSiteOmniRouteSearchSections,
+} from "./ManagedSiteOmniRoute.search"
+import {
   managedSiteVeloeraSearchControls,
   managedSiteVeloeraSearchSections,
 } from "./ManagedSiteVeloera.search"
@@ -41,6 +45,7 @@ export const managedSiteSearchSections = [
   ...managedSiteAxonHubSearchSections,
   ...managedSiteClaudeCodeHubSearchSections,
   ...managedSiteSub2ApiSearchSections,
+  ...managedSiteOmniRouteSearchSections,
 ]
 
 export const managedSiteSearchControls = [
@@ -52,4 +57,5 @@ export const managedSiteSearchControls = [
   ...managedSiteAxonHubSearchControls,
   ...managedSiteClaudeCodeHubSearchControls,
   ...managedSiteSub2ApiSearchControls,
+  ...managedSiteOmniRouteSearchControls,
 ]

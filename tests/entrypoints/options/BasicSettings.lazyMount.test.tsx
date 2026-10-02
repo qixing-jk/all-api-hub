@@ -412,9 +412,32 @@ describe("BasicSettings tab mounting", () => {
     expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
   })
 
+  it("routes every OmniRoute settings anchor to the managed-site tab", async () => {
+    for (const anchor of [
+      SETTINGS_ANCHORS.OMNIROUTE,
+      SETTINGS_ANCHORS.OMNIROUTE_BASE_URL,
+      SETTINGS_ANCHORS.OMNIROUTE_CREDENTIAL,
+      SETTINGS_ANCHORS.OMNIROUTE_TOKENS_LINK,
+      SETTINGS_ANCHORS.OMNIROUTE_VALIDATE,
+    ]) {
+      window.history.replaceState(null, "", `/?anchor=${anchor}#basic`)
+
+      const view = render(<BasicSettings />, {
+        withReleaseUpdateStatusProvider: false,
+      })
+
+      expect(
+        await screen.findByTestId("managed-site-tab-content"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByTestId("general-tab-content"),
+      ).not.toBeInTheDocument()
+      view.unmount()
+    }
+  })
+
   it("seeds the selected and mounted tab from the URL tab parameter", async () => {
     window.history.replaceState(null, "", "/?tab=managedSite#basic")
-
     render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     expect(

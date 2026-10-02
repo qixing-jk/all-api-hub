@@ -8,6 +8,7 @@ import { cliProxyApiManagedResourceRegistration } from "./cliProxyApi"
 import { doneHubManagedResourceRegistration } from "./doneHub"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { octopusManagedResourceRegistration } from "./octopus"
+import { omniRouteManagedResourceRegistration } from "./omniroute"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
 import { veloeraManagedResourceRegistration } from "./veloera"
 
@@ -20,6 +21,7 @@ const MANAGED_RESOURCE_REGISTRATIONS = [
   doneHubManagedResourceRegistration,
   sub2ApiManagedResourceRegistration,
   veloeraManagedResourceRegistration,
+  omniRouteManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 
 const managedResourceKey = (

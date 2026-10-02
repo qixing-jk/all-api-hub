@@ -97,6 +97,36 @@ export function resolveSub2ApiManagedSiteConfig(): ManagedSiteConfigResolution<
   }
 }
 
+/**
+ * Reads a ready-made OmniRoute `admin` access token.
+ *
+ * The password path is deliberately not exercised here: exchanging a password
+ * mints a persistent token on the deployment under test, so the E2E uses a
+ * token the operator created beforehand and leaves the exchange to the
+ * settings-page tests.
+ */
+export function resolveOmniRouteManagedSiteConfig(): ManagedSiteConfigResolution<
+  typeof SITE_TYPES.OMNIROUTE
+> {
+  const baseUrlKey = "AAH_E2E_OMNIROUTE_BASE_URL" as const
+  const tokenKey = "AAH_E2E_OMNIROUTE_ADMIN_TOKEN" as const
+  const baseUrl = readEnv(baseUrlKey)
+  const token = readEnv(tokenKey)
+  const missingEnvKeys = [
+    ...(!baseUrl ? [baseUrlKey] : []),
+    ...(!token ? [tokenKey] : []),
+  ] satisfies ManagedSiteEnvKey[]
+
+  if (!baseUrl || !token) {
+    return { config: null, missingEnvKeys }
+  }
+
+  return {
+    config: { baseUrl, token },
+    missingEnvKeys: [],
+  }
+}
+
 export function resolveOctopusManagedSiteConfig(): ManagedSiteConfigResolution<
   typeof SITE_TYPES.OCTOPUS
 > {

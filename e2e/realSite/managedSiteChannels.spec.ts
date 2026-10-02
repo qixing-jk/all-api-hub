@@ -30,6 +30,7 @@ import {
   resolveDoneHubManagedSiteConfig,
   resolveNewApiManagedSiteConfig,
   resolveOctopusManagedSiteConfig,
+  resolveOmniRouteManagedSiteConfig,
   resolveSub2ApiManagedSiteConfig,
   resolveVeloeraManagedSiteConfig,
 } from "~~/e2e/utils/realSite/managedSiteConfig"
@@ -99,6 +100,12 @@ const managedSiteTargets = [
     siteType: SITE_TYPES.SUB2API,
     preferenceKey: "sub2apiManagedSite",
     resolveConfig: resolveSub2ApiManagedSiteConfig,
+  },
+  {
+    label: "OmniRoute",
+    siteType: SITE_TYPES.OMNIROUTE,
+    preferenceKey: "omniroute",
+    resolveConfig: resolveOmniRouteManagedSiteConfig,
   },
 ] as const satisfies readonly ManagedSiteE2eTarget[]
 

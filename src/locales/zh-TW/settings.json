@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "依 GitHub Star 數快照排序。",
     "siteTypeDesc": "選擇用於渠道管理和模型同步的平台",
     "siteTypeLabel": "閘道型別",
@@ -413,6 +414,38 @@
       "missingFields": "請填寫所有必填欄位",
       "success": "連線成功",
       "title": "驗證連線",
+      "validate": "驗證連線",
+      "validating": "正在驗證…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "在閘道面板管理存取權杖，可隨時撤銷擴充功能使用的這一條。",
+      "missingBaseUrl": "先填寫部署位址，才能開啟閘道的存取權杖頁面。",
+      "open": "開啟存取權杖頁面",
+      "title": "管理閘道存取權杖"
+    },
+    "description": "設定自架 OmniRoute 閘道的連線資訊。",
+    "fields": {
+      "baseUrlDesc": "填寫你在瀏覽器開啟 OmniRoute 面板時使用的位址。",
+      "baseUrlLabel": "部署位址",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "在閘道 Settings → Access Tokens 中產生 admin 範圍的存取權杖，貼到此處。",
+      "credentialLabel": "存取權杖",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "隱藏存取權杖",
+      "showCredential": "顯示存取權杖"
+    },
+    "title": "OmniRoute 整合設定",
+    "validation": {
+      "description": "檢查目前設定能否正常連線並管理站點。",
+      "failed": "OmniRoute 設定驗證失敗：{{error}}",
+      "insufficientScope": "權杖作用域不足：目前為 {{have}}，需要 {{need}}。請在閘道 Settings → Access Tokens 重新產生一條 admin 作用域的權杖。",
+      "invalidCredential": "存取權杖不正確或已失效：{{error}}",
+      "missingFields": "請填寫部署位址和存取權杖",
+      "success": "連線成功",
+      "title": "驗證連線",
+      "unknownScope": "未知",
       "validate": "驗證連線",
       "validating": "正在驗證…"
     }

@@ -11,7 +11,10 @@ import {
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS } from "~/constants/sub2api"
+import {
+  SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/ManagedSiteChannelsRoute"
 import type { ManagedChannelsRowViewModel } from "~/features/ManagedSiteChannels/presentation/contracts"
@@ -152,8 +155,6 @@ vi.mock("~/services/managedSites/channelMigrationTargets", () => ({
 const nativeRow = {
   rowKey: "opaque:native",
   testToken: "resource-1",
-  displayIdentifier: "",
-  displayIdentifierSort: "Native example",
   name: "Native example",
   baseURL: "https://api.example.invalid",
   searchText: "Native example",
@@ -686,7 +687,12 @@ describe("ManagedSiteChannelsRoute", () => {
 
     expect(useListController).toHaveBeenCalledWith(
       expect.objectContaining({
-        fieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+        // Both the columns and the declared detail rows read from the same
+        // accepted projection.
+        fieldIds: expect.arrayContaining([
+          ...SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+          ...SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+        ]),
       }),
     )
   })
@@ -834,16 +840,12 @@ describe("ManagedSiteChannelsRoute", () => {
       ...nativeRow,
       rowKey: "opaque:alpha",
       testToken: "resource-alpha",
-      displayIdentifier: "2",
-      displayIdentifierSort: 2,
       name: "Alpha channel",
     }
     const zuluRow = {
       ...nativeRow,
       rowKey: "opaque:zulu",
       testToken: "resource-zulu",
-      displayIdentifier: "1",
-      displayIdentifierSort: 1,
       name: "Zulu channel",
     }
     installNativeControllers({
@@ -1639,11 +1641,13 @@ describe("ManagedSiteChannelsRoute", () => {
         screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
       ),
     )
+    // Claude Code Hub channels carry no identifier, so the shared table must not
+    // render an id column for them.
     expect(
-      screen.getByRole("columnheader", {
+      screen.queryByRole("columnheader", {
         name: "managedSiteChannels:table.columns.id",
       }),
-    ).toBeVisible()
+    ).toBeNull()
     expect(
       screen.getByRole("columnheader", {
         name: "managedSiteChannels:table.columns.name",
@@ -1765,13 +1769,15 @@ describe("ManagedSiteChannelsRoute", () => {
       </I18nextProvider>,
     )
 
-    await screen.findByText("Example 12")
+    // The default sort is by name ascending, so the first page holds the first
+    // ten rows and the second page starts at the eleventh.
+    await screen.findByText("Example 01")
     await user.click(
       screen.getByRole("button", {
         name: resourceI18n.t("managedSiteChannels:table.paginationNext"),
       }),
     )
-    const rowToken = "resource-1"
+    const rowToken = "resource-11"
     const row = screen.getByTestId(getManagedSiteChannelRowTestId(rowToken))
     await user.click(
       screen.getByTestId(getManagedSiteChannelRowSelectTestId(rowToken)),
@@ -2424,12 +2430,12 @@ describe("ManagedSiteChannelsRoute", () => {
     getFieldPolicy.mockReturnValue({
       fields: [
         {
-          fieldId: "manualModels",
+          fieldId: "defaultTestModel",
           section: "models",
           order: 1,
           resolveLabel: (t: TFunction) =>
-            t("managedSiteChannels:editor.fields.manualModels.label"),
-          renderer: "multi-select",
+            t("managedSiteChannels:editor.fields.defaultTestModel.label"),
+          renderer: "select",
         },
         {
           fieldId: "remark",
@@ -2449,10 +2455,10 @@ describe("ManagedSiteChannelsRoute", () => {
           name: "Detail example",
           cells: {
             ...nativeRow.cells,
-            manualModels: {
-              kind: "groups",
-              values: ["manual-model"],
-              sortValue: "manual-model",
+            defaultTestModel: {
+              kind: "text",
+              value: "Approved default model",
+              sortValue: "Approved default model",
             },
             remark: {
               kind: "text",
@@ -2487,7 +2493,7 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    expect(screen.getByText("manual-model")).toBeVisible()
+    expect(screen.getByText("Approved default model")).toBeVisible()
     expect(screen.getByText("Approved remark")).toBeVisible()
     expect(screen.queryByText("private detail")).toBeNull()
     expect(screen.queryByText("backendMessage")).toBeNull()

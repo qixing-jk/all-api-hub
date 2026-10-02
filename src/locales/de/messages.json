@@ -135,6 +135,10 @@
     "corsError": "Dies kann durch die CORS-Konfiguration verursacht werden. Bitte überprüfen Sie die CORS-Whitelist-Einstellung in den Octopus-Einstellungen.",
     "noChannelsToSync": "Keine Kanäle zum Synchronisieren"
   },
+  "omniroute": {
+    "configMissing": "Bitte konfigurieren Sie zuerst die OmniRoute-Adresse und das Zugriffstoken in den Grundeinstellungen",
+    "noChannelsToSync": "Keine Kanäle zum Synchronisieren"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "Die Erstellung des OpenRouter-Schlüssels wurde abgebrochen, bevor etwas erstellt wurde.",

@@ -24,6 +24,7 @@ import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
 import { newApiManagedSiteCapabilities } from "./managedSites/newApi"
 import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
+import { omniRouteManagedSiteCapabilities } from "./managedSites/omniroute"
 import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
@@ -43,6 +44,7 @@ const managedSitesBySiteType = {
   [SITE_TYPES.AXON_HUB]: axonHubManagedSiteCapabilities,
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteCapabilities,
   [SITE_TYPES.SUB2API]: sub2ApiManagedSiteCapabilities,
+  [SITE_TYPES.OMNIROUTE]: omniRouteManagedSiteCapabilities,
 } satisfies Record<ManagedSiteType, ManagedSiteCapabilities>
 
 const withManagedSites = (

@@ -92,6 +92,10 @@ import {
   type OctopusConfig,
 } from "~/types/octopusConfig"
 import {
+  DEFAULT_OMNIROUTE_CONFIG,
+  type OmniRouteConfig,
+} from "~/types/omnirouteConfig"
+import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   type SiteAnnouncementPreferences,
 } from "~/types/siteAnnouncements"
@@ -369,6 +373,9 @@ export interface UserPreferences {
   // Sub2API 管理站点配置（Base URL + Admin API Key）
   sub2apiManagedSite?: Sub2ApiManagedSiteConfig
 
+  // OmniRoute 管理站点配置（Base URL + 作用域访问令牌）
+  omniroute?: OmniRouteConfig
+
   // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
 
@@ -601,6 +608,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   axonHub: DEFAULT_AXON_HUB_CONFIG,
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
   sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
+  omniroute: DEFAULT_OMNIROUTE_CONFIG,
   managedSiteType: SITE_TYPES.NEW_API,
   cliProxyApi: DEFAULT_CLI_PROXY_API_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -1348,6 +1356,13 @@ class UserPreferencesService {
     return this.savePreferences({ sub2apiManagedSite: config })
   }
 
+  /** Update OmniRoute managed-site config (deployment URL + access token). */
+  async updateOmniRouteConfig(
+    config: Partial<OmniRouteConfig>,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ omniroute: config })
+  }
+
   /**
    * Reset Octopus config.
    */
@@ -1382,6 +1397,13 @@ class UserPreferencesService {
     })
   }
 
+  /** Reset OmniRoute managed-site config. */
+  async resetOmniRouteConfig(): Promise<PreferenceWriteResult> {
+    return this.savePreferences({
+      omniroute: DEFAULT_PREFERENCES.omniroute,
+    })
+  }
+
   /**
    * Update managed site type (new-api, veloera, done-hub, or octopus).
    */
@@ -1407,6 +1429,7 @@ class UserPreferencesService {
       | ClaudeCodeHubConfig
       | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
+      | OmniRouteConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
@@ -1419,12 +1442,15 @@ class UserPreferencesService {
       | ClaudeCodeHubConfig
       | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
+      | OmniRouteConfig
     if (siteType === SITE_TYPES.CLI_PROXY_API) {
       config = prefs.cliProxyApi ?? DEFAULT_CLI_PROXY_API_CONFIG
     } else if (siteType === SITE_TYPES.AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
     } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
+    } else if (siteType === SITE_TYPES.OMNIROUTE) {
+      config = prefs.omniroute || DEFAULT_OMNIROUTE_CONFIG
     } else if (siteType === SITE_TYPES.SUB2API) {
       config = prefs.sub2apiManagedSite ?? DEFAULT_SUB2API_MANAGED_SITE_CONFIG
     } else if (siteType === SITE_TYPES.OCTOPUS) {

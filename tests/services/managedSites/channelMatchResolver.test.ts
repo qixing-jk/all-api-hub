@@ -404,6 +404,77 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
   })
 
+  it("degrades an unreadable credential to key-resolution failure when no verification exists", async () => {
+    const maskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(40),
+      name: "Masked Candidate",
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-***",
+    })
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        // A provider whose plaintext read is simply unavailable: nothing the
+        // user can complete would unlock it.
+        secretVerification: undefined,
+        search: vi.fn().mockResolvedValue({
+          items: [maskedCandidate],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: vi.fn().mockRejectedValue(new Error("not readable")),
+      },
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+    })
+
+    expect(result.url.matched).toBe(true)
+    expect(result.key.comparable).toBe(false)
+    expect(result.unresolvedReason).toBe(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+    )
+  })
+
+  it("still asks for verification when the provider declares that workflow", async () => {
+    const maskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(41),
+      name: "Masked Candidate",
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-***",
+    })
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [maskedCandidate],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: vi.fn().mockRejectedValue(new Error("not readable")),
+      },
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+    })
+
+    expect(result.unresolvedReason).toBe(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+    )
+  })
+
   it("marks key comparison unavailable when candidate key hydration requires verification", async () => {
     const hydrateComparableChannelKeys = vi.fn(async () => {
       throw new MatchResolutionUnresolvedError(

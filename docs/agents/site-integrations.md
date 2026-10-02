@@ -15,6 +15,18 @@ When working on a site type:
 3. Verify upstream behavior before making definitive claims when backend differences matter.
 4. If missing upstream evidence blocks a protocol decision, ask for the target deployment, fork, version, or a redacted trace. State assumptions and continue independent work; do not repeatedly request evidence already supplied.
 
+## Managed-channel display contract
+
+A native channel workspace renders two surfaces from one accepted projection: the table columns named by `tableFieldIds` and the detail dialog's rows named by `detailFieldIds`. A field in either list renders only when all three of these exist, so adding one to a list is a promise:
+
+1. **A fact.** The adapter must project a `ResourceDisplayFact` for the field id. A declared field with no fact silently never appears.
+2. **A label.** Table columns and editor field policies carry most labels. A field with no editor control — a read-only mirror, a value the gateway reports about itself — needs an entry in `getManagedResourcePresentationSemantics(siteType).detailFieldLabels`; a raw field id never becomes visible copy.
+3. **A cell.** Detail rows read cells from the union of both lists, so a field does not need a table column to be readable, and its value presentation (`fieldValuePresentations`) may target any displayed field.
+
+Upstream message text is display data only when the upstream sanitizes it for disclosure: OmniRoute runs `sanitizeErrorMessage` over the diagnosis it stores, so its `lastError` is shown, while the New API family's backend messages are not.
+
+`tests/features/ManagedSiteChannels/` locks these rules across every registered site type; extend those cases instead of adding a parallel suite.
+
 ## Relationships
 
 - **One API (`one-api`)** is the original upstream family. One API/New API-family account types share capability construction under `src/services/apiAdapters/newApi/` and protocol transports under `src/services/apiService/newApiFamily/`.
@@ -39,6 +51,7 @@ When working on a site type:
 - **RightCode (`RightCode`)** is account-only and not a One API / New API derivative: it runs a provider-owned REST console served on three equivalent domains (`www.right.codes`, `right.codes`, `rightapi.ai`) behind a bearer account token. It covers account balance/plans, native key management, model list and pricing. The deployment has **no check-in flow**, and activation-code redemption is deliberately not integrated because its success payload is unverified. The account token is the API credential itself and expires on the account's own rotation schedule, so access is recovered by re-reading the logged-in browser session rather than by a refresh-token flow.
 - **Kimi Open Platform** is one adapter family (`kimiOpenPlatform`) and two account site types: `kimi` (`https://platform.kimi.com`, `https://api.moonshot.cn`, CNY) and `kimi-global` (`https://platform.kimi.ai`, `https://api.moonshot.ai`, USD). Console sessions use `localStorage` `token` / `rtoken` (refresh via `Msh-Authorization`), not cookies. API key plaintext is create-response-only. This is not Kimi Code (`api.kimi.com/coding`).
 - **OpenRouter (`openrouter`)** is an account-only platform integration, not a managed/self-hosted backend. It uses Management Keys for account access and provides native API-key resources plus provider-owned model catalogs.
+- **OmniRoute (`omniroute`)** is a self-hosted AI gateway registered as a **single managed-only site type** with the `Unsupported` adapter family and no account scope, because the gateway owns no upstream account of its own (no balance, plan, or check-in) and exposes no enumerable official hostname to detect. Its managed capabilities live in `src/services/apiAdapters/managedSites/omniroute.ts` and `src/services/apiAdapters/managedResources/omniroute.ts`, with the protocol in `src/services/apiService/omniroute/`. It is a TypeScript fork of 9router, but the two do not share a usable contract, so a shared type or family was rejected: OmniRoute authenticates with scoped `oma_` bearer tokens (no cookie session, so no CSRF or same-origin requirement), accepts a connection-level `providerSpecificData.baseUrl` override in a single create where 9router needs a provider node first, and returns channel credentials in plaintext from `/api/providers/client` where 9router returns none. **Continued access:** the scoped access token is long-lived and there is no refresh flow, so nothing renews it; a revoked or expired token surfaces as 401 on the next call and the user mints a replacement on the settings page. The panel password can be exchanged for a token through the public `POST /api/cli/connect` route, which mints a new persistent token on the gateway, so the extension stores only the returned token and never the password. Channel writes need the `admin` scope because `/api/providers` is an admin-mutation prefix upstream, while reads need only `read`. Its channels carry no model list (models come from the provider catalogue, gateway aliases, and a gateway disabled list), so no `models` capability is registered. It is not a CLIProxyAPI alias: that integration is `/v0/management` + `X-Management-Key`. The upstream `docs/openapi.yaml` drifts from the route handlers, so read the handlers when extending this integration.
 
 ## Default Upstream References
 
@@ -65,6 +78,7 @@ When the user names a backend without a deployment URL or fork, treat these as t
 - SharedChat canonical deployment: `https://new.sharedchat.cc`; no verified public upstream source repository is currently recorded
 - RightCode console: `https://www.right.codes` (equivalent aliases `https://right.codes`, `https://rightapi.ai`); docs: `https://docs.rightapi.ai/`; no public upstream source repository (provider-owned REST backend)
 - OpenRouter: `https://openrouter.ai/`; docs: `https://openrouter.ai/docs`; OpenAPI source: `https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml`
+- OmniRoute: `https://github.com/diegosouzapw/OmniRoute`; management-auth guide: `https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.51/docs/guides/MANAGEMENT-AUTH.md`; create schema: `https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.51/src/shared/validation/schemas/provider.ts` and base-URL override: `https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.51/open-sse/executors/base.ts`. `docs/openapi.yaml` drifts from the route handlers (it documents `url` for `POST /api/providers` and `label` for `POST /api/keys`), so read the handlers instead.
 
 If the reported behavior differs from upstream, distinguish the target deployment from the default reference before concluding the repo is wrong.
 

@@ -19,3 +19,18 @@ export function requireManagedResourceChannelId(
   assertManagedResourceRefForSite(ref, { siteType, config })
   return requireNumericManagedResourceId(ref.resourceId)
 }
+
+/**
+ * Validates the public identity before exposing an opaque string locator.
+ *
+ * Providers whose resource ids are UUIDs (rather than New API-family integers)
+ * keep the identifier as-is; only the site/kind/scope assertion is shared.
+ */
+export function requireOpaqueManagedResourceChannelId(
+  siteType: ManagedSiteType,
+  config: { baseUrl: string },
+  ref: ManagedResourceRef,
+): string {
+  assertManagedResourceRefForSite(ref, { siteType, config })
+  return ref.resourceId
+}

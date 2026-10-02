@@ -175,6 +175,9 @@
         "help": "AxonHub はシステム設定で指定された頻度で、プロバイダー API から有効なチャネルのモデル一覧を更新します。",
         "label": "対応モデルを自動同期"
       },
+      "channelStatusReason": {
+        "label": "無効化の理由"
+      },
       "concurrency": {
         "help": "このアカウントで同時に処理できるリクエストの最大数です。",
         "label": "同時実行数"
@@ -189,10 +192,37 @@
         "label": "追加モデルプレフィックス",
         "placeholder": "例: deepseek"
       },
+      "manualModels": {
+        "label": "手動モデル"
+      },
       "notes": {
         "help": "このアップストリームアカウントに関する任意のメモです。",
         "label": "メモ",
         "placeholder": "このアカウントのメモを追加..."
+      },
+      "omnirouteBaseUrl": {
+        "help": "空のままにすると選択した provider の既定エンドポイントを使います。入力すると、ゲートウェイはこのチャネルのリクエストをそのアドレスへ送ります。保存済みのアドレスは消去できないため、変更する場合は新しいアドレスを入力してください。"
+      },
+      "omnirouteDefaultModel": {
+        "help": "リクエストでモデルを指定しない場合に使われます。チャネルはモデル一覧を保存せず、モデルはゲートウェイの provider カタログと別名から決まります。",
+        "label": "既定モデル"
+      },
+      "omnirouteLastError": {
+        "label": "直近のエラー"
+      },
+      "omniroutePrefix": {
+        "help": "入力するとゲートウェイに provider node を作成し、「prefix/model」でアドレスします。空のままなら組み込み provider をそのまま使います。prefix を入力する場合はアドレスも必須です。",
+        "label": "独自のモデルプレフィックス"
+      },
+      "omniroutePriority": {
+        "help": "ゲートウェイはこの数字の昇順でチャネルを選ぶため、小さいほど先に使われます。新規接続はゲートウェイが最後に並べます。",
+        "label": "優先度"
+      },
+      "omnirouteProvider": {
+        "help": "ゲートウェイ組み込みの provider ID です。独自の中継は openai のままアドレスを上書きできます。読み込みボタンで、このゲートウェイが実際に扱う provider を取得できます。"
+      },
+      "omnirouteTestStatus": {
+        "label": "接続テスト"
       },
       "orderingWeight": {
         "help": "AxonHub がチャネルを選択するときは値が大きいほど優先され、同じ値は同じ優先順位になります。",
@@ -261,6 +291,12 @@
         "unsupported": "未対応のチャネル種別",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "失敗",
+        "ok": "正常",
+        "pending": "未テスト",
+        "unsupported": "テスト非対応"
       },
       "status": {
         "archived": "アーカイブ済み",

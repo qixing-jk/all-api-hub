@@ -128,6 +128,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:claudecodehub.configMissing")
     case "sub2api":
       return t("messages:sub2api.configMissing")
+    case "omniroute":
+      return t("messages:omniroute.configMissing")
     case "newapi":
     default:
       return t("messages:newapi.configMissing")
@@ -152,6 +154,8 @@ export function getManagedSiteNoChannelsToSyncMessage(
       return t("messages:axonhub.noChannelsToSync")
     case "claudecodehub":
       return t("messages:claudecodehub.noChannelsToSync")
+    case "omniroute":
+      return t("messages:omniroute.noChannelsToSync")
     case "newapi":
     default:
       return t("messages:newapi.noChannelsToSync")

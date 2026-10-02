@@ -99,6 +99,7 @@ type ExpectedManagedSiteType =
   | typeof SITE_TYPES.AXON_HUB
   | typeof SITE_TYPES.CLAUDE_CODE_HUB
   | typeof SITE_TYPES.SUB2API
+  | typeof SITE_TYPES.OMNIROUTE
 
 const accountSiteTypeIsExact: ExpectExact<
   AccountSiteType,
@@ -370,6 +371,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.OCTOPUS,
       SITE_TYPES.VELOERA,
       SITE_TYPES.DONE_HUB,
+      SITE_TYPES.OMNIROUTE,
     ])
   })
 

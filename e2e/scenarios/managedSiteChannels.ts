@@ -70,23 +70,45 @@ export function getManagedSiteStatusSourceAccountType(
     siteType === SITE_TYPES.VELOERA ||
     siteType === SITE_TYPES.DONE_HUB ||
     siteType === SITE_TYPES.AXON_HUB ||
-    siteType === SITE_TYPES.CLAUDE_CODE_HUB
+    siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
+    siteType === SITE_TYPES.OMNIROUTE
   )
     return SITE_TYPES.NEW_API
 
   return null
 }
 
+/**
+ * Editors whose channels carry no per-channel model list, so the scenario must
+ * not fill a models control at all. OmniRoute connections store a single
+ * `defaultModel` and resolve models from the gateway catalogue instead.
+ */
+const MANAGED_SITE_TYPES_WITHOUT_CHANNEL_MODELS = [
+  SITE_TYPES.SUB2API,
+  SITE_TYPES.OMNIROUTE,
+] as const satisfies readonly ManagedSiteType[]
+
+/** Whether the native channel editor offers a per-channel model list control. */
+function hasManagedSiteChannelModelList(siteType: ManagedSiteType): boolean {
+  return !MANAGED_SITE_TYPES_WITHOUT_CHANNEL_MODELS.some(
+    (candidate) => candidate === siteType,
+  )
+}
+
 export function shouldEditModelsInManagedSiteCrudScenario(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== SITE_TYPES.AXON_HUB && siteType !== SITE_TYPES.SUB2API
+  // The AxonHub editor accepts a model on create but owns later model edits
+  // through its own sync fields.
+  return (
+    siteType !== SITE_TYPES.AXON_HUB && hasManagedSiteChannelModelList(siteType)
+  )
 }
 
 export function shouldSeedModelsInManagedSiteCrudScenario(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== SITE_TYPES.SUB2API
+  return hasManagedSiteChannelModelList(siteType)
 }
 
 const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
@@ -361,7 +383,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
         }))
     }
     if (
-      context.siteType !== SITE_TYPES.SUB2API &&
+      hasManagedSiteChannelModelList(context.siteType) &&
       !context.verifyExactModelMatch
     ) {
       // Channel identity does not require a callable upstream model. Keep this

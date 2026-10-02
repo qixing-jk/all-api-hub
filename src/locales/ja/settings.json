@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "GitHub スター数のスナップショット順。",
     "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
     "siteTypeLabel": "ゲートウェイ種別",
@@ -415,6 +416,38 @@
       "title": "接続を確認",
       "validate": "接続を確認",
       "validating": "確認中…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "ゲートウェイのダッシュボードでアクセストークンを管理し、この拡張機能が使うトークンはいつでも失効できます。",
+      "missingBaseUrl": "先にデプロイ先アドレスを入力すると、ゲートウェイのアクセストークン画面を開けます。",
+      "open": "アクセストークン画面を開く",
+      "title": "ゲートウェイのアクセストークン管理"
+    },
+    "description": "セルフホストの OmniRoute ゲートウェイへの接続情報を設定します。",
+    "fields": {
+      "baseUrlDesc": "ブラウザで OmniRoute のダッシュボードを開くときのアドレスを入力します。",
+      "baseUrlLabel": "デプロイ先アドレス",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "ゲートウェイの Settings → Access Tokens で admin スコープのアクセストークンを作成し、ここに貼り付けてください。",
+      "credentialLabel": "アクセストークン",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "アクセストークンを非表示",
+      "showCredential": "アクセストークンを表示"
+    },
+    "title": "OmniRoute 統合設定",
+    "validation": {
+      "description": "現在の設定でサイトに接続して管理できるかを確認します。",
+      "failed": "OmniRoute の設定検証に失敗しました：{{error}}",
+      "insufficientScope": "トークンのスコープが不足しています：現在は {{have}}、必要は {{need}} です。ゲートウェイの Settings → Access Tokens で admin スコープのトークンを作り直してください。",
+      "invalidCredential": "アクセストークンが無効か、有効期限が切れています：{{error}}",
+      "missingFields": "デプロイ先アドレスとアクセストークンを入力してください",
+      "success": "接続に成功しました",
+      "title": "接続を検証",
+      "unknownScope": "不明",
+      "validate": "接続を検証",
+      "validating": "検証中…"
     }
   },
   "permissions": {

@@ -23,6 +23,10 @@ import {
   OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/octopus"
+import {
+  OMNIROUTE_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  OMNIROUTE_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/omniroute"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -178,7 +182,8 @@ export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 // GitHub stars snapshot (2026-09-11), descending; refresh deliberately rather
 // than fetching popularity during UI rendering. Counts from each upstream repo:
 // CLIProxyAPI 51356, new-api 47873, sub2api 41221, axonhub 5203,
-// claude-code-hub 3365, octopus 2619, Veloera 1638, done-hub 805.
+// claude-code-hub 3365, octopus 2619, Veloera 1638, done-hub 805. OmniRoute is
+// listed last: it is self-hosted only and has no comparable public count.
 export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
@@ -188,6 +193,7 @@ export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.OCTOPUS,
   SITE_TYPES.VELOERA,
   SITE_TYPES.DONE_HUB,
+  SITE_TYPES.OMNIROUTE,
 ] as const
 
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
@@ -835,6 +841,32 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       messagesKey: "claudecodehub",
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+    },
+  },
+  {
+    // OmniRoute is a self-hosted TypeScript fork of 9router, but it has diverged
+    // far enough that the two share no usable contract: scoped bearer tokens
+    // (no cookie session), connection-level base-URL overrides, and masked
+    // channel reads all exist only here. Not a CLIProxyAPI alias either — that
+    // integration is `/v0/management` + `X-Management-Key`.
+    siteType: SITE_TYPES.OMNIROUTE,
+    scopes: MANAGED_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/dashboard/providers",
+        tokens: "/dashboard/api-manager",
+      },
+      labelKey: "settings:managedSite.omniroute",
+      getStartedUrl: "https://github.com/diegosouzapw/OmniRoute#-quick-start",
+      messagesKey: "omniroute",
+      tableFieldIds: OMNIROUTE_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: OMNIROUTE_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      settingsTarget: {
+        ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
+        anchor: SETTINGS_ANCHORS.OMNIROUTE,
+      },
     },
   },
 ] as const satisfies readonly AccountSiteDefinition[]

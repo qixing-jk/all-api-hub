@@ -105,6 +105,11 @@ const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
 }
 
 describe("ManagedSiteChannels RowActions", () => {
+  it("shows no action separator for a view-only channel", () => {
+    setup({ capabilities: { canView: true } })
+    expect(screen.getByRole("menuitem", { name: labels.view })).toBeVisible()
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -122,19 +127,35 @@ describe("ManagedSiteChannels RowActions", () => {
     const user = userEvent.setup()
     const props = setup()
 
+    await user.click(screen.getByRole("menuitem", { name: labels.view }))
     await user.click(screen.getByRole("menuitem", { name: labels.edit }))
     await user.click(screen.getByRole("menuitem", { name: labels.filters }))
     await user.click(screen.getByRole("menuitem", { name: labels.openSync }))
     await user.click(screen.getByRole("menuitem", { name: labels.sync }))
     await user.click(screen.getByRole("menuitem", { name: labels.delete }))
 
+    expect(props.onView).toHaveBeenCalledWith("opaque:channel:42")
     expect(props.onEdit).toHaveBeenCalledWith("opaque:channel:42")
     expect(props.onFilters).toHaveBeenCalledWith("opaque:channel:42")
     expect(props.onOpenSync).toHaveBeenCalledWith("opaque:channel:42")
     expect(props.onSync).toHaveBeenCalledWith("opaque:channel:42")
     expect(props.onDelete).toHaveBeenCalledWith("opaque:channel:42")
-    expect(screen.queryByRole("menuitem", { name: labels.view })).toBeNull()
+    // Migration only exists while the workspace is in migration mode.
     expect(screen.queryByRole("menuitem", { name: labels.migrate })).toBeNull()
+  })
+
+  it("keeps the detail view reachable outside migration mode", () => {
+    setup()
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.view }),
+    ).toBeInTheDocument()
+  })
+
+  it("hides the detail view when the row cannot be read", () => {
+    setup({ capabilities: { canEdit: true, canDelete: true } })
+
+    expect(screen.queryByRole("menuitem", { name: labels.view })).toBeNull()
   })
 
   it("hides channel actions that the row does not support", () => {

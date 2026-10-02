@@ -139,8 +139,6 @@ export function createManagedResourceRowMapper({
       ].join(" ")
       return {
         ...identity,
-        displayIdentifier: "",
-        displayIdentifierSort: facts.displayName,
         name: facts.displayName,
         baseURL:
           baseURLFact?.kind === MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text

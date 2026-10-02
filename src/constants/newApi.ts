@@ -147,6 +147,8 @@ export const NEW_API_MANAGED_RESOURCE_FIELD_IDS = {
   Groups: "newApi.groups",
   Priority: "newApi.priority",
   Weight: "newApi.weight",
+  /** `other_info.status_reason` the gateway writes when it disables a channel. */
+  StatusReason: "newApi.statusReason",
   TestModel: "newApi.testModel",
   AutoBan: "newApi.autoBan",
   ModelMapping: "newApi.modelMapping",
@@ -196,4 +198,6 @@ export const NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
   NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
+  // The gateway's own reason for disabling a channel; read-only.
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.StatusReason,
 ] as const

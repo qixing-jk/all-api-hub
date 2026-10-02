@@ -133,6 +133,10 @@
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
     "noChannelsToSync": "同期するチャネルがありません"
   },
+  "omniroute": {
+    "configMissing": "先に設定で OmniRoute のデプロイ先アドレスとアクセストークンを設定してください",
+    "noChannelsToSync": "同期できるチャネルがありません"
+  },
   "openrouter": {
     "bootstrap": {
       "cancelled_before_create": "OpenRouter のキー作成は、作成前にキャンセルされました。",

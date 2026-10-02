@@ -32,6 +32,7 @@ export const SITE_TYPES = {
   SHAREDCHAT: "sharedchat",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
+  OMNIROUTE: "omniroute",
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
   UNKNOWN: "unknown",

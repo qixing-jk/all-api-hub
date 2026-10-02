@@ -86,6 +86,10 @@ import {
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import {
+  DEFAULT_OMNIROUTE_CONFIG,
+  type OmniRouteConfig,
+} from "~/types/omnirouteConfig"
+import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   normalizeSiteAnnouncementPreferences,
   type SiteAnnouncementPreferences,
@@ -296,6 +300,8 @@ interface UserPreferencesContextType {
   claudeCodeHubAdminToken: string
   sub2ApiManagedSiteBaseUrl: string
   sub2ApiManagedSiteAdminToken: string
+  omniRouteBaseUrl: string
+  omniRouteToken: string
   managedSiteType: ManagedSiteType
   cliProxyApiBaseUrl: string
   cliProxyApiManagementKey: string
@@ -442,6 +448,18 @@ interface UserPreferencesContextType {
     updates: Partial<Sub2ApiManagedSiteConfig>,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
+  updateOmniRouteBaseUrl: (
+    url: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateOmniRouteToken: (
+    token: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateOmniRouteConfig: (
+    updates: Partial<OmniRouteConfig>,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
   updateManagedSiteType: (siteType: ManagedSiteType) => PreferenceWritePromise
   updateCliProxyApiBaseUrl: (
     url: string,
@@ -514,6 +532,7 @@ interface UserPreferencesContextType {
   resetAxonHubConfig: () => PreferenceWritePromise
   resetClaudeCodeHubConfig: () => PreferenceWritePromise
   resetSub2ApiManagedSiteConfig: () => PreferenceWritePromise
+  resetOmniRouteConfig: () => PreferenceWritePromise
   resetNewApiModelSyncConfig: () => PreferenceWritePromise
   resetCliProxyApiConfig: () => PreferenceWritePromise
   resetClaudeCodeRouterConfig: () => PreferenceWritePromise
@@ -1307,6 +1326,26 @@ export const UserPreferencesProvider = ({
     [persistPreferenceUpdates],
   )
 
+  const updateOmniRouteBaseUrl = useCallback(
+    async (baseUrl: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ omniroute: { baseUrl } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateOmniRouteToken = useCallback(
+    async (token: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ omniroute: { token } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateOmniRouteConfig = useCallback(
+    async (
+      updates: Partial<OmniRouteConfig>,
+      options?: PreferenceSaveOptions,
+    ) => persistPreferenceUpdates({ omniroute: updates }, options),
+    [persistPreferenceUpdates],
+  )
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const result = await userPreferences.updateManagedSiteType(siteType)
@@ -1800,6 +1839,16 @@ export const UserPreferencesProvider = ({
     return result
   }, [reloadPreferencesAndTrackSnapshots])
 
+  const resetOmniRouteConfig = useCallback(async () => {
+    const result = await userPreferences.resetOmniRouteConfig()
+    if (result.ok) {
+      await reloadPreferencesAndTrackSnapshots({
+        omniroute: DEFAULT_OMNIROUTE_CONFIG,
+      })
+    }
+    return result
+  }, [reloadPreferencesAndTrackSnapshots])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const result = await userPreferences.resetNewApiModelSyncConfig()
     if (
@@ -2019,6 +2068,10 @@ export const UserPreferencesProvider = ({
     sub2ApiManagedSiteAdminToken:
       preferences?.sub2apiManagedSite?.adminToken ||
       DEFAULT_SUB2API_MANAGED_SITE_CONFIG.adminToken,
+    omniRouteBaseUrl:
+      preferences?.omniroute?.baseUrl || DEFAULT_OMNIROUTE_CONFIG.baseUrl,
+    omniRouteToken:
+      preferences?.omniroute?.token || DEFAULT_OMNIROUTE_CONFIG.token,
     managedSiteType: preferences?.managedSiteType || SITE_TYPES.NEW_API,
     cliProxyApiBaseUrl: preferences?.cliProxyApi?.baseUrl || "",
     cliProxyApiManagementKey: preferences?.cliProxyApi?.adminToken || "",
@@ -2084,6 +2137,9 @@ export const UserPreferencesProvider = ({
     updateSub2ApiManagedSiteBaseUrl,
     updateSub2ApiManagedSiteAdminToken,
     updateSub2ApiManagedSiteConfig,
+    updateOmniRouteBaseUrl,
+    updateOmniRouteToken,
+    updateOmniRouteConfig,
     updateManagedSiteType,
     updateCliProxyApiBaseUrl,
     updateCliProxyApiManagementKey,
@@ -2115,6 +2171,7 @@ export const UserPreferencesProvider = ({
     resetAxonHubConfig,
     resetClaudeCodeHubConfig,
     resetSub2ApiManagedSiteConfig,
+    resetOmniRouteConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyApiConfig,
     resetClaudeCodeRouterConfig,

@@ -175,6 +175,9 @@
         "help": "AxonHub cập nhật các kênh đang bật từ API của nhà cung cấp theo tần suất được cấu hình trong phần cài đặt hệ thống AxonHub.",
         "label": "Tự động đồng bộ các mô hình được hỗ trợ"
       },
+      "channelStatusReason": {
+        "label": "Lý do vô hiệu hóa"
+      },
       "concurrency": {
         "help": "Số yêu cầu đồng thời tối đa được phép cho tài khoản này.",
         "label": "Số yêu cầu đồng thời"
@@ -189,10 +192,37 @@
         "label": "Tiền tố mô hình bổ sung",
         "placeholder": "Ví dụ: deepseek"
       },
+      "manualModels": {
+        "label": "Model thủ công"
+      },
       "notes": {
         "help": "Ghi chú tùy chọn về tài khoản thượng nguồn này.",
         "label": "Ghi chú",
         "placeholder": "Thêm ghi chú về tài khoản này..."
+      },
+      "omnirouteBaseUrl": {
+        "help": "Để trống để giữ endpoint mặc định của provider đã chọn; khi điền, gateway sẽ gửi yêu cầu của kênh này tới địa chỉ đó. Không thể xóa địa chỉ đã lưu, hãy nhập địa chỉ mới thay vì xóa."
+      },
+      "omnirouteDefaultModel": {
+        "help": "Dùng khi yêu cầu không nêu model. Kênh không lưu danh sách model: model đến từ danh mục provider và alias của gateway.",
+        "label": "Model mặc định"
+      },
+      "omnirouteLastError": {
+        "label": "Lỗi gần nhất"
+      },
+      "omniroutePrefix": {
+        "help": "Điền vào sẽ tạo một provider node trên gateway và định địa chỉ kênh theo dạng prefix/model; để trống thì dùng provider tích hợp. Có prefix thì bắt buộc phải có địa chỉ.",
+        "label": "Tiền tố model riêng"
+      },
+      "omniroutePriority": {
+        "help": "Gateway chọn kênh theo thứ tự tăng dần, nên số nhỏ hơn được dùng trước. Kết nối mới tạo sẽ được gateway xếp cuối.",
+        "label": "Độ ưu tiên"
+      },
+      "omnirouteProvider": {
+        "help": "Mã provider tích hợp của gateway. Một relay riêng có thể giữ openai và ghi đè địa chỉ. Dùng nút tải để đọc các provider mà gateway này thực sự phục vụ."
+      },
+      "omnirouteTestStatus": {
+        "label": "Kiểm tra kết nối"
       },
       "orderingWeight": {
         "help": "Giá trị cao hơn được ưu tiên khi AxonHub chọn kênh; các giá trị bằng nhau có cùng mức ưu tiên.",
@@ -261,6 +291,12 @@
         "unsupported": "Loại kênh không được hỗ trợ",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "Thất bại",
+        "ok": "Bình thường",
+        "pending": "Chưa kiểm tra",
+        "unsupported": "Không kiểm tra được"
       },
       "status": {
         "archived": "Đã lưu trữ",

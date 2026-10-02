@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "Ordenados por um retrato da contagem de estrelas do GitHub.",
     "siteTypeDesc": "Escolha a plataforma usada para gerenciamento de canais e sincronização de modelos",
     "siteTypeLabel": "Tipo de gateway",
@@ -414,6 +415,38 @@
       "success": "Conexão bem-sucedida",
       "title": "Verificar conexão",
       "validate": "Verificar conexão",
+      "validating": "Verificando…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "Gerencie os tokens de acesso no painel do gateway e revogue quando quiser o que esta extensão usa.",
+      "missingBaseUrl": "Informe primeiro o endereço da implantação para abrir a página de tokens do gateway.",
+      "open": "Abrir a página de tokens",
+      "title": "Gerenciar os tokens do gateway"
+    },
+    "description": "Configure a conexão com o seu gateway OmniRoute auto-hospedado.",
+    "fields": {
+      "baseUrlDesc": "O endereço que você usa para abrir o painel do OmniRoute no navegador.",
+      "baseUrlLabel": "Endereço da implantação",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "Gere um token de acesso com escopo admin em Settings → Access Tokens do gateway e cole-o aqui.",
+      "credentialLabel": "Token de acesso",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ocultar token de acesso",
+      "showCredential": "Mostrar token de acesso"
+    },
+    "title": "Configurações de integração do OmniRoute",
+    "validation": {
+      "description": "Verifica se a configuração atual consegue conectar e gerenciar o site.",
+      "failed": "Falha na verificação da configuração do OmniRoute: {{error}}",
+      "insufficientScope": "O escopo do token é insuficiente: tem {{have}} e precisa de {{need}}. Gere um novo token com escopo admin em Settings → Access Tokens do gateway.",
+      "invalidCredential": "O token de acesso é inválido ou expirou: {{error}}",
+      "missingFields": "Insira a URL da implantação e o token de acesso",
+      "success": "Conectado",
+      "title": "Verificar a conexão",
+      "unknownScope": "desconhecido",
+      "validate": "Verificar a conexão",
       "validating": "Verificando…"
     }
   },

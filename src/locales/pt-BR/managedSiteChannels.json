@@ -175,6 +175,9 @@
         "help": "O AxonHub atualiza os canais ativos pela API do provedor na frequência configurada nos ajustes do sistema do AxonHub.",
         "label": "Sincronizar automaticamente os modelos compatíveis"
       },
+      "channelStatusReason": {
+        "label": "Motivo da desativação"
+      },
       "concurrency": {
         "help": "Número máximo de solicitações simultâneas permitido para esta conta.",
         "label": "Concorrência"
@@ -189,10 +192,37 @@
         "label": "Prefixo adicional de modelo",
         "placeholder": "ex.: deepseek"
       },
+      "manualModels": {
+        "label": "Modelos manuais"
+      },
       "notes": {
         "help": "Observações opcionais sobre esta conta upstream.",
         "label": "Observações",
         "placeholder": "Adicionar observações sobre esta conta..."
+      },
+      "omnirouteBaseUrl": {
+        "help": "Deixe vazio para manter o endpoint padrão do provider escolhido; o gateway envia as requisições deste canal para o endereço informado. Um endereço salvo não pode ser removido: informe um novo em vez de apagá-lo."
+      },
+      "omnirouteDefaultModel": {
+        "help": "Usado quando a requisição não indica um modelo. O canal não guarda uma lista de modelos: os modelos vêm do catálogo de providers e dos aliases do gateway.",
+        "label": "Modelo padrão"
+      },
+      "omnirouteLastError": {
+        "label": "Último erro"
+      },
+      "omniroutePrefix": {
+        "help": "Preencher cria um provider node no gateway e endereça o canal como prefixo/modelo; deixar vazio usa o provider integrado. Um prefixo exige um endereço.",
+        "label": "Prefixo de modelo próprio"
+      },
+      "omniroutePriority": {
+        "help": "O gateway escolhe os canais em ordem crescente, então um número menor é usado primeiro. O gateway coloca uma conexão recém-criada no fim.",
+        "label": "Prioridade"
+      },
+      "omnirouteProvider": {
+        "help": "O identificador do provider integrado do gateway. Um relay próprio pode manter openai e sobrescrever o endereço. Use o botão de carregar para ler os providers que este gateway realmente atende."
+      },
+      "omnirouteTestStatus": {
+        "label": "Teste de conexão"
       },
       "orderingWeight": {
         "help": "Valores mais altos têm preferência quando o AxonHub seleciona um canal; valores iguais têm a mesma prioridade de ordenação.",
@@ -261,6 +291,12 @@
         "unsupported": "Tipo de canal não compatível",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "Falhou",
+        "ok": "OK",
+        "pending": "Não testado",
+        "unsupported": "Não testável"
       },
       "status": {
         "archived": "Arquivado",

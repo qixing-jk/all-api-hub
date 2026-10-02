@@ -5,6 +5,7 @@ import { cliProxyApiManagedSiteMigrationCapability } from "~/services/apiAdapter
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
+import { omniRouteManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/omnirouteMigration"
 import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
@@ -44,6 +45,10 @@ const registrations: readonly {
   {
     siteType: SITE_TYPES.CLAUDE_CODE_HUB,
     capability: claudeCodeHubManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.OMNIROUTE,
+    capability: omniRouteManagedSiteMigrationCapability,
   },
 ]
 

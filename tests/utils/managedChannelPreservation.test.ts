@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   assertManagedChannelPreserved,
   extractManagedChannelSnapshot,
+  isManagedChannelDetailRead,
 } from "~~/e2e/utils/realSite/managedChannelPreservation"
 
 describe("managed channel preservation evidence", () => {
@@ -48,9 +49,15 @@ describe("managed channel preservation evidence", () => {
       SITE_TYPES.CLAUDE_CODE_HUB,
       { id: 1, name: "fixture", future: { keep: false } },
     ],
+    [
+      SITE_TYPES.OMNIROUTE,
+      {
+        connection: { id: "conn-1", name: "fixture", future: { keep: false } },
+      },
+    ],
   ] as const)("retains raw fields for %s", (site, body) => {
     expect(extractManagedChannelSnapshot(site, body, "fixture")).toEqual({
-      id: 1,
+      id: site === SITE_TYPES.OMNIROUTE ? "conn-1" : 1,
       name: "fixture",
       future: { keep: false },
     })
@@ -93,6 +100,26 @@ describe("managed channel preservation evidence", () => {
     ).not.toThrow()
   })
 
+  it("treats OmniRoute's camelCase update timestamp as the rename artifact", () => {
+    expect(() =>
+      assertManagedChannelPreserved(
+        SITE_TYPES.OMNIROUTE,
+        {
+          id: "conn-1",
+          name: "before",
+          updatedAt: "before",
+          providerSpecificData: { baseUrl: "https://relay.example.invalid" },
+        },
+        {
+          id: "conn-1",
+          name: "after",
+          updatedAt: "after",
+          providerSpecificData: { baseUrl: "https://relay.example.invalid" },
+        },
+      ),
+    ).not.toThrow()
+  })
+
   it("detects dropped nested fields without exposing credentials", () => {
     const before = {
       id: 1,
@@ -122,5 +149,62 @@ describe("managed channel preservation evidence", () => {
         { id: 2, keys: [2, 1] },
       ),
     ).toThrow("Unrelated channel fields changed: future, id, keys")
+  })
+})
+
+describe("managed channel detail reads", () => {
+  it("recognizes the OmniRoute connection detail read, not its inventory", () => {
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.OMNIROUTE,
+        "GET",
+        "/api/providers/3f1c8e02-9d4a-4c77-b0a1-5f2e7c9d0b13",
+      ),
+    ).toBe(true)
+    expect(
+      isManagedChannelDetailRead(SITE_TYPES.OMNIROUTE, "GET", "/api/providers"),
+    ).toBe(false)
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.OMNIROUTE,
+        "POST",
+        "/api/providers",
+      ),
+    ).toBe(false)
+  })
+
+  it("keeps every other managed site on its own detail path", () => {
+    expect(
+      isManagedChannelDetailRead(SITE_TYPES.NEW_API, "GET", "/api/channel/1"),
+    ).toBe(true)
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.CLAUDE_CODE_HUB,
+        "GET",
+        "/api/v1/providers/1",
+      ),
+    ).toBe(true)
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.SUB2API,
+        "GET",
+        "/api/v1/admin/accounts/1",
+      ),
+    ).toBe(true)
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.OCTOPUS,
+        "GET",
+        "/api/v1/channel/detail/1",
+      ),
+    ).toBe(true)
+    // The OmniRoute connection path belongs to no other site's inventory.
+    expect(
+      isManagedChannelDetailRead(
+        SITE_TYPES.NEW_API,
+        "GET",
+        "/api/providers/3f1c8e02-9d4a-4c77-b0a1-5f2e7c9d0b13",
+      ),
+    ).toBe(false)
   })
 })

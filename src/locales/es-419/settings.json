@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "Ordenados según una captura del número de estrellas de GitHub.",
     "siteTypeDesc": "Elige la plataforma usada para gestión de canales y sincronización de modelos",
     "siteTypeLabel": "Tipo de gateway",
@@ -414,6 +415,38 @@
       "success": "Conexión exitosa",
       "title": "Verificar conexión",
       "validate": "Verificar conexión",
+      "validating": "Verificando…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "Gestiona los tokens de acceso en el panel del gateway y revoca cuando quieras el que usa esta extensión.",
+      "missingBaseUrl": "Primero ingresa la dirección de despliegue para abrir la página de tokens del gateway.",
+      "open": "Abrir la página de tokens",
+      "title": "Gestionar los tokens del gateway"
+    },
+    "description": "Configura la conexión con tu gateway OmniRoute autoalojado.",
+    "fields": {
+      "baseUrlDesc": "La dirección con la que abres el panel de OmniRoute en el navegador.",
+      "baseUrlLabel": "Dirección de despliegue",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "Genera un token de acceso con alcance admin en Settings → Access Tokens de la puerta de enlace y pégalo aquí.",
+      "credentialLabel": "Token de acceso",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Ocultar token de acceso",
+      "showCredential": "Mostrar token de acceso"
+    },
+    "title": "Ajustes de integración de OmniRoute",
+    "validation": {
+      "description": "Comprueba si la configuración actual puede conectar y administrar el sitio.",
+      "failed": "Falló la verificación de la configuración de OmniRoute: {{error}}",
+      "insufficientScope": "El alcance del token no basta: tiene {{have}} y se necesita {{need}}. Crea un token nuevo con alcance admin en Settings → Access Tokens del gateway.",
+      "invalidCredential": "El token de acceso es inválido o ha expirado: {{error}}",
+      "missingFields": "Ingresa la URL de la implementación y el token de acceso",
+      "success": "Conexión correcta",
+      "title": "Verificar la conexión",
+      "unknownScope": "desconocido",
+      "validate": "Verificar la conexión",
       "validating": "Verificando…"
     }
   },

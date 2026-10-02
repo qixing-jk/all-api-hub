@@ -175,6 +175,9 @@
         "help": "AxonHub aktualisiert aktivierte Kanäle von der Anbieter-API mit der in den AxonHub-Systemeinstellungen konfigurierten Häufigkeit.",
         "label": "Unterstützte Modelle automatisch synchronisieren"
       },
+      "channelStatusReason": {
+        "label": "Grund der Deaktivierung"
+      },
       "concurrency": {
         "help": "Maximale Anzahl gleichzeitiger Anfragen für dieses Konto.",
         "label": "Parallelität"
@@ -189,10 +192,37 @@
         "label": "Zusätzliches Modellpräfix",
         "placeholder": "z. B. deepseek"
       },
+      "manualModels": {
+        "label": "Manuelle Modelle"
+      },
       "notes": {
         "help": "Optionale Hinweise zu diesem Upstream-Konto.",
         "label": "Notizen",
         "placeholder": "Hinweise zu diesem Konto hinzufügen..."
+      },
+      "omnirouteBaseUrl": {
+        "help": "Leer lassen, um den Standardendpunkt des gewählten Providers zu behalten; das Gateway sendet die Anfragen dieses Kanals dann an die eingegebene Adresse. Eine gespeicherte Adresse lässt sich nicht entfernen – trage stattdessen eine neue ein."
+      },
+      "omnirouteDefaultModel": {
+        "help": "Wird verwendet, wenn eine Anfrage kein Modell nennt. Ein Kanal speichert keine Modellliste: Modelle stammen aus dem Provider-Katalog und den Aliasen des Gateways.",
+        "label": "Standardmodell"
+      },
+      "omnirouteLastError": {
+        "label": "Letzter Fehler"
+      },
+      "omniroutePrefix": {
+        "help": "Ein Eintrag legt einen Provider-Node im Gateway an und adressiert den Kanal als prefix/model; leer bleibt der eingebaute Provider. Ein Prefix erfordert eine Adresse.",
+        "label": "Eigener Modell-Prefix"
+      },
+      "omniroutePriority": {
+        "help": "Das Gateway wählt die Kanäle in aufsteigender Reihenfolge, eine kleinere Zahl wird also zuerst verwendet. Eine neu angelegte Verbindung reiht das Gateway zuletzt ein.",
+        "label": "Priorität"
+      },
+      "omnirouteProvider": {
+        "help": "Die ID des eingebauten Providers. Ein eigener Relay kann openai behalten und die Adresse überschreiben. Über die Schaltfläche zum Laden liest du die Provider, die dieses Gateway tatsächlich bedient."
+      },
+      "omnirouteTestStatus": {
+        "label": "Verbindungstest"
       },
       "orderingWeight": {
         "help": "Höhere Werte werden bevorzugt, wenn AxonHub einen Kanal auswählt; Gleiche Werte haben die gleiche Sortierpriorität.",
@@ -261,6 +291,12 @@
         "unsupported": "Nicht unterstützter Kanaltyp",
         "volcengine": "Volcengine",
         "xai": "xAI"
+      },
+      "omnirouteTestStatus": {
+        "failed": "Fehlgeschlagen",
+        "ok": "OK",
+        "pending": "Nicht getestet",
+        "unsupported": "Nicht testbar"
       },
       "status": {
         "archived": "Archiviert",

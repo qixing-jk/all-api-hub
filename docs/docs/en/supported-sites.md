@@ -152,6 +152,7 @@ If you are also building your own backend system, All API Hub supports importing
 | AxonHub | Open-source AI Gateway, callable via any SDK for 100+ LLMs, with built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 | Claude Code Hub | A multi-vendor AI API proxy and operating platform for teams, unifying access to Claude, OpenAI Compatible, Codex, and Gemini, with support for elastic scheduling, monitoring, and price management. | [GitHub](https://github.com/ding113/claude-code-hub) |
 | Octopus | Personal LLM API aggregation service. | [GitHub](https://github.com/bestruirui/octopus) |
+| [OmniRoute](./omniroute-integration.md) | Self-hosted AI gateway with a large built-in provider catalogue, scoped access tokens, and connection-level upstream address overrides. | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | DoneHub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 

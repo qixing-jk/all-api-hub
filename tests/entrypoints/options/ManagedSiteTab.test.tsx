@@ -138,6 +138,26 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("ManagedSiteTab", () => {
+  it("renders OmniRoute settings and its unsupported model-sync message", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.OMNIROUTE,
+        omniRouteBaseUrl: "https://gateway.invalid",
+        omniRouteToken: "oma_test",
+        preferences: {
+          lastUpdated: 1,
+          managedSiteType: SITE_TYPES.OMNIROUTE,
+          omniroute: { baseUrl: "https://gateway.invalid", token: "oma_test" },
+        },
+      }),
+    )
+    render(<ManagedSiteTab />)
+    expect(await screen.findByText("settings:omniroute.title")).toBeVisible()
+    expect(
+      screen.queryByTestId("managed-site-model-sync-settings"),
+    ).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     mockedGetAllAccounts.mockReset()
     mockedGetAllAccounts.mockResolvedValue([])

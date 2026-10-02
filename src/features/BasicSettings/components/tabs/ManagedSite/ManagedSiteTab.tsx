@@ -31,6 +31,7 @@ import ManagedSiteSelector from "./ManagedSiteSelector"
 import ModelRedirectSettings from "./ModelRedirectSettings"
 import NewApiSettings from "./NewApiSettings"
 import OctopusSettings from "./OctopusSettings"
+import OmniRouteSettings from "./OmniRouteSettings"
 import Sub2ApiSettings from "./Sub2ApiSettings"
 import VeloeraSettings from "./VeloeraSettings"
 
@@ -105,6 +106,8 @@ export default function ManagedSiteTab() {
         return <ClaudeCodeHubSettings />
       case SITE_TYPES.SUB2API:
         return <Sub2ApiSettings />
+      case SITE_TYPES.OMNIROUTE:
+        return <OmniRouteSettings />
       case SITE_TYPES.NEW_API:
       default:
         return <NewApiSettings />

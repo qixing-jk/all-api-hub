@@ -231,6 +231,10 @@ function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
     return [config.config.password]
   }
 
+  if (config.siteType === SITE_TYPES.OMNIROUTE) {
+    return [config.config.token]
+  }
+
   return [config.config.adminToken]
 }
 

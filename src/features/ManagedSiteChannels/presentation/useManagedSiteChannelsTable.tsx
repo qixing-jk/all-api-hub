@@ -58,10 +58,6 @@ const getAccessorValue = (
 ): string | number | ManagedChannelsCell | undefined => {
   if (!accessor) return undefined
   switch (accessor.kind) {
-    case MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifier:
-      return row.displayIdentifier
-    case MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifierSort:
-      return row.displayIdentifierSort
     case MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Name:
       return row.name
     case MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell:
@@ -285,15 +281,6 @@ export function useManagedSiteChannelsTable({
             getAccessorValue(row, column.sort?.accessor ?? column.accessor),
           header: column.label,
           cell: ({ row }: { row: Row<ManagedChannelsRowViewModel> }) => {
-            if (
-              column.renderer === MANAGED_CHANNELS_COLUMN_RENDERERS.Identifier
-            ) {
-              return (
-                <span className="font-mono text-sm">
-                  {row.original.displayIdentifier || "—"}
-                </span>
-              )
-            }
             if (column.renderer === MANAGED_CHANNELS_COLUMN_RENDERERS.Channel) {
               return (
                 <div>

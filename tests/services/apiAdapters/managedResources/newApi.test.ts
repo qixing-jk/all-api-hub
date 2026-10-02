@@ -1183,6 +1183,44 @@ describe("New API native managed resource", () => {
     expect(JSON.stringify(page.items[0])).not.toContain("saved-secret")
   })
 
+  it("projects the reason the gateway recorded when it disabled a channel", async () => {
+    const disabled = buildManagedSiteChannel({
+      id: 21,
+      name: "Auto-disabled channel",
+      status: CHANNEL_STATUS.AutoDisabled,
+      other_info: JSON.stringify({
+        status_reason: "All keys are disabled",
+        status_time: 1_759_000_000,
+      }),
+    })
+    const unreadable = buildManagedSiteChannel({
+      id: 22,
+      name: "Older gateway channel",
+      other_info: "not-json",
+    })
+    mocks.list.mockResolvedValue({ items: [disabled, unreadable], total: 2 })
+
+    const workspace = await newApiManagedResourceRegistration.open()
+    const page = await workspace.list()
+    const [withReason, withoutReason] = page.items
+
+    expect(withReason!.fields).toEqual(
+      expect.arrayContaining([
+        {
+          fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.StatusReason,
+          kind: "text",
+          value: "All keys are disabled",
+        },
+      ]),
+    )
+    expect(
+      withoutReason!.fields.some(
+        (field) =>
+          field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.StatusReason,
+      ),
+    ).toBe(false)
+  })
+
   it("only offers create types representable by the common native editor", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openCreateEditor()

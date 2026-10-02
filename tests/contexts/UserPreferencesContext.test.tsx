@@ -173,6 +173,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetAxonHubConfig: vi.fn(),
       resetClaudeCodeHubConfig: vi.fn(),
       resetSub2ApiManagedSiteConfig: vi.fn(),
+      resetOmniRouteConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyApiConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -269,6 +270,35 @@ const renderProvider = async (
 }
 
 describe("UserPreferencesContext", () => {
+  it("persists an OmniRoute token and reloads the reset configuration only after successful writes", async () => {
+    const context = await renderProvider()
+    await act(async () => {
+      expect((await context.updateOmniRouteToken("oma_test")).ok).toBe(true)
+    })
+    expect(
+      preferencePersistence.getPersistedPreferences().omniroute?.token,
+    ).toBe("oma_test")
+    mockedUserPreferences.resetOmniRouteConfig.mockImplementation(async () => {
+      const preferences = deepOverride(
+        preferencePersistence.getPersistedPreferences(),
+        { omniroute: DEFAULT_PREFERENCES.omniroute },
+      )
+      preferencePersistence.setPersistedPreferences(preferences)
+      return { ok: true, preferences }
+    })
+    await act(async () => {
+      expect((await context.resetOmniRouteConfig()).ok).toBe(true)
+    })
+    expect(latestContext?.omniRouteToken).toBe("")
+    mockedUserPreferences.resetOmniRouteConfig.mockResolvedValue({
+      ok: false,
+      reason: { type: "storage-error", error: new Error("offline") },
+    })
+    await act(async () => {
+      expect((await context.resetOmniRouteConfig()).ok).toBe(false)
+    })
+    expect(latestContext?.omniRouteToken).toBe("")
+  })
   beforeEach(() => {
     latestContext = null
     vi.clearAllMocks()

@@ -328,6 +328,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "omniroute": "OmniRoute",
     "popularityHint": "Ordered by a snapshot of GitHub star counts.",
     "siteTypeDesc": "Choose the platform used for channel management and model sync",
     "siteTypeLabel": "Gateway type",
@@ -413,6 +414,38 @@
       "missingFields": "Please fill in all required fields",
       "success": "Connection successful",
       "title": "Verify connection",
+      "validate": "Verify connection",
+      "validating": "Verifying…"
+    }
+  },
+  "omniroute": {
+    "accessTokens": {
+      "description": "Manage access tokens on the gateway dashboard and revoke the one this extension uses at any time.",
+      "missingBaseUrl": "Enter the deployment address first to open the gateway's access-token page.",
+      "open": "Open access-token page",
+      "title": "Manage gateway access tokens"
+    },
+    "description": "Configure the connection to your self-hosted OmniRoute gateway.",
+    "fields": {
+      "baseUrlDesc": "The address you use to open the OmniRoute dashboard in your browser.",
+      "baseUrlLabel": "Deployment address",
+      "baseUrlPlaceholder": "http://localhost:20128",
+      "credentialDesc": "Generate an admin-scoped access token in the gateway's Settings → Access Tokens and paste it here.",
+      "credentialLabel": "Access token",
+      "credentialPlaceholder": "oma_…",
+      "hideCredential": "Hide access token",
+      "showCredential": "Show access token"
+    },
+    "title": "OmniRoute Integration Settings",
+    "validation": {
+      "description": "Check whether the current configuration can connect to and manage the site.",
+      "failed": "OmniRoute configuration check failed: {{error}}",
+      "insufficientScope": "The token scope is insufficient: it has {{have}} but needs {{need}}. Create a new token with the admin scope under the gateway's Settings → Access Tokens.",
+      "invalidCredential": "The access token is invalid or expired: {{error}}",
+      "missingFields": "Enter the deployment URL and access token",
+      "success": "Connected",
+      "title": "Verify connection",
+      "unknownScope": "unknown",
       "validate": "Verify connection",
       "validating": "Verifying…"
     }

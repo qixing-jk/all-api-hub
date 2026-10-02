@@ -1,6 +1,79 @@
 /* global chrome */
 import { randomUUID } from "node:crypto"
 
+/**
+ * Read one raw `chrome.storage.local` value from inside the service worker.
+ */
+async function readStoredValue(serviceWorker, storageKey) {
+  return await serviceWorker.evaluate((key) => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(key, (result) => {
+        resolve(result[key])
+      })
+    })
+  }, storageKey)
+}
+
+/**
+ * Write one raw `chrome.storage.local` value from inside the service worker.
+ * Passing `undefined` removes the key, matching a never-written value.
+ */
+async function writeStoredValue(serviceWorker, storageKey, value) {
+  await serviceWorker.evaluate(
+    ({ key, nextValue }) => {
+      return new Promise((resolve) => {
+        if (nextValue === undefined) {
+          chrome.storage.local.remove(key, () => resolve(true))
+          return
+        }
+        chrome.storage.local.set({ [key]: nextValue }, () => resolve(true))
+      })
+    },
+    { key: storageKey, nextValue: value },
+  )
+}
+
+/**
+ * Execute an async test function with a patched JSON storage value, restoring
+ * the exact original bytes afterwards.
+ *
+ * The dev browser profile is shared with the operator's daily browsing and with
+ * every other worktree, so a live run must not leave seeded preferences behind.
+ * Live suites seed before opening the extension page, because the options app
+ * reads preferences on load.
+ */
+export async function withStoredValue(
+  serviceWorker,
+  storageKey,
+  patch,
+  testFn,
+) {
+  const original = await readStoredValue(serviceWorker, storageKey)
+
+  let current = {}
+  if (typeof original === "string") {
+    try {
+      current = JSON.parse(original) || {}
+    } catch {
+      current = {}
+    }
+  } else if (original && typeof original === "object") {
+    current = original
+  }
+
+  await writeStoredValue(
+    serviceWorker,
+    storageKey,
+    JSON.stringify({ ...current, ...patch }),
+  )
+
+  try {
+    return await testFn()
+  } finally {
+    await writeStoredValue(serviceWorker, storageKey, original)
+  }
+}
+
 /** Read configured accounts without replacing unreadable storage. */
 export async function getAccounts(serviceWorker) {
   return serviceWorker.evaluate(async () => {

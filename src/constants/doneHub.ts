@@ -122,6 +122,8 @@ export const DONE_HUB_MANAGED_RESOURCE_FIELD_IDS = {
   Groups: "doneHub.groups",
   Priority: "doneHub.priority",
   Weight: "doneHub.weight",
+  /** `other_info.status_reason` the gateway writes when it disables a channel. */
+  StatusReason: "doneHub.statusReason",
   CompatibleResponse: "doneHub.compatibleResponse",
   ResponsesPath: "doneHub.responsesPath",
   ModelMapping: "doneHub.modelMapping",
@@ -180,6 +182,8 @@ export const DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Groups,
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Priority,
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Weight,
+  // The gateway's own reason for disabling a channel; read-only.
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.StatusReason,
 ] as const
 /** Native DoneHub status codes: https://github.com/deanxv/done-hub/blob/1c09e7d75dc170a53d47af1e88c498816a5b85fb/common/constants.go */
 export const DoneHubChannelStatus = {

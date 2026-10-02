@@ -47,15 +47,19 @@ describe("native managed-resource registration conformance", () => {
       const semantics = getManagedResourcePresentationSemantics(siteType)
 
       expect(registration, siteType).not.toBeNull()
+      // A value presentation or a status/base-URL role can target any field the
+      // workspace displays — a table column or a declared detail row.
+      const displayFieldIds = [
+        ...policy.tableFieldIds,
+        ...policy.detailFieldIds,
+      ]
       for (const fieldId of [
         semantics.baseUrlFieldId,
         semantics.statusFieldId,
         ...Object.keys(semantics.fieldValuePresentations ?? {}),
       ]) {
         if (fieldId) {
-          expect(policy.tableFieldIds, `${siteType}:${fieldId}`).toContain(
-            fieldId,
-          )
+          expect(displayFieldIds, `${siteType}:${fieldId}`).toContain(fieldId)
         }
       }
       expect(
