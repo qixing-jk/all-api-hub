@@ -597,6 +597,65 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("preserves the complete Kimi browser session during current-tab auto-detect", async () => {
+    mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.KIMI_GLOBAL)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 201,
+        active: true,
+        url: "https://platform.kimi.ai/dashboard",
+      },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      siteTypeHint: SITE_TYPES.KIMI_GLOBAL,
+      userId: "42",
+      user: { username: "tab-user" },
+      accessToken: "jwt-from-tab",
+      kimiOpenPlatformAuth: {
+        refreshToken: "refresh-from-tab",
+        organizationId: "org",
+        tokenExpiresAt: 123,
+      },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 201,
+        origin: "https://platform.kimi.ai",
+      },
+    })
+
+    const result = await autoDetectSmart("https://platform.kimi.ai/console")
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        userId: "42",
+        user: { username: "tab-user" },
+        siteType: SITE_TYPES.KIMI_GLOBAL,
+        accessToken: "jwt-from-tab",
+        kimiOpenPlatformAuth: {
+          refreshToken: "refresh-from-tab",
+          organizationId: "org",
+          tokenExpiresAt: 123,
+        },
+      },
+    })
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      tabId: 201,
+      baseUrl: "https://platform.kimi.ai/console",
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 201,
+        origin: "https://platform.kimi.ai",
+      },
+      onError: expect.any(Function),
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("enables the modern New API probe only for unknown current-tab sites", async () => {
     mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.UNKNOWN)
     mockGetActiveOrAllTabs.mockResolvedValue([

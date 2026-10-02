@@ -21,6 +21,23 @@ const request = {
 }
 
 describe("native key editor field policies", () => {
+  it.each([SITE_TYPES.KIMI, SITE_TYPES.KIMI_GLOBAL])(
+    "presents only the supported name field for %s",
+    (siteType) => {
+      expect(
+        getNativeKeyResourceEditorPresentation(
+          siteType,
+          "create",
+        ).policy.fields.map((field) => field.fieldId),
+      ).toEqual(["name"])
+      expect(
+        getNativeKeyResourceEditorPresentation(
+          siteType,
+          "edit",
+        ).policy.fields.map((field) => field.fieldId),
+      ).toEqual(["name"])
+    },
+  )
   it.each([
     ["required", "required"],
     ["invalid_value", "invalidValue"],

@@ -149,6 +149,7 @@ describe("kimiOpenPlatformAccountCompletion", () => {
             requestedAuthType: AuthTypeEnum.AccessToken,
             detected: {
               siteType: SITE_TYPES.KIMI,
+              userId: "",
               accessToken: scenario === "missing-token" ? " " : "token",
             },
             context: {},
@@ -169,7 +170,7 @@ describe("kimiOpenPlatformAccountCompletion", () => {
         url: "https://platform.kimi.com",
         requestedAuthType: AuthTypeEnum.AccessToken,
         existingAccessToken: " token ",
-        detected: { siteType: SITE_TYPES.KIMI },
+        detected: { siteType: SITE_TYPES.KIMI, userId: "" },
         context: {},
       },
       helpers,

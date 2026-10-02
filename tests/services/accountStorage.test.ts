@@ -231,21 +231,30 @@ const availabilityReplacementCases =
   buildTodayStatsAvailabilityReplacementCases()
 
 describe("accountStorage core behaviors", () => {
-  it.each([false, true])(
-    "preserves a rotated Kimi pair while saving an unchanged draft (explicit replacement=%s)",
-    async (replace) => {
+  it.each(
+    [false, true].flatMap((replace) =>
+      ["access", "refresh", "organization"].map((change) => ({
+        replace,
+        change,
+      })),
+    ),
+  )(
+    "preserves a changed Kimi session while saving an unchanged draft ($change, replacement=$replace)",
+    async ({ replace, change }) => {
       const account = createAccount({
         site_type: SITE_TYPES.KIMI_GLOBAL,
         site_url: "https://platform.kimi.ai",
         account_info: {
           ...createAccount().account_info,
           id: "user",
-          access_token: "rotated-access",
+          access_token:
+            change === "access" ? "rotated-access" : "loaded-access",
           username: "user",
         },
         kimiOpenPlatformAuth: {
-          refreshToken: "rotated-refresh",
-          organizationId: "org",
+          refreshToken:
+            change === "refresh" ? "rotated-refresh" : "loaded-refresh",
+          organizationId: change === "organization" ? "new-org" : "org",
         },
       })
       seedStorage([account])
@@ -275,10 +284,15 @@ describe("accountStorage core behaviors", () => {
       const latest = await accountStorage.getAccountById(account.id)
       expect(latest?.notes).toBe("edited note")
       expect(latest?.account_info.access_token).toBe(
-        replace ? "replacement-access" : "rotated-access",
+        replace ? "replacement-access" : account.account_info.access_token,
       )
       expect(latest?.kimiOpenPlatformAuth?.refreshToken).toBe(
-        replace ? "replacement-refresh" : "rotated-refresh",
+        replace
+          ? "replacement-refresh"
+          : account.kimiOpenPlatformAuth?.refreshToken,
+      )
+      expect(latest?.kimiOpenPlatformAuth?.organizationId).toBe(
+        replace ? "org" : account.kimiOpenPlatformAuth?.organizationId,
       )
     },
   )
@@ -4284,6 +4298,43 @@ describe("accountStorage core behaviors", () => {
       ).toEqual(expected)
     },
   )
+
+  it("refreshAccount persists the complete rotated Kimi session", async () => {
+    const account = createAccount({
+      id: "kimi-refresh",
+      site_url: "https://platform.kimi.ai",
+      site_type: SITE_TYPES.KIMI_GLOBAL,
+      kimiOpenPlatformAuth: {
+        refreshToken: "old-refresh",
+        organizationId: "org",
+        tokenExpiresAt: 123,
+      },
+    })
+    seedStorage([account])
+    const auth = {
+      refreshToken: "new-refresh",
+      organizationId: "org",
+      tokenExpiresAt: 456,
+    }
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: createCanonicalCheckIn(),
+      },
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+      authUpdate: { accessToken: "new-access", kimiOpenPlatformAuth: auth },
+    })
+    await accountStorage.refreshAccount("kimi-refresh", true)
+    const latest = await accountStorage.getAccountById("kimi-refresh")
+    expect(latest?.account_info.access_token).toBe("new-access")
+    expect(latest?.kimiOpenPlatformAuth).toEqual(auth)
+  })
 
   it("refreshAccount should persist Sub2API refresh-token auth updates", async () => {
     const account = createAccount({

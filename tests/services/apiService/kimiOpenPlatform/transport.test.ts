@@ -71,7 +71,7 @@ describe("kimi console transport", () => {
   })
 
   it("rejects missing saved accounts and persistence without an identity snapshot", async () => {
-    vi.mocked(accountQueries.getAccountById).mockResolvedValue(undefined)
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(null)
     await expect(
       ensureKimiAuthState({
         ...structuredClone(request),
