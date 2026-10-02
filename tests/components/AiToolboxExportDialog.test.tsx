@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AiToolboxExportDialog } from "~/components/AiToolboxExportDialog"
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "~/components/AiToolboxExportDialog.testIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { AI_TOOLBOX_API_FORMATS } from "~/services/integrations/aiToolbox"
@@ -21,7 +22,13 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 /** Keep export fixtures valid while making each test's credential inputs explicit. */
 function createAccountExportSource(
@@ -37,6 +44,33 @@ function createAccountExportSource(
     buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
     { preferCurrentSecret: true },
   )
+}
+
+/**
+ * Source whose Anthropic and OpenAI-compatible inference addresses differ
+ * (Kimi Global), so the Claude export field is Anthropic-shaped while model
+ * discovery must keep searching the OpenAI-compatible route.
+ */
+function createKimiExportSource() {
+  const account = buildDisplaySiteData({
+    id: "kimi-account",
+    name: "Kimi",
+    siteType: SITE_TYPES.KIMI_GLOBAL,
+    baseUrl: "https://platform.kimi.ai",
+  })
+  const key = buildAccountKeyResourceRuntimeKey(account, {
+    ref: {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "organization:test",
+      resourceId: "key:test",
+    },
+    label: "Kimi key",
+    secret: "sk-test",
+  })
+  return createAccountRuntimeKeyExportSource(account, key, {
+    preferCurrentSecret: true,
+  })
 }
 
 /** Source whose secret always resolves through the mocked async account read. */
@@ -747,6 +781,34 @@ describe("AiToolboxExportDialog", () => {
         baseUrl: "https://y.test",
         apiKey: "sk-test",
       })
+    })
+  })
+
+  it("discovers models on the OpenAI-compatible address when the export field shows the Anthropic address", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createKimiExportSource()}
+      />,
+    )
+
+    // The default Claude field carries the Anthropic-shaped address; automatic
+    // discovery must not chase it, or a split-protocol source returns no models.
+    await waitFor(() => {
+      expect(mockFetchModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://api.moonshot.ai",
+        apiKey: "sk-test",
+      })
+    })
+    // Let the 0ms debounced effect run: it must keep the source's OpenAI-compatible
+    // address and never redirect discovery to the Anthropic export field.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(mockFetchModelIds).not.toHaveBeenCalledWith({
+      baseUrl: "https://api.moonshot.ai/anthropic",
+      apiKey: "sk-test",
     })
   })
 

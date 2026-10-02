@@ -171,13 +171,18 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   // protocol root. Keeping one shape here also means switching to Codex — which
   // rewrites the endpoint to the discovered versioned mount — does not refetch
   // the same upstream model list.
+  // Keep automatic discovery on the source OpenAI-compatible address: the Claude
+  // default rewrites the endpoint to the Anthropic address, which a
+  // split-protocol source would reject with no model list. Only a user edit
+  // redirects it.
   const upstreamBaseUrl = useMemo(() => {
-    const normalizedEndpoint = normalizeHttpUrl(endpoint)
+    const discoveryEndpoint = isEndpointCustomized ? endpoint : source.baseUrl
+    const normalizedEndpoint = normalizeHttpUrl(discoveryEndpoint)
     return normalizedEndpoint
       ? toProtocolRoot("openai-compatible", normalizedEndpoint) ??
           normalizedEndpoint
       : ""
-  }, [endpoint])
+  }, [endpoint, isEndpointCustomized, source.baseUrl])
 
   useEffect(() => {
     if (isOpen) {

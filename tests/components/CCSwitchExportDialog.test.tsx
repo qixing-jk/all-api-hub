@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
@@ -22,7 +23,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 /** Keep export fixtures valid while making each test's credential inputs explicit. */
 function createAccountExportSource(
@@ -38,6 +39,33 @@ function createAccountExportSource(
     buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
     { preferCurrentSecret: true },
   )
+}
+
+/**
+ * Source whose Anthropic and OpenAI-compatible inference addresses differ
+ * (Kimi Global), so the Claude export endpoint is Anthropic-shaped while model
+ * discovery must keep searching the OpenAI-compatible route.
+ */
+function createKimiExportSource() {
+  const account = buildDisplaySiteData({
+    id: "kimi-account",
+    name: "Kimi",
+    siteType: SITE_TYPES.KIMI_GLOBAL,
+    baseUrl: "https://platform.kimi.ai",
+  })
+  const key = buildAccountKeyResourceRuntimeKey(account, {
+    ref: {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "organization:test",
+      resourceId: "key:test",
+    },
+    label: "Kimi key",
+    secret: "sk-test",
+  })
+  return createAccountRuntimeKeyExportSource(account, key, {
+    preferCurrentSecret: true,
+  })
 }
 
 const mockDiscoverOpenAICompatibleModels = vi.fn()
@@ -197,6 +225,67 @@ describe("CCSwitchExportDialog", () => {
     await user.click(modelCombo)
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
   })
+
+  it("discovers models on the OpenAI-compatible address when the endpoint shows the Anthropic address", async () => {
+    mockDiscoverOpenAICompatibleModels.mockResolvedValueOnce(
+      createModelDiscovery([{ id: "moonshot-v1" }]),
+    )
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createKimiExportSource()}
+      />,
+    )
+
+    // The Claude default rewrites the endpoint to the Anthropic address; model
+    // discovery must not follow it, or a split-protocol source returns no models.
+    await waitFor(() => {
+      expect(mockDiscoverOpenAICompatibleModels).toHaveBeenCalledWith({
+        baseUrl: "https://api.moonshot.ai",
+        apiKey: "sk-test",
+      })
+    })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(mockDiscoverOpenAICompatibleModels).not.toHaveBeenCalledWith({
+      baseUrl: "https://api.moonshot.ai/anthropic",
+      apiKey: "sk-test",
+    })
+  })
+
+  it.each(["", "not a url"])(
+    "keeps an invalid source %j editable without requesting models",
+    async (baseUrl) => {
+      const user = userEvent.setup()
+      const source = {
+        ...createKimiExportSource(),
+        baseUrl,
+        anthropicBaseUrl: undefined,
+      }
+      render(
+        <CCSwitchExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={source}
+        />,
+      )
+      await user.click(
+        await screen.findByLabelText("ui:dialog.ccswitch.fields.app"),
+      )
+      await user.click(
+        await screen.findByRole("option", {
+          name: "ui:dialog.ccswitch.appOptions.gemini",
+        }),
+      )
+      expect(
+        screen.getByLabelText("ui:dialog.ccswitch.fields.endpoint"),
+      ).toHaveValue(baseUrl)
+      expect(mockDiscoverOpenAICompatibleModels).not.toHaveBeenCalled()
+    },
+  )
 
   it("uses the endpoint confirmed by model discovery for Codex", async () => {
     const user = userEvent.setup()

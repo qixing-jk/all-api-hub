@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
+import {
+  createAccountRuntimeKeyExportSource,
+  resolveAccountExternalApiBaseUrl,
+} from "~/services/accounts/utils/credentialExport"
 import { resolveCredentialExport } from "~/services/integrations/credentialExport"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
@@ -189,6 +192,12 @@ describe("account credential exports", () => {
     expect(source.baseUrl).toBe("https://api.moonshot.ai")
     expect(source.anthropicBaseUrl).toBe("https://api.moonshot.ai/anthropic")
     expect(kimiAccount.baseUrl).toBe("https://platform.kimi.ai")
+  })
+
+  it("retains an unusable explicit key endpoint instead of silently exporting another gateway", () => {
+    expect(resolveAccountExternalApiBaseUrl(account, "  not a url  ")).toBe(
+      "not a url",
+    )
   })
 
   it("keeps an explicit per-key endpoint and unregistered account URLs", () => {

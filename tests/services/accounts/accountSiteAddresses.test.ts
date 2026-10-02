@@ -113,6 +113,22 @@ describe("account site address roles", () => {
     })
   })
 
+  it("resolves declared protocol roots from a pasted Kimi model endpoint", () => {
+    expect(
+      findDeclaredInferenceRoots("https://api.moonshot.ai/v1/models"),
+    ).toEqual({
+      openAiCompatible: "https://api.moonshot.ai",
+      anthropic: "https://api.moonshot.ai/anthropic",
+    })
+  })
+
+  it("does not invent an Anthropic address for a provider that declares only OpenAI", () => {
+    expect(findDeclaredInferenceRoots("https://openrouter.ai/api/v1")).toEqual({
+      openAiCompatible: "https://openrouter.ai/api",
+    })
+    expect(findDeclaredInferenceRoots("not a url")).toBeUndefined()
+  })
+
   it("keeps an unusable stored URL instead of failing the caller", () => {
     expect(
       resolveAccountSiteAddresses({

@@ -203,13 +203,17 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
   const [discoveryBaseUrl, setDiscoveryBaseUrl] = useState(() =>
     toOpenAiProtocolRoot(source.baseUrl),
   )
+  // Keep automatic discovery on the source OpenAI-compatible address: the Claude
+  // default fills the field with the Anthropic address, which a split-protocol
+  // source would reject with no model list. Only a user edit redirects it.
+  const discoverySourceUrl = isBaseUrlCustomized ? baseUrl : source.baseUrl
   useEffect(() => {
     const handle = setTimeout(
-      () => setDiscoveryBaseUrl(toOpenAiProtocolRoot(baseUrl)),
+      () => setDiscoveryBaseUrl(toOpenAiProtocolRoot(discoverySourceUrl)),
       UPSTREAM_MODEL_FETCH_DEBOUNCE_MS,
     )
     return () => clearTimeout(handle)
-  }, [baseUrl])
+  }, [baseUrl, discoverySourceUrl, isBaseUrlCustomized, source.baseUrl])
 
   // Closing the dialog or swapping the source invalidates an in-flight export
   // so a late credential resolution cannot send the key after a cancel.

@@ -327,6 +327,22 @@ describe("apiVerificationService", () => {
     expect(result.output).toMatchObject({ text: "OK" })
   })
 
+  it("reports an invalid model endpoint without attempting a provider request", async () => {
+    const result = await runApiVerificationProbe({
+      baseUrl: "  not a url  ",
+      apiKey: "secret",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      probeId: "models",
+    })
+    expect(result.status).toBe("fail")
+    expect(result.summary).toBe("Invalid protocol API base URL")
+    expect(result.input).toMatchObject({
+      baseUrl: "not a url",
+      endpoint: "models",
+    })
+    expect(mockFetchOpenAICompatibleModelIds).not.toHaveBeenCalled()
+  })
+
   it("runs models probe for openai apiType", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-test"])
 
