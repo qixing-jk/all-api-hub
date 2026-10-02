@@ -201,9 +201,11 @@ export function buildDraftFromAutoDetectResult(params: {
         automaticExecutionEnabled: resolveNewAccountAutomaticExecutionEnabled({
           siteType: nextSiteType,
           siteUrl: params.siteUrl,
-          currentAutomaticExecutionEnabled:
-            mergedCheckIn.automaticExecutionEnabled,
+          currentAutomaticExecutionEnabled: automaticExecutionPreferenceChanged
+            ? draft.checkIn.automaticExecutionEnabled
+            : mergedCheckIn.automaticExecutionEnabled,
           userPreferenceChanged: automaticExecutionPreferenceChanged,
+          checkIn: mergedCheckIn,
         }),
       }
   const nextDraft: AccountDialogDraft = {

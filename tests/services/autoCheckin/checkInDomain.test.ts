@@ -189,19 +189,30 @@ describe("inspectCheckInMethods", () => {
     {
       name: "the site type has no registered candidates",
       candidateMethodIds: [],
+      detections: {},
       expected: "no_provider",
     },
     {
       name: "the site type has a candidate awaiting selection",
       candidateMethodIds: [NEW_API_METHOD_ID],
+      detections: {},
       expected: "no_selected_method",
+    },
+    {
+      name: "all candidates are confirmed unsupported",
+      candidateMethodIds: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
+      detections: {
+        [NEW_API_METHOD_ID]: unsupported,
+        [VELOERA_METHOD_ID]: unsupported,
+      },
+      expected: "method_unsupported",
     },
   ])(
     "distinguishes missing provider support when $name",
-    ({ candidateMethodIds, expected }) => {
+    ({ candidateMethodIds, detections, expected }) => {
       expect(
         inspectCheckInMethods({
-          config: createConfig({}),
+          config: createConfig(detections),
           candidateMethodIds,
         }).executionEligibility,
       ).toEqual({ eligible: false, skipReason: expected })

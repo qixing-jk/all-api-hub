@@ -1,4 +1,7 @@
-import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
+import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_SELECTION_STATUSES,
+} from "~/constants/checkIn"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { isUnknownAccountSiteType } from "~/constants/siteType"
@@ -186,9 +189,13 @@ export function buildAttentionItems(input: {
         continue
       }
 
-      // Site types without a registered check-in method are unsupported, not a
-      // user-fixable setup gap.
-      if (checkInState.choices.length === 0) {
+      // Site types without a registered check-in method or with confirmed
+      // unsupported check-in are unsupported, not a user-fixable setup gap.
+      if (
+        checkInState.choices.length === 0 ||
+        checkInState.decision.outcome ===
+          CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+      ) {
         continue
       }
 

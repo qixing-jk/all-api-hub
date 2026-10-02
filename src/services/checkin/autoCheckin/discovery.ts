@@ -30,8 +30,8 @@ import type {
   CheckInMethodStatus,
 } from "~/types/checkIn"
 
-const DEFAULT_PER_ADAPTER_TIMEOUT_MS = 3_000
-const DEFAULT_DISCOVERY_DEADLINE_MS = 10_000
+const DEFAULT_PER_ADAPTER_TIMEOUT_MS = 5_000
+const DEFAULT_DISCOVERY_DEADLINE_MS = 15_000
 
 interface CheckInDiscoveryInput {
   account: SiteAccount
@@ -42,12 +42,14 @@ interface CheckInDiscoveryInput {
   observedAt?: number
   perAdapterTimeoutMs?: number
   deadlineMs?: number
+  signal?: AbortSignal
 }
 
 interface CheckInDiscoveryResult {
   config: CheckInConfig
   decision: CheckInDiscoveryDecision
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
+  statuses?: Partial<Record<CheckInMethodId, CheckInMethodStatus>>
   timedOutMethodIds: CheckInMethodId[]
 }
 
@@ -63,9 +65,11 @@ const unknownDetection = (
 const withTimeout = async <T>(
   task: Promise<T>,
   timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<{ timedOut: boolean; value?: T }> => {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return { timedOut: true }
   let timer: ReturnType<typeof setTimeout> | undefined
+  let onAbort: (() => void) | undefined
   try {
     const taskResult = task.then(
       (value) => ({ timedOut: false as const, value }),
@@ -75,12 +79,16 @@ const withTimeout = async <T>(
       taskResult,
       new Promise<{ timedOut: true }>((resolve) => {
         timer = setTimeout(() => resolve({ timedOut: true }), timeoutMs)
+        onAbort = () => resolve({ timedOut: true })
+        if (signal?.aborted) onAbort()
+        else signal?.addEventListener("abort", onAbort, { once: true })
       }),
     ])
     if (!result.timedOut && "error" in result) throw result.error
     return result
   } finally {
     if (timer) clearTimeout(timer)
+    if (onAbort) signal?.removeEventListener("abort", onAbort)
   }
 }
 
@@ -125,6 +133,7 @@ const runDetection = async (
     result = await withTimeout(
       Promise.resolve().then(() => registration.provider.detect!(context)),
       timeoutMs,
+      context.signal,
     )
   } catch (error) {
     return {
@@ -151,7 +160,7 @@ const runDetection = async (
 }
 
 /**
- * Runs bounded, serial, read-only detection for the current site's candidates.
+ * Runs bounded, concurrent, read-only detection for the current site's candidates.
  * Adapter objects remain private to this Module; callers receive only V7 data.
  */
 export async function discoverCheckInMethods(
@@ -171,72 +180,84 @@ export async function discoverCheckInMethods(
   const statuses: Partial<Record<CheckInMethodId, CheckInMethodStatus>> = {}
   const timedOutMethodIds: CheckInMethodId[] = []
 
-  for (const registration of registrations) {
-    const now = Date.now()
-    if (now >= deadlineAt) {
-      detections[registration.id] = unknownDetection(
-        CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
+  const results = await Promise.all(
+    registrations.map(async (registration) => {
+      const now = Date.now()
+      if (now >= deadlineAt || input.signal?.aborted) {
+        return {
+          id: registration.id,
+          detection: unknownDetection(
+            CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
+            observedAt,
+          ),
+          timedOut: true,
+        }
+      }
+      const abortController = new AbortController()
+      const onAbort = () => abortController.abort()
+      if (input.signal) {
+        input.signal.addEventListener("abort", onAbort, { once: true })
+      }
+      const context: AutoCheckinProviderReadContext = {
+        account: input.account,
+        ...(input.request ? { request: input.request } : {}),
         observedAt,
-      )
-      timedOutMethodIds.push(registration.id)
-      continue
-    }
-    const abortController = new AbortController()
-    const context: AutoCheckinProviderReadContext = {
-      account: input.account,
-      ...(input.request ? { request: input.request } : {}),
-      observedAt,
-      signal: abortController.signal,
-    }
-    const remaining = Math.max(1, deadlineAt - now)
-    const result = await runDetection(
-      registration,
-      context,
-      Math.min(perAdapterTimeoutMs, remaining),
-    )
-    if (result.timedOut) {
-      // The signal belongs to this one adapter invocation and cannot affect
-      // later candidates in the serial discovery round.
-      abortController.abort()
-    }
-    detections[registration.id] = result.detection
-    if (result.status) statuses[registration.id] = result.status
-    if (result.timedOut) timedOutMethodIds.push(registration.id)
+        signal: abortController.signal,
+      }
+      const remaining = Math.max(1, deadlineAt - now)
+      try {
+        const result = await runDetection(
+          registration,
+          context,
+          Math.min(perAdapterTimeoutMs, remaining),
+        )
+        if (result.timedOut || input.signal?.aborted) {
+          // The signal belongs to this one adapter invocation.
+          abortController.abort()
+        }
+        if (input.signal?.aborted) {
+          return {
+            id: registration.id,
+            detection: unknownDetection(
+              CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
+              observedAt,
+            ),
+            timedOut: true,
+          }
+        }
+        return {
+          id: registration.id,
+          detection: result.detection,
+          status: result.status,
+          timedOut: result.timedOut,
+        }
+      } finally {
+        if (input.signal) {
+          input.signal.removeEventListener("abort", onAbort)
+        }
+      }
+    }),
+  )
+
+  for (const item of results) {
+    detections[item.id] = item.detection
+    if (item.status) statuses[item.id] = item.status
+    if (item.timedOut) timedOutMethodIds.push(item.id)
   }
 
-  let config = mergeCheckInDiscoveryResults({
+  const config = mergeCheckInDiscoveryResults({
     config: input.config,
     candidateMethodIds: registrations.map(({ id }) => id),
     detections,
+    statuses,
     completedAt: observedAt,
   })
-  if (Object.keys(statuses).length > 0) {
-    config = {
-      ...config,
-      methodKnowledge: {
-        ...config.methodKnowledge,
-        methods: Object.fromEntries(
-          Object.entries(config.methodKnowledge.methods).map(
-            ([methodId, knowledge]) => [
-              methodId,
-              statuses[methodId as CheckInMethodId]
-                ? {
-                    ...knowledge,
-                    status: statuses[methodId as CheckInMethodId],
-                  }
-                : knowledge,
-            ],
-          ),
-        ),
-      },
-    }
-  }
   const decision: CheckInDiscoveryDecision = inspectCheckInMethods({
     config,
     candidateMethodIds: registrations.map(({ id }) => id),
   }).decision
 
-  return { config, decision, detections, timedOutMethodIds }
+  return { config, decision, detections, statuses, timedOutMethodIds }
 }
 
 /** Applies a user-owned manual choice or restores automatic selection. */

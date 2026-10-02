@@ -22,6 +22,7 @@ import type {
   CheckInMethodDetection,
   CheckInMethodId,
   CheckInMethodSelection,
+  CheckInMethodStatus,
   CheckInSelectionState,
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
@@ -185,6 +186,7 @@ export function shouldAutomaticallyDiscoverCheckIn(
 const deriveExecutionEligibility = (
   input: CheckInInspectionInput,
   selectionState: CheckInSelectionState,
+  decision?: CheckInDiscoveryDecision,
 ): CheckInExecutionEligibility => {
   // A claim held by another account outranks every per-account reason: the
   // browser login context is shared, so this run cannot use the provider no
@@ -215,12 +217,23 @@ const deriveExecutionEligibility = (
     }
   }
   if (selectionState.status === CHECK_IN_SELECTION_STATUSES.None) {
+    if (input.candidateMethodIds.length === 0) {
+      return {
+        eligible: false,
+        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider,
+      }
+    }
+    if (
+      decision?.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+    ) {
+      return {
+        eligible: false,
+        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported,
+      }
+    }
     return {
       eligible: false,
-      skipReason:
-        input.candidateMethodIds.length === 0
-          ? CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider
-          : CHECK_IN_EXECUTION_SKIP_REASONS.NoSelectedMethod,
+      skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.NoSelectedMethod,
     }
   }
   if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale) {
@@ -286,7 +299,11 @@ export function inspectCheckInMethods(
   const choices = deriveMethodChoices(input.config, candidateMethodIds)
   const decision = deriveDiscoveryDecision(choices)
   const selectionState = deriveSelectionState(input.config, candidateMethodIds)
-  const executionEligibility = deriveExecutionEligibility(input, selectionState)
+  const executionEligibility = deriveExecutionEligibility(
+    input,
+    selectionState,
+    decision,
+  )
 
   return {
     decision,
@@ -393,6 +410,7 @@ export function mergeCheckInDiscoveryResults(input: {
   config: CheckInConfig
   candidateMethodIds: readonly CheckInMethodId[]
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
+  statuses?: Partial<Record<CheckInMethodId, CheckInMethodStatus>>
   completedAt: number
 }): CheckInConfig {
   const candidateMethodIds = uniqueCandidateMethodIds(input.candidateMethodIds)
@@ -408,10 +426,11 @@ export function mergeCheckInDiscoveryResults(input: {
       reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
       attemptedAt: input.completedAt,
     }
+    const status = input.statuses?.[methodId] ?? previous?.status
 
     methods[methodId] = {
       detection: mergeDiscoveryDetection(previous?.detection, incoming),
-      ...(previous?.status ? { status: previous.status } : {}),
+      ...(status ? { status } : {}),
     }
   }
 

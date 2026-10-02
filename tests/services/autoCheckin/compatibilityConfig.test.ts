@@ -70,4 +70,48 @@ describe("new-account check-in defaults", () => {
       }),
     ).toBe(true)
   })
+
+  it("defaults automatic execution to false when discovery outcome is unsupported", () => {
+    expect(
+      resolveNewAccountAutomaticExecutionEnabled({
+        siteType: SITE_TYPES.SUB2API,
+        currentAutomaticExecutionEnabled: true,
+        userPreferenceChanged: false,
+        decisionOutcome: "unsupported",
+      }),
+    ).toBe(false)
+
+    expect(
+      resolveNewAccountAutomaticExecutionEnabled({
+        siteType: SITE_TYPES.SUB2API,
+        currentAutomaticExecutionEnabled: true,
+        userPreferenceChanged: true,
+        decisionOutcome: "unsupported",
+      }),
+    ).toBe(true)
+  })
+
+  it("derives unsupported outcome from checkIn inspection if provided", () => {
+    expect(
+      resolveNewAccountAutomaticExecutionEnabled({
+        siteType: SITE_TYPES.NEW_API,
+        currentAutomaticExecutionEnabled: true,
+        userPreferenceChanged: false,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic" },
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "unsupported",
+                  evidence: { source: "probe", observedAt: 1 },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ).toBe(false)
+  })
 })
