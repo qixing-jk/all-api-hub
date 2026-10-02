@@ -3496,51 +3496,56 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.focusWorkflowId).toBeNull()
   })
 
-  it("surfaces a success toast when an edit mutation completes without a created secret", async () => {
-    const scope = {
-      scopeKey: "workspace-default-id",
-      routeKey: "team",
-      displayName: "Team",
-      isDefault: true,
-    }
-    const facts = createFacts(scope.scopeKey, "key-existing")
-    const editor = {
-      fields: [],
-      initialValues: {},
-      validate: vi.fn().mockReturnValue({ valid: true }),
-      submit: vi.fn().mockResolvedValue({ facts }),
-    }
-    const collection = {
-      list: vi.fn().mockResolvedValue({ items: [facts] }),
-      openEditEditor: vi.fn().mockResolvedValue(editor),
-    }
-    mockNativeResourceSession(
-      vi.fn().mockResolvedValue({
-        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
-        listScopes: vi.fn().mockResolvedValue([scope]),
-        openCollection: vi.fn().mockResolvedValue(collection),
-        openCreateEditor: vi.fn(),
-      }),
-    )
-    const { result } = renderHook(() =>
-      useAccountKeyResourceController({
-        accounts: [createAccount("account-example")],
-        selectedAccount: "account-example",
-        routeParams: { accountId: "account-example", workspace: "team" },
-      }),
-    )
+  it.each(["Example key", ""])(
+    "surfaces edit success with returned name '%s' without a created secret",
+    async (displayName) => {
+      const scope = {
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }
+      const facts = createFacts(scope.scopeKey, "key-existing")
+      const editor = {
+        fields: [],
+        initialValues: {},
+        validate: vi.fn().mockReturnValue({ valid: true }),
+        submit: vi.fn().mockResolvedValue({ facts: { ...facts, displayName } }),
+      }
+      const collection = {
+        list: vi.fn().mockResolvedValue({ items: [facts] }),
+        openEditEditor: vi.fn().mockResolvedValue(editor),
+      }
+      mockNativeResourceSession(
+        vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue(collection),
+          openCreateEditor: vi.fn(),
+        }),
+      )
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      )
 
-    await waitFor(() => expect(result.current.rows).toEqual([facts]))
-    await act(async () => result.current.openEdit(facts.ref))
-    await act(async () =>
-      result.current.submitEditor(result.current.editor!.editorId, {}),
-    )
+      await waitFor(() => expect(result.current.rows).toEqual([facts]))
+      await act(async () => result.current.openEdit(facts.ref))
+      await act(async () =>
+        result.current.submitEditor(result.current.editor!.editorId, {}),
+      )
 
-    expect(result.current.createdSecret).toBeNull()
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "keyManagement:messages.keyUpdated",
-    )
-  })
+      expect(result.current.createdSecret).toBeNull()
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        displayName
+          ? "keyManagement:messages.keyUpdated"
+          : "keyManagement:messages.keyUpdatedSimple",
+      )
+    },
+  )
 
   it("leaves the create mutation without a toast so the one-time secret stays the only feedback", async () => {
     const scope = {
@@ -4487,69 +4492,89 @@ describe("useAccountKeyResourceController", () => {
     }
   })
 
-  it("optimistically removes the deleted key and returns true upon success", async () => {
-    const remove = deferred<void>()
-    const deferredList = deferred<any>()
-    const facts = createFacts("workspace-example", "key-to-delete")
-    const siblingFacts = createFacts("workspace-example", "key-to-keep")
-    const collection = {
-      list: vi
-        .fn()
-        .mockResolvedValueOnce({ items: [facts, siblingFacts] })
-        .mockImplementationOnce(() => deferredList.promise),
-      get: vi.fn(),
-      delete: vi.fn().mockImplementation(() => remove.promise),
-      create: vi.fn(),
-      update: vi.fn(),
-    }
-    const session = {
-      resolveDefaultScope: vi.fn().mockResolvedValue({
-        scopeKey: "workspace-example",
-        routeKey: "workspace-example",
-        displayName: "Workspace",
-        isDefault: true,
-      }),
-      listScopes: vi.fn().mockResolvedValue([]),
-      openCollection: vi.fn().mockResolvedValue(collection),
-      openCreateEditor: vi.fn(),
-    }
-    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+  it.each(["success", "failure"])(
+    "returns deletion success before background refresh %s",
+    async (refreshOutcome) => {
+      const remove = deferred<void>()
+      const deferredList = deferred<any>()
+      const facts = createFacts("workspace-example", "key-to-delete")
+      const siblingFacts = createFacts("workspace-example", "key-to-keep")
+      const collection = {
+        list: vi
+          .fn()
+          .mockResolvedValueOnce({ items: [facts, siblingFacts] })
+          .mockImplementationOnce(() => deferredList.promise),
+        get: vi.fn(),
+        delete: vi.fn().mockImplementation(() => remove.promise),
+        create: vi.fn(),
+        update: vi.fn(),
+      }
+      const session = {
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-example",
+          routeKey: "workspace-example",
+          displayName: "Workspace",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }
+      mockNativeResourceSession(vi.fn().mockResolvedValue(session))
 
-    const account = createAccount("account-example")
-    const { result } = renderHook(() =>
-      useAccountKeyResourceController({
-        accounts: [account],
-        selectedAccount: account.id,
-      }),
-    )
+      const account = createAccount("account-example")
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [account],
+          selectedAccount: account.id,
+        }),
+      )
 
-    await waitFor(() =>
-      expect(result.current.rows).toEqual([facts, siblingFacts]),
-    )
+      await waitFor(() =>
+        expect(result.current.rows).toEqual([facts, siblingFacts]),
+      )
 
-    act(() => {
-      result.current.openDelete(facts.ref)
-    })
-    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
+      act(() => {
+        result.current.openDelete(facts.ref)
+      })
+      await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
 
-    let deletePromise!: Promise<boolean>
-    act(() => {
-      deletePromise = result.current.confirmDelete()
-    })
+      let deletePromise!: Promise<boolean>
+      const onDeleted = vi.fn()
+      act(() => {
+        deletePromise = result.current.confirmDelete()
+        void deletePromise.then(onDeleted)
+      })
 
-    await waitFor(() => expect(collection.delete).toHaveBeenCalledTimes(1))
-    expect(result.current.rows).toEqual([facts, siblingFacts])
+      await waitFor(() => expect(collection.delete).toHaveBeenCalledTimes(1))
+      expect(result.current.rows).toEqual([facts, siblingFacts])
 
-    await act(async () => remove.resolve())
+      await act(async () => remove.resolve())
 
-    await waitFor(() => expect(result.current.rows).toEqual([siblingFacts]))
-    expect(result.current.deleteState.isOpen).toBe(false)
+      await waitFor(() => expect(result.current.rows).toEqual([siblingFacts]))
+      expect(result.current.deleteState.isOpen).toBe(false)
 
-    await act(async () => deferredList.resolve({ items: [siblingFacts] }))
-    const success = await deletePromise
-    expect(success).toBe(true)
-    expect(result.current.rows).toEqual([siblingFacts])
-  })
+      expect(onDeleted).toHaveBeenCalledWith(true)
+      await act(async () => {
+        if (refreshOutcome === "success")
+          deferredList.resolve({ items: [siblingFacts] })
+        else deferredList.reject(new Error("Inventory unavailable"))
+      })
+      const success = await deletePromise
+      expect(success).toBe(true)
+      expect(result.current.rows).toEqual([siblingFacts])
+      if (refreshOutcome === "failure") {
+        expect(result.current.failures[account.id]).toBeDefined()
+        expect(result.current.openDelete(siblingFacts.ref)).toBe(false)
+        collection.list.mockResolvedValue({ items: [siblingFacts] })
+        await act(async () => result.current.refresh())
+        expect(result.current.freshReadRequired).toBe(false)
+        act(() =>
+          expect(result.current.openDelete(siblingFacts.ref)).toBe(true),
+        )
+      }
+    },
+  )
 
   it("rejects foreign account, site, and scope refs for every resource command", async () => {
     const collection = {
@@ -4602,6 +4627,7 @@ describe("useAccountKeyResourceController", () => {
         opened = result.current.openDelete(ref as any)
       })
       expect(opened).toBe(false)
+      expect(await result.current.confirmDelete()).toBe(false)
     }
 
     expect(collection.get).not.toHaveBeenCalled()

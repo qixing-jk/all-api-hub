@@ -2456,8 +2456,11 @@ export function useAccountKeyResourceController({
             ref: null,
             failure: null,
           })
-          const accepted = await refreshAfterMutation()
-          if (!accepted) requireFreshRead(boundary)
+          void refreshAfterMutation()
+            .then((accepted) => {
+              if (!accepted) requireFreshRead(boundary)
+            })
+            .catch(() => requireFreshRead(boundary))
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
               mode: mutationAnalyticsMode,

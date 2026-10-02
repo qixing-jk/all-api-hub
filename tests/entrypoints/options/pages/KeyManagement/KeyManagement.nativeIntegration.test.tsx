@@ -65,8 +65,10 @@ const {
   legacyAddTokenSpy,
   refreshServiceCredentialsSpy,
   legacyRetryFailedAccountsSpy,
+  toastSuccessMock,
 } = vi.hoisted(() => ({
   accountKeyResourceControllerOptionsSpy: vi.fn(),
+  toastSuccessMock: vi.fn(),
   accountKeyResourceControllerReplaceRouteSpy: vi.fn(),
   accountKeyResourceEditorDialogPropsSpy: vi.fn(),
   accountSelectorPanelPropsSpy: vi.fn(),
@@ -85,6 +87,10 @@ const {
   legacyAddTokenSpy: vi.fn(),
   refreshServiceCredentialsSpy: vi.fn(),
   legacyRetryFailedAccountsSpy: vi.fn(),
+}))
+
+vi.mock("~/lib/notify", () => ({
+  default: { success: toastSuccessMock, error: vi.fn() },
 }))
 
 vi.mock(
@@ -2469,6 +2475,59 @@ describe("KeyManagement native page integration", () => {
       ).toBeEnabled(),
     )
   })
+
+  it.each(["Visible key", ""])(
+    "announces deletion of '%s' before the inventory refresh completes",
+    async (name) => {
+      toastSuccessMock.mockClear()
+      const user = userEvent.setup()
+      const account = createAccount({
+        id: "native-account",
+        siteType: SITE_TYPES.OPENROUTER,
+      })
+      const scope = createScope("workspace", "default", "Default", true)
+      const facts = createFacts(account.id, scope.scopeKey, "key", name)
+      const reload = deferred<{ items: AccountKeyResourceFacts[] }>()
+      const { session, collection } = createNativeSession({
+        scopes: [scope],
+        rows: [facts],
+        deleteResource: vi.fn().mockResolvedValue(undefined),
+      })
+      collection.list
+        .mockResolvedValueOnce({ items: [facts] })
+        .mockImplementationOnce(() => reload.promise)
+      createDisplayAccountApiContextMock.mockReturnValue({
+        accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+        request: {},
+      })
+      legacyHarnessConfig = {
+        accounts: [account],
+        initialSelectedAccount: account.id,
+      }
+      render(
+        <KeyManagement
+          routeParams={{ accountId: account.id, workspace: scope.routeKey }}
+        />,
+      )
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:native.actions.delete",
+        }),
+      )
+      await user.click(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+      )
+      await waitFor(() =>
+        expect(toastSuccessMock).toHaveBeenCalledWith(
+          name
+            ? "keyManagement:messages.keyDeleted"
+            : "keyManagement:messages.keyDeletedSimple",
+        ),
+      )
+      expect(screen.queryByRole("dialog")).toBeNull()
+      await act(async () => reload.resolve({ items: [] }))
+    },
+  )
 
   it("shows safe native delete detail and permits a deliberate retry without exposing the resource id", async () => {
     const user = userEvent.setup()

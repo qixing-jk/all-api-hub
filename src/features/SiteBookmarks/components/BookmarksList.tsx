@@ -421,7 +421,9 @@ export default function BookmarksList({
           onOpen={() => void handleOpenBookmark(bookmark)}
           onCopyUrl={() => void handleCopyUrl(bookmark)}
           onEdit={() => openEditBookmark(bookmark)}
-          onDelete={() => setDeleteTarget(bookmark)}
+          onDelete={() => {
+            if (!isDeleting) setDeleteTarget(bookmark)
+          }}
           onTogglePin={() => void handleTogglePin(bookmark)}
           isDragDisabled={dragDisabled}
           handleLabel={handleLabel}

@@ -939,6 +939,7 @@ export function TokenList(props: TokenListProps) {
       )}
 
       <div
+        inert={isReloading}
         className={cn(
           "transition-opacity duration-200",
           isReloading && "pointer-events-none opacity-60 select-none",

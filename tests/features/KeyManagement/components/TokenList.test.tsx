@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { buildServiceCredentialKeyManagementEntry } from "~/features/KeyManagement/utils"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 import {
@@ -23,6 +24,40 @@ const createRow = (name: string) =>
   nativeRowFromSeed(account, createToken({ name, accountId: account.id }))
 
 describe("TokenList secondary reloading state", () => {
+  it("keeps a single-account service credential visible while inventory reloads", async () => {
+    const entry = buildServiceCredentialKeyManagementEntry({
+      account,
+      serviceCredential: {
+        status: "loaded",
+        credential: {
+          kind: "singleton_service_key",
+          service: "codex",
+          label: "Codex API Key",
+          key: "sk-test",
+          isAuthenticated: true,
+          baseUrl: "https://example.invalid/v1",
+        },
+      },
+      canRotate: false,
+    })!
+    render(
+      <TokenList
+        isLoading={false}
+        nativeLoading={true}
+        entries={[entry]}
+        filteredEntries={[entry]}
+        handleAddToken={vi.fn()}
+        onAddAccount={vi.fn()}
+        onRequestAccountSelection={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+        onCopyServiceCredential={vi.fn()}
+      />,
+    )
+    expect(await screen.findByText("Codex API Key")).toBeVisible()
+    expect(screen.getByText("common:status.refreshing")).toBeVisible()
+  })
+
   it("renders a secondary reloading indicator and dimmed container when rows exist and nativeLoading is true", async () => {
     const row = createRow("Key 1")
     const { container } = render(
@@ -49,6 +84,7 @@ describe("TokenList secondary reloading state", () => {
     const reloadingContainer = container.querySelector(".opacity-60")
     expect(reloadingContainer).not.toBeNull()
     expect(reloadingContainer).toHaveClass("pointer-events-none")
+    expect(reloadingContainer).toHaveAttribute("inert")
   })
 
   it("does not render the reloading banner or dimmed container when not loading", () => {
@@ -72,6 +108,7 @@ describe("TokenList secondary reloading state", () => {
     expect(screen.queryByText("common:status.refreshing")).toBeNull()
     const reloadingContainer = container.querySelector(".opacity-60")
     expect(reloadingContainer).toBeNull()
+    expect(container.querySelector("[inert]")).toBeNull()
   })
 
   it("renders loading skeleton instead when rows are empty and loading is true", () => {

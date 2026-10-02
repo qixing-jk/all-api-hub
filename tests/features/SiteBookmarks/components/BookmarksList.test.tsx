@@ -584,6 +584,66 @@ describe("BookmarksList", () => {
     )
   })
 
+  it("blocks a new delete selection until the previous deletion reload finishes", async () => {
+    const user = userEvent.setup()
+    let finishReload!: () => void
+    loadAccountDataMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishReload = resolve
+      }),
+    )
+    bookmarksMock = [
+      {
+        id: "b1",
+        name: "First",
+        url: "https://example.com/first",
+        tagIds: [],
+        notes: "",
+        created_at: 0,
+        updated_at: 0,
+      },
+      {
+        id: "b2",
+        name: "Second",
+        url: "https://example.com/second",
+        tagIds: [],
+        notes: "",
+        created_at: 0,
+        updated_at: 0,
+      },
+    ]
+    render(<BookmarksList />)
+    const selectDelete = async (index: number) => {
+      await user.click(
+        atIndex(
+          await screen.findAllByRole("button", { name: "common:actions.more" }),
+          index,
+        ),
+      )
+      await user.click(
+        await screen.findByRole("menuitem", { name: "common:actions.delete" }),
+      )
+    }
+    await selectDelete(0)
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "common:actions.delete",
+      }),
+    )
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await selectDelete(1)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    finishReload()
+    await waitFor(() =>
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      ),
+    )
+    await selectDelete(1)
+    expect(await screen.findByRole("dialog")).toBeVisible()
+    expect(mockDeleteBookmark).toHaveBeenCalledTimes(1)
+  })
+
   it("offers the unpin action for a pinned bookmark", async () => {
     const user = userEvent.setup()
     const bookmark: SiteBookmark = {
