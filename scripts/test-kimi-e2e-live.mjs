@@ -6,6 +6,11 @@ import { runKimiProbe } from "./suites/kimi/probe.mjs"
 import { runKimiUiTest } from "./suites/kimi/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
+/**
+ * Resolve Kimi CLI overrides above environment defaults and validate site/suite.
+ * @param args Command-line options supplied by the operator.
+ * @returns Selected site, suite, CDP endpoint, and console session credentials.
+ */
 export function parseArgs(args) {
   let token = process.env.KIMI_ACCESS_TOKEN || ""
   let refreshToken = process.env.KIMI_REFRESH_TOKEN || ""
@@ -71,6 +76,10 @@ Kimi 开放平台现场端到端测试运行器 (CDP & Protocol Probe)
   }
 }
 
+/**
+ * Run the selected Kimi probe/UI suites using the configured console session.
+ * @param args CLI options; defaults to this process's arguments.
+ */
 export async function main(args = process.argv.slice(2)) {
   const options = parseArgs(args)
   let {
