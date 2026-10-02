@@ -152,4 +152,60 @@ describe("account dialog auto-detect draft mapping", () => {
 
     expect(merged.exchangeRate).toBe("7.5")
   })
+
+  it("recovers kimiOpenPlatformAuth into the draft", () => {
+    const draft = createEmptyAccountDialogDraft(SITE_TYPES.KIMI_GLOBAL)
+    const merged = mergeAutoDetectRecoveryIntoDraft({
+      draft,
+      recoveryData: {
+        siteType: SITE_TYPES.KIMI_GLOBAL,
+        kimiOpenPlatformAuth: {
+          refreshToken: "refresh-jwt",
+          organizationId: "org-123",
+          tokenExpiresAt: 123456789,
+        },
+      },
+      nextSiteType: SITE_TYPES.KIMI_GLOBAL,
+      hasExplicitAuthType: false,
+      sub2apiRefreshTokenPreferenceChanged: false,
+    })
+
+    expect(merged.kimiOpenPlatformAuth).toEqual({
+      refreshToken: "refresh-jwt",
+      organizationId: "org-123",
+      tokenExpiresAt: 123456789,
+    })
+  })
+
+  it("populates exchangeRate from Kimi auto-detect result in add mode", () => {
+    const draft = createEmptyAccountDialogDraft(SITE_TYPES.UNKNOWN)
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.KIMI)
+
+    const merged = buildDraftFromAutoDetectResult({
+      draft,
+      resultData: {
+        username: "kimi-user",
+        siteName: "Kimi",
+        accessToken: "detected-jwt",
+        userId: "kimi-1",
+        exchangeRate: 7.2,
+        authType: AuthTypeEnum.AccessToken,
+        checkIn: buildCheckInConfig(),
+        siteType: SITE_TYPES.KIMI,
+        kimiOpenPlatformAuth: {
+          refreshToken: "refresh-jwt",
+          organizationId: "org-1",
+        },
+      },
+      nextSiteType: SITE_TYPES.KIMI,
+      nextCheckIn: buildCheckInConfig(),
+      preserveExistingCheckIn: false,
+      automaticExecutionPreferenceChanged: false,
+      mode: DIALOG_MODES.ADD,
+      policy,
+    })
+
+    expect(merged.exchangeRate).toBe("7.2")
+    expect(merged.siteType).toBe(SITE_TYPES.KIMI)
+  })
 })

@@ -10,6 +10,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const originalBrowser = globalThis.browser
@@ -187,6 +188,45 @@ describe("useAccountDialog current tab detection", () => {
           surface,
         }),
     )
+  })
+
+  it("passes the detected Kimi refresh session to account creation", async () => {
+    const auth = {
+      refreshToken: "refresh",
+      organizationId: "org",
+      tokenExpiresAt: 123,
+    }
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: true,
+      message: "detected",
+      data: {
+        username: "User",
+        accessToken: "access",
+        userId: "user",
+        exchangeRate: 7,
+        siteName: "Kimi",
+        siteType: SITE_TYPES.KIMI_GLOBAL,
+        authType: AuthTypeEnum.AccessToken,
+        kimiOpenPlatformAuth: auth,
+        checkIn: buildCheckInConfig(),
+      },
+    })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+    await act(async () =>
+      result.current.setters.setUrl("https://platform.kimi.ai"),
+    )
+    await act(async () => result.current.handlers.handleAutoDetect())
+    await act(async () => result.current.handlers.handleSaveAccount())
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledOnce()
+    expect(mockValidateAndSaveAccount.mock.calls[0]?.[16]).toMatchObject({
+      kimiOpenPlatformAuth: auth,
+    })
   })
 
   it("runs explicit auto-detect under one detect-account intent", async () => {

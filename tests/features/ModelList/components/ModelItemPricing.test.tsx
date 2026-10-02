@@ -1,16 +1,21 @@
 import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { ModelItemDescription } from "~/features/ModelList/components/ModelItem/ModelItemDescription"
 import { ModelItemPerCallPricingView } from "~/features/ModelList/components/ModelItem/ModelItemPerCallPricingView"
 import { PriceView } from "~/features/ModelList/components/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/components/ModelItem/ModelItemPricing"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import { DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS } from "~/features/ModelList/priceComparison"
+import { createKimiOpenPlatformProviderModelCatalog } from "~/services/apiAdapters/kimiOpenPlatform/providerModelCatalog"
 import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/pricingPlan"
+import * as kimiService from "~/services/apiService/kimiOpenPlatform"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
+  type ModelPricing,
 } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,
@@ -25,12 +30,179 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
+import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+
+it.each([true, false])(
+  "shows published CNY rates while browsing (CNY=%s)",
+  (showRealPrice) => {
+    const rate = (amount: number) => ({
+      amount,
+      currency: "CNY" as const,
+      per: 1000000,
+      unit: "token" as const,
+    })
+    const model = createModel({
+      pricingPlan: {
+        rates: { input: rate(20), output: rate(100), cacheRead: rate(2) },
+        rules: [],
+        issues: [],
+        source: { kind: "catalog" },
+        groupMultiplier: "included",
+      },
+      price_metadata: {
+        source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+        precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+        unavailable_reason:
+          MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+      },
+    })
+    const price = calculateModelPrice(model, 1)
+    expect(price.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{ ...price, isComparisonActive: false }}
+        exchangeRate={5}
+        showRealPrice={showRealPrice}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(
+      screen.getByText(showRealPrice ? "CNY:20/M" : "USD:4/M"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+    if (!showRealPrice) expect(screen.getByText("estimatedPrice")).toBeVisible()
+  },
+)
+
+/**
+ * The China console publishes its table in CNY and the row carries no
+ * canonical USD field, so its metadata reports the USD price as unavailable.
+ * Both sort modes must still show the published price instead of an
+ * unavailable-price message, and a source without an exchange rate must be
+ * declined rather than converted with a guessed rate.
+ */
+describe("published CNY catalog prices", () => {
+  const CNY_RATES = {
+    modelId: "kimi-k3",
+    currency: "CNY" as const,
+    inputPrice: 20,
+    outputPrice: 100,
+  }
+
+  const buildRow = async () => {
+    vi.mocked(kimiService.fetchKimiPricingDoc).mockResolvedValue([CNY_RATES])
+    const capability = createKimiOpenPlatformProviderModelCatalog(
+      SITE_TYPES.KIMI,
+    )
+    const response = await capability.fetchPricing({})
+    return response.data[0] as unknown as ModelPricing
+  }
+
+  const quoteRow = (model: ModelPricing, cnyPerUsd?: number) =>
+    quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+      },
+      {
+        groupMultiplier: 1,
+        currency: "USD",
+        ...(cnyPerUsd === undefined ? {} : { cnyPerUsd }),
+      },
+    )
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    isTokenBillingTypeMock.mockReturnValue(true)
+  })
+
+  it("shows the published CNY rates while browsing without a price sort", async () => {
+    const model = await buildRow()
+    const price = calculateModelPrice(model, 1)
+    expect(price.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
+
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          ...price,
+          quote: quoteRow(model, 7.2),
+          isComparisonActive: false,
+        }}
+        exchangeRate={7.2}
+        showRealPrice={true}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+
+    expect(screen.getByText("CNY:20/M")).toBeVisible()
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("quotes the published CNY rates in USD when sorting by price", async () => {
+    const model = await buildRow()
+    const quote = quoteRow(model, 7.2)
+    expect(quote.status).toBe(QUOTE_STATUSES.COMPLETE)
+    expect(quote.amount).toBeGreaterThan(0)
+
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          ...calculateModelPrice(model, 1),
+          quote,
+          isComparisonActive: true,
+        }}
+        exchangeRate={7.2}
+        showRealPrice={false}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+
+    expect(
+      screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+    ).not.toBeInTheDocument()
+    // The converted quote replaces the published-price view while sorted.
+    expect(screen.getByText("scenario.calculationDetails")).toBeVisible()
+  })
+
+  it("refuses to convert the published rates without an exchange rate", async () => {
+    const model = await buildRow()
+    const quote = quoteRow(model)
+
+    expect(quote.status).toBe(QUOTE_STATUSES.UNAVAILABLE)
+    expect(quote.amount).toBeNull()
+    expect(quote.issues.length).toBeGreaterThan(0)
+    expect(
+      quote.issues.every(
+        (issue) => issue.code === PRICING_ISSUE_CODES.EXCHANGE_RATE_MISSING,
+      ),
+    ).toBe(true)
+  })
+})
 
 const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
     (price: number, currency?: string) => `${currency}:${price}`,
   ),
   isTokenBillingTypeMock: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/kimiOpenPlatform", () => ({
+  fetchKimiAccountModelCatalog: vi.fn(),
+  fetchKimiPricingDoc: vi.fn(),
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -153,7 +325,7 @@ describe("Model item pricing and description", () => {
     it("formats token-billing prices in USD and appends the per-million suffix", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1.25, output: 2.5 }}
+          prices={{ input: 1.25, output: 2.5 }}
           exchangeRate={7.2}
           showRealPrice={false}
           tokenBillingType={true}
@@ -173,7 +345,7 @@ describe("Model item pricing and description", () => {
     it("formats real prices in CNY without token suffixes and dims unavailable models", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1.25, output: 2.5 }}
+          prices={{ input: 1.25, output: 2.5 }}
           exchangeRate={7.2}
           showRealPrice={true}
           tokenBillingType={false}
@@ -192,7 +364,7 @@ describe("Model item pricing and description", () => {
     it("conditionally renders cache prices including an explicit free meter", () => {
       render(
         <PriceView
-          usdPrices={{
+          prices={{
             input: 1,
             output: 2,
             cacheRead: 0,
@@ -215,7 +387,7 @@ describe("Model item pricing and description", () => {
     it("omits cache labels when no cache meters are supplied", () => {
       render(
         <PriceView
-          usdPrices={{ input: 1, output: 2 }}
+          prices={{ input: 1, output: 2 }}
           exchangeRate={8}
           showRealPrice={false}
           tokenBillingType={true}

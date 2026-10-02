@@ -67,8 +67,17 @@ import {
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
   APIYI_HOSTNAME,
+  KIMI_API_BASE_URL,
+  KIMI_CONSOLE_ORIGIN,
+  KIMI_DISPLAY_NAME,
+  KIMI_GLOBAL_API_BASE_URL,
+  KIMI_GLOBAL_CONSOLE_ORIGIN,
+  KIMI_GLOBAL_DISPLAY_NAME,
+  KIMI_GLOBAL_HOSTNAMES,
+  KIMI_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
+  OPENROUTER_API_BASE_URL,
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
@@ -163,6 +172,8 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
+  SITE_TYPES.KIMI,
+  SITE_TYPES.KIMI_GLOBAL,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -654,6 +665,110 @@ const ACCOUNT_SITE_DEFINITIONS = [
         recognizedHostnames: OPENROUTER_HOSTNAMES,
         storageOrigin: OPENROUTER_WEB_ORIGIN,
         duplicateOrigin: OPENROUTER_WEB_ORIGIN,
+        managedChannelOrigin: OPENROUTER_API_BASE_URL,
+      },
+    },
+  },
+
+  {
+    siteType: SITE_TYPES.KIMI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform,
+    onboarding: {
+      displayName: KIMI_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: KIMI_CONSOLE_ORIGIN,
+        defaultSiteName: KIMI_DISPLAY_NAME,
+      },
+      detection: { hostnames: KIMI_HOSTNAMES },
+      routes: {
+        loginPath: "/console/account",
+        usagePath: "/console/account",
+        adminCredentialsPath: "/console/api-keys",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: true,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: KIMI_HOSTNAMES,
+        storageOrigin: KIMI_CONSOLE_ORIGIN,
+        duplicateOrigin: KIMI_CONSOLE_ORIGIN,
+        managedChannelOrigin: KIMI_API_BASE_URL,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.KIMI_GLOBAL,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform,
+    onboarding: {
+      displayName: KIMI_GLOBAL_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: KIMI_GLOBAL_CONSOLE_ORIGIN,
+        defaultSiteName: KIMI_GLOBAL_DISPLAY_NAME,
+      },
+      detection: { hostnames: KIMI_GLOBAL_HOSTNAMES },
+      routes: {
+        loginPath: "/console/account",
+        usagePath: "/console/account",
+        adminCredentialsPath: "/console/api-keys",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: true,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: KIMI_GLOBAL_HOSTNAMES,
+        storageOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
+        duplicateOrigin: KIMI_GLOBAL_CONSOLE_ORIGIN,
+        managedChannelOrigin: KIMI_GLOBAL_API_BASE_URL,
       },
     },
   },

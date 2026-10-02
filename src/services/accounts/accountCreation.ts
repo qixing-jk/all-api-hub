@@ -34,6 +34,7 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type CheckInConfig,
+  type KimiOpenPlatformAuthConfig,
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
@@ -45,6 +46,7 @@ import { t } from "~/utils/i18n/core"
 interface ValidateAndSaveAccountOptions {
   skipAutoProvisionKeyOnAccountAdd?: boolean
   deferDataRefresh?: boolean
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 /**
@@ -176,6 +178,7 @@ export async function validateAndSaveAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })
   const { fields, manualQuota, requestAccountIdentity, requestBaseUrl } =

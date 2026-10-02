@@ -302,6 +302,9 @@ const resolveSiteFields = (
   if (siteType === SITE_TYPES.SUB2API) return buildSub2ApiFields(mode)
   if (siteType === SITE_TYPES.VO_API_V2) return buildVoApiV2Fields()
   if (siteType === SITE_TYPES.RIGHT_CODE) return buildRightCodeFields(mode)
+  if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
+    return { fields: [name] }
+  }
   if (siteType === SITE_TYPES.AIHUBMIX) return buildAiHubMixFields()
   if (
     getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===

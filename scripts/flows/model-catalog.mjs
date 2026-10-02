@@ -1,56 +1,39 @@
 import { dismissModals } from "../cdp/ui-driver.mjs"
 
-/**
- * Common UI flow to test model catalog loading and rendering for a specific account data source.
- */
-export async function testModelCatalogFlow({ page, extensionId, accountName }) {
-  console.log(
-    `  [通用流: 模型目录] 校验【模型列表】在数据源 [${accountName}] 下的渲染...`,
+/** Verify the selected account and actual model rows, independent of UI language. */
+export async function testModelCatalogFlow({
+  page,
+  extensionId,
+  accountName,
+  accountId,
+}) {
+  if (!accountId) throw new Error("model_catalog_requires_account_id")
+  await page.goto(
+    `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`,
   )
-
-  await page.goto(`chrome-extension://${extensionId}/options.html#models`)
   await page.waitForLoadState("domcontentloaded")
-  await page.waitForTimeout(1000)
   await dismissModals(page)
-
-  const escapedName = accountName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const selectSourceBtn = page
-    .getByRole("button")
-    .filter({
-      hasText: new RegExp(`请选择数据源|选择数据源|${escapedName}`, "i"),
-    })
-    .first()
-
-  let countLine = ""
-  if (await selectSourceBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await selectSourceBtn.click()
-    await page.waitForTimeout(400)
-
-    const optionItem = page
-      .locator('[role="option"], [role="menuitem"], div.cursor-pointer')
-      .filter({ hasText: accountName })
-      .first()
-
-    if (await optionItem.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await optionItem.click()
-      await page.waitForTimeout(3000)
-
-      const pageText = await page.innerText("body")
-      const lines = pageText.split("\n").filter((l) => l.trim().length > 0)
-      countLine =
-        lines.find((l) => l.includes("总计") && l.includes("模型")) || ""
-
-      console.log(
-        `  - 模型列表实际渲染统计: "${countLine || "未直接捕获统计行"}"`,
+  await page.waitForFunction(
+    (expectedSource) => {
+      const root = document.querySelector('[data-testid="model-list-page"]')
+      const display = root?.querySelector('[data-testid="model-list-display"]')
+      return (
+        root?.getAttribute("data-model-source") === expectedSource &&
+        !root.hasAttribute("data-options-page-pending") &&
+        (!display || Boolean(display.querySelector("h3")))
       )
-      if (countLine && !countLine.includes("总计 0 个模型")) {
-        console.log("  ✅ 模型列表成功渲染并展示价格条目！")
-      }
-    }
-  }
-
-  return {
-    countLine,
-    ok: Boolean(countLine && !countLine.includes("总计 0 个模型")),
-  }
+    },
+    `account:${accountId}`,
+    { timeout: 15000 },
+  )
+  const modelDisplay = page.locator('[data-testid="model-list-display"]')
+  const names = await modelDisplay.locator("h3").allTextContents()
+  if (!names.some((name) => name.trim()))
+    throw new Error("model_catalog_has_no_rendered_models")
+  const prices = await modelDisplay.innerText()
+  if (!/[$¥￥]\s*\d/.test(prices))
+    throw new Error("model_catalog_has_no_rendered_prices")
+  const countLine = `${names.length} rendered model rows`
+  console.log(`  ✅ 数据源 [${accountName}] 已展示模型和价格：${countLine}`)
+  return { ok: true, countLine }
 }

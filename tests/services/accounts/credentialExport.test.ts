@@ -180,6 +180,28 @@ describe("account credential exports", () => {
     ).toBe(account.baseUrl)
   })
 
+  // The key carries the endpoint it was created against (account snapshot). If
+  // the live account later changes address, the export must follow the account
+  // rather than pin the creation-time key URL. The comparison is made against
+  // the key's account snapshot, not the live account.
+  // See cd032543f regression in KiloCodeExportDialog "runtime facts change".
+  it("follows a live account address change when the key inherits the account endpoint", () => {
+    const originalBaseUrl = runtimeKey.account.baseUrl
+    const movedAccount = {
+      ...account,
+      baseUrl: "https://new.example.invalid",
+    }
+    const inheritedKey = {
+      ...runtimeKey,
+      baseUrl: originalBaseUrl,
+      account: { ...runtimeKey.account, baseUrl: originalBaseUrl },
+    }
+
+    expect(
+      createAccountRuntimeKeyExportSource(movedAccount, inheritedKey).baseUrl,
+    ).toBe("https://new.example.invalid")
+  })
+
   // AIHubMix accounts are stored against the console origin, so exports used to
   // hand external callers the dashboard instead of the API origin.
   it("exports the AIHubMix API origin for an account stored on the console", () => {
@@ -203,5 +225,47 @@ describe("account credential exports", () => {
     expect(
       createAccountRuntimeKeyExportSource(consoleAccount, consoleKey).baseUrl,
     ).toBe("https://aihubmix.com")
+  })
+
+  it("exports the OpenRouter gateway URL for an existing native key", () => {
+    const openRouterAccount = buildDisplaySiteData({
+      siteType: SITE_TYPES.OPENROUTER,
+      baseUrl: "https://openrouter.ai",
+    })
+    const key = buildAccountKeyResourceRuntimeKey(openRouterAccount, {
+      ref: {
+        accountId: openRouterAccount.id,
+        siteType: SITE_TYPES.OPENROUTER,
+        scopeKey: "default",
+        resourceId: "hash-1",
+      },
+      label: "Existing key",
+      secret: "",
+    })
+
+    expect(
+      createAccountRuntimeKeyExportSource(openRouterAccount, key).baseUrl,
+    ).toBe("https://openrouter.ai/api/v1")
+  })
+
+  it("exports the Kimi gateway URL when a native key inherits the console address", () => {
+    const kimiAccount = buildDisplaySiteData({
+      siteType: SITE_TYPES.KIMI,
+      baseUrl: "https://platform.kimi.com",
+    })
+    const key = buildAccountKeyResourceRuntimeKey(kimiAccount, {
+      ref: {
+        accountId: kimiAccount.id,
+        siteType: SITE_TYPES.KIMI,
+        scopeKey: "project-1",
+        resourceId: "key-1",
+      },
+      label: "Kimi key",
+      secret: "",
+    })
+
+    expect(createAccountRuntimeKeyExportSource(kimiAccount, key).baseUrl).toBe(
+      "https://api.moonshot.cn/v1",
+    )
   })
 })

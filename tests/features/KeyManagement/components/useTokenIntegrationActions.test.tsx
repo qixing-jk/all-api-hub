@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -202,6 +203,110 @@ describe("useRuntimeKeyIntegrationActions", () => {
     expect(result.current.dialogs.kelivo.input).toMatchObject({
       baseUrl: "https://api.ai-router.dev",
     })
+  })
+
+  it("exports an inherited key through the current account endpoint after an account address edit", async () => {
+    const inheritedKey = buildNewApiRuntimeKey(account, token)
+    const editedAccount = {
+      ...account,
+      baseUrl: "https://edited.example.invalid",
+    }
+    resolveSecretMock.mockResolvedValue({
+      ...inheritedKey,
+      secret: "sk-example",
+    })
+    const { result } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account: editedAccount,
+        enabled: true,
+        runtimeKey: inheritedKey,
+      }),
+    )
+    await act(async () => {
+      await result.current.exportActions.openCherryStudio()
+      await result.current.exportActions.openKelivo()
+    })
+    expect(vi.mocked(OpenInCherryStudio)).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: editedAccount.baseUrl }),
+    )
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: editedAccount.baseUrl,
+    })
+  })
+
+  it("exports a key-specific gateway URL through Cherry Studio and Kelivo", async () => {
+    const kimiAccount = {
+      ...account,
+      siteType: SITE_TYPES.KIMI,
+      baseUrl: "https://platform.kimi.com",
+    } satisfies DisplaySiteData
+    const kimiKey = buildAccountKeyResourceRuntimeKey(kimiAccount, {
+      ref: {
+        accountId: kimiAccount.id,
+        siteType: SITE_TYPES.KIMI,
+        scopeKey: "project-1",
+        resourceId: "key-1",
+      },
+      label: "Kimi key",
+      secret: "",
+      baseUrl: "https://api.moonshot.cn/v1",
+    })
+    resolveSecretMock.mockResolvedValue({ ...kimiKey, secret: "sk-example" })
+    const { result } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account: kimiAccount,
+        enabled: true,
+        runtimeKey: kimiKey,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.exportActions.openCherryStudio()
+      await result.current.exportActions.openKelivo()
+    })
+
+    expect(vi.mocked(OpenInCherryStudio)).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://api.moonshot.cn/v1" }),
+    )
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: "https://api.moonshot.cn/v1",
+    })
+  })
+
+  it("clears an open export and discards a pending export when the key endpoint changes", async () => {
+    let key = {
+      ...buildNewApiRuntimeKey(account, token),
+      baseUrl: "https://first.example/v1",
+    }
+    resolveSecretMock.mockResolvedValue(key)
+    const { result, rerender } = renderHook(() =>
+      useRuntimeKeyIntegrationActions({
+        account,
+        enabled: true,
+        runtimeKey: key,
+      }),
+    )
+    await act(() => result.current.exportActions.openKelivo())
+    expect(result.current.dialogs.kelivo.input).toMatchObject({
+      baseUrl: key.baseUrl,
+    })
+    let finish!: (value: typeof key) => void
+    resolveSecretMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    const pending = result.current.exportActions.openKelivo()
+    const oldKey = key
+    key = { ...key, baseUrl: "https://second.example/v1" }
+    rerender()
+    expect(result.current.dialogs.kelivo.input).toBeNull()
+    await act(async () => {
+      finish(oldKey)
+      await pending
+    })
+    expect(result.current.dialogs.kelivo.input).toBeNull()
   })
 
   it("isolates a rejecting post-import callback", async () => {

@@ -2585,9 +2585,13 @@ describe("useAccountKeyResourceController", () => {
       cleanupMocks.finish.mockReset().mockResolvedValue(undefined)
       const facts = {
         ...createFacts("scope-native", "key-native"),
+        runtimeKey: {
+          baseUrl: "https://runtime.example.invalid/v1",
+        },
         ref: {
           ...createFacts("scope-native", "key-native").ref,
           accountId: "account-native",
+          siteType: SITE_TYPES.NEW_API,
         },
       }
       const collection = {
@@ -2617,7 +2621,12 @@ describe("useAccountKeyResourceController", () => {
       mockNativeResourceSession(openNativeResources)
       const { result } = renderHook(() =>
         useAccountKeyResourceController({
-          accounts: [createAccount("account-native")],
+          accounts: [
+            {
+              ...createAccount("account-native"),
+              siteType: SITE_TYPES.NEW_API,
+            },
+          ],
           selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
         }),
       )
@@ -2644,8 +2653,12 @@ describe("useAccountKeyResourceController", () => {
       )
       if (cleanupLinkedChannels) {
         expect(cleanupMocks.prepare).toHaveBeenCalledWith({
-          source: { accountId: "account-native", ref: facts.ref },
-          baseUrl: "https://example.invalid",
+          source: {
+            accountId: "account-native",
+            accountBaseUrl: "https://example.invalid",
+            ref: facts.ref,
+          },
+          baseUrl: "https://runtime.example.invalid/v1",
           key: "source-key",
         })
         const session = await atIndex(openNativeResources.mock.results, 0).value

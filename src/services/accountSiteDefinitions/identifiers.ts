@@ -33,6 +33,8 @@ export const SITE_TYPES = {
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
+  KIMI: "kimi",
+  KIMI_GLOBAL: "kimi-global",
   UNKNOWN: "unknown",
 } as const
 
@@ -76,6 +78,15 @@ export const RIGHTCODE_DISPLAY_NAME = "RightCode"
 export const RIGHTCODE_LOGIN_PATH = "/login"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
+
+export const KIMI_HOSTNAMES = ["platform.kimi.com"] as const
+export const KIMI_GLOBAL_HOSTNAMES = ["platform.kimi.ai"] as const
+export const KIMI_DISPLAY_NAME = "Kimi"
+export const KIMI_GLOBAL_DISPLAY_NAME = "Kimi Global"
+export const KIMI_CONSOLE_ORIGIN = "https://platform.kimi.com"
+export const KIMI_GLOBAL_CONSOLE_ORIGIN = "https://platform.kimi.ai"
+export const KIMI_API_BASE_URL = "https://api.moonshot.cn/v1"
+export const KIMI_GLOBAL_API_BASE_URL = "https://api.moonshot.ai/v1"
 export const OPENROUTER_DISPLAY_NAME = "OpenRouter"
 export const OPENROUTER_WEB_ORIGIN = "https://openrouter.ai"
 export const OPENROUTER_API_BASE_URL = `${OPENROUTER_WEB_ORIGIN}/api/v1`

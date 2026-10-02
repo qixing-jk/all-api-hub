@@ -4,6 +4,7 @@ import type {
   AccountSiteDetectionMetadata,
   AccountSiteRouteConfig,
 } from "~/services/accountSiteDefinitions/contracts"
+import type { KimiOpenPlatformAuthConfig } from "~/types"
 
 export type ContentSessionExtractionContext = {
   url?: string
@@ -38,6 +39,7 @@ export type ContentSessionExtractionResult = {
     refreshToken: string
     tokenExpiresAt?: number
   }
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 
 /** Untrusted session payload context; probe permission never implies permission to persist auth. */

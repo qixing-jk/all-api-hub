@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/accountCreationTimeout"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { EMPTY_ACCOUNT_INFO_METRICS } from "~/services/accounts/accountPersistence/constants"
 import { prepareAccountPersistenceIdentity } from "~/services/accounts/accountPersistence/shared"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
@@ -291,6 +292,66 @@ describe("accountPersistence save and update", () => {
       },
     }))
   })
+
+  it.each(["deferred", "refreshed", "fallback"])(
+    "keeps the latest Kimi session when saving a loaded draft through %s",
+    async (mode) => {
+      const accountId = await addAccountWithOldTodayAvailability()
+      const rotated = await accountStorage.updateAccount(
+        accountId,
+        {
+          site_type: SITE_TYPES.KIMI_GLOBAL,
+          site_url: "https://platform.kimi.ai",
+          account_info: { id: "user", access_token: "rotated-access" },
+          kimiOpenPlatformAuth: {
+            refreshToken: "rotated-refresh",
+            organizationId: "org",
+          },
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+      expect(rotated).toBe(true)
+      if (mode === "fallback")
+        fetchAccountDataMock.mockRejectedValueOnce(new Error("offline"))
+      else fetchAccountDataMock.mockResolvedValueOnce(LOG_TEST_ACCOUNT_DATA)
+      const result = await validateAndUpdateAccount(
+        accountId,
+        "https://platform.kimi.ai",
+        "Renamed",
+        "user",
+        "loaded-access",
+        "user",
+        "7",
+        "edited note",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.KIMI_GLOBAL,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        {
+          deferDataRefresh: mode === "deferred",
+          kimiOpenPlatformAuth: {
+            refreshToken: "loaded-refresh",
+            organizationId: "org",
+          },
+          loadedKimiAuth: {
+            accessToken: "loaded-access",
+            refreshToken: "loaded-refresh",
+            organizationId: "org",
+          },
+        },
+      )
+      expect(result.success).toBe(true)
+      const saved = await accountStorage.getAccountById(accountId)
+      expect(saved?.notes).toBe("edited note")
+      expect(saved?.account_info.access_token).toBe("rotated-access")
+      expect(saved?.kimiOpenPlatformAuth?.refreshToken).toBe("rotated-refresh")
+    },
+  )
 
   it("persists identity prepared by a registered capability independently of the site name", async () => {
     const prepareIdentity = vi.fn().mockResolvedValue("provider-owned-id")

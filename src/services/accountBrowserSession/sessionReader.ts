@@ -3,6 +3,7 @@ import { isAccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
 import {
   getAllTabs,
   getBrowserApiCapabilities,
@@ -112,6 +113,7 @@ const normalizeSessionData = (
     siteType?: unknown
     transientAuth?: unknown
     sub2apiAuth?: unknown
+    kimiOpenPlatformAuth?: unknown
     fetchContext?: unknown
   }
 
@@ -131,6 +133,9 @@ const normalizeSessionData = (
       ? payload.siteType
       : undefined
   const sub2apiAuth = normalizeSub2ApiAuth(payload.sub2apiAuth)
+  const kimiOpenPlatformAuth = normalizeKimiOpenPlatformAuth(
+    payload.kimiOpenPlatformAuth,
+  )
   const transientAuth = normalizeContentSessionTransientAuth(
     payload.transientAuth,
     {
@@ -152,6 +157,7 @@ const normalizeSessionData = (
     ...(accessToken ? { accessToken } : {}),
     ...(transientAuth ? { transientAuth } : {}),
     ...(sub2apiAuth ? { sub2apiAuth } : {}),
+    ...(kimiOpenPlatformAuth ? { kimiOpenPlatformAuth } : {}),
     ...(fetchContext ? { fetchContext } : {}),
   }
 }

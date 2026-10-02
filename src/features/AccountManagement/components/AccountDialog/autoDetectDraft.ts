@@ -153,6 +153,8 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
       canRecoverSub2ApiRefreshToken && draft.sub2apiTokenExpiresAt === null
         ? recoveryData.sub2apiAuth?.tokenExpiresAt ?? null
         : draft.sub2apiTokenExpiresAt,
+    kimiOpenPlatformAuth:
+      recoveryData.kimiOpenPlatformAuth ?? draft.kimiOpenPlatformAuth,
   }
 
   return normalizeAccountDialogDraftForSitePolicy({
@@ -231,6 +233,8 @@ export function buildDraftFromAutoDetectResult(params: {
       policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
         ? resultData.sub2apiAuth.tokenExpiresAt ?? null
         : draft.sub2apiTokenExpiresAt,
+    kimiOpenPlatformAuth:
+      resultData.kimiOpenPlatformAuth ?? draft.kimiOpenPlatformAuth,
   }
 
   return normalizeAccountDialogDraftForSitePolicy({

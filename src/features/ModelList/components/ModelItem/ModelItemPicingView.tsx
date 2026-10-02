@@ -7,7 +7,8 @@ import {
 import { type CurrencyType } from "~/types"
 
 interface PriceViewProps {
-  usdPrices: TokenPricesUSD
+  prices: TokenPricesUSD
+  sourceCurrency?: CurrencyType
   exchangeRate: number
   showRealPrice: boolean
   tokenBillingType: boolean
@@ -15,7 +16,8 @@ interface PriceViewProps {
   formatPriceCompact: (price: number, currency?: CurrencyType) => string
 }
 export const PriceView = ({
-  usdPrices,
+  prices,
+  sourceCurrency = "USD",
   exchangeRate,
   showRealPrice,
   tokenBillingType,
@@ -28,31 +30,31 @@ export const PriceView = ({
     {
       key: "input",
       label: t("input"),
-      amount: usdPrices.input,
+      amount: prices.input,
       className: "text-pricing-input",
     },
     {
       key: "output",
       label: t("output"),
-      amount: usdPrices.output,
+      amount: prices.output,
       className: "text-pricing-output",
     },
-    ...(usdPrices.cacheRead !== undefined
+    ...(prices.cacheRead !== undefined
       ? [
           {
             key: "cache-read",
             label: t("cacheRead"),
-            amount: usdPrices.cacheRead,
+            amount: prices.cacheRead,
             className: "text-pricing-cache-read",
           },
         ]
       : []),
-    ...(usdPrices.cacheWrite !== undefined
+    ...(prices.cacheWrite !== undefined
       ? [
           {
             key: "cache-write",
             label: t("cacheWrite"),
-            amount: usdPrices.cacheWrite,
+            amount: prices.cacheWrite,
             className: "text-pricing-cache-write",
           },
         ]
@@ -72,7 +74,11 @@ export const PriceView = ({
             }`}
           >
             {formatPriceCompact(
-              resolvePriceAmount(item.amount, currency, exchangeRate),
+              sourceCurrency === currency
+                ? item.amount
+                : sourceCurrency === "CNY"
+                  ? item.amount / exchangeRate
+                  : resolvePriceAmount(item.amount, currency, exchangeRate),
               currency,
             )}
             {tokenBillingType ? "/M" : ""}

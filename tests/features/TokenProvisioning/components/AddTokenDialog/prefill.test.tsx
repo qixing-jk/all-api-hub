@@ -128,6 +128,28 @@ describe("native AddTokenDialog", () => {
     expect(openCreateEditor).toHaveBeenCalledTimes(1)
   })
 
+  it("opens a preselected account directly in the editor without an account-selection interstitial", async () => {
+    const { props, session } = setup()
+    let releaseSession: ((value: typeof session) => void) | undefined
+    const opening = new Promise<typeof session>((resolve) => {
+      releaseSession = resolve
+    })
+    const open = vi.fn(() => opening)
+    context.mockReturnValue({
+      accountKeyResources: { open },
+      request: {},
+    })
+
+    render(<AddTokenDialog {...props} />)
+
+    await waitFor(() => expect(open).toHaveBeenCalled())
+    expect(screen.queryByText("keyManagement:dialog.accountSelect")).toBeNull()
+    expect(screen.queryByText("common:status.loading")).toBeNull()
+
+    releaseSession?.(session)
+    await screen.findByDisplayValue("Native default")
+  })
+
   it("retries an unavailable inventory before opening the editor", async () => {
     const { props, session } = setup()
     const open = vi
@@ -140,6 +162,7 @@ describe("native AddTokenDialog", () => {
     const retry = await screen.findByRole("button", {
       name: "common:actions.retry",
     })
+    expect(screen.queryByText("keyManagement:dialog.accountSelect")).toBeNull()
     const readsBeforeRetry = open.mock.calls.length
     await user.click(retry)
     await screen.findByDisplayValue("Native default")

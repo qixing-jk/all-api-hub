@@ -6,6 +6,7 @@ import {
   type NativeResourceEditorOpeningState,
 } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
   createDisplayAccountApiContext,
@@ -2393,19 +2394,22 @@ export function useAccountKeyResourceController({
             typeof deleteWithLinkedChannelCleanup
           >[0] = null
           if (cleanup) {
-            const resolution = await actionContext.session.runtimeKey?.resolve(
-              ref,
-              { signal: controller.signal },
-            )
-            if (!account || resolution?.kind !== "resolved")
+            const keyBaseUrl = acceptedRowsRef.current.find(
+              (row) => refIdentity(row.ref) === refIdentity(ref),
+            )?.runtimeKey?.baseUrl
+            if (!account)
               throw new AccountKeyResourceError({
                 code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
               })
-            cleanupInput = {
-              source: { accountId: account.id, ref },
-              baseUrl: account.baseUrl,
-              key: resolution.secret,
-            }
+            cleanupInput = await buildAccountKeyResourceLinkedCleanupInput({
+              account,
+              ref,
+              runtimeKeyBaseUrl: keyBaseUrl,
+              resolveProvider: () =>
+                actionContext.session.runtimeKey?.resolve(ref, {
+                  signal: controller.signal,
+                }) ?? Promise.resolve(undefined),
+            })
           }
           await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
             await actionContext.collection.delete(ref, {
