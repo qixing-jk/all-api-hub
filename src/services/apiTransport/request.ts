@@ -619,7 +619,10 @@ const _fetchApiWithMapper = async <T, TResult>(
   // dashboard they are addressed by. `request.baseUrl` keeps the browser origin:
   // session reading, temporary-window fallback and the current-tab origin guard
   // all depend on it.
-  const url = joinUrl(resolveDeploymentApiOrigin(baseUrl), options.endpoint)
+  const url = joinUrl(
+    request.managementApiBaseUrl ?? resolveDeploymentApiOrigin(baseUrl),
+    options.endpoint,
+  )
 
   const resolvedAuth: NormalizedAuthContext = {
     authType: request.auth?.authType ?? AuthTypeEnum.None,

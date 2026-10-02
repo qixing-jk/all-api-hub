@@ -1,3 +1,5 @@
+import { findDeclaredInferenceRoots } from "~/services/accounts/accountSiteProfile/addresses"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import type {
   CredentialExportData,
   CredentialExportSource,
@@ -16,6 +18,17 @@ function getLegacyProfileExportId(profileId: string) {
   return `account_token:${buildApiCredentialProfileSyntheticAccountId(profileId)}:${Math.abs(hash) || 1}`
 }
 
+/**
+ * Protocol root a profile export hands to an external caller.
+ *
+ * Stored profiles already hold a root; transient ones built from a provider's
+ * own service URL may not, and the consumer appends the version segment it
+ * owns, so the export namespace normalizes rather than trusting the caller.
+ */
+function resolveProfileExportBaseUrl(profile: ApiCredentialProfile): string {
+  return toProtocolRoot(profile.apiType, profile.baseUrl) ?? profile.baseUrl
+}
+
 /** Project a stored credential for synchronous desktop-client deeplinks. */
 export function createProfileCredentialExportData(
   profile: ApiCredentialProfile,
@@ -23,7 +36,7 @@ export function createProfileCredentialExportData(
   return {
     providerId: buildApiCredentialProfileSyntheticAccountId(profile.id),
     providerName: profile.name,
-    baseUrl: profile.baseUrl,
+    baseUrl: resolveProfileExportBaseUrl(profile),
     apiKey: profile.apiKey,
   }
 }
@@ -32,12 +45,19 @@ export function createProfileCredentialExportData(
 export function createProfileCredentialExportSource(
   profile: ApiCredentialProfile,
 ): CredentialExportSource {
+  const baseUrl = resolveProfileExportBaseUrl(profile)
+  const declaredRoots = findDeclaredInferenceRoots(baseUrl)
+  const anthropicBaseUrl =
+    profile.apiType === "openai-compatible"
+      ? declaredRoots?.anthropic
+      : undefined
   return {
     id: getLegacyProfileExportId(profile.id),
     providerId: buildApiCredentialProfileSyntheticAccountId(profile.id),
     providerName: profile.name,
     credentialName: profile.name,
-    baseUrl: profile.baseUrl,
+    baseUrl,
+    ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}),
     notes: profile.notes,
     cacheKey: hashProviderCatalogValue(
       JSON.stringify([profile.id, profile.baseUrl, profile.apiKey]),

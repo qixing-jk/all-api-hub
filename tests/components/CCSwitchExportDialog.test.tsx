@@ -293,9 +293,16 @@ describe("CCSwitchExportDialog", () => {
       baseUrl: "https://ark.example.invalid/api/v3",
       expectedEndpoint: "https://ark.example.invalid/api/v3",
     },
+    // A declared gateway root that carries a path still needs its version
+    // segment, or Codex would request `/api/responses`.
+    {
+      baseUrl: "https://openrouter.ai",
+      siteType: SITE_TYPES.OPENROUTER,
+      expectedEndpoint: "https://openrouter.ai/api/v1",
+    },
   ])(
     "uses the conservative Codex fallback for $baseUrl when discovery is inconclusive",
-    async ({ baseUrl, expectedEndpoint }) => {
+    async ({ baseUrl, expectedEndpoint, siteType }) => {
       const user = userEvent.setup()
       mockDiscoverOpenAICompatibleModels.mockRejectedValue(
         new Error("network error"),
@@ -307,7 +314,12 @@ describe("CCSwitchExportDialog", () => {
           isOpen={true}
           onClose={() => {}}
           source={createAccountExportSource(
-            { id: "acc", name: "Example", baseUrl },
+            {
+              id: "acc",
+              name: "Example",
+              baseUrl,
+              ...(siteType ? { siteType } : {}),
+            },
             { key: "sk-test" },
           )}
         />,
@@ -335,47 +347,112 @@ describe("CCSwitchExportDialog", () => {
     },
   )
 
+  // Claude Code and Gemini CLI append the version segment they own, so their
+  // endpoint must be the protocol root; a versioned mount here is appended
+  // twice upstream.
+  it("hands the SDK-native apps a protocol root rather than a versioned mount", async () => {
+    const user = userEvent.setup()
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const endpointInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.endpoint",
+    )
+    expect(endpointInput).toHaveValue("https://x.test")
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.ccswitch.appOptions.gemini",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://x.test")
+    })
+  })
+
+  it("prefers a declared Anthropic endpoint for Claude over the OpenAI address", async () => {
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          {
+            id: "acc",
+            name: "Kimi",
+            siteType: SITE_TYPES.KIMI_GLOBAL,
+            baseUrl: "https://platform.kimi.ai",
+          },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const endpointInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.endpoint",
+    )
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://api.moonshot.ai/anthropic")
+    })
+  })
+
+  // CC Switch documents these targets with a versioned base
+  // (`https://api.example.com/v1`) because their clients append only an
+  // operation path, so the export must add the segment the account root lacks.
   it.each([
     "ui:dialog.ccswitch.appOptions.opencode",
     "ui:dialog.ccswitch.appOptions.openclaw",
-  ])(
-    "keeps the stored base URL as the default endpoint for %s",
-    async (appLabel) => {
-      const user = userEvent.setup()
-      mockDiscoverOpenAICompatibleModels.mockResolvedValue(
-        createModelDiscovery(),
-      )
+    "ui:dialog.ccswitch.appOptions.hermes",
+    "ui:dialog.ccswitch.appOptions.grokbuild",
+  ])("fills the versioned base URL for %s", async (appLabel) => {
+    const user = userEvent.setup()
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
 
-      render(
-        <CCSwitchExportDialog
-          isOpen={true}
-          onClose={() => {}}
-          source={createAccountExportSource(
-            { id: "acc", name: "Example", baseUrl: "https://x.test" },
-            { key: "sk-test" },
-          )}
-        />,
-      )
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
 
-      const endpointInput = await screen.findByLabelText(
-        "ui:dialog.ccswitch.fields.endpoint",
-      )
-      const appSelect = await screen.findByLabelText(
-        "ui:dialog.ccswitch.fields.app",
-      )
+    const endpointInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.endpoint",
+    )
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
 
-      await user.click(appSelect)
-      await user.click(
-        await screen.findByRole("option", {
-          name: appLabel,
-        }),
-      )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: appLabel,
+      }),
+    )
 
-      await waitFor(() => {
-        expect(endpointInput).toHaveValue("https://x.test")
-      })
-    },
-  )
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://x.test/v1")
+    })
+  })
 
   it.each([
     {

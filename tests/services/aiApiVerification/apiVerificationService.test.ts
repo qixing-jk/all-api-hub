@@ -340,13 +340,14 @@ describe("apiVerificationService", () => {
 
     expect(result.status).toBe("pass")
     expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-      baseUrl: "https://example.com",
+      baseUrl: "https://example.com/v1",
       apiKey: "secret",
+      abortSignal: undefined,
     })
     expect(result.input).toMatchObject({
       apiType: API_TYPES.OPENAI,
-      endpoint: "/v1/models",
-      baseUrl: "https://example.com",
+      endpoint: "models",
+      baseUrl: "https://example.com/v1",
     })
     expect(result.output as any).toMatchObject({
       suggestedModelId: "gpt-test",
@@ -368,13 +369,14 @@ describe("apiVerificationService", () => {
 
     expect(result.status).toBe("pass")
     expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith({
-      baseUrl: "https://api.anthropic.com",
+      baseUrl: "https://api.anthropic.com/v1",
       apiKey: "secret",
+      abortSignal: undefined,
     })
     expect(result.input).toMatchObject({
       apiType: API_TYPES.ANTHROPIC,
-      endpoint: "/v1/models",
-      baseUrl: "https://api.anthropic.com",
+      endpoint: "models",
+      baseUrl: "https://api.anthropic.com/v1",
     })
     expect(result.output as any).toMatchObject({
       suggestedModelId: "claude-3-5-haiku-latest",
@@ -397,13 +399,14 @@ describe("apiVerificationService", () => {
 
     expect(result.status).toBe("pass")
     expect(mockFetchGoogleModelIds).toHaveBeenCalledWith({
-      baseUrl: "https://proxy.example.com/api",
+      baseUrl: "https://proxy.example.com/api/v1beta",
       apiKey: "secret",
+      abortSignal: undefined,
     })
     expect(result.input).toMatchObject({
       apiType: API_TYPES.GOOGLE,
-      endpoint: "/v1beta/models",
-      baseUrl: "https://proxy.example.com/api",
+      endpoint: "models",
+      baseUrl: "https://proxy.example.com/api/v1beta",
     })
     expect(result.output as any).toMatchObject({
       suggestedModelId: "gemini-1.5-pro",

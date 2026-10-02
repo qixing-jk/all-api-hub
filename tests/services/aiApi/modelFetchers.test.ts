@@ -55,11 +55,11 @@ describe("AI API model fetchers", () => {
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
-          baseUrl: "https://anthropic.example.test",
+          baseUrl: "https://anthropic.example.test/v1",
           auth: { authType: "none" },
         },
         expect.objectContaining({
-          endpoint: "/v1/models?limit=200",
+          endpoint: "models?limit=200",
           errorResponseDecoder: expect.any(Function),
           options: {
             headers: {
@@ -74,7 +74,7 @@ describe("AI API model fetchers", () => {
         2,
         expect.anything(),
         expect.objectContaining({
-          endpoint: "/v1/models?limit=200&after_id=cursor-1",
+          endpoint: "models?limit=200&after_id=cursor-1",
         }),
         true,
       )
@@ -123,7 +123,7 @@ describe("AI API model fetchers", () => {
       expect(mocks.anthropicLogger.error).toHaveBeenCalledWith(
         "Failed to fetch anthropic model list",
         expect.objectContaining({
-          endpoint: "/v1/models?limit=200",
+          endpoint: "models?limit=200",
           error: failure,
         }),
       )
@@ -186,7 +186,7 @@ describe("AI API model fetchers", () => {
         3,
         expect.anything(),
         expect.objectContaining({
-          endpoint: "/v1/models?limit=200&after_id=cursor-1",
+          endpoint: "models?limit=200&after_id=cursor-1",
           options: expect.objectContaining({
             headers: {
               Authorization: "Bearer synthetic-anthropic-key",
@@ -255,11 +255,11 @@ describe("AI API model fetchers", () => {
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
-          baseUrl: "https://google.example.test",
+          baseUrl: "https://google.example.test/v1beta",
           auth: { authType: "none" },
         },
         expect.objectContaining({
-          endpoint: "/v1beta/models",
+          endpoint: "models",
           errorResponseDecoder: expect.any(Function),
           options: {
             headers: {
@@ -273,7 +273,7 @@ describe("AI API model fetchers", () => {
         2,
         expect.anything(),
         expect.objectContaining({
-          endpoint: "/v1beta/models?pageToken=page-2",
+          endpoint: "models?pageToken=page-2",
         }),
         true,
       )
@@ -330,7 +330,7 @@ describe("AI API model fetchers", () => {
         3,
         expect.anything(),
         expect.objectContaining({
-          endpoint: "/v1beta/models?pageToken=page-2",
+          endpoint: "models?pageToken=page-2",
           options: expect.objectContaining({
             headers: {
               Authorization: "Bearer synthetic-google-key",
@@ -380,7 +380,7 @@ describe("AI API model fetchers", () => {
       expect(mocks.googleLogger.error).toHaveBeenCalledWith(
         "Failed to fetch google model list",
         expect.objectContaining({
-          endpoint: "/v1beta/models",
+          endpoint: "models",
           error: failure,
         }),
       )

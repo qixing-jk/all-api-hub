@@ -499,6 +499,18 @@ describe("display account API context and native runtime keys", () => {
     })
   })
 
+  it("keeps the browser address while naming the split management API address", () => {
+    const account = buildStoredAccount({
+      site_type: SITE_TYPES.SUB2API,
+      site_url: "https://ai-router.dev",
+    })
+    const context = createAccountApiRequestFromStoredAccount(account)
+    expect(context.request).toMatchObject({
+      baseUrl: "https://ai-router.dev",
+      managementApiBaseUrl: "https://api.ai-router.dev",
+    })
+  })
+
   it("preserves stored cookie-auth session in request auth", () => {
     const account = buildStoredAccount({
       authType: AuthTypeEnum.Cookie,

@@ -50,6 +50,11 @@ export const ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS = {
 export type AccountSiteModelListGroupSemantics =
   (typeof ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS]
 
+export type AccountSiteInferenceProtocols = {
+  openAiCompatible?: string
+  anthropic?: string
+}
+
 export type AccountSiteUrlProfile = {
   recognizedHostnames: readonly string[]
   /** Apply canonical URL rules without an explicit site-type hint. */
@@ -61,6 +66,8 @@ export type AccountSiteUrlProfile = {
   /** Client-facing API base URL; it may include a required path prefix. */
   managedChannelOrigin?: string
   duplicateOrigin?: string
+  /** Declared protocol mount URLs for supported inference engines. */
+  inferenceApiBaseUrls?: AccountSiteInferenceProtocols
 }
 
 export type AccountSiteIdentityProfile = {

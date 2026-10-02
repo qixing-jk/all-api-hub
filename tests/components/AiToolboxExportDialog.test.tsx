@@ -254,7 +254,7 @@ describe("AiToolboxExportDialog", () => {
 
     expect(
       await screen.findByLabelText("ui:dialog.aiToolbox.fields.baseUrl"),
-    ).toHaveValue("https://x.test/v1")
+    ).toHaveValue("https://x.test")
   })
 
   it("sends the target app, resolved credential, and edited fields", async () => {
@@ -292,19 +292,149 @@ describe("AiToolboxExportDialog", () => {
       expect(mockOpenInAiToolbox).toHaveBeenCalledWith({
         credential: expect.objectContaining({
           providerName: "Profile Provider",
-          baseUrl: "https://x.test/v1",
+          baseUrl: "https://x.test",
           apiKey: "sk-test",
         }),
         app: "opencode",
         model: undefined,
         notes: "token note",
         name: "Profile Provider",
-        homepage: "https://x.test/v1",
+        homepage: "https://x.test",
         endpoint: "https://x.test/v1",
         apiFormat: undefined,
       })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  // Each target app appends its own path to whatever address it receives, so an
+  // untouched export must already carry the shape that app expects: the Anthropic
+  // and Google SDKs add `/v1/messages` and `/v1beta` themselves, while every
+  // OpenAI- or AI-SDK-style target appends only an operation path.
+  it.each([
+    {
+      app: "codex",
+      appLabel: "ui:dialog.aiToolbox.appOptions.codex",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "gemini",
+      appLabel: "ui:dialog.aiToolbox.appOptions.gemini",
+      expectedBaseUrl: "https://x.test",
+    },
+    {
+      app: "opencode",
+      appLabel: "ui:dialog.aiToolbox.appOptions.opencode",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "hermes",
+      appLabel: "ui:dialog.aiToolbox.appOptions.hermes",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+    {
+      app: "grok",
+      appLabel: "ui:dialog.aiToolbox.appOptions.grok",
+      expectedBaseUrl: "https://x.test/v1",
+    },
+  ])(
+    "hands $app the address shape its client expects",
+    async ({ app, appLabel, expectedBaseUrl }) => {
+      const user = userEvent.setup()
+
+      render(
+        <AiToolboxExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={createAccountExportSource(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" },
+            { key: "sk-test" },
+          )}
+        />,
+      )
+
+      const appSelect = await screen.findByLabelText(
+        "ui:dialog.aiToolbox.fields.app",
+      )
+      await user.click(appSelect)
+      await user.click(await screen.findByRole("option", { name: appLabel }))
+
+      const baseUrlInput = screen.getByLabelText(
+        "ui:dialog.aiToolbox.fields.baseUrl",
+      )
+      await waitFor(() => {
+        expect(baseUrlInput).toHaveValue(expectedBaseUrl)
+      })
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.aiToolbox.actions.export",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(mockOpenInAiToolbox).toHaveBeenCalledWith(
+          expect.objectContaining({ app, endpoint: expectedBaseUrl }),
+        )
+      })
+    },
+  )
+
+  it("prefers a declared Anthropic endpoint for the Claude targets", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          {
+            id: "acc",
+            name: "Kimi",
+            siteType: SITE_TYPES.KIMI_GLOBAL,
+            baseUrl: "https://platform.kimi.ai",
+          },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.aiToolbox.fields.baseUrl"),
+    ).toHaveValue("https://api.moonshot.ai/anthropic")
+  })
+
+  it("keeps a user-edited address when the target app changes", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    const baseUrlInput = await screen.findByLabelText(
+      "ui:dialog.aiToolbox.fields.baseUrl",
+    )
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, "https://custom.example.invalid")
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.aiToolbox.fields.app",
+    )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.aiToolbox.appOptions.codex",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(baseUrlInput).toHaveValue("https://custom.example.invalid")
+    })
   })
 
   it("passes the explicitly selected API format and omits it by default", async () => {

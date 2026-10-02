@@ -405,7 +405,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     await waitFor(() => {
       expect(openInCherryStudioMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          baseUrl: "https://api.example.invalid/v1",
+          baseUrl: "https://api.example.invalid",
           providerName: "SharedChat - Codex service key",
           apiKey: "sk-service-credential-secret",
         }),
@@ -417,7 +417,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
       expect(ccSwitchDialogMock).toHaveBeenCalledWith(
         expect.objectContaining({
           source: expect.objectContaining({
-            baseUrl: "https://api.example.invalid/v1",
+            baseUrl: "https://api.example.invalid",
             providerName: "SharedChat - Codex service key",
             resolveApiKey: expect.any(Function),
           }),
@@ -436,7 +436,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
       expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
         expect.objectContaining({
           source: expect.objectContaining({
-            baseUrl: "https://api.example.invalid/v1",
+            baseUrl: "https://api.example.invalid",
             providerName: "SharedChat - Codex service key",
             resolveApiKey: expect.any(Function),
           }),

@@ -4,6 +4,7 @@ import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
   API_CREDENTIAL_PROFILE_CAPTURE_STATUSES,
   API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES,
@@ -29,10 +30,6 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import type { VerificationOwnerReconcileInput } from "~/services/verification/verificationResultHistory"
-import {
-  normalizeGoogleFamilyBaseUrl,
-  normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   ApiCredentialProfile,
@@ -290,15 +287,19 @@ function isSameTelemetryConfig(
 
 /**
  * Normalizes the profile base URL.
+ *
+ * A profile stores the protocol root: the address the user is given by the
+ * provider, without the version segment each consumer adds for itself. Keeping
+ * the root makes one stored value usable by both kinds of consumer — Claude Code
+ * and Gemini CLI append `/v1` and `/v1beta`, the OpenAI and Anthropic SDKs only
+ * append an operation path — and it is what every version before v7 stored, so
+ * existing data needs no migration.
  */
 function normalizeProfileBaseUrl(
   apiType: ApiVerificationApiType,
   baseUrl: string,
 ): string | null {
-  if (apiType === API_TYPES.GOOGLE) {
-    return normalizeGoogleFamilyBaseUrl(baseUrl)
-  }
-  return normalizeOpenAiFamilyBaseUrl(baseUrl)
+  return toProtocolRoot(apiType, baseUrl)
 }
 
 /**

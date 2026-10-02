@@ -44,6 +44,47 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 describe("apiCredentialProfilesStorage additional flows", () => {
+  it("stores the protocol root and leaves provider-owned path versions alone", () => {
+    const stored = coerceApiCredentialProfilesConfig({
+      version: 5,
+      profiles: [
+        {
+          id: "legacy",
+          name: "Legacy",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://old.example/api",
+          apiKey: "sk-old",
+        },
+        {
+          id: "versioned",
+          name: "Versioned",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://old.example/api/v1",
+          apiKey: "sk-versioned",
+        },
+      ],
+    })
+    expect(stored.version).toBe(API_CREDENTIAL_PROFILES_CONFIG_VERSION)
+    expect(stored.profiles[0]?.baseUrl).toBe("https://old.example/api")
+    // The version each consumer appends is derived, never stored: keeping one
+    // shape is what lets Claude Code and the OpenAI SDK share a profile.
+    expect(stored.profiles[1]?.baseUrl).toBe("https://old.example/api")
+
+    const current = coerceApiCredentialProfilesConfig({
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: [
+        {
+          id: "ark",
+          name: "Ark",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://ark.example/api/v3",
+          apiKey: "sk-ark",
+        },
+      ],
+    })
+    expect(current.profiles[0]?.baseUrl).toBe("https://ark.example/api/v3")
+  })
+
   const originalBrowser = (globalThis as any).browser
   let addListenerMock: ReturnType<typeof vi.fn>
   let removeListenerMock: ReturnType<typeof vi.fn>

@@ -1,3 +1,4 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import type { AccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
@@ -172,6 +173,7 @@ const createAccountApiContextFromSource = (
 
   const request: ApiServiceRequest = {
     baseUrl: source.siteUrl,
+    managementApiBaseUrl: resolveDeploymentApiOrigin(source.siteUrl),
     accountId: source.id,
     auth: {
       authType: source.authType,

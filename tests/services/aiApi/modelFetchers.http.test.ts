@@ -6,6 +6,49 @@ import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { server } from "~~/tests/msw/server"
 
 describe("AI API model fetcher HTTP routing", () => {
+  it("uses a complete Anthropic mount without repeating v1", async () => {
+    const hit = vi.fn()
+    server.use(
+      http.get(
+        "https://anthropic-compatible.example.invalid/proxy/v1/models",
+        () => {
+          hit()
+          return HttpResponse.json({
+            data: [{ id: "claude-test" }],
+            has_more: false,
+          })
+        },
+      ),
+    )
+    await expect(
+      fetchAnthropicModelIds({
+        baseUrl: "https://anthropic-compatible.example.invalid/proxy/v1",
+        apiKey: "sk-synthetic",
+      }),
+    ).resolves.toEqual(["claude-test"])
+    expect(hit).toHaveBeenCalledOnce()
+  })
+
+  it("uses a complete Gemini mount without repeating v1beta", async () => {
+    const hit = vi.fn()
+    server.use(
+      http.get(
+        "https://google-compatible.example.invalid/proxy/v1beta/models",
+        () => {
+          hit()
+          return HttpResponse.json({ models: [{ name: "models/gemini-test" }] })
+        },
+      ),
+    )
+    await expect(
+      fetchGoogleModelIds({
+        baseUrl: "https://google-compatible.example.invalid/proxy/v1beta",
+        apiKey: "AIza-synthetic",
+      }),
+    ).resolves.toEqual(["gemini-test"])
+    expect(hit).toHaveBeenCalledOnce()
+  })
+
   it("negotiates auth without changing the configured model-list path", async () => {
     const authHeaders: Array<{
       authorization: string | null
@@ -38,7 +81,7 @@ describe("AI API model fetcher HTTP routing", () => {
 
     await expect(
       fetchAnthropicModelIds({
-        baseUrl: "https://anthropic-compatible.example.invalid/proxy",
+        baseUrl: "https://anthropic-compatible.example.invalid/proxy/v1",
         apiKey: "sk-synthetic",
       }),
     ).resolves.toEqual(["claude-test"])
@@ -65,7 +108,7 @@ describe("AI API model fetcher HTTP routing", () => {
 
     await expect(
       fetchGoogleModelIds({
-        baseUrl: "https://google-compatible.example.invalid/proxy",
+        baseUrl: "https://google-compatible.example.invalid/proxy/v1beta",
         apiKey: "AIza-synthetic",
       }),
     ).resolves.toEqual(["gemini-test"])
@@ -100,7 +143,7 @@ describe("AI API model fetcher HTTP routing", () => {
 
     await expect(
       fetchGoogleModelIds({
-        baseUrl: "https://bearer-google.example.invalid/proxy",
+        baseUrl: "https://bearer-google.example.invalid/proxy/v1beta",
         apiKey: "synthetic-google-key",
       }),
     ).resolves.toEqual(["gemini-test"])

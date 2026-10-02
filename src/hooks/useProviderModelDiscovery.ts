@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
   hashProviderCatalogValue,
   normalizeProviderCatalogModelIds,
 } from "~/services/integrations/providerCatalogExport"
 import { createLogger } from "~/utils/core/logger"
-import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 const logger = createLogger("ProviderModelDiscovery")
 
@@ -170,8 +170,13 @@ export function useProviderModelDiscovery({
 
       try {
         const apiKey = await source.resolveApiKey()
+        // Discovery derives its own candidate mounts, so it is given the
+        // protocol root: one canonical input regardless of which shape the
+        // caller stored or derived.
         const upstreamModelIds = await fetchModelIds({
-          baseUrl: stripTrailingOpenAIV1(source.baseUrl),
+          baseUrl:
+            toProtocolRoot("openai-compatible", source.baseUrl) ??
+            source.baseUrl,
           apiKey,
         })
         const modelIds = normalizeProviderCatalogModelIds(

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { CURSOR_PLUS_EXPORT_TEST_IDS } from "~/components/CursorPlusExportDialog.testIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
@@ -365,6 +366,141 @@ describe("CursorPlusExportDialog", () => {
     expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0])).toMatchObject({
       type: "gemini",
       baseUrl: "https://api.example.invalid/gemini/v1beta",
+    })
+  })
+
+  // The selected protocol decides which SDK receives the address, and those SDKs
+  // disagree about who writes the version segment: the OpenAI SDK appends only
+  // `/chat/completions` or `/responses`, while the Anthropic and Google SDKs add
+  // `/v1/messages` and `/v1beta` themselves.
+  it.each([
+    {
+      protocolLabel: "ui:dialog.cursorPlus.protocols.openAIResponses",
+      expectedBaseUrl: "https://api.example.invalid/v1",
+    },
+    {
+      protocolLabel: "ui:dialog.cursorPlus.protocols.anthropic",
+      expectedBaseUrl: "https://api.example.invalid",
+    },
+    {
+      protocolLabel: "ui:dialog.cursorPlus.protocols.gemini",
+      expectedBaseUrl: "https://api.example.invalid",
+    },
+  ])(
+    "prefills the address $protocolLabel expects without an edit",
+    async ({ protocolLabel, expectedBaseUrl }) => {
+      const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
+      resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
+        ...key,
+        secret: "resolved-key",
+      }))
+      fetchModelIdsMock.mockResolvedValue(["model-a"])
+      const user = userEvent.setup()
+
+      render(
+        <CursorPlusExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
+        />,
+      )
+
+      await screen.findByText("model-a")
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "ui:dialog.cursorPlus.labels.protocol",
+        }),
+      )
+      await user.click(
+        await screen.findByRole("option", { name: protocolLabel }),
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.baseUrlInput),
+        ).toHaveValue(expectedBaseUrl)
+      })
+    },
+  )
+
+  it("prefers a declared Anthropic endpoint for the Anthropic protocol", async () => {
+    const kimiAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.KIMI_GLOBAL,
+      baseUrl: "https://platform.kimi.ai",
+    }
+    const runtimeKey = buildNewApiRuntimeKey(kimiAccount, TOKEN)
+    resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
+      ...key,
+      secret: "resolved-key",
+    }))
+    fetchModelIdsMock.mockResolvedValue(["model-a"])
+    const user = userEvent.setup()
+
+    render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountRuntimeKeyExportSource(kimiAccount, runtimeKey)}
+      />,
+    )
+
+    await screen.findByText("model-a")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.cursorPlus.labels.protocol",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.cursorPlus.protocols.anthropic",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.baseUrlInput),
+      ).toHaveValue("https://api.moonshot.ai/anthropic")
+    })
+  })
+
+  it("keeps a user-edited address when the protocol changes", async () => {
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
+    resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
+      ...key,
+      secret: "resolved-key",
+    }))
+    fetchModelIdsMock.mockResolvedValue(["model-a"])
+    const user = userEvent.setup()
+
+    render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
+      />,
+    )
+
+    await screen.findByText("model-a")
+    const baseUrlInput = screen.getByTestId(
+      CURSOR_PLUS_EXPORT_TEST_IDS.baseUrlInput,
+    )
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, "https://custom.example.invalid/router")
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.cursorPlus.labels.protocol",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.cursorPlus.protocols.gemini",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(baseUrlInput).toHaveValue("https://custom.example.invalid/router")
     })
   })
 

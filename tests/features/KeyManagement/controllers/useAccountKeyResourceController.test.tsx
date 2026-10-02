@@ -2658,7 +2658,7 @@ describe("useAccountKeyResourceController", () => {
             accountBaseUrl: "https://example.invalid",
             ref: facts.ref,
           },
-          baseUrl: "https://runtime.example.invalid/v1",
+          baseUrl: "https://runtime.example.invalid",
           key: "source-key",
         })
         const session = await atIndex(openNativeResources.mock.results, 0).value

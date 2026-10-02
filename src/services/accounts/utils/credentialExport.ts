@@ -1,9 +1,10 @@
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
+import { resolveAccountSiteAddresses } from "~/services/accounts/accountSiteProfile/addresses"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   hasUsableApiTokenKey,
 } from "~/services/accountTokens/apiTokenKey"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
 import type { DisplaySiteData } from "~/types"
@@ -36,29 +37,45 @@ const getCredentialCacheKey = (
  * Endpoint an external caller must use for this account. The account keeps its
  * own browser origin; an integration, managed site, or verification profile
  * needs the deployment's API origin instead.
+ *
+ * Exporters are configured with a protocol root: the consumer appends the
+ * version segment it owns, so a trailing `/v1` here would be appended twice.
+ *
+ * An explicit gateway override — a per-key address or a linked profile — wins
+ * over the account address.
  */
-const resolveAccountExternalApiBaseUrl = (
+export const resolveAccountExternalApiBaseUrl = (
   account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
-): string =>
-  normalizeAccountSiteProfileUrlForManagedChannel({
+  overrideUrl?: string,
+): string => {
+  if (overrideUrl)
+    return (
+      toProtocolRoot("openai-compatible", overrideUrl) ?? overrideUrl.trim()
+    )
+
+  return resolveAccountSiteAddresses({
     siteType: account.siteType,
-    url: account.baseUrl,
-  })
+    siteUrl: account.baseUrl,
+  }).inferenceApi.openAiCompatible.root
+}
 
 /**
  * Prefer a key's own gateway address over the account's browser address.
- * `accountBaseUrl` is the address the key was created against; pass the key's
- * account snapshot (not the live account) when the key inherits the account
- * endpoint, so an account address change is still followed by the export.
+ *
+ * Only a provider-supplied per-key address counts: a key that merely inherits
+ * its account snapshot's address must follow the account when it is edited,
+ * otherwise a stale key would keep exporting the old endpoint.
  */
 export const resolveAccountRuntimeKeyExternalApiBaseUrl = (
   account: Pick<DisplaySiteData, "siteType" | "baseUrl">,
-  runtimeKeyBaseUrl?: string,
-  accountBaseUrl?: string,
+  runtimeKey: Pick<AccountRuntimeKey, "baseUrl" | "account">,
 ): string =>
-  runtimeKeyBaseUrl && runtimeKeyBaseUrl !== (accountBaseUrl ?? account.baseUrl)
-    ? runtimeKeyBaseUrl
-    : resolveAccountExternalApiBaseUrl(account)
+  resolveAccountExternalApiBaseUrl(
+    account,
+    runtimeKey.baseUrl !== runtimeKey.account.baseUrl
+      ? runtimeKey.baseUrl
+      : undefined,
+  )
 
 /** Keep runtime-key identity and source-specific secret recovery in accounts. */
 export function createAccountRuntimeKeyExportSource(
@@ -66,20 +83,28 @@ export function createAccountRuntimeKeyExportSource(
   runtimeKey: AccountRuntimeKey,
   { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
 ): CredentialExportSource {
-  // The key inherits the account endpoint unless it carries its own. Compare
-  // against the key's account snapshot so a live account address change is still
-  // followed rather than pinned to the creation-time key URL.
+  // The key inherits the account endpoint unless it carries its own.
   const baseUrl = resolveAccountRuntimeKeyExternalApiBaseUrl(
     account,
-    runtimeKey.baseUrl,
-    runtimeKey.account.baseUrl,
+    runtimeKey,
   )
+  const addresses = resolveAccountSiteAddresses({
+    siteType: account.siteType,
+    siteUrl: account.baseUrl,
+  })
+  const declaredAnthropic = addresses.inferenceApi.anthropic?.root
+  const anthropicBaseUrl =
+    baseUrl === addresses.inferenceApi.openAiCompatible.root &&
+    declaredAnthropic
+      ? declaredAnthropic
+      : undefined
   return {
     id: runtimeKey.id,
     providerId: account.id,
     providerName: account.name,
     credentialName: runtimeKey.label,
     baseUrl,
+    ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}),
     notes: runtimeKey.notes,
     cacheKey: getCredentialCacheKey(
       account,

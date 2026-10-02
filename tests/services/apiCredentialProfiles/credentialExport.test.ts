@@ -53,4 +53,26 @@ describe("profile credential exports", () => {
     expect(renamed.cacheKey).toBe(source.cacheKey)
     expect(renamed.providerName).toBe("Renamed profile")
   })
+
+  it("attaches declared multi-protocol inference endpoints for matching OpenAI base URL", () => {
+    const profile = buildApiCredentialProfile({
+      baseUrl: "https://api.moonshot.cn/v1",
+      apiType: "openai-compatible",
+    })
+    const source = createProfileCredentialExportSource(profile)
+    expect(source.baseUrl).toBe("https://api.moonshot.cn")
+    expect(source.anthropicBaseUrl).toBe("https://api.moonshot.cn/anthropic")
+  })
+
+  it("attaches Anthropic compatible endpoint when exporting Volcengine Ark OpenAI profile", () => {
+    const profile = buildApiCredentialProfile({
+      baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      apiType: "openai-compatible",
+    })
+    const source = createProfileCredentialExportSource(profile)
+    expect(source.baseUrl).toBe("https://ark.cn-beijing.volces.com/api/v3")
+    expect(source.anthropicBaseUrl).toBe(
+      "https://ark.cn-beijing.volces.com/api/compatible",
+    )
+  })
 })

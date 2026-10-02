@@ -3,6 +3,7 @@ import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
+import { toVersionedProtocolMount } from "../protocolAddress"
 import {
   ANTHROPIC_AUTH_MODES,
   createAnthropicAuthHeaders,
@@ -41,8 +42,10 @@ const MAX_MODELS = 2000
 export async function fetchAnthropicModelIds(
   params: AnthropicAuthParams,
 ): Promise<string[]> {
+  const baseUrl = toVersionedProtocolMount("anthropic", params.baseUrl)
+  if (!baseUrl) throw new Error("Invalid Anthropic API base URL")
   const request = {
-    baseUrl: params.baseUrl,
+    baseUrl,
     auth: { authType: AuthTypeEnum.None },
   }
 
@@ -56,7 +59,7 @@ export async function fetchAnthropicModelIds(
     searchParams.set("limit", String(PAGE_LIMIT))
     if (afterId) searchParams.set("after_id", afterId)
 
-    const endpoint = `/v1/models?${searchParams.toString()}`
+    const endpoint = `models?${searchParams.toString()}`
 
     const fetchPage = (mode: AnthropicAuthMode) =>
       fetchApi<AnthropicModelsListResponse>(

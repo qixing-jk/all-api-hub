@@ -7,19 +7,14 @@ import type {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { coerceBaseUrlToPathSuffix, normalizeHttpUrl } from "~/utils/core/url"
 
+import { toProtocolRoot, toVersionedProtocolMount } from "../protocolAddress"
 import { decodeOpenAICompatibleResponseError } from "./responseError"
 
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.
  */
 const logger = createLogger("AiApi.OpenAICompatible")
-
-// Some OpenAI-compatible Base URLs already include their complete API prefix,
-// so model discovery must also try `/models` without changing that Base URL.
-// Volcengine Ark Coding Plan: https://docs.volcengine.com/docs/82379/2160841
-const OPENAI_COMPATIBLE_MODELS_ENDPOINTS = ["/v1/models", "/models"] as const
 
 interface OpenAICompatibleModelDiscovery {
   models: UpstreamModelList
@@ -39,58 +34,53 @@ const isMissingModelRoute = (error: unknown) =>
   error instanceof ApiError &&
   (error.statusCode === 404 || error.statusCode === 405)
 
-const resolveBaseUrlForModelEndpoint = (
-  baseUrl: string,
-  endpoint: (typeof OPENAI_COMPATIBLE_MODELS_ENDPOINTS)[number],
-) => {
-  const normalizedBaseUrl =
-    normalizeHttpUrl(baseUrl) ?? baseUrl.trim().replace(/\/+$/, "")
-  return endpoint === "/v1/models"
-    ? coerceBaseUrlToPathSuffix(normalizedBaseUrl, "/v1")
-    : normalizedBaseUrl
+const resolveCandidateModelBaseUrls = (mount: string): string[] => {
+  const root = toProtocolRoot("openai-compatible", mount)
+  return root && root !== mount ? [mount, root] : [mount]
 }
 
 /**
- * Discovers models and retains the API base URL confirmed by that same request.
- * Only route-level 404/405 responses justify trying the path-preserving fallback;
- * authentication, throttling, server, and network failures are inconclusive.
+ * Discovers models from an OpenAI-compatible protocol mount. The versioned
+ * mount is tried first because that is where compatible providers serve
+ * `/models`; the protocol root stays as a compatibility fallback for providers
+ * that publish the list without a version segment or under a legacy path.
  */
 export const discoverOpenAICompatibleModels = async (
   params: OpenAIAuthParams,
 ): Promise<OpenAICompatibleModelDiscovery> => {
+  const baseUrl = toVersionedProtocolMount("openai-compatible", params.baseUrl)
+  if (!baseUrl) throw new Error("Invalid OpenAI-compatible API base URL")
+  const candidateBaseUrls = resolveCandidateModelBaseUrls(baseUrl)
   const request = {
     ...(params.requestScheduling
       ? { requestScheduling: params.requestScheduling }
       : {}),
-    baseUrl: params.baseUrl,
+    baseUrl,
     auth: {
       authType: AuthTypeEnum.AccessToken,
       accessToken: params.apiKey,
     },
   }
   let lastError: unknown
-  for (const [
-    index,
-    endpoint,
-  ] of OPENAI_COMPATIBLE_MODELS_ENDPOINTS.entries()) {
+  for (const [index, candidateBaseUrl] of candidateBaseUrls.entries()) {
     try {
-      const models = await fetchApiData<unknown>(request, {
-        endpoint,
-        errorResponseDecoder: decodeOpenAICompatibleResponseError,
-        ...(params.abortSignal
-          ? { options: { signal: params.abortSignal } }
-          : {}),
-      })
+      const models = await fetchApiData<unknown>(
+        { ...request, baseUrl: candidateBaseUrl },
+        {
+          endpoint: "models",
+          errorResponseDecoder: decodeOpenAICompatibleResponseError,
+          ...(params.abortSignal
+            ? { options: { signal: params.abortSignal } }
+            : {}),
+        },
+      )
       if (!isModelList(models)) {
         throw new TypeError("Upstream returned an invalid model list")
       }
 
       return {
         models,
-        resolvedBaseUrl: resolveBaseUrlForModelEndpoint(
-          params.baseUrl,
-          endpoint,
-        ),
+        resolvedBaseUrl: candidateBaseUrl,
       }
     } catch (error) {
       if (
@@ -100,7 +90,7 @@ export const discoverOpenAICompatibleModels = async (
         throw error
       }
       lastError = error
-      const hasFallback = index < OPENAI_COMPATIBLE_MODELS_ENDPOINTS.length - 1
+      const hasFallback = index < candidateBaseUrls.length - 1
       if (hasFallback && isMissingModelRoute(error)) {
         continue
       }

@@ -42,7 +42,7 @@ Both the QR code and Kelivo Mobile import code contain the API key in plain text
 
 From the actions for an account key or API credential, select **Export Cursor++ Provider Configuration**. All API Hub reads the OpenAI-compatible model list and generates the `provider` object used by Cursor++ 0.0.13. The object includes a stable provider ID, name, `baseUrl`, API-key authentication, and a model list with `defaultOn: true`.
 
-Before exporting, you can search or remove discovered models and enter or paste multiple model IDs. The export uses the account's existing OpenAI-compatible address by default. If the selected native protocol uses a different path, you can edit the provider Base URL directly.
+Before exporting, you can search or remove discovered models and enter or paste multiple model IDs. The Base URL is filled in automatically for the selected protocol: the two OpenAI protocols use the versioned address, while Anthropic and Gemini use the protocol root, because their SDKs add the version segment themselves. You can still edit it if needed.
 
 Cursor++ currently supports these protocol types:
 

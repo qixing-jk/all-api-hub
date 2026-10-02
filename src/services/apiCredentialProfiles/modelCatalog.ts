@@ -10,7 +10,6 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
-import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface FetchApiCredentialModelCatalogParams {
   apiType: ApiVerificationApiType
@@ -30,7 +29,7 @@ export async function fetchApiCredentialModelIds(
     params.apiType === API_TYPES.OPENAI
   ) {
     return fetchOpenAICompatibleModelIds({
-      baseUrl: stripTrailingOpenAIV1(params.baseUrl),
+      baseUrl: params.baseUrl,
       apiKey: params.apiKey,
       abortSignal: params.abortSignal,
     })

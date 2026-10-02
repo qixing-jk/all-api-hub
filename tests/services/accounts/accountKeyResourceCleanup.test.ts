@@ -48,7 +48,7 @@ describe("account key resource linked cleanup input", () => {
         accountBaseUrl: account.baseUrl,
         ref,
       },
-      baseUrl: "https://api.moonshot.cn/v1",
+      baseUrl: "https://api.moonshot.cn",
       key: "sk-stored",
     })
     expect(resolveProvider).not.toHaveBeenCalled()
@@ -79,7 +79,7 @@ describe("account key resource linked cleanup input", () => {
         resolveProvider,
       }),
     ).resolves.toMatchObject({
-      baseUrl: "https://channel.example.invalid/v1",
+      baseUrl: "https://channel.example.invalid",
       key: "sk-channel-key",
     })
     expect(resolveProvider).toHaveBeenCalledOnce()
@@ -100,7 +100,7 @@ describe("account key resource linked cleanup input", () => {
         resolveProvider: vi.fn(),
       }),
     ).resolves.toMatchObject({
-      baseUrl: "https://api.moonshot.cn/v1",
+      baseUrl: "https://api.moonshot.cn",
       key: "sk-stored",
     })
   })

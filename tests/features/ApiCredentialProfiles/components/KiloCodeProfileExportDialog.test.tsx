@@ -53,7 +53,7 @@ const PROFILE = {
   id: "profile-1",
   name: "Reusable Key",
   apiType: API_TYPES.OPENAI_COMPATIBLE,
-  baseUrl: "https://profile.example.com/v1",
+  baseUrl: "https://profile.example.com",
   apiKey: "sk-secret",
   tagIds: [],
   notes: "",
@@ -245,7 +245,7 @@ describe("KiloCodeProfileExportDialog", () => {
         {
           accountId: "profile-1",
           siteName: "Reusable Key",
-          baseUrl: "https://profile.example.com/v1",
+          baseUrl: "https://profile.example.com",
           tokenId: 0,
           tokenName: "common:labels.apiKey",
           tokenKey: "sk-secret",
@@ -668,7 +668,7 @@ describe("KiloCodeProfileExportDialog", () => {
         {
           accountId: "profile-1",
           siteName: "Reusable Key",
-          baseUrl: "https://profile.example.com/v1",
+          baseUrl: "https://profile.example.com",
           tokenId: 0,
           tokenName: "common:labels.apiKey",
           tokenKey: "sk-secret",
@@ -945,7 +945,7 @@ describe("KiloCodeProfileExportDialog", () => {
       ...PROFILE,
       id: "profile-2",
       name: "New Profile",
-      baseUrl: "https://new-profile.example.com/v1",
+      baseUrl: "https://new-profile.example.com",
       apiKey: "sk-new",
     }
     rerender(
@@ -1100,7 +1100,7 @@ describe("KiloCodeProfileExportDialog", () => {
       ...PROFILE,
       id: "profile-2",
       name: "Next Profile",
-      baseUrl: "https://next-profile.example.com/v1",
+      baseUrl: "https://next-profile.example.com",
       apiKey: "sk-next",
     }
     rerender(

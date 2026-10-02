@@ -142,7 +142,7 @@ function createAccountStub(): DisplaySiteData {
     todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
     siteType: SITE_TYPES.NEW_API,
-    baseUrl: "https://example.com/v1",
+    baseUrl: "https://example.com",
     token: "token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,

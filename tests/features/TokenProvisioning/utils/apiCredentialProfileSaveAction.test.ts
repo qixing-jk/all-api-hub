@@ -440,7 +440,7 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
       profile: {
         name: "Example - First",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: "https://api.example.invalid/v1",
+        baseUrl: "https://api.example.invalid",
         apiKey: "sk-first",
         tagIds: ["tag-a"],
       },

@@ -21,6 +21,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import toast from "~/lib/notify"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
   API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS,
   coerceApiCredentialTelemetryJsonPathMap,
@@ -39,10 +40,6 @@ import {
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
-import {
-  normalizeGoogleFamilyBaseUrl,
-  normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type { Tag } from "~/types"
 import type {
   ApiCredentialProfile,
@@ -101,9 +98,7 @@ function normalizeBaseUrl(
   apiType: ApiVerificationApiType,
   baseUrl: string,
 ): string | null {
-  return apiType === API_TYPES.GOOGLE
-    ? normalizeGoogleFamilyBaseUrl(baseUrl)
-    : normalizeOpenAiFamilyBaseUrl(baseUrl)
+  return toProtocolRoot(apiType, baseUrl)
 }
 
 /**

@@ -42,7 +42,7 @@ Kelivo 本身也支持 OpenAI Responses，但当前 `ai-provider:v1` 导入码�
 
 在账号密钥或 API 凭据的操作区选择“导出 Cursor++ 提供商配置”，All API Hub 会读取 OpenAI 兼容模型列表，并生成 Cursor++ 0.0.13 使用的 `provider` 对象。其中包含稳定的提供商 ID、名称、`baseUrl`、API 密钥认证信息，以及带有 `defaultOn: true` 的模型列表。
 
-导出前可以搜索、移除已发现的模型，也可以输入或粘贴多个模型 ID。默认使用账号现有的 OpenAI 兼容地址；如果所选原生协议使用不同路径，可以直接调整提供商 Base URL。
+导出前可以搜索、移除已发现的模型，也可以输入或粘贴多个模型 ID。Base URL 会按所选协议自动填成该协议需要的地址：OpenAI 两种协议使用带版本段的地址，Anthropic 与 Gemini 使用协议根地址，因为对应的 SDK 会自己补上版本段；需要时仍可以直接修改。
 
 Cursor++ 当前支持以下协议类型：
 

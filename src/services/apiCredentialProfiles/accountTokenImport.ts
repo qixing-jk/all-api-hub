@@ -1,5 +1,5 @@
 import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
-import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
+import { resolveAccountSiteAddresses } from "~/services/accounts/accountSiteProfile/addresses"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import {
   apiCredentialProfileLinks,
@@ -45,10 +45,10 @@ export async function captureProfileFromAccountToken({
         tokenName: token.name ?? "",
       }),
       apiType,
-      baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
+      baseUrl: resolveAccountSiteAddresses({
         siteType,
-        url: baseUrl,
-      }),
+        siteUrl: baseUrl,
+      }).inferenceApi.openAiCompatible.root,
       apiKey: token.key,
       tagIds: tagIds ?? [],
     },
