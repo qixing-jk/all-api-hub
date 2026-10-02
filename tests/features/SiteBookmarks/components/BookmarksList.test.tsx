@@ -534,6 +534,56 @@ describe("BookmarksList", () => {
     )
   })
 
+  it("displays working state during deletion and closes dialog immediately on success", async () => {
+    const user = userEvent.setup()
+    let resolveDelete!: (value: boolean) => void
+    const deletePromise = new Promise<boolean>((resolve) => {
+      resolveDelete = resolve
+    })
+    mockDeleteBookmark.mockReturnValue(deletePromise)
+
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+    bookmarksMock = [bookmark]
+
+    render(<BookmarksList />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "common:actions.delete" }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    const confirmButton = await within(dialog).findByRole("button", {
+      name: "common:actions.delete",
+    })
+    fireEvent.click(confirmButton)
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole("button", { name: "common:status.deleting" }),
+      ).toHaveAttribute("aria-busy", "true")
+    })
+
+    resolveDelete(true)
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull()
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:toast.success.bookmarkDeleted",
+    )
+  })
+
   it("offers the unpin action for a pinned bookmark", async () => {
     const user = userEvent.setup()
     const bookmark: SiteBookmark = {

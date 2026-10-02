@@ -211,6 +211,11 @@ export default function DedupeAccountsDialog({
         },
       )
 
+      setIsConfirmOpen(false)
+      if (deletedCount > 0) {
+        onClose()
+      }
+
       await loadAccountData()
 
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
@@ -219,10 +224,6 @@ export default function DedupeAccountsDialog({
           successCount: deletedCount,
         },
       })
-      setIsConfirmOpen(false)
-      if (deletedCount > 0) {
-        onClose()
-      }
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

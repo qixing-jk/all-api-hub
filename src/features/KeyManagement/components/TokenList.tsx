@@ -8,7 +8,7 @@ import {
   type DeeplinkExportTarget,
 } from "~/components/DeeplinkExportDialog"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
-import { Badge, Button, Card, Checkbox } from "~/components/ui"
+import { Badge, Button, Card, Checkbox, Spinner } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
@@ -376,6 +376,7 @@ export function TokenList(props: TokenListProps) {
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+  const isReloading = (isLoading || nativeLoading) && displayRows.length > 0
   const [collapsedAccountIds, setCollapsedAccountIds] = useState<Set<string>>(
     () =>
       selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -927,155 +928,176 @@ export function TokenList(props: TokenListProps) {
         </div>
       ) : null}
 
-      {!isAllAccountsMode ? nativeResourceList : null}
+      {isReloading && (
+        <div
+          aria-live="polite"
+          className="border-border bg-surface-subtle/70 text-muted-foreground gap-density-2 py-density-2 mb-density-3 animate-in fade-in flex items-center justify-center rounded-lg border text-xs duration-150"
+        >
+          <Spinner size="sm" className="text-primary h-3.5 w-3.5" />
+          <span>{t("common:status.refreshing")}</span>
+        </div>
+      )}
 
-      {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
-        <>
-          <div className="gap-density-2 mb-density-4 flex flex-wrap items-center justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              data-testid={KEY_MANAGEMENT_TEST_IDS.expandAllButton}
-              onClick={expandAll}
-              leftIcon={<ChevronDown className="h-4 w-4" />}
-            >
-              {t("actions.expandAll")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              onClick={collapseAll}
-              leftIcon={<ChevronUp className="h-4 w-4" />}
-            >
-              {t("actions.collapseAll")}
-            </Button>
-          </div>
+      <div
+        className={cn(
+          "transition-opacity duration-200",
+          isReloading && "pointer-events-none opacity-60 select-none",
+        )}
+      >
+        {!isAllAccountsMode ? nativeResourceList : null}
 
-          <KeyAccountGroups
-            groups={groupedRows}
-            hasNavigationTarget={Boolean(
-              associationTarget || guidedManagedSiteImportAccountId,
-            )}
-            renderGroup={(group) => {
-              const { account } = group
-              const isCollapsed = collapsedAccountIds.has(account.id)
-              const shouldShowShowingCount =
-                group.showingCount !== group.totalCount
-              const groupEligibleEntries = filteredEligibleEntries.filter(
-                (entry) => entry.runtimeKey.accountId === account.id,
-              )
-              const selectedGroupVisibleCount = groupEligibleEntries.filter(
-                (entry) => selectedEntryIds.has(entry.id),
-              ).length
-              const groupSelectionChecked =
-                selectedGroupVisibleCount === 0
-                  ? false
-                  : selectedGroupVisibleCount === groupEligibleEntries.length
-                    ? true
-                    : "indeterminate"
+        {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
+          <>
+            <div className="gap-density-2 mb-density-4 flex flex-wrap items-center justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                data-testid={KEY_MANAGEMENT_TEST_IDS.expandAllButton}
+                onClick={expandAll}
+                leftIcon={<ChevronDown className="h-4 w-4" />}
+              >
+                {t("actions.expandAll")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={collapseAll}
+                leftIcon={<ChevronUp className="h-4 w-4" />}
+              >
+                {t("actions.collapseAll")}
+              </Button>
+            </div>
 
-              return (
-                <Card
-                  key={account.id}
-                  variant="outlined"
-                  className="overflow-hidden"
-                  role="group"
-                  aria-label={account.name}
-                >
-                  <div
-                    className={cn(
-                      "dark:hover:bg-secondary hover:bg-surface-subtle gap-density-3 py-density-2 flex w-full items-center justify-between px-3 text-left",
-                      isCollapsed ? "rounded-lg" : "border-border border-b",
-                    )}
+            <KeyAccountGroups
+              groups={groupedRows}
+              hasNavigationTarget={Boolean(
+                associationTarget || guidedManagedSiteImportAccountId,
+              )}
+              renderGroup={(group) => {
+                const { account } = group
+                const isCollapsed = collapsedAccountIds.has(account.id)
+                const shouldShowShowingCount =
+                  group.showingCount !== group.totalCount
+                const groupEligibleEntries = filteredEligibleEntries.filter(
+                  (entry) => entry.runtimeKey.accountId === account.id,
+                )
+                const selectedGroupVisibleCount = groupEligibleEntries.filter(
+                  (entry) => selectedEntryIds.has(entry.id),
+                ).length
+                const groupSelectionChecked =
+                  selectedGroupVisibleCount === 0
+                    ? false
+                    : selectedGroupVisibleCount === groupEligibleEntries.length
+                      ? true
+                      : "indeterminate"
+
+                return (
+                  <Card
+                    key={account.id}
+                    variant="outlined"
+                    className="overflow-hidden"
+                    role="group"
+                    aria-label={account.name}
                   >
-                    <BatchSelectionControl
-                      checked={groupSelectionChecked}
-                      label={t(
-                        "batchManagedSiteExport.selection.accountGroup",
-                        { name: account.name },
+                    <div
+                      className={cn(
+                        "dark:hover:bg-secondary hover:bg-surface-subtle gap-density-3 py-density-2 flex w-full items-center justify-between px-3 text-left",
+                        isCollapsed ? "rounded-lg" : "border-border border-b",
                       )}
-                      onSelectionChange={
-                        groupEligibleEntries.length > 0
-                          ? (checked) =>
-                              toggleGroupSelection(
-                                groupEligibleEntries,
-                                checked,
-                              )
-                          : undefined
-                      }
-                      disabledReason={
-                        groupEligibleEntries.length === 0
-                          ? t(
-                              "keyManagement:batchSelection.accountUnavailableReason",
-                            )
-                          : undefined
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="gap-density-3 flex min-w-0 flex-1 items-center justify-between text-left"
-                      onClick={() => toggleGroup(account.id)}
-                      aria-expanded={!isCollapsed}
                     >
-                      <div className="gap-density-2 flex min-w-0 flex-1 items-center">
-                        <span className="truncate font-medium">
-                          {account.name}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          size="sm"
-                          className="shrink-0"
-                        >
-                          {t("accountSummary.keys", {
-                            count: group.totalCount,
-                          })}
-                        </Badge>
-                        <Badge variant="outline" size="sm" className="shrink-0">
-                          {t("enabledCount", { count: group.enabledCount })}
-                        </Badge>
-                        {shouldShowShowingCount ? (
+                      <BatchSelectionControl
+                        checked={groupSelectionChecked}
+                        label={t(
+                          "batchManagedSiteExport.selection.accountGroup",
+                          { name: account.name },
+                        )}
+                        onSelectionChange={
+                          groupEligibleEntries.length > 0
+                            ? (checked) =>
+                                toggleGroupSelection(
+                                  groupEligibleEntries,
+                                  checked,
+                                )
+                            : undefined
+                        }
+                        disabledReason={
+                          groupEligibleEntries.length === 0
+                            ? t(
+                                "keyManagement:batchSelection.accountUnavailableReason",
+                              )
+                            : undefined
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="gap-density-3 flex min-w-0 flex-1 items-center justify-between text-left"
+                        onClick={() => toggleGroup(account.id)}
+                        aria-expanded={!isCollapsed}
+                      >
+                        <div className="gap-density-2 flex min-w-0 flex-1 items-center">
+                          <span className="truncate font-medium">
+                            {account.name}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            size="sm"
+                            className="shrink-0"
+                          >
+                            {t("accountSummary.keys", {
+                              count: group.totalCount,
+                            })}
+                          </Badge>
                           <Badge
                             variant="outline"
                             size="sm"
                             className="shrink-0"
                           >
-                            {t("showingCount", { count: group.showingCount })}
+                            {t("enabledCount", { count: group.enabledCount })}
                           </Badge>
-                        ) : null}
-                      </div>
-                      <ChevronDown
-                        className={cn(
-                          "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
-                          isCollapsed ? "rotate-0" : "rotate-180",
-                        )}
-                      />
-                    </button>
-                  </div>
-
-                  {!isCollapsed ? (
-                    <div className="space-y-density-3 py-density-3 px-3">
-                      {group.filteredEntries.map((entry) => (
-                        <div key={entry.id}>
-                          {renderServiceCredentialCard(entry)}
+                          {shouldShowShowingCount ? (
+                            <Badge
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                            >
+                              {t("showingCount", { count: group.showingCount })}
+                            </Badge>
+                          ) : null}
                         </div>
-                      ))}
-                      {renderNativeResourceList(group.nativeRows)}
+                        <ChevronDown
+                          className={cn(
+                            "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
+                            isCollapsed ? "rotate-0" : "rotate-180",
+                          )}
+                        />
+                      </button>
                     </div>
-                  ) : null}
-                </Card>
-              )
-            }}
-          />
-        </>
-      ) : (
-        <div className="space-y-density-3">
-          {filteredEntries.map((entry) => (
-            <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
-          ))}
-        </div>
-      )}
+
+                    {!isCollapsed ? (
+                      <div className="space-y-density-3 py-density-3 px-3">
+                        {group.filteredEntries.map((entry) => (
+                          <div key={entry.id}>
+                            {renderServiceCredentialCard(entry)}
+                          </div>
+                        ))}
+                        {renderNativeResourceList(group.nativeRows)}
+                      </div>
+                    ) : null}
+                  </Card>
+                )
+              }}
+            />
+          </>
+        ) : (
+          <div className="space-y-density-3">
+            {filteredEntries.map((entry) => (
+              <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {currentDeeplinkExportRequest && (
         <DeeplinkExportDialog
