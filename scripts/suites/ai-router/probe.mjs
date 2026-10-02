@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadLocalEnv } from "../../utils/local-env.mjs"
 
 /**
  * Pure protocol and backend API probe for AI-Router.
@@ -99,6 +100,7 @@ export async function runAiRouterProbe({
 
 // 允许单独作为 CLI 运行: node scripts/suites/ai-router/probe.mjs [token]
 if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
+  loadLocalEnv()
   const token = process.argv[2] || process.env.AI_ROUTER_ACCESS_TOKEN || ""
   runAiRouterProbe({ token })
     .then((res) => {

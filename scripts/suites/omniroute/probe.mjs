@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadLocalEnv } from "../../utils/local-env.mjs"
 
 /**
  * Live protocol probe for an OmniRoute deployment.
@@ -319,6 +320,7 @@ export async function runOmniRouteProbe({
 
 // Allow running this suite directly: node scripts/suites/omniroute/probe.mjs
 if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
+  loadLocalEnv()
   const baseUrl =
     process.argv[2] ||
     process.env.OMNIROUTE_BASE_URL ||

@@ -1,3 +1,5 @@
+import { loadLocalEnv } from "../../utils/local-env.mjs"
+
 /** Require both transport and console-envelope success before trusting probe data. */
 async function readProbeData(response, endpoint) {
   if (!response.ok) throw new Error(`${endpoint}: HTTP ${response.status}`)
@@ -178,6 +180,7 @@ export async function runKimiProbe({
 // Legacy positional refreshToken is ignored; baseUrl stays in position 4 for compatibility.
 // node scripts/suites/kimi/probe.mjs [token] [ignoredRefreshToken] [baseUrl]
 if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
+  loadLocalEnv()
   const token = process.argv[2] || process.env.KIMI_ACCESS_TOKEN || ""
   const baseUrl =
     process.argv[4] || process.env.KIMI_BASE_URL || "https://platform.kimi.ai"

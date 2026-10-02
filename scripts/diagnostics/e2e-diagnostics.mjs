@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process"
 import path from "node:path"
 
+import { loadLocalEnv } from "../utils/local-env.mjs"
+
+loadLocalEnv()
+
 const repoRoot = process.cwd()
 
 const commandRegistry = {

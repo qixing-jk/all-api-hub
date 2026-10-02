@@ -2,6 +2,9 @@
 import { connectDevExtension } from "./cdp/client.mjs"
 import { runRixProbe } from "./suites/rix/probe.mjs"
 import { runRixUiTest } from "./suites/rix/ui.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
+
+loadLocalEnv()
 
 function parseArgs(args) {
   let targetUrl = process.env.TARGET_RIX_URL || "https://platform.ephone.ai"

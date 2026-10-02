@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadLocalEnv } from "../../utils/local-env.mjs"
 
 /**
  * Pure protocol probe for Rix API deployments (5.x or 6.x).
@@ -89,6 +90,7 @@ export async function runRixProbe({ targetUrl, timeoutMs = 10000 }) {
 
 // 允许单独作为 CLI 运行: node scripts/suites/rix/probe.mjs [url]
 if (process.argv[1] && process.argv[1].endsWith("probe.mjs")) {
+  loadLocalEnv()
   const target =
     process.argv[2] ||
     process.env.TARGET_RIX_URL ||

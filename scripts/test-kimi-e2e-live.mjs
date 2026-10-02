@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { connectDevExtension } from "./cdp/client.mjs"
 import { runKimiProbe } from "./suites/kimi/probe.mjs"
 import { runKimiUiTest } from "./suites/kimi/ui.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
 
 export function parseArgs(args) {
   let token = process.env.KIMI_ACCESS_TOKEN || ""
@@ -188,6 +189,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  loadLocalEnv()
   main().catch((err) => {
     console.error("\n❌ 测试运行失败:", err.message)
     process.exit(1)

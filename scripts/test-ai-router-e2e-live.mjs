@@ -2,6 +2,9 @@
 import { connectDevExtension } from "./cdp/client.mjs"
 import { runAiRouterProbe } from "./suites/ai-router/probe.mjs"
 import { runAiRouterUiTest } from "./suites/ai-router/ui.mjs"
+import { loadLocalEnv } from "./utils/local-env.mjs"
+
+loadLocalEnv()
 
 function parseArgs(args) {
   let token = process.env.AI_ROUTER_ACCESS_TOKEN || ""
