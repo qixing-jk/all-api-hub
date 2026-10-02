@@ -137,4 +137,18 @@ describe("parseKimiPricingDoc", () => {
       '<DocTable columns={[{ title: "Model" }, { title: "Unit" }, { title: "Input Price" }, { title: "Output Price" }]} rows={[["kimi-k3", "1M tokens", "$1.00", "$2.00"], ["kimi-k3", "1M tokens", "$10.00", "$20.00"]]} />'
     expect(parseKimiPricingDoc(doc)).toEqual([])
   })
+
+  it.each(["¥0.10", "n/a"])(
+    "rejects a cached price with wrong currency or unavailable value %s",
+    (cachePrice) => {
+      const doc = `<DocTable columns={[{ title: "Model" }, { title: "Unit" }, { title: "Input Price" }, { title: "Output Price" }, { title: "Cached Input Price" }]} rows={[["kimi-k3", "1M tokens", "$1.00", "$2.00", "${cachePrice}"]]} />`
+      expect(parseKimiPricingDoc(doc)).toEqual([])
+    },
+  )
+
+  it("rejects adjacent table cells without their required separator", () => {
+    const doc =
+      '<DocTable columns={[{ title: "Model" }, { title: "Unit" }, { title: "Input Price" }, { title: "Output Price" }]} rows={[["kimi-k3" "1M tokens", "$1.00", "$2.00"]]} />'
+    expect(parseKimiPricingDoc(doc)).toEqual([])
+  })
 })

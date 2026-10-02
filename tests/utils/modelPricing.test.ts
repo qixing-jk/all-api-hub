@@ -57,6 +57,37 @@ describe("modelPricing utils", () => {
       })
     })
 
+    it("keeps native CNY cache-write prices without relabeling them as USD", () => {
+      const rate = (amount: number) => ({
+        amount,
+        currency: "CNY" as const,
+        unit: PRICE_RATE_UNITS.TOKEN,
+        per: TOKENS_PER_MILLION,
+      })
+      const model: ModelPricing = {
+        ...tokenModel,
+        pricingPlan: {
+          rates: { input: rate(20), output: rate(100), cacheWrite: rate(40) },
+          rules: [],
+          issues: [],
+          source: { kind: PRICING_SOURCE_KINDS.CATALOG },
+          groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+        },
+      }
+      expect(calculateModelPrice(model, 1)).toMatchObject({
+        kind: "unavailable",
+        perMillionTokens: {
+          input: { amount: 20, currency: "CNY" },
+          output: { amount: 100, currency: "CNY" },
+          cacheWrite: { amount: 40, currency: "CNY" },
+        },
+      })
+      model.pricingPlan!.rates.input!.amount = Infinity
+      expect(calculateModelPrice(model, 1)).not.toHaveProperty(
+        "perMillionTokens",
+      )
+    })
+
     it("displays independent plan rates and applies the group exactly once", () => {
       const model: ModelPricing = {
         ...tokenModel,

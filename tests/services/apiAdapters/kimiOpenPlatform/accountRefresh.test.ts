@@ -90,4 +90,14 @@ describe("kimiOpenPlatformAccountRefresh", () => {
       expect(result.healthStatus.status).not.toBe(SiteHealthStatus.Healthy)
     }
   })
+
+  it("does not manufacture a console auth update for an API-key balance refresh", async () => {
+    const data = { quota: 42, checkIn: baseRequest.checkIn }
+    mockFetchKimiAccountData.mockResolvedValueOnce(data)
+    mockReadKimiAuthState.mockReturnValueOnce(undefined)
+    const result =
+      await kimiOpenPlatformAccountRefresh.refreshAccount(baseRequest)
+    expect(result).toMatchObject({ success: true, data })
+    expect(result).not.toHaveProperty("authUpdate")
+  })
 })

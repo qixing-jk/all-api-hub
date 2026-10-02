@@ -98,6 +98,28 @@ describe("kimi console transport", () => {
     expect(session).not.toHaveProperty("kimiOpenPlatformAuth")
   })
 
+  it("retains the saved token expiry when hydrating a console session", async () => {
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue({
+      id: "saved",
+      site_type: "kimi-global",
+      site_url: "https://platform.kimi.ai",
+      account_info: { id: "user", access_token: "access" },
+      kimiOpenPlatformAuth: {
+        refreshToken: "refresh",
+        organizationId: "org",
+        tokenExpiresAt: 123,
+      },
+    } as never)
+    await expect(
+      ensureKimiAuthState({ ...structuredClone(request), accountId: "saved" }),
+    ).resolves.toEqual({
+      accessToken: "access",
+      refreshToken: "refresh",
+      organizationId: "org",
+      tokenExpiresAt: 123,
+    })
+  })
+
   it("detects a changed organization between reads and removes stale expiry after rotation", async () => {
     const saved = {
       id: "saved",
