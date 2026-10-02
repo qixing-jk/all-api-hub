@@ -1,0 +1,27 @@
+name: setup
+description: Set up Node.js and pnpm, then install dependencies.
+
+inputs:
+  node-version-file:
+    description: Path to the Node.js version file relative to the repository root
+    required: false
+    default: ".nvmrc"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      with:
+        run_install: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      with:
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: "pnpm"
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline
