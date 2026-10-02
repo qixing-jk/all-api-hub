@@ -99,6 +99,35 @@ describe("kimiOpenPlatformKeyResources", () => {
     expect(mockRenameKimiKey).not.toHaveBeenCalled()
   })
 
+  it("falls back to the first project and refuses default creation without any project", async () => {
+    mockFetchKimiProjects.mockResolvedValueOnce([
+      { id: "first", name: "First" },
+      { id: "second", name: "Second" },
+    ])
+    const session = await capability.open(openInput)
+    await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+      scopeKey: "first",
+    })
+    mockFetchKimiProjects.mockResolvedValueOnce([])
+    const emptySession = await capability.open(openInput)
+    await expect(emptySession.resolveDefaultScope()).rejects.toThrow()
+    expect(mockCreateKimiKey).not.toHaveBeenCalled()
+  })
+
+  it("lists keys without inventing a creation timestamp when the console omits it", async () => {
+    mockFetchKimiProjects.mockResolvedValueOnce([
+      { id: "proj-1", name: "Project" },
+    ])
+    mockFetchKimiKeys.mockResolvedValueOnce([
+      { key: "ak", auth: "masked…", name: "Name", project_id: "proj-1" },
+    ])
+    const session = await capability.open(openInput)
+    const collection = await session.openCollection("proj-1")
+    const page = await collection.list()
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]?.runtimeKey).not.toHaveProperty("createdAt")
+  })
+
   it("uses safe key identifiers and project metadata for unnamed inventory entries", async () => {
     mockFetchKimiProjects.mockResolvedValue([{ id: "proj-1", name: "Project" }])
     mockFetchKimiKeys.mockResolvedValue([
