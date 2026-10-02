@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
@@ -77,7 +84,9 @@ export function useProviderModelDiscovery({
     [sources],
   )
 
-  useEffect(() => {
+  // A credential promise can settle between commit and passive effects. Keep
+  // cancellation refs synchronized with committed state before that can happen.
+  useLayoutEffect(() => {
     const requestIds = requestIdsRef.current
     const activeCacheKeys = activeCacheKeysRef.current
     isMountedRef.current = true
@@ -91,11 +100,11 @@ export function useProviderModelDiscovery({
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     isOpenRef.current = isOpen
   }, [isOpen])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const nextCacheKeys = new Map(
       sources.map((source) => [source.selectionId, source.cacheKey]),
     )

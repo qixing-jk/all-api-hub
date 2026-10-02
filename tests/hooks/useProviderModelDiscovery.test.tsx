@@ -1,3 +1,5 @@
+import { useLayoutEffect } from "react"
+import { createRoot } from "react-dom/client"
 import { describe, expect, it, vi } from "vitest"
 
 import { useProviderModelDiscovery } from "~/hooks/useProviderModelDiscovery"
@@ -120,6 +122,70 @@ describe("useProviderModelDiscovery", () => {
           baseUrl: "https://old.test",
           apiKey: "new-key",
         })
+    },
+  )
+
+  it.each(["close", "replace"])(
+    "invalidates a pending key in the same commit as %s",
+    async (action) => {
+      let resolveKey!: (key: string) => void
+      const pendingKey = new Promise<string>((resolve) => {
+        resolveKey = resolve
+      })
+      const resolveApiKey = vi.fn().mockReturnValue(pendingKey)
+      const fetchModelIds = vi.fn().mockResolvedValue([])
+      let resolveCommit!: () => void
+      const committed = new Promise<void>((resolve) => {
+        resolveCommit = resolve
+      })
+      function Harness({ changed }: { changed: boolean }) {
+        useProviderModelDiscovery({
+          isOpen: !(changed && action === "close"),
+          sources: [
+            {
+              selectionId: "account",
+              cacheKey: changed ? "new" : "old",
+              baseUrl: "https://old.test",
+              resolveApiKey: changed ? async () => "new-key" : resolveApiKey,
+            },
+          ],
+          fetchModelIds,
+        })
+        useLayoutEffect(() => {
+          if (changed) {
+            resolveKey("old-key")
+            resolveCommit()
+          }
+        }, [changed])
+        return null
+      }
+      const container = document.createElement("div")
+      const root = createRoot(container)
+      const actEnvironment = globalThis as typeof globalThis & {
+        IS_REACT_ACT_ENVIRONMENT: boolean
+      }
+      const previousActEnvironment = actEnvironment.IS_REACT_ACT_ENVIRONMENT
+      try {
+        await act(async () => {
+          root.render(<Harness changed={false} />)
+        })
+        expect(resolveApiKey).toHaveBeenCalled()
+        // act flushes passive effects synchronously. Let React perform this commit
+        // normally so credential resolution can run before that passive flush.
+        actEnvironment.IS_REACT_ACT_ENVIRONMENT = false
+        root.render(<Harness changed={true} />)
+        await committed
+        await pendingKey
+        expect(fetchModelIds).not.toHaveBeenCalledWith({
+          baseUrl: "https://old.test",
+          apiKey: "old-key",
+        })
+      } finally {
+        actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+        await act(async () => {
+          root.unmount()
+        })
+      }
     },
   )
 
