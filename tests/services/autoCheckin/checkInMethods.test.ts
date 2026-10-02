@@ -400,6 +400,40 @@ describe("check-in methods compatibility activation", () => {
     expect(getStatus).not.toHaveBeenCalled()
   })
 
+  it("flags every candidate as timed out when the deadline is already exhausted", async () => {
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          getReadiness: () => ({ ready: true }),
+          detect: async () => ({
+            outcome: "matched",
+            evidence: { source: "probe", observedAt: 200 },
+          }),
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+    const account = buildSiteAccount({ site_type: SITE_TYPES.NEW_API })
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+
+    const result = await discoverCheckInMethods({
+      account,
+      config,
+      registry,
+      observedAt: 200,
+      deadlineMs: 0,
+    })
+
+    expect(result.timedOutMethodIds).toEqual(["new-api:daily-checkin"])
+    expect(result.decision.outcome).toBe("unknown")
+  })
+
   it("keeps manual selection sticky across an incomplete discovery", async () => {
     const abortSpy = vi.fn()
     const registry = createAutoCheckinMethodRegistry([
