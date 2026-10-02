@@ -1167,6 +1167,38 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it("preserves the Kimi session read through background messaging", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([])
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.KIMI_GLOBAL)
+    const auth = {
+      refreshToken: "refresh",
+      organizationId: "org",
+      tokenExpiresAt: 123,
+    }
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "user",
+        user: { id: "user", username: "User" },
+        accessToken: "access",
+        kimiOpenPlatformAuth: auth,
+        siteTypeHint: SITE_TYPES.KIMI_GLOBAL,
+      },
+    })
+    await expect(
+      autoDetectSmart("https://platform.kimi.ai", testExecution),
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        userId: "user",
+        accessToken: "access",
+        kimiOpenPlatformAuth: auth,
+        siteType: SITE_TYPES.KIMI_GLOBAL,
+      },
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("falls back to background messaging when the current tab does not match the target origin", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
