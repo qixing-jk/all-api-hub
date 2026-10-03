@@ -5,11 +5,13 @@ import {
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
   parseNewApiDashboardAuthBundleResponse,
 } from "~/services/apiService/newApi/dashboardAuth"
+import { getErrorMessage } from "~/utils/core/error"
 import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
 
 import {
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+  type ContentSessionExtractionContext,
   type ContentSessionExtractionResult,
   type ContentSessionExtractor,
 } from "../contracts"
@@ -47,24 +49,46 @@ async function createControlledRefreshError(
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/docs/authentication.md
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/controller/user.go
  */
-async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult | null> {
+async function extractNewApiAuthBundle(
+  context: ContentSessionExtractionContext,
+): Promise<ContentSessionExtractionResult | null> {
   const origin = location.origin
   let response: Response
+  const diagnostics = context.diagnostics
+  diagnostics?.record("refresh_started")
 
   try {
     response = await fetch(`${origin}${NEW_API_DASHBOARD_AUTH_REFRESH_PATH}`, {
       credentials: "include",
       method: "POST",
     })
-  } catch {
+  } catch (error) {
+    diagnostics?.record("refresh_failed", {
+      reason: "network_error",
+      error: getErrorMessage(error),
+    })
     throw new Error(AUTH_REFRESH_REQUEST_ERROR)
   }
+  diagnostics?.record("refresh_response", { status: response.status })
 
-  if (response.status === 404 || response.status === 405) return null
+  if (response.status === 404 || response.status === 405) {
+    diagnostics?.record("refresh_unsupported", { status: response.status })
+    return null
+  }
   if (!response.ok && CONTROLLED_ERROR_STATUSES.has(response.status)) {
-    throw await createControlledRefreshError(response)
+    const error = await createControlledRefreshError(response)
+    diagnostics?.record("refresh_failed", {
+      reason: "http_error",
+      status: response.status,
+      error: error.message,
+    })
+    throw error
   }
   if (!response.ok) {
+    diagnostics?.record("refresh_failed", {
+      reason: "http_error",
+      status: response.status,
+    })
     throw createRefreshStatusError(response.status)
   }
 
@@ -72,10 +96,12 @@ async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult
   try {
     body = await response.json()
   } catch {
+    diagnostics?.record("refresh_invalid", { reason: "body_unreadable" })
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
 
   const parsed = parseNewApiDashboardAuthBundleResponse(body)
+  diagnostics?.record("refresh_body_parsed", { kind: parsed.kind })
   if (parsed.kind === "malformed") {
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
@@ -85,7 +111,10 @@ async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult
     parsed.bundle.user,
     SITE_TYPES.NEW_API,
   )
-  if (!identity) throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+  if (!identity) {
+    diagnostics?.record("refresh_invalid", { reason: "user_id_missing" })
+    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+  }
 
   return {
     userId: identity.userId,

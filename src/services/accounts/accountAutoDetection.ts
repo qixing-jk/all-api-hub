@@ -25,6 +25,10 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
+import {
+  createAccountDetectionDiagnostics,
+  type AccountDetectionDiagnostics,
+} from "~/services/accountSiteOnboarding/diagnostics"
 import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
@@ -126,12 +130,13 @@ function getPrivateDetectionFailure(
 }
 
 /** Detects account information using the available browser and API strategies. */
-export async function autoDetectAccount(
+async function runAutoDetectAccount(
   url: string,
   authType: AuthTypeEnum,
   protectionBypassExecution?: ProtectionBypassExecution,
   cookieAuthSessionCookie?: string,
   options?: { existingAccount?: AccountAutoDetectExistingAccount },
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
     return {
@@ -176,6 +181,7 @@ export async function autoDetectAccount(
     const detectResult = await autoDetectSmart(
       normalizedUrl,
       protectionBypassExecution,
+      diagnostics,
     )
     autoDetectContext = detectResult.autoDetectContext
     recoveryData = mergeAccountAutoDetectRecoveryData(
@@ -256,6 +262,7 @@ export async function autoDetectAccount(
       }
     }
 
+    diagnostics?.record("account_completion_started", { siteType })
     const completed = await completeAutoDetectedAccount({
       url: normalizedUrl,
       requestedAuthType: authType,
@@ -326,5 +333,38 @@ export async function autoDetectAccount(
       autoDetectFailureReason,
       recoveryData,
     }
+  }
+}
+
+/** Reports the complete account-detection outcome under the session trace ID. */
+export async function autoDetectAccount(
+  url: string,
+  authType: AuthTypeEnum,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  cookieAuthSessionCookie?: string,
+  options?: { existingAccount?: AccountAutoDetectExistingAccount },
+): Promise<AccountAutoDetectResponse> {
+  const diagnostics = createAccountDetectionDiagnostics()
+  diagnostics.record("account_detection_started", { authType })
+  try {
+    const result = await runAutoDetectAccount(
+      url,
+      authType,
+      protectionBypassExecution,
+      cookieAuthSessionCookie,
+      options,
+      diagnostics,
+    )
+    diagnostics.finish(result.success ? "success" : "failed", {
+      reason:
+        result.autoDetectFailureReason ??
+        (result.success ? undefined : "validation_failed"),
+      strategy: result.autoDetectContext?.strategy,
+      siteType: result.autoDetectContext?.siteType,
+    })
+    return result
+  } catch (error) {
+    diagnostics.finish("failed", { reason: "exception" })
+    throw error
   }
 }

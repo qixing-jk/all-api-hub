@@ -686,6 +686,7 @@ describe("content storage handler", () => {
       expect(firstExtractor.extract).toHaveBeenCalledWith({
         url: "https://example.invalid",
         siteTypeHint: "new-api",
+        diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       })
       expect(laterExtractor.canExtract).not.toHaveBeenCalled()
       expect(laterExtractor.extract).not.toHaveBeenCalled()
@@ -732,6 +733,7 @@ describe("content storage handler", () => {
       expect(matchingExtractor.extract).toHaveBeenCalledWith({
         url: "https://example.invalid",
         siteTypeHint: "unknown",
+        diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       })
     })
 

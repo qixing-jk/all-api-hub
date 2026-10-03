@@ -26,6 +26,10 @@ import {
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import {
+  createAccountDetectionDiagnostics,
+  type AccountDetectionDiagnostics,
+} from "~/services/accountSiteOnboarding/diagnostics"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -111,17 +115,6 @@ function isGenericUserDataMissingError(error?: string): boolean {
 }
 
 /**
- * 检测平台能力
- */
-/**
- * Detect available browser APIs to choose a compatible auto-detect strategy.
- * @returns Capability flags indicating windows/tabs/runtime availability.
- */
-function detectPlatformCapabilities() {
-  return getBrowserApiCapabilities()
-}
-
-/**
  * Resolves the detection origin only for profiles that opt into hostname inference.
  */
 function resolveAutoDetectUrl(url: string): string {
@@ -203,10 +196,6 @@ function withAutoDetectContext(
 }
 
 /**
- * 公共逻辑：组合用户数据和站点类型
- * 这是所有自动识别方式的最后一步
- */
-/**
  * Merge user data (if any) with detected site type into a unified result.
  * @param userData User info resolved from upstream source; null when missing.
  * @param url Current site URL for site type detection.
@@ -216,8 +205,10 @@ async function combineUserDataAndSiteType(
   userData: UserDataResult | null,
   url: string,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
   if (!userData) {
+    diagnostics?.record("session_invalid", { reason: "user_data_missing" })
     return {
       success: false,
       error: t("messages:operations.detection.getUserIdFailed"),
@@ -277,7 +268,9 @@ async function getUserDataViaAPI(
   fetchContext?: AutoDetectFetchContext,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<UserDataResult | null> {
+  diagnostics?.record("api_session_started", { siteType })
   try {
     if (fetchContext) {
       logger.debug("API auto-detect using browser fetch context", {
@@ -289,6 +282,11 @@ async function getUserDataViaAPI(
 
     const accountBootstrap = getAccountBootstrapForApiFallback(siteType)
     if (!accountBootstrap) {
+      diagnostics?.record("source_skipped", {
+        source: "api",
+        reason: "capability_unavailable",
+        siteType,
+      })
       logger.warn("Account bootstrap capability is unavailable", {
         siteType,
         hasFetchContext: Boolean(fetchContext),
@@ -307,6 +305,11 @@ async function getUserDataViaAPI(
     })
     const userId = normalizeAccountIdentity(userInfo?.id)
     if (!userInfo || !userId) {
+      diagnostics?.record("session_invalid", {
+        source: "api",
+        reason: "user_id_missing",
+        siteType,
+      })
       logger.debug("API auto-detect returned no user id", {
         url,
         siteType,
@@ -314,6 +317,7 @@ async function getUserDataViaAPI(
       })
       return null
     }
+    diagnostics?.record("api_session_finished", { success: true, siteType })
     return {
       userId,
       user: userInfo,
@@ -325,6 +329,10 @@ async function getUserDataViaAPI(
       ...(fetchContext ? { fetchContext } : {}),
     }
   } catch (error) {
+    diagnostics?.record("api_session_failed", {
+      siteType,
+      error: getErrorMessage(error),
+    })
     logger.warn("API 方式获取用户数据失败", {
       url,
       siteType,
@@ -346,7 +354,11 @@ async function getUserDataViaAPI(
 async function autoDetectDirect(
   url: string,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+  })
   logger.info("使用直接方式", { url })
 
   try {
@@ -357,6 +369,10 @@ async function autoDetectDirect(
     // 请求必然失败。提前跳过，避免空发一条注定失败的请求（手机上它常是最后的
     // 兜底，不能因为它在桌面端多半失败就直接去掉）。
     if (!(await hasCookiesForUrl(url))) {
+      diagnostics?.record("source_skipped", {
+        source: AUTO_DETECT_STRATEGIES.DirectApi,
+        reason: "cookies_missing",
+      })
       logger.info("目标站点无 Cookie，跳过直接方式", { url })
       return withAutoDetectContext(
         {
@@ -377,6 +393,7 @@ async function autoDetectDirect(
       undefined,
       undefined,
       protectionBypassExecution,
+      diagnostics,
     )
 
     // 组合用户数据和站点类型（公共逻辑）
@@ -385,6 +402,7 @@ async function autoDetectDirect(
         userData,
         url,
         protectionBypassExecution,
+        diagnostics,
       ),
       createAutoDetectContext({
         strategy: AUTO_DETECT_STRATEGIES.DirectApi,
@@ -418,17 +436,27 @@ async function getUserDataViaBackground(
   siteType: AccountSiteType,
   fetchContext?: AutoDetectFetchContext,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<UserDataResult | null> {
   const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+  diagnostics?.record("session_read_started", {
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    siteType,
+  })
 
   try {
     if (!protectionBypassExecution) {
+      diagnostics?.record("source_skipped", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "execution_missing",
+      })
       return await getUserDataViaAPI(
         url,
         siteType,
         fetchContext,
         tempWindowRequestSource,
         protectionBypassExecution,
+        diagnostics,
       )
     }
     const requestId = `auto-detect-${Date.now()}`
@@ -443,6 +471,7 @@ async function getUserDataViaBackground(
     const params = {
       url: url,
       requestId: requestId,
+      diagnosticId: diagnostics?.requestId,
       siteType,
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
@@ -454,7 +483,19 @@ async function getUserDataViaBackground(
       execution: protectionBypassExecution,
     })
 
+    diagnostics?.record("temp_session_response", {
+      success: response?.success === true,
+      hasData: Boolean(response?.data),
+      reason: response?.error,
+      code: response?.code,
+    })
     if (!response || !response.success || !response.data) {
+      diagnostics?.record("source_fallback", {
+        from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        to: "api",
+        reason: response?.error ?? "no_session_data",
+        code: response?.code,
+      })
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
       logger.info(
         "Background auto-detect returned no user data; using API fallback",
@@ -473,6 +514,7 @@ async function getUserDataViaBackground(
         fetchContext,
         tempWindowRequestSource,
         protectionBypassExecution,
+        diagnostics,
       )
     }
 
@@ -486,6 +528,10 @@ async function getUserDataViaBackground(
 
     const userId = normalizeAccountIdentity(response.data.userId)
     if (!userId) {
+      diagnostics?.record("session_invalid", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "user_id_missing",
+      })
       logger.debug("Background auto-detect returned no usable user id", {
         url,
         siteType,
@@ -497,6 +543,7 @@ async function getUserDataViaBackground(
         fetchContext,
         tempWindowRequestSource,
         protectionBypassExecution,
+        diagnostics,
       )
     }
 
@@ -504,6 +551,12 @@ async function getUserDataViaBackground(
       response.data.transientAuth,
       { baseUrl: url, siteType },
     )
+    if (response.data.transientAuth && !transientAuth) {
+      diagnostics?.record("session_auth_rejected", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "invalid_transient_auth",
+      })
+    }
 
     return {
       userId,
@@ -518,6 +571,12 @@ async function getUserDataViaBackground(
       ...(fetchContext ? { fetchContext } : {}),
     }
   } catch (error) {
+    diagnostics?.record("source_fallback", {
+      from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      to: "api",
+      reason: "exception",
+      error: getErrorMessage(error),
+    })
     logger.warn("Background 方式获取用户数据失败", {
       url,
       siteType,
@@ -530,6 +589,7 @@ async function getUserDataViaBackground(
       fetchContext,
       tempWindowRequestSource,
       protectionBypassExecution,
+      diagnostics,
     )
   }
 }
@@ -544,11 +604,22 @@ async function autoDetectViaBackground(
   url: string,
   fetchContext?: AutoDetectFetchContext,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+  options: { currentTabMatched?: true } = {},
 ): Promise<AutoDetectResult> {
-  logger.info("使用 Background 方式", {
-    url,
-    fetchContext: summarizeApiServiceFetchContext(fetchContext),
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+    ...options,
   })
+  logger.info(
+    options.currentTabMatched
+      ? "使用带当前标签页上下文的 Background 方式"
+      : "使用 Background 方式",
+    {
+      url,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+    },
+  )
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
   const siteType = await getAccountSiteType(url, protectionBypassExecution)
@@ -559,15 +630,22 @@ async function autoDetectViaBackground(
     siteType,
     fetchContext,
     protectionBypassExecution,
+    diagnostics,
   )
 
   // 组合用户数据和站点类型（公共逻辑）
   return withAutoDetectContext(
-    await combineUserDataAndSiteType(userData, url, protectionBypassExecution),
+    await combineUserDataAndSiteType(
+      userData,
+      url,
+      protectionBypassExecution,
+      diagnostics,
+    ),
     createAutoDetectContext({
       strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
       siteType,
       fetchContext,
+      ...options,
     }),
   )
 }
@@ -586,6 +664,7 @@ async function getUserDataFromCurrentTab(
   incognito?: boolean,
   cookieStoreId?: string,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
   const fetchContext: AutoDetectFetchContext = {
@@ -604,6 +683,7 @@ async function getUserDataFromCurrentTab(
 
   try {
     const session = await readAccountBrowserSessionFromTab({
+      diagnostics,
       tabId,
       baseUrl: url,
       siteType,
@@ -656,6 +736,13 @@ async function getUserDataFromCurrentTab(
       }
     }
 
+    diagnostics?.record("source_fallback", {
+      from: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      to: "api",
+      reason: contentScriptUnavailable
+        ? "content_script_unavailable"
+        : "no_session",
+    })
     // fallback
     const fallbackUserData = await getUserDataViaAPI(
       url,
@@ -663,6 +750,7 @@ async function getUserDataFromCurrentTab(
       fetchContext,
       undefined,
       protectionBypassExecution,
+      diagnostics,
     )
     if (fallbackUserData) {
       return {
@@ -680,6 +768,10 @@ async function getUserDataFromCurrentTab(
       fetchContext,
     }
   } catch (error) {
+    diagnostics?.record("source_failed", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      error: getErrorMessage(error),
+    })
     logger.warn("从当前标签页获取用户数据失败", {
       url,
       tabId,
@@ -707,7 +799,12 @@ async function autoDetectFromCurrentTab(
   incognito?: boolean,
   cookieStoreId?: string,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+    tabId,
+  })
   logger.info("使用当前标签页方式", { url, tabId })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
@@ -722,6 +819,7 @@ async function autoDetectFromCurrentTab(
       incognito,
       cookieStoreId,
       protectionBypassExecution,
+      diagnostics,
     )
 
   // 组合用户数据和站点类型（公共逻辑）
@@ -729,6 +827,7 @@ async function autoDetectFromCurrentTab(
     userData,
     url,
     protectionBypassExecution,
+    diagnostics,
   )
   const autoDetectContext = createAutoDetectContext({
     strategy:
@@ -760,12 +859,14 @@ async function autoDetectFromCurrentTab(
  * 2. Background 方式（如果支持 runtime/background messaging）
  * 3. 直接 API 方式（所有平台的 fallback）
  */
-export async function autoDetectSmart(
+async function runAutoDetectSmart(
   url: string,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
   const detectionUrl = resolveAutoDetectUrl(url)
-  const capabilities = detectPlatformCapabilities()
+  const capabilities = getBrowserApiCapabilities()
+  diagnostics?.record("platform_capabilities", { ...capabilities })
   let shouldHintCurrentTabReload = false
   let currentTabReloadHintResult: AutoDetectResult | null = null
   let browserFallbackContext: AutoDetectFetchContext | undefined
@@ -790,6 +891,10 @@ export async function autoDetectSmart(
         // 检查当前标签页是否是目标站点
         const currentUrl = new URL(currentTab.url)
         const targetUrl = new URL(detectionUrl)
+        diagnostics?.record("current_tab_selected", {
+          matched: currentUrl.origin === targetUrl.origin,
+          tabId: currentTab.id,
+        })
 
         if (
           currentUrl.origin === targetUrl.origin &&
@@ -806,7 +911,13 @@ export async function autoDetectSmart(
             currentTab.incognito === true,
             currentTab.cookieStoreId,
             protectionBypassExecution,
+            diagnostics,
           )
+          diagnostics?.record("strategy_finished", {
+            strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+            success: currentTabResult.success,
+            reason: currentTabResult.errorCode ?? currentTabResult.error,
+          })
           if (currentTabResult.success) {
             return currentTabResult
           }
@@ -836,19 +947,40 @@ export async function autoDetectSmart(
               fetchContext: summarizeApiServiceFetchContext(currentTabContext),
             },
           )
-          const backgroundResult = await autoDetectViaBackgroundWithContext(
+          const backgroundResult = await autoDetectViaBackground(
             detectionUrl,
             currentTabContext,
             protectionBypassExecution,
+            diagnostics,
+            { currentTabMatched: true },
           )
+          diagnostics?.record("strategy_finished", {
+            strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+            success: backgroundResult.success,
+            reason: backgroundResult.errorCode ?? backgroundResult.error,
+          })
           if (backgroundResult.success) {
             return backgroundResult
           }
         }
+      } else {
+        diagnostics?.record("source_skipped", {
+          source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+          reason: "tab_missing",
+        })
       }
     } catch (error) {
+      diagnostics?.record("source_failed", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        error: getErrorMessage(error),
+      })
       logger.warn("当前标签页方式失败，尝试其他方式", error)
     }
+  } else {
+    diagnostics?.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      reason: "tabs_unavailable",
+    })
   }
 
   // 2. 如果支持 runtime/background messaging，使用 Background 方式
@@ -860,7 +992,13 @@ export async function autoDetectSmart(
         detectionUrl,
         browserFallbackContext,
         protectionBypassExecution,
+        diagnostics,
       )
+      diagnostics?.record("strategy_finished", {
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+        success: result.success,
+        reason: result.errorCode ?? result.error,
+      })
       if (result.success) {
         return result
       }
@@ -870,6 +1008,10 @@ export async function autoDetectSmart(
         fetchContext: summarizeApiServiceFetchContext(browserFallbackContext),
       })
     } catch (error) {
+      diagnostics?.record("source_failed", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        error: getErrorMessage(error),
+      })
       logger.warn("Background 方式抛出异常，降级到直接方式", {
         url,
         detectionUrl,
@@ -877,13 +1019,24 @@ export async function autoDetectSmart(
         error: getErrorMessage(error),
       })
     }
+  } else {
+    diagnostics?.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      reason: "background_messaging_unavailable",
+    })
   }
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）
   const directResult = await autoDetectDirect(
     detectionUrl,
     protectionBypassExecution,
+    diagnostics,
   )
+  diagnostics?.record("strategy_finished", {
+    strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+    success: directResult.success,
+    reason: directResult.errorCode ?? directResult.error,
+  })
 
   if (
     shouldHintCurrentTabReload &&
@@ -903,34 +1056,36 @@ export async function autoDetectSmart(
   return directResult
 }
 
-/**
- * Runs the background temp-context auto-detect path while preserving the
- * matched current-tab browser context.
- */
-async function autoDetectViaBackgroundWithContext(
+/** Correlates strategy diagnostics while keeping the public detection result unchanged. */
+export async function autoDetectSmart(
   url: string,
-  fetchContext: AutoDetectFetchContext,
   protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
-  logger.info("使用带当前标签页上下文的 Background 方式", {
-    url,
-    fetchContext: summarizeApiServiceFetchContext(fetchContext),
-  })
-
-  const siteType = await getAccountSiteType(url, protectionBypassExecution)
-  const userData = await getUserDataViaBackground(
-    url,
-    siteType,
-    fetchContext,
-    protectionBypassExecution,
-  )
-  return withAutoDetectContext(
-    await combineUserDataAndSiteType(userData, url, protectionBypassExecution),
-    createAutoDetectContext({
-      strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
-      siteType,
-      fetchContext,
-      currentTabMatched: true,
-    }),
-  )
+  const trace = diagnostics ?? createAccountDetectionDiagnostics()
+  trace.record("detection_started")
+  try {
+    const result = await runAutoDetectSmart(
+      url,
+      protectionBypassExecution,
+      trace,
+    )
+    const details = {
+      success: result.success,
+      strategy: result.autoDetectContext?.strategy,
+      reason:
+        result.errorCode ?? (result.success ? undefined : "user_data_missing"),
+    }
+    if (diagnostics) trace.record("site_detection_finished", details)
+    else trace.finish(result.success ? "success" : "failed", details)
+    return result
+  } catch (error) {
+    if (diagnostics)
+      trace.record("site_detection_finished", {
+        success: false,
+        reason: "exception",
+      })
+    else trace.finish("failed", { reason: "exception" })
+    throw error
+  }
 }

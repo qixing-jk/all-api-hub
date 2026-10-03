@@ -11,6 +11,13 @@ import {
   E2E_ACCESS_TOKEN_NAME,
   revokeStaleE2eAccessTokens,
 } from "./newApiAccessTokens"
+import { observeNewApiRefreshes } from "./newApiRefreshObserver"
+
+export {
+  describeNewApiRefreshObservations,
+  observeNewApiRefreshes,
+  type NewApiRefreshObservation,
+} from "./newApiRefreshObserver"
 
 /**
  * Follow the same manual-token recovery offered to a user after auto-detection.
@@ -32,6 +39,7 @@ export function createNewApiAccountRecovery(params: {
   // extension reads their contract instead of attempting creation.
   const tokenUrl = new URL("api/user/token", baseUrl).href
   const dialogReadyTimeoutMs = params.dialogReadyTimeoutMs ?? 30_000
+  const refreshObserver = observeNewApiRefreshes(params.page, baseUrl)
 
   return {
     extensionPageGuardOptions: {
@@ -57,7 +65,9 @@ export function createNewApiAccountRecovery(params: {
       } catch (error) {
         if (!isDetectedDialogPollTimeout(error)) throw error
 
-        throw new Error(await describeDetectedDialogFailure(dialog, error))
+        throw new Error(
+          await describeDetectedDialogFailure(dialog, error, refreshObserver),
+        )
       }
 
       if (!(await recoveryHeading.isVisible())) return
@@ -349,12 +359,18 @@ function isDetectedDialogPollTimeout(error: unknown) {
 async function describeDetectedDialogFailure(
   dialog: AccountAddDialog,
   error: unknown,
+  refreshObserver: ReturnType<typeof observeNewApiRefreshes>,
 ) {
   const failureText = await readDetectedDialogFailureText(dialog)
   const detail =
     failureText || (error instanceof Error ? error.message : String(error))
+  const refreshObservations =
+    refreshObserver.describe() || "dashboard refresh requests: none observed"
 
-  return `New API account detection never became confirmable: ${detail}`
+  return [
+    `New API account detection never became confirmable: ${detail}`,
+    refreshObservations,
+  ].join("; ")
 }
 
 async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
