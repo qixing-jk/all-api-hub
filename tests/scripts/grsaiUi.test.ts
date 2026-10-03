@@ -31,6 +31,13 @@ describe("Grsai live UI cleanup", () => {
       let keyExists = false
       let currentName = ""
       let inventoryFailed = false
+      let unlimited = true
+      const fieldValues: Record<string, string> = {}
+      const submittedLimits: Array<{
+        unlimited: boolean
+        credits?: string
+        expiry?: string
+      }> = []
       const locator = (selector: string): any => ({
         first: () => locator(selector),
         or: () => locator(selector),
@@ -40,13 +47,23 @@ describe("Grsai live UI cleanup", () => {
         isVisible: async () => true,
         innerText: async () => "",
         fill: async (value: string) => {
-          currentName = value
+          fieldValues[selector] = value
+          if (selector.includes("Name")) currentName = value
         },
+        getAttribute: async () => String(unlimited),
         count: async () => (keyExists && !inventoryFailed ? 1 : 0),
         waitFor: async () => {},
         click: async () => {
           actions.push(selector)
-          if (selector.includes("submit")) keyExists = true
+          if (selector === "Unlimited Quota") unlimited = !unlimited
+          if (selector.includes("submit")) {
+            keyExists = true
+            submittedLimits.push({
+              unlimited,
+              credits: fieldValues["Remaining credits"],
+              expiry: fieldValues["Expiration Time"],
+            })
+          }
           if (selector.includes("delete-confirm")) keyExists = false
         },
       })
@@ -89,6 +106,14 @@ describe("Grsai live UI cleanup", () => {
       if (failure === "models")
         await expect(result).rejects.toThrow("models unavailable")
       else await result
+      expect(submittedLimits).toHaveLength(2)
+      for (const limits of submittedLimits) {
+        expect(limits.unlimited).toBe(false)
+        expect(Number(limits.credits)).toBe(100)
+        const expiry = new Date(limits.expiry!).getTime()
+        expect(expiry).toBeGreaterThan(Date.now())
+        expect(expiry).toBeLessThanOrEqual(Date.now() + 30 * 60_000)
+      }
       expect(currentName).toContain("AAH E2E Grsai")
       expect(actions.some((action) => action.includes("delete-confirm"))).toBe(
         true,

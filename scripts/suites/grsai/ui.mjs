@@ -194,6 +194,29 @@ export async function runGrsaiUiTest({
                 // label is the English "Name" from the locale resource.
                 const nameInput = nameInputLocator(keyPage, "Name")
                 await nameInput.fill(createdKeyName)
+                // Bound remote access even if the process stops before cleanup.
+                const unlimitedSwitch = keyPage.getByRole("switch", {
+                  name: "Unlimited Quota",
+                  exact: true,
+                })
+                if (
+                  (await unlimitedSwitch.getAttribute("aria-checked")) ===
+                  "true"
+                ) {
+                  await unlimitedSwitch.click()
+                }
+                await keyPage
+                  .getByLabel("Remaining credits", { exact: true })
+                  .fill("100")
+                const expiresAt = new Date(Date.now() + 30 * 60_000)
+                const localExpiry = new Date(
+                  expiresAt.getTime() - expiresAt.getTimezoneOffset() * 60_000,
+                )
+                  .toISOString()
+                  .slice(0, 16)
+                await keyPage
+                  .getByLabel("Expiration Time", { exact: true })
+                  .fill(localExpiry)
                 await keyPage
                   .locator(
                     `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
