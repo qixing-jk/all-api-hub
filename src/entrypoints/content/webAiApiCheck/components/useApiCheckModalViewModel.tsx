@@ -44,6 +44,7 @@ import {
   type ApiCheckOpenModalDetail,
 } from "../events"
 import { WEB_AI_API_CHECK_TEST_IDS } from "../testIds"
+import { normalizeApiCheckSourceUrl } from "../utils/apiCheckSourceUrl"
 import {
   buildApiCheckAnalyticsInsights,
   contentApiCheckAnalyticsScope,
@@ -85,6 +86,7 @@ export interface ApiCheckModalViewModel {
   selectedTagIds: string[]
   notes: string
   expiresAtInput: string
+  sourceUrl: string
   datePickerLanguage: string
   isProfileOptionsOpen: boolean
   hasProfileMetadataInput: boolean
@@ -122,6 +124,7 @@ export interface ApiCheckModalActions {
   setSelectedTagIds: (tagIds: string[]) => void
   setNotes: (notes: string) => void
   setExpiresAtInput: (value: string) => void
+  setSourceUrl: (value: string) => void
   setIsProfileOptionsOpen: (isOpen: boolean) => void
   createTag: (name: string) => Promise<Tag>
   renameTag: (tagId: string, name: string) => Promise<Tag>
@@ -167,6 +170,7 @@ export function useApiCheckModalViewModel() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
   const [expiresAtInput, setExpiresAtInput] = useState("")
+  const [sourceUrl, setSourceUrl] = useState("")
   const [isProfileOptionsOpen, setIsProfileOptionsOpen] = useState(false)
 
   const baseUrlValueRef = useRef("")
@@ -274,7 +278,10 @@ export function useApiCheckModalViewModel() {
     isStoppingRunAll ||
     (!isRunningAll && (isFetchingModels || isAnyProbeRunning))
   const hasProfileMetadataInput =
-    selectedTagIds.length > 0 || !!notes.trim() || !!expiresAtInput.trim()
+    selectedTagIds.length > 0 ||
+    !!notes.trim() ||
+    !!expiresAtInput.trim() ||
+    !!sourceUrl.trim()
 
   const loadTags = useCallback(async () => {
     setTags([])
@@ -337,7 +344,8 @@ export function useApiCheckModalViewModel() {
       resetAutoFetchMarker()
 
       setTrigger(detail.trigger)
-      setPageUrl(detail.pageUrl || window.location.href)
+      const nextPageUrl = detail.pageUrl || window.location.href
+      setPageUrl(nextPageUrl)
 
       const nextSourceText = (detail.sourceText ?? "").toString()
       skipNextSourceTextExtractionRef.current = nextSourceText
@@ -365,6 +373,7 @@ export function useApiCheckModalViewModel() {
       setSelectedTagIds([])
       setNotes("")
       setExpiresAtInput("")
+      setSourceUrl(normalizeApiCheckSourceUrl(nextPageUrl) ?? "")
       setIsProfileOptionsOpen(false)
 
       setApiKeyVisible(true)
@@ -536,6 +545,7 @@ export function useApiCheckModalViewModel() {
     recordBaseUrlHistory(trimmedBaseUrl)
 
     const trimmedNotes = notes.trim()
+    const normalizedSourceUrl = normalizeApiCheckSourceUrl(sourceUrl)
     const expiresAt = parseDateInputValue(expiresAtInput)
 
     setIsSavingProfile(true)
@@ -549,6 +559,7 @@ export function useApiCheckModalViewModel() {
           pageUrl: pageUrl || window.location.href,
           ...(selectedTagIds.length > 0 ? { tagIds: selectedTagIds } : {}),
           ...(trimmedNotes ? { notes: trimmedNotes } : {}),
+          ...(normalizedSourceUrl ? { sourceUrl: normalizedSourceUrl } : {}),
           ...(expiresAt !== null ? { expiresAt } : {}),
         },
       )
@@ -635,6 +646,7 @@ export function useApiCheckModalViewModel() {
       selectedTagIds,
       notes,
       expiresAtInput,
+      sourceUrl,
       datePickerLanguage: i18n.language,
       isProfileOptionsOpen,
       hasProfileMetadataInput,
@@ -671,6 +683,7 @@ export function useApiCheckModalViewModel() {
       setSelectedTagIds,
       setNotes,
       setExpiresAtInput,
+      setSourceUrl,
       setIsProfileOptionsOpen,
       createTag,
       renameTag,

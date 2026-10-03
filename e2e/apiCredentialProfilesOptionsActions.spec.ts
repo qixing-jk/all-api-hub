@@ -292,7 +292,7 @@ test("filters options-page profiles and copies reusable credentials", async ({
   await expect(addToEndpointDialog).toHaveCount(0)
 
   const searchInput = page.getByPlaceholder(
-    "Search by name, base URL, tag, or notes",
+    "Search by name, base URL, tag, source page, or notes",
   )
   await searchInput.fill("daily driver")
 

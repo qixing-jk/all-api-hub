@@ -35,6 +35,7 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   openModelManagementButton:
     "api-credential-profile-open-model-management-button",
   popupView: "api-credential-profiles-popup-view",
+  sourceUrlLink: "api-credential-profile-source-url-link",
   showKeyButton: "api-credential-profile-show-key-button",
   copyApiKeyButton: "api-credential-profile-copy-api-key-button",
   copyBundleButton: "api-credential-profile-copy-bundle-button",

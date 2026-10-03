@@ -282,6 +282,45 @@ describe("useApiCredentialProfilesController", () => {
     )
   })
 
+  it("forwards the source page URL on create and update", async () => {
+    createProfileMock.mockResolvedValue(buildProfile())
+    tagStorageListTagsMock.mockResolvedValue([])
+    const { result } = renderHook(() => useApiCredentialProfilesController(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    const common = {
+      name: "Shared",
+      apiType: "openai-compatible" as const,
+      baseUrl: "https://shared.example.com",
+      apiKey: "sk-shared",
+      tagIds: [] as string[],
+      notes: "",
+      sourceUrl: "https://forum.example.com/t/9?p=2",
+    }
+
+    await act(async () => {
+      await result.current.handleSave(common)
+    })
+    expect(createProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceUrl: "https://forum.example.com/t/9?p=2",
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleSave({ ...common, id: "profile-1" })
+    })
+    expect(updateProfileMock).toHaveBeenCalledWith(
+      "profile-1",
+      expect.objectContaining({
+        sourceUrl: "https://forum.example.com/t/9?p=2",
+      }),
+    )
+  })
+
   it("completes create profile analytics after profile persistence succeeds", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
     createProfileMock.mockResolvedValue(buildProfile())

@@ -44,11 +44,13 @@
       "expiresAt": "Expiration date",
       "modelId": "Model ID",
       "notes": "Notes",
+      "sourceUrl": "Source page",
       "tags": "Tags"
     },
     "hints": {
       "expiresAt": "Optional. Record when this key is expected to expire.",
       "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability.",
+      "sourceUrl": "Optional. Record the page where you found these credentials so you can revisit it later for updates.",
       "tags": "Optional. Shared with the global account and bookmark tags."
     },
     "history": {
@@ -69,6 +71,7 @@
     },
     "placeholders": {
       "notes": "Optional notes",
+      "sourceUrl": "https://example.com/post",
       "tags": "Select tags"
     },
     "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API credential library.",

@@ -390,6 +390,23 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                         disabled={view.isSavingProfile}
                       />
                     </FormField>
+
+                    <FormField
+                      className="md:col-span-2"
+                      label={t("webAiApiCheck:modal.fields.sourceUrl")}
+                      description={t("webAiApiCheck:modal.hints.sourceUrl")}
+                      htmlFor="api-check-source-url"
+                    >
+                      <Input
+                        id="api-check-source-url"
+                        value={view.sourceUrl}
+                        onChange={(e) => actions.setSourceUrl(e.target.value)}
+                        placeholder={t(
+                          "webAiApiCheck:modal.placeholders.sourceUrl",
+                        )}
+                        disabled={view.isSavingProfile}
+                      />
+                    </FormField>
                   </div>
                 </CollapsibleContent>
               </Collapsible>

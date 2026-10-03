@@ -1176,6 +1176,7 @@ describe("ApiCheckModalHost", () => {
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
+        sourceUrl: "https://example.com",
       })
     })
 
@@ -1393,6 +1394,7 @@ describe("ApiCheckModalHost", () => {
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-changed-fixture",
         pageUrl: "https://example.com",
+        sourceUrl: "https://example.com",
       })
     })
     expect(upsertVerificationHistorySummaryMock).not.toHaveBeenCalled()
@@ -1602,6 +1604,7 @@ describe("ApiCheckModalHost", () => {
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
+        sourceUrl: "https://example.com",
         tagIds: ["tag-work", "tag-expiring"],
         notes: "Shared by Alice",
         expiresAt: new Date(2026, 9, 31).getTime(),
@@ -1932,6 +1935,7 @@ describe("ApiCheckModalHost", () => {
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
+        sourceUrl: "https://example.com",
       })
     })
   })
@@ -2270,6 +2274,7 @@ describe("ApiCheckModalHost", () => {
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
+        sourceUrl: "https://example.com",
       })
     })
   })

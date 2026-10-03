@@ -78,9 +78,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
   return {
     ...actual,
-    Badge: ({ children, variant: _variant, size: _size, ...props }: any) => (
-      <span {...props}>{children}</span>
-    ),
+    Badge: ({
+      children,
+      variant: _variant,
+      size: _size,
+      asChild,
+      ...props
+    }: any) => (asChild ? children : <span {...props}>{children}</span>),
     Card: forwardRef<HTMLDivElement, any>(({ children, ...props }, ref) => (
       <div ref={ref} {...props}>
         {children}
@@ -316,6 +320,27 @@ describe("ApiCredentialProfileListItem", () => {
     renderListItem(buildProfile({ notes: "  \n  " }))
     expect(
       screen.queryByText("apiCredentialProfiles:dialog.fields.notes"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the source page as a labeled clickable badge and omits empty ones", () => {
+    const { unmount } = renderListItem(
+      buildProfile({ sourceUrl: "  https://forum.example.com/t/9?p=2  " }),
+    )
+
+    const link = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.sourceUrlLink,
+    )
+    expect(link).toHaveAttribute("href", "https://forum.example.com/t/9?p=2")
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("title", "https://forum.example.com/t/9?p=2")
+    expect(link).toHaveTextContent("apiCredentialProfiles:list.sourceUrl")
+    expect(link).toHaveAccessibleName("apiCredentialProfiles:list.sourceUrl")
+
+    unmount()
+    renderListItem(buildProfile({ sourceUrl: "   " }))
+    expect(
+      screen.queryByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.sourceUrlLink),
     ).not.toBeInTheDocument()
   })
 

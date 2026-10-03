@@ -44,11 +44,13 @@
       "expiresAt": "到期日",
       "modelId": "模型 ID",
       "notes": "备注",
+      "sourceUrl": "来源网页",
       "tags": "标签"
     },
     "hints": {
       "expiresAt": "可选。用于记录这枚密钥预计失效的日期。",
       "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭据库（无需先测试或获取模型列表）。测试仅用于验证可用性。",
+      "sourceUrl": "可选。记录你从哪个页面拿到这份凭据，之后可一键回访查看更新。",
       "tags": "可选。与账号/书签共用全局标签。"
     },
     "history": {
@@ -69,6 +71,7 @@
     },
     "placeholders": {
       "notes": "可选备注",
+      "sourceUrl": "https://example.com/post",
       "tags": "选择标签"
     },
     "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭据库，否则不会持久化保存任何数据。",
