@@ -84,10 +84,12 @@ describe("optional check-in clue scan", () => {
   })
 
   it("uses Wong's read-only route and excludes AnyRouter's mutation-only flow", () => {
-    expect(getCheckInFeedbackStatusRoutes(SITE_TYPES.WONG_GONGYI)).toEqual([
-      { path: "/api/user/checkin" },
-    ])
-    expect(getCheckInFeedbackStatusRoutes(SITE_TYPES.ANYROUTER)).toEqual([])
+    expect(
+      getCheckInFeedbackStatusRoutes(SITE_TYPES.WONG_GONGYI, baseUrl),
+    ).toEqual([{ path: "/api/user/checkin" }])
+    expect(
+      getCheckInFeedbackStatusRoutes(SITE_TYPES.ANYROUTER, baseUrl),
+    ).toEqual([])
   })
   it("reports route limits and invalid resource responses while retaining useful clues", async () => {
     vi.stubGlobal(

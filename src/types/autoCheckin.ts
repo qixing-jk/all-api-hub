@@ -52,6 +52,7 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   STATUS_UNAVAILABLE: "status_unavailable",
   NO_PROVIDER: "no_provider",
   NO_SELECTED_METHOD: "no_selected_method",
+  NO_AVAILABLE_METHOD: "no_available_method",
   METHOD_UNAVAILABLE: "method_unavailable",
   METHOD_NOT_MATCHED: "method_not_matched",
   METHOD_UNSUPPORTED: "method_unsupported",
@@ -158,6 +159,8 @@ const SKIP_REASON_TRANSLATION_KEYS: Record<AutoCheckinSkipReason, string> = {
   [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: "autoCheckin:skipReasons.no_provider",
   [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD]:
     "autoCheckin:skipReasons.no_selected_method",
+  [AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD]:
+    "autoCheckin:skipReasons.no_available_method",
   [AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED]:
     "autoCheckin:skipReasons.permission_denied",
   [AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE]:

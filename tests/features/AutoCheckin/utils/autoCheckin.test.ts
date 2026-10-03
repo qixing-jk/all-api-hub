@@ -141,6 +141,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.method_unsupported",
       "autoCheckin:skipReasons.network_error",
       "autoCheckin:skipReasons.no_selected_method",
+      "autoCheckin:skipReasons.no_available_method",
       "autoCheckin:skipReasons.permission_denied",
       "autoCheckin:skipReasons.session_busy",
       "autoCheckin:skipReasons.source_unavailable",
@@ -784,6 +785,7 @@ describe("autoCheckin utils", () => {
         [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE]: 0,
         [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER]: 0,
         [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD]: 0,
+        [AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD]: 0,
         [AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE]: 0,
         [AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED]: 1,
         [AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED]: 0,
@@ -984,6 +986,7 @@ describe("autoCheckin utils", () => {
       AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
       AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
       AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+      AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD,
     ])("keeps %s on its own explanation", (reasonCode) => {
       expect(
         resolveAutoCheckinTroubleshootingHintKey({

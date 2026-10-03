@@ -29,7 +29,9 @@ Upstream message text is display data only when the upstream sanitizes it for di
 
 ## Check-in methods
 
-Auto check-in methods live under `src/services/checkin/autoCheckin/providers/` and are registered in `registry.ts`. Adding one also requires a decision about the reward it reports:
+Auto check-in methods live under `src/services/checkin/autoCheckin/providers/` and are registered in `registry.ts`. Each definition must declare `feedbackStatusRoutes`; methods with `supportsStatusReadback: true` require at least one verified read-only route (or a date-aware route factory). Feedback derives its endpoints from these definitions rather than a separate switch. Keep protocol path/query builders pure and shared with execution when they have provider-specific parameters. Mutation-only methods explicitly declare an empty list; never substitute a POST action. Split-origin status queries use only the maintained deployment API-origin map, while resource scanning stays on the browser origin and shares the scan budgets. Cover the new method in `tests/services/checkin/feedback/`.
+
+Adding one also requires a decision about the reward it reports:
 
 - When the deployment's success response carries the award it granted, normalize it to the extension's internal quota unit inside the provider and set `AutoCheckinProviderOutcome.reward`: `readQuotaReward` for deployments that answer in quota (New API family, Veloera, WONG), `readUsdReward` for the USD-quoting Sub2API family.
 - When the response carries no authoritative amount, leave `reward` unset. Do not hardcode a site's usual value and do not substitute an estimated balance delta — a constant an operator can change is not something the extension may state as fact.

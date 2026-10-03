@@ -15,6 +15,14 @@ import {
 const t = ((key: string) => key) as unknown as TFunction
 
 describe("autoCheckin translation helpers", () => {
+  it("translates confirmed absence of supported methods separately from selection", () => {
+    expect(
+      translateAutoCheckinSkipReason(
+        t,
+        AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD,
+      ),
+    ).toBe("autoCheckin:skipReasons.no_available_method")
+  })
   it.each([
     [
       AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,

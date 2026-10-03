@@ -38,6 +38,34 @@ function createConfig(
   }
 }
 
+describe("inconclusive selected-method detection", () => {
+  it("reports timeout as waiting and allows a later automatic rediscovery", () => {
+    const config = createConfig({
+      [NEW_API_METHOD_ID]: {
+        outcome: "unknown",
+        reason: "timeout",
+        attemptedAt: 100,
+      },
+    })
+    config.selection = { mode: "automatic", methodId: NEW_API_METHOD_ID }
+    const state = inspectCheckInMethods({
+      config,
+      candidateMethodIds: [NEW_API_METHOD_ID],
+    })
+    expect(state.executionEligibility).toEqual({
+      eligible: false,
+      skipReason: "timeout",
+    })
+    expect(
+      shouldAutomaticallyDiscoverCheckIn({
+        config,
+        candidateMethodIds: [NEW_API_METHOD_ID],
+        now: AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS + 100,
+      }),
+    ).toBe(true)
+  })
+})
+
 const matched: CheckInMethodDetection = {
   outcome: "matched",
   evidence: { source: "probe", observedAt: 100 },
@@ -84,7 +112,7 @@ describe("automatic check-in discovery policy", () => {
       name: "a selected method with unknown support",
       selection: NEW_API_METHOD_ID,
       detection: unknown,
-      expected: false,
+      expected: true,
     },
     {
       name: "a selected method without detection evidence",
@@ -205,7 +233,7 @@ describe("inspectCheckInMethods", () => {
         [NEW_API_METHOD_ID]: unsupported,
         [VELOERA_METHOD_ID]: unsupported,
       },
-      expected: "method_unsupported",
+      expected: "no_available_method",
     },
   ])(
     "distinguishes missing provider support when $name",

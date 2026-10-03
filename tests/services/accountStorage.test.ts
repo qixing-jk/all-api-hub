@@ -7,6 +7,7 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
+import * as postSaveDiscovery from "~/services/checkin/autoCheckin/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -3902,6 +3903,48 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it.each([
+    { account_info: { access_token: "replacement-token" } },
+    { account_info: { id: "another-user" } },
+    { site_url: "https://another.example" },
+    { site_type: SITE_TYPES.VELOERA },
+    {
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "replacement-session" },
+    },
+  ])(
+    "invalidates discovery completion when saved check-in credentials change (%j)",
+    async (updates) => {
+      const account = createAccount({
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId: "new-api:daily-checkin" },
+          methodKnowledge: {
+            methods: {},
+            lastFullDiscoveryAt: 100,
+            lastAutomaticDiscoveryAttemptAt: 100,
+          },
+        },
+      })
+      seedStorage([account])
+      await accountCheckInState.updateAccountWithCheckInDraft(
+        account.id,
+        updates,
+        account.checkIn,
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      )
+      const updated = await accountStorage.getAccountById(account.id)
+      expect(
+        updated?.checkIn.methodKnowledge.lastFullDiscoveryAt,
+      ).toBeUndefined()
+      expect(
+        updated?.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
+      ).toBeUndefined()
+      expect(updated?.checkIn.selection).toEqual(account.checkIn.selection)
+    },
+  )
+
   it("refreshAccount merges status into a newer dialog save inside the storage lock", async () => {
     const account = createAccount({
       id: "refresh-dialog-race",
@@ -4129,6 +4172,116 @@ describe("accountStorage core behaviors", () => {
       }),
     )
   })
+
+  it.each(["null", "throw"])(
+    "preserves a successful refresh when post-save discovery returns %s",
+    async (failure) => {
+      const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+      seedStorage([account])
+      const discover = vi.spyOn(
+        postSaveDiscovery,
+        "discoverSavedAccountCheckIn",
+      )
+      if (failure === "null") discover.mockResolvedValueOnce(null)
+      else
+        discover.mockRejectedValueOnce(new Error("optional discovery failed"))
+      try {
+        const result = await accountStorage.refreshAccount(account.id, true, {
+          discoverCheckInAfterSave: true,
+        })
+        expect(result?.refreshed).toBe(true)
+        expect(result?.account?.id).toBe(account.id)
+        expect(result?.account?.health.status).toBe(SiteHealthStatus.Healthy)
+        expect(
+          (await accountStorage.getAccountById(account.id))?.health.status,
+        ).toBe(SiteHealthStatus.Healthy)
+      } finally {
+        discover.mockRestore()
+      }
+    },
+  )
+
+  it("allows a second Sub2API refresh while post-save discovery is still pending", async () => {
+    const account = createAccount({
+      site_type: SITE_TYPES.SUB2API,
+      sub2apiAuth: { refreshToken: "refresh-token", tokenExpiresAt: 123 },
+    })
+    seedStorage([account])
+    const entered = createDeferred<void>()
+    const discovery = createDeferred<SiteAccount | null>()
+    const discover = vi
+      .spyOn(postSaveDiscovery, "discoverSavedAccountCheckIn")
+      .mockImplementation(() => {
+        entered.resolve()
+        return discovery.promise
+      })
+    const first = accountStorage.refreshAccount(account.id, true, {
+      discoverCheckInAfterSave: true,
+    })
+    await entered.promise
+    const second = accountStorage.refreshAccount(account.id, true)
+    try {
+      await vi.waitFor(() =>
+        expect(mockRefreshAccountData).toHaveBeenCalledTimes(2),
+      )
+      expect((await second)?.refreshed).toBe(true)
+    } finally {
+      discovery.resolve(null)
+      await Promise.allSettled([first, second])
+      discover.mockRestore()
+    }
+  })
+
+  it.each([
+    { enabled: true, success: true, probes: true },
+    { enabled: false, success: true, probes: false },
+    { enabled: true, success: false, probes: false },
+  ])(
+    "runs post-save discovery only for an opted-in successful refresh ($enabled, $success)",
+    async ({ enabled, success, probes }) => {
+      const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+      seedStorage([account])
+      const discover = vi
+        .spyOn(postSaveDiscovery, "discoverSavedAccountCheckIn")
+        .mockImplementation(async (snapshot) => snapshot)
+      const originalRefresh = mockRefreshAccountData.getMockImplementation()!
+      mockRefreshAccountData.mockImplementation(async (request) => ({
+        ...(await originalRefresh(request)),
+        success,
+        authUpdate: { accessToken: "final-refreshed-token" },
+      }))
+      const execution = userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      )
+      try {
+        const result = await accountStorage.refreshAccount(account.id, true, {
+          discoverCheckInAfterSave: enabled,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: execution,
+        })
+        expect(result?.refreshed).toBe(true)
+        if (probes) {
+          expect(discover).toHaveBeenCalledWith(
+            expect.objectContaining({
+              account_info: expect.objectContaining({
+                access_token: "final-refreshed-token",
+              }),
+              health: expect.objectContaining({
+                status: SiteHealthStatus.Healthy,
+              }),
+            }),
+            {
+              tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+              protectionBypassExecution: execution,
+            },
+          )
+        } else expect(discover).not.toHaveBeenCalled()
+      } finally {
+        discover.mockRestore()
+      }
+    },
+  )
 
   it("refreshAccount preserves the temp window source for data refresh", async () => {
     const account = createAccount({

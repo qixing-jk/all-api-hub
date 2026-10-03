@@ -125,6 +125,7 @@ export default function ResultsTableRowActions({
   )
   const showDirectFeedback =
     result.reasonCode === AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED ||
+    result.reasonCode === AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD ||
     result.reasonCode === AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
   // Reserve one direct action; every other action remains available in More.
   const showDirectVerifyAction = !showDirectFeedback && showVerifyAction

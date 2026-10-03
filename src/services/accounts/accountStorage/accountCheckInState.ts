@@ -11,6 +11,7 @@ import {
   isCheckInMethodId,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import {
+  invalidateCheckInDiscovery,
   markCheckInMethodExecuted,
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
@@ -38,15 +39,22 @@ const hasSameCheckInIdentity = (account: SiteAccount, snapshot: SiteAccount) =>
   normalizeAccountIdentity(account.account_info.id) ===
     normalizeAccountIdentity(snapshot.account_info.id)
 
+/** Compares the identity and credentials actually used by a check-in request. */
+const hasSameCheckInCredentials = (
+  account: SiteAccount,
+  snapshot: SiteAccount,
+) =>
+  hasSameCheckInIdentity(account, snapshot) &&
+  account.authType === snapshot.authType &&
+  account.account_info.access_token === snapshot.account_info.access_token &&
+  account.cookieAuth?.sessionCookie === snapshot.cookieAuth?.sessionCookie
+
 /** Rejects discovery from an obsolete request, selection, or cooldown claim. */
 export const isAutomaticCheckInDiscoveryCurrent = (
   account: SiteAccount,
   snapshot: SiteAccount,
 ): boolean =>
-  hasSameCheckInIdentity(account, snapshot) &&
-  account.authType === snapshot.authType &&
-  account.account_info.access_token === snapshot.account_info.access_token &&
-  account.cookieAuth?.sessionCookie === snapshot.cookieAuth?.sessionCookie &&
+  hasSameCheckInCredentials(account, snapshot) &&
   !account.disabled &&
   account.checkIn.automaticExecutionEnabled &&
   account.checkIn.selection.mode === snapshot.checkIn.selection.mode &&
@@ -108,12 +116,46 @@ class AccountCheckInState {
     snapshot: SiteAccount,
     discovered: SiteAccount["checkIn"],
   ): Promise<{ account: SiteAccount; applied: boolean } | null> {
+    return this.completeCheckInDiscovery(
+      snapshot,
+      discovered,
+      isAutomaticCheckInDiscoveryCurrent,
+    )
+  }
+
+  /** Applies read-only save discovery without requiring automatic execution. */
+  async completePostSaveCheckInDiscovery(
+    snapshot: SiteAccount,
+    discovered: SiteAccount["checkIn"],
+  ): Promise<{ account: SiteAccount; applied: boolean } | null> {
+    return this.completeCheckInDiscovery(
+      snapshot,
+      discovered,
+      (account, previous) =>
+        hasSameCheckInCredentials(account, previous) &&
+        !account.disabled &&
+        account.checkIn.selection.mode === previous.checkIn.selection.mode &&
+        account.checkIn.selection.methodId ===
+          previous.checkIn.selection.methodId &&
+        account.checkIn.methodKnowledge.lastFullDiscoveryAt ===
+          previous.checkIn.methodKnowledge.lastFullDiscoveryAt &&
+        account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt ===
+          previous.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
+    )
+  }
+
+  /** Merges discovery facts inside the account write lock after a source guard. */
+  private async completeCheckInDiscovery(
+    snapshot: SiteAccount,
+    discovered: SiteAccount["checkIn"],
+    isCurrent: (account: SiteAccount, snapshot: SiteAccount) => boolean,
+  ): Promise<{ account: SiteAccount; applied: boolean } | null> {
     try {
       return await accountConfigStore.mutateAccount<{
         account: SiteAccount
         applied: boolean
       }>(snapshot.id, (account) => {
-        if (!isAutomaticCheckInDiscoveryCurrent(account, snapshot)) {
+        if (!isCurrent(account, snapshot)) {
           return {
             nextAccount: account,
             result: { account, applied: false },
@@ -152,7 +194,7 @@ class AccountCheckInState {
         }
       })
     } catch (error) {
-      logger.warn("Failed to save automatic check-in discovery", {
+      logger.warn("Failed to save check-in discovery", {
         accountId: snapshot.id,
         error,
       })
@@ -234,13 +276,28 @@ class AccountCheckInState {
               })
             : mergedUserDraft
 
+          const nextAccount = applySiteAccountUpdates({
+            account,
+            updates: { ...effectiveUpdates, checkIn },
+            now: Date.now(),
+            userTimestampMode: mutationOptions.userTimestampMode,
+          })
+          const hasFreshDraftDiscovery =
+            mutationOptions.discoveryBaseSelection &&
+            (checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0) >
+              (account.checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0)
+          if (
+            !hasSameCheckInCredentials(nextAccount, account) &&
+            !hasFreshDraftDiscovery
+          ) {
+            // Existing facts may still be useful, but a different credential
+            // must establish its own completed discovery after this save.
+            nextAccount.checkIn = invalidateCheckInDiscovery(
+              nextAccount.checkIn,
+            )
+          }
           return {
-            nextAccount: applySiteAccountUpdates({
-              account,
-              updates: { ...effectiveUpdates, checkIn },
-              now: Date.now(),
-              userTimestampMode: mutationOptions.userTimestampMode,
-            }),
+            nextAccount,
             result: true,
             changed: true,
           }

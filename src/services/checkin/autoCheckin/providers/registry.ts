@@ -2,6 +2,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
+import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/aiRouterCheckInProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -42,14 +43,24 @@ export function isCheckInMethodId(value: unknown): value is CheckInMethodId {
   return typeof value === "string" && CHECK_IN_METHOD_ID_SET.has(value)
 }
 
+/** Verified, read-only protocol clues; never execution endpoints. */
+export interface CheckInFeedbackStatusRoute {
+  readonly path: string
+  readonly public?: boolean
+  readonly rawToken?: boolean
+}
+
+type FeedbackStatusRoutes = readonly [
+  CheckInFeedbackStatusRoute,
+  ...CheckInFeedbackStatusRoute[],
+]
+
 interface AutoCheckinMethodDefinitionBase {
   readonly id: CheckInMethodId
   readonly siteTypes: readonly AccountSiteType[]
   readonly origins?: readonly string[]
   readonly excludedOrigins?: readonly string[]
   readonly source: AutoCheckinMethodSource
-  /** True only when the executable provider implements getStatus. */
-  readonly supportsStatusReadback?: boolean
 }
 
 /** Methods whose same-day check-in must not be replayed. Empty until observed. */
@@ -61,6 +72,19 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
  * New methods participate in discovery without inheriting migration behavior.
  */
 export type AutoCheckinMethodDefinition = AutoCheckinMethodDefinitionBase &
+  (
+    | {
+        /** True only when the executable provider implements getStatus. */
+        readonly supportsStatusReadback: true
+        readonly feedbackStatusRoutes:
+          | FeedbackStatusRoutes
+          | ((now: Date) => FeedbackStatusRoutes)
+      }
+    | {
+        readonly supportsStatusReadback?: false
+        readonly feedbackStatusRoutes: readonly CheckInFeedbackStatusRoute[]
+      }
+  ) &
   (
     | {
         readonly legacy: true
@@ -169,6 +193,16 @@ export function createAutoCheckinMethodMetadata(
   }
 }
 
+/** New API and Veloera share these verified GET status contracts. */
+const newApiFeedbackStatusRoutes = (now: Date): FeedbackStatusRoutes => {
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  return [
+    { path: "/api/status", public: true },
+    { path: `/api/user/checkin?month=${month}` },
+    { path: "/api/user/check_in_status" },
+  ]
+}
+
 /** All method definitions, including post-registry discovery candidates. */
 export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
@@ -177,6 +211,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     origins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: false,
+    feedbackStatusRoutes: [{ path: "/api/status", public: true }],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -185,6 +220,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     siteTypes: [SITE_TYPES.ANYROUTER],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: false,
+    feedbackStatusRoutes: [],
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -193,6 +229,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     siteTypes: [SITE_TYPES.VELOERA],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
+    feedbackStatusRoutes: newApiFeedbackStatusRoutes,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -201,6 +238,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     siteTypes: [SITE_TYPES.WONG_GONGYI],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/user/checkin" }],
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -211,6 +249,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     excludedOrigins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
+    feedbackStatusRoutes: newApiFeedbackStatusRoutes,
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -219,6 +258,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     siteTypes: [SITE_TYPES.VO_API_V2],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/check_in/stats", rawToken: true }],
     legacy: true,
     newAccountCompatibility: true,
   },
@@ -230,6 +270,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "Sub2API Pro",
     },
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/v1/redeem/checkin/status" }],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -241,6 +282,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "天才程序员中转站",
     },
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/v1/user/checkin/status" }],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -252,6 +294,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "登仙公益站",
     },
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/v1/tbe-sponsor-checkin/status" }],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -263,6 +306,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "小白Code",
     },
     supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/checkin/api/status" }],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -278,6 +322,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "AI-ROUTER",
     },
     supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createAiRouterCheckInStatusEndpoint() },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

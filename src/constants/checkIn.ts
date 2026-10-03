@@ -84,6 +84,9 @@ export const CHECK_IN_SELECTION_MODES = {
 /** Minimum interval between unattended full-discovery attempts for an account. */
 export const AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS = 24 * 60 * 60 * 1_000
 
+/** A full discovery round allows browser startup and protection recovery before timing out. */
+export const FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS = 60_000
+
 export const CHECK_IN_DISCOVERY_DECISION_OUTCOMES = {
   Resolved: "resolved",
   Ambiguous: "ambiguous",
@@ -110,6 +113,7 @@ export const CHECK_IN_EXECUTION_SKIP_REASONS = {
   GlobalAutomaticExecutionDisabled: "global_automatic_execution_disabled",
   AutomaticExecutionDisabled: "automatic_execution_disabled",
   NoSelectedMethod: "no_selected_method",
+  NoAvailableMethod: "no_available_method",
   MethodUnavailable: CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable,
   MethodNotMatched: CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched,
   MethodUnsupported: CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported,

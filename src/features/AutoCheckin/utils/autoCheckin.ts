@@ -412,6 +412,8 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:skipReasons.method_unsupported", messageParams)
     case "autoCheckin:skipReasons.network_error":
       return t("autoCheckin:skipReasons.network_error", messageParams)
+    case "autoCheckin:skipReasons.no_available_method":
+      return t("autoCheckin:skipReasons.no_available_method", messageParams)
     case "autoCheckin:skipReasons.no_selected_method":
       return t("autoCheckin:skipReasons.no_selected_method", messageParams)
     case "autoCheckin:skipReasons.permission_denied":

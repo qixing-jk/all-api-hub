@@ -71,6 +71,7 @@ describe("AutoCheckin AccountSnapshotTable", () => {
     [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED, "feedback"],
     [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE, "feedback"],
     [AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED, "request"],
+    [AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD, "request"],
     [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER, "request"],
   ] as const)("offers appropriate feedback for %s", (skipReason, action) => {
     renderSnapshotTable([

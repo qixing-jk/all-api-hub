@@ -226,6 +226,7 @@
     "method_unavailable": "Die gewählte Check-in-Methode ist nicht verfügbar. Erkennen Sie sie erneut.",
     "method_unsupported": "Diese Website unterstützt die gewählte Check-in-Methode nicht. Erkennen Sie sie erneut.",
     "network_error": "Netzwerkverbindung fehlgeschlagen, der Check-in blieb unvollständig. Prüfen Sie die Verbindung und wiederholen Sie.",
+    "no_available_method": "Keine integrierte Check-in-Methode verfügbar. Externe URL verwenden oder Unterstützung anfragen.",
     "no_provider": "Der Website-Typ dieses Kontos unterstützt noch keinen automatischen Check-in.",
     "no_selected_method": "Es ist keine Check-in-Methode gewählt. Wählen Sie eine im Dialog „Konto bearbeiten“.",
     "permission_denied": "Die Website hat den Check-in abgelehnt. Melden Sie sich erneut an und versuchen Sie es noch einmal.",

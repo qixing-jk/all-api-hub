@@ -82,6 +82,8 @@ export function useAccountCheckInRedetection({
   const [checkInRedetectionFeedback, setCheckInRedetectionFeedback] =
     useState<AccountCheckInRedetectionFeedback | null>(null)
   const invocationLeaseRef = useRef<symbol | null>(null)
+  const latestDraftRef = useRef(draft)
+  latestDraftRef.current = draft
 
   const resetCheckInRedetection = useCallback(() => {
     invocationLeaseRef.current = null
@@ -124,7 +126,12 @@ export function useAccountCheckInRedetection({
     const isInvocationCurrent = () =>
       invocationLeaseRef.current === lease &&
       selectedSiteTypeRef.current === requestedSiteType &&
-      selectedSiteUrlRef.current.trim() === requestedUrl
+      selectedSiteUrlRef.current.trim() === requestedUrl &&
+      latestDraftRef.current.userId.trim() === draft.userId.trim() &&
+      latestDraftRef.current.accessToken.trim() === draft.accessToken.trim() &&
+      latestDraftRef.current.authType === draft.authType &&
+      latestDraftRef.current.cookieAuthSessionCookie.trim() ===
+        draft.cookieAuthSessionCookie.trim()
 
     try {
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()

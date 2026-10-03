@@ -15,6 +15,77 @@ afterEach(() => {
 })
 
 describe("rendered feedback scan", () => {
+  it.each([true, false])(
+    "allows split-origin status only with prepared options (prepared=%s)",
+    async (prepared) => {
+      vi.stubGlobal("location", {
+        origin: "https://ai-router.dev",
+        href: "https://ai-router.dev/dashboard",
+      })
+      document.body.innerHTML =
+        '<script src="/app.js"></script><script src="https://api.ai-router.dev/private.js"></script>'
+      const fetch = vi.fn(
+        async (url: string, _init?: RequestInit) =>
+          new Response(
+            url.endsWith(".js") ? "'/checkin'" : '{"code":0,"data":{}}',
+            {
+              headers: {
+                "content-type": url.endsWith(".js")
+                  ? "application/javascript"
+                  : "application/json",
+              },
+            },
+          ),
+      )
+      vi.stubGlobal("fetch", fetch)
+      const result = createDeferred<any>()
+      handlePageFeedbackScan(
+        {
+          params: {
+            originUrl: "https://ai-router.dev",
+            requestId: `split-origin-${prepared}`,
+            input: {
+              baseUrl: "https://ai-router.dev",
+              siteType: "sub2api",
+              auth: { authType: "access_token", accessToken: "selected" },
+            },
+          },
+          statusOptions: prepared
+            ? { "/api/v1/user/daily-checkin": { credentials: "omit" } }
+            : {},
+        },
+        result.resolve,
+      )
+      const reply = await result.promise
+      const calls = fetch.mock.calls.filter(([url]) =>
+        url.startsWith("https://api.ai-router.dev/api/v1/user/daily-checkin"),
+      )
+      expect(calls).toHaveLength(prepared ? 1 : 0)
+      if (prepared) {
+        expect(new Headers(calls[0]?.[1]?.headers).get("Authorization")).toBe(
+          "Bearer selected",
+        )
+        expect(calls[0]?.[1]?.credentials).toBe("omit")
+        expect(reply.data.statusQueries).toContainEqual(
+          expect.objectContaining({
+            path: "/api/v1/user/daily-checkin",
+            status: 200,
+          }),
+        )
+      }
+      const resourceCall = fetch.mock.calls.find(
+        ([url]) => url === "https://ai-router.dev/app.js",
+      )
+      expect(resourceCall).toBeDefined()
+      expect(new Headers(resourceCall?.[1]?.headers).has("Authorization")).toBe(
+        false,
+      )
+      expect(fetch.mock.calls.map(([url]) => url)).not.toContain(
+        "https://api.ai-router.dev/private.js",
+      )
+    },
+  )
+
   it("stops authenticated reads when the page changes origin during collection", async () => {
     const pageLocation = { origin, href: origin + "/" }
     vi.stubGlobal("location", pageLocation)

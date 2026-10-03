@@ -168,7 +168,12 @@ export function shouldAutomaticallyDiscoverCheckIn(
       (selection.reason ===
         CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported ||
         selection.reason ===
-          CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable))
+          CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable ||
+        (selection.reason ===
+          CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched &&
+          isCandidateMethodId(selection.methodId, input.candidateMethodIds) &&
+          input.config.methodKnowledge.methods[selection.methodId]?.detection
+            .outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown)))
   if (!needsDiscovery) return false
 
   const { lastAutomaticDiscoveryAttemptAt, lastFullDiscoveryAt } =
@@ -228,7 +233,7 @@ const deriveExecutionEligibility = (
     ) {
       return {
         eligible: false,
-        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported,
+        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.NoAvailableMethod,
       }
     }
     return {
@@ -237,6 +242,21 @@ const deriveExecutionEligibility = (
     }
   }
   if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale) {
+    const detection = isCandidateMethodId(
+      selectionState.methodId,
+      input.candidateMethodIds,
+    )
+      ? input.config.methodKnowledge.methods[selectionState.methodId]?.detection
+      : undefined
+    if (
+      detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown &&
+      detection.reason === CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout
+    ) {
+      return {
+        eligible: false,
+        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.Timeout,
+      }
+    }
     return {
       eligible: false,
       skipReason: selectionState.reason,

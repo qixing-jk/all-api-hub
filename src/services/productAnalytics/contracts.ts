@@ -1051,6 +1051,7 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AlreadyCheckedToday: "already_checked_today",
   NoProvider: "no_provider",
   NoSelectedMethod: "no_selected_method",
+  NoAvailableMethod: "no_available_method",
   MethodUnavailable: "method_unavailable",
   MethodNotMatched: "method_not_matched",
   MethodUnsupported: "method_unsupported",

@@ -5,6 +5,7 @@ import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefau
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/postSaveDiscovery"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -37,6 +38,8 @@ const createMissingAccountRefreshResult = (
 })
 
 type RefreshAccountOptions = {
+  /** Read-only discovery requested by a successful user save, never a periodic refresh. */
+  discoverCheckInAfterSave?: boolean
   includeTodayCashflow?: boolean
   balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
   allowDisabled?: boolean
@@ -56,6 +59,7 @@ class AccountRefresh {
     force: boolean = false,
     options?: RefreshAccountOptions,
   ) {
+    let discoverAfterRefresh = false
     const runRefresh = async () => {
       let account = await accountQueries.getAccountById(id)
       if (!account) {
@@ -211,6 +215,12 @@ class AccountRefresh {
       const updatedAccount = didPersist
         ? await accountQueries.getAccountById(id)
         : account
+      discoverAfterRefresh = Boolean(
+        didPersist &&
+          result.success &&
+          updatedAccount &&
+          options?.discoverCheckInAfterSave,
+      )
       const reEnabled =
         didPersist && shouldReEnable && updatedAccount?.disabled === false
 
@@ -236,12 +246,28 @@ class AccountRefresh {
             sub2apiAuth: account.sub2apiAuth,
           }).sub2apiAuth,
         )
-      return shouldSerializeSub2ApiRefresh
+      const refreshedResult = shouldSerializeSub2ApiRefresh
         ? await withExtensionStorageWriteLock(
             `all-api-hub:sub2api-refresh:${id}`,
             runRefresh,
           )
         : await runRefresh()
+      // Release refresh-token serialization before optional, slow read-only discovery.
+      if (discoverAfterRefresh && refreshedResult.account) {
+        try {
+          refreshedResult.account =
+            (await discoverSavedAccountCheckIn(refreshedResult.account, {
+              tempWindowRequestSource: options?.tempWindowRequestSource,
+              protectionBypassExecution: options?.protectionBypassExecution,
+            })) ?? refreshedResult.account
+        } catch (error) {
+          logger.warn("Post-save discovery failed after a successful refresh", {
+            accountId: id,
+            error: getErrorMessage(error),
+          })
+        }
+      }
+      return refreshedResult
     } catch (error) {
       logger.error("刷新账号数据失败", { accountId: id, error })
       try {

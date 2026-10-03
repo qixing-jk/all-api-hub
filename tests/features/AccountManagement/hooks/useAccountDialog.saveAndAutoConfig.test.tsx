@@ -454,6 +454,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         "saved-account-id",
         true,
         {
+          discoverCheckInAfterSave: true,
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
           protectionBypassExecution: userCommandExecution(
             "add_account",
@@ -584,6 +585,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       true,
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+        discoverCheckInAfterSave: true,
         protectionBypassExecution: initialExecution,
       },
     )
@@ -991,6 +993,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
     await waitFor(() => {
       expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true, {
+        discoverCheckInAfterSave: true,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         protectionBypassExecution: expect.objectContaining({
           kind: "user_command",
@@ -1056,6 +1059,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         "saved-account-id",
         true,
         {
+          discoverCheckInAfterSave: true,
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
           protectionBypassExecution: expect.objectContaining({
             kind: "user_command",
@@ -1153,6 +1157,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         "saved-account-id",
         true,
         {
+          discoverCheckInAfterSave: true,
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
           protectionBypassExecution: expect.objectContaining({
             kind: "user_command",
@@ -1277,6 +1282,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       true,
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        discoverCheckInAfterSave: true,
         protectionBypassExecution: userCommandExecution(
           "reauthenticate_account",
           "background",

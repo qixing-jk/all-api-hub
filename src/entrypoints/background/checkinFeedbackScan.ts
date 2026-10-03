@@ -1,3 +1,4 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   resolveAccountSiteRouteUrl,
@@ -90,9 +91,12 @@ export async function executeTempCheckinFeedbackScan(
           signal: controller.signal,
         })
         const statusOptions: Record<string, RequestInit> = {}
-        for (const route of getCheckInFeedbackStatusRoutes(input.siteType)) {
+        for (const route of getCheckInFeedbackStatusRoutes(
+          input.siteType,
+          originUrl,
+        )) {
           controller.signal.throwIfAborted()
-          const url = new URL(route.path, originUrl)
+          const url = new URL(route.path, resolveDeploymentApiOrigin(originUrl))
           const prepared =
             await tempWindowBackgroundRuntime.prepareFetchOptions({
               tabId: context.tabId,
