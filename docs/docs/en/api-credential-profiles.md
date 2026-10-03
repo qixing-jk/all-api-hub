@@ -19,7 +19,7 @@ The complete API key is stored in the extension's local storage. Masking in the 
 ## Feature Overview
 
 - **Credential Library Management**: Store name, `Base URL`, API key, tags, and notes without relying on a site account.
-- **Search and Filter**: Supports filtering by name, `Base URL`, tags, notes, and API type.
+- **Search and Filter**: Supports filtering by name, `Base URL`, tags, notes, source page, and API type.
 - **Allowance and Usage Overview**: View balance, remaining quota windows, reset countdowns, today's usage, today's requests, available models, last refresh time, and health status when the endpoint provides that data.
 - **Interface Verification**: Supports verifying API availability and separately testing CLI compatibility.
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
@@ -59,7 +59,8 @@ If you need stable and CLI-friendly API interfaces to fill your credential libra
 | Base URL | The base address of the interface; it will be automatically normalized upon saving. |
 | Key | The corresponding API Key. The input is masked by default and can be revealed temporarily. |
 | Tags | Optional; shares the global tag system with accounts and bookmarks. |
-| Notes | Can record information such as source, purpose, model limitations, etc. |
+| Notes | Can record information such as purpose, model limitations, etc. |
+| Source page | Optional. Record the web page where you obtained these credentials. After saving, reopen it directly from the list to check whether the person who shared the key has updated it. |
 | Expiration date | Optional. This is only a reminder date you enter; it does not mean the provider has confirmed that the key expires then. |
 
 ### API Type
