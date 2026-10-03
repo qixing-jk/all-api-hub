@@ -230,6 +230,7 @@
     "method_unavailable": "El método de check-in seleccionado no está disponible. Vuelve a detectarlo.",
     "method_unsupported": "Este sitio no admite el método de check-in seleccionado. Vuelve a detectarlo o elige otro.",
     "network_error": "La conexión de red falló y el check-in no terminó. Revisa tu conexión y vuelve a intentarlo.",
+    "no_available_method": "No se detectó ningún método integrado de check-in compatible con este sitio. Usa una URL de check-in externa o solicita una integración.",
     "no_provider": "El tipo de sitio de esta cuenta aún no admite check-in automático.",
     "no_selected_method": "No hay método de check-in seleccionado. Vuelve a detectarlo o elígelo en \"Editar cuenta\".",
     "permission_denied": "El sitio rechazó el check-in. Inicia sesión otra vez y vuelve a intentarlo.",

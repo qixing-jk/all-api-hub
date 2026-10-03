@@ -113,6 +113,7 @@ export const CHECK_IN_EXECUTION_SKIP_REASONS = {
   GlobalAutomaticExecutionDisabled: "global_automatic_execution_disabled",
   AutomaticExecutionDisabled: "automatic_execution_disabled",
   NoSelectedMethod: "no_selected_method",
+  NoAvailableMethod: "no_available_method",
   MethodUnavailable: CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable,
   MethodNotMatched: CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched,
   MethodUnsupported: CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported,

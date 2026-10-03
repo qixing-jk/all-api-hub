@@ -8323,6 +8323,10 @@ describe("autoCheckinScheduler private helpers", () => {
       resultReason: "no_selected_method",
     },
     {
+      domainReason: "no_available_method",
+      resultReason: "no_available_method",
+    },
+    {
       domainReason: "method_unavailable",
       resultReason: "method_unavailable",
     },

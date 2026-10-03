@@ -368,6 +368,7 @@ describe("product analytics event enums", () => {
       AutoCheckinDisabled: "auto_checkin_disabled",
       NetworkError: "network_error",
       NoSelectedMethod: "no_selected_method",
+      NoAvailableMethod: "no_available_method",
       NoProvider: "no_provider",
       PermissionDenied: "permission_denied",
       SourceUnavailable: "source_unavailable",

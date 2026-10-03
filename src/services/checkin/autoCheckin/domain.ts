@@ -233,7 +233,7 @@ const deriveExecutionEligibility = (
     ) {
       return {
         eligible: false,
-        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported,
+        skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.NoAvailableMethod,
       }
     }
     return {

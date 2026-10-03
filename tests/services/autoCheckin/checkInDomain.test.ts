@@ -233,7 +233,7 @@ describe("inspectCheckInMethods", () => {
         [NEW_API_METHOD_ID]: unsupported,
         [VELOERA_METHOD_ID]: unsupported,
       },
-      expected: "method_unsupported",
+      expected: "no_available_method",
     },
   ])(
     "distinguishes missing provider support when $name",

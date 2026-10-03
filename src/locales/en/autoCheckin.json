@@ -226,6 +226,7 @@
     "method_unavailable": "The selected check-in method is unavailable. Re-detect it.",
     "method_unsupported": "This site does not support the selected check-in method. Re-detect or pick another.",
     "network_error": "The network connection failed and check-in did not finish. Check your connection and retry.",
+    "no_available_method": "No supported built-in check-in method was detected for this site. Use an external check-in URL or request support.",
     "no_provider": "This account's site type does not support auto check-in yet.",
     "no_selected_method": "No check-in method is selected. Re-detect or select one in the account's Edit dialog.",
     "permission_denied": "The site refused the check-in. Sign in to the site again and retry.",

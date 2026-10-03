@@ -82,6 +82,19 @@ describe("isRetryableCheckinResult", () => {
 })
 
 describe("canAutomaticallyRetryCheckinResult", () => {
+  it("classifies confirmed absence as unsupported without retrying or requesting selection", () => {
+    expect(
+      CHECKIN_SKIP_REASON_CATEGORIES[
+        AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD
+      ],
+    ).toBe(AUTO_CHECKIN_SKIP_CATEGORY.UNSUPPORTED)
+    expect(
+      canAutomaticallyRetryCheckinResult({
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD,
+      }),
+    ).toBe(false)
+  })
   it("retries exactly the reasons the product tells the user to wait on", () => {
     // The decision is a projection of the semantic category, so the two cannot
     // drift: this holds for every reason code, including ones added later.
