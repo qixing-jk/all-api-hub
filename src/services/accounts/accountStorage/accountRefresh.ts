@@ -5,6 +5,7 @@ import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefau
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/postSaveDiscovery"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -37,6 +38,8 @@ const createMissingAccountRefreshResult = (
 })
 
 type RefreshAccountOptions = {
+  /** Read-only discovery requested by a successful user save, never a periodic refresh. */
+  discoverCheckInAfterSave?: boolean
   includeTodayCashflow?: boolean
   balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
   allowDisabled?: boolean
@@ -208,9 +211,20 @@ class AccountRefresh {
         refreshedCheckIn,
         account,
       )
-      const updatedAccount = didPersist
+      let updatedAccount = didPersist
         ? await accountQueries.getAccountById(id)
         : account
+      if (
+        didPersist &&
+        result.success &&
+        updatedAccount &&
+        options?.discoverCheckInAfterSave
+      ) {
+        updatedAccount = await discoverSavedAccountCheckIn(updatedAccount, {
+          tempWindowRequestSource: options.tempWindowRequestSource,
+          protectionBypassExecution: options.protectionBypassExecution,
+        })
+      }
       const reEnabled =
         didPersist && shouldReEnable && updatedAccount?.disabled === false
 

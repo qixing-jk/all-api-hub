@@ -247,6 +247,49 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.accessToken).toBe("draft-pat")
   })
 
+  it.each(["token", "identity", "auth", "cookie", "url"])(
+    "invalidates completed draft discovery when the user changes %s before saving",
+    async (field) => {
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      act(() => {
+        result.current.setters.setUrl("https://original.example.invalid")
+        result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+        result.current.setters.setUserId("7")
+        result.current.setters.setAccessToken("original-token")
+        result.current.setters.setCheckIn({
+          ...result.current.state.checkIn,
+          methodKnowledge: { methods: {}, lastFullDiscoveryAt: 200 },
+        })
+      })
+      expect(
+        result.current.state.checkIn.methodKnowledge.lastFullDiscoveryAt,
+      ).toBe(200)
+      await act(async () => {
+        if (field === "token")
+          result.current.setters.setAccessToken("replacement-token")
+        if (field === "identity") result.current.setters.setUserId("8")
+        if (field === "auth")
+          result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        if (field === "cookie")
+          result.current.setters.setCookieAuthSessionCookie(
+            "replacement-session",
+          )
+        if (field === "url")
+          result.current.setters.setUrl("https://another.example.invalid")
+      })
+      expect(
+        result.current.state.checkIn.methodKnowledge.lastFullDiscoveryAt,
+      ).toBeUndefined()
+    },
+  )
+
   it("preserves a credential entered while an earlier detection is returning recovery data", async () => {
     const detection = createDeferred<AccountAutoDetectResponse>()
     mockAutoDetectAccount
@@ -595,44 +638,62 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(mockDiscoverCheckInMethods).not.toHaveBeenCalled()
   })
 
-  it("ignores a redetection result after the requested URL changes", async () => {
-    const discoveryDeferred = createDeferred<CheckInDiscoveryResult>()
-    mockDiscoverCheckInMethods.mockReturnValueOnce(discoveryDeferred.promise)
-    const { result } = renderHook(() =>
-      useAccountDialog({
-        mode: DIALOG_MODES.ADD,
-        isOpen: true,
-        onClose: vi.fn(),
-        onSuccess: vi.fn(),
-      }),
-    )
-    await waitFor(() => expect(result.current).toBeTruthy())
-    await act(async () => {
-      result.current.setters.setUrl("https://first.example.invalid")
-      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
-    })
+  it.each(["url", "token", "identity", "auth", "cookie"])(
+    "ignores a redetection result after the requested %s changes",
+    async (field) => {
+      const discoveryDeferred = createDeferred<CheckInDiscoveryResult>()
+      mockDiscoverCheckInMethods.mockReturnValueOnce(discoveryDeferred.promise)
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+          onSuccess: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://first.example.invalid")
+        result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      })
 
-    let redetection!: Promise<void>
-    await act(async () => {
-      redetection = result.current.handlers.handleRedetectCheckInMethods()
-      await Promise.resolve()
-    })
-    act(() => {
-      result.current.setters.setUrl("https://second.example.invalid")
-    })
-    discoveryDeferred.resolve({
-      config: buildCheckInConfig({ automaticExecutionEnabled: true }),
-      decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
-      detections: {},
-      timedOutMethodIds: [],
-    })
-    await act(async () => {
-      await redetection
-    })
+      let redetection!: Promise<void>
+      await act(async () => {
+        redetection = result.current.handlers.handleRedetectCheckInMethods()
+        await Promise.resolve()
+      })
+      await act(async () => {
+        if (field === "url")
+          result.current.setters.setUrl("https://second.example.invalid")
+        if (field === "token")
+          result.current.setters.setAccessToken("replacement")
+        if (field === "identity")
+          result.current.setters.setUserId("replacement-user")
+        if (field === "auth")
+          result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        if (field === "cookie")
+          result.current.setters.setCookieAuthSessionCookie(
+            "replacement-session",
+          )
+      })
+      discoveryDeferred.resolve({
+        config: buildCheckInConfig({ automaticExecutionEnabled: true }),
+        decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
+        detections: {},
+        timedOutMethodIds: [],
+      })
+      await act(async () => {
+        await redetection
+      })
 
-    expect(result.current.state.url).toBe("https://second.example.invalid")
-    expect(result.current.state.checkInRedetectionFeedback).toBeNull()
-  })
+      expect(result.current.state.url).toBe(
+        field === "url"
+          ? "https://second.example.invalid"
+          : "https://first.example.invalid",
+      )
+      expect(result.current.state.checkInRedetectionFeedback).toBeNull()
+    },
+  )
 
   it("ignores a site type suggestion that arrives after the site type changed", async () => {
     const mismatchDeferred = createDeferred<SiteTypeCheck>()
@@ -798,6 +859,8 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(mockDiscoverCheckInMethods).toHaveBeenCalledWith(
       expect.objectContaining({
+        perAdapterTimeoutMs: 60_000,
+        deadlineMs: 60_000,
         account: expect.objectContaining({
           site_url: "https://new-api.example.invalid",
           site_type: SITE_TYPES.NEW_API,

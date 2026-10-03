@@ -1,3 +1,4 @@
+import { FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS } from "~/constants/checkIn"
 import {
   accountCheckInState,
   isAutomaticCheckInDiscoveryCurrent,
@@ -47,6 +48,8 @@ export async function prepareAutomaticCheckIn(input: {
     const discovery = await discoverCheckInMethods({
       account,
       config: account.checkIn,
+      perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
+      deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
       observedAt:
         account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
       request: {

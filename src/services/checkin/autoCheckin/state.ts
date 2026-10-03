@@ -161,6 +161,20 @@ const selectionsEqual = (
   right: CheckInMethodSelection,
 ) => left.mode === right.mode && left.methodId === right.methodId
 
+/** Keeps established facts while requiring discovery for a new credential scope. */
+export function invalidateCheckInDiscovery(
+  config: CheckInConfig,
+): CheckInConfig {
+  return {
+    ...config,
+    methodKnowledge: {
+      ...config.methodKnowledge,
+      lastFullDiscoveryAt: undefined,
+      lastAutomaticDiscoveryAttemptAt: undefined,
+    },
+  }
+}
+
 /**
  * Commits one trusted redetection round without letting a stale form replace a
  * concurrent manual selection or a newer selected-method status observation.

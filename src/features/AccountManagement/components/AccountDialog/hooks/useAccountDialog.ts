@@ -98,6 +98,7 @@ import {
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import { invalidateCheckInDiscovery } from "~/services/checkin/autoCheckin/state"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
@@ -241,6 +242,7 @@ async function refreshPostSaveAccount(
 ) {
   try {
     const result = await accountRefresh.refreshAccount(accountId, true, {
+      discoverCheckInAfterSave: true,
       tempWindowRequestSource,
       protectionBypassExecution,
     })
@@ -556,7 +558,22 @@ export function useAccountDialog({
 
   const updateDraft = useCallback(
     (updater: (prev: AccountDialogDraft) => AccountDialogDraft) => {
-      setDraft((prev) => updater(prev))
+      setDraft((prev) => {
+        const next = updater(prev)
+        const credentialsChanged =
+          prev.accessToken.trim() !== next.accessToken.trim() ||
+          prev.userId.trim() !== next.userId.trim() ||
+          prev.authType !== next.authType ||
+          prev.cookieAuthSessionCookie.trim() !==
+            next.cookieAuthSessionCookie.trim() ||
+          prev.siteType !== next.siteType
+        // A completion that supplies fresh method facts owns that evidence;
+        // editing the credentials alone invalidates the previous round.
+        return credentialsChanged &&
+          next.checkIn.methodKnowledge === prev.checkIn.methodKnowledge
+          ? { ...next, checkIn: invalidateCheckInDiscovery(next.checkIn) }
+          : next
+      })
     },
     [],
   )
@@ -588,6 +605,12 @@ export function useAccountDialog({
       }
       resetCheckInRedetection()
       notifyOpenRouterUrlChange(value)
+      if (selectedSiteUrlRef.current.trim() !== value.trim()) {
+        setDraft((prev) => ({
+          ...prev,
+          checkIn: invalidateCheckInDiscovery(prev.checkIn),
+        }))
+      }
       selectedSiteUrlRef.current = value
       setUrl(value)
     },

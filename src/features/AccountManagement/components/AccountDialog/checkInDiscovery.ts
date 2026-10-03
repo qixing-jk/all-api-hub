@@ -1,3 +1,4 @@
+import { FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS } from "~/constants/checkIn"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
@@ -96,6 +97,8 @@ export function discoverAccountDialogCheckInMethods(params: {
         account: context.account,
         config: params.draft.checkIn,
         request: context.request,
+        perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
+        deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
       })
 
       return { discovery, protectionBypassExecution }

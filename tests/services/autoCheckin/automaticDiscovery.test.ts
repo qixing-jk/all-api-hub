@@ -163,6 +163,35 @@ afterEach(() => {
 })
 
 describe("automatic check-in preparation", () => {
+  it("recovers a timeout-stale selection with a slow browser-assisted probe", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "automatic", methodId: PRO }
+    account.checkIn.methodKnowledge.methods[PRO] = {
+      detection: {
+        outcome: "unknown",
+        reason: "timeout",
+        attemptedAt: NOW - AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
+      },
+    }
+    saveAccount(account)
+    const started = createDeferred<void>()
+    atIndex(detectors, 0).mockImplementation(() => {
+      started.resolve()
+      return new Promise<CheckInMethodDetection>((resolve) => {
+        setTimeout(() => resolve(detection("matched")), 8_000)
+      })
+    })
+    const pending = prepare(account)
+    await started.promise
+    await vi.advanceTimersByTimeAsync(8_000)
+    const result = await pending
+    expect(
+      result.account?.checkIn.methodKnowledge.methods[PRO]?.detection.outcome,
+    ).toBe("matched")
+    expect(result.discovered).toBe(true)
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
   it("settles cancelled discovery without waiting for a provider that ignores abort", async () => {
     const account = createAccount()
     const controller = new AbortController()
@@ -681,7 +710,7 @@ describe("automatic check-in preparation", () => {
     const account = saveAccount()
     atIndex(detectors, 0).mockImplementation(() => new Promise(() => {}))
     const pending = prepare(account)
-    await vi.advanceTimersByTimeAsync(5_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     await pending
     const saved = (await accountQueries.getAccountById(account.id))!
     expect(saved.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt).toBe(
