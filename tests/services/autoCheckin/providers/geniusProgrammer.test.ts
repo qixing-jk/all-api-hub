@@ -6,6 +6,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchGeniusProgrammerDailyCheckInStatus,
@@ -235,6 +236,21 @@ describe("Genius Programmer check-in integration", () => {
         kind === GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.Applied
           ? CHECKIN_RESULT_STATUS.SUCCESS
           : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    })
+  })
+  it("reports the awarded USD amount as a quota reward", async () => {
+    vi.mocked(performGeniusProgrammerDailyCheckIn).mockResolvedValue({
+      kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+      data: { rewardAmount: 0.05 },
+    })
+    await expect(
+      geniusProgrammerProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      reward: { quota: 0.05 * QUOTA_PER_USD },
     })
   })
   it("marks a dispatched malformed or lost response uncertain", async () => {

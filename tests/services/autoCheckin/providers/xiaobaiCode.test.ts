@@ -6,6 +6,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   performXiaobaiCodeDailyCheckIn,
@@ -272,6 +273,23 @@ describe("小白Code check-in integration", () => {
         kind === XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied
           ? CHECKIN_RESULT_STATUS.SUCCESS
           : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    })
+  })
+
+  it("reports the awarded decimal amount as a quota reward", async () => {
+    vi.mocked(performXiaobaiCodeDailyCheckIn).mockResolvedValue({
+      kind: XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+      data: { rewardAmount: 0.25 },
+    })
+
+    await expect(
+      xiaobaiCodeProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      reward: { quota: 0.25 * QUOTA_PER_USD },
     })
   })
 

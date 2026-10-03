@@ -18,6 +18,7 @@ import {
   tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
@@ -852,6 +853,61 @@ describe("newApiProvider", () => {
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
     })
 
+    it("reports today's award on an already-checked row from the month records it already fetches", async () => {
+      const today = formatLocalDayKey()
+      const yesterday = formatLocalDayKey(
+        new Date(Date.now() - 24 * 60 * 60 * 1000),
+      )
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "今日已签到",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        enabled: true,
+        stats: {
+          checked_in_today: true,
+          records: [
+            { checkin_date: today, quota_awarded: 500_000 },
+            { checkin_date: yesterday, quota_awarded: 250_000 },
+          ],
+        },
+      } as any)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("already_checked")
+      // Only today's record counts; an older day's award must not be shown.
+      expect(result.reward).toEqual({ quota: 500_000 })
+    })
+
+    it("omits the reward on an already-checked row without a record for today", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "今日已签到",
+        data: null,
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        enabled: true,
+        stats: {
+          checked_in_today: true,
+          records: [
+            {
+              checkin_date: formatLocalDayKey(
+                new Date(Date.now() - 24 * 60 * 60 * 1000),
+              ),
+              quota_awarded: 250_000,
+            },
+          ],
+        },
+      } as any)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("already_checked")
+      expect(result.reward).toBeUndefined()
+    })
+
     it("does not start a second mutation after a dispatched request loses its result", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),
@@ -904,6 +960,7 @@ describe("newApiProvider", () => {
         status: "success",
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        reward: { quota: 1 },
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
       expect(
@@ -1076,6 +1133,32 @@ describe("newApiProvider", () => {
         }),
         expect.any(Object),
       )
+    })
+
+    it("reports the awarded quota as the check-in reward", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "签到成功",
+        data: { checkin_date: "2026-01-01", quota_awarded: 500000 },
+      })
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("success")
+      expect(result.reward).toEqual({ quota: 500000 })
+    })
+
+    it("omits the reward when the success payload carries no awarded quota", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "签到成功",
+        data: { checkin_date: "2026-01-01" },
+      })
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("success")
+      expect(result.reward).toBeUndefined()
     })
 
     it("uses cookie-auth temp-context options when Turnstile assistance runs for cookie-auth accounts", async () => {

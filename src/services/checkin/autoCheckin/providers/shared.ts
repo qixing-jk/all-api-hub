@@ -20,6 +20,7 @@ import {
   CHECKIN_RESULT_STATUS,
   getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinSkipReason,
+  type CheckInReward,
 } from "~/types/autoCheckin"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
@@ -72,6 +73,35 @@ const DEFAULT_ALREADY_CHECKED_MESSAGE_SNIPPETS = [
  */
 export function normalizeCheckinMessage(message: unknown): string {
   return typeof message === "string" ? message : ""
+}
+
+const DECIMAL_AMOUNT_PATTERN = /^\d+(?:\.\d+)?$/
+
+/**
+ * Read a strictly positive decimal amount from a backend field.
+ *
+ * Deployments in these families report the same field as a number or as a
+ * decimal string, so both shapes are accepted. Anything else — missing, empty,
+ * zero, negative, signed, non-decimal, or non-finite — yields `undefined`: a
+ * zero or malformed award carries no information and must not become a shown
+ * "0" amount.
+ */
+export function readPositiveDecimalAmount(value: unknown): number | undefined {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && DECIMAL_AMOUNT_PATTERN.test(value.trim())
+        ? Number(value.trim())
+        : Number.NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+/**
+ * Read an award a deployment already reports in the internal quota unit.
+ */
+export function readQuotaReward(value: unknown): CheckInReward | undefined {
+  const quota = readPositiveDecimalAmount(value)
+  return quota === undefined ? undefined : { quota }
 }
 
 /**

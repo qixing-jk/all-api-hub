@@ -208,7 +208,7 @@ export default function AutoCheckin(props: {
   routeParams?: Record<string, string>
 }) {
   const { t } = useTranslation(["autoCheckin", "messages", "account", "common"])
-  const { preferences: userPrefs } = useUserPreferencesContext()
+  const { preferences: userPrefs, currencyType } = useUserPreferencesContext()
   const autoCheckinPreferences =
     userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
   const autoCheckinEnabled = autoCheckinPreferences.globalEnabled !== false
@@ -218,6 +218,14 @@ export default function AutoCheckin(props: {
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
   const [siteTypeMismatches, setSiteTypeMismatches] =
     useState<SiteTypeMismatchMap>({})
+  /**
+   * Each account's own USD-to-CNY rate, so a reported reward can be shown in
+   * the display currency. Accounts missing here are ones this page could not
+   * load; their reward stays hidden rather than converted with a guessed rate.
+   */
+  const [exchangeRateByAccountId, setExchangeRateByAccountId] = useState<
+    Record<string, number>
+  >({})
   const [accountSetupState, setAccountSetupState] = useState<
     "ready" | "no_accounts" | "no_detection_accounts" | null
   >(null)
@@ -300,6 +308,14 @@ export default function AutoCheckin(props: {
       if (loadId === latestStatusLoadIdRef.current) {
         setAccountSetupState(accountSetup.state)
         setSiteTypeMismatches(siteTypeMismatches)
+        setExchangeRateByAccountId(
+          Object.fromEntries(
+            accountSetup.accounts.map((account) => [
+              account.id,
+              account.exchange_rate,
+            ]),
+          ),
+        )
 
         if (response.success) {
           setStatus(response.data)
@@ -1136,6 +1152,8 @@ export default function AutoCheckin(props: {
     <ResultsTable
       results={accountResults}
       siteTypeMismatches={siteTypeMismatches}
+      currencyType={currencyType}
+      exchangeRateByAccountId={exchangeRateByAccountId}
       showDevActions={showDebugButtons}
       retryingAccountId={retryingAccountId}
       verifyingAccountId={verifyingAccountId}

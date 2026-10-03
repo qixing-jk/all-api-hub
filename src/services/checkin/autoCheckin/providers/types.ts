@@ -3,6 +3,7 @@ import {
   type CHECKIN_RESULT_STATUS,
   type CheckinReconciliationOutcome,
   type CheckinResultStatus,
+  type CheckInReward,
 } from "~/types/autoCheckin"
 
 /**
@@ -29,6 +30,13 @@ export interface AutoCheckinProviderResult<
   /** A human-readable backend message when the site provided one. */
   rawMessage?: string
   reconciliation?: CheckinReconciliationOutcome
+  /**
+   * The award the site itself reported for this check-in, already normalized to
+   * the extension's internal quota unit. Only methods whose response carries an
+   * authoritative amount set it; a method without one leaves it unset so the UI
+   * shows no amount instead of a guessed or zeroed value.
+   */
+  reward?: CheckInReward
   data?: TData
 }
 
@@ -55,4 +63,6 @@ export type AutoCheckinProviderOutcome<
         | typeof CHECKIN_RESULT_STATUS.UNCERTAIN
         | typeof CHECKIN_RESULT_STATUS.SKIPPED
       reasonCode: AutoCheckinSkipReason
+      /** Only a success can carry an award the site confirmed. */
+      reward?: never
     })

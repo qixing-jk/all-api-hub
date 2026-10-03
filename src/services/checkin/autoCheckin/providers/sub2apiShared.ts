@@ -10,6 +10,7 @@ import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
 } from "~/services/apiService/sub2api/authSession"
+import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -19,6 +20,7 @@ import {
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   createTerminalFailureResult,
+  readPositiveDecimalAmount,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
@@ -26,6 +28,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinSkipReason,
+  type CheckInReward,
 } from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
@@ -91,6 +94,20 @@ export const failedSub2ApiCheckIn = (
   reasonCode,
   messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
 })
+
+/**
+ * Read an award a Sub2API-family deployment reports as a USD decimal amount.
+ *
+ * This family quotes balances in USD (`convertUsdBalanceToQuota`), so its
+ * check-in award needs the same conversion before it can be stored or shown
+ * next to the account's quota.
+ */
+export function readUsdReward(value: unknown): CheckInReward | undefined {
+  const usd = readPositiveDecimalAmount(value)
+  if (usd === undefined) return undefined
+  const quota = convertUsdBalanceToQuota(usd)
+  return quota > 0 ? { quota } : undefined
+}
 
 /** Shared fallback for single-step methods; Denxio owns its upstream error codes. */
 export const mapSub2ApiCheckInMutationError = (

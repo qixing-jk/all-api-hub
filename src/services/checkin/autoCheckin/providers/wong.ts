@@ -32,6 +32,7 @@ import {
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
+  readQuotaReward,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
@@ -145,6 +146,9 @@ async function checkinWongGongyi(
         messageKey: responseMessage
           ? undefined
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+        // The deployment answers with the day's awarded quota; its own console
+        // renders it as "恭喜获得额度：{quota}".
+        reward: readQuotaReward(checkinResponse.data?.quota),
         data: checkinResponse.data,
       }
     }

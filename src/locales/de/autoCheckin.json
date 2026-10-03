@@ -78,6 +78,9 @@
       "summary": "{{start}}–{{end}} von {{total}}"
     },
     "refresh": "Aktualisieren",
+    "reward": {
+      "title": "Belohnung für diesen Check-in"
+    },
     "runNow": "Jetzt ausführen",
     "statistics": {
       "result": "Ergebnis"

@@ -89,6 +89,15 @@ export interface AutoCheckinProvider {
   getStatus?: (
     context: AutoCheckinProviderReadContext,
   ) => Promise<CheckInMethodStatus | undefined>
+  /**
+   * Executes the daily check-in.
+   *
+   * A success whose response carries the award the deployment granted must also
+   * set `reward`, normalized to the extension's internal quota unit. A method
+   * whose response carries no authoritative amount must leave it unset rather
+   * than report a constant or an estimate. See `docs/agents/site-integrations.md`
+   * for the per-family helpers and the coverage table.
+   */
   checkIn(
     account: SiteAccount | AnyrouterCheckInParams,
     context: AutoCheckinProviderContext,

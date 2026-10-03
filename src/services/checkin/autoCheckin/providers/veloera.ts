@@ -20,6 +20,7 @@ import {
   getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
+  readQuotaReward,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
@@ -28,6 +29,7 @@ import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { isPlainObject } from "~/utils/core/object"
 
 import type {
   AutoCheckinProvider,
@@ -38,6 +40,19 @@ import { detectWithStatusReadback } from "./detection"
 type CheckinResult = AutoCheckinProviderOutcome
 
 const ENDPOINT = "/api/user/check_in"
+
+/**
+ * Read the awarded quota from this deployment's untyped success payload.
+ *
+ * Upstream answers a successful check-in with
+ * `{success, message: "签到成功", data: {quota: reward}}`, where the reward is
+ * added to the user's quota, so it is already in the internal quota unit:
+ * https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/user.go
+ * The payload stays `unknown` at the transport because this is the only part of
+ * the shape the extension consumes.
+ */
+const readAwardedQuota = (data: unknown): unknown =>
+  isPlainObject(data) ? data.quota : undefined
 
 // Veloera exposes the global switch through /api/status and today's state
 // through /api/user/check_in_status. Keep these independent: `can_check_in`
@@ -135,6 +150,7 @@ async function checkinVeloera(
         messageKey: responseMessage
           ? undefined
           : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+        reward: readQuotaReward(readAwardedQuota(response.data)),
         data: response.data,
       }
     }

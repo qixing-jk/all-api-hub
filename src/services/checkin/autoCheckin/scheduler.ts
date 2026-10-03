@@ -1207,6 +1207,7 @@ class AutoCheckinScheduler {
           | "methodId"
           | "reconciliation"
           | "accountStateDurability"
+          | "reward"
         >
       >,
     ): CheckinAccountResult =>
@@ -1308,6 +1309,7 @@ class AutoCheckinScheduler {
         reasonCode: providerResult.reasonCode,
         methodId: execution.methodId,
         reconciliation: providerResult.reconciliation,
+        reward: providerResult.reward,
         ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
         providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
           ? { retryable: execution.retryable === true }

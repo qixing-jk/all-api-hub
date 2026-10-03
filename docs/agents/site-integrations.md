@@ -27,6 +27,14 @@ Upstream message text is display data only when the upstream sanitizes it for di
 
 `tests/features/ManagedSiteChannels/` locks these rules across every registered site type; extend those cases instead of adding a parallel suite.
 
+## Check-in methods
+
+Auto check-in methods live under `src/services/checkin/autoCheckin/providers/` and are registered in `registry.ts`. Adding one also requires a decision about the reward it reports:
+
+- When the deployment's success response carries the award it granted, normalize it to the extension's internal quota unit inside the provider and set `AutoCheckinProviderOutcome.reward`: `readQuotaReward` for deployments that answer in quota (New API family, Veloera, WONG), `readUsdReward` for the USD-quoting Sub2API family.
+- When the response carries no authoritative amount, leave `reward` unset. Do not hardcode a site's usual value and do not substitute an estimated balance delta — a constant an operator can change is not something the extension may state as fact.
+- Record the field, its unit, and the evidence for both in `.scratch/checkin-reward-display/spec.md`, whose coverage table lists every registered method and which ones still need live evidence.
+
 ## Relationships
 
 - **One API (`one-api`)** is the original upstream family. One API/New API-family account types share capability construction under `src/services/apiAdapters/newApi/` and protocol transports under `src/services/apiService/newApiFamily/`.

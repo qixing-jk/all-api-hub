@@ -689,6 +689,47 @@ describe("daily automatic check-in preparation", () => {
     expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
 
+  it("persists the reward a successful check-in reported", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "sub2api-pro:daily-checkin",
+      result: {
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        reward: { quota: 250_000 },
+      },
+      retryable: false,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "success",
+      reward: { quota: 250_000 },
+    })
+  })
+
+  it("persists a success without a reward when the method reports no amount", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "sub2api-pro:daily-checkin",
+      result: {
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      },
+      retryable: false,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount[account.id].status).toBe("success")
+    expect(storedStatus.perAccount[account.id].reward).toBeUndefined()
+  })
+
   it.each(["manual", "globally disabled"])(
     "does not run automatic discovery for a %s run",
     async (mode) => {

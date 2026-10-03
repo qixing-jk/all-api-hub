@@ -211,6 +211,22 @@ describe("veloeraProvider", () => {
       })
     })
 
+    it("reports the awarded quota as the check-in reward", async () => {
+      const { newApiFamilyRequests } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "签到成功",
+        data: { quota: 500000 },
+      })
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result.status).toBe("success")
+      expect(result.reward).toEqual({ quota: 500000 })
+    })
+
     it("returns success on successful check-in", async () => {
       const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
