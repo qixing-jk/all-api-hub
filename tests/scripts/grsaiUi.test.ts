@@ -23,13 +23,14 @@ vi.mock("~~/scripts/flows/model-catalog.mjs", () => ({ testModelCatalogFlow }))
 afterEach(() => vi.restoreAllMocks())
 
 describe("Grsai live UI cleanup", () => {
-  it.each([false, true])(
-    "deletes the owned key even when model validation fails: %s",
-    async (failModels) => {
+  it.each(["success", "models", "inventory"])(
+    "cleans owned keys or reports cleanup failure: %s",
+    async (failure) => {
       vi.spyOn(console, "log").mockImplementation(() => {})
       const actions: string[] = []
       let keyExists = false
       let currentName = ""
+      let inventoryFailed = false
       const locator = (selector: string): any => ({
         first: () => locator(selector),
         or: () => locator(selector),
@@ -41,7 +42,7 @@ describe("Grsai live UI cleanup", () => {
         fill: async (value: string) => {
           currentName = value
         },
-        count: async () => (keyExists ? 1 : 0),
+        count: async () => (keyExists && !inventoryFailed ? 1 : 0),
         waitFor: async () => {},
         click: async () => {
           actions.push(selector)
@@ -57,10 +58,12 @@ describe("Grsai live UI cleanup", () => {
           locator(options.name),
         addInitScript: vi.fn(),
         goto: vi.fn(),
-        reload: vi.fn(),
+        reload: vi.fn(async () => {
+          inventoryFailed = failure === "inventory"
+        }),
         waitForLoadState: vi.fn(),
         waitForTimeout: vi.fn(),
-        innerText: async () => "",
+        innerText: async () => (inventoryFailed ? "Failed to load keys" : ""),
         close: vi.fn(async () => {}),
       }
       vi.mocked(withTemporaryAccount).mockImplementation(
@@ -69,7 +72,7 @@ describe("Grsai live UI cleanup", () => {
       vi.mocked(openExtensionPage).mockResolvedValue(page)
       vi.mocked(testAccountCardFlow).mockResolvedValue({ ok: true })
       vi.mocked(testModelCatalogFlow).mockImplementation(async () => {
-        if (failModels) throw new Error("models unavailable")
+        if (failure === "models") throw new Error("models unavailable")
         return { ok: true, countLine: "1 model" }
       })
       const result = runGrsaiUiTest({
@@ -78,7 +81,13 @@ describe("Grsai live UI cleanup", () => {
         serviceWorker: {} as any,
         token: "session",
       })
-      if (failModels) await expect(result).rejects.toThrow("models unavailable")
+      if (failure === "inventory") {
+        await expect(result).rejects.toThrow("Grsai key cleanup failed")
+        expect(keyExists).toBe(true)
+        return
+      }
+      if (failure === "models")
+        await expect(result).rejects.toThrow("models unavailable")
       else await result
       expect(currentName).toContain("AAH E2E Grsai")
       expect(actions.some((action) => action.includes("delete-confirm"))).toBe(

@@ -31,9 +31,13 @@ const session: GrsaiConsoleSession = {
 
 describe("grsai console transport", () => {
   it("rejects a missing account token before dispatching", async () => {
-    expect(getGrsaiAccessToken({ baseUrl: request.baseUrl })).toBe("")
+    const unauthenticated = {
+      ...request,
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "" },
+    }
+    expect(getGrsaiAccessToken(unauthenticated)).toBe("")
     await expect(
-      fetchGrsaiConsole({ baseUrl: request.baseUrl }, GRSAI_ENDPOINTS.credits),
+      fetchGrsaiConsole(unauthenticated, GRSAI_ENDPOINTS.credits),
     ).rejects.toMatchObject({ statusCode: 401 })
   })
 

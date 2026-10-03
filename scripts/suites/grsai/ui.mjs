@@ -57,6 +57,15 @@ function nameInputLocator(page, label) {
     .first()
 }
 
+/** Refuse to treat a failed inventory fetch as proof that owned keys are absent. */
+async function requireCleanupInventory(page) {
+  if ((await page.innerText("body")).includes("Failed to load keys")) {
+    throw new Error(
+      "Cannot confirm cleanup while the key inventory is unavailable",
+    )
+  }
+}
+
 /**
  * Run the Grsai live UI suite.
  * @param options Suite options.
@@ -148,6 +157,7 @@ export async function runGrsaiUiTest({
               // real; a fixture without a token still renders the row header.
               const bodyText = await keyPage.innerText("body")
               const hasLoadError =
+                bodyText.includes("Failed to load keys") ||
                 bodyText.includes("无法加载") ||
                 bodyText.includes("加载密钥列表失败") ||
                 bodyText.includes("invalid_response")
@@ -253,6 +263,7 @@ export async function runGrsaiUiTest({
                   await keyPage
                     .locator("[data-options-page-pending], [inert]")
                     .waitFor({ state: "detached", timeout: 60_000 })
+                  await requireCleanupInventory(keyPage)
                   for (const name of ownedKeyNames) {
                     const row = keyPage
                       .locator(
