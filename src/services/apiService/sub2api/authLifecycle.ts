@@ -71,6 +71,8 @@ type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 
 type AuthenticatedSub2ApiRequestOptions = {
   proactiveRefresh?: boolean
+  /** Allow read-only probes to skip refresh and browser recovery for absent tokens. */
+  recoverMissingAccessToken?: boolean
   recoverUnauthorized?: boolean
   recoverInvalidRefreshTokenViaBrowser?: boolean
   beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
@@ -605,7 +607,7 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
     effectiveRequest.auth?.accessToken,
   )
 
-  if (!accessToken) {
+  if (!accessToken && options.recoverMissingAccessToken !== false) {
     if (refreshToken) {
       try {
         const refreshed = await refreshSub2ApiRequestAuth({

@@ -83,6 +83,17 @@ describe("optional check-in clue scan", () => {
     expect(clues.status).toBe("partial")
   })
 
+  it("includes ToolCode's read-only growth-center status in Sub2API feedback", () => {
+    expect(
+      getCheckInFeedbackStatusRoutes(
+        SITE_TYPES.SUB2API,
+        "https://toolcode.top",
+      ),
+    ).toContainEqual({
+      path: `/api/v1/engagement/checkin/status?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+    })
+  })
+
   it("uses Wong's read-only route and excludes AnyRouter's mutation-only flow", () => {
     expect(
       getCheckInFeedbackStatusRoutes(SITE_TYPES.WONG_GONGYI, baseUrl),

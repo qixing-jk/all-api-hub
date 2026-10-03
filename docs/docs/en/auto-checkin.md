@@ -101,8 +101,14 @@ The following sites have supported check-in methods. Availability still depends 
 | `anyrouter` | Yes | Cookie session or browser sign-in context, plus account ID |
 | `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
 | `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
-| `sub2api` | Yes | Valid login credentials for the detected Sub2API Pro or Denxio check-in method |
+| `sub2api` | Yes | Valid login credentials for the detected Sub2API Pro, Genius Programmer, Denxio, XiaobaiCode, AI-ROUTER, or ToolCode check-in method |
 | AgentRouter | Yes | After login check-in is detected, select the matching GitHub or LinuxDo method in account check-in settings. Complete browser login or authorization as prompted and check the execution result. |
+
+### ToolCode growth-center check-in
+
+The growth center at `toolcode.top` uses a separate check-in protocol. Keep the account's site type as `sub2api`. For an existing account, open **Edit Account**, click **Re-detect check-in method**, and save after ToolCode is detected. Enable the account's automatic check-in if you want it to run daily.
+
+Before submission, the extension reads today's status and skips the POST if the account is already checked in or check-in is unavailable. Growth-center points and expiring bonus credit are separate from the account balance, so they are not displayed as a balance reward amount in check-in results. View their details in the site's growth center.
 
 ### AgentRouter login check-in limits
 
