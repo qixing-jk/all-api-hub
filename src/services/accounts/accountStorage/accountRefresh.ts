@@ -59,6 +59,7 @@ class AccountRefresh {
     force: boolean = false,
     options?: RefreshAccountOptions,
   ) {
+    let discoverAfterRefresh = false
     const runRefresh = async () => {
       let account = await accountQueries.getAccountById(id)
       if (!account) {
@@ -211,20 +212,15 @@ class AccountRefresh {
         refreshedCheckIn,
         account,
       )
-      let updatedAccount = didPersist
+      const updatedAccount = didPersist
         ? await accountQueries.getAccountById(id)
         : account
-      if (
+      discoverAfterRefresh = Boolean(
         didPersist &&
-        result.success &&
-        updatedAccount &&
-        options?.discoverCheckInAfterSave
-      ) {
-        updatedAccount = await discoverSavedAccountCheckIn(updatedAccount, {
-          tempWindowRequestSource: options.tempWindowRequestSource,
-          protectionBypassExecution: options.protectionBypassExecution,
-        })
-      }
+          result.success &&
+          updatedAccount &&
+          options?.discoverCheckInAfterSave,
+      )
       const reEnabled =
         didPersist && shouldReEnable && updatedAccount?.disabled === false
 
@@ -250,12 +246,28 @@ class AccountRefresh {
             sub2apiAuth: account.sub2apiAuth,
           }).sub2apiAuth,
         )
-      return shouldSerializeSub2ApiRefresh
+      const refreshedResult = shouldSerializeSub2ApiRefresh
         ? await withExtensionStorageWriteLock(
             `all-api-hub:sub2api-refresh:${id}`,
             runRefresh,
           )
         : await runRefresh()
+      // Release refresh-token serialization before optional, slow read-only discovery.
+      if (discoverAfterRefresh && refreshedResult.account) {
+        try {
+          refreshedResult.account =
+            (await discoverSavedAccountCheckIn(refreshedResult.account, {
+              tempWindowRequestSource: options?.tempWindowRequestSource,
+              protectionBypassExecution: options?.protectionBypassExecution,
+            })) ?? refreshedResult.account
+        } catch (error) {
+          logger.warn("Post-save discovery failed after a successful refresh", {
+            accountId: id,
+            error: getErrorMessage(error),
+          })
+        }
+      }
+      return refreshedResult
     } catch (error) {
       logger.error("刷新账号数据失败", { accountId: id, error })
       try {
