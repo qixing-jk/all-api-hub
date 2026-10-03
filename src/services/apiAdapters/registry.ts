@@ -17,6 +17,7 @@ import type {
   SiteType,
   SiteTypeCapabilities,
 } from "./contracts/siteTypeCapabilities"
+import { grsaiCapabilities } from "./grsai"
 import { createKimiOpenPlatformCapabilities } from "./kimiOpenPlatform"
 import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "./managedSites/claudeCodeHub"
@@ -90,6 +91,7 @@ export function getSiteTypeCapabilities(
   if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
     return createKimiOpenPlatformCapabilities(siteType)
   }
+  if (siteType === SITE_TYPES.GRSAI) return grsaiCapabilities
 
   if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {
     return withManagedSites(

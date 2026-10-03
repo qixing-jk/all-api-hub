@@ -27,6 +27,7 @@ import type { SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { runAccountAutoDetectScenario } from "~~/e2e/scenarios/accountAutoDetect"
 import { saveExistingAccountTokenToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
+import { refreshAccountRowsAndReadStorage } from "~~/e2e/scenarios/accountManualAdd"
 import {
   openApiCredentialProfilesPopupScenario,
   verifyApiCredentialProfileModelsProbeScenario,
@@ -68,6 +69,18 @@ const RIGHTCODE_SITE_URL = "https://www.right.codes"
 const RIGHTCODE_ACCOUNT_ID = 4242
 const RIGHTCODE_ACCOUNT_USERNAME = "rightcode-user"
 const RIGHTCODE_ACCOUNT_TOKEN = "rightcode-e2e-account-token"
+const GRSAI_SITE_URL = "https://grsai.com"
+/** The console serves its data API from a second host, as it does in production. */
+const GRSAI_CONSOLE_API_ORIGIN = "https://eb.grsaiapi.com"
+const GRSAI_ACCOUNT_ID = "6aba891720c8e541cff9d0e3"
+const GRSAI_ACCOUNT_EMAIL = "grsai-e2e@example.invalid"
+const GRSAI_SESSION_TOKEN = "grsai-e2e-session-token"
+/** Balances and consumption are credits; the console sells 66,600 per dollar. */
+const GRSAI_CREDITS_PER_USD = 66_600
+const GRSAI_CREDITS = 5000
+const GRSAI_TODAY_CREDITS = 1332
+/** Balance the console reports after the account was saved. */
+const GRSAI_REFRESHED_CREDITS = 12_000
 
 type OpenRouterManagementKeyFixtureMode = "authenticated" | "logged_out"
 
@@ -589,6 +602,126 @@ async function stubRightCodeRoutes(context: BrowserContext) {
       body: JSON.stringify({
         message: `Unhandled RightCode route: ${method} ${url.pathname}`,
       }),
+    })
+  })
+}
+
+/**
+ * Serves the Grsai console and the console API.
+ *
+ * The console keeps its session token as plain page state and serves its data
+ * API from `eb.grsaiapi.com`, so detection reads `localStorage.Token` through
+ * the content-session extractor and then calls the console API, which needs
+ * cross-origin headers because that call comes from the console's own page.
+ * The reported balance is read per request so a test can change it and prove a
+ * later read really reached the API with no console tab open.
+ */
+async function stubGrsaiRoutes(
+  context: BrowserContext,
+  options: { getCredits?: () => number } = {},
+) {
+  const getCredits = options.getCredits ?? (() => GRSAI_CREDITS)
+  const corsHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-headers": "authorization,xtx,content-type",
+    "access-control-allow-methods": "POST,OPTIONS",
+  }
+
+  await context.route(
+    `${GRSAI_CONSOLE_API_ORIGIN}/**`,
+    async (route: Route) => {
+      const method = route.request().method()
+      if (method === "OPTIONS") {
+        await route.fulfill({ status: 204, headers: corsHeaders, body: "" })
+        return
+      }
+
+      const json = (body: unknown) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: corsHeaders,
+          body: JSON.stringify(body),
+        })
+
+      const endpoint = new URL(route.request().url()).pathname
+
+      if (endpoint === "/client/common/getConfig") {
+        // Material the console hands out per call; these reads never sign, so
+        // placeholder values are enough to satisfy the session contract.
+        await json({
+          code: 0,
+          msg: "success",
+          data: {
+            token: GRSAI_SESSION_TOKEN,
+            kis: "kis-blob",
+            ra1: "ra1",
+            ra2: "ra2",
+            random: "1234567890",
+            isAuth: true,
+          },
+        })
+        return
+      }
+
+      if (endpoint === "/client/grsai/getUserInfo") {
+        await json({
+          code: 0,
+          msg: "success",
+          data: {
+            id: GRSAI_ACCOUNT_ID,
+            mail: GRSAI_ACCOUNT_EMAIL,
+            credits: getCredits(),
+          },
+        })
+        return
+      }
+
+      if (endpoint === "/client/grsai/getDashboardData") {
+        await json({
+          code: 0,
+          msg: "success",
+          data: {
+            credits: getCredits(),
+            todayConsumed: GRSAI_TODAY_CREDITS,
+            totalConsumed: 400_000,
+          },
+        })
+        return
+      }
+
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        headers: corsHeaders,
+        body: JSON.stringify({ message: `Unhandled Grsai route: ${endpoint}` }),
+      })
+    },
+  )
+
+  await context.route(`${GRSAI_SITE_URL}/**`, async (route: Route) => {
+    const url = new URL(route.request().url())
+
+    if (url.pathname === "/favicon.ico") {
+      await route.fulfill({ status: 204, body: "" })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: `<!doctype html>
+        <html>
+          <head><title>Grsai API</title></head>
+          <body>
+            <script>
+              window.localStorage.setItem(${JSON.stringify(
+                "Token",
+              )}, ${JSON.stringify(GRSAI_SESSION_TOKEN)})
+            </script>
+            Grsai
+          </body>
+        </html>`,
     })
   })
 }
@@ -1316,6 +1449,89 @@ test("adds a RightCode account from its logged-in console without a one-time key
   // RightCode runs no check-in flow, so no method may be learned or selected.
   expect(Object.keys(savedAccount.checkIn.methodKnowledge.methods)).toEqual([])
   expect(savedAccount.checkIn.selection.methodId).toBeUndefined()
+
+  await fixture.cleanup()
+})
+
+test("adds a Grsai account from its logged-in console session", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    // This scenario enters its URL manually; avoid racing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+  let grsaiCredits = GRSAI_CREDITS
+  await stubGrsaiRoutes(context, { getCredits: () => grsaiCredits })
+
+  const fixture = await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl: GRSAI_SITE_URL,
+    siteType: SITE_TYPES.GRSAI,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      installExtensionPageGuards(sitePage)
+      await forceExtensionLanguage(sitePage, "en")
+      await sitePage.goto(GRSAI_SITE_URL)
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async () => undefined,
+  })
+
+  // The console is not a One/New API backend, so detection has to resolve it
+  // from the console session instead of reporting an unmatched payload.
+  expect(fixture.siteType).toBe(SITE_TYPES.GRSAI)
+
+  // The console re-reveals keys on every read, so saving must not raise the
+  // created-secret dialog that warns the value would be lost.
+  await expect(
+    page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput),
+  ).toHaveCount(0)
+
+  const savedAccount = await waitForSavedAccount({
+    serviceWorker,
+    siteType: SITE_TYPES.GRSAI,
+    baseUrl: GRSAI_SITE_URL,
+    predicate: (account) => account.account_info.quota > 0,
+  })
+  expect(savedAccount.account_info.username).toBe(GRSAI_ACCOUNT_EMAIL)
+  expect(savedAccount.account_info.id).toBe(GRSAI_ACCOUNT_ID)
+  expect(savedAccount.account_info.access_token).toBe(GRSAI_SESSION_TOKEN)
+  // Saving reads the account through the same producer the refresh button uses:
+  // the stubbed credit balance and today consumption, normalized into quota
+  // points at the console's own base credit rate.
+  expect(savedAccount.account_info.quota).toBe(
+    Math.round((GRSAI_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD),
+  )
+  expect(savedAccount.account_info.today_quota_consumption).toBe(
+    Math.round((GRSAI_TODAY_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD),
+  )
+  // The console runs no check-in flow, so no method may be learned or selected.
+  expect(Object.keys(savedAccount.checkIn.methodKnowledge.methods)).toEqual([])
+  expect(savedAccount.checkIn.selection.methodId).toBeUndefined()
+
+  // Saving closed the console tab, and the balance the stub now reports is a
+  // different one, so this refresh can only succeed if the extension reaches
+  // the console API by itself: the account is usable without the site's page.
+  grsaiCredits = GRSAI_REFRESHED_CREDITS
+  await refreshAccountRowsAndReadStorage({
+    page,
+    serviceWorker,
+    accountIds: [savedAccount.id],
+    expectedQuotas: [
+      Math.round(
+        (GRSAI_REFRESHED_CREDITS / GRSAI_CREDITS_PER_USD) * QUOTA_PER_USD,
+      ),
+    ],
+  })
 
   await fixture.cleanup()
 })

@@ -388,6 +388,8 @@
         "loading": "Schlüsseleditor öffnen...",
         "retry": "Versuchen Sie es erneut"
       },
+      "quotaCredits": "Verbleibende Credits",
+      "quotaCreditsHelp": "Sobald diese Credits aufgebraucht sind, funktioniert der Schlüssel nicht mehr.",
       "quotaUsd": "Kontingent (USD)",
       "remainingCount": "Verbleibende Aufrufe",
       "remainingCountPlaceholder": "Wie viele Aufrufe dieser Schlüssel noch erlaubt",

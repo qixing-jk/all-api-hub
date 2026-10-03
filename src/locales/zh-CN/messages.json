@@ -113,6 +113,10 @@
       "userIdNumeric": "用户 ID 必须是数字"
     }
   },
+  "grsai": {
+    "openApiTokenRejected": "这是 Grsai 用户信息页展示的 Token，它是给平台开放接口用的，控制台并不接受它。请用「自动识别」读取已登录的控制台会话，或改为粘贴控制台会话 token。",
+    "sessionExpired": "保存的 Grsai 控制台会话已过期（一次会话约 30 天）。请先在 Grsai 控制台重新登录，再用「自动识别」重新添加账号。"
+  },
   "kelivo": {
     "copied": "已复制 Kelivo 移动端导入码，请在 Kelivo 移动端的提供商导入中粘贴。",
     "copyFailed": "无法复制 Kelivo 导入码，请检查剪贴板权限后重试。",

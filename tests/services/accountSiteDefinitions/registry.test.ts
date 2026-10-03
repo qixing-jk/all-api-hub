@@ -88,6 +88,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.OPENROUTER
   | typeof SITE_TYPES.KIMI
   | typeof SITE_TYPES.KIMI_GLOBAL
+  | typeof SITE_TYPES.GRSAI
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -356,6 +357,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.OPENROUTER,
       SITE_TYPES.KIMI,
       SITE_TYPES.KIMI_GLOBAL,
+      SITE_TYPES.GRSAI,
       SITE_TYPES.UNKNOWN,
     ])
   })

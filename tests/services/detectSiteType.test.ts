@@ -322,6 +322,58 @@ describe("detectSiteType", () => {
         ).resolves.toBe(SITE_TYPES.UNKNOWN)
       })
 
+      it("detects Grsai from the console hostname without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://grsai.com", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://grsai.com/dashboard/api-keys"),
+        ).resolves.toBe(SITE_TYPES.GRSAI)
+        expect(titleFetched).toBe(false)
+      })
+
+      it("detects Grsai on its second console domain", async () => {
+        await expect(
+          getAccountSiteType("https://grsai.ai/dashboard"),
+        ).resolves.toBe(SITE_TYPES.GRSAI)
+      })
+
+      it("does not generalize Grsai detection to sibling hostnames", async () => {
+        server.use(
+          http.get("https://api.grsai.com", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+          http.get("https://api.grsai.com/api/user/self", () => {
+            return HttpResponse.json(
+              {
+                success: false,
+                message: "error: completely unmatched identifier",
+              },
+              { status: 400 },
+            )
+          }),
+          http.get("https://api.grsai.com/api/v1/auth/me", () => {
+            return HttpResponse.json({ message: "not found" }, { status: 404 })
+          }),
+        )
+
+        await expect(getAccountSiteType("https://api.grsai.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
+      })
+
       it("does not generalize SharedChat detection to sibling hostnames", async () => {
         server.use(
           http.get("https://api.sharedchat.cc", () => {

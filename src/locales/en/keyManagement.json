@@ -388,6 +388,8 @@
         "loading": "Opening key editor...",
         "retry": "Try again"
       },
+      "quotaCredits": "Remaining credits",
+      "quotaCreditsHelp": "The key stops working once these credits run out.",
       "quotaUsd": "Quota (USD)",
       "remainingCount": "Remaining calls",
       "remainingCountPlaceholder": "How many calls this key can still make",

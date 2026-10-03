@@ -69,10 +69,15 @@ const group = (
           : {}),
       }
 }
-const quota = (
+/**
+ * Quota pair shared by every native editor. Label resolution is passed in so
+ * each call site keeps its translation keys as literals the extractor can see.
+ */
+const quotaField = (
   fieldId: string,
   unlimitedId: string,
-  total = false,
+  resolveLabel: (t: TFunction) => string,
+  resolveHelp?: (t: TFunction) => string,
 ): ResourceFieldPresentation[] => [
   {
     fieldId: unlimitedId,
@@ -87,15 +92,23 @@ const quota = (
     section: "spending",
     order: 10,
     renderer: "number",
-    resolveLabel: (t) =>
-      total
-        ? t("keyManagement:native.editor.totalQuotaUsd")
-        : t("keyManagement:native.editor.quotaUsd"),
+    resolveLabel,
     resolvePlaceholder: (t) => t("keyManagement:dialog.quotaPlaceholder"),
+    ...(resolveHelp ? { resolveHelp } : {}),
     visibleWhen: (values) => values[unlimitedId] !== true,
     issueLabelResolvers: issues,
   },
 ]
+const quota = (
+  fieldId: string,
+  unlimitedId: string,
+  total = false,
+): ResourceFieldPresentation[] =>
+  quotaField(fieldId, unlimitedId, (t) =>
+    total
+      ? t("keyManagement:native.editor.totalQuotaUsd")
+      : t("keyManagement:native.editor.quotaUsd"),
+  )
 const models = (fieldId: string): ResourceFieldPresentation => ({
   fieldId,
   section: "advanced",
@@ -229,6 +242,26 @@ const buildRightCodeFields = (
   ],
 })
 
+/**
+ * Grsai keys are a name, a remaining credit budget and an optional expiry; the
+ * console prices everything in its own credits rather than in currency.
+ */
+const buildGrsaiFields = (): {
+  fields: ResourceFieldPresentation[]
+  getAutomaticName?: EditorPresentation["getAutomaticName"]
+} => ({
+  fields: [
+    name,
+    ...quotaField(
+      "credits",
+      "unlimited_credits",
+      (t) => t("keyManagement:native.editor.quotaCredits"),
+      (t) => t("keyManagement:native.editor.quotaCreditsHelp"),
+    ),
+    expiry,
+  ],
+})
+
 const buildAiHubMixFields = (): {
   fields: ResourceFieldPresentation[]
   getAutomaticName?: EditorPresentation["getAutomaticName"]
@@ -305,6 +338,7 @@ const resolveSiteFields = (
   if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
     return { fields: [name] }
   }
+  if (siteType === SITE_TYPES.GRSAI) return buildGrsaiFields()
   if (siteType === SITE_TYPES.AIHUBMIX) return buildAiHubMixFields()
   if (
     getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===

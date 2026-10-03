@@ -378,6 +378,8 @@
         "loading": "正在開啟金鑰編輯器...",
         "retry": "重試"
       },
+      "quotaCredits": "剩餘積分",
+      "quotaCreditsHelp": "額度用完後該金鑰將無法繼續使用。",
       "quotaUsd": "額度（美元）",
       "remainingCount": "剩餘次數",
       "remainingCountPlaceholder": "此金鑰還能呼叫多少次",

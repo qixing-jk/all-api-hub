@@ -378,6 +378,8 @@
         "loading": "正在打开密钥编辑器...",
         "retry": "重试"
       },
+      "quotaCredits": "剩余积分",
+      "quotaCreditsHelp": "额度用完后该密钥将无法继续使用。",
       "quotaUsd": "额度（美元）",
       "remainingCount": "剩余次数",
       "remainingCountPlaceholder": "该密钥还能调用多少次",

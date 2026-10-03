@@ -115,6 +115,10 @@
       "userIdNumeric": "Die Benutzer-ID muss eine Zahl sein"
     }
   },
+  "grsai": {
+    "openApiTokenRejected": "Dies ist das Token von der Grsai-Benutzerinfoseite. Es ist für die offenen APIs der Plattform gedacht, und die Konsole akzeptiert es nicht. Verwende die automatische Erkennung, um die angemeldete Konsolensitzung zu lesen, oder füge stattdessen das Sitzungstoken der Konsole ein.",
+    "sessionExpired": "Die gespeicherte Grsai-Konsolensitzung ist abgelaufen (eine Sitzung dauert etwa 30 Tage). Melde dich erneut in der Grsai-Konsole an und füge das Konto dann über die automatische Erkennung hinzu."
+  },
   "kelivo": {
     "copied": "Importcode für Kelivo Mobile kopiert. Füge ihn beim Anbieterimport in Kelivo Mobile ein.",
     "copyFailed": "Der Kelivo-Importcode konnte nicht kopiert werden. Prüfe die Zwischenablageberechtigung und versuche es erneut.",

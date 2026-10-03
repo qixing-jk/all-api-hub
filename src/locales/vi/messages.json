@@ -113,6 +113,10 @@
       "userIdNumeric": "ID người dùng phải là số"
     }
   },
+  "grsai": {
+    "openApiTokenRejected": "Đây là Token hiển thị trên trang thông tin người dùng của Grsai. Nó dành cho API mở của nền tảng và bảng điều khiển không chấp nhận nó. Hãy dùng tự động nhận diện để đọc phiên bảng điều khiển đã đăng nhập, hoặc dán token phiên bảng điều khiển.",
+    "sessionExpired": "Phiên bảng điều khiển Grsai đã lưu đã hết hạn (một phiên kéo dài khoảng 30 ngày). Hãy đăng nhập lại vào bảng điều khiển Grsai rồi thêm tài khoản bằng tự động nhận diện."
+  },
   "kelivo": {
     "copied": "Đã sao chép mã nhập Kelivo di động. Hãy dán mã vào phần nhập nhà cung cấp của Kelivo di động.",
     "copyFailed": "Không thể sao chép mã nhập Kelivo. Hãy kiểm tra quyền truy cập bảng nhớ tạm rồi thử lại.",
