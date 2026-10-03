@@ -15,7 +15,7 @@ Chromium blocks `--remote-debugging-port` on the system default user data direct
 
 By default every worktree mounts the single shared profile (`AllApiHub/dev-browser`) on CDP port 9222. This reuses one account login across worktrees but couples their browser instances: a `--restart` mounts a different worktree's build and closes another session's tabs, and discovery by title can target the wrong extension.
 
-When concurrent worktrees must not interfere (multi-agent runs), mount a **per-worktree profile** with `--isolate`. The profile resolves to `AllApiHub/dev-browser-<worktree>` and the CDP port shifts to `9222 + 1 + hash(<worktree>) % 200`. Different worktree names normally use different profiles and ports. Names and hashed ports can collide; choose explicit `AAH_DEV_PROFILE_DIR` and `CDP_PORT` for those cases. Account state is cloned from the primary browser into that profile once:
+When concurrent worktrees must not interfere (multi-agent runs), mount a **per-worktree profile** with `--isolate`. The profile resolves to `AllApiHub/dev-browser-<worktree>-<path-hash>`, using the canonical checkout path to distinguish same-named worktrees. Its default CDP port is a stable offset from 9222 based on the resolved profile path. Hash collisions remain possible; isolated clients and the launcher verify the listening browser uses the expected profile before reuse, reload or restart. On a collision, choose a free explicit `CDP_PORT`. Account state is cloned from the primary browser into that profile once:
 
 | Goal | Command |
 | :--- | :--- |

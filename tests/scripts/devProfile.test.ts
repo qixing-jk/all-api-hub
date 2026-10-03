@@ -24,8 +24,8 @@ describe("development browser profile", () => {
     vi.stubEnv("AAH_DEV_PROFILE_DIR", "")
     vi.stubEnv("CDP_PORT", "")
     applyIsolateFlag(["--isolate"])
-    expect(path.basename(resolveDevProfileDir())).toBe(
-      `dev-browser-${WORKTREE_NAME}`,
+    expect(path.basename(resolveDevProfileDir())).toMatch(
+      new RegExp(`^dev-browser-${WORKTREE_NAME}-[a-f0-9]{16}$`),
     )
     const port = resolveCdpPort()
     expect(port).toBeGreaterThan(9222)
@@ -38,6 +38,14 @@ describe("development browser profile", () => {
     vi.stubEnv("CDP_PORT", "9444")
     expect(resolveDevProfileDir()).toBe(path.resolve("custom-profile"))
     expect(resolveCdpPort()).toBe(9444)
+  })
+
+  it("separates checkouts with the same basename", () => {
+    vi.stubEnv("AAH_DEV_PROFILE_PER_WORKTREE", "1")
+    vi.stubEnv("AAH_DEV_PROFILE_DIR", "")
+    expect(resolveDevProfileDir(path.resolve("a/feature"))).not.toBe(
+      resolveDevProfileDir(path.resolve("b/feature")),
+    )
   })
 
   it.each(["invalid", "0", "65536", "1.5"])(

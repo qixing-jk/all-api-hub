@@ -27,6 +27,20 @@ const isAuthorized = (init?: RequestInit) =>
   )
 
 describe("Grsai console probe", () => {
+  it("does not pass an exclusion check when its request fails", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {})
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).endsWith("/api/status")) throw new Error("offline")
+        return jsonResponse(UNAUTHENTICATED)
+      }),
+    )
+    await expect(runGrsaiProbe({})).resolves.toMatchObject({
+      ok: false,
+      notNewApi: false,
+    })
+  })
   it("rejects an issued guest token without authenticated reads", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {})
     const fetchMock = vi.fn(async (url: string) => {
@@ -183,6 +197,10 @@ describe("Grsai console probe", () => {
     expect(result.modelsOk).toBe(true)
     expect(result.modelCount).toBe(1)
     expect(result.plaintextKeyCount).toBe(1)
+    const logs = JSON.stringify(vi.mocked(console.log).mock.calls)
+    expect(logs).not.toContain("a@b.invalid")
+    expect(logs).not.toContain('"id":"acct"')
+    expect(logs).not.toContain("sk-0123456789abcdef0123456789abcdef")
     expect(result.ok).toBe(true)
   })
 

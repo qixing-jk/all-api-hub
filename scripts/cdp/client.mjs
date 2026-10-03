@@ -2,6 +2,7 @@
 import path from "node:path"
 import { chromium } from "@playwright/test"
 
+import { assertDevBrowserProfile } from "./browser-runtime.mjs"
 import { resolveCdpPort } from "./dev-profile.mjs"
 
 /**
@@ -30,7 +31,9 @@ export async function connectExtensionById({
   let browser
   try {
     browser = await chromium.connectOverCDP(cdpUrl)
+    await assertDevBrowserProfile(browser)
   } catch (err) {
+    await browser?.close().catch(() => {})
     throw new Error(
       `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
     )
@@ -84,7 +87,9 @@ export async function connectDevExtension({
   let browser
   try {
     browser = await chromium.connectOverCDP(cdpUrl)
+    await assertDevBrowserProfile(browser)
   } catch (err) {
+    await browser?.close().catch(() => {})
     throw new Error(
       `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
     )

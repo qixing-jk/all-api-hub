@@ -102,12 +102,14 @@ export async function runGrsaiProbe({
   // 2. The same origin must not present a New API `/api/status` payload. A
   //    deployment that did would be misdetected by the New API family.
   let newApiShaped = false
+  let statusChecked = false
   try {
     const status = await fetch(`${siteUrl}/api/status`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
     })
     const text = await status.text()
+    statusChecked = status.status < 500
     try {
       const parsed = JSON.parse(text)
       // New API reports a `data.version`/`data.system_name` payload here.
@@ -118,7 +120,7 @@ export async function runGrsaiProbe({
   } catch (error) {
     console.warn(`  ⚠️ /api/status 探测异常: ${error.message}`)
   }
-  findings.notNewApi = !newApiShaped
+  findings.notNewApi = statusChecked && !newApiShaped
   console.log("  [New API 后端排除检查 GET /api/status]:", {
     newApiShaped,
     rejected: findings.notNewApi,
@@ -181,8 +183,8 @@ export async function runGrsaiProbe({
     Number.isFinite(Number(account?.credits))
   console.log("  [账号身份 POST /client/grsai/getUserInfo]:", {
     code: userInfo.payload?.code ?? "(none)",
-    id: account?.id ?? "(none)",
-    mail: account?.mail ?? "(none)",
+    hasAccountId: Boolean(account?.id),
+    hasEmail: Boolean(account?.mail),
     credits: account?.credits ?? "(none)",
   })
 

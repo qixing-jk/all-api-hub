@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -31,7 +33,7 @@ export function isIsolatedDevProfile() {
 /**
  * Cross-platform base directory that holds all All API Hub dev profiles.
  * `${base}/dev-browser` is the shared profile; an isolated profile is named
- * `${base}/dev-browser-<worktree>` so concurrent worktrees never share state.
+ * `${base}/dev-browser-<worktree>-<path-hash>` to distinguish checkout paths.
  */
 function devProfilesBaseDir() {
   const home = os.homedir()
@@ -55,7 +57,7 @@ function devProfilesBaseDir() {
  * launcher and sync both read the same directory so a synced profile is the
  * one the isolated browser actually uses.
  */
-export function resolveDevProfileDir() {
+export function resolveDevProfileDir(checkoutRoot = repoRoot) {
   if (process.env.AAH_DEV_PROFILE_DIR) {
     return path.resolve(process.env.AAH_DEV_PROFILE_DIR)
   }
@@ -63,7 +65,20 @@ export function resolveDevProfileDir() {
   if (!isIsolatedDevProfile()) {
     return path.join(base, SHARED_PROFILE_NAME)
   }
-  return path.join(base, `${SHARED_PROFILE_NAME}-${WORKTREE_NAME}`)
+  const absoluteRoot = path.resolve(checkoutRoot)
+  const canonicalRoot = fs.existsSync(absoluteRoot)
+    ? fs.realpathSync.native(absoluteRoot)
+    : absoluteRoot
+  const identity = createHash("sha256")
+    .update(
+      os.platform() === "win32" ? canonicalRoot.toLowerCase() : canonicalRoot,
+    )
+    .digest("hex")
+    .slice(0, 16)
+  return path.join(
+    base,
+    `${SHARED_PROFILE_NAME}-${path.basename(absoluteRoot)}-${identity}`,
+  )
 }
 
 /**
@@ -82,8 +97,9 @@ export function applyIsolateFlag(args) {
 /** Stable small hash (xorshift-ish) for deriving a per-worktree CDP port. */
 function worktreeHash() {
   let h = 0
-  for (let i = 0; i < WORKTREE_NAME.length; i++) {
-    h = (h * 31 + WORKTREE_NAME.charCodeAt(i)) >>> 0
+  const profile = resolveDevProfileDir()
+  for (let i = 0; i < profile.length; i++) {
+    h = (h * 31 + profile.charCodeAt(i)) >>> 0
   }
   return h
 }
@@ -92,8 +108,8 @@ function worktreeHash() {
  * Resolve the CDP port for the debug browser.
  *
  * `CDP_PORT` always wins. In an isolated profile the default is offset by the
- * worktree name so concurrent worktrees answer on distinct ports and never
- * fight over the shared 9222; the shared profile stays on 9222.
+ * profile path; collisions require an explicit free port. Isolated callers
+ * verify profile ownership before using an existing listener.
  */
 export function resolveCdpPort() {
   if (process.env.CDP_PORT) {

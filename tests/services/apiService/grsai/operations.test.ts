@@ -39,6 +39,54 @@ const handle = (endpoint: string, data: unknown) =>
   http.post(`${origin}${endpoint}`, () => HttpResponse.json({ code: 0, data }))
 
 describe("Grsai protocol operations", () => {
+  it("reads all 101 keys across successive inventory pages", async () => {
+    const inventory = Array.from({ length: 101 }, (_, index) => ({
+      ...key,
+      id: `key-${index}`,
+    }))
+    const pages: number[] = []
+    server.use(
+      http.post(
+        `${origin}${GRSAI_ENDPOINTS.apiKeyList}`,
+        async ({ request: req }) => {
+          const { page, size } = (await req.json()) as {
+            page: number
+            size: number
+          }
+          pages.push(page)
+          return HttpResponse.json({
+            code: 0,
+            data: {
+              list: inventory.slice((page - 1) * size, page * size),
+              total: inventory.length,
+            },
+          })
+        },
+      ),
+    )
+    await expect(fetchGrsaiKeys(request)).resolves.toEqual(inventory)
+    expect(pages).toEqual([1, 2])
+  })
+
+  it("refuses an inventory whose advertised total cannot be retrieved", async () => {
+    server.use(handle(GRSAI_ENDPOINTS.apiKeyList, { list: [key], total: 101 }))
+    await expect(fetchGrsaiKeys(request)).rejects.toThrow(
+      "incomplete_grsai_key_inventory",
+    )
+  })
+
+  it("refuses repeated pages instead of looping or duplicating keys", async () => {
+    const repeated = Array.from({ length: 100 }, (_, index) => ({
+      ...key,
+      id: `key-${index}`,
+    }))
+    server.use(
+      handle(GRSAI_ENDPOINTS.apiKeyList, { list: repeated, total: 201 }),
+    )
+    await expect(fetchGrsaiKeys(request)).rejects.toThrow(
+      "invalid_grsai_key_inventory",
+    )
+  })
   beforeEach(() => {
     server.resetHandlers()
     server.use(

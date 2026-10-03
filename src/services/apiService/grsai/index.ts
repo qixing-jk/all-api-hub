@@ -164,15 +164,30 @@ export async function fetchGrsaiKeys(
   request: ApiServiceRequest,
   session?: GrsaiConsoleSession,
 ): Promise<GrsaiApiKey[]> {
-  const payload = await fetchGrsaiConsole<unknown>(
-    request,
-    GRSAI_ENDPOINTS.apiKeyList,
-    { body: { page: 1, size: 100 }, session },
-  )
-  if (!isGrsaiApiKeyList(payload)) {
-    throw new Error("invalid_grsai_key_inventory")
+  const keys: GrsaiApiKey[] = []
+  const ids = new Set<string>()
+  const size = 100
+  for (let page = 1; ; page++) {
+    const payload = await fetchGrsaiConsole<unknown>(
+      request,
+      GRSAI_ENDPOINTS.apiKeyList,
+      { body: { page, size }, session },
+    )
+    if (!isGrsaiApiKeyList(payload))
+      throw new Error("invalid_grsai_key_inventory")
+    for (const key of payload.list) {
+      if (ids.has(key.id)) throw new Error("invalid_grsai_key_inventory")
+      ids.add(key.id)
+    }
+    keys.push(...payload.list)
+    const total = toOptionalFiniteNumber(payload.total)
+    if (total !== undefined && keys.length >= total) return keys
+    if (payload.list.length < size) {
+      if (total !== undefined && keys.length < total)
+        throw new Error("incomplete_grsai_key_inventory")
+      return keys
+    }
   }
-  return payload.list
 }
 
 /** Creates a key and returns it together with its plaintext secret. */

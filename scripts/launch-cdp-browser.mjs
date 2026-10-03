@@ -8,6 +8,10 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
+  assertDevBrowserProfile,
+  ensureDevExtensionReady,
+} from "./cdp/browser-runtime.mjs"
+import {
   applyIsolateFlag,
   isIsolatedDevProfile,
   resolveCdpPort,
@@ -576,6 +580,27 @@ async function closeDevBrowserViaCdp(cdpPort) {
   }
 }
 
+async function verifyRunningProfile() {
+  const { chromium } = await import("@playwright/test")
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`)
+  try {
+    await assertDevBrowserProfile(browser)
+  } finally {
+    await browser.close()
+  }
+}
+
+async function verifyExtensionReady(extensionDir) {
+  const { chromium } = await import("@playwright/test")
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`)
+  try {
+    await assertDevBrowserProfile(browser)
+    await ensureDevExtensionReady(browser, extensionDir)
+  } finally {
+    await browser.close()
+  }
+}
+
 async function main() {
   console.log("==========================================")
   console.log("   All API Hub 自动化 CDP 调试环境启动器   ")
@@ -613,6 +638,7 @@ async function main() {
   if (forceReloadOnly) {
     const isRunning = await checkPortOpen(CDP_PORT)
     if (isRunning) {
+      await verifyRunningProfile()
       console.log(`正在向 127.0.0.1:${CDP_PORT} 发送扩展热重载信号...`)
       await reloadRunningExtension(CDP_PORT)
       process.exit(0)
@@ -703,11 +729,13 @@ async function main() {
   // 4. 检查调试浏览器是否已经在运行
   const isRunning = await checkPortOpen(CDP_PORT)
   if (isRunning) {
+    await verifyRunningProfile()
     if (forceRestart) {
       console.log(`\n🔄 检测到 --restart 参数，正在关闭旧调试实例并重新启动...`)
       await closeDevBrowserViaCdp(CDP_PORT)
       await new Promise((r) => setTimeout(r, 1200))
     } else {
+      await verifyExtensionReady(extDir)
       console.log(`\n✅ 端口 ${CDP_PORT} 已经在监听中！调试浏览器已就绪。`)
       console.log(`🔄 正在通过 CDP 唤醒运行中的浏览器刷新扩展...`)
       await reloadRunningExtension(CDP_PORT)
@@ -727,12 +755,9 @@ async function main() {
     `--user-data-dir=${devProfileDir}`,
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
-    // A fresh profile has developer mode off, so Edge brands the unpacked
-    // extension DISABLE_NOT_VERIFIED and never starts it. This flag admits it
-    // anyway; on an established profile (developer mode already on) it is a
-    // no-op. Enabling developer mode through the UI instead would require a
-    // human click on every new isolated profile.
+    // Enable the supported CDP unpacked installer; readiness is verified below.
     "--enable-unsafe-extension-debugging",
+    "--enable-automation",
     "--no-first-run",
     "--no-default-browser-check",
   ]
@@ -776,12 +801,13 @@ async function main() {
   }
 
   if (ready) {
+    await verifyExtensionReady(extDir)
     console.log(`🎉 成功！调试浏览器已启动，CDP 监听在 127.0.0.1:${CDP_PORT}`)
     console.log(
       `👉 日常浏览器与该独立沙盒已同时运行，随时可用 pnpm e2e:cdp 执行全自动控制！`,
     )
   } else {
-    console.warn(`⚠️ 等待端口 ${CDP_PORT} 超时，请检查浏览器是否已弹出。`)
+    throw new Error(`等待端口 ${CDP_PORT} 超时，请检查浏览器是否已弹出。`)
   }
 }
 
