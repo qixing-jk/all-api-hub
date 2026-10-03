@@ -360,6 +360,7 @@ export type ProtectionBypassExecutionResolutionFailure = {
 }
 
 export interface TempWindowSessionReadParams {
+  diagnosticId?: string
   url: string
   requestId: string
   useIncognito?: boolean

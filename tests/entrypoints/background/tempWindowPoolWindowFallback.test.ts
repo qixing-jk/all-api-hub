@@ -2632,6 +2632,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-success",
+        diagnosticId: "detect-parent",
         siteType: "new-api",
       },
       sendResponse,
@@ -2647,6 +2648,7 @@ describe("tempWindowPool window fallback", () => {
         action: RuntimeActionIds.ContentGetUserFromLocalStorage,
         url: "https://example.com/account",
         siteType: "new-api",
+        diagnosticId: "detect-parent",
       }),
     )
     expect(sendResponse).toHaveBeenCalledWith({

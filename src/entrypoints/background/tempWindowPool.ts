@@ -1424,6 +1424,7 @@ async function executeAutoDetectSite(
       {
         incognito: Boolean(useIncognito),
         siteType,
+        diagnosticId: request.diagnosticId,
       },
       authorizeAtAcquire,
     )
@@ -2073,7 +2074,11 @@ async function getSiteDataFromTab(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: { incognito?: boolean; siteType?: string } = {},
+  options: {
+    incognito?: boolean
+    siteType?: string
+    diagnosticId?: string
+  } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   try {
@@ -2091,13 +2096,18 @@ async function getSiteDataFromTab(
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: url,
       siteType: options.siteType,
+      diagnosticId: options.diagnosticId ?? requestId,
     })
 
     await releaseTempContext(requestId)
 
     // 检查响应并返回结果
     if (!userResponse || !userResponse.success) {
-      logger.warn("获取用户信息失败", { reason: userResponse?.error ?? null })
+      logger.warn("获取用户信息失败", {
+        reason: userResponse?.error ?? null,
+        requestId,
+        diagnosticId: options.diagnosticId ?? requestId,
+      })
       return null
     }
 

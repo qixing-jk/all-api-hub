@@ -79,6 +79,27 @@ describe("accountAutoDetection", () => {
     resetAccountAutoDetectionMocks()
   })
 
+  it("reports final detection failure with the same trace passed to site detection", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "no session",
+    })
+    await autoDetectAccount(
+      "https://site.example.invalid",
+      AuthTypeEnum.AccessToken,
+    )
+    const trace = mockAutoDetectSmart.mock.calls[0]?.[2]
+    expect(trace).toMatchObject({ requestId: expect.any(String) })
+    expect(accountAutoDetectionMocks.otherLoggerMock.info).toHaveBeenCalledWith(
+      "Account detection summary",
+      expect.objectContaining({
+        requestId: trace.requestId,
+        outcome: "failed",
+        reason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+      }),
+    )
+  })
+
   it("keeps generic auto-detect detected-only when a legacy caller passes provider options", async () => {
     const privateError = "openrouter-detected-only-private-sentinel"
     mockAutoDetectSmart.mockResolvedValueOnce({
@@ -345,6 +366,7 @@ describe("accountAutoDetection", () => {
     expect(mockAutoDetectSmart).toHaveBeenCalledWith(
       "https://example.invalid",
       protectionBypassExecution,
+      expect.objectContaining({ requestId: expect.any(String) }),
     )
   })
 
@@ -370,6 +392,7 @@ describe("accountAutoDetection", () => {
     expect(mockAutoDetectSmart).toHaveBeenCalledWith(
       "https://sub2.example.com",
       undefined,
+      expect.objectContaining({ requestId: expect.any(String) }),
     )
     expect(mockLoadBootstrapFacts).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://sub2.example.com" }),

@@ -4,6 +4,10 @@ import {
   SUB2API_LOGIN_REQUIRED_I18N_KEY,
   Sub2ApiContentSessionLoginRequiredError,
 } from "~/services/accountSiteOnboarding/contentSession/sub2api"
+import {
+  createAccountDetectionDiagnostics,
+  type AccountDetectionDiagnostics,
+} from "~/services/accountSiteOnboarding/diagnostics"
 import { getContentSessionExtractors } from "~/services/accountSiteOnboarding/registry"
 import {
   PAGE_CONTEXT,
@@ -52,6 +56,7 @@ export function handleGetUserFromLocalStorage(
   sendResponse: (res: any) => void,
 ) {
   ;(async () => {
+    let diagnostics: AccountDetectionDiagnostics | undefined
     try {
       const context = {
         url: typeof request?.url === "string" ? request.url : undefined,
@@ -93,11 +98,28 @@ export function handleGetUserFromLocalStorage(
         return
       }
 
+      diagnostics = createAccountDetectionDiagnostics({
+        requestId:
+          typeof request?.diagnosticId === "string"
+            ? request.diagnosticId
+            : undefined,
+        relayToBackground: true,
+      })
+      const extractionContext = { ...context, diagnostics }
       for (const extractor of getContentSessionExtractors()) {
         if (!extractor.canExtract(context)) continue
-        const result = await extractor.extract(context)
+        diagnostics.record("extractor_started", {
+          extractor: extractor.id,
+          siteType: context.siteTypeHint,
+        })
+        const result = await extractor.extract(extractionContext)
+        diagnostics.record("extractor_finished", {
+          extractor: extractor.id,
+          outcome: result ? "success" : "empty",
+        })
         if (!result) continue
 
+        diagnostics.finish("success", { extractor: extractor.id })
         sendResponse({
           success: true,
           data: result,
@@ -105,11 +127,16 @@ export function handleGetUserFromLocalStorage(
         return
       }
 
+      diagnostics.finish("failed", { reason: "no_extractor_session" })
       sendResponse({
         success: false,
         error: t("messages:content.userInfoNotFound"),
       })
     } catch (error) {
+      diagnostics?.finish("failed", {
+        reason: "extraction_error",
+        error: getErrorMessage(error),
+      })
       if (error instanceof Sub2ApiContentSessionLoginRequiredError) {
         sendResponse({
           success: false,

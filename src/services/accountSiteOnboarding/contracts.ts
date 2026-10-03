@@ -6,11 +6,14 @@ import type {
 } from "~/services/accountSiteDefinitions/contracts"
 import type { KimiOpenPlatformAuthConfig } from "~/types"
 
+import type { AccountDetectionDiagnostics } from "./diagnostics"
+
 export type ContentSessionExtractionContext = {
   url?: string
   siteTypeHint?: AccountSiteType
   /** Allows an explicit current-tab auto-detect to probe the modern New API session. */
   allowNewApiAuthProbe?: boolean
+  diagnostics?: AccountDetectionDiagnostics
 }
 
 export const NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND = "new_api_dashboard_bearer"

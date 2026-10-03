@@ -203,6 +203,43 @@ describe("setupRuntimeMessageListeners routing", () => {
     )
   })
 
+  it("keeps relayed account summaries visible at the normal info log level", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    const { setLoggingPreferences } = await import("~/utils/core/logger")
+    setupRuntimeMessageListeners()
+    const log = vi.spyOn(console, "info").mockImplementation(() => {})
+    const sendResponse = vi.fn()
+    setLoggingPreferences({ consoleEnabled: true, level: "info" })
+    try {
+      runtimeMessageListener?.(
+        {
+          action: RuntimeActionIds.CloudflareGuardLog,
+          event: "detection_finished",
+          details: {
+            diagnosticScope: "account_detection",
+            requestId: "detect-relay",
+            outcome: "failed",
+          },
+        },
+        { tab: { id: 8 } },
+        sendResponse,
+      )
+      expect(sendResponse).toHaveBeenCalledWith({ success: true })
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining("AccountDetectionRelay"),
+        expect.objectContaining({
+          requestId: "detect-relay",
+          details: expect.objectContaining({ outcome: "failed" }),
+          sender: expect.objectContaining({ tabId: 8 }),
+        }),
+      )
+    } finally {
+      setLoggingPreferences({ consoleEnabled: false, level: "debug" })
+    }
+  })
+
   it("routes OpenRouter page mutation through protection-bypass authorization", async () => {
     const { setupRuntimeMessageListeners } = await import(
       "~/entrypoints/background/runtimeMessages"

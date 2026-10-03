@@ -1,5 +1,4 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { relayContentLog } from "~/utils/browser/contentLogRelay"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("CloudflareGuard")
@@ -18,15 +17,7 @@ export function logCloudflareGuard(
     logger.debug(message, details)
   }
 
-  try {
-    void sendRuntimeMessage({
-      action: RuntimeActionIds.CloudflareGuardLog,
-      event,
-      details: details ?? null,
-    }).catch(() => {})
-  } catch {
-    // ignore relay errors
-  }
+  relayContentLog(event, details)
 }
 
 type CloudflareChallengeDetection = {

@@ -9,6 +9,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
+import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart as autoDetectSmartProduction } from "~/services/siteDetection/autoDetectService"
@@ -176,6 +177,111 @@ describe("autoDetectSmart", () => {
       username: "tester",
     })
   })
+
+  it("carries one diagnostic ID from the current tab to a temp-context fallback", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockFetchUserInfo.mockResolvedValue(null)
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "2", user: { id: 2 } },
+    })
+    const diagnostics = createAccountDetectionDiagnostics({
+      requestId: "detect-chain",
+    })
+    const record = vi.spyOn(diagnostics, "record")
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+      testExecution,
+      diagnostics,
+    )
+    expect(result.success).toBe(true)
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith(
+      expect.objectContaining({ diagnostics }),
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          params: expect.objectContaining({ diagnosticId: "detect-chain" }),
+        }),
+      }),
+    )
+    expect(record).toHaveBeenCalledWith(
+      "strategy_finished",
+      expect.objectContaining({
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        success: false,
+      }),
+    )
+  })
+
+  it.each([false, true])(
+    "preserves background detection metadata with a matched tab: %s",
+    async (matched) => {
+      if (matched) {
+        mockGetActiveOrAllTabs.mockResolvedValue([
+          {
+            id: 7,
+            active: true,
+            url: "https://site.example.invalid/dashboard",
+            incognito: true,
+            cookieStoreId: "firefox-container-1",
+          },
+        ])
+      }
+      mockFetchUserInfo.mockResolvedValue(null)
+      mockSendRuntimeMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "2", user: { id: 2 } },
+      })
+      const diagnostics = {
+        requestId: "detect-background",
+        record: vi.fn(),
+        finish: vi.fn(),
+      }
+
+      const result = await autoDetectSmartProduction(
+        "https://site.example.invalid/console",
+        testExecution,
+        diagnostics,
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.autoDetectContext).toMatchObject({
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+        siteType: SITE_TYPES.NEW_API,
+        currentTabMatched: matched,
+        incognitoContextUsed: matched,
+        fetchContextKind: matched
+          ? AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab
+          : AUTO_DETECT_FETCH_CONTEXT_KINDS.None,
+      })
+      expect(diagnostics.record).toHaveBeenCalledWith("strategy_started", {
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+        ...(matched ? { currentTabMatched: true } : {}),
+      })
+      expect(diagnostics.finish).not.toHaveBeenCalled()
+      if (matched) {
+        expect(result.data?.fetchContext).toMatchObject({
+          tabId: 7,
+          incognito: true,
+          cookieStoreId: "firefox-container-1",
+        })
+        expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            task: expect.objectContaining({
+              params: expect.objectContaining({
+                diagnosticId: diagnostics.requestId,
+                useIncognito: true,
+                cookieStoreId: "firefox-container-1",
+              }),
+            }),
+          }),
+        )
+      }
+    },
+  )
 
   it.each(["MV3 service worker", "Firefox MV2 background page"])(
     "routes background session detection directly through the coordinator in a %s",
@@ -366,6 +472,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       tabId: 101,
       baseUrl: "https://example.com/console",
       siteType: SITE_TYPES.NEW_API,
@@ -583,6 +690,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       tabId: 201,
       baseUrl: "https://sub2.example.com/console",
       siteType: SITE_TYPES.SUB2API,
@@ -642,6 +750,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       tabId: 201,
       baseUrl: "https://platform.kimi.ai/console",
       siteType: SITE_TYPES.KIMI_GLOBAL,
@@ -921,6 +1030,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       tabId: 101,
       baseUrl: "https://example.com/console",
       siteType: SITE_TYPES.NEW_API,
@@ -979,6 +1089,7 @@ describe("autoDetectSmart", () => {
         kind: "session_read",
         params: {
           requestId: expect.any(String),
+          diagnosticId: expect.any(String),
           siteType: SITE_TYPES.AIHUBMIX,
           url: "https://aihubmix.com",
         },
@@ -1013,6 +1124,7 @@ describe("autoDetectSmart", () => {
         kind: "session_read",
         params: {
           requestId: expect.any(String),
+          diagnosticId: expect.any(String),
           siteType: SITE_TYPES.NEW_API,
           url: "https://example.invalid",
         },
@@ -1123,6 +1235,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith({
+      diagnostics: expect.objectContaining({ requestId: expect.any(String) }),
       tabId: 2,
       baseUrl: "https://aihubmix.com",
       siteType: SITE_TYPES.AIHUBMIX,
@@ -1333,6 +1446,7 @@ describe("autoDetectSmart", () => {
         kind: "session_read",
         params: {
           requestId: expect.any(String),
+          diagnosticId: expect.any(String),
           siteType: SITE_TYPES.NEW_API,
           url: "https://example.com/console",
           useIncognito: true,
@@ -1386,6 +1500,7 @@ describe("autoDetectSmart", () => {
         kind: "session_read",
         params: {
           requestId: expect.any(String),
+          diagnosticId: expect.any(String),
           siteType: SITE_TYPES.NEW_API,
           url: "https://example.com/console",
           useIncognito: true,

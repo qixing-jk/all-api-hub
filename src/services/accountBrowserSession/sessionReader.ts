@@ -1,6 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isAccountSiteType } from "~/constants/siteType"
+import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import {
+  createAccountDetectionDiagnostics,
+  type AccountDetectionDiagnostics,
+} from "~/services/accountSiteOnboarding/diagnostics"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
@@ -10,12 +14,16 @@ import {
   sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
+import { trimToNull } from "~/utils/core/string"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
 import type {
   AccountBrowserSession,
   AccountBrowserSessionFetchContext,
+  AccountBrowserSessionSource,
   ReadAccountBrowserSessionFromExistingTabsOptions,
   ReadAccountBrowserSessionFromTabOptions,
   ResolveAccountBrowserSessionOptions,
@@ -101,9 +109,16 @@ const normalizeSessionData = (
     siteType: AccountBrowserSession["siteType"]
     allowNewApiAuthProbe?: boolean
     fetchContext?: AccountBrowserSessionFetchContext
+    diagnostics?: AccountDetectionDiagnostics
   },
 ): AccountBrowserSession | null => {
-  if (!data || typeof data !== "object") return null
+  if (!data || typeof data !== "object") {
+    options.diagnostics?.record("session_invalid", {
+      source: options.source,
+      reason: "invalid_payload",
+    })
+    return null
+  }
 
   const payload = data as {
     userId?: unknown
@@ -118,7 +133,13 @@ const normalizeSessionData = (
   }
 
   const userId = normalizeAccountIdentity(payload.userId)
-  if (!userId) return null
+  if (!userId) {
+    options.diagnostics?.record("session_invalid", {
+      source: options.source,
+      reason: "user_id_missing",
+    })
+    return null
+  }
 
   const user =
     payload.user &&
@@ -147,6 +168,17 @@ const normalizeSessionData = (
   )
   const fetchContext =
     options.fetchContext ?? normalizeFetchContext(payload.fetchContext)
+  if (payload.transientAuth && !transientAuth) {
+    options.diagnostics?.record("session_auth_rejected", {
+      source: options.source,
+      reason: "invalid_transient_auth",
+    })
+  }
+  options.diagnostics?.record("session_normalized", {
+    source: options.source,
+    hasAccessToken: Boolean(accessToken),
+    hasTransientAuth: Boolean(transientAuth),
+  })
 
   return {
     source: options.source,
@@ -163,11 +195,57 @@ const normalizeSessionData = (
 }
 
 /**
+ * Reads the reason a content script reported for a failed session extraction.
+ *
+ * The content-script handler answers `{success: false, error}` for every
+ * extraction failure, including the ones it classifies itself: a refused New
+ * API refresh carries the deployment's own code (`AUTH_REFRESH_RACE`,
+ * `AUTH_SESSION_ISSUANCE_LIMIT`, ...). Only a non-empty string counts as a
+ * reason, so a bare `{success: false}` stays "no reason reported".
+ */
+function readContentSessionFailureReason(response: unknown): string | null {
+  if (!isRecord(response)) return null
+
+  return trimToNull(response.error)
+}
+
+/**
+ * Records why a content script could not produce a session, when it said why.
+ *
+ * Deliberately a log rather than an `onError` notification: the reported text
+ * is a diagnostic, and some extractors report an i18n key that callers must not
+ * surface verbatim. Callers keep using `onError` for control flow, and this
+ * only makes the cause recoverable from a log.
+ */
+function logContentSessionFailure(
+  response: unknown,
+  context: {
+    siteType: AccountSiteType
+    source: AccountBrowserSessionSource
+    tabId?: number
+  },
+) {
+  const reason = readContentSessionFailureReason(response)
+  if (!reason) return
+
+  logger.warn("Content script reported no account session", {
+    ...context,
+    reason,
+  })
+}
+
+/**
  * Reads and normalizes an account browser session from a specific tab.
  */
 export async function readAccountBrowserSessionFromTab(
   options: ReadAccountBrowserSessionFromTabOptions,
 ): Promise<AccountBrowserSession | null> {
+  const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
+  diagnostics.record("session_read_started", {
+    source: options.source,
+    tabId: options.tabId,
+    siteType: options.siteType,
+  })
   try {
     const allowNewApiAuthProbe =
       options.source === ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB &&
@@ -176,10 +254,30 @@ export async function readAccountBrowserSessionFromTab(
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: options.baseUrl,
       siteType: options.siteType,
+      diagnosticId: diagnostics.requestId,
       ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
     })
 
-    if (!response?.success || !response.data) return null
+    if (!response?.success || !response.data) {
+      diagnostics.record("session_read_failed", {
+        source: options.source,
+        reason:
+          readContentSessionFailureReason(response) ??
+          (response ? "no_session_data" : "no_response"),
+      })
+      // The content script reports why it could not extract a session (a
+      // refused New API refresh, a signed-out site, ...) inside the response
+      // envelope. Recording it here is what keeps a transient site refusal
+      // distinguishable from a site that simply has no session; the reported
+      // text stays out of `onError`, which callers use as control flow.
+      logContentSessionFailure(response, {
+        tabId: options.tabId,
+        siteType: options.siteType,
+        source: options.source,
+      })
+
+      return null
+    }
 
     return normalizeSessionData(response.data, {
       source: options.source,
@@ -187,8 +285,14 @@ export async function readAccountBrowserSessionFromTab(
       siteType: options.siteType,
       allowNewApiAuthProbe,
       fetchContext: options.fetchContext,
+      diagnostics,
     })
   } catch (error) {
+    diagnostics.record("session_read_failed", {
+      source: options.source,
+      reason: "message_error",
+      error: getErrorMessage(error),
+    })
     logger.debug("Failed to read account browser session from tab", {
       tabId: options.tabId,
       siteType: options.siteType,
@@ -225,12 +329,25 @@ const doesTabMatchBrowserContext = (
 const getSameOriginTabs = async (
   baseUrl: string,
   browserContext?: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"],
+  diagnostics?: AccountDetectionDiagnostics,
 ) => {
   const origin = tryParseOrigin(baseUrl)
-  if (!origin) return []
-  if (!getBrowserApiCapabilities().hasTabs) return []
+  if (!origin || !getBrowserApiCapabilities().hasTabs) {
+    diagnostics?.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      reason: !origin ? "invalid_origin" : "tabs_unavailable",
+    })
+    return []
+  }
 
-  const tabs = await getAllTabs().catch(() => [])
+  const tabs = await getAllTabs().catch((error) => {
+    diagnostics?.record("source_failed", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      reason: "tab_query_failed",
+      error: getErrorMessage(error),
+    })
+    return []
+  })
   return tabs
     .filter((tab) => {
       if (!tab?.id || !tab.url) return false
@@ -267,7 +384,16 @@ const createCurrentTabFetchContext = (
 export async function readAccountBrowserSessionFromExistingTabs(
   options: ReadAccountBrowserSessionFromExistingTabsOptions,
 ): Promise<AccountBrowserSession | null> {
-  const tabs = await getSameOriginTabs(options.baseUrl, options.browserContext)
+  const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
+  const tabs = await getSameOriginTabs(
+    options.baseUrl,
+    options.browserContext,
+    diagnostics,
+  )
+  diagnostics.record("existing_tabs_selected", {
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    count: tabs.length,
+  })
 
   for (const tab of tabs) {
     const tabId = tab.id
@@ -287,6 +413,7 @@ export async function readAccountBrowserSessionFromExistingTabs(
       }),
       protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
+      diagnostics,
     })
 
     if (
@@ -295,6 +422,12 @@ export async function readAccountBrowserSessionFromExistingTabs(
     ) {
       return session
     }
+    if (session)
+      diagnostics.record("source_rejected", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        tabId,
+        reason: "unusable_session",
+      })
   }
 
   return null
@@ -303,11 +436,22 @@ export async function readAccountBrowserSessionFromExistingTabs(
 const readAccountBrowserSessionFromTempWindow = async (
   options: ResolveAccountBrowserSessionOptions,
 ): Promise<AccountBrowserSession | null> => {
+  const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
   try {
-    if (!options.protectionBypassExecution) return null
+    if (!options.protectionBypassExecution) {
+      diagnostics.record("source_skipped", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "execution_missing",
+      })
+      return null
+    }
+    diagnostics.record("session_read_started", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    })
     const params = {
       url: options.baseUrl,
       requestId: `${options.requestIdPrefix ?? "account-browser-session"}-${Date.now()}`,
+      diagnosticId: diagnostics.requestId,
       siteType: options.siteType,
       ...(typeof options.suppressMinimize === "boolean"
         ? { suppressMinimize: options.suppressMinimize }
@@ -319,14 +463,35 @@ const readAccountBrowserSessionFromTempWindow = async (
       execution: options.protectionBypassExecution,
     })
 
-    if (!response?.success || !response.data) return null
+    if (!response?.success || !response.data) {
+      diagnostics.record("session_read_failed", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: readContentSessionFailureReason(response) ?? "no_session_data",
+        code: response?.code,
+      })
+      // Same reason-recording rule as the tab path: this is the source the
+      // background temp-context strategy uses, so a dropped reason here is what
+      // turns a site refusal into an unattributed detection failure.
+      logContentSessionFailure(response, {
+        siteType: options.siteType,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      })
+
+      return null
+    }
 
     return normalizeSessionData(response.data, {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
+      diagnostics,
     })
   } catch (error) {
+    diagnostics.record("session_read_failed", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      reason: "message_error",
+      error: getErrorMessage(error),
+    })
     logger.debug("Failed to read account browser session from temp window", {
       siteType: options.siteType,
       error,
@@ -344,7 +509,12 @@ const readAccountBrowserSessionFromTempWindow = async (
 export async function resolveAccountBrowserSession(
   options: ResolveAccountBrowserSessionOptions,
 ): Promise<AccountBrowserSession | null> {
+  const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
   const isUsable = options.isUsableSession ?? (() => true)
+  const succeed = (session: AccountBrowserSession) => {
+    diagnostics.finish("success", { source: session.source })
+    return session
+  }
 
   if (options.currentTab) {
     const session = await readAccountBrowserSessionFromTab({
@@ -355,8 +525,19 @@ export async function resolveAccountBrowserSession(
       fetchContext: createCurrentTabFetchContext(options),
       protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
+      diagnostics,
     })
-    if (session && isUsable(session)) return session
+    if (session && isUsable(session)) return succeed(session)
+    if (session)
+      diagnostics.record("source_rejected", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        reason: "unusable_session",
+      })
+  } else {
+    diagnostics.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      reason: "tab_missing",
+    })
   }
 
   if (options.useExistingTabs) {
@@ -374,14 +555,34 @@ export async function resolveAccountBrowserSession(
       isUsableSession: isUsable,
       protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
+      diagnostics,
     })
-    if (session) return session
+    if (session) return succeed(session)
+  } else {
+    diagnostics.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      reason: "disabled",
+    })
   }
 
   if (options.useTempWindow) {
-    const session = await readAccountBrowserSessionFromTempWindow(options)
-    if (session && isUsable(session)) return session
+    const session = await readAccountBrowserSessionFromTempWindow({
+      ...options,
+      diagnostics,
+    })
+    if (session && isUsable(session)) return succeed(session)
+    if (session)
+      diagnostics.record("source_rejected", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "unusable_session",
+      })
+  } else {
+    diagnostics.record("source_skipped", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      reason: "disabled",
+    })
   }
 
+  diagnostics.finish("failed", { reason: "no_usable_session" })
   return null
 }

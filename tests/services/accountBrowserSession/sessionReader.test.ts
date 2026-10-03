@@ -9,6 +9,7 @@ import {
   resolveAccountBrowserSession as resolveAccountBrowserSessionProduction,
 } from "~/services/accountBrowserSession"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
+import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -18,6 +19,8 @@ const {
   mockGetAllTabs,
   mockGetBrowserApiCapabilities,
   mockIsExtensionBackground,
+  mockLoggerWarn,
+  mockLoggerInfo,
   mockSendRuntimeMessage,
   mockSendTabMessage,
 } = vi.hoisted(() => ({
@@ -25,8 +28,19 @@ const {
   mockGetAllTabs: vi.fn(),
   mockGetBrowserApiCapabilities: vi.fn(),
   mockIsExtensionBackground: vi.fn(),
+  mockLoggerWarn: vi.fn(),
+  mockLoggerInfo: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
   mockSendTabMessage: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: mockLoggerInfo,
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+  }),
 }))
 
 vi.mock("~/utils/browser", async (importOriginal) => {
@@ -94,6 +108,75 @@ describe("account browser-session reader", () => {
       hasTabs: true,
       hasBackgroundMessaging: true,
     })
+  })
+
+  it("explains rejected current-tab sessions and the successful temp-window fallback under one ID", async () => {
+    const diagnostics = createAccountDetectionDiagnostics({
+      requestId: "detect-fallback",
+    })
+    const onError = vi.fn()
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: { userId: "1" },
+    })
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: { userId: "2", accessToken: "test-token" },
+    })
+    const session = await resolveAccountBrowserSession({
+      baseUrl: "https://site.example.invalid",
+      siteType: SITE_TYPES.NEW_API,
+      currentTab: { tabId: 1 },
+      useTempWindow: true,
+      isUsableSession: (session) => Boolean(session.accessToken),
+      onError,
+      diagnostics,
+    })
+    expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW)
+    expect(onError).not.toHaveBeenCalled()
+    expect(mockSendTabMessage).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ diagnosticId: "detect-fallback" }),
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          params: expect.objectContaining({ diagnosticId: "detect-fallback" }),
+        }),
+      }),
+    )
+    expect(mockLoggerInfo).toHaveBeenCalledWith(
+      "Account detection summary",
+      expect.objectContaining({
+        requestId: "detect-fallback",
+        outcome: "success",
+        events: expect.arrayContaining([
+          expect.objectContaining({
+            event: "source_rejected",
+            source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+            reason: "unusable_session",
+          }),
+        ]),
+      }),
+    )
+  })
+
+  it("records missing user identity rather than treating a successful envelope as a session", async () => {
+    const record = vi.fn()
+    mockSendTabMessage.mockResolvedValueOnce({ success: true, data: {} })
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 1,
+        baseUrl: "https://site.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        diagnostics: { requestId: "detect-invalid", record, finish: vi.fn() },
+      }),
+    ).resolves.toBeNull()
+    expect(record).toHaveBeenCalledWith(
+      "session_invalid",
+      expect.objectContaining({ reason: "user_id_missing" }),
+    )
   })
 
   it.each(["MV3 service worker", "Firefox MV2 background page"])(
@@ -222,6 +305,7 @@ describe("account browser-session reader", () => {
     })
     expect(mockSendTabMessage).toHaveBeenCalledWith(12, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
     })
@@ -247,6 +331,7 @@ describe("account browser-session reader", () => {
 
     expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
       allowNewApiAuthProbe: true,
@@ -279,6 +364,7 @@ describe("account browser-session reader", () => {
 
     expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
     })
@@ -652,6 +738,48 @@ describe("account browser-session reader", () => {
     })
   })
 
+  it("reports the content-script failure reason in a log instead of dropping it", async () => {
+    const onError = vi.fn()
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: false,
+      error: "AUTH_REFRESH_RACE: Conflict",
+    })
+
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 1,
+        baseUrl: "https://dashboard.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        onError,
+      }),
+    ).resolves.toBeNull()
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Content script reported no account session",
+      expect.objectContaining({ reason: "AUTH_REFRESH_RACE: Conflict" }),
+    )
+  })
+
+  it("keeps a content-script failure that carries no reason silent", async () => {
+    const onError = vi.fn()
+    mockSendTabMessage.mockResolvedValueOnce({ success: false })
+
+    await expect(
+      readAccountBrowserSessionFromTab({
+        tabId: 1,
+        baseUrl: "https://dashboard.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        onError,
+      }),
+    ).resolves.toBeNull()
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(mockLoggerWarn).not.toHaveBeenCalled()
+  })
+
   it("filters same-origin tabs, tries the active tab first, and honors the usability predicate", async () => {
     mockGetAllTabs.mockResolvedValueOnce([
       { id: 1, url: "https://other.example.com/dashboard", active: true },
@@ -688,11 +816,13 @@ describe("account browser-session reader", () => {
     expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB)
     expect(mockSendTabMessage).toHaveBeenNthCalledWith(1, 3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
     })
     expect(mockSendTabMessage).toHaveBeenNthCalledWith(2, 2, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
     })
@@ -754,6 +884,7 @@ describe("account browser-session reader", () => {
     expect(mockSendTabMessage).toHaveBeenCalledTimes(1)
     expect(mockSendTabMessage).toHaveBeenCalledWith(3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
     })

@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import type { AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { KimiOpenPlatformAuthConfig, Sub2ApiAuthConfig } from "~/types"
@@ -43,6 +44,7 @@ export type AccountBrowserSessionErrorHandler = (
 ) => void
 
 export type ReadAccountBrowserSessionFromTabOptions = {
+  diagnostics?: AccountDetectionDiagnostics
   tabId: number
   baseUrl: string
   siteType: AccountSiteType
@@ -60,6 +62,7 @@ export type ReadAccountBrowserSessionFromTabOptions = {
 }
 
 export type ReadAccountBrowserSessionFromExistingTabsOptions = {
+  diagnostics?: AccountDetectionDiagnostics
   baseUrl: string
   siteType: AccountSiteType
   browserContext?: {
@@ -72,6 +75,7 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
 }
 
 export type ResolveAccountBrowserSessionOptions = {
+  diagnostics?: AccountDetectionDiagnostics
   baseUrl: string
   siteType: AccountSiteType
   currentTab?: {

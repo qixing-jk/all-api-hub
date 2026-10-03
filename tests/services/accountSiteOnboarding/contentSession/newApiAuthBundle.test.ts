@@ -80,6 +80,50 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     expect(newApiAuthBundleContentSessionExtractor.canExtract({})).toBe(false)
   })
 
+  it("reports refresh headers immediately even when the body is still pending", async () => {
+    const record = vi.fn()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => new Promise(() => {}),
+      }),
+    )
+    void newApiAuthBundleContentSessionExtractor.extract({
+      siteTypeHint: SITE_TYPES.NEW_API,
+      diagnostics: { requestId: "detect-1", record, finish: vi.fn() },
+    })
+    await vi.waitFor(() =>
+      expect(record).toHaveBeenCalledWith(
+        "refresh_response",
+        expect.objectContaining({ status: 200 }),
+      ),
+    )
+    expect(record).toHaveBeenCalledWith("refresh_started")
+  })
+
+  it("records network failure without changing the extraction error", async () => {
+    const record = vi.fn()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("connection reset")),
+    )
+    await expect(
+      newApiAuthBundleContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.NEW_API,
+        diagnostics: { requestId: "detect-2", record, finish: vi.fn() },
+      }),
+    ).rejects.toThrow("New API session refresh request failed")
+    expect(record).toHaveBeenCalledWith(
+      "refresh_failed",
+      expect.objectContaining({
+        reason: "network_error",
+        error: "connection reset",
+      }),
+    )
+  })
+
   it("extracts a future, current AuthBundle from the actual page origin without writing storage", async () => {
     const fetchMock = vi
       .fn()

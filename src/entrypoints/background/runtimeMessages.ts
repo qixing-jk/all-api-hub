@@ -196,7 +196,13 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.CloudflareGuardLog) {
         try {
-          logger.debug("CFGuardRelay", {
+          const isAccountDiagnostic =
+            request.details?.diagnosticScope === "account_detection"
+          const log =
+            isAccountDiagnostic && request.event === "detection_finished"
+              ? logger.info
+              : logger.debug
+          log(isAccountDiagnostic ? "AccountDetectionRelay" : "CFGuardRelay", {
             event: request.event ?? null,
             requestId: request?.details?.requestId ?? null,
             details: request.details ?? null,
