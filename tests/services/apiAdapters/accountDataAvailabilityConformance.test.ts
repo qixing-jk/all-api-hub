@@ -414,7 +414,7 @@ const producerFixturesByFamily = {
           code: 0,
           msg: "success",
           data: {
-            id: "6aba891720c8e541cff9d0e3",
+            id: "user-1",
             mail: "example@example.invalid",
             credits: 5000,
           },
