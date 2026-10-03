@@ -15,6 +15,7 @@ import {
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/toolcodeCheckIn"
 import {
   probeXiaobaiCodeCheckInStatus,
   XIAOBAI_CODE_STATUS_OUTCOMES,
@@ -81,6 +82,16 @@ vi.mock(
 
 const METHOD_ID = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
 
+vi.mock(
+  "~/services/apiService/sub2api/toolcodeCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/toolcodeCheckIn")
+    >()),
+    fetchToolcodeDailyCheckInStatus: vi.fn(),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",
@@ -131,6 +142,9 @@ const notCheckedStatus = {
 describe("Sub2API Pro daily check-in method Adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(fetchToolcodeDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
     // A host that does not serve the app answers its SPA shell, not the app.
     vi.mocked(probeXiaobaiCodeCheckInStatus).mockResolvedValue({
       outcome: XIAOBAI_CODE_STATUS_OUTCOMES.Absent,

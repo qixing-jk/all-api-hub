@@ -23,7 +23,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
   storageData: new Map<string, unknown>(),
   storageSet: vi.fn(),
-  detectors: [vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  detectors: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
   checkIn: vi.fn(),
 }))
 
@@ -51,6 +51,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],
@@ -151,6 +152,24 @@ afterEach(() => {
 })
 
 describe("post-save check-in discovery", () => {
+  it("selects ToolCode after save without enabling automatic execution or posting", async () => {
+    const account = createAccount()
+    account.checkIn.automaticExecutionEnabled = false
+    detectors.forEach((detect) =>
+      detect.mockResolvedValue(detection("unsupported")),
+    )
+    atIndex(detectors, 4).mockResolvedValue(detection("matched"))
+    const result = await discoverSavedAccountCheckIn(
+      saveAccount(account),
+      context,
+    )
+    expect(result?.checkIn.selection.methodId).toBe(
+      AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
+    )
+    expect(result?.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
   it.each(["edited", "deleted"])(
     "returns the latest saved account after discovery completion fails (%s)",
     async (change) => {

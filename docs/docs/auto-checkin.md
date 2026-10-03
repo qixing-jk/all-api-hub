@@ -101,8 +101,14 @@
 | `anyrouter` | 有 | Cookie 会话或浏览器登录上下文，以及账号 ID |
 | `wong-gongyi` | 有 | Access Token 或 Cookie，以及账号 ID |
 | `voapi-v2` | 有 | 保存的仪表盘 JWT（Access Token） |
-| `sub2api` | 有 | 已检测到的 Sub2API Pro 或 Denxio 签到方式所需的有效登录凭据 |
+| `sub2api` | 有 | 已检测到的 Sub2API Pro、天才程序员中转站、Denxio、小白Code、AI-ROUTER 或 ToolCode 签到方式所需的有效登录凭据 |
 | AgentRouter | 有 | 检测到登录签到后，在账号签到配置中选择对应的 GitHub 或 LinuxDo 登录方式；按提示完成浏览器登录或授权，并以执行结果确认签到状态 |
+
+### ToolCode 成长中心签到
+
+`toolcode.top` 的成长中心签到使用独立接口，账号站点类型仍选择 `sub2api`。已有账号可在「编辑账号」中点击「重新检测签到方式」，确认识别到 ToolCode 后保存；需要自动签到时，开启该账号的自动签到。
+
+执行前会读取当天状态，已签到或站点未开放签到时不会重复提交。成长中心的积分及有时效的赠金独立于账号余额，因此签到结果不把它们显示为余额奖励金额；积分和赠金详情请在站点成长中心查看。
 
 ### AgentRouter 登录签到的限制
 

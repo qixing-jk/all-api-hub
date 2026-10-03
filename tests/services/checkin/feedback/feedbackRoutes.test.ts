@@ -11,6 +11,20 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 afterEach(() => vi.restoreAllMocks())
 
 describe("registered check-in feedback status routes", () => {
+  it("uses the browser timezone for ToolCode growth-center status", () => {
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      timeZone: "Asia/Singapore",
+    } as Intl.ResolvedDateTimeFormatOptions)
+    expect(
+      getCheckInFeedbackStatusRoutes(
+        SITE_TYPES.SUB2API,
+        "https://toolcode.top",
+      ),
+    ).toContainEqual({
+      path: "/api/v1/engagement/checkin/status?timezone=Asia%2FSingapore",
+    })
+  })
+
   it("includes Xiaobai's read-only protocol on Sub2API deployments", () => {
     expect(
       getCheckInFeedbackStatusRoutes(
@@ -34,12 +48,12 @@ describe("registered check-in feedback status routes", () => {
     })
   })
 
-  it("retains all five candidate protocols on AI Router without truncation", () => {
+  it("retains all six candidate protocols on AI Router without truncation", () => {
     const routes = getCheckInFeedbackStatusRoutes(
       SITE_TYPES.SUB2API,
       "https://ai-router.dev",
     )
-    expect(routes).toHaveLength(5)
+    expect(routes).toHaveLength(6)
     expect(routes[0]?.path).toMatch(
       /^\/api\/v1\/user\/daily-checkin\?timezone=/,
     )
