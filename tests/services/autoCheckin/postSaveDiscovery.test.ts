@@ -6,6 +6,7 @@ import {
   createDefaultAccountStorageConfig,
   createPersistedSiteAccount,
 } from "~/services/accounts/accountDefaults"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/postSaveDiscovery"
@@ -150,6 +151,46 @@ afterEach(() => {
 })
 
 describe("post-save check-in discovery", () => {
+  it.each(["edited", "deleted"])(
+    "returns the latest saved account after discovery completion fails (%s)",
+    async (change) => {
+      const account = saveAccount()
+      const complete = vi
+        .spyOn(accountCheckInState, "completePostSaveCheckInDiscovery")
+        .mockImplementationOnce(async () => {
+          if (change === "deleted") {
+            storageData.set(
+              ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+              createDefaultAccountStorageConfig(NOW),
+            )
+          } else {
+            await updateAccount((latest) => ({
+              ...latest,
+              notes: "Edited during discovery",
+              account_info: {
+                ...latest.account_info,
+                access_token: "replacement-token",
+              },
+            }))
+          }
+          throw new Error("discovery completion failed")
+        })
+      try {
+        const result = await discoverSavedAccountCheckIn(account, context)
+        if (change === "deleted") expect(result).toBeNull()
+        else {
+          expect(result?.notes).toBe("Edited during discovery")
+          expect(result?.account_info.access_token).toBe("replacement-token")
+          expect(result?.checkIn.selection.methodId).toBeUndefined()
+        }
+        expect(result).toEqual(await accountQueries.getAccountById(account.id))
+        expect(checkIn).not.toHaveBeenCalled()
+      } finally {
+        complete.mockRestore()
+      }
+    },
+  )
+
   it.each(["disabled", "no candidates"])(
     "skips discovery for %s accounts",
     async (reason) => {
