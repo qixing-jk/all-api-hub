@@ -3315,6 +3315,12 @@ class AutoCheckinScheduler {
       let updatedResult: CheckinAccountResult | undefined
 
       if (isCheckedInToday) {
+        const sameDayReward =
+          currentResult &&
+          isSuccessfulCheckinStatus(currentResult.status) &&
+          formatLocalDayKey(new Date(currentResult.timestamp)) === today
+            ? currentResult.reward
+            : undefined
         updatedResult = {
           accountId: account.id,
           accountName,
@@ -3323,6 +3329,7 @@ class AutoCheckinScheduler {
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
           reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
           methodId: selectedMethodId ?? currentResult?.methodId,
+          ...(sameDayReward !== undefined ? { reward: sameDayReward } : {}),
           timestamp: now,
         }
       } else if (isNotCheckedInToday) {

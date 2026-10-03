@@ -831,6 +831,23 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     ).resolves.toMatchObject({ status: expectedStatus })
   })
 
+  it("omits an overflowing reward without failing the check-in", async () => {
+    vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue({
+      kind: "applied",
+      data: {
+        rewardAmount: Number.MAX_VALUE,
+        newBalance: 10,
+        checkedInAt: "2026-09-28T00:00:00Z",
+      },
+    })
+    const result = await sub2apiProProvider.checkIn(createAccount(), {
+      ...executionContext(),
+      statusProof: notCheckedStatus,
+    })
+    expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+    expect(result.reward).toBeUndefined()
+  })
+
   it("reports the awarded USD amount as a quota reward", async () => {
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue({
       kind: "applied",

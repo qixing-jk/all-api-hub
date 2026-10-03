@@ -106,7 +106,7 @@ export function readUsdReward(value: unknown): CheckInReward | undefined {
   const usd = readPositiveDecimalAmount(value)
   if (usd === undefined) return undefined
   const quota = convertUsdBalanceToQuota(usd)
-  return quota > 0 ? { quota } : undefined
+  return Number.isFinite(quota) && quota > 0 ? { quota } : undefined
 }
 
 /** Shared fallback for single-step methods; Denxio owns its upstream error codes. */

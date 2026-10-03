@@ -438,19 +438,17 @@ async function pollCheckedInTodayStatus(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
-): Promise<boolean | undefined> {
+): ReturnType<typeof fetchCheckedInTodayStatus> {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
-  let lastStatus: boolean | undefined
+  let lastStatus: Awaited<ReturnType<typeof fetchCheckedInTodayStatus>>
 
   while (Date.now() <= deadline) {
-    lastStatus = (
-      await fetchCheckedInTodayStatus(
-        account,
-        tempWindowRequestSource,
-        protectionBypassExecution,
-      )
-    )?.checkedInToday
-    if (lastStatus === true) return true
+    lastStatus = await fetchCheckedInTodayStatus(
+      account,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    )
+    if (lastStatus?.checkedInToday === true) return lastStatus
 
     const remainingMs = deadline - Date.now()
     if (remainingMs <= 0) break
@@ -700,16 +698,17 @@ async function resolveNativePageCheckinResult(params: {
     })
   }
 
-  const checkedInToday = await pollCheckedInTodayStatus(
+  const observedAfterNativeAction = await pollCheckedInTodayStatus(
     params.account,
     params.tempWindowRequestSource,
     params.protectionBypassExecution,
   )
-  if (checkedInToday === true) {
+  if (observedAfterNativeAction?.checkedInToday === true) {
     return {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       messageKey:
         AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+      reward: readQuotaReward(observedAfterNativeAction.todayQuotaAwarded),
       data: action,
     }
   }

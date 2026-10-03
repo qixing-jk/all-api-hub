@@ -457,6 +457,43 @@ describe("newApiProvider", () => {
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
+    it.each([true, false])(
+      "retains only today's reward from native page polling (today: %s)",
+      async (isToday) => {
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+          success: false,
+          message: "missing check-in signature header",
+          data: null,
+        })
+        vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+          success: true,
+          reason: "clicked",
+          identity: { userId: "123", user: { id: "123" } },
+        })
+        mockCheckInStatusSequence(false)
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+          enabled: true,
+          stats: {
+            checked_in_today: true,
+            records: [
+              {
+                checkin_date: formatLocalDayKey(
+                  isToday
+                    ? new Date()
+                    : new Date(Date.now() - 48 * 60 * 60 * 1000),
+                ),
+                quota_awarded: 500_000,
+              },
+            ],
+          },
+        } as any)
+        const result = await checkInForTest(mockAccount)
+        expect(result.status).toBe(CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
+        expect(result.reward).toEqual(isToday ? { quota: 500_000 } : undefined)
+        expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(2)
+      },
+    )
+
     it("uses native page check-in for generic check-in API failures", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,

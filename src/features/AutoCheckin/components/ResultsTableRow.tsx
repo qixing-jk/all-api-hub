@@ -13,7 +13,10 @@ import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/compone
 import { cn } from "~/lib/utils"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import type { CurrencyType } from "~/types"
-import { type CheckinAccountResult } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import {
   convertQuotaToCurrencyAmounts,
@@ -53,6 +56,8 @@ export default function ResultsTableRow({
   // Only a hint from the site itself is shown; a method without an
   // authoritative amount renders nothing rather than a zero.
   const rewardAmount =
+    (result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) &&
     result.reward &&
     Number.isFinite(result.reward.quota) &&
     result.reward.quota > 0 &&

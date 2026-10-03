@@ -313,6 +313,34 @@ describe("AutoCheckin ResultsTable", () => {
     ).toBeVisible()
   })
 
+  it.each([
+    CHECKIN_RESULT_STATUS.FAILED,
+    CHECKIN_RESULT_STATUS.SKIPPED,
+    CHECKIN_RESULT_STATUS.UNCERTAIN,
+  ])("hides a stored reward on a %s result", (status) => {
+    const storedResult = {
+      accountId: "invalid-status",
+      accountName: "Invalid Status Account",
+      status,
+      reward: { quota: 500_000 },
+      timestamp: 1,
+    } as unknown as CheckinAccountResult
+    render(
+      <ResultsTable
+        results={[storedResult]}
+        exchangeRateByAccountId={{ "invalid-status": 7.2 }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      screen.queryByTitle("autoCheckin:execution.reward.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows an already-checked row's award too", () => {
     render(
       <ResultsTable
