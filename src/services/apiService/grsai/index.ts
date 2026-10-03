@@ -346,10 +346,11 @@ async function recoverGrsaiSession(
   currentToken: string,
 ): Promise<RefreshAccountResult | null> {
   const expectedUserId = expectedAccountIdentity(request)
+  if (!expectedUserId) return null
 
   const resynced = await resyncGrsaiAuthToken(
     request.baseUrl,
-    expectedUserId || undefined,
+    expectedUserId,
     request.tempWindowRequestSource,
     request.protectionBypassExecution,
   ).catch((error) => {
@@ -359,7 +360,7 @@ async function recoverGrsaiSession(
 
   if (!resynced || resynced.accessToken === currentToken) return null
 
-  if (expectedUserId && resynced.userId.trim() !== expectedUserId) {
+  if (resynced.userId.trim() !== expectedUserId) {
     logger.warn("Grsai token re-sync returned session for different user", {
       expected: expectedUserId,
       actual: resynced.userId,
@@ -375,7 +376,7 @@ async function recoverGrsaiSession(
   try {
     const session = await openSignedInSession(retryRequest)
     const retryUser = await fetchGrsaiUserInfo(retryRequest, session)
-    if (expectedUserId && retryUser.id.trim() !== expectedUserId) {
+    if (retryUser.id.trim() !== expectedUserId) {
       logger.warn("Grsai token re-sync authenticated a different user", {
         expected: expectedUserId,
         actual: retryUser.id,

@@ -121,7 +121,7 @@ const sessionJwt = (expSeconds: number): string =>
 describe("grsai account data", () => {
   beforeEach(() => {
     server.resetHandlers()
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     configRequests = 0
     server.use(configHandler(true), dashboardHandler(), userInfoHandler())
   })
@@ -203,6 +203,21 @@ describe("grsai account data", () => {
   })
 
   describe("session recovery", () => {
+    it.each([undefined, "", "   "])(
+      "refuses recovery without a saved account identity: %j",
+      async (userId) => {
+        vi.mocked(resolveAccountBrowserSession).mockResolvedValueOnce(
+          browserSession() as never,
+        )
+        const result = await refreshAccountData({
+          ...request,
+          auth: { ...request.auth, userId },
+        })
+        expect(result.success).toBe(false)
+        expect(result).not.toHaveProperty("authUpdate")
+        expect(resolveAccountBrowserSession).not.toHaveBeenCalled()
+      },
+    )
     it("reports the original failure when browser session recovery throws", async () => {
       vi.mocked(resolveAccountBrowserSession).mockRejectedValueOnce(
         new Error("browser unavailable"),
