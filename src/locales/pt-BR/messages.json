@@ -117,6 +117,10 @@
       "userIdNumeric": "O ID do usuário deve ser um número"
     }
   },
+  "grsai": {
+    "openApiTokenRejected": "Este é o Token exibido na página de informações do usuário da Grsai. Ele é destinado às APIs abertas da plataforma, e o console não o aceita. Use a detecção automática para ler a sessão do console já conectada ou cole o token de sessão do console.",
+    "sessionExpired": "A sessão do console da Grsai salva expirou (uma sessão dura cerca de 30 dias). Faça login novamente no console da Grsai e adicione a conta pela detecção automática."
+  },
   "kelivo": {
     "copied": "Código de importação do Kelivo móvel copiado. Cole-o na importação de provedores do Kelivo móvel.",
     "copyFailed": "Não foi possível copiar o código de importação do Kelivo. Verifique a permissão da área de transferência e tente novamente.",

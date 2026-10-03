@@ -19,6 +19,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
@@ -58,6 +59,7 @@ const siteBrowserAdapters: readonly {
     sessionExtractor: rightCodeContentSessionExtractor,
     identity: rightCodeBrowserIdentity,
   },
+  { sessionExtractor: grsaiContentSessionExtractor },
   { sessionExtractor: vApiContentSessionExtractor },
   { sessionExtractor: apiyiContentSessionExtractor },
   { sessionExtractor: newApiAuthBundleContentSessionExtractor },

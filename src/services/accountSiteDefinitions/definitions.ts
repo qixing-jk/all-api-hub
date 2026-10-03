@@ -67,6 +67,10 @@ import {
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
   APIYI_HOSTNAME,
+  GRSAI_ACCOUNT_PATH,
+  GRSAI_API_BASE_URL,
+  GRSAI_DISPLAY_NAME,
+  GRSAI_HOSTNAMES,
   KIMI_API_BASE_URL,
   KIMI_CONSOLE_ORIGIN,
   KIMI_DISPLAY_NAME,
@@ -174,6 +178,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
   SITE_TYPES.KIMI_GLOBAL,
+  SITE_TYPES.GRSAI,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -779,6 +784,65 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferenceApiBaseUrls: {
           openAiCompatible: KIMI_GLOBAL_API_BASE_URL,
           anthropic: "https://api.moonshot.ai/anthropic",
+        },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.GRSAI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai,
+    onboarding: {
+      displayName: GRSAI_DISPLAY_NAME,
+      detection: { hostnames: GRSAI_HOSTNAMES },
+      // Console routes verified against the deployment's own router table. The
+      // console is served on grsai.com and grsai.ai; it has no separate sign-in
+      // route (/login, /sign-in and /register all answer 404), so /dashboard
+      // owns the signed-out state and is what "open the console" means.
+      routes: {
+        loginPath: GRSAI_ACCOUNT_PATH,
+        usagePath: "/dashboard/consumption-log",
+        adminCredentialsPath: "/dashboard/api-keys",
+        siteAnnouncementsPath: null,
+        pricingPath: "/dashboard/models",
+        // No check-in flow, no separate access-token page, no activation codes.
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        // The console identifies an account by its sign-in email and never
+        // exposes a separate display name; the saved session token alone
+        // authenticates every call, so manual adds must not demand an id.
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      tokenForm: {
+        // Keys carry no network restrictions; only quota and expiry.
+        networkLimitPolicy:
+          ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
+      },
+      // The two console domains are equivalent; accounts keep whichever host
+      // they were detected on instead of being rewritten to a canonical origin.
+      urls: {
+        recognizedHostnames: GRSAI_HOSTNAMES,
+        inferFromHostname: true,
+        inferenceApiBaseUrls: {
+          openAiCompatible: GRSAI_API_BASE_URL,
         },
       },
     },

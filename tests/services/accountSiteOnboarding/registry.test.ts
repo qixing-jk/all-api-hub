@@ -161,6 +161,7 @@ describe("account site onboarding registry", () => {
       "voapi-v2",
       "kimi-open-platform",
       "right-code",
+      "grsai",
       "v-api",
       "apiyi",
       "new-api-auth-bundle",

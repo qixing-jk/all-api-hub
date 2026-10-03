@@ -45,6 +45,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   RightCode: "rightcode",
   OpenRouter: "openrouter",
   KimiOpenPlatform: "kimiOpenPlatform",
+  Grsai: "grsai",
   Unsupported: "unsupported",
 } as const
 

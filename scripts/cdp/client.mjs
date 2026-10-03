@@ -2,7 +2,16 @@
 import path from "node:path"
 import { chromium } from "@playwright/test"
 
-const DEFAULT_CDP_URL = "http://127.0.0.1:9222"
+import { assertDevBrowserProfile } from "./browser-runtime.mjs"
+import { resolveCdpPort } from "./dev-profile.mjs"
+
+/**
+ * Resolve the CDP URL at call time so a `--isolate` flag parsed later in the
+ * process (e.g. in a runner's argument loop) still picks the right port.
+ */
+export function defaultCdpUrl() {
+  return `http://127.0.0.1:${resolveCdpPort()}`
+}
 
 /**
  * Wake a specific extension's service worker and wrap the connection.
@@ -12,7 +21,7 @@ const DEFAULT_CDP_URL = "http://127.0.0.1:9222"
  * relying on title-based discovery.
  */
 export async function connectExtensionById({
-  cdpUrl = process.env.CDP_URL || DEFAULT_CDP_URL,
+  cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
   extensionId,
 } = {}) {
   if (!extensionId) {
@@ -22,7 +31,9 @@ export async function connectExtensionById({
   let browser
   try {
     browser = await chromium.connectOverCDP(cdpUrl)
+    await assertDevBrowserProfile(browser)
   } catch (err) {
+    await browser?.close().catch(() => {})
     throw new Error(
       `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
     )
@@ -71,12 +82,14 @@ export async function connectExtensionById({
  * Connect to running dev browser over CDP and locate the current worktree's extension.
  */
 export async function connectDevExtension({
-  cdpUrl = process.env.CDP_URL || DEFAULT_CDP_URL,
+  cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
 } = {}) {
   let browser
   try {
     browser = await chromium.connectOverCDP(cdpUrl)
+    await assertDevBrowserProfile(browser)
   } catch (err) {
+    await browser?.close().catch(() => {})
     throw new Error(
       `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
     )

@@ -35,6 +35,7 @@ export const SITE_TYPES = {
   OMNIROUTE: "omniroute",
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
+  GRSAI: "grsai",
   UNKNOWN: "unknown",
 } as const
 
@@ -102,3 +103,25 @@ export function isCanonicalOpenRouterUrl(value: string): boolean {
     return false
   }
 }
+
+/**
+ * Grsai serves one account database from two equivalent console domains:
+ * https://grsai.com and https://grsai.ai (the domain its own document links
+ * use). `www.grsai.com` redirects to the canonical origin and `www.grsai.ai`
+ * does not resolve, so neither needs its own entry.
+ */
+export const GRSAI_HOSTNAMES = ["grsai.com", "grsai.ai"] as const
+export const GRSAI_DISPLAY_NAME = "Grsai"
+/**
+ * Console (account, key and model) API. The console origin itself only serves
+ * the Next.js frontend; every data call goes to this host.
+ */
+export const GRSAI_CONSOLE_API_ORIGIN = "https://eb.grsaiapi.com"
+/**
+ * OpenAI-compatible endpoint the account's `sk-` keys are used against, taken
+ * from the console's own node information (overseas host). The deployment has no
+ * `GET /v1/models`, so the model catalog comes from the console API instead.
+ */
+export const GRSAI_API_BASE_URL = "https://grsaiapi.com/v1"
+/** Settings entry of the account whose keys carry the credits. */
+export const GRSAI_ACCOUNT_PATH = "/dashboard"

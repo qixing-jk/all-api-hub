@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { connectDevExtension } from "./cdp/client.mjs"
+import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
+import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { runAiRouterProbe } from "./suites/ai-router/probe.mjs"
 import { runAiRouterUiTest } from "./suites/ai-router/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -9,7 +10,9 @@ loadLocalEnv()
 function parseArgs(args) {
   let token = process.env.AI_ROUTER_ACCESS_TOKEN || ""
   let suite = "all" // all | probe | ui
-  let cdpUrl = process.env.CDP_URL || "http://127.0.0.1:9222"
+  // Resolve the default port after the flag pass so `--isolate` is honored.
+  applyIsolateFlag(args)
+  let cdpUrl = process.env.CDP_URL || defaultCdpUrl()
 
   for (const arg of args) {
     if (arg.startsWith("--token=")) {
@@ -29,7 +32,7 @@ AI-Router 现场端到端测试运行器 (CDP & Protocol Probe)
 选项:
   --token=<token>    AI-Router 访问会话令牌 (默认读取 AI_ROUTER_ACCESS_TOKEN 环境变量)
   --suite=<type>     运行套件: 'all' (默认), 'probe' (纯后端协议), 'ui' (纯界面)
-  --cdp=<url>        CDP 调试端口地址 (默认: http://127.0.0.1:9222)
+  --cdp=<url>        CDP 调试端口地址 (默认: 共享模式 9222，隔离模式按 worktree 偏移)
   --help, -h         显示帮助说明
 `)
       process.exit(0)

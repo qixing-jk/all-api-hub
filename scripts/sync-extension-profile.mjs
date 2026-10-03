@@ -4,6 +4,11 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import {
+  applyIsolateFlag,
+  isIsolatedDevProfile,
+  resolveDevProfileDir,
+} from "./cdp/dev-profile.mjs"
 import { replaceProfileDatabase } from "./cdp/profile-database-copy.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
@@ -14,31 +19,11 @@ const KNOWN_STORE_IDS = [
 ]
 
 /**
- * 跨平台解析共享开发 Profile 路径
+ * 跨平台解析开发 Profile 路径（与人浏览器 launcher 共用同一解析，
+ * 隔离模式时同步目标即隔离 profile）
  */
 function resolveSharedDevProfile() {
-  if (process.env.AAH_DEV_PROFILE_DIR) {
-    return path.resolve(process.env.AAH_DEV_PROFILE_DIR)
-  }
-
-  const platform = os.platform()
-  const home = os.homedir()
-
-  if (platform === "win32") {
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(home, "AppData", "Local")
-    return path.join(localAppData, "AllApiHub", "dev-browser")
-  } else if (platform === "darwin") {
-    return path.join(
-      home,
-      "Library",
-      "Application Support",
-      "AllApiHub",
-      "dev-browser",
-    )
-  } else {
-    return path.join(home, ".config", "all-api-hub", "dev-browser")
-  }
+  return resolveDevProfileDir()
 }
 
 /**
@@ -290,6 +275,8 @@ export function assertBrowsersClosed(processes) {
 
 async function main() {
   const args = process.argv.slice(2)
+  // `--isolate` 与 launcher 保持一致：同步目标即隔离 profile。
+  applyIsolateFlag(args)
   const sourceProfileFlagIndex = args.indexOf("--source-profile")
   const preferredProfile =
     sourceProfileFlagIndex !== -1 ? args[sourceProfileFlagIndex + 1] : null
@@ -305,7 +292,11 @@ async function main() {
   const devBaseDir = resolveSharedDevProfile()
   const devProfileDir = path.join(devBaseDir, "Default")
 
-  console.log(`目标开发 Profile: ${devProfileDir}`)
+  console.log(
+    `目标开发 Profile: ${devProfileDir}${
+      isIsolatedDevProfile() ? " [隔离模式]" : ""
+    }`,
+  )
   console.log("正在全自动探测宿主浏览器中的 All API Hub 数据...")
 
   const discovered = autoDiscoverSourceExtensionData(

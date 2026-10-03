@@ -44,6 +44,7 @@ const collectedRequests = {
   rightCodeTodayStats: 0,
   rightCodeOverall: 0,
   kimiAccount: 0,
+  grsaiAccount: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -381,6 +382,57 @@ const producerFixturesByFamily = {
       expect(collectedRequests.kimiAccount).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai]: {
+    // The console serves its frontend and its data API from different hosts, so
+    // the account's own origin is not where the adapter reads from.
+    baseUrl: "https://grsai.com",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      // The deployment reports no request, token or income series at all.
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.post("https://eb.grsaiapi.com/client/common/getConfig", () =>
+        HttpResponse.json({
+          code: 0,
+          msg: "success",
+          data: {
+            token: "grsai-session-token",
+            kis: "kis-blob",
+            ra1: "ra1",
+            ra2: "ra2",
+            random: "1234567890",
+            isAuth: true,
+          },
+        }),
+      ),
+      http.post("https://eb.grsaiapi.com/client/grsai/getUserInfo", () =>
+        HttpResponse.json({
+          code: 0,
+          msg: "success",
+          data: {
+            id: "user-1",
+            mail: "example@example.invalid",
+            credits: 5000,
+          },
+        }),
+      ),
+      http.post("https://eb.grsaiapi.com/client/grsai/getDashboardData", () => {
+        collectedRequests.grsaiAccount += 1
+        return HttpResponse.json({
+          code: 0,
+          msg: "success",
+          data: { credits: 5000, todayConsumed: 1000, totalConsumed: 250000 },
+        })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.grsaiAccount).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -486,6 +538,7 @@ describe("AccountData availability producer conformance", () => {
       rightCodeTodayStats: 0,
       rightCodeOverall: 0,
       kimiAccount: 0,
+      grsaiAccount: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

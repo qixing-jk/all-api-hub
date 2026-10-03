@@ -21,6 +21,26 @@ const request = {
 }
 
 describe("native key editor field policies", () => {
+  it("presents Grsai budgets as credits with their own explanatory text", () => {
+    const fields = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.GRSAI,
+      "edit",
+    ).policy.fields
+    const credits = fields.find((field) => field.fieldId === "credits")!
+    const translate = ((key: string) => key) as TFunction
+    expect(credits.resolveLabel(translate)).toBe(
+      "keyManagement:native.editor.quotaCredits",
+    )
+    expect(credits.resolveHelp?.(translate)).toBe(
+      "keyManagement:native.editor.quotaCreditsHelp",
+    )
+    expect(fields.map((field) => field.fieldId)).toEqual([
+      "name",
+      "unlimited_credits",
+      "credits",
+      "expires_at",
+    ])
+  })
   it.each([SITE_TYPES.KIMI, SITE_TYPES.KIMI_GLOBAL])(
     "presents only the supported name field for %s",
     (siteType) => {

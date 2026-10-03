@@ -1,10 +1,13 @@
-import { connectDevExtension } from "./cdp/client.mjs"
+import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
+import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { openExtensionPage } from "./cdp/ui-driver.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
 
-const CDP_URL = process.env.CDP_URL || "http://127.0.0.1:9222"
+const args = process.argv.slice(2)
+applyIsolateFlag(args)
+const CDP_URL = process.env.CDP_URL || defaultCdpUrl()
 
 async function main() {
   console.log(`正在连接 Edge CDP: ${CDP_URL}...`)

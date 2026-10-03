@@ -7,6 +7,23 @@ import {
 } from "~/services/accounts/accountSiteProfile/addresses"
 
 describe("account site address roles", () => {
+  it.each(["https://grsai.com", "https://grsai.ai"])(
+    "routes Grsai inference away from its console at %s",
+    (siteUrl) => {
+      expect(
+        resolveAccountSiteAddresses({ siteType: SITE_TYPES.GRSAI, siteUrl }),
+      ).toMatchObject({
+        browserBaseUrl: siteUrl,
+        inferenceApi: {
+          openAiCompatible: {
+            root: "https://grsaiapi.com",
+            mount: "https://grsaiapi.com/v1",
+          },
+        },
+      })
+    },
+  )
+
   it("separates Kimi browser, management, and two inference protocols", () => {
     expect(
       resolveAccountSiteAddresses({

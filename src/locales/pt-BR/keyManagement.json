@@ -398,6 +398,8 @@
         "loading": "Abrindo o editor de chaves...",
         "retry": "Tentar novamente"
       },
+      "quotaCredits": "Créditos restantes",
+      "quotaCreditsHelp": "A chave para de funcionar quando esses créditos acabam.",
       "quotaUsd": "Cota (USD)",
       "remainingCount": "Chamadas restantes",
       "remainingCountPlaceholder": "Quantas chamadas esta chave ainda permite",

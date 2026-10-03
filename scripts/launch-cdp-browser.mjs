@@ -7,6 +7,16 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import {
+  assertDevBrowserProfile,
+  ensureDevExtensionReady,
+} from "./cdp/browser-runtime.mjs"
+import {
+  applyIsolateFlag,
+  isIsolatedDevProfile,
+  resolveCdpPort,
+  resolveDevProfileDir,
+} from "./cdp/dev-profile.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -14,7 +24,11 @@ loadLocalEnv()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, "..")
 
-const CDP_PORT = Number(process.env.CDP_PORT) || 9222
+// `--isolate` must seed the environment before the module-level profile/port
+// constants below are evaluated, because they are baked at import time.
+applyIsolateFlag(process.argv)
+
+const CDP_PORT = resolveCdpPort()
 const WORKTREE_NAME = path.basename(rootDir)
 
 /**
@@ -73,31 +87,10 @@ function findBrowserExecutable() {
 }
 
 /**
- * 2. 跨平台解析全局共享的开发 Profile 目录
+ * 2. 跨平台解析开发 Profile 目录（共享或按 worktree 隔离）
  */
 function resolveSharedDevProfile() {
-  if (process.env.AAH_DEV_PROFILE_DIR) {
-    return path.resolve(process.env.AAH_DEV_PROFILE_DIR)
-  }
-
-  const platform = os.platform()
-  const home = os.homedir()
-
-  if (platform === "win32") {
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(home, "AppData", "Local")
-    return path.join(localAppData, "AllApiHub", "dev-browser")
-  } else if (platform === "darwin") {
-    return path.join(
-      home,
-      "Library",
-      "Application Support",
-      "AllApiHub",
-      "dev-browser",
-    )
-  } else {
-    return path.join(home, ".config", "all-api-hub", "dev-browser")
-  }
+  return resolveDevProfileDir()
 }
 
 /**
@@ -587,13 +580,40 @@ async function closeDevBrowserViaCdp(cdpPort) {
   }
 }
 
+async function verifyRunningProfile() {
+  const { chromium } = await import("@playwright/test")
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`)
+  try {
+    await assertDevBrowserProfile(browser)
+  } finally {
+    await browser.close()
+  }
+}
+
+async function verifyExtensionReady(extensionDir) {
+  const { chromium } = await import("@playwright/test")
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`)
+  try {
+    await assertDevBrowserProfile(browser)
+    await ensureDevExtensionReady(browser, extensionDir)
+  } finally {
+    await browser.close()
+  }
+}
+
 async function main() {
   console.log("==========================================")
   console.log("   All API Hub 自动化 CDP 调试环境启动器   ")
   console.log("==========================================")
   console.log(`当前 Worktree: ${WORKTREE_NAME} (${rootDir})`)
+  if (isIsolatedDevProfile()) {
+    console.log(
+      `🧪 隔离 Profile 模式：独占 user-data-dir 与 CDP 端口，不影响其它 worktree`,
+    )
+  }
 
   const cliArgs = process.argv.slice(2)
+  // `--isolate` 由模块顶部在常量求值前解析；此处仅记录命中，避免重复 seed。
   const forceDev = cliArgs.includes("--dev")
   const forceProd = cliArgs.includes("--prod")
   const forceBuild = cliArgs.includes("--build")
@@ -618,6 +638,7 @@ async function main() {
   if (forceReloadOnly) {
     const isRunning = await checkPortOpen(CDP_PORT)
     if (isRunning) {
+      await verifyRunningProfile()
       console.log(`正在向 127.0.0.1:${CDP_PORT} 发送扩展热重载信号...`)
       await reloadRunningExtension(CDP_PORT)
       process.exit(0)
@@ -708,11 +729,13 @@ async function main() {
   // 4. 检查调试浏览器是否已经在运行
   const isRunning = await checkPortOpen(CDP_PORT)
   if (isRunning) {
+    await verifyRunningProfile()
     if (forceRestart) {
       console.log(`\n🔄 检测到 --restart 参数，正在关闭旧调试实例并重新启动...`)
       await closeDevBrowserViaCdp(CDP_PORT)
       await new Promise((r) => setTimeout(r, 1200))
     } else {
+      await verifyExtensionReady(extDir)
       console.log(`\n✅ 端口 ${CDP_PORT} 已经在监听中！调试浏览器已就绪。`)
       console.log(`🔄 正在通过 CDP 唤醒运行中的浏览器刷新扩展...`)
       await reloadRunningExtension(CDP_PORT)
@@ -732,6 +755,9 @@ async function main() {
     `--user-data-dir=${devProfileDir}`,
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
+    // Enable the supported CDP unpacked installer; readiness is verified below.
+    "--enable-unsafe-extension-debugging",
+    "--enable-automation",
     "--no-first-run",
     "--no-default-browser-check",
   ]
@@ -775,12 +801,13 @@ async function main() {
   }
 
   if (ready) {
+    await verifyExtensionReady(extDir)
     console.log(`🎉 成功！调试浏览器已启动，CDP 监听在 127.0.0.1:${CDP_PORT}`)
     console.log(
       `👉 日常浏览器与该独立沙盒已同时运行，随时可用 pnpm e2e:cdp 执行全自动控制！`,
     )
   } else {
-    console.warn(`⚠️ 等待端口 ${CDP_PORT} 超时，请检查浏览器是否已弹出。`)
+    throw new Error(`等待端口 ${CDP_PORT} 超时，请检查浏览器是否已弹出。`)
   }
 }
 

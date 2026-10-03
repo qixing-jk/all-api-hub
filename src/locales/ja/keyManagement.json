@@ -378,6 +378,8 @@
         "loading": "キーエディターを開いています...",
         "retry": "再試行"
       },
+      "quotaCredits": "残りクレジット",
+      "quotaCreditsHelp": "クレジットを使い切ると、このキーは使用できなくなります。",
       "quotaUsd": "クォータ（米ドル）",
       "remainingCount": "残り回数",
       "remainingCountPlaceholder": "このキーであと何回呼び出せるか",

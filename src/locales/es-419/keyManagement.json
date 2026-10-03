@@ -398,6 +398,8 @@
         "loading": "Abriendo el editor de claves...",
         "retry": "Intentar de nuevo"
       },
+      "quotaCredits": "Créditos restantes",
+      "quotaCreditsHelp": "La clave deja de funcionar cuando se agotan estos créditos.",
       "quotaUsd": "Cuota (USD)",
       "remainingCount": "Llamadas restantes",
       "remainingCountPlaceholder": "Cuántas llamadas más permite esta clave",

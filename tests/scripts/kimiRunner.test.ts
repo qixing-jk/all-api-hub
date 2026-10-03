@@ -6,7 +6,11 @@ import { main, parseArgs } from "~~/scripts/test-kimi-e2e-live.mjs"
 const { connectDevExtension } = vi.hoisted(() => ({
   connectDevExtension: vi.fn(),
 }))
-vi.mock("~~/scripts/cdp/client.mjs", () => ({ connectDevExtension }))
+vi.mock("~~/scripts/cdp/client.mjs", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("~~/scripts/cdp/client.mjs")>()
+  return { ...original, connectDevExtension }
+})
 vi.mock("~~/scripts/suites/kimi/ui.mjs", () => ({ runKimiUiTest: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())
 
