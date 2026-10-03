@@ -78,6 +78,7 @@ type SaveApiCredentialProfileInput = {
   apiKey: string
   tagIds: string[]
   notes: string
+  sourceUrl?: string
   expiresAt?: number | null
   telemetryConfig?: ApiCredentialTelemetryConfig
 }
@@ -447,6 +448,7 @@ export function useApiCredentialProfilesController() {
             apiKey: input.apiKey,
             tagIds: input.tagIds,
             notes: input.notes,
+            sourceUrl: input.sourceUrl,
             expiresAt: input.expiresAt,
             telemetryConfig: input.telemetryConfig,
           })
@@ -458,6 +460,7 @@ export function useApiCredentialProfilesController() {
             apiKey: input.apiKey,
             tagIds: input.tagIds,
             notes: input.notes,
+            sourceUrl: input.sourceUrl,
             expiresAt: input.expiresAt,
             telemetryConfig: input.telemetryConfig,
           })

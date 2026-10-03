@@ -44,11 +44,13 @@
       "expiresAt": "Ngày hết hạn",
       "modelId": "Model ID",
       "notes": "Ghi chú",
+      "sourceUrl": "Source page",
       "tags": "Thẻ"
     },
     "hints": {
       "expiresAt": "Tùy chọn. Ghi lại ngày dự kiến khóa này hết hạn.",
       "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng.",
+      "sourceUrl": "Optional. Record the page where you found these credentials so you can revisit it later for updates.",
       "tags": "Tùy chọn. Dùng chung với thẻ toàn cục của tài khoản và dấu trang."
     },
     "history": {
@@ -69,6 +71,7 @@
     },
     "placeholders": {
       "notes": "Ghi chú tùy chọn",
+      "sourceUrl": "https://example.com/post",
       "tags": "Chọn thẻ"
     },
     "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",

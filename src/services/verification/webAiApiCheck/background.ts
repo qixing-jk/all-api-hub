@@ -33,6 +33,7 @@ import {
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
 
 import { onWebAiApiCheckMessage, WebAiApiCheckMessageTypes } from "./messaging"
@@ -562,12 +563,18 @@ export async function resolveWebAiApiCheckSaveProfileMessage(
     const profileName =
       providedName || buildDefaultProfileName({ normalizedBaseUrl, pageUrl })
 
+    const sourceUrl =
+      typeof request.sourceUrl === "string" && isHttpUrl(request.sourceUrl)
+        ? request.sourceUrl.trim()
+        : undefined
+
     try {
       const profile = await apiCredentialProfilesStorage.createProfile({
         name: profileName,
         apiType,
         baseUrl: normalizedBaseUrl,
         apiKey,
+        ...(sourceUrl !== undefined ? { sourceUrl } : {}),
         ...(request.tagIds !== undefined ? { tagIds: request.tagIds } : {}),
         ...(request.notes !== undefined ? { notes: request.notes } : {}),
         ...(request.expiresAt !== undefined

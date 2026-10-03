@@ -192,6 +192,8 @@ export type ApiCheckSaveProfileRequest = {
   apiKey: string
   pageUrl?: string
   name?: string
+  /** Optional page the user found these credentials on, used for later revisits. */
+  sourceUrl?: string
   tagIds?: string[]
   notes?: string
   expiresAt?: number | null

@@ -891,6 +891,58 @@ describe("webAiApiCheck background handlers", () => {
     expect(responsePayload?.apiKey).toBeUndefined()
   })
 
+  it("saveProfile passes a trimmed HTTP(S) source URL through and drops invalid ones", async () => {
+    vi.resetModules()
+
+    const { apiCredentialProfilesStorage } = await import(
+      "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+    )
+
+    vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
+      id: "p-source",
+      name: "proxy.example.com",
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: "sk-test-secret-fixture",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    } as any)
+
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    await background.resolveWebAiApiCheckSaveProfileMessage({
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api/v1",
+      apiKey: "sk-test-secret-fixture",
+      sourceUrl: "  https://forum.example.com/t/7?p=2  ",
+    })
+
+    expect(apiCredentialProfilesStorage.createProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceUrl: "https://forum.example.com/t/7?p=2",
+      }),
+    )
+
+    vi.mocked(apiCredentialProfilesStorage.createProfile).mockClear()
+
+    await background.resolveWebAiApiCheckSaveProfileMessage({
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api/v1",
+      apiKey: "sk-test-secret-fixture",
+      sourceUrl: "javascript:alert(1)",
+    })
+
+    expect(apiCredentialProfilesStorage.createProfile).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        sourceUrl: expect.anything(),
+      }),
+    )
+  })
+
   it("saveProfile rejects missing required fields", async () => {
     vi.resetModules()
 

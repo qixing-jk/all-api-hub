@@ -70,6 +70,7 @@ type SaveProfileInput = {
   apiKey: string
   tagIds: string[]
   notes: string
+  sourceUrl: string
   expiresAt?: number | null
   telemetryConfig?: ApiCredentialTelemetryConfig
 }
@@ -144,6 +145,7 @@ export function ApiCredentialProfileDialog({
   const [apiKey, setApiKey] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
+  const [sourceUrl, setSourceUrl] = useState("")
   const [expiresAtInput, setExpiresAtInput] = useState("")
   const [telemetryMode, setTelemetryMode] =
     useState<ApiCredentialTelemetryCapabilityMode>(
@@ -168,6 +170,7 @@ export function ApiCredentialProfileDialog({
   const baseUrlInputId = "api-credential-profile-baseUrl"
   const apiKeyInputId = "api-credential-profile-apiKey"
   const notesInputId = "api-credential-profile-notes"
+  const sourceUrlInputId = "api-credential-profile-sourceUrl"
   const expiresAtInputId = "api-credential-profile-expiresAt"
   const telemetryModeInputId = "api-credential-profile-telemetry-mode"
   const customEndpointInputId =
@@ -187,6 +190,7 @@ export function ApiCredentialProfileDialog({
       setApiKey(profile.apiKey ?? "")
       setTagIds(profile.tagIds ?? [])
       setNotes(profile.notes ?? "")
+      setSourceUrl(profile.sourceUrl ?? "")
       setExpiresAtInput(formatDatePickerTimestamp(profile.expiresAt))
       setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
       setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
@@ -205,6 +209,7 @@ export function ApiCredentialProfileDialog({
     setApiKey("")
     setTagIds([])
     setNotes("")
+    setSourceUrl("")
     setExpiresAtInput("")
     setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
     setCustomEndpoint("")
@@ -369,6 +374,7 @@ export function ApiCredentialProfileDialog({
         apiKey: apiKey.trim(),
         tagIds,
         notes: notes.trim(),
+        sourceUrl: sourceUrl.trim(),
         expiresAt: parseDatePickerTimestamp(expiresAtInput),
         telemetryConfig: buildTelemetryConfig(),
       })
@@ -578,6 +584,22 @@ export function ApiCredentialProfileDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("apiCredentialProfiles:dialog.placeholders.notes")}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.sourceUrl")}
+            description={t("apiCredentialProfiles:dialog.hints.sourceUrl")}
+            htmlFor={sourceUrlInputId}
+          >
+            <Input
+              id={sourceUrlInputId}
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder={t(
+                "apiCredentialProfiles:dialog.placeholders.sourceUrl",
+              )}
               disabled={isSaving}
             />
           </FormField>

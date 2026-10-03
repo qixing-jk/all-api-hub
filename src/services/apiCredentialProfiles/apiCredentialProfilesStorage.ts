@@ -50,6 +50,7 @@ import {
 import { onStorageChanged } from "~/utils/browser/browserApi"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
 /**
  * Unified logger scoped to API credential profiles storage.
@@ -63,6 +64,7 @@ export type ApiCredentialProfileCreateInput = {
   apiKey: string
   tagIds?: string[]
   notes?: string
+  sourceUrl?: string
   expiresAt?: number | null
   telemetryConfig?: Partial<ApiCredentialTelemetryConfig>
 }
@@ -210,6 +212,19 @@ function coerceOptionalTimestamp(raw: unknown): number | undefined {
   const value = coerceFiniteNumber(raw)
   if (value === undefined || value <= 0) return undefined
   return Math.round(value)
+}
+
+/**
+ * Normalizes an optional credential source URL for persistence.
+ *
+ * Keeps the full HTTP(S) URL (path/query included) because the user revisits
+ * the recorded page; returns undefined for empty, malformed, or non-HTTP(S)
+ * values so they are never persisted.
+ */
+function normalizeSourceUrl(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined
+  const trimmed = raw.trim()
+  return isHttpUrl(trimmed) ? trimmed : undefined
 }
 
 /**
@@ -380,6 +395,9 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
       createdAt:
         Math.min(newer.createdAt || 0, older.createdAt || 0) || newer.createdAt,
       tagIds: mergedTagIds,
+      // The latest recorded source wins; an empty re-save must not wipe a
+      // previously recorded one.
+      sourceUrl: newer.sourceUrl || older.sourceUrl,
       telemetryConfig,
       telemetrySnapshot,
     })
@@ -474,6 +492,7 @@ export function coerceApiCredentialProfilesConfigWithRemap(
     const notes = typeof candidate.notes === "string" ? candidate.notes : ""
     const tagIds = normalizeTagIdList(candidate.tagIds)
     const expiresAt = coerceOptionalTimestamp(candidate.expiresAt)
+    const sourceUrl = normalizeSourceUrl(candidate.sourceUrl)
 
     if (!apiKey || !baseUrl) {
       // Skip obviously invalid rows; they are not actionable in UI.
@@ -488,6 +507,7 @@ export function coerceApiCredentialProfilesConfigWithRemap(
       apiKey,
       tagIds,
       notes: notes.trim(),
+      ...(sourceUrl !== undefined ? { sourceUrl } : {}),
       ...(expiresAt !== undefined ? { expiresAt } : {}),
       telemetryConfig: coerceApiCredentialTelemetryConfig(
         candidate.telemetryConfig,
@@ -606,6 +626,7 @@ const createNormalizedProfile = (
   }
 
   const expiresAt = coerceOptionalTimestamp(input.expiresAt)
+  const sourceUrl = normalizeSourceUrl(input.sourceUrl)
   return {
     id: safeRandomUUID("api-profile"),
     name: normalizedName,
@@ -614,6 +635,7 @@ const createNormalizedProfile = (
     apiKey: normalizedKey,
     tagIds: normalizeTagIdList(input.tagIds),
     notes: typeof input.notes === "string" ? input.notes.trim() : "",
+    ...(sourceUrl !== undefined ? { sourceUrl } : {}),
     ...(expiresAt !== undefined ? { expiresAt } : {}),
     telemetryConfig: coerceApiCredentialTelemetryConfig(input.telemetryConfig, {
       baseUrl: normalizedBaseUrl,
@@ -1245,6 +1267,11 @@ class ApiCredentialProfilesStorageService {
             typeof updates.notes === "string"
               ? updates.notes.trim()
               : current.notes,
+          ...(typeof updates.sourceUrl === "string"
+            ? {
+                sourceUrl: normalizeSourceUrl(updates.sourceUrl),
+              }
+            : {}),
           ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
           telemetryConfig: nextTelemetryConfig,
           telemetrySnapshot:

@@ -105,6 +105,7 @@ export function buildApiCredentialProfileListModel({
         profile.baseUrl,
         ...getProfileTagNames(profile, tagNameById),
         profile.notes ?? "",
+        profile.sourceUrl ?? "",
       ]
         .filter(Boolean)
         .join(" "),

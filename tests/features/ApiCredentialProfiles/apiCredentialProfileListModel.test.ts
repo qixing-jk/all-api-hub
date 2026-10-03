@@ -55,6 +55,27 @@ describe("buildApiCredentialProfileListModel", () => {
     }
   })
 
+  it("matches search text against the recorded source URL", () => {
+    const profile = buildProfile({
+      sourceUrl: "https://forum.example.com/t/42?p=3#reply",
+    })
+    const other = buildProfile({ id: "other" })
+
+    for (const searchTerm of ["forum.example.com", "t/42", "REPLY"]) {
+      const model = buildApiCredentialProfileListModel({
+        profiles: [profile, other],
+        tags,
+        tagNameById: new Map(),
+        searchTerm,
+        apiTypeFilter: "",
+        selectedTagIds: [],
+        lastFilterMode: null,
+      })
+
+      expect(model.filteredProfiles.map(({ id }) => id)).toEqual([profile.id])
+    }
+  })
+
   it("combines query, API type, and any selected tag without changing profile order", () => {
     const first = buildProfile({
       id: "first",

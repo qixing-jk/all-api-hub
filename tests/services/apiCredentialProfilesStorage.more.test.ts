@@ -195,6 +195,188 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     expect(coerced.lastUpdated).toBe(12345)
   })
 
+  describe("sourceUrl", () => {
+    it("persists a trimmed HTTP(S) source URL on create", async () => {
+      const created = await apiCredentialProfilesStorage.createProfile({
+        name: "Shared key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://shared.example.com/v1",
+        apiKey: "sk-shared",
+        sourceUrl: "  https://forum.example.com/t/123?p=2  ",
+      })
+
+      expect(created.sourceUrl).toBe("https://forum.example.com/t/123?p=2")
+      await expect(
+        apiCredentialProfilesStorage.getProfileById(created.id),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          sourceUrl: "https://forum.example.com/t/123?p=2",
+        }),
+      )
+    })
+
+    it("does not store empty, malformed, or non-HTTP(S) source URLs", async () => {
+      const created = await apiCredentialProfilesStorage.createProfile({
+        name: "No source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://nosource.example.com/v1",
+        apiKey: "sk-nosource",
+        sourceUrl: "ftp://forum.example.com/t/1",
+      })
+
+      expect(created).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+
+      const empty = await apiCredentialProfilesStorage.createProfile({
+        name: "Empty source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://empty.example.com/v1",
+        apiKey: "sk-empty",
+        sourceUrl: "   ",
+      })
+      expect(empty).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+
+      const malformed = await apiCredentialProfilesStorage.createProfile({
+        name: "Malformed source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://malformed.example.com/v1",
+        apiKey: "sk-malformed",
+        sourceUrl: "not a url",
+      })
+      expect(malformed).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("updates and clears the source URL through updateProfile", async () => {
+      const profile = await apiCredentialProfilesStorage.createProfile({
+        name: "Updatable source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://updatable.example.com/v1",
+        apiKey: "sk-updatable",
+        sourceUrl: "https://a.example.com/post",
+      })
+
+      const updated = await apiCredentialProfilesStorage.updateProfile(
+        profile.id,
+        { sourceUrl: "https://b.example.com/new-post" },
+      )
+      expect(updated.sourceUrl).toBe("https://b.example.com/new-post")
+
+      const cleared = await apiCredentialProfilesStorage.updateProfile(
+        profile.id,
+        { sourceUrl: "  " },
+      )
+      expect(cleared).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("coerces stored source URLs on read, dropping invalid values", () => {
+      const coerced = coerceApiCredentialProfilesConfig({
+        profiles: [
+          {
+            id: "row-source",
+            name: "Source row",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-source",
+            sourceUrl: "  https://forum.example.com/t/9?b=1  ",
+          },
+          {
+            id: "row-invalid-source",
+            name: "Invalid source row",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://invalid.example.com",
+            apiKey: "sk-invalid-source",
+            sourceUrl: "javascript:alert(1)",
+          },
+        ],
+      })
+
+      expect(coerced.profiles[0]).toEqual(
+        expect.objectContaining({
+          sourceUrl: "https://forum.example.com/t/9?b=1",
+        }),
+      )
+      expect(coerced.profiles[1]).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("keeps an existing source URL when a duplicate re-save has none, and prefers a new one when present", async () => {
+      const seen = await apiCredentialProfilesStorage.importConfig({
+        profiles: [
+          {
+            id: "original",
+            name: "Original",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://original.example.com",
+            apiKey: "sk-dupe",
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+          {
+            id: "with-source",
+            name: "With source",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://source.example.com",
+            apiKey: "sk-keep-source",
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            sourceUrl: "https://forum.example.com/a",
+          },
+        ],
+      })
+
+      expect(seen.profiles).toHaveLength(2)
+
+      // Duplicate re-save without a source must not wipe the recorded one.
+      const mergedWithoutSource =
+        await apiCredentialProfilesStorage.mergeConfig({
+          profiles: [
+            {
+              name: "Re-save",
+              apiType: API_TYPES.OPENAI_COMPATIBLE,
+              baseUrl: "https://source.example.com",
+              apiKey: "sk-keep-source",
+              notes: "",
+              updatedAt: 20,
+            },
+          ],
+        })
+      const kept = mergedWithoutSource.profiles.find(
+        (profile) => profile.apiKey === "sk-keep-source",
+      )
+      expect(kept?.sourceUrl).toBe("https://forum.example.com/a")
+
+      // Duplicate re-save from a newer page adopts the newer source.
+      const mergedWithNewSource =
+        await apiCredentialProfilesStorage.mergeConfig({
+          profiles: [
+            {
+              name: "Re-save new page",
+              apiType: API_TYPES.OPENAI_COMPATIBLE,
+              baseUrl: "https://source.example.com",
+              apiKey: "sk-keep-source",
+              notes: "",
+              updatedAt: 30,
+              sourceUrl: "https://forum.example.com/b?tab=new",
+            },
+          ],
+        })
+      const updated = mergedWithNewSource.profiles.find(
+        (profile) => profile.apiKey === "sk-keep-source",
+      )
+      expect(updated?.sourceUrl).toBe("https://forum.example.com/b?tab=new")
+    })
+  })
+
   it("coerces malformed rows with generated ids, fallback timestamps, and trimmed notes", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {

@@ -319,6 +319,27 @@ describe("ApiCredentialProfileListItem", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows the source page as a labeled clickable badge and omits empty ones", () => {
+    const { unmount } = renderListItem(
+      buildProfile({ sourceUrl: "  https://forum.example.com/t/9?p=2  " }),
+    )
+
+    const link = screen.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.sourceUrlLink,
+    )
+    expect(link).toHaveAttribute("href", "https://forum.example.com/t/9?p=2")
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("title", "https://forum.example.com/t/9?p=2")
+    expect(link).toHaveTextContent("apiCredentialProfiles:list.sourceUrl")
+    expect(link).toHaveAccessibleName("apiCredentialProfiles:list.sourceUrl")
+
+    unmount()
+    renderListItem(buildProfile({ sourceUrl: "   " }))
+    expect(
+      screen.queryByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.sourceUrlLink),
+    ).not.toBeInTheDocument()
+  })
+
   it("focuses and scrolls the exact profile card for a deep-link request", () => {
     const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
     const scrollIntoViewSpy = vi

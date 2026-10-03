@@ -13,6 +13,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
   Badge,
   Button,
@@ -268,6 +269,7 @@ export function ApiCredentialProfileListItem({
     "account",
   ])
   const telemetry = profile.telemetrySnapshot
+  const sourceUrl = profile.sourceUrl?.trim() ?? ""
   const hasTelemetryDetails = hasApiCredentialTelemetryDetailData(telemetry)
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(hasTelemetryDetails)
   const previousHasTelemetryDetailsRef = useRef(hasTelemetryDetails)
@@ -406,6 +408,34 @@ export function ApiCredentialProfileListItem({
                   >
                     {expirationStatusLabel}
                   </Badge>
+                  {sourceUrl ? (
+                    <Badge
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="max-w-full truncate"
+                    >
+                      <a
+                        data-testid={
+                          API_CREDENTIAL_PROFILES_TEST_IDS.sourceUrlLink
+                        }
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={sourceUrl}
+                        aria-label={t("apiCredentialProfiles:list.sourceUrl")}
+                        className="focus-visible:ring-ring gap-density-1 text-link inline-flex min-w-0 items-center gap-1 text-xs underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-1 focus-visible:outline-none"
+                      >
+                        <span className="min-w-0 truncate">
+                          {t("apiCredentialProfiles:list.sourceUrl")}
+                        </span>
+                        <WorkflowTransitionIcon
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 shrink-0"
+                        />
+                      </a>
+                    </Badge>
+                  ) : null}
                   {tagNames.map((tag) => (
                     <Badge
                       key={tag}

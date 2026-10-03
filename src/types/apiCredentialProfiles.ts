@@ -5,7 +5,7 @@ import type { HealthStatus } from "~/types"
 /**
  * Current schema version for the API credential profiles storage payload.
  */
-export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 6
+export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 7
 
 export const API_CREDENTIAL_PROFILE_LINK_STATES = {
   Active: "active",
@@ -320,6 +320,13 @@ export type ApiCredentialProfile = {
    */
   tagIds: string[]
   notes: string
+  /**
+   * Optional HTTP(S) URL of the page where the user found this credential.
+   *
+   * User-maintained metadata (e.g. a forum post or shared document), not an
+   * automated provenance claim. Kept as the full URL so the user can revisit it.
+   */
+  sourceUrl?: string
   /**
    * Optional user-maintained credential expiration date, stored as a local
    * day-level timestamp from the API credential library form.

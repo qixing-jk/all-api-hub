@@ -44,11 +44,13 @@
       "expiresAt": "到期日",
       "modelId": "模型 ID",
       "notes": "備註",
+      "sourceUrl": "來源網頁",
       "tags": "標籤"
     },
     "hints": {
       "expiresAt": "可選。用於記錄這枚金鑰預計失效的日期。",
       "saveWithoutTest": "提示：只要填寫 Base URL 與 API Key 就能儲存到 API 憑據庫（無需先測試或獲取模型列表）。測試僅用於驗證可用性。",
+      "sourceUrl": "可選。記錄你從哪個頁面取得這份憑證，之後可一鍵回訪查看更新。",
       "tags": "可選。與帳號/書籤共用全域標籤。"
     },
     "history": {
@@ -69,6 +71,7 @@
     },
     "placeholders": {
       "notes": "可選備註",
+      "sourceUrl": "https://example.com/post",
       "tags": "選擇標籤"
     },
     "privacyHint": "API Key 會被視為敏感資訊：預設隱藏，且除非你主動儲存到 API 憑據庫，否則不會持久化儲存任何資料。",

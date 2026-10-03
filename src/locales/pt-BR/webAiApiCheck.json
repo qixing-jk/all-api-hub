@@ -44,11 +44,13 @@
       "expiresAt": "Data de expiração",
       "modelId": "ID do modelo",
       "notes": "Notas",
+      "sourceUrl": "Página de origem",
       "tags": "Etiquetas"
     },
     "hints": {
       "expiresAt": "Opcional. Registre quando esta chave deverá expirar.",
       "saveWithoutTest": "Dica: você pode salvar assim que informar a URL base e a chave de API (não é necessário testar nem buscar os modelos primeiro). O teste é opcional e serve apenas para verificar a disponibilidade.",
+      "sourceUrl": "Opcional. Registra a página onde você encontrou estas credenciales para revisá-la depois.",
       "tags": "Opcional. Compartilhado com a conta global e tags de favoritos."
     },
     "history": {
@@ -69,6 +71,7 @@
     },
     "placeholders": {
       "notes": "Notas opcionais",
+      "sourceUrl": "https://example.com/post",
       "tags": "Selecionar tags"
     },
     "privacyHint": "As chaves de API são tratadas como informações confidenciais: ficam ocultas por padrão e nada é armazenado, a menos que você opte por salvar na biblioteca de credenciais de API.",

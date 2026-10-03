@@ -213,6 +213,7 @@ describe("ApiCredentialProfileDialog", () => {
         apiKey: "sk-auto",
         tagIds: [],
         notes: "",
+        sourceUrl: "",
         expiresAt: new Date(2026, 6, 31).getTime(),
         telemetryConfig: {
           mode: "auto",
@@ -413,6 +414,59 @@ describe("ApiCredentialProfileDialog", () => {
         }),
       )
     })
+  })
+
+  it("saves the source page URL (trimmed)", async () => {
+    const { onSave } = renderDialog()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+      { target: { value: "Shared credential" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.baseUrl",
+      ),
+      { target: { value: "https://shared.example.com" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.apiKey",
+      ),
+      { target: { value: "sk-shared" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.sourceUrl",
+      ),
+      { target: { value: "  https://forum.example.com/t/9?p=2  " } },
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceUrl: "https://forum.example.com/t/9?p=2",
+        }),
+      )
+    })
+  })
+
+  it("replays the source page URL when editing an existing profile", () => {
+    renderDialog({
+      profile: buildProfile({
+        sourceUrl: "https://forum.example.com/t/9?p=2",
+      }),
+    })
+
+    expect(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.sourceUrl",
+      ),
+    ).toHaveValue("https://forum.example.com/t/9?p=2")
   })
 
   it("replays stored telemetry config when editing an existing profile", () => {
