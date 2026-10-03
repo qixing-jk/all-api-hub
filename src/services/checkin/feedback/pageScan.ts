@@ -1,4 +1,6 @@
+import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import {
   isTempContextTask,
   TEMP_CONTEXT_TASK_KINDS,
@@ -46,11 +48,16 @@ export function handlePageFeedbackScan(
   }
   const cancel = () => controller.abort()
   window.addEventListener("pagehide", cancel, { once: true })
+  const statusOrigin = new URL(resolveDeploymentApiOrigin(originUrl)).origin
+  const statusPaths = new Set(
+    getCheckInFeedbackStatusRoutes(input.siteType, originUrl).map(
+      (route) => new URL(route.path, statusOrigin).pathname,
+    ),
+  )
   const scanFetch: typeof fetch = async (url, init) => {
     if (controller.signal.aborted || location.origin !== originUrl)
       throw new Error("scan_cancelled")
     const parsed = new URL(String(url))
-    if (parsed.origin !== originUrl) throw new Error("scan_origin")
     if (parsed.href === originUrl + "/")
       return new Response(document.documentElement.outerHTML, {
         headers: { "content-type": "text/html" },
@@ -58,6 +65,15 @@ export function handlePageFeedbackScan(
     const statusOptions = request.statusOptions?.[parsed.pathname] as
       | RequestInit
       | undefined
+    // API-origin exceptions apply only to registered status paths with isolation
+    // prepared by the background. Resources remain browser-origin only.
+    if (
+      parsed.origin !== originUrl &&
+      (parsed.origin !== statusOrigin ||
+        !statusPaths.has(parsed.pathname) ||
+        !statusOptions)
+    )
+      throw new Error("scan_origin")
     if (init?.headers && !statusOptions)
       throw new Error("scan_auth_unavailable")
     const headers = new Headers(init?.headers)

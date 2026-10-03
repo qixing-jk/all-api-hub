@@ -12,7 +12,7 @@ import type {
 /** Derives read-only clues from the same registry that declares method support. */
 export function getCheckInFeedbackStatusRoutes(
   siteType: AccountSiteType,
-  siteUrl?: string,
+  siteUrl: string,
 ): CheckInFeedbackStatusRoute[] {
   const routes = new Map<string, CheckInFeedbackStatusRoute>()
   const now = new Date()

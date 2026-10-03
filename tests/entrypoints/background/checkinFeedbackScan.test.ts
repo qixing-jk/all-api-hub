@@ -58,6 +58,41 @@ beforeEach(() => {
 })
 
 describe("temporary feedback scan ownership", () => {
+  it("prepares deployment-specific status options on the registered API origin", async () => {
+    const reply = vi.fn()
+    await executeTempCheckinFeedbackScan(
+      {
+        originUrl: "https://ai-router.dev",
+        requestId: "ai-router-status",
+        input: { baseUrl: "https://ai-router.dev", siteType: "sub2api" },
+      },
+      false,
+      authorize,
+      reply,
+    )
+    expect(
+      tempWindowBackgroundRuntime.prepareFetchOptions,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringMatching(
+          /^https:\/\/api\.ai-router\.dev\/api\/v1\/user\/daily-checkin\?timezone=/,
+        ),
+        rawOptions: { credentials: "omit" },
+      }),
+    )
+    expect(sendTabMessageWithRetry).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        statusOptions: expect.objectContaining({
+          "/api/v1/user/daily-checkin": { credentials: "include" },
+        }),
+      }),
+    )
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
+  })
+
   it("falls back after route lookup failure", async () => {
     vi.mocked(resolveAccountSiteRouteUrl).mockRejectedValueOnce(
       new Error("lookup failed"),
