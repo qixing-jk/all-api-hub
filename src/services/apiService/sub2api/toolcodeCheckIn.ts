@@ -6,6 +6,7 @@ import { executeAuthenticatedSub2ApiRequest } from "./authLifecycle"
 import {
   TOOLCODE_DAILY_CHECK_IN_ENDPOINT as CHECK_IN_ENDPOINT,
   createToolcodeCheckInStatusEndpoint,
+  resolveToolcodeCheckInTimezone,
   TOOLCODE_CHECK_IN_STATUS_ENDPOINT as STATUS_ENDPOINT,
 } from "./toolcodeCheckInProtocol"
 
@@ -77,7 +78,9 @@ export async function fetchToolcodeDailyCheckInStatus(
     STATUS_ENDPOINT,
     async (authenticatedRequest) => {
       const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: createToolcodeCheckInStatusEndpoint(),
+        endpoint: createToolcodeCheckInStatusEndpoint(
+          resolveToolcodeCheckInTimezone(),
+        ),
         options: { method: "GET", cache: "no-store" },
       })
       const data = parseData(response, STATUS_ENDPOINT)
@@ -94,7 +97,11 @@ export async function fetchToolcodeDailyCheckInStatus(
         checkedInToday: data.checked_in_today,
       }
     },
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    {
+      proactiveRefresh: false,
+      recoverMissingAccessToken: false,
+      recoverUnauthorized: false,
+    },
   )
 }
 

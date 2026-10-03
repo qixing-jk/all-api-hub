@@ -3,7 +3,10 @@ import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/aiRouterCheckInProtocol"
-import { createToolcodeCheckInStatusEndpoint } from "~/services/apiService/sub2api/toolcodeCheckInProtocol"
+import {
+  createToolcodeCheckInStatusEndpoint,
+  resolveToolcodeCheckInTimezone,
+} from "~/services/apiService/sub2api/toolcodeCheckInProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -297,7 +300,11 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     supportsStatusReadback: true,
     // Logged-in GET verified at https://toolcode.top/engagement, 2026-10-04.
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
-      { path: createToolcodeCheckInStatusEndpoint() },
+      {
+        path: createToolcodeCheckInStatusEndpoint(
+          resolveToolcodeCheckInTimezone(),
+        ),
+      },
     ],
     legacy: false,
     newAccountCompatibility: false,

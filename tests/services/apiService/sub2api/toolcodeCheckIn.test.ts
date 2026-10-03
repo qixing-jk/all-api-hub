@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/browserAuth"
+import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/tokenRefresh"
 import {
   fetchToolcodeDailyCheckInStatus,
   performToolcodeDailyCheckIn,
@@ -7,6 +9,27 @@ import {
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+
+vi.mock(
+  "~/services/apiService/sub2api/browserAuth",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/browserAuth")
+    >()),
+    recoverSub2ApiBrowserAuth: vi.fn().mockResolvedValue(null),
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi
+      .fn()
+      .mockRejectedValue(new Error("refresh unavailable")),
+  }),
+)
 
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
@@ -43,7 +66,24 @@ const statusData = (
 describe("ToolCode growth-center check-in protocol", () => {
   beforeEach(() => {
     vi.mocked(fetchApiResponse).mockReset()
+    vi.mocked(recoverSub2ApiBrowserAuth).mockClear()
+    vi.mocked(refreshSub2ApiTokens).mockClear()
   })
+
+  it.each([undefined, "saved-refresh-token"])(
+    "does not recover or persist credentials during a missing-token status probe (refresh=%s)",
+    async (refreshToken) => {
+      await expect(
+        fetchToolcodeDailyCheckInStatus({
+          ...request,
+          auth: { ...request.auth!, accessToken: "", refreshToken },
+        }),
+      ).rejects.toMatchObject({ statusCode: 401 })
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     [false, true, true],
