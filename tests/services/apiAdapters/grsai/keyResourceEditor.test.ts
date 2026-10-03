@@ -20,6 +20,15 @@ const key = (overrides: Partial<GrsaiApiKey> = {}): GrsaiApiKey => ({
 })
 
 describe("grsai key editor", () => {
+  it("preserves stored credits when renaming an unlimited key", () => {
+    const editor = createGrsaiKeyEditor({ key: key({ credits: 500 }) })
+    const command = editor.buildCommand({
+      ...editor.initialValues,
+      [field.Name]: "Renamed",
+    })
+    expect(command.values.credits).toBe(500)
+    expect(command.values.name).toBe("Renamed")
+  })
   it("defaults a new key to an unlimited, named credential", () => {
     const editor = createGrsaiKeyEditor({})
 
@@ -97,8 +106,7 @@ describe("grsai key editor", () => {
     expect(command.values).toEqual({
       name: "Fresh key",
       unlimited: true,
-      // The deployment ignores the budget of an unlimited key, so it is cleared
-      // rather than carried along.
+      // A new unlimited key keeps its initial budget; hidden edits are ignored.
       credits: 0,
       expiresAt: null,
     })

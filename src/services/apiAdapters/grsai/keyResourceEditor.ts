@@ -145,7 +145,10 @@ export function createGrsaiKeyEditor(params: {
         values: {
           name: asString(values[field.Name]).trim(),
           unlimited,
-          credits: unlimited || typeof credits !== "number" ? 0 : credits,
+          credits:
+            unlimited || typeof credits !== "number"
+              ? baseline.credits
+              : credits,
           expiresAt: expiry ? new Date(expiry).toISOString() : null,
         },
       }

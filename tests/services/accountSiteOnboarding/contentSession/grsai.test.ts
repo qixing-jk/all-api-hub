@@ -28,6 +28,26 @@ function createLocalStorageMock() {
 }
 
 describe("grsaiContentSessionExtractor", () => {
+  it("ignores malformed console URLs", async () => {
+    await expect(
+      grsaiContentSessionExtractor.extract({ url: "not a URL" }),
+    ).resolves.toBeNull()
+  })
+
+  it("ignores malformed console response bodies", async () => {
+    storeToken("session-token")
+    server.use(
+      http.post(
+        "https://eb.grsaiapi.com/client/grsai/getUserInfo",
+        () => new HttpResponse("not JSON"),
+      ),
+    )
+    await expect(
+      grsaiContentSessionExtractor.extract({
+        url: "https://grsai.com/dashboard",
+      }),
+    ).resolves.toBeNull()
+  })
   beforeEach(() => {
     server.resetHandlers()
     vi.unstubAllGlobals()

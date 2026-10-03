@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -61,6 +62,94 @@ const key = (overrides: Partial<GrsaiApiKey> = {}): GrsaiApiKey => ({
 const openSession = async () => await grsaiAccountKeyResources.open(openInput)
 
 describe("grsaiAccountKeyResources", () => {
+  const ref = {
+    accountId: "account-example",
+    siteType: SITE_TYPES.GRSAI,
+    scopeKey: "account",
+    resourceId: key().id,
+  }
+
+  it("reports read failures without exposing a runtime secret", async () => {
+    mockFetchGrsaiKeys.mockRejectedValue(new Error("offline"))
+    const session = await openSession()
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toMatchObject({
+      kind: "unavailable",
+      failure: { code: expect.any(String) },
+    })
+  })
+
+  it.each(["create", "update", "delete"])(
+    "does not replay a rejected %s mutation",
+    async (operation) => {
+      const denied = new ApiError(
+        "denied",
+        undefined,
+        "/keys",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+      mockFetchGrsaiKeys.mockResolvedValue([key()])
+      const session = await openSession()
+      const collection = await session.openCollection("account")
+      if (operation === "create") {
+        mockCreateGrsaiKey.mockRejectedValue(denied)
+        const editor = await session.openCreateEditor("account")
+        await expect(editor.submit(editor.initialValues)).rejects.toBeDefined()
+        expect(mockCreateGrsaiKey).toHaveBeenCalledTimes(1)
+      } else if (operation === "update") {
+        mockUpdateGrsaiKey.mockRejectedValue(denied)
+        const editor = await collection.openEditEditor(ref)
+        await expect(
+          editor.submit({ ...editor.initialValues, name: "Renamed" }),
+        ).rejects.toBeDefined()
+        expect(mockUpdateGrsaiKey).toHaveBeenCalledTimes(1)
+      } else {
+        mockDeleteGrsaiKey.mockRejectedValue(denied)
+        await expect(collection.delete(ref)).rejects.toBeDefined()
+        expect(mockDeleteGrsaiKey).toHaveBeenCalledTimes(1)
+      }
+    },
+  )
+
+  it.each(["unchanged", "missing", "offline"])(
+    "retains uncertainty when update readback is %s",
+    async (state) => {
+      mockFetchGrsaiKeys.mockResolvedValue([key({ credits: 500 })])
+      const session = await openSession()
+      const collection = await session.openCollection("account")
+      const editor = await collection.openEditEditor(ref)
+      mockUpdateGrsaiKey.mockImplementation(async () => {
+        if (state === "offline")
+          mockFetchGrsaiKeys.mockRejectedValue(new Error("offline"))
+        else
+          mockFetchGrsaiKeys.mockResolvedValue(
+            state === "missing" ? [] : [key({ credits: 500 })],
+          )
+      })
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Renamed" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockUpdateGrsaiKey).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("renames an unlimited key without changing its stored credit budget", async () => {
+    let inventory = [key({ credits: 500 })]
+    mockFetchGrsaiKeys.mockImplementation(async () => inventory)
+    mockUpdateGrsaiKey.mockImplementation(async () => {
+      inventory = [key({ name: "Renamed", credits: 500 })]
+    })
+    const collection = await (await openSession()).openCollection("account")
+    const editor = await collection.openEditEditor(ref)
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Renamed" }),
+    ).resolves.toMatchObject({ facts: { displayName: "Renamed" } })
+    expect(mockUpdateGrsaiKey).toHaveBeenCalledWith(expect.anything(), {
+      apiKey: key().key,
+      name: "Renamed",
+      type: 0,
+      expireTime: 0,
+    })
+  })
   beforeEach(() => {
     vi.resetAllMocks()
   })

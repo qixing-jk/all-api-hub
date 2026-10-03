@@ -203,6 +203,35 @@ describe("grsai account data", () => {
   })
 
   describe("session recovery", () => {
+    it("reports the original failure when browser session recovery throws", async () => {
+      vi.mocked(resolveAccountBrowserSession).mockRejectedValueOnce(
+        new Error("browser unavailable"),
+      )
+      const result = await refreshAccountData(request)
+      expect(result.success).toBe(false)
+      expect(result).not.toHaveProperty("authUpdate")
+    })
+
+    it("rejects a resolver result for another account even if its filter was bypassed", async () => {
+      vi.mocked(resolveAccountBrowserSession).mockResolvedValueOnce(
+        browserSession({ userId: "someone-else" }) as never,
+      )
+      const result = await refreshAccountData(request)
+      expect(result.success).toBe(false)
+      expect(result).not.toHaveProperty("authUpdate")
+    })
+
+    it("reports a network failure without attempting browser recovery", async () => {
+      server.use(
+        http.post(
+          `${CONSOLE}${GRSAI_ENDPOINTS.config}`,
+          () => new HttpResponse(null, { status: 503 }),
+        ),
+      )
+      const result = await refreshAccountData(request)
+      expect(result.success).toBe(false)
+      expect(resolveAccountBrowserSession).not.toHaveBeenCalled()
+    })
     beforeEach(() => {
       // Only the token the browser is holding still authenticates.
       server.use(

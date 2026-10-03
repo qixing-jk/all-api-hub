@@ -803,7 +803,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         loginPath: GRSAI_ACCOUNT_PATH,
         usagePath: "/dashboard/consumption-log",
         adminCredentialsPath: "/dashboard/api-keys",
-        siteAnnouncementsPath: "/dashboard/announcements",
+        siteAnnouncementsPath: null,
         pricingPath: "/dashboard/models",
         // No check-in flow, no separate access-token page, no activation codes.
         checkInPath: null,

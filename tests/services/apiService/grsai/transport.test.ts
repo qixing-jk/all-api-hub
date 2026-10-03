@@ -5,6 +5,7 @@ import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
 import { computeGrsaiSignature } from "~/services/apiService/grsai/signature"
 import {
   fetchGrsaiConsole,
+  getGrsaiAccessToken,
   isGrsaiAuthFailureError,
   openGrsaiConsoleSession,
   type GrsaiConsoleSession,
@@ -29,6 +30,23 @@ const session: GrsaiConsoleSession = {
 }
 
 describe("grsai console transport", () => {
+  it("rejects a missing account token before dispatching", async () => {
+    expect(getGrsaiAccessToken({ baseUrl: request.baseUrl })).toBe("")
+    await expect(
+      fetchGrsaiConsole({ baseUrl: request.baseUrl }, GRSAI_ENDPOINTS.credits),
+    ).rejects.toMatchObject({ statusCode: 401 })
+  })
+
+  it("rejects malformed signing configuration", async () => {
+    server.use(
+      http.post(`${CONSOLE_ORIGIN}${GRSAI_ENDPOINTS.config}`, () =>
+        HttpResponse.json({ code: 0, data: {} }),
+      ),
+    )
+    await expect(openGrsaiConsoleSession(request)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
   beforeEach(() => {
     server.resetHandlers()
   })

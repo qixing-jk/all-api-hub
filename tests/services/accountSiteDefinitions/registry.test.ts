@@ -59,6 +59,13 @@ import { getManagedResourceRegistration } from "~/services/apiAdapters/managedRe
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
+it("does not expose an unsupported Grsai announcements route", () => {
+  expect(
+    getAccountSiteDefinition(SITE_TYPES.GRSAI)?.onboarding?.routes
+      ?.siteAnnouncementsPath,
+  ).toBeNull()
+})
+
 type ExpectExact<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true

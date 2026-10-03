@@ -30,6 +30,14 @@ describe("grsai request signature", () => {
   })
 
   describe("computeGrsaiSignature", () => {
+    it.each(["", "000000", "1xa0011", "2x9900992"])(
+      "rejects malformed or out-of-range signing indices: %j",
+      async (random) => {
+        await expect(
+          computeGrsaiSignature({ ...GRSAI_SIGNATURE_MATERIAL, random }, {}),
+        ).rejects.toThrow("invalid_grsai_signature_material")
+      },
+    )
     it("reproduces the xtx the console itself computed", async () => {
       for (const vector of GRSAI_SIGNATURE_VECTORS) {
         await expect(
