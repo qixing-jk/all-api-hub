@@ -241,6 +241,45 @@ describe("wongGongyiProvider", () => {
       )
     })
 
+    it("reports the awarded quota as the check-in reward", async () => {
+      const { newApiFamilyRequests } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
+      const mockedEnvelope = vi.mocked(newApiFamilyRequests.envelope)
+
+      // Deployments in this family report amounts as numbers or decimal strings.
+      for (const quota of [500000, "500000"]) {
+        mockedEnvelope.mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { enabled: true, checked_in: false, quota },
+        })
+
+        const result = await checkInForTest(mockAccount)
+        expect(result.status).toBe("success")
+        expect(result.reward).toEqual({ quota: 500000 })
+      }
+    })
+
+    it("omits the reward when the response carries no usable amount", async () => {
+      const { newApiFamilyRequests } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
+      const mockedEnvelope = vi.mocked(newApiFamilyRequests.envelope)
+
+      for (const quota of [undefined, 0, -1, "abc", "", Number.NaN]) {
+        mockedEnvelope.mockResolvedValueOnce({
+          success: true,
+          message: "",
+          data: { enabled: true, checked_in: false, quota },
+        })
+
+        const result = await checkInForTest(mockAccount)
+        expect(result.status).toBe("success")
+        expect(result.reward).toBeUndefined()
+      }
+    })
+
     it("does not let ambiguous copy override an explicit unchecked status", async () => {
       const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"

@@ -204,7 +204,21 @@ interface CheckinAccountResultBase {
   retryable?: boolean
   reconciliation?: CheckinReconciliationOutcome
   accountStateDurability?: CheckinAccountStateDurability
+  reward?: CheckInReward
   timestamp: number
+}
+
+/**
+ * An award a site reported for one check-in.
+ *
+ * `quota` is always the extension's internal quota unit, so neither the UI nor
+ * the storage layer has to know whether a deployment reports its award in quota
+ * or in its own currency. Providers normalize before setting it; there is no
+ * "unknown unit" state, and a missing field means "this method has no
+ * authoritative amount", never zero.
+ */
+export interface CheckInReward {
+  quota: number
 }
 
 /**
@@ -216,6 +230,10 @@ interface CheckinAccountResultBase {
  * for every failed or uncertain row. `isRetryableCheckinResult` is the only
  * reader, so the queue and the UI cannot disagree about a row this version
  * produced.
+ *
+ * `reward` is permitted on success and already-checked outcomes only. Providers
+ * set it when the site returns an authoritative award, including today's record
+ * in an already-fetched New API status response.
  */
 export type CheckinAccountResult = CheckinAccountResultBase &
   (
@@ -230,12 +248,14 @@ export type CheckinAccountResult = CheckinAccountResultBase &
     | {
         status: typeof CHECKIN_RESULT_STATUS.FAILED
         accountStateDurability?: never
+        reward?: never
       }
     | {
         status: typeof CHECKIN_RESULT_STATUS.SKIPPED
         retryable?: never
         reconciliation?: never
         accountStateDurability?: never
+        reward?: never
       }
     | {
         status: typeof CHECKIN_RESULT_STATUS.UNCERTAIN
@@ -244,6 +264,7 @@ export type CheckinAccountResult = CheckinAccountResultBase &
           typeof CHECKIN_RECONCILIATION_OUTCOME.CHECKED
         >
         accountStateDurability?: never
+        reward?: never
       }
   )
 

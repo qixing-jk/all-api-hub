@@ -36,6 +36,8 @@ import {
   isAlreadyCheckedMessage,
   isPermissionFailureMessage,
   normalizeCheckinMessage,
+  readPositiveDecimalAmount,
+  readQuotaReward,
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
@@ -59,7 +61,7 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
-import { formatLocalMonthKey } from "~/utils/core/dayKey"
+import { formatLocalDayKey, formatLocalMonthKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { joinUrl } from "~/utils/core/url"
 
@@ -108,6 +110,29 @@ function createCheckInRequest(
     protectionBypassExecution,
     ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
   }
+}
+
+/**
+ * Resolve the quota today's check-in awarded from a month's record set.
+ *
+ * The comparison uses the local calendar day, the same boundary the rest of the
+ * extension keys days by. A deployment that resolves its own day differently
+ * simply yields no match, and a record without a positive award yields none
+ * either, so the row stays without an amount instead of showing a neighbouring
+ * day's value or a meaningless zero.
+ */
+function resolveTodayQuotaAwarded(
+  records: NewApiCheckInRecord[] | undefined,
+): number | undefined {
+  if (!Array.isArray(records)) return undefined
+  const today = formatLocalDayKey()
+  const todayRecord = records.find(
+    (record) =>
+      record &&
+      typeof record.checkin_date === "string" &&
+      record.checkin_date.trim() === today,
+  )
+  return readPositiveDecimalAmount(todayRecord?.quota_awarded)
 }
 
 /** Read the canonical public site flag instead of matching backend copy. */
@@ -291,6 +316,11 @@ function resolveStandardCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       rawMessage: message || undefined,
+      // A repeat answer may carry the day's record; the day-match guard keeps
+      // any other day's record from being shown as today's award.
+      reward: readQuotaReward(
+        resolveTodayQuotaAwarded(payload.data ? [payload.data] : undefined),
+      ),
       data: payload.data,
     }
   }
@@ -302,6 +332,9 @@ function resolveStandardCheckinResult(params: {
       messageKey: message
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+      // The mutation answers with the day's record, whose `quota_awarded` is
+      // already an internal quota amount.
+      reward: readQuotaReward(payload.data?.quota_awarded),
       data: payload.data ?? undefined,
     }
   }
@@ -328,6 +361,12 @@ async function fetchCheckedInTodayStatus(
   | {
       checkedInToday?: boolean
       enabled: boolean
+      /**
+       * The quota this day's check-in awarded, read from the same month record
+       * set this call already fetched. Absent when the deployment returns no
+       * records or none of them is the caller's local day.
+       */
+      todayQuotaAwarded?: number
     }
   | undefined
 > {
@@ -356,9 +395,13 @@ async function fetchCheckedInTodayStatus(
       typeof checkInData?.stats?.checked_in_today === "boolean" &&
       (!strictResponse || typeof checkInData?.enabled === "boolean")
     ) {
+      const todayQuotaAwarded = resolveTodayQuotaAwarded(
+        checkInData.stats.records,
+      )
       return {
         enabled: checkInData.enabled !== false,
         checkedInToday: checkInData.stats.checked_in_today,
+        ...(todayQuotaAwarded !== undefined ? { todayQuotaAwarded } : {}),
       }
     }
 
@@ -395,19 +438,17 @@ async function pollCheckedInTodayStatus(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
-): Promise<boolean | undefined> {
+): ReturnType<typeof fetchCheckedInTodayStatus> {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
-  let lastStatus: boolean | undefined
+  let lastStatus: Awaited<ReturnType<typeof fetchCheckedInTodayStatus>>
 
   while (Date.now() <= deadline) {
-    lastStatus = (
-      await fetchCheckedInTodayStatus(
-        account,
-        tempWindowRequestSource,
-        protectionBypassExecution,
-      )
-    )?.checkedInToday
-    if (lastStatus === true) return true
+    lastStatus = await fetchCheckedInTodayStatus(
+      account,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    )
+    if (lastStatus?.checkedInToday === true) return lastStatus
 
     const remainingMs = deadline - Date.now()
     if (remainingMs <= 0) break
@@ -657,16 +698,17 @@ async function resolveNativePageCheckinResult(params: {
     })
   }
 
-  const checkedInToday = await pollCheckedInTodayStatus(
+  const observedAfterNativeAction = await pollCheckedInTodayStatus(
     params.account,
     params.tempWindowRequestSource,
     params.protectionBypassExecution,
   )
-  if (checkedInToday === true) {
+  if (observedAfterNativeAction?.checkedInToday === true) {
     return {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       messageKey:
         AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+      reward: readQuotaReward(observedAfterNativeAction.todayQuotaAwarded),
       data: action,
     }
   }
@@ -777,18 +819,17 @@ async function resolveTurnstileAssistedCheckinResult(params: {
 
   if (!assisted.success) {
     if (assisted.turnstile?.status !== "token_obtained") {
-      const checkedInToday = (
-        await fetchCheckedInTodayStatus(
-          params.account,
-          params.tempWindowRequestSource,
-          params.protectionBypassExecution,
-        )
-      )?.checkedInToday
-      if (checkedInToday === true) {
+      const observedAfterAssistFailure = await fetchCheckedInTodayStatus(
+        params.account,
+        params.tempWindowRequestSource,
+        params.protectionBypassExecution,
+      )
+      if (observedAfterAssistFailure?.checkedInToday === true) {
         return {
           status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+          reward: readQuotaReward(observedAfterAssistFailure.todayQuotaAwarded),
           data: assisted ?? undefined,
         }
       }
@@ -894,18 +935,17 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     assisted.turnstile?.status &&
     assisted.turnstile.status !== "token_obtained"
   ) {
-    const checkedInToday = (
-      await fetchCheckedInTodayStatus(
-        params.account,
-        params.tempWindowRequestSource,
-        params.protectionBypassExecution,
-      )
-    )?.checkedInToday
-    if (checkedInToday === true) {
+    const observedAfterAssist = await fetchCheckedInTodayStatus(
+      params.account,
+      params.tempWindowRequestSource,
+      params.protectionBypassExecution,
+    )
+    if (observedAfterAssist?.checkedInToday === true) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+        reward: readQuotaReward(observedAfterAssist.todayQuotaAwarded),
         data: assistedPayload ?? undefined,
       }
     }
@@ -1036,6 +1076,7 @@ async function checkinNewApi(
         return {
           status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
           rawMessage: responseMessage || undefined,
+          reward: readQuotaReward(statusAfterFailure.todayQuotaAwarded),
           data: checkinResponse.data,
         }
       }

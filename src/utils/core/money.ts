@@ -1,8 +1,26 @@
-import { CURRENCY_SYMBOLS, DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
-import type { CurrencyType } from "~/types"
+import {
+  CURRENCY_SYMBOLS,
+  DEFAULT_USD_TO_CNY_RATE,
+  QUOTA_PER_USD,
+} from "~/constants/money"
+import type { CurrencyAmount, CurrencyType } from "~/types"
 
 /** Decimal precision shared by static and animated money displays. */
 export const MONEY_DECIMAL_PLACES = 2
+
+/**
+ * Converts an internal quota amount into both display currencies.
+ *
+ * The account owns the USD-to-CNY rate used elsewhere in the UI, so callers
+ * pass their own account's `exchange_rate`.
+ */
+export const convertQuotaToCurrencyAmounts = (
+  quota: number,
+  exchangeRate: number,
+): CurrencyAmount => {
+  const USD = quota / QUOTA_PER_USD
+  return { USD, CNY: USD * exchangeRate }
+}
 
 /**
  * Formatting options for money-like numeric values used across the UI.

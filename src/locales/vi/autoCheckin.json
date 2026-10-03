@@ -76,6 +76,9 @@
       "summary": "Hiển thị {{start}}–{{end}} / {{total}}"
     },
     "refresh": "Làm mới",
+    "reward": {
+      "title": "Phần thưởng của lần điểm danh này"
+    },
     "runNow": "Thực hiện ngay",
     "statistics": {
       "result": "Kết quả thực hiện"

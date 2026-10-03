@@ -80,6 +80,9 @@
       "summary": "Mostrando {{start}}–{{end}} de {{total}}"
     },
     "refresh": "Actualizar",
+    "reward": {
+      "title": "Recompensa de este check-in"
+    },
     "runNow": "Ejecutar ahora",
     "statistics": {
       "result": "Resultado"

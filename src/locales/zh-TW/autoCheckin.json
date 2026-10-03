@@ -76,6 +76,9 @@
       "summary": "顯示第 {{start}}–{{end}} 筆，共 {{total}} 筆"
     },
     "refresh": "重新整理",
+    "reward": {
+      "title": "本次簽到獎勵"
+    },
     "runNow": "立即執行",
     "statistics": {
       "result": "執行結果"

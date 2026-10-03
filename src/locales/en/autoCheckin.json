@@ -78,6 +78,9 @@
       "summary": "Showing {{start}}–{{end}} of {{total}}"
     },
     "refresh": "Refresh",
+    "reward": {
+      "title": "Reward for this check-in"
+    },
     "runNow": "Run now",
     "statistics": {
       "result": "Result"

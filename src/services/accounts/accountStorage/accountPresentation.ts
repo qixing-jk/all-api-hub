@@ -1,4 +1,3 @@
-import { QUOTA_PER_USD } from "~/constants/money"
 import { normalizeSiteAccount } from "~/services/accounts/accountDefaults"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStatsResolver"
 import {
@@ -6,11 +5,7 @@ import {
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
 import type { DisplaySiteData, SiteAccount } from "~/types"
-
-const convertQuotaToCurrency = (quota: number, exchangeRate: number) => {
-  const USD = quota / QUOTA_PER_USD
-  return { USD, CNY: USD * exchangeRate }
-}
+import { convertQuotaToCurrencyAmounts } from "~/utils/core/money"
 
 class AccountPresentation {
   convertToDisplayData(
@@ -49,15 +44,15 @@ class AccountPresentation {
       disabled: account.disabled,
       excludeFromTotalBalance: account.excludeFromTotalBalance,
       excludeFromTodayIncome: account.excludeFromTodayIncome,
-      balance: convertQuotaToCurrency(
+      balance: convertQuotaToCurrencyAmounts(
         account.account_info.quota,
         account.exchange_rate,
       ),
-      todayConsumption: convertQuotaToCurrency(
+      todayConsumption: convertQuotaToCurrencyAmounts(
         account.account_info.today_quota_consumption,
         account.exchange_rate,
       ),
-      todayIncome: convertQuotaToCurrency(
+      todayIncome: convertQuotaToCurrencyAmounts(
         account.account_info.today_income,
         account.exchange_rate,
       ),

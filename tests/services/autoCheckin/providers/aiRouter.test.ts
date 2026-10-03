@@ -6,6 +6,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS,
@@ -291,6 +292,22 @@ describe("AI-ROUTER check-in integration", () => {
         kind === AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied
           ? CHECKIN_RESULT_STATUS.SUCCESS
           : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    })
+  })
+
+  it("reports the awarded USD amount as a quota reward", async () => {
+    vi.mocked(performAiRouterDailyCheckIn).mockResolvedValue({
+      kind: AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+      data: { rewardAmount: 1 },
+    })
+    await expect(
+      aiRouterProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      reward: { quota: 1 * QUOTA_PER_USD },
     })
   })
 

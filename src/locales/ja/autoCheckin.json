@@ -76,6 +76,9 @@
       "summary": "{{total}} 件中 {{start}}–{{end}} 件を表示"
     },
     "refresh": "更新",
+    "reward": {
+      "title": "今回のチェックイン報酬"
+    },
     "runNow": "今すぐ実行",
     "statistics": {
       "result": "結果"

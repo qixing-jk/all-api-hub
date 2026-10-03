@@ -221,6 +221,176 @@ describe("AutoCheckin ResultsTable", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows the reported reward in the selected currency", () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "rewarded",
+            accountName: "Rewarded Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            reward: { quota: 500_000 },
+            timestamp: 2,
+          },
+          {
+            accountId: "no-reward",
+            accountName: "No Reward Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 1,
+          },
+          {
+            // A deleted account has no exchange rate to convert with.
+            accountId: "missing-rate",
+            accountName: "Missing Rate Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            reward: { quota: 500_000 },
+            timestamp: 1,
+          },
+        ]}
+        currencyType="CNY"
+        exchangeRateByAccountId={{ rewarded: 7.2 }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const reward = screen.getByText("+¥7.20")
+    expect(reward).toBeVisible()
+    expect(reward).toHaveAttribute(
+      "title",
+      "autoCheckin:execution.reward.title",
+    )
+
+    // The amount reads as part of the message line, separated from it, and the
+    // status cell stays a bare result badge.
+    const row = reward.closest("tr")
+    expect(row).not.toBeNull()
+    const cells = within(row as HTMLElement).getAllByRole("cell")
+    expect(cells[1]).not.toHaveTextContent("+¥7.20")
+    expect(cells[1]).toHaveTextContent("autoCheckin:execution.status.success")
+    expect(cells[2]).toHaveTextContent("+¥7.20")
+
+    expect(screen.queryAllByText("+¥0.00")).toHaveLength(0)
+  })
+
+  it.each([
+    { quota: 500_000, rate: Number.NaN },
+    { quota: 500_000, rate: Number.POSITIVE_INFINITY },
+    { quota: 500_000, rate: -1 },
+    { quota: Number.NaN, rate: 7.2 },
+    { quota: Number.POSITIVE_INFINITY, rate: 7.2 },
+    { quota: -1, rate: 7.2 },
+    { quota: Number.MAX_VALUE, rate: Number.MAX_VALUE },
+  ])("omits an invalid reward conversion: %j", ({ quota, rate }) => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "invalid-reward",
+            accountName: "Invalid Reward Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            reward: { quota },
+            timestamp: 1,
+          },
+        ]}
+        currencyType="CNY"
+        exchangeRateByAccountId={{ "invalid-reward": rate }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      screen.queryByTitle("autoCheckin:execution.reward.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("autoCheckin:execution.status.success"),
+    ).toBeVisible()
+  })
+
+  it.each([
+    CHECKIN_RESULT_STATUS.FAILED,
+    CHECKIN_RESULT_STATUS.SKIPPED,
+    CHECKIN_RESULT_STATUS.UNCERTAIN,
+  ])("hides a stored reward on a %s result", (status) => {
+    const storedResult = {
+      accountId: "invalid-status",
+      accountName: "Invalid Status Account",
+      status,
+      reward: { quota: 500_000 },
+      timestamp: 1,
+    } as unknown as CheckinAccountResult
+    render(
+      <ResultsTable
+        results={[storedResult]}
+        exchangeRateByAccountId={{ "invalid-status": 7.2 }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      screen.queryByTitle("autoCheckin:execution.reward.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows an already-checked row's award too", () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "already",
+            accountName: "Already Checked Account",
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            reward: { quota: 500_000 },
+            timestamp: 1,
+          },
+        ]}
+        currencyType="USD"
+        exchangeRateByAccountId={{ already: 7.2 }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(screen.getByText("+$1.00")).toBeVisible()
+  })
+
+  it("shows a USD reward without converting it", () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "rewarded",
+            accountName: "Rewarded Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            reward: { quota: 125_000 },
+            timestamp: 1,
+          },
+        ]}
+        currencyType="USD"
+        exchangeRateByAccountId={{ rewarded: 7.2 }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(screen.getByText("+$0.25")).toBeVisible()
+  })
+
   it("prioritizes failed, uncertain, and not-executed results", () => {
     render(
       <ResultsTable

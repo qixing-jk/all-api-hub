@@ -76,6 +76,9 @@
       "summary": "显示第 {{start}}–{{end}} 条，共 {{total}} 条"
     },
     "refresh": "刷新",
+    "reward": {
+      "title": "本次签到奖励"
+    },
     "runNow": "立即执行",
     "statistics": {
       "result": "执行结果"

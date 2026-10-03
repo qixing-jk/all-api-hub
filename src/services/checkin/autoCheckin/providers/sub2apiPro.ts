@@ -25,6 +25,7 @@ import {
   failedSub2ApiCheckIn,
   getSub2ApiCheckInReadiness,
   mapSub2ApiCheckInMutationError,
+  readUsdReward,
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
@@ -66,6 +67,7 @@ export const sub2apiProProvider: AutoCheckinProvider = {
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+            reward: readUsdReward(result.data.rewardAmount),
             data: result.data,
           }
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:

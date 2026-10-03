@@ -88,12 +88,12 @@ describe("AutoCheckin ResultsTable dev actions", () => {
       <ResultsTable
         results={[
           {
-            ...baseResult,
             accountId: "failed-account",
             accountName: "Failed Account",
             status: CHECKIN_RESULT_STATUS.FAILED,
             retryable: false,
-            accountStateDurability: undefined,
+            message: baseResult.message,
+            timestamp: baseResult.timestamp,
           },
         ]}
         onDisableAccount={vi.fn()}

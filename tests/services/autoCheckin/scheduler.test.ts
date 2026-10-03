@@ -689,6 +689,47 @@ describe("daily automatic check-in preparation", () => {
     expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
 
+  it("persists the reward a successful check-in reported", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "sub2api-pro:daily-checkin",
+      result: {
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        reward: { quota: 250_000 },
+      },
+      retryable: false,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "success",
+      reward: { quota: 250_000 },
+    })
+  })
+
+  it("persists a success without a reward when the method reports no amount", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "sub2api-pro:daily-checkin",
+      result: {
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      },
+      retryable: false,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount[account.id].status).toBe("success")
+    expect(storedStatus.perAccount[account.id].reward).toBeUndefined()
+  })
+
   it.each(["manual", "globally disabled"])(
     "does not run automatic discovery for a %s run",
     async (mode) => {
@@ -5246,6 +5287,100 @@ describe("auto check-in operation helpers", () => {
     )
     expect(updated?.pendingRetry).toBe(false)
   })
+
+  it.each([
+    {
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      sameDay: true,
+      checked: true,
+      keepsReward: true,
+    },
+    {
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      sameDay: true,
+      checked: true,
+      keepsReward: true,
+    },
+    {
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      sameDay: false,
+      checked: true,
+      keepsReward: false,
+    },
+    {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      sameDay: true,
+      checked: true,
+      keepsReward: false,
+    },
+    {
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      sameDay: true,
+      checked: false,
+      keepsReward: false,
+    },
+  ])(
+    "retains a reward only after confirming a same-day successful result: %j",
+    async ({ status, sameDay, checked, keepsReward }) => {
+      const now = Date.now()
+      let storedStatus: any = {
+        perAccount: {
+          [verificationAccount.id]: {
+            accountId: verificationAccount.id,
+            accountName: "Verify Account",
+            status,
+            reward: { quota: 250_000 },
+            timestamp: sameDay ? now : now - 48 * 60 * 60 * 1000,
+          },
+        },
+      }
+      mockedAutoCheckinStorage.getStatus.mockImplementation(
+        async () => storedStatus,
+      )
+      mockedAutoCheckinStorage.updateStatus.mockImplementation(
+        async (updater: any) => {
+          const applied = updater(storedStatus)
+          if (applied.patch)
+            storedStatus = { ...storedStatus, ...applied.patch }
+          return { ok: true, result: applied.result ?? null }
+        },
+      )
+      mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([
+        verificationAccount,
+      ])
+      mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+        verificationAccount,
+      )
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
+      })
+      mockedRefreshSelectedStatus.mockImplementation(
+        async ({ onOutcome, config }: any) => {
+          onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+          return config
+        },
+      )
+      mockedInspection.getSelectedCheckInStatus.mockReturnValue({
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: checked
+          ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+          : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        observedAt: now,
+      })
+      const outcome = await autoCheckinScheduler.verifyAccountStatus(
+        verificationAccount.id,
+      )
+      expect(outcome).toMatchObject({
+        outcome: "verified",
+        verifiedStatus: checked ? "checked" : "not_checked",
+      })
+      const updated = await autoCheckinStorage.getStatus()
+      expect(updated?.perAccount?.[verificationAccount.id]?.reward).toEqual(
+        keepsReward ? { quota: 250_000 } : undefined,
+      )
+    },
+  )
 
   it("queues a verified not-checked result that was not already pending", async () => {
     let storedStatus: any = {
