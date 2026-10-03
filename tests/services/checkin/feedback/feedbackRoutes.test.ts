@@ -6,6 +6,7 @@ import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   type AutoCheckinMethodDefinition,
 } from "~/services/checkin/autoCheckin/providers/registry"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -55,7 +56,9 @@ describe("registered check-in feedback status routes", () => {
       if (!definition.supportsStatusReadback) continue
       const routes = getCheckInFeedbackStatusRoutes(
         definition.siteTypes[0],
-        "origins" in definition ? definition.origins[0] : "https://example.com",
+        "origins" in definition
+          ? atIndex(definition.origins, 0)
+          : "https://example.com",
       )
       const metadata: AutoCheckinMethodDefinition = definition
       const declared = metadata.feedbackStatusRoutes
