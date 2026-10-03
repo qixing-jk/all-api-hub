@@ -5,6 +5,10 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
+import {
+  AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
+  createAiRouterCheckInStatusEndpoint,
+} from "./aiRouterCheckInProtocol"
 import { executeAuthenticatedSub2ApiRequest } from "./authLifecycle"
 
 /**
@@ -25,7 +29,8 @@ import { executeAuthenticatedSub2ApiRequest } from "./authLifecycle"
  * from the account URL are routed to the API origin by the shared transport, so
  * this module addresses the path only.
  */
-export const AI_ROUTER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/daily-checkin"
+
+export { AI_ROUTER_DAILY_CHECK_IN_ENDPOINT } from "./aiRouterCheckInProtocol"
 
 /**
  * The fork refuses a repeat claim with HTTP 409 and this reason. The claim is
@@ -132,21 +137,6 @@ const readFailureReason = (body: string): string => {
   return typeof reason === "string" ? reason : ""
 }
 
-/**
- * The deployment scopes a check-in to a calendar day, and its own dashboard
- * sends the browser timezone on every GET so the server resolves `checkin_date`
- * the same way the user sees it.
- */
-const createStatusEndpoint = (): string => {
-  let timezone = "UTC"
-  try {
-    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  } catch {
-    // A runtime without timezone data keeps the UTC fallback.
-  }
-  return `${AI_ROUTER_DAILY_CHECK_IN_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`
-}
-
 const classifyStatusResponse = (
   response: ApiTransportResponse<string>,
 ): AiRouterStatusProbe => {
@@ -226,7 +216,7 @@ export async function probeAiRouterDailyCheckInStatus(
     AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
       const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: createStatusEndpoint(),
+        endpoint: createAiRouterCheckInStatusEndpoint(),
         options: { method: "GET", cache: "no-store" },
         responseType: "text",
       })
