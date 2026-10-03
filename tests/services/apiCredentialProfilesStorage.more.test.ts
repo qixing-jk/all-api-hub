@@ -266,6 +266,14 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       )
       expect(updated.sourceUrl).toBe("https://b.example.com/new-post")
 
+      const preservedOnInvalid =
+        await apiCredentialProfilesStorage.updateProfile(profile.id, {
+          sourceUrl: "invalid-url",
+        })
+      expect(preservedOnInvalid.sourceUrl).toBe(
+        "https://b.example.com/new-post",
+      )
+
       const cleared = await apiCredentialProfilesStorage.updateProfile(
         profile.id,
         { sourceUrl: "  " },

@@ -1307,7 +1307,11 @@ class ApiCredentialProfilesStorageService {
               : current.notes,
           ...(typeof updates.sourceUrl === "string"
             ? {
-                sourceUrl: normalizeSourceUrl(updates.sourceUrl),
+                sourceUrl:
+                  updates.sourceUrl.trim() === ""
+                    ? undefined
+                    : normalizeSourceUrl(updates.sourceUrl) ??
+                      current.sourceUrl,
               }
             : {}),
           ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
