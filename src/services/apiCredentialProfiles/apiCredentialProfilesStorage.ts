@@ -896,13 +896,26 @@ class ApiCredentialProfilesStorageService {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await this.readConfig())
       const identityKey = getIdentityKey(candidateProfile)
+      const existing = config.profiles.find(
+        (profile) => getIdentityKey(profile) === identityKey,
+      )
+      const sourceUrlChanged =
+        existing !== undefined &&
+        candidateProfile.sourceUrl !== undefined &&
+        candidateProfile.sourceUrl !== existing.sourceUrl
       const profile =
-        config.profiles.find(
-          (existing) => getIdentityKey(existing) === identityKey,
-        ) ?? candidateProfile
+        existing && sourceUrlChanged
+          ? {
+              ...existing,
+              sourceUrl: candidateProfile.sourceUrl,
+              updatedAt: now,
+            }
+          : existing ?? candidateProfile
 
       const profiles = config.profiles.some(({ id }) => id === profile.id)
-        ? config.profiles
+        ? config.profiles.map((storedProfile) =>
+            storedProfile.id === profile.id ? profile : storedProfile,
+          )
         : [...config.profiles, profile]
       if (!locator) {
         await this.saveConfig(
@@ -916,6 +929,11 @@ class ApiCredentialProfilesStorageService {
 
       const samePair = findProfileLinkForPair(config.links, profile.id, locator)
       if (samePair) {
+        if (sourceUrlChanged) {
+          await this.saveConfig(
+            createNextConfig({ current: config, profiles, now }),
+          )
+        }
         return {
           status:
             samePair.state ===
@@ -1152,7 +1170,27 @@ class ApiCredentialProfilesStorageService {
           (p) => getIdentityKey(p) === identityKey,
         )
         if (existing) {
-          return { created: existing, isNew: false, profileIdRemap: null }
+          const profile =
+            nextProfile.sourceUrl !== undefined &&
+            nextProfile.sourceUrl !== existing.sourceUrl
+              ? {
+                  ...existing,
+                  sourceUrl: nextProfile.sourceUrl,
+                  updatedAt: now,
+                }
+              : existing
+          if (profile !== existing) {
+            await this.saveConfig(
+              createNextConfig({
+                current: config,
+                profiles: config.profiles.map((p) =>
+                  p.id === existing.id ? profile : p,
+                ),
+                now,
+              }),
+            )
+          }
+          return { created: profile, isNew: false, profileIdRemap: null }
         }
 
         const { profiles: dedupedProfiles, profileIdRemap } = dedupeProfiles([

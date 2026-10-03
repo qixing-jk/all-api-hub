@@ -375,6 +375,106 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       )
       expect(updated?.sourceUrl).toBe("https://forum.example.com/b?tab=new")
     })
+
+    it("merges a supplied source URL into an existing profile via createProfileWithCreationStatus", async () => {
+      const initial =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Initial Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+          sourceUrl: "https://forum.example.com/initial",
+        })
+      expect(initial.isNew).toBe(true)
+      expect(initial.profile.sourceUrl).toBe(
+        "https://forum.example.com/initial",
+      )
+
+      // Re-save without sourceUrl preserves the existing source URL
+      const resavedWithoutSource =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Resaved Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+        })
+      expect(resavedWithoutSource.isNew).toBe(false)
+      expect(resavedWithoutSource.profile.sourceUrl).toBe(
+        "https://forum.example.com/initial",
+      )
+
+      // Re-save with a new valid sourceUrl updates the profile
+      const resavedWithNewSource =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Updated Source Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+          sourceUrl: "https://forum.example.com/updated",
+        })
+      expect(resavedWithNewSource.isNew).toBe(false)
+      expect(resavedWithNewSource.profile.sourceUrl).toBe(
+        "https://forum.example.com/updated",
+      )
+
+      const stored = await apiCredentialProfilesStorage.getProfileById(
+        initial.profile.id,
+      )
+      expect(stored?.sourceUrl).toBe("https://forum.example.com/updated")
+    })
+
+    it("merges a supplied source URL into an existing profile via captureProfile even when already linked", async () => {
+      const locator = {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: "acc-1",
+        siteType: SITE_TYPES.NEW_API,
+        tokenId: 1,
+      } as const
+
+      const firstCapture = await apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Capture Initial",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture-merge.example.com/v1",
+          apiKey: "sk-capture-merge",
+          sourceUrl: "https://forum.example.com/capture-initial",
+        },
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      })
+      expect(firstCapture.status).toBe(
+        API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+      )
+      expect(firstCapture.profile.sourceUrl).toBe(
+        "https://forum.example.com/capture-initial",
+      )
+
+      // Re-capture same pair with a new source URL
+      const secondCapture = await apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Capture Updated",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture-merge.example.com/v1",
+          apiKey: "sk-capture-merge",
+          sourceUrl: "https://forum.example.com/capture-updated",
+        },
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      })
+      expect(secondCapture.status).toBe(
+        API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+      )
+      expect(secondCapture.profile.sourceUrl).toBe(
+        "https://forum.example.com/capture-updated",
+      )
+
+      const stored = await apiCredentialProfilesStorage.getProfileById(
+        firstCapture.profile.id,
+      )
+      expect(stored?.sourceUrl).toBe(
+        "https://forum.example.com/capture-updated",
+      )
+    })
   })
 
   it("coerces malformed rows with generated ids, fallback timestamps, and trimmed notes", () => {

@@ -78,9 +78,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
   return {
     ...actual,
-    Badge: ({ children, variant: _variant, size: _size, ...props }: any) => (
-      <span {...props}>{children}</span>
-    ),
+    Badge: ({
+      children,
+      variant: _variant,
+      size: _size,
+      asChild,
+      ...props
+    }: any) => (asChild ? children : <span {...props}>{children}</span>),
     Card: forwardRef<HTMLDivElement, any>(({ children, ...props }, ref) => (
       <div ref={ref} {...props}>
         {children}
