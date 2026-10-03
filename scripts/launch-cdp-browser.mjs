@@ -7,6 +7,12 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import {
+  applyIsolateFlag,
+  isIsolatedDevProfile,
+  resolveCdpPort,
+  resolveDevProfileDir,
+} from "./cdp/dev-profile.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -14,7 +20,11 @@ loadLocalEnv()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, "..")
 
-const CDP_PORT = Number(process.env.CDP_PORT) || 9222
+// `--isolate` must seed the environment before the module-level profile/port
+// constants below are evaluated, because they are baked at import time.
+applyIsolateFlag(process.argv)
+
+const CDP_PORT = resolveCdpPort()
 const WORKTREE_NAME = path.basename(rootDir)
 
 /**
@@ -73,31 +83,10 @@ function findBrowserExecutable() {
 }
 
 /**
- * 2. 跨平台解析全局共享的开发 Profile 目录
+ * 2. 跨平台解析开发 Profile 目录（共享或按 worktree 隔离）
  */
 function resolveSharedDevProfile() {
-  if (process.env.AAH_DEV_PROFILE_DIR) {
-    return path.resolve(process.env.AAH_DEV_PROFILE_DIR)
-  }
-
-  const platform = os.platform()
-  const home = os.homedir()
-
-  if (platform === "win32") {
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(home, "AppData", "Local")
-    return path.join(localAppData, "AllApiHub", "dev-browser")
-  } else if (platform === "darwin") {
-    return path.join(
-      home,
-      "Library",
-      "Application Support",
-      "AllApiHub",
-      "dev-browser",
-    )
-  } else {
-    return path.join(home, ".config", "all-api-hub", "dev-browser")
-  }
+  return resolveDevProfileDir()
 }
 
 /**
@@ -592,8 +581,14 @@ async function main() {
   console.log("   All API Hub 自动化 CDP 调试环境启动器   ")
   console.log("==========================================")
   console.log(`当前 Worktree: ${WORKTREE_NAME} (${rootDir})`)
+  if (isIsolatedDevProfile()) {
+    console.log(
+      `🧪 隔离 Profile 模式：独占 user-data-dir 与 CDP 端口，不影响其它 worktree`,
+    )
+  }
 
   const cliArgs = process.argv.slice(2)
+  // `--isolate` 由模块顶部在常量求值前解析；此处仅记录命中，避免重复 seed。
   const forceDev = cliArgs.includes("--dev")
   const forceProd = cliArgs.includes("--prod")
   const forceBuild = cliArgs.includes("--build")
@@ -732,6 +727,12 @@ async function main() {
     `--user-data-dir=${devProfileDir}`,
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
+    // A fresh profile has developer mode off, so Edge brands the unpacked
+    // extension DISABLE_NOT_VERIFIED and never starts it. This flag admits it
+    // anyway; on an established profile (developer mode already on) it is a
+    // no-op. Enabling developer mode through the UI instead would require a
+    // human click on every new isolated profile.
+    "--enable-unsafe-extension-debugging",
     "--no-first-run",
     "--no-default-browser-check",
   ]

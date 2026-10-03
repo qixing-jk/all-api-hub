@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 import path from "node:path"
 
-import { connectDevExtension, connectExtensionById } from "./cdp/client.mjs"
+import {
+  connectDevExtension,
+  connectExtensionById,
+  defaultCdpUrl,
+} from "./cdp/client.mjs"
+import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { runOmniRouteProbe } from "./suites/omniroute/probe.mjs"
 import { runOmniRouteUiTest } from "./suites/omniroute/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -12,6 +17,8 @@ import { loadLocalEnv } from "./utils/local-env.mjs"
  * @returns Connection settings and the files available for recovery guidance.
  */
 function parseArgs(args) {
+  // Resolve the default port after the flag pass so `--isolate` is honored.
+  applyIsolateFlag(args)
   const options = {
     suite: "all",
     cdpUrl: undefined,
@@ -49,7 +56,7 @@ OmniRoute 现场端到端测试运行器 (CDP & Protocol Probe)
   --base-url=<url>  覆盖部署地址 (默认读 AAH_E2E_OMNIROUTE_BASE_URL)
   --token=<token>   覆盖 admin 作用域令牌 (默认读 AAH_E2E_OMNIROUTE_ADMIN_TOKEN)
   --suite=<type>    运行套件: 'all' (默认), 'probe' (纯协议), 'ui' (纯界面)
-  --cdp=<url>       CDP 调试端口地址 (默认: http://127.0.0.1:9222)
+  --cdp=<url>       CDP 调试端口地址 (默认: 共享模式 9222，隔离模式按 worktree 偏移)
   --extension-id=<id> 指定要驱动的扩展 ID (默认按当前 worktree 自动发现)
   --write           协议探测额外执行 创建→回读→删除 的写入轮 (默认只读)
   --help, -h        显示帮助说明
@@ -63,7 +70,7 @@ dev profile 的扩展设置；协议探测默认完全只读。
 
   const { files } = loadLocalEnv({ envFile: options.envFile })
   options.envSources = files
-  options.cdpUrl ??= process.env.CDP_URL || "http://127.0.0.1:9222"
+  options.cdpUrl ??= process.env.CDP_URL || defaultCdpUrl()
   options.baseUrl =
     options.baseUrl ||
     process.env.OMNIROUTE_BASE_URL ||

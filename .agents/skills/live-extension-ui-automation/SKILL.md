@@ -9,7 +9,21 @@ description: Control, debug, and test the live dev browser extension UI (Options
 
 Automate and test the development browser extension UI against real accounts and logged-in states without closing or disturbing the user's daily primary browser.
 
-Chromium blocks `--remote-debugging-port` on the system default user data directory. To preserve daily browser workflows while enabling CDP automation, tests run in a dedicated, persistent dev profile (`AllApiHub/dev-browser`) that shares accounts and sessions across all Git worktrees.
+Chromium blocks `--remote-debugging-port` on the system default user data directory. To preserve daily browser workflows while enabling CDP automation, tests run in a dedicated dev profile (`AllApiHub/dev-browser`) that shares accounts and sessions across all Git worktrees.
+
+## Shared vs isolated dev profiles
+
+By default every worktree mounts the single shared profile (`AllApiHub/dev-browser`) on CDP port 9222. This reuses one account login across worktrees but couples their browser instances: a `--restart` mounts a different worktree's build and closes another session's tabs, and discovery by title can target the wrong extension.
+
+When concurrent worktrees must not interfere (multi-agent runs), mount a **per-worktree profile** with `--isolate`. The profile resolves to `AllApiHub/dev-browser-<worktree>` and the CDP port shifts to `9222 + 1 + hash(<worktree>) % 200`. Different worktree names normally use different profiles and ports. Names and hashed ports can collide; choose explicit `AAH_DEV_PROFILE_DIR` and `CDP_PORT` for those cases. Account state is cloned from the primary browser into that profile once:
+
+| Goal | Command |
+| :--- | :--- |
+| Isolated browser (own profile + port) | `pnpm browser:cdp:isolate` |
+| Sync accounts/cookies/localStorage into it | `pnpm browser:sync:isolate -- --cookies` |
+| Env-var equivalents | `AAH_DEV_PROFILE_PER_WORKTREE=1` (or `--isolate`); explicit `AAH_DEV_PROFILE_DIR` / `CDP_PORT` still win. |
+
+Live suites (`e2e:cdp:*`) compute their default CDP URL from the same resolver, so launching and driving under `--isolate` need no extra flags. The trade-off: each isolated profile needs its own first login or sync, and each buys an extra resident browser process. The shared-profile default is unchanged.
 
 ## Available Tooling & Commands
 

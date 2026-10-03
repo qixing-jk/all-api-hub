@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { connectDevExtension } from "./cdp/client.mjs"
+import { connectDevExtension, defaultCdpUrl } from "./cdp/client.mjs"
+import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { runRixProbe } from "./suites/rix/probe.mjs"
 import { runRixUiTest } from "./suites/rix/ui.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -9,7 +10,9 @@ loadLocalEnv()
 function parseArgs(args) {
   let targetUrl = process.env.TARGET_RIX_URL || "https://platform.ephone.ai"
   let suite = "all" // all | probe | ui
-  let cdpUrl = process.env.CDP_URL || "http://127.0.0.1:9222"
+  // Resolve the default port after the flag pass so `--isolate` is honored.
+  applyIsolateFlag(args)
+  let cdpUrl = process.env.CDP_URL || defaultCdpUrl()
 
   for (const arg of args) {
     if (arg.startsWith("--url=")) {
@@ -29,7 +32,7 @@ Rix API 现场端到端测试运行器 (CDP & Protocol Probe)
 选项:
   --url=<url>        目标 Rix 站点地址 (默认: https://platform.ephone.ai)
   --suite=<type>     运行套件: 'all' (默认), 'probe' (纯网络协议), 'ui' (纯界面)
-  --cdp=<url>        CDP 调试端口地址 (默认: http://127.0.0.1:9222)
+  --cdp=<url>        CDP 调试端口地址 (默认: 共享模式 9222，隔离模式按 worktree 偏移)
   --help, -h         显示帮助说明
 `)
       process.exit(0)
