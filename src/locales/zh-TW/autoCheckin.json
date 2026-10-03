@@ -222,7 +222,7 @@
     "method_unavailable": "已選簽到方式無法使用，請重新偵測。",
     "method_unsupported": "站點不支援已選的簽到方式，請重新偵測或改選。",
     "network_error": "網路連線失敗，簽到未完成，請檢查網路後重試。",
-    "no_available_method": "目前站點未偵測到可用的內建簽到方式。可使用外部簽到網址，或申請簽到適配。",
+    "no_available_method": "未偵測到可用的內建簽到方式，可設定外部簽到網址或申請支援。",
     "no_provider": "該帳號的站點型別暫不支援自動簽到。",
     "no_selected_method": "尚未選擇簽到方式，請在「編輯帳號」中重新偵測或選擇。",
     "permission_denied": "站點拒絕了簽到請求，請重新登入該站點後重試。",

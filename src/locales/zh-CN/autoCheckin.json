@@ -222,7 +222,7 @@
     "method_unavailable": "已选签到方式不可用，请重新检测。",
     "method_unsupported": "站点不支持已选的签到方式，请重新检测或改选。",
     "network_error": "网络连接失败，签到未完成，请检查网络后重试。",
-    "no_available_method": "当前站点未检测到可用的内置签到方式。可使用外部签到地址，或申请签到适配。",
+    "no_available_method": "未检测到可用的内置签到方式，可设置外部签到地址或申请适配。",
     "no_provider": "该账号的站点类型暂不支持自动签到。",
     "no_selected_method": "尚未选择签到方式，请在「编辑账号」中重新检测或选择。",
     "permission_denied": "站点拒绝了签到请求，请重新登录该站点后重试。",

@@ -222,7 +222,7 @@
     "method_unavailable": "Phương thức điểm danh đã chọn không khả dụng. Hãy phát hiện lại.",
     "method_unsupported": "Site này không hỗ trợ phương thức điểm danh đã chọn. Hãy phát hiện lại hoặc chọn cách khác.",
     "network_error": "Kết nối mạng thất bại, điểm danh chưa xong. Hãy kiểm tra mạng rồi thử lại.",
-    "no_available_method": "Không phát hiện phương thức điểm danh tích hợp được hỗ trợ cho site này. Hãy dùng URL điểm danh bên ngoài hoặc yêu cầu tích hợp.",
+    "no_available_method": "Không có phương thức điểm danh tích hợp khả dụng. Dùng URL bên ngoài hoặc yêu cầu hỗ trợ.",
     "no_provider": "Loại trang web của tài khoản này chưa hỗ trợ điểm danh tự động.",
     "no_selected_method": "Chưa chọn phương thức điểm danh. Hãy phát hiện lại hoặc chọn trong \"Chỉnh sửa tài khoản\".",
     "permission_denied": "Site đã từ chối yêu cầu điểm danh. Hãy đăng nhập lại rồi thử lại.",

@@ -141,6 +141,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:skipReasons.method_unsupported",
       "autoCheckin:skipReasons.network_error",
       "autoCheckin:skipReasons.no_selected_method",
+      "autoCheckin:skipReasons.no_available_method",
       "autoCheckin:skipReasons.permission_denied",
       "autoCheckin:skipReasons.session_busy",
       "autoCheckin:skipReasons.source_unavailable",
