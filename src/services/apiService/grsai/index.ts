@@ -273,6 +273,16 @@ export async function fetchAccountData(
     fetchGrsaiDashboard(request, session),
   ])
 
+  const expectedUserId = expectedAccountIdentity(request)
+  if (expectedUserId && userInfo.id.trim() !== expectedUserId) {
+    throw new ApiError(
+      "The authenticated account does not match the expected account",
+      undefined,
+      GRSAI_ENDPOINTS.userInfo,
+      API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+    )
+  }
+
   const credits =
     toOptionalFiniteNumber(userInfo.credits) ??
     toOptionalFiniteNumber(dashboard.credits) ??

@@ -13,6 +13,7 @@ import {
   refreshAccountData,
 } from "~/services/apiService/grsai"
 import { GRSAI_ENDPOINTS } from "~/services/apiService/grsai/constants"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -119,6 +120,16 @@ const sessionJwt = (expSeconds: number): string =>
   ].join(".")
 
 describe("grsai account data", () => {
+  it("refuses a foreign identity during an ordinary refresh without persisting a rotated token", async () => {
+    server.use(userInfoHandler("someone-else"))
+    const result = await refreshAccountData(request)
+    expect(result.success).toBe(false)
+    expect(result).not.toHaveProperty("authUpdate")
+    expect(resolveAccountBrowserSession).not.toHaveBeenCalled()
+    await expect(fetchAccountData(request)).rejects.toMatchObject({
+      code: API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+    })
+  })
   beforeEach(() => {
     server.resetHandlers()
     vi.resetAllMocks()
