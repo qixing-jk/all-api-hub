@@ -269,6 +269,8 @@ describe("gpt-load native workspace", () => {
       weight_manual: 20,
     })
     expect(writes).toEqual(["settings", "models"])
+    const reopened = await workspace.openEditEditor(ref)
+    expect(reopened.initialValues[fields.Status]).toBe("disabled")
   })
 
   it("replaces a saved credential by importing before deleting its old ID", async () => {

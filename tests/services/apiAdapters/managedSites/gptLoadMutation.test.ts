@@ -7,6 +7,28 @@ import {
 import { GptLoadApiError } from "~/services/apiService/gptLoad"
 
 describe("gpt-load mutation evidence", () => {
+  it.each([123, Number.NaN])(
+    "filters optional diagnostics without changing dispatch certainty (%s)",
+    async (code) => {
+      const result = await runGptLoadMutation({
+        effect: gptLoadChannelEffect("resource-created"),
+        execute: async () => {
+          throw new GptLoadApiError("network", undefined, {
+            dispatch: "dispatched",
+            responseReceived: false,
+            confirmedNonApplication: false,
+            code,
+          })
+        },
+      })
+      expect(result.outcome).toBe("uncertain")
+      if (result.outcome === "succeeded") throw new Error("unexpected success")
+      expect(result.diagnostic).not.toHaveProperty("statusCode")
+      if (Number.isNaN(code))
+        expect(result.diagnostic).not.toHaveProperty("code")
+      else expect(result.diagnostic.code).toBe(123)
+    },
+  )
   it.each([
     ["not-dispatched", false, true, "rejected"],
     ["dispatched", false, false, "uncertain"],

@@ -50,6 +50,8 @@ const selection = (resourceId: string): ManagedSiteMigrationSelection => ({
 const useGroupDetailHandlers = (overrides?: {
   channelId?: string
   credentialIds?: number[]
+  priceMultiplier?: string
+  enabled?: boolean
 }) => {
   const channelId = overrides?.channelId ?? "openai_compatible"
   const credentialIds = overrides?.credentialIds ?? [11, 12]
@@ -59,8 +61,8 @@ const useGroupDetailHandlers = (overrides?: {
         name: "Primary",
         channel_id: channelId,
         params: { base_url: "https://relay.example.invalid/v1" },
-        enabled: true,
-        price_multiplier: "1",
+        enabled: overrides?.enabled ?? true,
+        price_multiplier: overrides?.priceMultiplier ?? "1",
       }),
     ),
     http.get(`${BASE_URL}/api/groups/1/models`, () =>
@@ -151,6 +153,20 @@ describe("gpt-load migration routing", () => {
 })
 
 describe("gpt-load migration source", () => {
+  it("preserves disabled status and warns about non-default routing settings", async () => {
+    useGroupDetailHandlers({ priceMultiplier: "2", enabled: false })
+    expect(
+      await gptLoadManagedSiteMigrationCapability.source!.prepare(
+        selection("1"),
+      ),
+    ).toMatchObject({
+      status: "ready",
+      source: {
+        status: "disabled",
+        lossSignals: { hasAdvancedSettings: true },
+      },
+    })
+  })
   it("normalizes mid-reveal cancellation and prevents a partial migration", async () => {
     useGroupDetailHandlers()
     const controller = new AbortController()
