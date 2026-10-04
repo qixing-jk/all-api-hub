@@ -595,6 +595,13 @@
   },
   "pleaseAddAccount": "Bitte fügen Sie zuerst ein Konto hinzu",
   "pleaseSelectAccount": "Bitte Konto auswählen",
+  "provisioning": {
+    "cancelled": "Gestoppt. Bereits erstellte Schlüssel bleiben erhalten.",
+    "continue": "Mit Benutzereingaben fortfahren",
+    "input": "{{label}} · {{current}} / {{total}}. Alle Eingaben abschließen, bevor Schlüssel erstellt werden.",
+    "progress": "{{created}} / {{total}} erstellt; bereits abgedeckt: {{covered}}.",
+    "title": "Kontoschlüssel vorbereiten"
+  },
   "refreshTokenList": "Schlüsselliste aktualisieren",
   "repairMissingKeys": {
     "action": "Schlüsselüberprüfung",

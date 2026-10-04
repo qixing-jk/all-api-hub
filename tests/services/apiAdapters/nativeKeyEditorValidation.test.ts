@@ -208,11 +208,16 @@ it.each([NaN, Infinity, -1, "1", 0])(
 )
 
 it.each([NaN, Infinity, -1, "1", 0])(
-  "rejects invalid initial VoAPI amount %s",
+  "rejects invalid finite VoAPI amount %s",
   (amount) => {
     const editor = createVoApiV2KeyEditor(request)
     expect(
-      editor.validate({ ...editor.initialValues, groups: ["1"], amount }),
+      editor.validate({
+        ...editor.initialValues,
+        groups: ["1"],
+        boundlessAmount: false,
+        amount,
+      }),
     ).toMatchObject({
       valid: false,
       issues: [{ fieldId: "amount", code: "out_of_range" }],

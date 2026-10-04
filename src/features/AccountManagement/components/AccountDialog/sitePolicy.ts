@@ -6,12 +6,10 @@ import {
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { isKimiOpenPlatformSiteType } from "~/services/kimiOpenPlatform/deployments"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
-import {
-  ACCOUNT_KEY_AUTO_PROVISION_MODES,
-  type AccountKeyAutoProvisionMode,
-} from "~/types/accountKeyAutoProvisioning"
+import { type AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 
 /**
  * Describes site-specific account-dialog behavior that must stay pure and UI-free.
@@ -27,6 +25,7 @@ export interface AccountDialogSitePolicy {
   allowSub2ApiRefreshTokenState: boolean
   openSub2ApiTokenDialogPostSave: boolean
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
+  supportsKeyProvisioning: boolean
   requireUsername: boolean
   requireUserId: boolean
 }
@@ -63,6 +62,9 @@ export function getAccountDialogSitePolicy(
     deferSuccessForOneTimeKeyPostSaveFlow:
       productProfile.createdToken.secretHandling ===
       ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog,
+    supportsKeyProvisioning: Boolean(
+      getSiteTypeCapabilities(siteType).account?.keyResourceManagement,
+    ),
   }
 }
 
@@ -162,7 +164,7 @@ export function shouldOpenSub2ApiTokenDialogForAccountDialogSite(params: {
 }
 
 /**
- * Determines whether success feedback should wait for the one-time key post-save flow.
+ * Defers add completion while the foreground owner provisions keys in either mode.
  */
 export function shouldDeferAccountSaveSuccessForAccountDialogSite(params: {
   policy: AccountDialogSitePolicy
@@ -175,16 +177,13 @@ export function shouldDeferAccountSaveSuccessForAccountDialogSite(params: {
     policy,
     isAddMode,
     autoProvisionKeyOnAccountAdd,
-    autoProvisionKeyOnAccountAddMode,
     skipAutoProvisionKeyOnAccountAdd,
   } = params
 
   return (
-    policy.deferSuccessForOneTimeKeyPostSaveFlow &&
+    policy.supportsKeyProvisioning &&
     isAddMode &&
     autoProvisionKeyOnAccountAdd &&
-    autoProvisionKeyOnAccountAddMode ===
-      ACCOUNT_KEY_AUTO_PROVISION_MODES.Default &&
     !skipAutoProvisionKeyOnAccountAdd
   )
 }

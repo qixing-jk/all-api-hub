@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { prepareAccountKeyProvisioning } from "~/services/accounts/accountKeyProvisioning"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -62,6 +64,48 @@ const key = (overrides: Partial<GrsaiApiKey> = {}): GrsaiApiKey => ({
 const openSession = async () => await grsaiAccountKeyResources.open(openInput)
 
 describe("grsaiAccountKeyResources", () => {
+  it.each(["default", "all-groups"] as const)(
+    "prepares one unlimited key without group or quota input in %s mode",
+    async (mode) => {
+      mockFetchGrsaiKeys.mockResolvedValue([])
+      mockCreateGrsaiKey.mockResolvedValue(key())
+      const plan = await prepareAccountKeyProvisioning(
+        buildDisplaySiteData({
+          id: `grsai-provision-${mode}`,
+          siteType: SITE_TYPES.GRSAI,
+        }),
+        mode,
+      )
+      expect(plan.entries).toHaveLength(1)
+      expect(plan.entries[0]?.editor).toBeUndefined()
+      expect(mockCreateGrsaiKey).not.toHaveBeenCalled()
+      const result = await plan.entries[0]!.create()
+      expect(mockCreateGrsaiKey).toHaveBeenCalledWith(expect.anything(), {
+        name: "default key (auto)",
+        type: 0,
+        expireTime: 0,
+      })
+      expect(result.createdSecret).toBeUndefined()
+      expect(result.ref?.siteType).toBe(SITE_TYPES.GRSAI)
+    },
+  )
+
+  it.each(["default", "all-groups"] as const)(
+    "skips an existing active key in %s mode",
+    async (mode) => {
+      mockFetchGrsaiKeys.mockResolvedValue([key()])
+      const plan = await prepareAccountKeyProvisioning(
+        buildDisplaySiteData({
+          id: `grsai-covered-${mode}`,
+          siteType: SITE_TYPES.GRSAI,
+        }),
+        mode,
+      )
+      expect(plan).toEqual({ coveredCount: 1, entries: [] })
+      expect(mockCreateGrsaiKey).not.toHaveBeenCalled()
+    },
+  )
+
   const ref = {
     accountId: "account-example",
     siteType: SITE_TYPES.GRSAI,

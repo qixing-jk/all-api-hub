@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
@@ -885,6 +886,7 @@ const loadWorkspaceScopeInventory = async (
 export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
   {
     siteType: SITE_TYPES.OPENROUTER,
+    defaultCreation: "editor-defaults",
     // OpenRouter returns plaintext only from key creation; existing inventory
     // rows expose an opaque hash and masked key. Local profile associations are
     // the only supported historical recovery source.
@@ -1030,6 +1032,7 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       scope,
       options,
       scopeInventory,
+      intent,
     ): Promise<
       AccountKeyResourceEditorDefinition<OpenRouterKeyCreateCommand>
     > => {
@@ -1049,7 +1052,8 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       return {
         fields: createFields(scopeEntries),
         initialValues: {
-          [field.Name]: "",
+          [field.Name]:
+            intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
           [field.Workspace]: scope.scopeKey,
           [field.Creator]: null,
           [field.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Unlimited,

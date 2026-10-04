@@ -497,7 +497,11 @@ function AccountKeyResourceEditorDialogSession({
           RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual &&
         candidate.optionLoader?.dependsOn.includes(fieldId)
       ) {
-        next[candidate.fieldId] = candidate.nullable ? null : ""
+        next[candidate.fieldId] = candidate.nullable
+          ? null
+          : candidate.type === RESOURCE_FIELD_TYPES.MultiSelect
+            ? []
+            : ""
       }
     }
     const previousAutoName = presentation.getAutomaticName?.(

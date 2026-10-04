@@ -239,6 +239,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
         legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
       },
       auth: {
+        // freemodel.dev console APIs validate the live browser cookie session.
+        usesBrowserCookieSession: true,
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
         defaultAuthHostnames: FREEMODEL_HOSTNAMES,

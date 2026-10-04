@@ -3,6 +3,44 @@
 ## Purpose
 TBD - created by archiving change auto-create-account-keys. Update Purpose after archive.
 ## Requirements
+### Requirement: Provisioning scope is independent of user interaction
+Default-key and all-groups provisioning MUST both support foreground user input.
+The frontend owns dialogs; background services MUST NOT open dialogs themselves.
+Providers without group requirements MUST use one default-key creation plan in
+either scope. Existing active keys or covered requirements MUST NOT be duplicated.
+
+#### Scenario: All-groups provisioning needs creation parameters
+- **GIVEN** missing requirements need user input such as a required channel selection
+- **WHEN** a foreground provisioning flow starts
+- **THEN** one native editor workflow MUST collect all required inputs before any writes
+- **AND** cancellation during input MUST create no keys
+- **AND** requirement selection MUST retain exact adapter-owned identities, even when names repeat
+
+#### Scenario: Default quota policy
+- **WHEN** a provider supports unlimited key quota
+- **THEN** default and all-groups provisioning MUST use unlimited quota by default
+- **AND** missing quota input alone MUST NOT require a user dialog
+- **AND** the native editor MUST allow explicit finite limits and preserve existing key limits
+
+#### Scenario: Provisioning produces a one-time secret
+- **WHEN** a creation returns a response-only secret
+- **THEN** the foreground MUST present copy and save actions before proceeding
+- **AND** the secret MUST NOT be stored in persisted repair progress
+
+#### Scenario: Cancellation or uncertainty follows partial success
+- **WHEN** a user cancels during a write or a mutation becomes uncertain
+- **THEN** no subsequent creation MUST start
+- **AND** confirmed keys and their creation count MUST be retained
+- **AND** an in-flight write MUST settle and its response-only secret MUST remain available
+- **AND** closing the parent view or replacing its credential source MUST hand off an in-flight or displayed secret to a foreground dialog that remains available until explicitly handled
+- **AND** explicit handling MAY be successful copy, successful save, or user-confirmed dismissal after the existing irreversible-loss warning; an ordinary close MUST NOT silently discard an unhandled secret
+- **AND** reopening MUST NOT replay uncertain or unreconciled writes
+
+#### Scenario: A background repair cannot complete without user input
+- **WHEN** a current repair result needs native input or response-only secret handling
+- **THEN** eligible accounts MUST expose an explicit foreground continuation action
+- **AND** continuation MUST read fresh inventory before preparing writes
+
 ### Requirement: Auto-provision on account add is configurable
 The system MUST provide a user setting to enable or disable automatic default-key (token) provisioning when adding an account.
 
@@ -55,7 +93,10 @@ An account is eligible for manual repair when all of the following are true:
 - **AND** it MUST create one key for each currently uncovered group
 - **AND** it MUST NOT guess a single default group or require a separate choice for each uncovered group
 
-Automatic account-add provisioning MUST continue skipping `sub2api` accounts.
+Default-key provisioning MUST NOT guess a Sub2API group. A foreground add flow
+MAY collect the selection in the native key editor. When the user has selected
+the all-groups scope, provisioning MAY fill every missing group without choosing
+one arbitrary default group.
 For backward compatibility, when a current manual repair result reports a
 legacy skipped `sub2api` account and the underlying account record remains
 available, the system MUST continue exposing the explicit group-aware

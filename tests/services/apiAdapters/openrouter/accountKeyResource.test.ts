@@ -117,6 +117,15 @@ const openSession = async () => {
 }
 
 describe("openRouterAccountKeyResources", () => {
+  it("provides valid defaults for foreground creation without group selection", async () => {
+    const session = await openSession()
+    const scope = await session.resolveDefaultScope()
+    const editor = await session.openCreateEditor(scope.scopeKey)
+    expect(openRouterAccountKeyResources.defaultCreation).toBe(
+      "editor-defaults",
+    )
+    expect(editor.validate(editor.initialValues).valid).toBe(true)
+  })
   beforeEach(() => {
     vi.resetAllMocks()
   })

@@ -15,9 +15,9 @@ import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
-  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  AccountKeyResourceError,
   type AccountKeyProvisionedResource,
   type AccountKeyProvisioningSnapshot,
   type AccountKeyResourceFacts,
@@ -227,9 +227,7 @@ const inspectProvisioning = async (
       requirementKey: group.requirementKey,
       displayName: group.displayName,
       provisioning: {
-        kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired,
-        reasonCode:
-          ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS.FiniteQuotaRequired,
+        kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
       },
     })),
     items: keys.map((key) => {
@@ -411,20 +409,88 @@ const renameProvisionedResource = async (
   }
 }
 
-const rejectProvisionWithoutFiniteQuotaInput = async (): Promise<
+/** Share write confirmation between explicit edits and automatic provisioning. */
+const createNativeKey = async (
+  config: VoApiV2AccountKeyResourceConfig,
+  command: VoApiV2KeyEditCommand,
+  options?: ResourceOperationOptions,
+) => {
+  const request = requestWithOptions(config, options)
+  const before = new Set(
+    (await fetchAllVoApiV2RawKeys(request)).map((key) => key.id),
+  )
+  const result = await runNativeResourceMutation({
+    request,
+    execute: (mutationRequest) =>
+      createVoApiV2Key(mutationRequest, command.values),
+    mapFailure,
+    classifyError: (error) =>
+      isApiBusinessError(error) ? "not-applied" : undefined,
+  })
+  if (result.certainty === "not-applied") return result
+  try {
+    const created = (await fetchKeysWithRuntimeGroups(request)).filter(
+      (key) => !before.has(key.id) && matchesVoApiKeyWrite(key, command.values),
+    )
+    const [createdKey] = created
+    if (created.length === 1 && createdKey)
+      return { certainty: "applied" as const, value: { detail: createdKey } }
+  } catch (error) {
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(error),
+    }
+  }
+  return {
+    certainty: "possibly-applied" as const,
+    failure: mapAccountKeyResourceUncertainFailure(
+      result.certainty === "possibly-applied" ? result.failure : undefined,
+    ),
+  }
+}
+
+const provisionRequirement = async (
+  config: VoApiV2AccountKeyResourceConfig,
+  requirementKey: string,
+  options?: ResourceOperationOptions,
+): Promise<
   NativeResourceMutationResult<AccountKeyProvisionedResource, ResourceFailure>
-> => ({
-  certainty: "not-applied",
-  failure: {
-    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ConfigurationRequired,
-  },
-})
+> => {
+  const groups = await fetchVoApiV2KeyGroupDescriptors(
+    requestWithOptions(config, options),
+  )
+  const group = groups.find(
+    (candidate) => candidate.requirementKey === requirementKey,
+  )
+  if (!group) throw new AccountKeyResourceError({ code: "validation_failed" })
+  const editor = createVoApiV2KeyEditor(
+    config.request,
+    undefined,
+    undefined,
+    groups,
+    group.id,
+  )
+  const validation = editor.validate(editor.initialValues)
+  if (!validation.valid)
+    throw new AccountKeyResourceError({ code: "validation_failed" })
+  const result = await createNativeKey(
+    config,
+    editor.buildCommand(editor.initialValues),
+    options,
+  )
+  return result.certainty === "applied"
+    ? {
+        certainty: "applied",
+        value: { ref: createRef(config, result.value.detail.id) },
+      }
+    : result
+}
 
 /** VoAPI v2-native account key resources for one saved account. */
 export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.VO_API_V2,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "requires-input",
+  defaultCreation: "select-requirement",
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
@@ -438,8 +504,9 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
     },
   ],
   provisioning: {
+    supportsEditor: true,
     inspect: inspectProvisioning,
-    provision: rejectProvisionWithoutFiniteQuotaInput,
+    provision: provisionRequirement,
     rename: renameProvisionedResource,
   },
   runtimeKey: { resolve: resolveRuntimeKey },
@@ -468,54 +535,40 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   },
   toListFacts: toFacts,
   toDetailFacts: toFacts,
-  createEditor: async (config, _scope, options, _inventory, intent) =>
-    createVoApiV2KeyEditor(
-      config.request,
-      undefined,
-      intent,
-      intent
+  createEditor: async (
+    config,
+    _scope,
+    options,
+    _inventory,
+    intent,
+    provisioningRequirementKey,
+  ) => {
+    const groups =
+      intent || provisioningRequirementKey
         ? await fetchVoApiV2KeyGroupDescriptors(
             requestWithOptions(config, options),
           )
-        : undefined,
-    ),
+        : undefined
+    const requirement =
+      provisioningRequirementKey === undefined
+        ? undefined
+        : groups?.find(
+            (group) => group.requirementKey === provisioningRequirementKey,
+          )
+    if (provisioningRequirementKey !== undefined && !requirement)
+      throw new AccountKeyResourceError({ code: "validation_failed" })
+    return createVoApiV2KeyEditor(
+      config.request,
+      undefined,
+      intent,
+      groups,
+      requirement?.id,
+    )
+  },
   editEditor: (config, _scope, detail) =>
     createVoApiV2KeyEditor(config.request, detail),
-  create: async (config, _scope, command: VoApiV2KeyEditCommand, options) => {
-    const request = requestWithOptions(config, options)
-    const before = new Set(
-      (await fetchAllVoApiV2RawKeys(request)).map((key) => key.id),
-    )
-    const result = await runNativeResourceMutation({
-      request,
-      execute: (mutationRequest) =>
-        createVoApiV2Key(mutationRequest, command.values),
-      mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
-    })
-    if (result.certainty === "not-applied") return result
-    try {
-      const created = (await fetchKeysWithRuntimeGroups(request)).filter(
-        (key) =>
-          !before.has(key.id) && matchesVoApiKeyWrite(key, command.values),
-      )
-      const [createdKey] = created
-      if (created.length === 1 && createdKey)
-        return { certainty: "applied" as const, value: { detail: createdKey } }
-    } catch (error) {
-      return {
-        certainty: "possibly-applied" as const,
-        failure: mapAccountKeyResourceUncertainFailure(error),
-      }
-    }
-    return {
-      certainty: "possibly-applied" as const,
-      failure: mapAccountKeyResourceUncertainFailure(
-        result.certainty === "possibly-applied" ? result.failure : undefined,
-      ),
-    }
-  },
+  create: (config, _scope, command: VoApiV2KeyEditCommand, options) =>
+    createNativeKey(config, command, options),
   update: async (
     config,
     _scope,

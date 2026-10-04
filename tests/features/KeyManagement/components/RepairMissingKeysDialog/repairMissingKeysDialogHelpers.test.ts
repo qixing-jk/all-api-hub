@@ -2,6 +2,7 @@ import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import {
+  canContinueRepairWithUserInput,
   filterRepairInvalidResources,
   filterRepairResults,
   getInvalidResourceKey,
@@ -66,6 +67,47 @@ const emptySummary: AccountKeyRepairProgress["summary"] = {
   deleteRejected: 0,
   deleteUncertain: 0,
 }
+
+describe("interactive repair continuation", () => {
+  it("allows an explicitly input-blocked account", () => {
+    expect(
+      canContinueRepairWithUserInput(
+        buildResult({
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
+        }),
+      ),
+    ).toBe(true)
+  })
+  it("does not replay an uncertain write even when another requirement needs input", () => {
+    expect(
+      canContinueRepairWithUserInput(
+        buildResult({
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
+          failure: {
+            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          },
+        }),
+      ),
+    ).toBe(false)
+    const requirement = buildResult().requirementResults[0]!.requirement
+    expect(
+      canContinueRepairWithUserInput(
+        buildResult({
+          requirementResults: [
+            { requirement, outcome: "blocked-input-required" },
+            {
+              requirement,
+              outcome: "uncertain",
+              failure: {
+                code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+              },
+            },
+          ],
+        }),
+      ),
+    ).toBe(false)
+  })
+})
 
 function buildProgress(
   overrides: Partial<AccountKeyRepairProgress> = {},

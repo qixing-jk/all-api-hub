@@ -135,7 +135,7 @@
   "autoProvisionKeyOnAccountAdd": {
     "description": "新增帳號後自動準備 API 金鑰，可選擇預設金鑰或所有可用群組。",
     "manualHint": "已儲存的帳號可在「金鑰管理 → {{actionLabel}}」中手動補齊所有可用群組的金鑰。",
-    "modeDescription": "預設模式僅在帳號沒有金鑰時建立一個；所有群組模式會為每個缺少可用金鑰的群組建立一個。需要手動處理的群組會顯示提示。",
+    "modeDescription": "預設模式在沒有有效金鑰時準備一個；全部群組模式補齊各個缺少的群組，沒有群組要求的站點則準備一個預設金鑰。兩種模式都可開啟視窗補充參數或處理一次性金鑰。",
     "modeLabel": "自動建立範圍",
     "modes": {
       "allGroups": "所有可用群組",

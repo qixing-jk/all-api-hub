@@ -1137,10 +1137,14 @@ export function useAccountDialog({
     runtimeKey?: AccountRuntimeKey | null
     createdSecret?: CreatedRuntimeSecret
   } | null>(null)
-  const pendingAihubmixPostSaveSuccessRef = useRef<string | null>(null)
+  const pendingAccountKeyProvisioningSuccessRef = useRef<string | null>(null)
+  const [postSaveKeyProvisioning, setPostSaveKeyProvisioning] = useState<{
+    account: DisplaySiteData
+    mode: typeof autoProvisionKeyOnAccountAddMode
+  } | null>(null)
   const postSaveAutoConfigRunRef = useRef(0)
   const postSaveCreationAbort = useRef<AbortController | null>(null)
-  const aihubmixPostSaveKeyRunRef = useRef(0)
+  const postSaveKeyProvisioningRunRef = useRef(0)
   const nextPostSaveSub2ApiDialogSessionIdRef = useRef(0)
   const activePostSaveSub2ApiDialogSessionIdRef = useRef<number | null>(null)
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -1179,32 +1183,38 @@ export function useAccountDialog({
     postSaveCreationAbort.current = null
     invalidatePostSaveAutoConfigRun()
     invalidatePostSaveSub2ApiDialogSession()
-    aihubmixPostSaveKeyRunRef.current += 1
+    postSaveKeyProvisioningRunRef.current += 1
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeSecret(null)
     setPostSaveSub2ApiAccount(null)
+    setPostSaveKeyProvisioning(null)
     setAihubmixPostSaveKeyPrompt({
       isOpen: false,
       accountId: null,
       accountName: "",
       isCreating: false,
     })
-    pendingAihubmixPostSaveSuccessRef.current = null
+    pendingAccountKeyProvisioningSuccessRef.current = null
     pendingPostSaveChannelRef.current = null
   }, [invalidatePostSaveAutoConfigRun, invalidatePostSaveSub2ApiDialogSession])
 
-  const completePendingAihubmixPostSaveSuccess = useCallback(() => {
-    const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
-    pendingAihubmixPostSaveSuccessRef.current = null
+  const completePendingAccountKeyProvisioningSuccess = useCallback(() => {
+    const savedAccountId = pendingAccountKeyProvisioningSuccessRef.current
+    pendingAccountKeyProvisioningSuccessRef.current = null
     if (savedAccountId) {
       onSuccess?.(savedAccountId)
     }
   }, [onSuccess])
 
+  const handlePostSaveKeyProvisioningClose = useCallback(() => {
+    setPostSaveKeyProvisioning(null)
+    completePendingAccountKeyProvisioningSuccess()
+  }, [completePendingAccountKeyProvisioningSuccess])
+
   const openAihubmixPostSaveKeyPrompt = useCallback(
     (params: { accountId: string; accountName: string }) => {
-      aihubmixPostSaveKeyRunRef.current += 1
-      pendingAihubmixPostSaveSuccessRef.current = params.accountId
+      postSaveKeyProvisioningRunRef.current += 1
+      pendingAccountKeyProvisioningSuccessRef.current = params.accountId
       setAihubmixPostSaveKeyPrompt({
         isOpen: true,
         accountId: params.accountId,
@@ -1217,8 +1227,8 @@ export function useAccountDialog({
 
   const handleAihubmixNormalSaveForegroundKeyFlow = useCallback(
     async (params: { accountId: string; accountName: string }) => {
-      const runId = aihubmixPostSaveKeyRunRef.current
-      const isCurrentRun = () => aihubmixPostSaveKeyRunRef.current === runId
+      const runId = postSaveKeyProvisioningRunRef.current
+      const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
       const savedAccountId = params.accountId.trim()
       if (!savedAccountId) return
 
@@ -1672,7 +1682,7 @@ export function useAccountDialog({
     }
     handleDuplicateAccountWarningCancel()
     cancelPendingDuplicateAccountWarning()
-    completePendingAihubmixPostSaveSuccess()
+    completePendingAccountKeyProvisioningSuccess()
     clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
       prev?.isOpen ? { ...prev, isOpen: false } : prev,
@@ -1683,7 +1693,7 @@ export function useAccountDialog({
     cancelPendingDuplicateAccountWarning,
     beforeOpenRouterOnboardingClose,
     clearPostSaveWorkflowState,
-    completePendingAihubmixPostSaveSuccess,
+    completePendingAccountKeyProvisioningSuccess,
     handleDuplicateAccountWarningCancel,
     onClose,
   ])
@@ -2841,14 +2851,42 @@ export function useAccountDialog({
       }
 
       if (shouldDeferSuccessForSitePolicy && savedAccountId) {
-        await handleAihubmixNormalSaveForegroundKeyFlow({
-          accountId: savedAccountId,
-          accountName: siteName.trim() || policy.defaultSiteName || siteType,
-        })
+        if (
+          policy.deferSuccessForOneTimeKeyPostSaveFlow &&
+          autoProvisionKeyOnAccountAddMode ===
+            ACCOUNT_KEY_AUTO_PROVISION_MODES.Default
+        ) {
+          await handleAihubmixNormalSaveForegroundKeyFlow({
+            accountId: savedAccountId,
+            accountName: siteName.trim() || policy.defaultSiteName || siteType,
+          })
+        } else {
+          pendingAccountKeyProvisioningSuccessRef.current = savedAccountId
+          const runId = postSaveKeyProvisioningRunRef.current
+          try {
+            const display =
+              await accountReadModels.getDisplayDataById(savedAccountId)
+            const stored = display
+              ? null
+              : await accountQueries.getAccountById(savedAccountId)
+            if (runId !== postSaveKeyProvisioningRunRef.current) return result
+            const owner =
+              display ??
+              (stored ? accountPresentation.convertToDisplayData(stored) : null)
+            if (owner)
+              setPostSaveKeyProvisioning({
+                account: owner,
+                mode: autoProvisionKeyOnAccountAddMode,
+              })
+            else completePendingAccountKeyProvisioningSuccess()
+          } catch {
+            if (runId === postSaveKeyProvisioningRunRef.current)
+              completePendingAccountKeyProvisioningSuccess()
+          }
+        }
       }
 
-      // Background group provisioning owns key creation for this add operation;
-      // a foreground default-key prompt could race it and create an extra key.
+      // A single provisioning owner must finish before any legacy default-key prompt opens.
       const autoProvisioningAllGroups =
         mode === DIALOG_MODES.ADD &&
         autoProvisionKeyOnAccountAdd &&
@@ -2856,7 +2894,9 @@ export function useAccountDialog({
           ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups &&
         options?.skipAutoProvisionKeyOnAccountAdd !== true
       const skipSub2ApiKeyPrompt =
-        options?.skipSub2ApiKeyPrompt === true || autoProvisioningAllGroups
+        options?.skipSub2ApiKeyPrompt === true ||
+        autoProvisioningAllGroups ||
+        shouldDeferSuccessForSitePolicy
       if (
         savedAccountId &&
         policy.openSub2ApiTokenDialogPostSave &&
@@ -2907,24 +2947,24 @@ export function useAccountDialog({
   }
 
   const handleAihubmixPostSaveKeyPromptCancel = useCallback(() => {
-    aihubmixPostSaveKeyRunRef.current += 1
+    postSaveKeyProvisioningRunRef.current += 1
     setAihubmixPostSaveKeyPrompt({
       isOpen: false,
       accountId: null,
       accountName: "",
       isCreating: false,
     })
-    completePendingAihubmixPostSaveSuccess()
+    completePendingAccountKeyProvisioningSuccess()
     toast.info(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
-  }, [completePendingAihubmixPostSaveSuccess, t])
+  }, [completePendingAccountKeyProvisioningSuccess, t])
 
   const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {
     const accountId = aihubmixPostSaveKeyPrompt.accountId
     if (!accountId) return
 
-    const runId = aihubmixPostSaveKeyRunRef.current + 1
-    aihubmixPostSaveKeyRunRef.current = runId
-    const isCurrentRun = () => aihubmixPostSaveKeyRunRef.current === runId
+    const runId = postSaveKeyProvisioningRunRef.current + 1
+    postSaveKeyProvisioningRunRef.current = runId
+    const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
 
     setAihubmixPostSaveKeyPrompt((prev) => ({
       ...prev,
@@ -2942,7 +2982,7 @@ export function useAccountDialog({
           accountName: "",
           isCreating: false,
         })
-        completePendingAihubmixPostSaveSuccess()
+        completePendingAccountKeyProvisioningSuccess()
         return
       }
 
@@ -2978,7 +3018,7 @@ export function useAccountDialog({
         accountName: "",
         isCreating: false,
       })
-      completePendingAihubmixPostSaveSuccess()
+      completePendingAccountKeyProvisioningSuccess()
     } catch (error) {
       if (!isCurrentRun()) return
 
@@ -2989,7 +3029,7 @@ export function useAccountDialog({
         accountName: "",
         isCreating: false,
       })
-      completePendingAihubmixPostSaveSuccess()
+      completePendingAccountKeyProvisioningSuccess()
       logger.error("AIHubMix post-save one-time key creation failed", {
         accountId,
         error: getErrorMessage(error),
@@ -2997,7 +3037,7 @@ export function useAccountDialog({
     }
   }, [
     aihubmixPostSaveKeyPrompt.accountId,
-    completePendingAihubmixPostSaveSuccess,
+    completePendingAccountKeyProvisioningSuccess,
     t,
   ])
 
@@ -3079,7 +3119,7 @@ export function useAccountDialog({
     pendingPostSaveChannelRef.current = null
     if (!pending || (!pending.runtimeKey && !pending.createdSecret)) {
       setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-      completePendingAihubmixPostSaveSuccess()
+      completePendingAccountKeyProvisioningSuccess()
       return
     }
 
@@ -3090,7 +3130,10 @@ export function useAccountDialog({
       undefined,
       pending.createdSecret,
     )
-  }, [completePendingAihubmixPostSaveSuccess, openPostSaveManagedSiteDialog])
+  }, [
+    completePendingAccountKeyProvisioningSuccess,
+    openPostSaveManagedSiteDialog,
+  ])
 
   const handlePostSaveSub2ApiTokenDialogCloseForSession = useCallback(
     (sessionId: number | null) => {
@@ -3519,6 +3562,7 @@ export function useAccountDialog({
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
+      postSaveKeyProvisioning,
       postSaveSub2ApiAccount,
       postSaveSub2ApiDialogSessionId,
       duplicateAccountWarning,
@@ -3584,6 +3628,7 @@ export function useAccountDialog({
       handleAihubmixPostSaveKeyPromptConfirm,
       shouldDeferAccountSaveSuccess,
       handlePostSaveOneTimeSecretClose,
+      handlePostSaveKeyProvisioningClose,
       handlePostSaveSub2ApiTokenDialogClose,
       handlePostSaveSub2ApiTokenCreated,
       getPostSaveSub2ApiDialogHandlers,

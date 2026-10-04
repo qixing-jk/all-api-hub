@@ -49,11 +49,20 @@ export function createVoApiV2KeyEditor(
   key?: VoApiV2Key,
   intent?: AccountKeyCreationIntent,
   groups?: Awaited<ReturnType<typeof fetchVoApiV2KeyGroupDescriptors>>,
+  provisioningGroupId?: number,
 ): AccountKeyResourceEditorDefinition<VoApiV2KeyEditCommand> {
-  const { allowedIds, preferred } = resolveKeyCreationGroupIntent(
+  const resolved = resolveKeyCreationGroupIntent(
     groups,
     key ? undefined : intent,
   )
+  const preferred =
+    provisioningGroupId === undefined
+      ? resolved.preferred
+      : groups?.find((group) => group.id === provisioningGroupId)
+  const allowedIds =
+    provisioningGroupId === undefined
+      ? resolved.allowedIds
+      : new Set([String(provisioningGroupId)])
   const baseline: VoApiV2KeyWrite = key
     ? toVoApiV2KeyWrite(key)
     : {
@@ -63,7 +72,7 @@ export function createVoApiV2KeyEditor(
         groups: preferred ? [preferred.id] : [],
         enable: true,
         expireTime: -1,
-        boundlessAmount: false,
+        boundlessAmount: true,
         amount: "0",
         used: "0",
         note: "",

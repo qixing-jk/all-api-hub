@@ -21,6 +21,7 @@ import { useDialogDebugDevSection } from "./sections/dialogDebugSection"
 import { useFixtureAccountsDevSection } from "./sections/fixtureAccountsSection"
 import { useFixtureApiCredentialsDevSection } from "./sections/fixtureApiCredentialsSection"
 import { useInstanceIdentityDevSection } from "./sections/instanceIdentitySection"
+import { KeyProvisioningPreviewSection } from "./sections/keyProvisioningPreviewSection"
 import {
   useBalanceHistoryDevSection,
   useDevPagesSection,
@@ -246,7 +247,7 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
   useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   useRegisterDevPanelSection(useUninstallSurveyDevSection())
   useRegisterDevPanelSection(useTempContextDevSection())
-  return null
+  return <KeyProvisioningPreviewSection />
 }
 
 /** Put actions for the active page first and fold each general tool separately. */

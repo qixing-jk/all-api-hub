@@ -25,6 +25,31 @@ import {
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
 
+/** Only known input blocks may continue; unresolved writes must not be replayed. */
+export function canContinueRepairWithUserInput(
+  result: AccountKeyRepairAccountResult,
+): boolean {
+  if (
+    result.failure?.code ===
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain ||
+    result.requirementResults.some(
+      (requirement) =>
+        requirement.outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Uncertain,
+    )
+  )
+    return false
+  return (
+    result.skipReason === ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey ||
+    result.skipReason ===
+      ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable ||
+    result.requirementResults.some(
+      (requirement) =>
+        requirement.outcome ===
+        ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedInputRequired,
+    )
+  )
+}
+
 export const REPAIR_RESULT_VIEWS = {
   AccountCoverage: "accountCoverage",
   InvalidKeys: "invalidKeys",

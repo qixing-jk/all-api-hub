@@ -585,6 +585,13 @@
   },
   "pleaseAddAccount": "Vui lòng thêm tài khoản trước",
   "pleaseSelectAccount": "Vui lòng chọn tài khoản",
+  "provisioning": {
+    "cancelled": "Đã dừng. Các khóa đã tạo được giữ lại.",
+    "continue": "Tiếp tục nhập thông tin",
+    "input": "{{label}} · {{current}} / {{total}}. Hoàn tất mọi thông tin trước khi tạo khóa.",
+    "progress": "Đã tạo {{created}} / {{total}}; đã có: {{covered}}.",
+    "title": "Chuẩn bị khóa tài khoản"
+  },
   "refreshTokenList": "Làm mới danh sách khóa",
   "repairMissingKeys": {
     "action": "Kiểm tra khóa",

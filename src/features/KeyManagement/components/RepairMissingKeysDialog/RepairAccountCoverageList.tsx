@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { ChevronDown, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Badge, EmptyState } from "~/components/ui"
+import { Badge, Button, EmptyState } from "~/components/ui"
 import {
   Collapsible,
   CollapsibleContent,
@@ -30,6 +30,8 @@ import {
 } from "./repairMissingKeysDialogHelpers"
 
 interface RepairAccountCoverageListProps {
+  continuableAccountIds?: ReadonlySet<string>
+  onContinue?: (accountId: string) => void
   filteredResults: AccountKeyRepairAccountResult[]
   searchTerm: string
   t: TFunction
@@ -49,6 +51,7 @@ interface RepairAccountDetailsProps {
 }
 
 interface RepairAccountCoverageItemProps {
+  onContinue?: () => void
   openWhenSearching: boolean
   result: AccountKeyRepairAccountResult
   t: TFunction
@@ -224,6 +227,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
 
 /** Renders one static or expandable account result card. */
 function RepairAccountCoverageItem({
+  onContinue,
   openWhenSearching,
   result,
   t,
@@ -292,12 +296,19 @@ function RepairAccountCoverageItem({
           {summary}
         </div>
       )}
+      {onContinue ? (
+        <Button size="sm" variant="outline" onClick={onContinue}>
+          {t("keyManagement:provisioning.continue")}
+        </Button>
+      ) : null}
     </li>
   )
 }
 
 /** Renders per-account repair outcomes and expandable result details. */
 export function RepairAccountCoverageList({
+  continuableAccountIds,
+  onContinue,
   filteredResults,
   searchTerm,
   t,
@@ -319,6 +330,11 @@ export function RepairAccountCoverageList({
           key={`${result.accountId}-${result.finishedAt}`}
           openWhenSearching={Boolean(searchTerm.trim())}
           result={result}
+          onContinue={
+            onContinue && continuableAccountIds?.has(result.accountId)
+              ? () => onContinue(result.accountId)
+              : undefined
+          }
           t={t}
         />
       ))}
