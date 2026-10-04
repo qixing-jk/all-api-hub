@@ -70,22 +70,26 @@
         "collapseFolder": "Collapse folder",
         "expandAll": "Expand all",
         "expandFolder": "Expand folder",
-        "importSelected_one": "Import selected ({{count}})",
-        "importSelected_other": "Import selected ({{count}})",
+        "importSelected_one": "Add selected ({{count}})",
+        "importSelected_other": "Add selected ({{count}})",
         "invertSelected": "Invert selected",
-        "openAddAccount": "Open Add Account",
+        "openAddAccount": "Finish manually",
+        "retryFailed": "Retry incomplete items",
         "scanSelected": "Scan selected range",
         "selectAll": "Select all"
       },
       "apiUnavailable": "This browser does not expose native bookmarks to the extension.",
+      "bestEffortHelp": "We’ll do our best to add them automatically. Some sites may need you to sign in, complete verification, or fill in a few details.",
       "bookmarkCount_one": "{{count}} bookmark",
       "bookmarkCount_other": "{{count}} bookmarks",
-      "description": "Batch scan browser bookmark URLs and review account-site candidates before importing.",
+      "description": "Add accounts from your bookmarked sites in one batch.",
       "empty": "No browser bookmarks were returned.",
       "failures": {
-        "detection": "Auto-detect could not read this site.",
-        "save": "The account could not be saved.",
-        "unknown": "The import failed."
+        "detection": "A few account details are still needed. Retry or finish manually.",
+        "login": "Sign in to this site, then retry adding it.",
+        "save": "Check and complete the account details before adding it.",
+        "unknown": "Adding is not complete yet. Retry or finish manually.",
+        "verification": "This site needs verification. Choose “Finish manually” to continue."
       },
       "folderCount_one": "{{count}} folder",
       "folderCount_other": "{{count}} folders",
@@ -94,16 +98,17 @@
       "includeExisting": "Include sites that already have saved accounts",
       "initialSteps": {
         "chooseScope": "Choose bookmark folders",
-        "review": "Review import candidates",
+        "review": "Review sites to add",
         "skipExisting": "Skip existing accounts by default"
       },
-      "initialValue": "Batch scan browser bookmarks and turn saved relay sites into account candidates. You choose the bookmark folders first, review the candidates before importing, and existing accounts are skipped by default.",
+      "initialValue": "Choose your bookmarked relay sites, review the list, and add them together. Existing accounts are skipped by default.",
       "noCandidates": "No importable web bookmark URLs were found.",
       "permissionDenied": "Bookmark permission was not granted. You can try again without closing this dialog.",
       "permissionNeeded": "Bookmark access is optional and is requested only for this batch import.",
       "readFailed": "The browser bookmark tree could not be read.",
+      "recoveryHelp": "For the remaining accounts, sign in and retry or choose “Finish manually” to continue.",
       "reloadFailed": "The import finished, but account data could not be reloaded. Refresh the account list and try again if the new accounts are not visible.",
-      "resultSummary": "Imported {{success}}, failed {{failed}}, skipped {{skipped}}.",
+      "resultSummary": "Added {{success}}, incomplete {{failed}}, skipped {{skipped}}.",
       "scanning": "Scanning browser bookmarks...",
       "scopeHelp": "Scanning only creates a preview. You can return here to adjust the selection before importing.",
       "searchEmpty": "No matching bookmark scopes",
@@ -115,7 +120,7 @@
         "duplicate_one": "Skipped by default. Existing saved-account match count: {{count}}",
         "duplicate_other": "Skipped by default. Existing saved-account match count: {{count}}",
         "imported": "Imported",
-        "ready": "Ready to import"
+        "ready": "To add"
       },
       "title": "Import accounts from bookmarks",
       "untitledFolder": "Untitled folder"

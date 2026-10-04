@@ -2,6 +2,10 @@ import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { autoDetectAccount as defaultAutoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { validateAndSaveAccount as defaultValidateAndSaveAccount } from "~/services/accounts/accountCreation"
+import {
+  AUTO_DETECT_FAILURE_REASONS,
+  AutoDetectErrorType,
+} from "~/services/accounts/utils/autoDetectUtils"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
@@ -62,6 +66,7 @@ function resolveCheckIn(value: unknown): CheckInConfig {
 function createFailureRow(
   candidate: BookmarkAccountImportCandidate,
   failureCategory: BookmarkAccountImportFailureCategory,
+  hints?: { siteType?: unknown; authType?: unknown },
 ): BookmarkAccountImportRowResult {
   return {
     candidateId: candidate.id,
@@ -69,6 +74,10 @@ function createFailureRow(
     status: "failed",
     failureCategory,
     safeMessageKey: `ui:dialog.bookmarkAccountImport.failures.${failureCategory}`,
+    ...(isAccountSiteType(hints?.siteType) ? { siteType: hints.siteType } : {}),
+    ...(Object.values(AuthTypeEnum).includes(hints?.authType as AuthTypeEnum)
+      ? { authType: hints?.authType as AuthTypeEnum }
+      : {}),
   }
 }
 
@@ -94,7 +103,16 @@ export async function runBookmarkAccountImport({
       )
 
       if (!detection.success || !detection.data) {
-        rows.push(createFailureRow(candidate, "detection"))
+        const failureCategory =
+          detection.autoDetectFailureReason ===
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
+            ? "verification"
+            : detection.detailedError?.type === AutoDetectErrorType.UNAUTHORIZED
+              ? "login"
+              : "detection"
+        rows.push(
+          createFailureRow(candidate, failureCategory, detection.recoveryData),
+        )
         continue
       }
 
@@ -122,11 +140,14 @@ export async function runBookmarkAccountImport({
         data.sub2apiAuth,
         {
           deferDataRefresh: true,
+          ...(data.kimiOpenPlatformAuth
+            ? { kimiOpenPlatformAuth: data.kimiOpenPlatformAuth }
+            : {}),
         },
       )
 
       if (!saveResult.success) {
-        rows.push(createFailureRow(candidate, "save"))
+        rows.push(createFailureRow(candidate, "save", data))
         continue
       }
 

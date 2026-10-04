@@ -251,8 +251,10 @@ If you keep AI relay sites in browser bookmarks, use "Import from Bookmarks" to 
   > Grant permission → Read bookmark tree → Select scope → Scan and create candidates → Preview → Import → Results summary
 
 - Existing accounts are skipped by default and are not imported again.
-- After import, successful, failed, and skipped entries are summarized separately. Existing accounts count as skipped by default.
-- Failed entries can continue through "Open Add Account".
+- The extension will do its best to add accounts automatically. Some sites may need you to sign in, complete verification, or fill in a few details.
+- Results summarize added, incomplete, and skipped entries. Unselected candidate sites, including existing sites skipped by default, count as skipped.
+- Added accounts are kept. After signing in or completing site verification, use "Retry incomplete items". Entries successfully added in this batch are not added again by retries.
+- Use "Finish manually" to open the regular Add Account dialog with the URL and any detected site type and authentication method, then complete the site-specific setup.
 
 ## 5. Improving the Account Addition Experience
 

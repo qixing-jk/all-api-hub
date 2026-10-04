@@ -36,8 +36,19 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import type { SiteAccount } from "~/types"
 import { getBrowserBookmarkTree } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+
+/** Boundary used by local development fixtures without replacing browser globals. */
+export interface BookmarkAccountImportDialogRuntime {
+  accounts: SiteAccount[]
+  requestPermissions: typeof ensurePermissionsDetailed
+  readBookmarks: typeof getBrowserBookmarkTree
+  importAccounts: typeof runBookmarkAccountImport
+  loadAccountData: () => Promise<void>
+  startAnalytics: typeof startProductAnalyticsAction
+}
 
 type BookmarkAccountImportDialogStage =
   | "permission-needed"
@@ -219,8 +230,17 @@ function findBookmarkNodePath(
 }
 
 /** Controls the bookmark account import dialog workflow. */
-export function useBookmarkAccountImportDialog() {
-  const { accounts, loadAccountData } = useAccountDataContext()
+export function useBookmarkAccountImportDialog(
+  runtime?: BookmarkAccountImportDialogRuntime,
+) {
+  const accountData = useAccountDataContext()
+  const accounts = runtime?.accounts ?? accountData.accounts
+  const loadAccountData =
+    runtime?.loadAccountData ?? accountData.loadAccountData
+  const requestPermissions =
+    runtime?.requestPermissions ?? ensurePermissionsDetailed
+  const readBookmarks = runtime?.readBookmarks ?? getBrowserBookmarkTree
+  const startAnalytics = runtime?.startAnalytics ?? startProductAnalyticsAction
   const { openAddAccount } = useDialogStateContext()
   const [stage, setStage] =
     useState<BookmarkAccountImportDialogStage>("permission-needed")
@@ -270,7 +290,7 @@ export function useBookmarkAccountImportDialog() {
       readyCount = scanSummary.readyCount,
       blockedCount = scanSummary.duplicateCount,
     }: CompleteFailureOptions) => {
-      startProductAnalyticsAction(BOOKMARK_IMPORT_ANALYTICS_CONTEXT).complete(
+      startAnalytics(BOOKMARK_IMPORT_ANALYTICS_CONTEXT).complete(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory,
@@ -290,6 +310,7 @@ export function useBookmarkAccountImportDialog() {
       scanSummary.duplicateCount,
       scanSummary.readyCount,
       selectedCandidateIds.size,
+      startAnalytics,
     ],
   )
 
@@ -304,7 +325,7 @@ export function useBookmarkAccountImportDialog() {
     })
 
     try {
-      const permissionResult = await ensurePermissionsDetailed([
+      const permissionResult = await requestPermissions([
         OPTIONAL_PERMISSION_IDS.Bookmarks,
       ])
 
@@ -323,7 +344,7 @@ export function useBookmarkAccountImportDialog() {
         return
       }
 
-      const bookmarkRead = await getBrowserBookmarkTree()
+      const bookmarkRead = await readBookmarks()
       if (!bookmarkRead.success) {
         setError(
           bookmarkRead.reason === "unavailable"
@@ -387,7 +408,7 @@ export function useBookmarkAccountImportDialog() {
         blockedCount: 0,
       })
     }
-  }, [completeFailure])
+  }, [completeFailure, requestPermissions, readBookmarks])
 
   const toggleBookmarkNode = useCallback(
     (nodeId: string) => {
@@ -538,107 +559,148 @@ export function useBookmarkAccountImportDialog() {
     [candidates],
   )
 
-  const startImport = useCallback(async () => {
-    if (selectedCandidates.length === 0) return
-
-    setStage("importing")
-    setError(null)
-    setProgress({
-      completedCount: 0,
-      totalCount: selectedCandidates.length,
-      currentCandidateId: "",
-    })
-
-    const tracker = startProductAnalyticsAction(
-      BOOKMARK_IMPORT_ANALYTICS_CONTEXT,
-    )
-    let importResult: BookmarkAccountImportRunResult
-    try {
-      importResult = await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
-        getCurrentTempWindowRequestSource(),
-        (protectionBypassExecution) =>
-          runBookmarkAccountImport({
-            candidates: selectedCandidates,
-            onProgress: setProgress,
-            protectionBypassExecution,
-          }),
+  const startImport = useCallback(
+    async (retryFailed = false) => {
+      if (stage !== (retryFailed ? "results" : "review")) return
+      const failedIds = new Set(
+        result.rows
+          .filter((row) => row.status === "failed")
+          .map((row) => row.candidateId),
       )
-    } catch {
-      setError("import-failed")
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-          itemCount: candidates.length,
-          selectedCount: selectedCandidates.length,
-          readyCount: scanSummary.readyCount,
-          blockedCount: scanSummary.duplicateCount,
-        },
-      })
-      setStage("review")
-      return
-    }
-    setResult(importResult)
+      const importCandidates = retryFailed
+        ? candidates.filter((candidate) => failedIds.has(candidate.id))
+        : selectedCandidates
+      if (importCandidates.length === 0) return
 
-    try {
-      await loadAccountData()
-    } catch {
-      setError("reload-failed")
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-          itemCount: candidates.length,
-          selectedCount: selectedCandidates.length,
-          successCount: importResult.successCount,
-          failureCount: importResult.failureCount,
-          skippedCount: importResult.skippedCount,
-          readyCount: scanSummary.readyCount,
-          blockedCount: scanSummary.duplicateCount,
-        },
+      setStage("importing")
+      setError(null)
+      setProgress({
+        completedCount: 0,
+        totalCount: importCandidates.length,
+        currentCandidateId: "",
       })
-      setStage("results")
-      return
-    }
 
-    tracker.complete(
-      importResult.failureCount > 0
-        ? PRODUCT_ANALYTICS_RESULTS.Failure
-        : PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        ...(importResult.failureCount > 0
-          ? {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            }
-          : {}),
-        insights: {
-          ...(importResult.failureCount > 0
+      const tracker = startAnalytics(BOOKMARK_IMPORT_ANALYTICS_CONTEXT)
+      let importResult: BookmarkAccountImportRunResult
+      try {
+        importResult = runtime
+          ? await runtime.importAccounts({
+              candidates: importCandidates,
+              onProgress: setProgress,
+            })
+          : await withProtectionBypassUserCommand(
+              PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+              getCurrentTempWindowRequestSource(),
+              (protectionBypassExecution) =>
+                runBookmarkAccountImport({
+                  candidates: importCandidates,
+                  onProgress: setProgress,
+                  protectionBypassExecution,
+                }),
+            )
+      } catch {
+        setError("import-failed")
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+            itemCount: candidates.length,
+            selectedCount: importCandidates.length,
+            readyCount: scanSummary.readyCount,
+            blockedCount: scanSummary.duplicateCount,
+          },
+        })
+        setStage(retryFailed ? "results" : "review")
+        return
+      }
+      let displayedResult = {
+        ...importResult,
+        skippedCount:
+          importResult.skippedCount +
+          candidates.length -
+          importCandidates.length,
+      }
+      if (retryFailed) {
+        const retriedRows = new Map(
+          importResult.rows.map((row) => [row.candidateId, row]),
+        )
+        const rows = result.rows.map(
+          (row) => retriedRows.get(row.candidateId) ?? row,
+        )
+        displayedResult = {
+          rows,
+          successCount: rows.filter((row) => row.status === "success").length,
+          failureCount: rows.filter((row) => row.status === "failed").length,
+          skippedCount: result.skippedCount,
+        }
+      }
+      setResult(displayedResult)
+
+      try {
+        await loadAccountData()
+      } catch {
+        setError("reload-failed")
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+            itemCount: candidates.length,
+            selectedCount: selectedCandidates.length,
+            successCount: displayedResult.successCount,
+            failureCount: displayedResult.failureCount,
+            skippedCount: displayedResult.skippedCount,
+            readyCount: scanSummary.readyCount,
+            blockedCount: scanSummary.duplicateCount,
+          },
+        })
+        setStage("results")
+        return
+      }
+
+      tracker.complete(
+        displayedResult.failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          ...(displayedResult.failureCount > 0
             ? {
-                failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
-                failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
               }
             : {}),
-          itemCount: candidates.length,
-          selectedCount: selectedCandidates.length,
-          successCount: importResult.successCount,
-          failureCount: importResult.failureCount,
-          skippedCount: importResult.skippedCount,
-          readyCount: scanSummary.readyCount,
-          blockedCount: scanSummary.duplicateCount,
+          insights: {
+            ...(displayedResult.failureCount > 0
+              ? {
+                  failureReason:
+                    PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
+                  failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+                }
+              : {}),
+            itemCount: candidates.length,
+            selectedCount: selectedCandidates.length,
+            successCount: displayedResult.successCount,
+            failureCount: displayedResult.failureCount,
+            skippedCount: displayedResult.skippedCount,
+            readyCount: scanSummary.readyCount,
+            blockedCount: scanSummary.duplicateCount,
+          },
         },
-      },
-    )
-    setStage("results")
-  }, [
-    candidates.length,
-    loadAccountData,
-    scanSummary.duplicateCount,
-    scanSummary.readyCount,
-    selectedCandidates,
-  ])
+      )
+      setStage("results")
+    },
+    [
+      candidates,
+      stage,
+      result,
+      loadAccountData,
+      scanSummary.duplicateCount,
+      scanSummary.readyCount,
+      selectedCandidates,
+      runtime,
+      startAnalytics,
+    ],
+  )
 
   const backToBookmarkScopeSelection = useCallback(() => {
     if (stage !== "review") return
@@ -652,6 +714,8 @@ export function useBookmarkAccountImportDialog() {
       openAddAccount({
         source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
         siteUrl: row.url,
+        ...(row.siteType ? { siteType: row.siteType } : {}),
+        ...(row.authType ? { authType: row.authType } : {}),
       })
     },
     [openAddAccount],

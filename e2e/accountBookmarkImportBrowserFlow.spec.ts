@@ -455,7 +455,7 @@ test("imports an account from a native browser bookmark", async ({
       .click()
 
     await expect(
-      dialog.getByText("Imported 1, failed 0, skipped 0."),
+      dialog.getByText("Added 1, incomplete 0, skipped 0."),
     ).toBeVisible()
 
     await expect
@@ -552,7 +552,7 @@ test("opens add account recovery for a failed bookmark import", async ({
       .click()
 
     await expect(
-      importDialog.getByText("Imported 0, failed 1, skipped 0."),
+      importDialog.getByText("Added 0, incomplete 1, skipped 0."),
     ).toBeVisible()
     await importDialog
       .getByTestId(
