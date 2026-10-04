@@ -12,13 +12,13 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import {
   Button,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { AccountSiteUrlInput } from "~/features/AccountManagement/components/AccountDialog/AccountSiteUrlInput"
 import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
@@ -195,17 +195,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               >
                 {t("siteInfo.siteUrl")}
               </label>
-              <Input
-                id="site-url"
-                type="text"
-                value={url}
-                onChange={(e) => onUrlChange(e.target.value)}
-                placeholder="https://example.com"
+              <AccountSiteUrlInput
+                url={url}
+                onUrlChange={onUrlChange}
+                onClearUrl={onClearUrl}
                 disabled={isSiteUrlLocked}
-                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-                onClear={isSiteUrlLocked ? undefined : onClearUrl}
-                clearButtonLabel={
-                  isSiteUrlLocked ? undefined : t("common:actions.clear")
+                enableRecentTabs={
+                  !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
                 }
               />
             </div>
@@ -220,17 +216,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             {t("siteInfo.siteUrl")}
           </label>
           <div className="relative grow">
-            <Input
-              id="site-url"
-              type="text"
-              value={url}
-              onChange={(e) => onUrlChange(e.target.value)}
-              placeholder="https://example.com"
+            <AccountSiteUrlInput
+              url={url}
+              onUrlChange={onUrlChange}
+              onClearUrl={onClearUrl}
               disabled={isSiteUrlLocked}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-              onClear={isSiteUrlLocked ? undefined : onClearUrl}
-              clearButtonLabel={
-                isSiteUrlLocked ? undefined : t("common:actions.clear")
+              enableRecentTabs={
+                !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
               }
             />
           </div>
@@ -278,7 +270,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             )}
           </div>
         )}
-        {!isDetected && onUseCurrentTab && (
+        {!isDetected && onUseCurrentTab && currentTabUrl && (
           <div className="bg-primary-soft text-primary-soft-foreground py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
             <div className="flex items-center">
               <Info className="h-4 w-4" />

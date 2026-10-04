@@ -315,6 +315,7 @@
     "currentLoginAlreadyAdded": "Current login already added",
     "currentSite": "Current Site",
     "editNow": "Edit Now",
+    "recentTabSites": "Choose from recently active tabs",
     "siteUrl": "Site URL",
     "sub2apiHint": "Sub2API uses short-term JWTs. When they expire, the extension will automatically try to obtain a new JWT using a temporary window (requires being logged in on the site). With \"Plugin Hosted Session\" enabled, each account can automatically refresh and renew authentication independently in the background, supporting multiple accounts on the same site.",
     "unknown": "Unable to get",
