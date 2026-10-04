@@ -8,6 +8,8 @@ import {
   normalizeAccountSiteProfileUrlForStorage,
 } from "~/services/accounts/accountSiteProfile/urls"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
+import { resolveFreeModelRoutes } from "~/services/apiAdapters/freemodel/routes"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import {
@@ -21,7 +23,10 @@ import { fetchFreeModelNodes } from "~/services/apiService/freemodel/nodes"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
-import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
+import {
+  createAccountCompletionHelpersMock,
+  createCheckInConfig,
+} from "../../apiAdapters/checkInFixtures"
 
 const { captureMock } = vi.hoisted(() => ({ captureMock: vi.fn() }))
 vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
@@ -61,6 +66,191 @@ const publicNodes = [
 const user = { id: 7, name: "Example", email: "example@example.invalid" }
 
 describe("FreeModel integration", () => {
+  it("bootstraps a cookie account from the verified identity with check-in disabled", async () => {
+    const account = getSiteTypeCapabilities(SITE_TYPES.FREEMODEL).account!
+    const bootstrap = account.bootstrap!
+    await expect(
+      bootstrap.getOrCreateAccessToken(request),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+    await expect(bootstrap.loadBootstrapFacts(request)).resolves.toMatchObject({
+      displayName: "FreeModel",
+      checkInSupported: false,
+    })
+    await expect(bootstrap.fetchCheckInSupport(request, {})).resolves.toBe(
+      false,
+    )
+    await expect(
+      bootstrap.resolveRoutePath(
+        { baseUrl: origin, siteType: SITE_TYPES.FREEMODEL },
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn,
+      ),
+    ).resolves.toBeNull()
+    const { helpers, captureRecoveryData } = createAccountCompletionHelpersMock(
+      SITE_TYPES.FREEMODEL,
+      { automaticExecutionEnabled: true },
+    )
+    await expect(
+      account.completion!.complete(
+        {
+          url: origin,
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: { userId: "7", siteType: SITE_TYPES.FREEMODEL },
+          context: {},
+        },
+        helpers,
+      ),
+    ).resolves.toMatchObject({
+      userId: "7",
+      username: "Example",
+      authType: AuthTypeEnum.Cookie,
+      accessToken: "",
+      siteName: "FreeModel",
+    })
+    expect(captureRecoveryData).toHaveBeenCalledWith({
+      userId: "7",
+      username: "Example",
+      authType: AuthTypeEnum.Cookie,
+    })
+  })
+
+  it("reports an expired console session as an unhealthy refresh", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      ),
+    )
+    await expect(
+      getSiteTypeCapabilities(
+        SITE_TYPES.FREEMODEL,
+      ).account!.refresh!.refreshAccount({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+      }),
+    ).resolves.toMatchObject({ success: false })
+  })
+
+  it.each([-1, "125", null])(
+    "rejects invalid stored credits: %s",
+    async (creditCents) => {
+      server.use(
+        http.get(`${origin}/api/billing`, () =>
+          HttpResponse.json({
+            creditCents,
+            signupCreditCents: 0,
+            subscription: {},
+          }),
+        ),
+        http.get(`${origin}/api/usage`, () =>
+          HttpResponse.json({
+            window5h: { limitCents: 0, usedCents: 0 },
+            windowWeek: { limitCents: 0, usedCents: 0 },
+          }),
+        ),
+      )
+      await expect(
+        fetchAccountData({
+          ...request,
+          checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+        }),
+      ).rejects.toMatchObject({
+        endpoint: "/api/billing",
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+
+  it("keeps absent optional plan metadata unset on a valid account snapshot", async () => {
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({
+          creditCents: 0,
+          signupCreditCents: 0,
+          subscription: {},
+        }),
+      ),
+      http.get(`${origin}/api/usage`, () =>
+        HttpResponse.json({
+          window5h: { limitCents: 0, usedCents: 0 },
+          windowWeek: { limitCents: 0, usedCents: 0 },
+        }),
+      ),
+    )
+    const data = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+    })
+    expect(data.subscription).toMatchObject({
+      name: undefined,
+      periodResetTime: undefined,
+      isActive: false,
+      remainingAmount: 0,
+    })
+    expect(data.quota).toBe(0)
+  })
+
+  it.each([{ keys: [{ id: 0, name: "bad", suffix: "abcd" }] }, { keys: null }])(
+    "rejects malformed key inventory: %j",
+    async (body) => {
+      server.use(http.get(`${origin}/api/keys`, () => HttpResponse.json(body)))
+      await expect(fetchKeys(request)).rejects.toMatchObject({
+        endpoint: "/api/keys",
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+
+  it.each([undefined, "", "   "])(
+    "rejects a creation response without a usable one-time secret: %s",
+    async (secret) => {
+      server.use(
+        http.post(`${origin}/api/keys`, () =>
+          HttpResponse.json({
+            key: { id: 12, name: "Example", suffix: "abcd" },
+            secret,
+          }),
+        ),
+      )
+      await expect(createKey(request, "Example")).rejects.toMatchObject({
+        endpoint: "/api/keys",
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+
+  it.each([{ id: 0 }, { id: 1, url: "not a URL" }])(
+    "rejects an invalid enabled node: %j",
+    async (overrides) => {
+      server.use(
+        http.get(`${origin}/api/nodes-public`, () =>
+          HttpResponse.json({ nodes: [{ ...publicNodes[0], ...overrides }] }),
+        ),
+      )
+      await expect(fetchFreeModelNodes(request)).rejects.toMatchObject({
+        endpoint: "/api/nodes-public",
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+
+  it("uses the node name when display_name is absent", async () => {
+    server.use(
+      http.get(`${origin}/api/nodes-public`, () =>
+        HttpResponse.json({
+          nodes: [
+            { ...publicNodes[0], display_name: null, name: " Custom " },
+            { ...publicNodes[1], display_name: null },
+          ],
+        }),
+      ),
+    )
+    const nodes = await fetchFreeModelNodes(request)
+    expect(nodes[0].label).toContain("Custom")
+    expect(nodes[1].label).toBe("Claude · cc.freemodel.dev")
+    expect(() =>
+      resolveFreeModelRoutes(nodes, "https://api.freemodel.dev?key=private"),
+    ).toThrow("Invalid FreeModel route")
+  })
+
   it.each([
     ["subscription", "/api/billing"],
     ["window5h", "/api/usage"],
@@ -677,6 +867,9 @@ describe("FreeModel integration", () => {
       http.post(`${origin}/api/keys`, () =>
         HttpResponse.json({ key, secret: "sk-example-secret" }),
       ),
+      http.delete(`${origin}/api/keys/12`, () =>
+        HttpResponse.json({ ok: true }),
+      ),
     )
     const capability = getSiteTypeCapabilities(SITE_TYPES.FREEMODEL).account!
       .keyResourceManagement!
@@ -703,6 +896,15 @@ describe("FreeModel integration", () => {
     const created = await editor.submit({ name: "Example" })
     expect(created.createdSecret).toMatchObject({ secret: "sk-example-secret" })
     expect(JSON.stringify(created.facts)).not.toContain("sk-example-secret")
+    await expect(
+      collection.delete(inventory.items[0]!.ref),
+    ).resolves.toBeUndefined()
+    server.use(
+      http.get(`${origin}/api/keys`, () => HttpResponse.json({ keys: [] })),
+    )
+    await expect(collection.get(inventory.items[0]!.ref)).rejects.toMatchObject(
+      { failure: { code: "not_found" } },
+    )
   })
 
   it.each([{}, { user: { id: "7" } }, { user: { id: 0 } }])(

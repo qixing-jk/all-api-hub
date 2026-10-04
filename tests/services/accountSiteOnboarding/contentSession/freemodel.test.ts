@@ -12,6 +12,11 @@ const context = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("FreeModel browser session", () => {
+  it("returns no identity when the session endpoint cannot be read", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+    expect(await freeModelContentSessionExtractor.extract(context)).toBeNull()
+  })
+
   it.each([
     undefined,
     null,

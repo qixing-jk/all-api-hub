@@ -3,9 +3,12 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
 import { AccountKeyResourceListItem as NativeAccountKeyResourceListItem } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem"
+import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/components/AccountKeyResource/useAccountKeySecretDisclosure"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import toast from "~/lib/notify"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/accountRuntimeKeys"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
@@ -53,6 +56,45 @@ const row: NativeKeyManagementRow = {
 }
 
 describe("AccountKeyResourceListItem", () => {
+  it("reveals and hides a recoverable provider key through the shared controls", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ id: row.accountId, siteType: row.siteType })
+    const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+      account,
+      row.facts,
+      "sk-recoverable-example",
+    )
+    function Disclosure() {
+      const { secret, secretControls } = useAccountKeySecretDisclosure({
+        account,
+        runtimeKey,
+        recoverable: true,
+        maskedLabel: "masked",
+        displayName: "Example",
+      })
+      return (
+        <div>
+          <span>{secret}</span>
+          {secretControls}
+        </div>
+      )
+    }
+    render(<Disclosure />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(screen.getByText("masked")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
+    )
+    expect(await screen.findByText("sk-recoverable-example")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
+    )
+    expect(screen.queryByText("sk-recoverable-example")).not.toBeInTheDocument()
+    expect(screen.getByText("masked")).toBeVisible()
+  })
+
   it("renders a native key with only detail, edit, and delete actions", async () => {
     const user = userEvent.setup()
     const setExpanded = vi.fn()
@@ -257,10 +299,28 @@ describe("AccountKeyResourceListItem", () => {
     expect(screen.getByText("complete-example-secret")).toBeVisible()
 
     await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
+    )
+    expect(
+      screen.queryByText("complete-example-secret"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
       screen.getByRole("button", { name: "common:actions.copyKey" }),
     )
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith("complete-example-secret"),
+    )
+
+    const errorToast = vi.spyOn(toast, "error")
+    writeText.mockRejectedValueOnce(new Error("clipboard denied"))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.copyKey" }),
+    )
+    await waitFor(() =>
+      expect(errorToast).toHaveBeenCalledWith(
+        "keyManagement:messages.copyFailed",
+      ),
     )
 
     await user.click(exportButton)
