@@ -52,6 +52,7 @@ import { onStorageChanged } from "~/utils/browser/browserApi"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
+import { t } from "~/utils/i18n/core"
 
 /**
  * Unified logger scoped to API credential profiles storage.
@@ -340,8 +341,25 @@ function getIdentityKey(
 }
 
 /**
- * Deduplicates profiles by identity.
+ * Avoid silently accepting an explicit header edit through identity dedupe.
  */
+function assertDuplicateRequestHeaders(
+  existing: ApiCredentialProfile | undefined,
+  incoming: ApiCredentialProfile,
+): void {
+  if (
+    existing &&
+    incoming.requestHeaders !== undefined &&
+    JSON.stringify(normalizeHeaderOverrides(existing.requestHeaders)) !==
+      JSON.stringify(incoming.requestHeaders)
+  ) {
+    throw new Error(
+      t("apiCredentialProfiles:dialog.errors.duplicateRequestHeaders"),
+    )
+  }
+}
+
+/** Deduplicates profiles by identity. */
 function dedupeProfiles(profiles: ApiCredentialProfile[]): {
   profiles: ApiCredentialProfile[]
   profileIdRemap: Map<string, string>
@@ -909,6 +927,7 @@ class ApiCredentialProfilesStorageService {
       const existing = config.profiles.find(
         (profile) => getIdentityKey(profile) === identityKey,
       )
+      assertDuplicateRequestHeaders(existing, candidateProfile)
       const sourceUrlChanged =
         existing !== undefined &&
         candidateProfile.sourceUrl !== undefined &&
@@ -1180,6 +1199,7 @@ class ApiCredentialProfilesStorageService {
           (p) => getIdentityKey(p) === identityKey,
         )
         if (existing) {
+          assertDuplicateRequestHeaders(existing, nextProfile)
           const profile =
             nextProfile.sourceUrl !== undefined &&
             nextProfile.sourceUrl !== existing.sourceUrl

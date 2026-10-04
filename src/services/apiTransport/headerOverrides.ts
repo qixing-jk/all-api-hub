@@ -151,10 +151,13 @@ export async function fetchWithHeaderOverrides(
       if (!needsRule) {
         // A terminated MV3 worker cannot execute finally. Clear its orphaned
         // rule before the next ordinary request, while no UA lease is active.
-        if (hasDnrPermission)
-          await dnr!.updateSessionRules({
-            removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
-          })
+        if (hasDnrPermission) {
+          const rules = await dnr!.getSessionRules()
+          if (rules.some((rule) => rule.id === HEADER_OVERRIDE_RULE_ID))
+            await dnr!.updateSessionRules({
+              removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
+            })
+        }
         return fetch(input, options)
       }
 

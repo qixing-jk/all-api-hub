@@ -221,10 +221,15 @@ describe("ApiCredentialProfileDialog", () => {
     const { onSave } = renderDialog({
       profile: buildProfile({ requestHeaders: { "user-agent": "client/1" } }),
     })
+    const headerSection = screen
+      .getByText("apiCredentialProfiles:dialog.requestHeaders.title")
+      .closest("details")!
+    headerSection.open = false
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "apiCredentialProfiles:dialog.errors.userAgentPermission",
     )
+    expect(headerSection.contains(screen.getByRole("alert"))).toBe(false)
     expect(onSave).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
     await waitFor(() =>

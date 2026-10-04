@@ -2223,69 +2223,113 @@ describe("apiTransport request helpers", () => {
     expect(protectedTask?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 
-  it("rejects forced incognito fallback without execution context", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+  it.each([undefined, { "x-client": "client/1" }])(
+    "rejects forced incognito fallback without execution context (headers=%j)",
+    async (requestHeaders) => {
+      const observer = {
+        onDispatch: vi.fn(),
+        onResponse: vi.fn(),
+      }
+      mockGetPreferences.mockResolvedValueOnce({
+        tempWindowFallback: {
+          enabled: true,
+          automaticFeatureBypass: {
+            ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+          },
         },
-      },
-    })
-    mockSendRuntimeMessage.mockResolvedValueOnce({
-      success: true,
-      status: 200,
-      data: {
+      })
+      mockSendRuntimeMessage.mockResolvedValueOnce({
         success: true,
-        data: { ok: true },
-        message: "temp",
-      },
-    })
-
-    let normalFetchCount = 0
-    server.use(
-      http.get(API_URL, () => {
-        normalFetchCount += 1
-        return HttpResponse.json({
+        status: 200,
+        data: {
           success: true,
-          data: { ok: false },
-          message: "normal",
-        })
-      }),
-    )
-
-    await expect(
-      fetchApiData<{ ok: boolean }>(
-        {
-          baseUrl: BASE_URL,
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            cookie: "session=abc123",
-            userId: "123",
-          },
-          fetchContext: {
-            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
-            incognito: true,
-            cookieStoreId: "1-incognito",
-          },
-          observer,
+          data: { ok: true },
+          message: "temp",
         },
-        { endpoint: ENDPOINT },
-      ),
-    ).rejects.toMatchObject({
-      code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
-    })
+      })
 
-    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
-    expect(normalFetchCount).toBe(0)
-    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
-    expect(observer.onDispatch).not.toHaveBeenCalled()
-    expect(observer.onResponse).not.toHaveBeenCalled()
-  })
+      let normalFetchCount = 0
+      server.use(
+        http.get(API_URL, () => {
+          normalFetchCount += 1
+          return HttpResponse.json({
+            success: true,
+            data: { ok: false },
+            message: "normal",
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData<{ ok: boolean }>(
+          {
+            baseUrl: BASE_URL,
+            requestHeaders,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              cookie: "session=abc123",
+              userId: "123",
+            },
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+              incognito: true,
+              cookieStoreId: "1-incognito",
+            },
+            observer,
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      })
+
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(normalFetchCount).toBe(0)
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+      expect(observer.onDispatch).not.toHaveBeenCalled()
+      expect(observer.onResponse).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { forceTempWindow: true },
+    {
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        incognito: true,
+      },
+    },
+    {
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        cookieStoreId: "container-2",
+      },
+    },
+  ])(
+    "rejects header overrides in a protected context even with execution authorization (%j)",
+    async (context) => {
+      const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            requestHeaders: { "x-client": "client/1" },
+            auth: { authType: AuthTypeEnum.None },
+            protectionBypassExecution: backgroundProtectionBypassExecution,
+            observer,
+            ...context,
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      })
+      expect(observer.onDispatch).not.toHaveBeenCalled()
+      expect(observer.onResponse).not.toHaveBeenCalled()
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
 
   it("fetchApiData skips normal fetch when a browser-context cookie store is present", async () => {
     mockGetPreferences.mockResolvedValueOnce({

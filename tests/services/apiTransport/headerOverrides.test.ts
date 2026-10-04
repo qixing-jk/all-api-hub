@@ -92,10 +92,36 @@ describe("credential request header overrides", () => {
     vi.stubGlobal("chrome", {
       runtime: { id: "extension-id" },
       permissions: { contains: vi.fn().mockResolvedValue(true) },
-      declarativeNetRequest: { updateSessionRules },
+      declarativeNetRequest: {
+        updateSessionRules,
+        getSessionRules: vi.fn().mockResolvedValue([]),
+      },
     })
     return updateSessionRules
   }
+
+  it("does not mutate DNR rules for ordinary requests when no UA rule is orphaned", async () => {
+    const updateSessionRules = installDnr()
+    await fetchWithHeaderOverrides("https://api.example/models")
+    expect(nativeFetch).toHaveBeenCalledOnce()
+    expect(updateSessionRules).not.toHaveBeenCalled()
+  })
+
+  it("cleans only the orphaned UA rule before dispatching an ordinary request", async () => {
+    const updateSessionRules = installDnr()
+    const api = (globalThis as any).chrome.declarativeNetRequest
+    api.getSessionRules.mockResolvedValue([
+      { id: 1_000_001 },
+      { id: 3_000_000 },
+    ])
+    await fetchWithHeaderOverrides("https://api.example/models")
+    expect(updateSessionRules).toHaveBeenCalledExactlyOnceWith({
+      removeRuleIds: [3_000_000],
+    })
+    expect(updateSessionRules.mock.invocationCallOrder[0]).toBeLessThan(
+      nativeFetch.mock.invocationCallOrder[0]!,
+    )
+  })
 
   it("scopes UA to this extension and URL and removes the rule after failure", async () => {
     const updateSessionRules = installDnr()

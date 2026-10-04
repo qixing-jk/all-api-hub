@@ -990,16 +990,17 @@ export function ApiCredentialProfileDialog({
                 <Plus className="h-4 w-4" />
                 {t("apiCredentialProfiles:dialog.requestHeaders.add")}
               </Button>
-              {errors.requestHeaders && (
-                <p role="alert" className="text-destructive-text text-xs">
-                  {errors.requestHeaders}
-                </p>
-              )}
               <p className="text-muted-foreground text-xs">
                 {t("apiCredentialProfiles:dialog.requestHeaders.hint")}
               </p>
             </div>
           </details>
+
+          {errors.requestHeaders && (
+            <p role="alert" className="text-destructive-text text-xs">
+              {errors.requestHeaders}
+            </p>
+          )}
 
           <div className="text-muted-foreground text-xs">
             {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {

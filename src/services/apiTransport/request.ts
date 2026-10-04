@@ -724,6 +724,14 @@ const _fetchApiWithMapper = async <T, TResult>(
         request.requestHeaders &&
         Object.keys(request.requestHeaders).length
       ) {
+        if (dispatchedContext.forceTempWindow) {
+          throw new ApiError(
+            t("messages:background.tempWindowPolicyContextInvalid"),
+            undefined,
+            options.endpoint,
+            API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+          )
+        }
         return await primaryRequest()
       }
       if (dispatchedContext.forceTempWindow) return await fallback()

@@ -26,6 +26,38 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 describe("apiCredentialProfilesStorage", () => {
+  it.each(["create", "capture"])(
+    "directs duplicate %s callers to edit differing headers without modifying the profile",
+    async (operation) => {
+      const input = {
+        name: "Headers",
+        apiType: API_TYPES.OPENAI,
+        baseUrl: "https://api.example",
+        apiKey: "key",
+        requestHeaders: { "x-client": "old" },
+      }
+      const original = await apiCredentialProfilesStorage.createProfile(input)
+      const changed = { ...input, requestHeaders: { "x-client": "new" } }
+      const task =
+        operation === "create"
+          ? apiCredentialProfilesStorage.createProfileWithCreationStatus(
+              changed,
+            )
+          : apiCredentialProfilesStorage.captureProfile({
+              profile: changed,
+              linkedBy: "creation-response",
+            })
+      await expect(task).rejects.toThrow(
+        "apiCredentialProfiles:dialog.errors.duplicateRequestHeaders",
+      )
+      expect(
+        await apiCredentialProfilesStorage.getProfileById(original.id),
+      ).toEqual(original)
+      expect(await apiCredentialProfilesStorage.createProfile(input)).toEqual(
+        original,
+      )
+    },
+  )
   it("round-trips normalized headers through storage and import, and clears them explicitly", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Headers",
