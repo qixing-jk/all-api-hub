@@ -156,6 +156,67 @@ describe("interactive account key provisioning plans", () => {
     })
   })
 
+  it("uses the native default editor for a complete New API inventory without groups or keys", async () => {
+    account = buildDisplaySiteData({
+      id: crypto.randomUUID(),
+      siteType: "new-api",
+    })
+    const { session, nativeEditor } = setup()
+    session.provisioning.inspect.mockResolvedValue({
+      requirements: [],
+      items: [],
+    })
+    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+    expect(plan.entries).toHaveLength(1)
+    expect(plan.entries[0]?.editor).toBe(nativeEditor)
+    expect(session.provisioning.provision).not.toHaveBeenCalled()
+    expect(nativeEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it.each(["voapi-v2", "sub2api"] as const)(
+    "does not assume an empty %s requirement inventory permits default creation",
+    async (siteType) => {
+      account = buildDisplaySiteData({ id: crypto.randomUUID(), siteType })
+      const { session } = setup()
+      session.provisioning.inspect.mockResolvedValue({
+        requirements: [],
+        items: [],
+      })
+      await expect(
+        prepareAccountKeyProvisioning(account, "all-groups"),
+      ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+      expect(prepareDefault).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([true, false])(
+    "blocks an empty New API snapshot with %s partial failure",
+    async (partial) => {
+      account = buildDisplaySiteData({
+        id: crypto.randomUUID(),
+        siteType: "new-api",
+      })
+      const { session } = setup()
+      session.provisioning.inspect.mockResolvedValue({
+        requirements: [],
+        items: partial
+          ? []
+          : [
+              {
+                ref,
+                coverage: "usable",
+                placement: { kind: "orphaned", placementKey: "old" },
+              },
+            ],
+        ...(partial ? { partialFailure: { code: "unavailable" } } : {}),
+      } as never)
+      await expect(
+        prepareAccountKeyProvisioning(account, "all-groups"),
+      ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+      expect(prepareDefault).not.toHaveBeenCalled()
+    },
+  )
+
   it("never replays an uncertain mutation", async () => {
     const { session } = setup()
     session.provisioning.provision.mockResolvedValueOnce({

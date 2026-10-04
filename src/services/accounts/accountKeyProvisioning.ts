@@ -8,6 +8,8 @@ import {
   createDisplayAccountApiContext,
   fetchDisplayAccountRuntimeKeys,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions/contracts"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   AccountKeyResourceError,
   type AccountKeyResourceEditor,
@@ -128,8 +130,17 @@ export async function prepareAccountKeyProvisioning(
         snapshot.partialFailure ?? { code: "unavailable" },
       )
     const entries: AccountKeyProvisioningEntry[] = []
-    if (!snapshot.requirements.length)
+    if (!snapshot.requirements.length) {
+      // Compatible New API deployments may expose no selectable groups. Only
+      // a complete empty inventory may enter the native default-key workflow.
+      if (
+        !snapshot.items.length &&
+        getAccountSiteDefinition(account.siteType)?.adapterFamily ===
+          ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+      )
+        return prepareAccountKeyProvisioning(account, "default", options)
       throw new AccountKeyResourceError({ code: "unavailable" })
+    }
     for (const requirement of snapshot.requirements) {
       options.signal?.throwIfAborted()
       if (analysis.coveredRequirementKeys.has(requirement.requirementKey)) {
