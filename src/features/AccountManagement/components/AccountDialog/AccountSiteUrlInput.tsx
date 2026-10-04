@@ -1,8 +1,8 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
+import { Globe2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/components/ui"
 import { ClearableFieldButton } from "~/components/ui/clearableField"
 import {
   Combobox,
@@ -20,6 +20,7 @@ import {
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { getAllTabs } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 const logger = createLogger("AccountSiteUrlInput")
 
@@ -28,19 +29,27 @@ interface RecentTabSite {
   label: string
 }
 
-/** Offers open web tabs as an explicit alternative when the active tab has no usable URL. */
+/**
+ * Site URL field for the account dialog. The field itself carries the actions
+ * that fill it: reusing the site open in the current tab, and picking another
+ * recently active site when no current-tab site is available.
+ */
 export function AccountSiteUrlInput({
   url,
   onUrlChange,
   onClearUrl,
   disabled,
   enableRecentTabs,
+  currentTabUrl,
+  onUseCurrentTab,
 }: {
   url: string
   onUrlChange: (url: string) => void
   onClearUrl: () => void
   disabled: boolean
   enableRecentTabs: boolean
+  currentTabUrl?: string | null
+  onUseCurrentTab?: () => void
 }) {
   const { t } = useTranslation(["accountDialog", "common"])
   const [options, setOptions] = useState<RecentTabSite[]>([])
@@ -104,15 +113,57 @@ export function AccountSiteUrlInput({
     "data-testid": ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput,
   }
 
+  const clearButton =
+    url && !disabled ? (
+      <ClearableFieldButton
+        label={t("common:actions.clear")}
+        onClick={() => {
+          onClearUrl()
+          inputRef.current?.focus()
+        }}
+      />
+    ) : null
+
+  // The reuse action belongs to the field it fills, so the detected origin is
+  // not repeated as helper text below the input. It stays hidden while the
+  // field already holds that site, and its label collapses to the globe on very
+  // narrow viewports, where the URL itself needs the room.
+  const currentTabSite = normalizeUrlForOriginKey(currentTabUrl, {
+    lowerCase: true,
+  })
+  const useCurrentTabButton =
+    currentTabSite &&
+    onUseCurrentTab &&
+    !disabled &&
+    normalizeUrlForOriginKey(url, { lowerCase: true }) !== currentTabSite ? (
+      <InputGroupButton
+        size="xs"
+        onClick={onUseCurrentTab}
+        aria-label={t("siteInfo.useCurrent")}
+        title={currentTabUrl ?? undefined}
+        className="shrink-0 whitespace-nowrap"
+      >
+        <Globe2 aria-hidden="true" />
+        <span className="hidden min-[360px]:inline">
+          {t("siteInfo.useCurrent")}
+        </span>
+      </InputGroupButton>
+    ) : null
+
   if (!enableRecentTabs || options.length === 0) {
     return (
-      <Input
-        {...inputProps}
-        onClear={disabled ? undefined : onClearUrl}
-        clearButtonLabel={disabled ? undefined : t("common:actions.clear")}
-        value={url}
-        onChange={(event) => onUrlChange(event.target.value)}
-      />
+      <InputGroup>
+        <InputGroupInput
+          ref={inputRef}
+          {...inputProps}
+          value={url}
+          onChange={(event) => onUrlChange(event.target.value)}
+        />
+        <InputGroupAddon align="inline-end">
+          {clearButton}
+          {useCurrentTabButton}
+        </InputGroupAddon>
+      </InputGroup>
     )
   }
 
@@ -147,15 +198,8 @@ export function AccountSiteUrlInput({
           render={<InputGroupInput {...inputProps} />}
         />
         <InputGroupAddon align="inline-end">
-          {url && !disabled && (
-            <ClearableFieldButton
-              label={t("common:actions.clear")}
-              onClick={() => {
-                onClearUrl()
-                inputRef.current?.focus()
-              }}
-            />
-          )}
+          {clearButton}
+          {useCurrentTabButton}
           <InputGroupButton asChild size="icon-xs">
             <ComboboxTrigger
               type="button"
