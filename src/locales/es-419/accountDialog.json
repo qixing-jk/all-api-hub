@@ -314,12 +314,10 @@
     },
     "cookieWarning": "Prefiere access tokens. La autenticación con Cookie requiere importar una cookie de sesión, que puede vencer/renovarse y dejar de funcionar, lo que exige reimportarla; para varias cuentas en el mismo sitio, importa una cookie de sesión por cuenta. Úsala solo cuando sea necesario.",
     "currentLoginAlreadyAdded": "El inicio de sesión actual ya fue agregado",
-    "currentSite": "Sitio actual",
     "editNow": "Editar ahora",
     "recentTabSites": "Elegir entre las pestañas activas recientemente",
     "siteUrl": "URL del sitio",
     "sub2apiHint": "Sub2API usa JWTs de corta duración. Cuando vencen, la extensión intentará obtener automáticamente un JWT nuevo mediante una ventana temporal (requiere que tengas sesión iniciada en el sitio). Con \"Sesión alojada por el plugin\" habilitada, cada cuenta puede actualizar y renovar la autenticación automáticamente en segundo plano de forma independiente, admitiendo varias cuentas en el mismo sitio.",
-    "unknown": "No se puede obtener",
     "useCurrent": "Usar sitio actual"
   },
   "title": {

@@ -312,12 +312,10 @@
     },
     "cookieWarning": "Khuyến nghị ưu tiên sử dụng Access Token. Xác thực Cookie yêu cầu nhập Session Cookie và có thể không hợp lệ do hết hạn/gia hạn, bạn cần nhập lại sau khi không hợp lệ; nhiều tài khoản trên cùng một trang web cần được nhập riêng cho mỗi tài khoản, không khuyến nghị sử dụng trừ khi cần thiết.",
     "currentLoginAlreadyAdded": "Tài khoản đăng nhập hiện tại đã được thêm",
-    "currentSite": "Trang web hiện tại",
     "editNow": "Chỉnh sửa ngay",
     "recentTabSites": "Chọn từ các tab hoạt động gần đây",
     "siteUrl": "URL trang web",
     "sub2apiHint": "Sub2API sử dụng JWT ngắn hạn, khi hết hạn, tiện ích mở rộng sẽ tự động sử dụng cửa sổ tạm thời để thử lấy JWT mới (yêu cầu đã đăng nhập trên trang web đó). Sau khi bật \"Phiên do tiện ích quản lý\", mỗi tài khoản có thể tự động làm mới và gia hạn xác thực độc lập trong nền, hỗ trợ nhiều tài khoản trên cùng một trang web.",
-    "unknown": "Không thể lấy",
     "useCurrent": "Sử dụng trang web hiện tại"
   },
   "title": {

@@ -227,7 +227,9 @@ describe("AccountDialog SiteInfoInput", () => {
     )
     resolveTabs([{ url: "https://stale.example" }])
     expect(
-      await screen.findByText("https://current.example"),
+      await screen.findByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
@@ -376,7 +378,11 @@ describe("AccountDialog SiteInfoInput", () => {
       "accountDialog:siteInfo.siteUrl",
     )
     expect(urlInput).toBeEnabled()
-    expect(screen.getByText("https://current.example.com")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    ).toBeEnabled()
 
     fireEvent.change(urlInput, {
       target: { value: "https://updated.example.com" },
@@ -507,6 +513,106 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(authTypeTrigger).toHaveClass(
       "data-[size=default]:min-h-(--density-control)",
     )
+  })
+
+  it("keeps the reuse action inside the URL field instead of repeating the detected origin", async () => {
+    const user = userEvent.setup()
+    const props = createAddModeProps()
+
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
+
+    const useCurrentButton = await screen.findByRole("button", {
+      name: "accountDialog:siteInfo.useCurrent",
+    })
+    const urlInput = screen.getByLabelText("accountDialog:siteInfo.siteUrl")
+
+    // The action shares the field it fills, so the detected origin is not
+    // repeated as helper text below the input.
+    expect(urlInput.closest('[data-slot="input-group"]')).toContainElement(
+      useCurrentButton,
+    )
+    expect(
+      screen.queryByText("https://current.example.com"),
+    ).not.toBeInTheDocument()
+    expect(useCurrentButton).toHaveAttribute(
+      "title",
+      "https://current.example.com",
+    )
+    // Narrow viewports keep the URL readable by dropping the action label.
+    expect(useCurrentButton.querySelector("span")).toHaveClass(
+      "hidden",
+      "min-[360px]:inline",
+    )
+
+    await user.click(useCurrentButton)
+    expect(props.onUseCurrentTab).toHaveBeenCalledTimes(1)
+  })
+
+  it("hides the reuse action while the field already holds that site", async () => {
+    const props = createAddModeProps()
+    props.url = "https://current.example.com"
+
+    const { rerender } = render(<SiteInfoInput {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByLabelText("accountDialog:siteInfo.siteUrl"),
+    ).toHaveValue("https://current.example.com")
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:siteInfo.recentTabSites",
+      }),
+    ).not.toBeInTheDocument()
+
+    // A trailing slash or a path is still the site the action would fill.
+    rerender(
+      <SiteInfoInput
+        {...withSitePolicy({
+          ...props,
+          url: "https://current.example.com/dashboard",
+        })}
+      />,
+    )
+    expect(
+      await screen.findByDisplayValue("https://current.example.com/dashboard"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    ).not.toBeInTheDocument()
+
+    // A different site keeps the action available.
+    rerender(
+      <SiteInfoInput
+        {...withSitePolicy({ ...props, url: "https://other.example.com" })}
+      />,
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the current-site warning while the reuse action stays in the field", async () => {
+    const props = createAddModeProps()
+    props.isCurrentSiteAdded = true
+
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:siteInfo.alreadyAdded"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("shows the generic already-added warning and keeps manual entry when no recent tabs are available", async () => {
@@ -663,5 +769,10 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(
       screen.queryByTestId("account-management-auth-type-trigger"),
     ).not.toBeInTheDocument()
+    expect(urlInput.closest('[data-slot="input-group"]')).toContainElement(
+      screen.getByRole("button", {
+        name: "accountDialog:siteInfo.useCurrent",
+      }),
+    )
   })
 })

@@ -313,12 +313,10 @@
     },
     "cookieWarning": "Bevorzugen Sie Zugriffstoken. Die Cookie-Authentifizierung erfordert den Import eines Sitzungscookies. Das Cookie kann ablaufen oder erneuert werden und dadurch ungültig werden, sodass es erneut importiert werden muss. Importieren Sie für mehrere Konten auf derselben Website jeweils ein Sitzungscookie. Verwenden Sie diese Methode nur bei Bedarf.",
     "currentLoginAlreadyAdded": "Aktueller Login bereits hinzugefügt",
-    "currentSite": "Aktuelle Seite",
     "editNow": "Jetzt bearbeiten",
     "recentTabSites": "Aus zuletzt aktiven Tabs auswählen",
     "siteUrl": "Website-URL",
     "sub2apiHint": "Sub2API verwendet kurzfristige JWTs. Wenn sie ablaufen, versucht die Erweiterung automatisch, über ein temporäres Fenster ein neues JWT zu erhalten (erfordert die Anmeldung auf der Website). Wenn „Plugin-gehostete Sitzung“ aktiviert ist, kann jedes Konto die Authentifizierung unabhängig im Hintergrund automatisch aktualisieren und erneuern, wodurch mehrere Konten auf derselben Website unterstützt werden.",
-    "unknown": "Konnte nicht abgerufen werden",
     "useCurrent": "Aktuelle Website verwenden"
   },
   "title": {
