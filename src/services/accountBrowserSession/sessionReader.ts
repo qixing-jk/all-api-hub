@@ -255,6 +255,9 @@ export async function readAccountBrowserSessionFromTab(
       url: options.baseUrl,
       siteType: options.siteType,
       diagnosticId: diagnostics.requestId,
+      ...(options.source === ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
+        ? { expectedOrigin: tryParseOrigin(options.baseUrl) ?? "" }
+        : {}),
       ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
     })
 

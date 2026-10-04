@@ -58,6 +58,66 @@ describe("content storage handler", () => {
     })
   })
 
+  it("rejects a bound session read before touching another origin's storage", async () => {
+    vi.stubGlobal("location", new URL("https://other.example/dashboard"))
+    localStorage.setItem("user", JSON.stringify({ id: 42, username: "other" }))
+    const readStorage = vi.spyOn(Storage.prototype, "getItem")
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        { url: "https://site.example", expectedOrigin: "https://site.example" },
+        resolve,
+      )
+    })
+    expect(response).toEqual({
+      success: false,
+      error: "messages:content.userInfoNotFound",
+    })
+    expect(readStorage).not.toHaveBeenCalled()
+  })
+
+  it("discards a session if the page origin changes during extraction", async () => {
+    vi.stubGlobal("location", new URL("https://site.example/dashboard"))
+    const extract = vi.fn(async () => {
+      vi.stubGlobal("location", new URL("https://other.example/dashboard"))
+      return { userId: "42", accessToken: "other-origin-token" }
+    })
+    mockGetContentSessionExtractors.mockReturnValue([
+      { id: "delayed", canExtract: () => true, extract },
+    ])
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        { url: "https://site.example", expectedOrigin: "https://site.example" },
+        resolve,
+      )
+    })
+    expect(extract).toHaveBeenCalledOnce()
+    expect(response).toEqual({
+      success: false,
+      error: "messages:content.userInfoNotFound",
+    })
+  })
+
+  it("allows a bound session read while the document stays on its target origin", async () => {
+    vi.stubGlobal("location", new URL("https://site.example/dashboard"))
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 42, username: "current" }),
+    )
+    mockGetContentSessionExtractors.mockReturnValue([
+      compatibleUserContentSessionExtractor,
+    ])
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        { url: "https://site.example", expectedOrigin: "https://site.example" },
+        resolve,
+      )
+    })
+    expect(response).toEqual({
+      success: true,
+      data: { userId: "42", user: { id: 42, username: "current" } },
+    })
+  })
+
   it("returns every localStorage entry when no specific key is requested", () => {
     localStorage.setItem("theme", "dark")
     localStorage.setItem("language", "zh-CN")

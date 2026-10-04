@@ -367,6 +367,7 @@ describe("account browser-session reader", () => {
       diagnosticId: expect.any(String),
       url: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
+      expectedOrigin: "https://white-label.example.invalid",
     })
     expect(session).not.toHaveProperty("transientAuth")
   })
@@ -893,12 +894,14 @@ describe("account browser-session reader", () => {
       diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
+      expectedOrigin: "https://sub2.example.com",
     })
     expect(mockSendTabMessage).toHaveBeenNthCalledWith(2, 2, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
+      expectedOrigin: "https://sub2.example.com",
     })
   })
 
@@ -961,6 +964,7 @@ describe("account browser-session reader", () => {
       diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
+      expectedOrigin: "https://sub2.example.com",
     })
   })
 

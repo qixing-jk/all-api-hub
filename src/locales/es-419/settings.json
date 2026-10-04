@@ -329,7 +329,7 @@
       "copied": "Registros copiados",
       "copy": "Copiar registros filtrados",
       "copyError": "No se pudieron copiar los registros",
-      "description": "Este dispositivo conserva hasta {{limit}} registros de las últimas {{hours}} horas, a partir de la activación. Establece el nivel mínimo en Depuración para más detalles.",
+      "description": "Muestra hasta {{limit}} entradas locales de las últimas {{hours}} horas. La limpieza de entradas vencidas se ejecuta al registrar o ver los registros. Activa los registros para guardar eventos; establece el nivel mínimo en Depuración para obtener más detalles.",
       "details": "Detalles",
       "empty": "No hay registros coincidentes. Activa el registro, reproduce el problema y vuelve aquí.",
       "entryDescription": "Sigue los registros de todas las páginas de la extensión en vivo o consulta el historial reciente.",

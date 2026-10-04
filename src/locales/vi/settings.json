@@ -329,7 +329,7 @@
       "copied": "Đã sao chép nhật ký",
       "copy": "Sao chép nhật ký đã lọc",
       "copyError": "Không thể sao chép nhật ký",
-      "description": "Thiết bị giữ tối đa {{limit}} mục trong {{hours}} giờ gần nhất sau khi bật nhật ký. Đặt mức nhật ký tối thiểu thành Gỡ lỗi để ghi chi tiết hơn.",
+      "description": "Hiển thị tối đa {{limit}} bản ghi cục bộ trong {{hours}} giờ qua. Việc dọn dẹp bản ghi hết hạn diễn ra khi ghi hoặc xem nhật ký. Bật nhật ký để ghi lại sự kiện; đặt mức nhật ký tối thiểu thành Gỡ lỗi để có thêm chi tiết.",
       "details": "Chi tiết",
       "empty": "Không có nhật ký phù hợp. Bật nhật ký, tái hiện sự cố rồi quay lại đây.",
       "entryDescription": "Theo dõi trực tiếp nhật ký từ các trang của tiện ích hoặc xem lịch sử gần đây.",

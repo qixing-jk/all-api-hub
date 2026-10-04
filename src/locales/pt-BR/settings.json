@@ -329,7 +329,7 @@
       "copied": "Logs copiados",
       "copy": "Copiar logs filtrados",
       "copyError": "Não foi possível copiar os logs",
-      "description": "Este dispositivo mantém até {{limit}} registros das últimas {{hours}} horas após ativar os logs. Defina o nível mínimo como Depuração para mais detalhes.",
+      "description": "Exibe até {{limit}} registros locais das últimas {{hours}} horas. A limpeza de registros expirados ocorre ao registrar ou visualizar os logs. Ative os logs para registrar eventos; defina o nível mínimo como Depuração para obter mais detalhes.",
       "details": "Detalhes",
       "empty": "Nenhum log correspondente. Ative os logs, reproduza o problema e volte aqui.",
       "entryDescription": "Acompanhe os logs de todas as páginas da extensão ao vivo ou consulte o histórico recente.",

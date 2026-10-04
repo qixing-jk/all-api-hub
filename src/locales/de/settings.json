@@ -329,7 +329,7 @@
       "copied": "Protokolle kopiert",
       "copy": "Gefilterte Protokolle kopieren",
       "copyError": "Protokolle konnten nicht kopiert werden",
-      "description": "Dieses Gerät speichert bis zu {{limit}} Einträge der letzten {{hours}} Stunden nach Aktivierung der Protokollierung. Für mehr Details die Mindestprotokollstufe auf Debug setzen.",
+      "description": "Zeigt bis zu {{limit}} lokale Einträge der letzten {{hours}} Stunden. Veraltete Einträge werden beim Aufzeichnen oder Anzeigen von Protokollen bereinigt. Aktiviere die Protokollierung, um Ereignisse aufzuzeichnen; stelle die Mindestprotokollstufe für mehr Details auf Debug.",
       "details": "Details",
       "empty": "Keine passenden Protokolle. Protokollierung aktivieren, das Problem reproduzieren und hierher zurückkehren.",
       "entryDescription": "Protokolle aller Erweiterungsseiten live verfolgen oder den Verlauf ansehen.",

@@ -105,6 +105,25 @@ export function handleGetUserFromLocalStorage(
             : undefined,
         relayToBackground: true,
       })
+      // A tab ID can survive navigation after the caller's eligibility query.
+      // Bind existing-tab reads to the live document before reading credentials
+      // and again after an asynchronous extractor completes.
+      const rejectChangedOrigin = () => {
+        if (
+          request?.expectedOrigin === undefined ||
+          (typeof location !== "undefined" &&
+            location.origin === request.expectedOrigin)
+        ) {
+          return false
+        }
+        diagnostics?.finish("failed", { reason: "origin_mismatch" })
+        sendResponse({
+          success: false,
+          error: t("messages:content.userInfoNotFound"),
+        })
+        return true
+      }
+      if (rejectChangedOrigin()) return
       const extractionContext = { ...context, diagnostics }
       for (const extractor of getContentSessionExtractors()) {
         if (!extractor.canExtract(context)) continue
@@ -113,6 +132,7 @@ export function handleGetUserFromLocalStorage(
           siteType: context.siteTypeHint,
         })
         const result = await extractor.extract(extractionContext)
+        if (rejectChangedOrigin()) return
         diagnostics.record("extractor_finished", {
           extractor: extractor.id,
           outcome: result ? "success" : "empty",
