@@ -29,6 +29,55 @@ const createDeferred = <T,>() => {
 }
 
 describe("OneTimeSecretDialog", () => {
+  it("shows automatic copy as status and keeps save as the primary footer action", async () => {
+    render(
+      <OneTimeSecretDialog
+        isOpen
+        result={RESULT}
+        onClose={vi.fn()}
+        saveAction={{ onSave: vi.fn() }}
+      />,
+    )
+    const status = await screen.findByRole("status")
+    await waitFor(() =>
+      expect(status).toHaveTextContent("keyManagement:oneTimeKey.copiedAction"),
+    )
+    const save = screen.getByRole("button", {
+      name: "keyManagement:actions.saveToApiProfiles",
+    })
+    const copy = screen.getByRole("button", {
+      name: "keyManagement:oneTimeKey.copy",
+    })
+    expect(
+      within(save.closest('[data-slot="action-group"]') as HTMLElement)
+        .getAllByRole("button")
+        .at(-1),
+    ).toBe(save)
+    expect(save.closest('[data-slot="action-group"]')).not.toContainElement(
+      copy,
+    )
+  })
+
+  it("allows retry after automatic copy fails", async () => {
+    const user = userEvent.setup()
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockRejectedValueOnce(new Error("denied"))
+      .mockResolvedValue(undefined)
+    render(<OneTimeSecretDialog isOpen result={RESULT} onClose={vi.fn()} />)
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "keyManagement:oneTimeKey.copyFailed",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:oneTimeKey.copy" }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "keyManagement:oneTimeKey.copiedAction",
+      ),
+    )
+    expect(write).toHaveBeenCalledTimes(2)
+  })
   beforeEach(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,

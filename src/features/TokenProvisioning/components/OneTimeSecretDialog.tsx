@@ -50,6 +50,7 @@ export function OneTimeSecretDialog({
 }: OneTimeSecretDialogProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
   const [handled, setHandled] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isCopying, setIsCopying] = useState(false)
@@ -73,6 +74,7 @@ export function OneTimeSecretDialog({
 
   const resetLocalState = useCallback(() => {
     setCopied(false)
+    setCopyFailed(false)
     setHandled(false)
     setIsSaving(false)
     setIsCopying(false)
@@ -101,6 +103,7 @@ export function OneTimeSecretDialog({
     copyInvocationRef.current = invocation
     isCopyingRef.current = true
     setIsCopying(true)
+    setCopyFailed(false)
     const isCurrent = () =>
       operationGenerationRef.current === operationGeneration &&
       copyInvocationRef.current === invocation
@@ -118,6 +121,7 @@ export function OneTimeSecretDialog({
     } catch {
       if (!isCurrent()) return false
 
+      setCopyFailed(true)
       toast.error(t("keyManagement:oneTimeKey.copyFailed"))
       outcome = "failure"
     } finally {
@@ -262,23 +266,6 @@ export function OneTimeSecretDialog({
                     t("keyManagement:actions.saveToApiProfiles")}
               </Button>
             ) : null}
-            <Button
-              type="button"
-              onClick={() => void copySecret()}
-              loading={isCopying}
-              data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCopyButton}
-              leftIcon={
-                copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Clipboard className="h-4 w-4" />
-                )
-              }
-            >
-              {copied
-                ? t("keyManagement:oneTimeKey.copiedAction")
-                : t("keyManagement:oneTimeKey.copy")}
-            </Button>
           </ActionGroup>
         }
       >
@@ -304,6 +291,34 @@ export function OneTimeSecretDialog({
               autoFocus
               onFocus={(event) => event.currentTarget.select()}
             />
+            <div className="mt-density-2 flex flex-wrap items-center justify-between gap-2">
+              <span
+                role="status"
+                className="text-secondary-foreground flex items-center gap-2 text-sm"
+              >
+                {copied && !copyFailed ? (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                ) : null}
+                {isCopying
+                  ? t("common:status.copying")
+                  : copyFailed
+                    ? t("keyManagement:oneTimeKey.copyFailed")
+                    : copied
+                      ? t("keyManagement:oneTimeKey.copiedAction")
+                      : null}
+              </span>
+              <Button
+                type="button"
+                onClick={() => void copySecret()}
+                variant="ghost"
+                size="sm"
+                loading={isCopying}
+                data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCopyButton}
+                leftIcon={<Clipboard className="h-4 w-4" />}
+              >
+                {t("keyManagement:oneTimeKey.copy")}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
