@@ -69,6 +69,8 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
     incognito?: boolean
     cookieStoreId?: string
   }
+  /** Reuse a tab query snapshot; origin and browser context are still checked. */
+  candidateTabs?: readonly browser.tabs.Tab[]
   isUsableSession?: AccountBrowserSessionPredicate
   protectionBypassExecution?: ProtectionBypassExecution
   onError?: AccountBrowserSessionErrorHandler

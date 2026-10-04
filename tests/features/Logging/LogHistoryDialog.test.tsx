@@ -1,6 +1,14 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import LogHistoryDialog from "~/features/Logging/LogHistoryDialog"
 import type { LogHistoryEntry } from "~/types/logging"
@@ -10,6 +18,10 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   clear: vi.fn(),
   subscribe: vi.fn(),
+  error: vi.fn(),
+}))
+vi.mock("~/lib/notify", () => ({
+  default: { success: vi.fn(), error: mocks.error },
 }))
 vi.mock("~/services/logging/logHistory", () => ({
   LOG_HISTORY_LIMIT: 1000,
@@ -38,6 +50,7 @@ const renderViewer = () =>
   )
 
 describe("log history viewer", () => {
+  afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.list.mockResolvedValue([entry("Earlier session")])
@@ -131,5 +144,151 @@ describe("log history viewer", () => {
     await act(async () => resolveInitial([entry("Stale snapshot")]))
     expect(screen.getByText("Latest event")).toBeInTheDocument()
     expect(screen.queryByText("Stale snapshot")).not.toBeInTheDocument()
+  })
+
+  it("filters retained logs by time, level and source", async () => {
+    const user = userEvent.setup()
+    mocks.list.mockResolvedValue([
+      {
+        ...entry("Recent background error"),
+        level: "error",
+        context: "Background",
+      },
+      entry("Recent content info"),
+      {
+        ...entry("Older background error"),
+        level: "error",
+        context: "Background",
+        timestamp: Date.now() - 20 * 60_000,
+      },
+      { ...entry("Yesterday event"), timestamp: Date.now() - 2 * 60 * 60_000 },
+    ])
+    renderViewer()
+    await screen.findByText("Yesterday event")
+    const select = async (name: string, option: string) => {
+      await user.click(screen.getByRole("combobox", { name }))
+      await user.click(screen.getByRole("option", { name: option }))
+    }
+    await select(
+      "settings:logging.history.period",
+      "settings:logging.history.lastHour",
+    )
+    expect(screen.queryByText("Yesterday event")).not.toBeInTheDocument()
+    await select(
+      "settings:logging.history.level",
+      "settings:logging.levels.error",
+    )
+    expect(screen.queryByText("Recent content info")).not.toBeInTheDocument()
+    await select("settings:logging.history.context", "Background")
+    expect(screen.getByText("Older background error")).toBeInTheDocument()
+    await select(
+      "settings:logging.history.period",
+      "settings:logging.history.lastMinutes",
+    )
+    expect(screen.queryByText("Older background error")).not.toBeInTheDocument()
+    expect(screen.getByText("Recent background error")).toBeInTheDocument()
+  })
+
+  it("loads older rows and copies all filtered logs including rows not displayed", async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    mocks.list.mockResolvedValue(
+      Array.from({ length: 120 }, (_, index) => entry(`Event ${index}`)),
+    )
+    renderViewer()
+    await screen.findByText("Event 0")
+    expect(screen.queryByText("Event 119")).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "settings:logging.history.copy" }),
+    )
+    expect(JSON.parse(writeText.mock.calls[0]![0])).toHaveLength(120)
+    await user.click(
+      screen.getByRole("button", { name: "settings:logging.history.more" }),
+    )
+    expect(screen.getByText("Event 119")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "settings:logging.history.more" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("reports clipboard failure while preserving logs for another copy attempt", async () => {
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    })
+    renderViewer()
+    await screen.findByText("Earlier session")
+    await user.click(
+      screen.getByRole("button", { name: "settings:logging.history.copy" }),
+    )
+    await waitFor(() =>
+      expect(mocks.error).toHaveBeenCalledWith(
+        "settings:logging.history.copyError",
+      ),
+    )
+    expect(screen.getByText("Earlier session")).toBeInTheDocument()
+  })
+
+  it("requires clear confirmation and preserves history on failure before retrying", async () => {
+    const user = userEvent.setup()
+    renderViewer()
+    await screen.findByText("Earlier session")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    let confirmation = within(screen.getByRole("dialog"))
+    await user.click(
+      confirmation.getByRole("button", { name: "common:actions.cancel" }),
+    )
+    expect(mocks.clear).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    confirmation = within(screen.getByRole("dialog"))
+    mocks.clear.mockRejectedValueOnce(new Error("write unavailable"))
+    await user.click(
+      confirmation.getByRole("button", { name: "common:actions.clear" }),
+    )
+    await waitFor(() =>
+      expect(mocks.error).toHaveBeenCalledWith(
+        "settings:logging.history.clearError",
+      ),
+    )
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByText("Earlier session")).toBeInTheDocument()
+    mocks.list.mockResolvedValue([])
+    await user.click(
+      confirmation.getByRole("button", { name: "common:actions.clear" }),
+    )
+    await screen.findByText("settings:logging.history.empty")
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(screen.queryByText("Earlier session")).not.toBeInTheDocument()
+  })
+
+  it("refreshes periodically while live and supports manual refresh while paused", async () => {
+    const interval = vi.spyOn(window, "setInterval")
+    renderViewer()
+    await screen.findByText("Earlier session")
+    const tick = interval.mock.calls.find(
+      ([, delay]) => delay === 30_000,
+    )?.[0] as () => void
+    mocks.list.mockResolvedValue([entry("Periodic event")])
+    act(() => tick())
+    await screen.findByText("Periodic event")
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:logging.history.pause" }),
+    )
+    mocks.list.mockResolvedValue([entry("Manual event")])
+    act(() => tick())
+    expect(screen.queryByText("Manual event")).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.refresh" }),
+    )
+    await screen.findByText("Manual event")
   })
 })

@@ -9,6 +9,7 @@ import {
   listLogHistory,
   LOG_HISTORY_LIMIT,
   LOG_HISTORY_RETENTION_MS,
+  subscribeToLogHistory,
 } from "~/services/logging/logHistory"
 
 const storage = new Storage({ area: "local" })
@@ -112,6 +113,32 @@ describe("local log history", () => {
     await expect(appendLogHistory(entry("lost"))).rejects.toThrow("read failed")
     getSpy.mockRestore()
     expect(await storage.get(STORAGE_KEYS.LOG_HISTORY)).toEqual(before)
+    await appendLogHistory(entry("recovered"))
+    expect((await listLogHistory()).map((row) => row.id)).toEqual(
+      expect.arrayContaining(["original", "lost", "recovered"]),
+    )
+  })
+
+  it("retains a failed batch and concurrent logs until a later producer retries", async () => {
+    let rejectWrite!: (error: Error) => void
+    const write = vi.spyOn(browser.storage.local, "set").mockImplementationOnce(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectWrite = reject
+        }),
+    )
+    const first = appendLogHistory(entry("failed-batch"))
+    const firstFailure = expect(first).rejects.toThrow("write failed")
+    await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(1))
+    const concurrent = appendLogHistory(entry("during-write"))
+    const concurrentFailure = expect(concurrent).rejects.toThrow("write failed")
+    rejectWrite(new Error("write failed"))
+    await Promise.all([firstFailure, concurrentFailure])
+    expect(write).toHaveBeenCalledTimes(1)
+    await appendLogHistory(entry("retry-trigger"))
+    expect((await listLogHistory()).map((row) => row.id)).toEqual(
+      expect.arrayContaining(["failed-batch", "during-write", "retry-trigger"]),
+    )
   })
 
   it("clear removes queued older logs without resurrecting them", async () => {
@@ -156,5 +183,50 @@ describe("local log history", () => {
     const stored = JSON.stringify(await storage.get(STORAGE_KEYS.LOG_HISTORY))
     expect(stored).not.toContain("json-password-secret")
     expect(stored).not.toContain("json-session-secret")
+  })
+
+  it("ignores malformed entries and retains bounded plain text details", async () => {
+    await Promise.all([
+      appendLogHistory(null),
+      appendLogHistory({ ...entry("bad-date"), timestamp: NaN }),
+      appendLogHistory({ ...entry("bad-level"), level: "trace" }),
+      appendLogHistory({ ...entry("plain"), details: "Bearer private-token" }),
+      appendLogHistory({ ...entry("long"), details: "x".repeat(10_000) }),
+      appendLogHistory({ ...entry("without-details"), details: null }),
+    ])
+    const rows = await listLogHistory()
+    expect(rows).toHaveLength(3)
+    expect(rows.find((row) => row.id === "plain")?.details).toBe(
+      "Bearer [REDACTED]",
+    )
+    expect(rows.find((row) => row.id === "long")?.details).toHaveLength(8001)
+    expect(rows.find((row) => row.id === "without-details")?.details).toBeNull()
+  })
+
+  it("bounds the pending queue during a large concurrent log burst", async () => {
+    await Promise.all(
+      Array.from({ length: LOG_HISTORY_LIMIT + 5 }, (_, index) =>
+        appendLogHistory(entry(`burst-${index}`, now + index)),
+      ),
+    )
+    const rows = await listLogHistory()
+    expect(rows).toHaveLength(LOG_HISTORY_LIMIT)
+    expect(rows[0]?.id).toBe(`burst-${LOG_HISTORY_LIMIT + 4}`)
+    expect(rows.some((row) => row.id === "burst-0")).toBe(false)
+  })
+
+  it("notifies only for local history changes and removes its listener", () => {
+    const addListener = vi.spyOn(browser.storage.onChanged, "addListener")
+    const removeListener = vi.spyOn(browser.storage.onChanged, "removeListener")
+    const changed = vi.fn()
+    const unsubscribe = subscribeToLogHistory(changed)
+    const listener = addListener.mock.calls.at(-1)![0]
+    listener({ unrelated: { newValue: 1 } }, "local")
+    listener({ [STORAGE_KEYS.LOG_HISTORY]: { newValue: [] } }, "sync")
+    expect(changed).not.toHaveBeenCalled()
+    listener({ [STORAGE_KEYS.LOG_HISTORY]: { newValue: [] } }, "local")
+    expect(changed).toHaveBeenCalledTimes(1)
+    unsubscribe()
+    expect(removeListener).toHaveBeenCalledWith(listener)
   })
 })

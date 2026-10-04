@@ -21,6 +21,7 @@ import {
 } from "~/constants/siteType"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
+  getAccountBrowserSessionTabs,
   readAccountBrowserSessionFromExistingTabs,
   readAccountBrowserSessionFromTab,
   type AccountBrowserSession,
@@ -879,8 +880,7 @@ async function runAutoDetectSmart(
   let currentTabReloadHintResult: AutoDetectResult | null = null
   let browserFallbackContext: AutoDetectFetchContext | undefined
   let currentTabMatched = false
-  let browserContext: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"] =
-    { incognito: false }
+  let browserContext: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"]
 
   // 1. 尝试从当前标签页获取（最快，无需创建新窗口）
   if (capabilities.hasTabs) {
@@ -888,11 +888,13 @@ async function runAutoDetectSmart(
       // On mobile, currentWindow may be unsupported; fall back to first available tab
       const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
-      browserContext = {
-        incognito: currentTab?.incognito === true,
-        ...(currentTab?.cookieStoreId
-          ? { cookieStoreId: currentTab.cookieStoreId }
-          : {}),
+      if (currentTab) {
+        browserContext = {
+          incognito: currentTab.incognito === true,
+          ...(currentTab.cookieStoreId
+            ? { cookieStoreId: currentTab.cookieStoreId }
+            : {}),
+        }
       }
       browserFallbackContext = createBrowserContextFromTab(currentTab)
       if (browserFallbackContext) {
@@ -1003,18 +1005,28 @@ async function runAutoDetectSmart(
 
   // Options is itself the active tab. Reuse a logged-in target tab before
   // opening a temporary page, keeping normal/incognito/container sessions apart.
-  if (capabilities.hasTabs && !currentTabMatched) {
+  if (capabilities.hasTabs && browserContext && !currentTabMatched) {
     try {
       // This attempt must not acquire a temporary page merely to detect the
       // site type. The ordinary background fallback retains bypass intent.
-      const siteType = await getAccountSiteType(detectionUrl)
-      const session = await readAccountBrowserSessionFromExistingTabs({
-        baseUrl: detectionUrl,
-        siteType,
+      const candidateTabs = await getAccountBrowserSessionTabs(
+        detectionUrl,
         browserContext,
-        protectionBypassExecution,
         diagnostics,
-      })
+      )
+      const siteType = candidateTabs.length
+        ? await getAccountSiteType(detectionUrl)
+        : undefined
+      const session = siteType
+        ? await readAccountBrowserSessionFromExistingTabs({
+            baseUrl: detectionUrl,
+            siteType,
+            browserContext,
+            candidateTabs,
+            protectionBypassExecution,
+            diagnostics,
+          })
+        : null
       if (session) {
         const result = await combineUserDataAndSiteType(
           {

@@ -326,7 +326,27 @@ const doesTabMatchBrowserContext = (
   return true
 }
 
-const getSameOriginTabs = async (
+/** Filter a query snapshot without mixing origins or browser sessions. */
+const selectSameOriginTabs = (
+  tabs: readonly browser.tabs.Tab[],
+  baseUrl: string,
+  browserContext: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"],
+) => {
+  const origin = tryParseOrigin(baseUrl)
+  if (!origin) return []
+  return tabs
+    .filter((tab) => {
+      if (!tab?.id || !tab.url) return false
+      return (
+        tryParseOrigin(tab.url) === origin &&
+        doesTabMatchBrowserContext(tab, browserContext)
+      )
+    })
+    .sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)))
+}
+
+/** Query eligible same-origin tabs before running provider classification. */
+export const getAccountBrowserSessionTabs = async (
   baseUrl: string,
   browserContext?: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"],
   diagnostics?: AccountDetectionDiagnostics,
@@ -348,15 +368,7 @@ const getSameOriginTabs = async (
     })
     return []
   })
-  return tabs
-    .filter((tab) => {
-      if (!tab?.id || !tab.url) return false
-      return (
-        tryParseOrigin(tab.url) === origin &&
-        doesTabMatchBrowserContext(tab, browserContext)
-      )
-    })
-    .sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)))
+  return selectSameOriginTabs(tabs, baseUrl, browserContext)
 }
 
 const createCurrentTabFetchContext = (
@@ -385,11 +397,17 @@ export async function readAccountBrowserSessionFromExistingTabs(
   options: ReadAccountBrowserSessionFromExistingTabsOptions,
 ): Promise<AccountBrowserSession | null> {
   const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
-  const tabs = await getSameOriginTabs(
-    options.baseUrl,
-    options.browserContext,
-    diagnostics,
-  )
+  const tabs = options.candidateTabs
+    ? selectSameOriginTabs(
+        options.candidateTabs,
+        options.baseUrl,
+        options.browserContext,
+      )
+    : await getAccountBrowserSessionTabs(
+        options.baseUrl,
+        options.browserContext,
+        diagnostics,
+      )
   diagnostics.record("existing_tabs_selected", {
     source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     count: tabs.length,

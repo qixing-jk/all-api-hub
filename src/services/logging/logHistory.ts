@@ -106,30 +106,36 @@ export function appendLogHistory(value: unknown): Promise<void> {
 /** Drain again if a producer appends during the previous flush's final microtask. */
 function flushPendingLogs(): Promise<void> {
   if (!flushing) {
+    let completed = false
     flushing = Promise.resolve()
       .then(async () => {
         while (pending.length) {
           await withExtensionStorageWriteLock(
             STORAGE_LOCKS.LOG_HISTORY,
             async () => {
-              const existing = await readEntries()
-              const batch = pending.splice(0)
-              if (batch.length)
-                await storage.set(STORAGE_KEYS.LOG_HISTORY, {
-                  version: 1,
-                  entries: pruneEntries([...batch, ...existing]),
-                })
+              let batch: LogHistoryEntry[] = []
+              try {
+                const existing = await readEntries()
+                batch = pending.splice(0)
+                if (batch.length)
+                  await storage.set(STORAGE_KEYS.LOG_HISTORY, {
+                    version: 1,
+                    entries: pruneEntries([...batch, ...existing]),
+                  })
+              } catch (error) {
+                pending = [...batch, ...pending].slice(-LOG_HISTORY_LIMIT)
+                throw error
+              }
             },
           )
         }
       })
-      .catch((error) => {
-        pending = []
-        throw error
+      .then(() => {
+        completed = true
       })
       .finally(() => {
         flushing = null
-        if (pending.length) return flushPendingLogs()
+        if (completed && pending.length) return flushPendingLogs()
       })
   }
   return flushing

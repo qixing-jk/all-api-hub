@@ -428,6 +428,57 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it.each(["empty", "failed"])(
+    "does not read another tab when the active browser context is %s",
+    async (queryResult) => {
+      if (queryResult === "failed")
+        mockGetActiveOrAllTabs.mockRejectedValue(new Error("tabs unavailable"))
+      else mockGetActiveOrAllTabs.mockResolvedValue([])
+      browserAny.tabs.query.mockResolvedValue([
+        { id: 20, url: "https://example.invalid", incognito: false },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "12", siteTypeHint: SITE_TYPES.NEW_API },
+      })
+      mockFetchUserInfo.mockResolvedValue(null)
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+      expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+      expect(result.autoDetectContext?.strategy).not.toBe(
+        AUTO_DETECT_STRATEGIES.ExistingTab,
+      )
+    },
+  )
+
+  it("skips passive classification without eligible tabs and preserves bypass classification for fallback", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid", incognito: true },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "88" },
+    })
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
+    expect(result.success).toBe(true)
+    expect(mockGetAccountSiteType).not.toHaveBeenCalledWith(
+      "https://example.invalid",
+    )
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+      "https://example.invalid",
+      testExecution,
+    )
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+  })
+
   it("reads the logged-in site tab when Options is active and temporary detection cannot read a user ID", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       { id: 10, active: true, url: "chrome-extension://test/options.html" },

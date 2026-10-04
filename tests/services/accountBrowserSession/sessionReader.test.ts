@@ -780,6 +780,80 @@ describe("account browser-session reader", () => {
     expect(mockLoggerWarn).not.toHaveBeenCalled()
   })
 
+  it("reuses a query snapshot while rechecking origin and browser session boundaries", async () => {
+    const tabState = {
+      index: 0,
+      highlighted: false,
+      active: false,
+      pinned: false,
+    }
+    mockSendTabMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "3" },
+    })
+    const session = await readAccountBrowserSessionFromExistingTabs({
+      baseUrl: "https://sub2.example.com",
+      siteType: SITE_TYPES.SUB2API,
+      browserContext: { incognito: true, cookieStoreId: "container-1" },
+      candidateTabs: [
+        {
+          ...tabState,
+          id: 1,
+          url: "https://elsewhere.example.com",
+          incognito: true,
+          cookieStoreId: "container-1",
+        },
+        {
+          ...tabState,
+          id: 2,
+          url: "https://sub2.example.com",
+          incognito: false,
+          cookieStoreId: "container-1",
+        },
+        {
+          ...tabState,
+          id: 4,
+          url: "https://sub2.example.com",
+          incognito: true,
+          cookieStoreId: "container-2",
+        },
+        {
+          ...tabState,
+          id: 3,
+          url: "https://sub2.example.com",
+          incognito: true,
+          cookieStoreId: "container-1",
+        },
+      ],
+    })
+    expect(mockGetAllTabs).not.toHaveBeenCalled()
+    expect(mockSendTabMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendTabMessage).toHaveBeenCalledWith(3, expect.anything())
+    expect(session?.userId).toBe("3")
+  })
+
+  it("does not read a supplied snapshot for an invalid target origin", async () => {
+    expect(
+      await readAccountBrowserSessionFromExistingTabs({
+        baseUrl: "invalid URL",
+        siteType: SITE_TYPES.NEW_API,
+        candidateTabs: [
+          {
+            id: 3,
+            url: "https://example.com",
+            index: 0,
+            highlighted: false,
+            active: false,
+            pinned: false,
+            incognito: false,
+          },
+        ],
+      }),
+    ).toBeNull()
+    expect(mockGetAllTabs).not.toHaveBeenCalled()
+    expect(mockSendTabMessage).not.toHaveBeenCalled()
+  })
+
   it("filters same-origin tabs, tries the active tab first, and honors the usability predicate", async () => {
     mockGetAllTabs.mockResolvedValueOnce([
       { id: 1, url: "https://other.example.com/dashboard", active: true },
