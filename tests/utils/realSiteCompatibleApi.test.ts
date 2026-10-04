@@ -95,6 +95,41 @@ function createPage(
 }
 
 describe("compatible real-site login", () => {
+  it("keeps a fresh login cookie from being cleared by a late anonymous frontend refresh", async () => {
+    let hasRefreshCookie = false
+    let finishAnonymousBootstrap: (() => void) | undefined
+    const post = vi.fn().mockImplementation(async (url: string) => {
+      if (url === AUTH_REFRESH_URL) {
+        return createResponse(401, { code: "AUTH_UNAUTHORIZED" })
+      }
+      hasRefreshCookie = true
+      return createResponse(200, createAuthBundle())
+    })
+    const { page } = createPage(post)
+    page.url.mockReturnValue("about:blank")
+    page.goto.mockImplementation(async () => {
+      page.url.mockReturnValue(config.loginUrl)
+      // An anonymous bootstrap response clears the refresh cookie even if
+      // the programmatic login creates a new cookie before it arrives.
+      if (!hasRefreshCookie) {
+        finishAnonymousBootstrap = () => {
+          hasRefreshCookie = false
+        }
+      }
+    })
+
+    const result = await loginToCompatibleApiRealSite(page, config, {
+      label: "New API",
+      envPrefix: "NEW_API",
+      authBundle: true,
+    })
+    finishAnonymousBootstrap?.()
+
+    expect(result.user).toMatchObject({ id: 42 })
+    expect(page.goto).toHaveBeenCalled()
+    expect(hasRefreshCookie).toBe(true)
+  })
+
   it("keeps legacy user responses and localStorage seeding unchanged", async () => {
     const user = { id: 7, username: "legacy-user" }
     const post = vi.fn().mockResolvedValue(
@@ -391,6 +426,11 @@ describe("compatible real-site login", () => {
       .fn()
       .mockResolvedValue(createResponse(200, createAuthBundle()))
     const { page, evaluate, waitForFunction } = createPage(post)
+    page.url.mockReturnValue("about:blank")
+    page.goto.mockImplementation(async () => {
+      expect(post).toHaveBeenCalledWith(AUTH_REFRESH_URL, expect.any(Object))
+      page.url.mockReturnValue(config.loginUrl)
+    })
 
     const result = await loginToRealNewApiSite(page, config)
 
@@ -402,6 +442,29 @@ describe("compatible real-site login", () => {
     expect(evaluate).not.toHaveBeenCalled()
     expect(waitForFunction).not.toHaveBeenCalled()
     expect(post).toHaveBeenCalledTimes(1)
+    expect(page.goto).toHaveBeenCalledTimes(1)
+  })
+
+  it("cleans up its fresh session if opening the authenticated frontend fails", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+      .mockResolvedValueOnce(createResponse(200, { success: true }))
+    const { page } = createPage(post)
+    page.url.mockReturnValue("about:blank")
+    const navigationError = new Error("frontend navigation failed")
+    page.goto.mockRejectedValue(navigationError)
+
+    await expect(loginToRealNewApiSite(page, config)).rejects.toBe(
+      navigationError,
+    )
+
+    expect(post).toHaveBeenLastCalledWith(AUTH_LOGOUT_URL, expect.any(Object))
+    expect(page.request.delete).toHaveBeenCalledWith(
+      AUTH_SESSION_DELETE_URL,
+      expect.any(Object),
+    )
   })
 
   it("logs out only the fresh owned session with exact safe headers", async () => {

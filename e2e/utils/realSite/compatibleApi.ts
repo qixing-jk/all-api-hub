@@ -182,7 +182,11 @@ export async function loginToCompatibleApiRealSite(
   config: CompatibleApiRealSiteConfig,
   options: CompatibleApiLoginOptions,
 ): Promise<CompatibleApiRealSiteLoginResult> {
-  await ensureRealSiteOriginPage(page, config.loginUrl)
+  // A cold frontend can send an anonymous refresh whose late 401 clears a
+  // cookie created by API login. Establish modern auth before loading it.
+  if (!options.authBundle) {
+    await ensureRealSiteOriginPage(page, config.loginUrl)
+  }
   let loginPayloadMode: CompatibleLoginPayloadMode = options.authBundle
     ? "authBundleFirst"
     : "legacyFirst"
@@ -190,6 +194,7 @@ export async function loginToCompatibleApiRealSite(
   if (options.authBundle) {
     const probeResult = await probeCompatibleAuthBundle(page, config, options)
     if (probeResult.kind === "authBundle") {
+      await ensureRealSiteOriginPage(page, config.loginUrl)
       return await createAuthBundleLoginResult(
         page,
         config,
@@ -201,6 +206,7 @@ export async function loginToCompatibleApiRealSite(
 
     if (probeResult.kind === "legacyFallback") {
       loginPayloadMode = "legacyFirst"
+      await ensureRealSiteOriginPage(page, config.loginUrl)
       const existingUser = await waitForStoredUser(page, 2_500)
       if (existingUser) {
         return {
@@ -226,9 +232,16 @@ export async function loginToCompatibleApiRealSite(
     loginPayloadMode,
   )
   if (apiLoginResult) {
+    try {
+      await ensureRealSiteOriginPage(page, config.loginUrl)
+    } catch (error) {
+      await apiLoginResult.cleanupOwnedSession?.()
+      throw error
+    }
     return apiLoginResult
   }
 
+  await ensureRealSiteOriginPage(page, config.loginUrl)
   const locatorFactory = createLocatorFactory(`AAH_E2E_${options.envPrefix}`)
   const emptySelectors: Pick<
     CompatibleApiRealSiteConfig,
