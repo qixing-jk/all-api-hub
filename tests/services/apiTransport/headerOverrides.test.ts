@@ -20,11 +20,15 @@ describe("credential request header overrides", () => {
     expect(
       sanitizeHeaderOverrideError(new Error("invalid tenant-secret-value"), {
         "x-tenant": "tenant-secret-value",
+        "x-client": "another-secret",
       }),
     ).toBe("invalid [REDACTED]")
   })
 
   it("normalizes header names and rejects browser-controlled or internal headers", () => {
+    for (const malformed of ["x-client", 1, [], true]) {
+      expect(() => normalizeHeaderOverrides(malformed)).toThrow()
+    }
     expect(
       normalizeHeaderOverrides({
         " User-Agent ": " client/1 ",
@@ -122,6 +126,23 @@ describe("credential request header overrides", () => {
       nativeFetch.mock.invocationCallOrder[0]!,
     )
   })
+  it.each(["read", "remove"])(
+    "does not expose ordinary requests to an orphaned UA when rule %s fails",
+    async (failure) => {
+      const updateSessionRules = installDnr()
+      const api = (globalThis as any).chrome.declarativeNetRequest
+      const error = new Error("Rule API unavailable")
+      if (failure === "read") api.getSessionRules.mockRejectedValue(error)
+      else {
+        api.getSessionRules.mockResolvedValue([{ id: 3_000_000 }])
+        updateSessionRules.mockRejectedValue(error)
+      }
+      await expect(
+        fetchWithHeaderOverrides("https://api.example/models"),
+      ).rejects.toBe(error)
+      expect(nativeFetch).not.toHaveBeenCalled()
+    },
+  )
 
   it("scopes UA to this extension and URL and removes the rule after failure", async () => {
     const updateSessionRules = installDnr()
@@ -216,4 +237,25 @@ describe("credential request header overrides", () => {
     ).rejects.toThrow("userAgentPermission")
     expect(nativeFetch).not.toHaveBeenCalled()
   })
+  it.each([false, true])(
+    "preserves the fetch outcome if UA rule cleanup fails (fetch failure=%s)",
+    async (failure) => {
+      const updateSessionRules = installDnr()
+      updateSessionRules
+        .mockReset()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("cleanup unavailable"))
+      const response = new Response("ok")
+      const fetchError = new Error("upstream unavailable")
+      if (failure) nativeFetch.mockRejectedValueOnce(fetchError)
+      else nativeFetch.mockResolvedValueOnce(response)
+      const request = fetchWithHeaderOverrides(
+        "https://api.example/models",
+        {},
+        { "user-agent": "client/1" },
+      )
+      if (failure) await expect(request).rejects.toBe(fetchError)
+      else await expect(request).resolves.toBe(response)
+    },
+  )
 })

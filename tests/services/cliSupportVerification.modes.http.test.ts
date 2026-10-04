@@ -27,8 +27,10 @@ describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
         ? "stream must be set to false"
         : "Stream must be set to true"
       const requests: Array<{ path: string; streaming: boolean }> = []
+      const headers: Headers[] = []
       server.use(
         http.post(baseUrl + "/*", async ({ request }) => {
+          headers.push(request.headers)
           const path = new URL(request.url).pathname
           const body = (await request.json()) as { stream?: boolean }
           requests.push({
@@ -57,6 +59,7 @@ describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
         toolId: fixture.toolId,
         baseUrl,
         apiKey: "sk-mode-fixture",
+        requestHeaders: { "x-client": "cli-credential" },
         modelId: "mode-test",
         mode,
       })
@@ -72,6 +75,8 @@ describe.each(cliFixtures)("$toolId verification modes", (fixture) => {
         summary: rejection,
         input: { endpoint },
       })
+      expect(headers).toHaveLength(1)
+      expect(headers[0]?.get("x-client")).toBe("cli-credential")
     },
   )
 })

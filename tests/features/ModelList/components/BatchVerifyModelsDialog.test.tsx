@@ -2278,83 +2278,107 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeGreaterThan(0)
   })
 
-  it("keeps the profile protocol independent of the row's resolved vendor", async () => {
-    mockRunApiVerificationProbe.mockResolvedValueOnce({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 8,
-      summary: "Profile model ok",
-    })
+  it.each(["none", "probe", "setup"])(
+    "keeps the profile protocol independent of the row's resolved vendor and redacts thrown header values (failure=%s)",
+    async (failure) => {
+      if (failure === "probe")
+        mockRunApiVerificationProbe.mockRejectedValueOnce(
+          new Error("Upstream rejected header-sensitive-value"),
+        )
+      else
+        mockRunApiVerificationProbe.mockResolvedValueOnce({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 8,
+          summary: "Profile model ok",
+        })
 
-    renderDialog([
-      {
-        key: "profile:profile-1:model:gpt-4o",
-        modelId: "gpt-4o",
-        enableGroups: [],
-        resolvedVendor: {
-          state: "resolved",
-          kind: "known",
-          key: "known:openai",
-          knownId: "openai",
-          label: "OpenAI",
-          source: "curated-rule",
-        },
-        source: {
-          kind: "profile",
-          profile: {
-            id: "profile-1",
-            name: "Profile One",
-            baseUrl: "https://anthropic.example.com",
-            apiKey: "profile-secret",
-            apiType: API_TYPES.ANTHROPIC,
-          },
-        },
-      },
-    ])
-
-    const row = await screen.findByTestId(
-      getBatchVerifyRowTestId("profile:profile-1:model:gpt-4o"),
-    )
-    const sourceBadge = row.querySelector(
-      '[data-slot="badge"][title="https://anthropic.example.com"]',
-    )
-    expect(sourceBadge).toHaveTextContent("modelList:sourceLabels.profileBadge")
-    expect(sourceBadge).toHaveAttribute(
-      "title",
-      "https://anthropic.example.com",
-    )
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "modelList:batchVerify.actions.start",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
-        expect.objectContaining({
-          baseUrl: "https://anthropic.example.com",
-          apiKey: "profile-secret",
-          apiType: API_TYPES.ANTHROPIC,
+      renderDialog([
+        {
+          key: "profile:profile-1:model:gpt-4o",
           modelId: "gpt-4o",
-          probeId: "text-generation",
-          abortSignal: expect.any(AbortSignal),
-        }),
-      )
-    })
-    expect(mockNewApiInventory).not.toHaveBeenCalled()
-    await waitFor(() => {
-      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target: {
-            kind: "profile-model",
-            profileId: "profile-1",
-            modelId: "gpt-4o",
+          enableGroups: [],
+          resolvedVendor: {
+            state: "resolved",
+            kind: "known",
+            key: "known:openai",
+            knownId: "openai",
+            label: "OpenAI",
+            source: "curated-rule",
           },
+          source: {
+            kind: "profile",
+            profile: {
+              id: "profile-1",
+              name: "Profile One",
+              baseUrl: "https://anthropic.example.com",
+              apiKey: "profile-secret",
+              apiType: API_TYPES.ANTHROPIC,
+              requestHeaders: { "x-client": "header-sensitive-value" },
+            },
+          },
+        },
+      ])
+
+      const row = await screen.findByTestId(
+        getBatchVerifyRowTestId("profile:profile-1:model:gpt-4o"),
+      )
+      const sourceBadge = row.querySelector(
+        '[data-slot="badge"][title="https://anthropic.example.com"]',
+      )
+      expect(sourceBadge).toHaveTextContent(
+        "modelList:sourceLabels.profileBadge",
+      )
+      expect(sourceBadge).toHaveAttribute(
+        "title",
+        "https://anthropic.example.com",
+      )
+
+      if (failure === "setup") {
+        mockGetApiVerificationProbeDefinitions.mockImplementationOnce(() => {
+          throw new Error("Setup rejected header-sensitive-value")
+        })
+      }
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "modelList:batchVerify.actions.start",
         }),
       )
-    })
-  })
+
+      if (failure !== "setup") {
+        await waitFor(() => {
+          expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+            expect.objectContaining({
+              baseUrl: "https://anthropic.example.com",
+              apiKey: "profile-secret",
+              apiType: API_TYPES.ANTHROPIC,
+              requestHeaders: { "x-client": "header-sensitive-value" },
+              modelId: "gpt-4o",
+              probeId: "text-generation",
+              abortSignal: expect.any(AbortSignal),
+            }),
+          )
+        })
+      } else expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+      expect(mockNewApiInventory).not.toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+          expect.objectContaining({
+            target: {
+              kind: "profile-model",
+              profileId: "profile-1",
+              modelId: "gpt-4o",
+            },
+          }),
+        )
+      })
+      if (failure !== "none") {
+        const summary = mockUpsertLatestSummary.mock.calls[0]![0]
+        expect(JSON.stringify(summary)).not.toContain("header-sensitive-value")
+        expect(JSON.stringify(summary)).toContain("[REDACTED]")
+      }
+    },
+  )
 
   it("renders a provider-catalog source label from the source identity", async () => {
     const itemKey = "account:acc-1:provider-catalog:model:example-model"

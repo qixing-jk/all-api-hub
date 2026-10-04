@@ -1,7 +1,10 @@
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { t } from "~/utils/i18n/core"
+
+const logger = createLogger("RequestHeaderOverrides")
 
 /** User-maintained headers can contain secrets; never log their values. */
 type HeaderOverrides = Record<string, string>
@@ -195,9 +198,16 @@ export async function fetchWithHeaderOverrides(
         signal?.throwIfAborted()
         return await fetch(input, options)
       } finally {
-        await dnr!.updateSessionRules({
-          removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
-        })
+        try {
+          await dnr!.updateSessionRules({
+            removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
+          })
+        } catch (error) {
+          logger.warn(
+            "Failed to remove User-Agent override rule",
+            sanitizeHeaderOverrideError(error, custom),
+          )
+        }
       }
     },
   )

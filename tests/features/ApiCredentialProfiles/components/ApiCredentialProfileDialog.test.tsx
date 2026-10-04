@@ -269,6 +269,41 @@ describe("ApiCredentialProfileDialog", () => {
       ),
     ).toBeInTheDocument()
   })
+  it("retains independent header rows and rejects duplicate names regardless of case", async () => {
+    const { onSave } = renderDialog({ profile: buildProfile() })
+    const add = screen.getByRole("button", {
+      name: "apiCredentialProfiles:dialog.requestHeaders.add",
+    })
+    fireEvent.click(add)
+    fireEvent.click(add)
+    const names = screen.getAllByLabelText(
+      "apiCredentialProfiles:dialog.requestHeaders.name",
+    )
+    const values = screen.getAllByLabelText(
+      "apiCredentialProfiles:dialog.requestHeaders.value",
+    )
+    fireEvent.change(names[0]!, { target: { value: "X-Client" } })
+    fireEvent.change(values[0]!, { target: { value: "same-value" } })
+    fireEvent.change(names[1]!, { target: { value: "x-client" } })
+    fireEvent.change(values[1]!, { target: { value: "same-value" } })
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "apiCredentialProfiles:dialog.errors.requestHeadersInvalid",
+    )
+    expect(onSave).not.toHaveBeenCalled()
+    fireEvent.change(names[1]!, { target: { value: "X-Tenant" } })
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestHeaders: {
+            "x-client": "same-value",
+            "x-tenant": "same-value",
+          },
+        }),
+      ),
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     trackProductAnalyticsActionStartedMock.mockReset()
