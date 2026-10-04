@@ -1,15 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { createRootMock, isMobileDeviceMock, renderMock, setDocumentTitleMock } =
-  vi.hoisted(() => {
-    const renderMock = vi.fn()
-    return {
-      createRootMock: vi.fn(() => ({ render: renderMock })),
-      isMobileDeviceMock: vi.fn(),
-      renderMock,
-      setDocumentTitleMock: vi.fn(),
-    }
-  })
+const {
+  createRootMock,
+  isDesktopDeviceMock,
+  renderMock,
+  setDocumentTitleMock,
+} = vi.hoisted(() => {
+  const renderMock = vi.fn()
+  return {
+    createRootMock: vi.fn(() => ({ render: renderMock })),
+    isDesktopDeviceMock: vi.fn(),
+    renderMock,
+    setDocumentTitleMock: vi.fn(),
+  }
+})
 
 vi.mock("react-dom/client", () => ({
   default: { createRoot: createRootMock },
@@ -18,7 +22,7 @@ vi.mock("~/components/RootErrorBoundary", () => ({
   RootErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
 }))
 vi.mock("~/entrypoints/popup/App", () => ({ default: () => null }))
-vi.mock("~/utils/browser", () => ({ isMobileDevice: isMobileDeviceMock }))
+vi.mock("~/utils/browser", () => ({ isDesktopDevice: isDesktopDeviceMock }))
 vi.mock("~/utils/i18n", () => ({ i18nReady: Promise.resolve() }))
 vi.mock("~/utils/i18n/core", () => ({ t: vi.fn(() => "Loading") }))
 vi.mock("~/utils/navigation/documentTitle", () => ({
@@ -70,7 +74,7 @@ describe("popup entrypoint sizing", () => {
 
   it("seeds and clamps the desktop action popup to the usable viewport", async () => {
     let animationFrameCallback: FrameRequestCallback | undefined
-    isMobileDeviceMock.mockReturnValue(false)
+    isDesktopDeviceMock.mockReturnValue(true)
     vi.stubGlobal(
       "requestAnimationFrame",
       vi.fn((callback: FrameRequestCallback) => {
@@ -126,7 +130,7 @@ describe("popup entrypoint sizing", () => {
   })
 
   it("does not apply desktop popup sizing on mobile", async () => {
-    isMobileDeviceMock.mockReturnValue(true)
+    isDesktopDeviceMock.mockReturnValue(false)
     const requestAnimationFrameMock = vi.fn()
     vi.stubGlobal("requestAnimationFrame", requestAnimationFrameMock)
 

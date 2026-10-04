@@ -1,12 +1,12 @@
 import { renderExtensionPage } from "~/entrypoints/shared/renderExtensionPage"
-import { isMobileDevice } from "~/utils/browser"
+import { isDesktopDevice } from "~/utils/browser"
 
 import App from "./App"
 
 const WIDTH_PX = 410
 const HEIGHT_PX = 600
 
-if (!isMobileDevice()) {
+if (isDesktopDevice()) {
   const popupDocument = document.documentElement
   const syncPopupDocumentSize = () => {
     // Ignore the transient tiny viewport Edge exposes before it measures the
