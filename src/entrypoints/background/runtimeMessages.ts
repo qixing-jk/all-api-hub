@@ -51,6 +51,7 @@ import {
   hasCookieReadPermissionForUrl,
 } from "~/utils/browser/cookieHelper"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
+import { getRawExtensionApi } from "~/utils/browser/devApiExplorer"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -443,6 +444,42 @@ export function setupRuntimeMessageListeners() {
         RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
       ) {
         handleDailyBalanceHistoryMessage(request, sendResponse)
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.DevExecuteBrowserApi) {
+        const payload = (request.payload || {}) as {
+          path?: string
+          args?: unknown[]
+        }
+        void (async () => {
+          try {
+            const root = getRawExtensionApi() || globalThis
+            const segments = (payload.path || "").split(".").filter(Boolean)
+            let parent: unknown = null
+            let target: unknown = root
+            for (const seg of segments) {
+              if (target == null) {
+                throw new Error(
+                  `Cannot read property '${seg}' of ${String(target)}`,
+                )
+              }
+              parent = target
+              target = (target as Record<string, unknown>)[seg]
+            }
+
+            let result: unknown
+            if (typeof target === "function") {
+              result = await target.apply(parent, payload.args || [])
+            } else {
+              result = target
+            }
+
+            sendResponse({ success: true, data: result })
+          } catch (error) {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          }
+        })()
         return true
       }
 

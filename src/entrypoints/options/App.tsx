@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { AppLayout } from "~/components/AppLayout"
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
 import { Spinner } from "~/components/ui"
+import { isDevMenuItemId } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { THEME_CONTENT_WIDTH } from "~/constants/theme"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -33,6 +34,7 @@ import {
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/contracts"
 import { normalizeAppearance } from "~/types/theme"
+import { useDevUnlocked } from "~/utils/core/devMode"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
@@ -123,10 +125,14 @@ function OptionsPage() {
     pageId: mapOptionsMenuItemToAnalyticsPageId(activeMenuItem),
   })
 
+  const isDev = useDevUnlocked()
+
   // 获取当前活动的组件
   const ActiveComponent =
-    menuItems.find((item) => item.id === activeMenuItem)?.component ||
-    BasicSettings
+    !isDev && isDevMenuItemId(activeMenuItem)
+      ? BasicSettings
+      : menuItems.find((item) => item.id === activeMenuItem)?.component ||
+        BasicSettings
 
   // A deep link or search result that targets a setting scrolls on arrival, so
   // that page must not slide into place underneath its own landing position.

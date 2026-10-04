@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 
+import { isDevMenuItemId } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { isDevUnlocked } from "~/utils/core/devMode"
 import {
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
@@ -61,9 +63,11 @@ function updateHash(page: string, params?: Record<string, string | undefined>) {
  * Resolves unknown route ids to the default Overview page.
  */
 function getCanonicalPage(page: string) {
-  return menuItems.find((item) => item.id === page)
-    ? page
-    : MENU_ITEM_IDS.OVERVIEW
+  const isDev = isDevUnlocked()
+  const found = menuItems.find((item) => item.id === page)
+  if (!found) return MENU_ITEM_IDS.OVERVIEW
+  if (!isDev && isDevMenuItemId(found.id)) return MENU_ITEM_IDS.OVERVIEW
+  return page
 }
 
 /**

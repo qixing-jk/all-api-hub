@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Browser API Lab Sandbox</title>
+  </head>
+  <body>
+    <script>
+      let nextRpcId = 0
+      const pendingRpcs = new Map()
+
+      function createApiProxy(pathSegments = []) {
+        const fnTarget = () => {}
+
+        return new Proxy(fnTarget, {
+          get(_, prop) {
+            if (typeof prop !== "string") return undefined
+            if (prop === "then") return undefined
+            return createApiProxy([...pathSegments, prop])
+          },
+          apply(_, __, args) {
+            return new Promise((resolve, reject) => {
+              const rpcId = ++nextRpcId
+              pendingRpcs.set(rpcId, { resolve, reject })
+              window.parent.postMessage(
+                {
+                  source: "aah-sandbox",
+                  type: "RPC_REQUEST",
+                  rpcId,
+                  path: pathSegments.join("."),
+                  args,
+                },
+                "*",
+              )
+            })
+          },
+        })
+      }
+
+      const chromeProxy = createApiProxy(["chrome"])
+      const browserProxy = createApiProxy(["browser"])
+
+      Reflect.set(window, "chrome", chromeProxy)
+      Reflect.set(window, "browser", browserProxy)
+
+      window.addEventListener("message", async (event) => {
+        if (event.source !== window.parent) {
+          return
+        }
+        const data = event.data
+        if (!data || typeof data !== "object" || data.source !== "aah-sandbox-host") {
+          return
+        }
+
+        // Handle RPC response from host
+        if (data.type === "RPC_RESPONSE") {
+          const { rpcId, success, data: resData, error } = data
+          const pending = pendingRpcs.get(rpcId)
+          if (pending) {
+            pendingRpcs.delete(rpcId)
+            if (success) {
+              pending.resolve(resData)
+            } else {
+              pending.reject(new Error(error || "API call failed"))
+            }
+          }
+          return
+        }
+
+        // Handle execution request
+        if (data.type === "EXECUTE_CODE") {
+          const { runId, code } = data
+          try {
+            const runner = new Function(
+              "chrome",
+              "browser",
+              `return (async () => {\n${code}\n})()`,
+            )
+            const result = await runner(chromeProxy, browserProxy)
+            try {
+              window.parent.postMessage(
+                {
+                  source: "aah-sandbox",
+                  type: "EXECUTION_RESULT",
+                  runId,
+                  success: true,
+                  result,
+                },
+                "*",
+              )
+            } catch {
+              window.parent.postMessage(
+                {
+                  source: "aah-sandbox",
+                  type: "EXECUTION_RESULT",
+                  runId,
+                  success: true,
+                  result: String(result),
+                },
+                "*",
+              )
+            }
+          } catch (err) {
+            window.parent.postMessage(
+              {
+                source: "aah-sandbox",
+                type: "EXECUTION_RESULT",
+                runId,
+                success: false,
+                error: err?.stack || err?.message || String(err),
+              },
+              "*",
+            )
+          }
+        }
+      })
+
+      window.parent.postMessage({ source: "aah-sandbox", type: "SANDBOX_READY" }, "*")
+    </script>
+  </body>
+</html>

@@ -161,6 +161,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   afterEach(() => {
     ;(globalThis as any).browser.cookies = originalBrowserCookies
+    vi.unstubAllGlobals()
   })
 
   afterAll(() => {
@@ -186,6 +187,47 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/siteAnnouncements/scheduler")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("executes developer API methods with their receiver and returns properties or errors", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    const receiver = {
+      id: "test-extension",
+      getPlatformInfo: vi.fn(function (this: unknown) {
+        expect(this).toBe(receiver)
+        return Promise.resolve({ os: "win" })
+      }),
+    }
+    vi.stubGlobal("chrome", { runtime: receiver })
+    setupRuntimeMessageListeners()
+    for (const [path, args, expected] of [
+      ["runtime.getPlatformInfo", [], { success: true, data: { os: "win" } }],
+      ["runtime.id", [], { success: true, data: "test-extension" }],
+      [
+        "missing.method",
+        [],
+        {
+          success: false,
+          error: expect.stringContaining("Cannot read property"),
+        },
+      ],
+    ]) {
+      const response = new Promise((resolve) => {
+        expect(
+          runtimeMessageListener?.(
+            {
+              action: RuntimeActionIds.DevExecuteBrowserApi,
+              payload: { path, args },
+            },
+            {},
+            resolve,
+          ),
+        ).toBe(true)
+      })
+      expect(await response).toEqual(expected)
+    }
   })
 
   it("keeps the runtime channel open for a temp-context debug response", async () => {

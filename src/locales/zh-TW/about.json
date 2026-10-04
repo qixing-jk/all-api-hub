@@ -2,6 +2,13 @@
   "copyrightAck": "版權與致謝",
   "description": "查看擴充功能版本、更新紀錄與專案連結，取得協助或回報問題。",
   "devMaintenance": "開發與維護",
+  "devMode": {
+    "activatedToast": "🛠️ 開發者模式已啟用！全部 Dev 實驗室已解鎖",
+    "alreadyDevToast": "目前處於開發建置環境 (wxt dev)，開發者模式預設保持啟用",
+    "deactivatedToast": "已結束開發者模式",
+    "tooltipDev": "目前處於開發調試環境 (wxt dev)",
+    "tooltipProd": "連續點擊 7 次可切換開發者模式"
+  },
   "features": "功能特性",
   "feedbackSection": {
     "bugReport": {

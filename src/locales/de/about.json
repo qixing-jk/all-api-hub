@@ -2,6 +2,13 @@
   "copyrightAck": "Urheberrecht und Danksagungen",
   "description": "Version, Änderungsprotokoll und Projektlinks finden, Hilfe erhalten oder ein Problem melden.",
   "devMaintenance": "Entwicklung & Wartung",
+  "devMode": {
+    "activatedToast": "🛠️ Entwicklermodus aktiviert! Alle Dev-Lab-Funktionen freigeschaltet.",
+    "alreadyDevToast": "Aktuell in der Entwicklungsumgebung (wxt dev). Entwicklermodus bleibt standardmäßig aktiviert.",
+    "deactivatedToast": "Entwicklermodus deaktiviert.",
+    "tooltipDev": "Läuft in der Entwicklungsumgebung (wxt dev)",
+    "tooltipProd": "7 Mal klicken, um den Entwicklermodus umzuschalten"
+  },
   "features": "Funktionen",
   "feedbackSection": {
     "bugReport": {

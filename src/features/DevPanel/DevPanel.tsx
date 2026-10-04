@@ -9,7 +9,7 @@ import { cn } from "~/lib/utils"
 import { getDevIdentity } from "~/utils/browser/extensionIdentity"
 import { formatDevInstanceLabel } from "~/utils/core/devBranding"
 import type { DevIdentity } from "~/utils/core/devIdentity"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { useDevUnlocked } from "~/utils/core/devMode"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
@@ -319,7 +319,9 @@ function DevPanelBall() {
   const registeredSections = useDevPanelSections()
   const identity = getDevIdentity()
 
-  if (!isDevelopmentMode()) {
+  const isDevActive = useDevUnlocked()
+
+  if (!isDevActive) {
     return null
   }
 

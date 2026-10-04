@@ -11,7 +11,7 @@ import {
   type OptionsMenuCategoryId,
   type OptionsPageMenuItemId,
 } from "~/constants/optionsMenuIds"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { isDevUnlocked } from "~/utils/core/devMode"
 
 import { createLazyMenuComponent } from "./createLazyMenuComponent"
 import BasicSettings from "./pages/BasicSettings"
@@ -100,53 +100,69 @@ const BASE_MENU_ITEMS: MenuItem[] = BASE_OPTIONS_MENU_DEFINITIONS.map(
   }),
 )
 
+const BrowserApiLab = lazy(() => import("./pages/BrowserApiLab"))
+const MeshGradientLab = lazy(() => import("./pages/MeshGradientLab"))
+const UnifiedApiGuidanceDevPreview = lazy(
+  () => import("./pages/UnifiedApiGuidanceDevPreview"),
+)
+const StarPromotionDevPreview = lazy(
+  () => import("./pages/StarPromotionDevPreview"),
+)
+
+const BrowserApiLabComponent: ComponentType<any> = (props) =>
+  createElement(
+    Suspense,
+    { fallback: null },
+    createElement(BrowserApiLab, props),
+  )
+const MeshGradientLabComponent: ComponentType<any> = (props) =>
+  createElement(
+    Suspense,
+    { fallback: null },
+    createElement(MeshGradientLab, props),
+  )
+const UnifiedApiGuidanceDevPreviewComponent: ComponentType<any> = (props) =>
+  createElement(
+    Suspense,
+    { fallback: null },
+    createElement(UnifiedApiGuidanceDevPreview, props),
+  )
+const StarPromotionDevPreviewComponent: ComponentType<any> = (props) =>
+  createElement(
+    Suspense,
+    { fallback: null },
+    createElement(StarPromotionDevPreview, props),
+  )
+
 const DEV_MENU_ITEMS: MenuItem[] = []
 
-if (isDevelopmentMode()) {
-  const MeshGradientLab = lazy(() => import("./pages/MeshGradientLab"))
-  const UnifiedApiGuidanceDevPreview = lazy(
-    () => import("./pages/UnifiedApiGuidanceDevPreview"),
+if (isDevUnlocked()) {
+  DEV_MENU_ITEMS.push(
+    {
+      id: DEV_MENU_ITEM_IDS.BROWSER_API_LAB,
+      icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.BROWSER_API_LAB],
+      component: BrowserApiLabComponent,
+    },
+    {
+      id: DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
+      icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB],
+      component: MeshGradientLabComponent,
+    },
+    {
+      id: DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW,
+      icon: DEV_OPTIONS_MENU_ITEM_ICONS[
+        DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW
+      ],
+      component: UnifiedApiGuidanceDevPreviewComponent,
+    },
+    {
+      id: DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW,
+      icon: DEV_OPTIONS_MENU_ITEM_ICONS[
+        DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW
+      ],
+      component: StarPromotionDevPreviewComponent,
+    },
   )
-  const StarPromotionDevPreview = lazy(
-    () => import("./pages/StarPromotionDevPreview"),
-  )
-
-  const MeshGradientLabComponent: ComponentType<any> = (props) =>
-    createElement(
-      Suspense,
-      { fallback: null },
-      createElement(MeshGradientLab, props),
-    )
-  const UnifiedApiGuidanceDevPreviewComponent: ComponentType<any> = (props) =>
-    createElement(
-      Suspense,
-      { fallback: null },
-      createElement(UnifiedApiGuidanceDevPreview, props),
-    )
-  const StarPromotionDevPreviewComponent: ComponentType<any> = (props) =>
-    createElement(
-      Suspense,
-      { fallback: null },
-      createElement(StarPromotionDevPreview, props),
-    )
-
-  DEV_MENU_ITEMS.push({
-    id: DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
-    icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB],
-    component: MeshGradientLabComponent,
-  })
-  DEV_MENU_ITEMS.push({
-    id: DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW,
-    icon: DEV_OPTIONS_MENU_ITEM_ICONS[
-      DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW
-    ],
-    component: UnifiedApiGuidanceDevPreviewComponent,
-  })
-  DEV_MENU_ITEMS.push({
-    id: DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW,
-    icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW],
-    component: StarPromotionDevPreviewComponent,
-  })
 }
 
 export const menuItems: MenuItem[] = [...BASE_MENU_ITEMS, ...DEV_MENU_ITEMS]

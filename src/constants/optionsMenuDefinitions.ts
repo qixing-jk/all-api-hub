@@ -1,4 +1,4 @@
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { isDevUnlocked } from "~/utils/core/devMode"
 
 import { DEV_MENU_ITEM_IDS } from "./devOptionsMenuIds"
 import {
@@ -50,10 +50,10 @@ export const BASE_OPTIONS_MENU_DEFINITIONS = [
   { id: MENU_ITEM_IDS.ABOUT, category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM },
 ] as const
 
-/** Include the developer routes only in development, in sidebar order. */
+/** Include the developer routes only when unlocked, in sidebar order. */
 export function getOptionsPageMenuIds(): OptionsPageMenuItemId[] {
   return [
     ...BASE_OPTIONS_MENU_DEFINITIONS.map((item) => item.id),
-    ...(isDevelopmentMode() ? Object.values(DEV_MENU_ITEM_IDS) : []),
+    ...(isDevUnlocked() ? Object.values(DEV_MENU_ITEM_IDS) : []),
   ]
 }

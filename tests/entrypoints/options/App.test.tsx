@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import App from "~/entrypoints/options/App"
 import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
@@ -213,6 +214,15 @@ vi.mock("~/entrypoints/options/constants", () => ({
 }))
 
 describe("options App", () => {
+  it("falls back to settings for a locked developer deep link", async () => {
+    mockUseHashNavigationState.activeMenuItem =
+      DEV_MENU_ITEM_IDS.BROWSER_API_LAB
+    render(<App />, {
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    expect(await screen.findByText("basic settings fallback")).toBeVisible()
+  })
   beforeEach(() => {
     mockedHandleMenuItemChange.mockReset()
     mockedOptionsSearchDialog.mockReset()

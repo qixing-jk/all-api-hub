@@ -535,6 +535,7 @@
     "basic": "设置",
     "batchCheckin": "批量签到",
     "bookmark": "书签管理",
+    "browserApiLab": "浏览器 API 实验室 (Dev)",
     "categories": {
       "api": "接口",
       "automation": "自动化",

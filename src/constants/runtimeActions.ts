@@ -161,6 +161,8 @@ export const RuntimeActionIds = {
     "reclaimNow",
   ),
 
+  DevExecuteBrowserApi: "dev:executeBrowserApi",
+
   ContentGetLocalStorage: "getLocalStorage",
   ContentCompleteAgentRouterOAuth: "completeAgentRouterOAuth",
   ContentPrepareAgentRouterOAuth: "prepareAgentRouterOAuth",

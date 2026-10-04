@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   Settings,
   Star,
+  Terminal,
   UserRound,
   type LucideIcon,
 } from "lucide-react"
@@ -49,6 +50,7 @@ export const OPTIONS_MENU_ITEM_ICONS = {
 } satisfies Record<OptionsMenuItemId, LucideIcon>
 
 export const DEV_OPTIONS_MENU_ITEM_ICONS = {
+  [DEV_MENU_ITEM_IDS.BROWSER_API_LAB]: Terminal,
   [DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB]: Palette,
   [DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW]: Compass,
   [DEV_MENU_ITEM_IDS.STAR_PROMOTION_PREVIEW]: Star,
