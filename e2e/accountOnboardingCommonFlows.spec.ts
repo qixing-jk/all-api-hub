@@ -1295,6 +1295,8 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
 }) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
+    // This scenario enters its URL manually; avoid racing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
     tempWindowFallback: {
       enabled: false,
     },
