@@ -163,4 +163,16 @@ describe("local check-in discovery fixtures", () => {
       previous,
     )
   })
+
+  it.each([undefined, ["not-a-fixture", 42]])(
+    "rejects missing or malformed registration (%j)",
+    async (registry) => {
+      await addDevCheckInFixtureAccounts()
+      const accounts = await accountQueries.getAllAccounts()
+      data.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, registry)
+      expect(await appendDevCheckInFixtureSnapshots([], accounts)).toEqual([])
+      await discoverAccountCheckInMethods(accounts[0]!, {})
+      expect(detectors.some((d) => d.mock.calls.length > 0)).toBe(true)
+    },
+  )
 })

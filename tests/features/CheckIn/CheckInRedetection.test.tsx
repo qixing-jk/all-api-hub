@@ -1,4 +1,10 @@
-import { render as rtlRender, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  renderHook,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
@@ -9,6 +15,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AccountSnapshotTableRow from "~/features/AutoCheckin/components/AccountSnapshotTableRow"
 import ResultsTableRowActions from "~/features/AutoCheckin/components/ResultsTableRowActions"
 import { CheckInRedetectionButton } from "~/features/CheckIn/CheckInRedetectionButton"
+import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
+import toast from "~/lib/notify"
 import accountDialogLocale from "~/locales/en/accountDialog.json"
 import commonLocale from "~/locales/en/common.json"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
@@ -91,6 +99,142 @@ beforeEach(() => {
 })
 
 describe("shared check-in redetection", () => {
+  it("allows programmatic redetection without a focused opener", async () => {
+    vi.mocked(redetectSavedAccountCheckIn).mockResolvedValue({
+      ...result,
+      requiresSelection: false,
+      discovery: { ...result.discovery, decision: { outcome: "unsupported" } },
+    })
+    const hook = renderHook(() => useCheckInRedetection(account.id), {
+      wrapper: ({ children }) => (
+        <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+      ),
+    })
+    const focus = vi
+      .spyOn(document, "activeElement", "get")
+      .mockReturnValue(null)
+    try {
+      await act(async () => {
+        await hook.result.current.redetect()
+      })
+      expect(toast.info).toHaveBeenCalled()
+      expect(hook.result.current.isPending).toBe(false)
+      expect(hook.result.current.selectionDialog).toBeNull()
+    } finally {
+      focus.mockRestore()
+    }
+  })
+  it.each(["unavailable", "changed", "failed"])(
+    "reports %s detection without opening a chooser",
+    async (failure) => {
+      if (failure === "unavailable")
+        vi.mocked(redetectSavedAccountCheckIn).mockResolvedValue(null)
+      else if (failure === "changed")
+        vi.mocked(redetectSavedAccountCheckIn).mockResolvedValue({
+          ...result,
+          applied: false,
+        })
+      else
+        vi.mocked(redetectSavedAccountCheckIn).mockRejectedValue(
+          new Error("probe failed"),
+        )
+      const onUpdated = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <CheckInRedetectionButton
+          accountId={account.id}
+          onUpdated={onUpdated}
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: accountDialogLocale.form.redetectCheckInMethods,
+        }),
+      )
+      const message =
+        failure === "unavailable"
+          ? accountDialogLocale.checkInFeedback.accountUnavailable
+          : failure === "changed"
+            ? accountDialogLocale.messages.checkInRedetectChanged
+            : "probe failed"
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining(message),
+        ),
+      )
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      expect(onUpdated).toHaveBeenCalledTimes(failure === "changed" ? 1 : 0)
+    },
+  )
+
+  it("warns about inconclusive probes and recovers from a failed view refresh", async () => {
+    vi.mocked(redetectSavedAccountCheckIn).mockResolvedValue({
+      ...result,
+      requiresSelection: false,
+      discovery: {
+        ...result.discovery,
+        decision: {
+          outcome: "unknown",
+          matchedMethodIds: [PRO],
+          unknownMethodIds: [GENIUS],
+        },
+        detections: {
+          [GENIUS]: { outcome: "unknown", reason: "network", attemptedAt: 2 },
+        },
+      },
+    })
+    const onUpdated = vi.fn().mockRejectedValue(new Error("refresh failed"))
+    const user = userEvent.setup()
+    render(
+      <CheckInRedetectionButton accountId={account.id} onUpdated={onUpdated} />,
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.form.redetectCheckInMethods,
+      }),
+    )
+    await waitFor(() =>
+      expect(toast.warning).toHaveBeenCalledWith(
+        expect.stringContaining(
+          accountDialogLocale.messages.checkInRedetectUnknown,
+        ),
+      ),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: accountDialogLocale.form.redetectCheckInMethods,
+        }),
+      ).toBeEnabled(),
+    )
+    expect(onUpdated).toHaveBeenCalledOnce()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("retires a stale choice without reporting a successful save", async () => {
+    vi.mocked(
+      accountCheckInState.selectDetectedCheckInMethod,
+    ).mockResolvedValue(null)
+    const user = userEvent.setup()
+    render(<CheckInRedetectionButton accountId={account.id} />)
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.form.redetectCheckInMethods,
+      }),
+    )
+    await screen.findByRole("dialog")
+    await user.click(
+      screen.getAllByRole("button", { name: /daily check-in/ })[0]!,
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      accountDialogLocale.messages.checkInRedetectChanged,
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
   it("uses the same chooser from automatic check-in result menus", async () => {
     const user = userEvent.setup()
     const onUpdated = vi.fn()

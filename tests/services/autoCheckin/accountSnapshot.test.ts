@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+} from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
 import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
@@ -77,5 +80,30 @@ describe("current check-in readiness", () => {
     )
     expect(updated?.detectionEnabled).toBe(true)
     expect(updated?.skipReason).toBe("auto_checkin_disabled")
+  })
+
+  it.each([
+    CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+    CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration,
+  ])("projects known check-in status from %s evidence", (source) => {
+    const checked = structuredClone(account)
+    checked.checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ]!.status = {
+      outcome: "known",
+      today: "checked",
+      evidence:
+        source === "probe"
+          ? { source, observedAt: Date.now() }
+          : { source, legacyDayKey: "2026-10-05" },
+    }
+    const [snapshot] = refreshAutoCheckinAccountSnapshots([old], [checked])
+    expect(snapshot?.isCheckedInToday).toBe(true)
+    expect(snapshot?.lastCheckInDate).toBe(
+      source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+        ? "2026-10-05"
+        : undefined,
+    )
+    expect(snapshot?.lastResult).toEqual(old.lastResult)
   })
 })

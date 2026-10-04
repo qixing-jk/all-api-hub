@@ -177,6 +177,27 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
+  it("shows an empty setup when the scheduler has no persisted status", async () => {
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus)
+          return { success: true, data: null }
+        return { success: true }
+      },
+    )
+    render(<AutoCheckin routeParams={{}} />)
+    expect(await screen.findByText("autoCheckin:execution.title")).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "autoCheckin:execution.runNow" }),
+      ).toBeEnabled(),
+    )
+    expect(
+      await screen.findByText("autoCheckin:execution.empty.noAccounts"),
+    ).toBeVisible()
+  })
+
   it.each(["disabled", "missing"])(
     "does not repeatedly fail account-info reads for a %s account when another account is retried",
     async (unavailableAccount) => {
