@@ -61,6 +61,36 @@ const publicNodes = [
 const user = { id: 7, name: "Example", email: "example@example.invalid" }
 
 describe("FreeModel integration", () => {
+  it.each([
+    ["subscription", "/api/billing"],
+    ["window5h", "/api/usage"],
+    ["windowWeek", "/api/usage"],
+  ])("attributes malformed %s to %s", async (field, endpoint) => {
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({
+          creditCents: 0,
+          signupCreditCents: 0,
+          subscription: field === "subscription" ? null : { status: "active" },
+        }),
+      ),
+      http.get(`${origin}/api/usage`, () =>
+        HttpResponse.json({
+          window5h:
+            field === "window5h" ? null : { limitCents: 0, usedCents: 0 },
+          windowWeek:
+            field === "windowWeek" ? null : { limitCents: 0, usedCents: 0 },
+        }),
+      ),
+    )
+    await expect(
+      fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+      }),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR", endpoint })
+  })
+
   beforeEach(() => {
     server.use(
       http.get(`${origin}/api/auth/me`, () => HttpResponse.json({ user })),

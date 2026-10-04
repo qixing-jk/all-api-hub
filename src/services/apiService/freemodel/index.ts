@@ -121,11 +121,8 @@ export async function fetchAccountData(
   const credit =
     amount(billing.creditCents, "/api/billing") +
     amount(billing.signupCreditCents, "/api/billing")
-  if (
-    !isRecord(usage.window5h) ||
-    !isRecord(usage.windowWeek) ||
-    !isRecord(billing.subscription)
-  )
+  if (!isRecord(billing.subscription)) throw invalid("/api/billing")
+  if (!isRecord(usage.window5h) || !isRecord(usage.windowWeek))
     throw invalid("/api/usage")
   const window = usage.window5h
   const week = usage.windowWeek

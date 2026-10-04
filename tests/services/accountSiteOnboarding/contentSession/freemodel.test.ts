@@ -12,6 +12,27 @@ const context = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("FreeModel browser session", () => {
+  it.each([
+    undefined,
+    null,
+    "7",
+    0,
+    -1,
+    1.5,
+    NaN,
+    Infinity,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects an invalid passive browser identity: %s", async (id) => {
+    vi.stubGlobal("document", { cookie: "" })
+    const observation = freeModelBrowserIdentity.observe({
+      origin: "https://freemodel.dev",
+      siteType: SITE_TYPES.FREEMODEL,
+      candidateUserIds: ["7"],
+    })!
+    const read = vi.fn().mockResolvedValue({ user: { id } })
+    expect(await observation.verify(read)).toBeNull()
+  })
+
   it("reads a numeric identity from the live cookie endpoint without an access token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

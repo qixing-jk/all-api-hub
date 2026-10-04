@@ -28,7 +28,8 @@ vi.mock("~/components/PageHeader", () => ({
   PageHeader: ({ title }: { title: string }) => <div>{title}</div>,
 }))
 
-vi.mock("~/utils/core/url", () => ({
+vi.mock("~/utils/core/url", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/core/url")>()),
   navigateToAnchor: vi.fn(),
 }))
 

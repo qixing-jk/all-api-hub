@@ -88,6 +88,16 @@ const PROFILE = {
   updatedAt: 2,
 } as any
 
+const ACCOUNT_PRICING_CONTEXT = {
+  accountId: ACCOUNT.id,
+  account: ACCOUNT,
+  pricing: {
+    success: true,
+    data: [],
+    groupRatios: {},
+    groupAccess: { kind: "not-applicable" as const },
+  },
+}
 const ACCOUNT_SOURCE = createAccountSource(ACCOUNT)
 const ALL_ACCOUNTS_SOURCE = createAllAccountsSource()
 const PROFILE_SOURCE = createProfileSource(PROFILE)
@@ -512,9 +522,12 @@ describe("ModelList page flows", () => {
         selectedSource: ALL_ACCOUNTS_SOURCE,
         selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
         currentAccount: null,
-        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        sourceCapabilities: {
+          ...ALL_ACCOUNTS_SOURCE.capabilities,
+          supportsPricing: false,
+        },
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         isFallbackCatalogActive: true,
         accountSummaryCountsByAccountId: new Map([
           [ACCOUNT.id, 2],
@@ -574,9 +587,12 @@ describe("ModelList page flows", () => {
         selectedSource: ALL_ACCOUNTS_SOURCE,
         selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
         currentAccount: null,
-        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        sourceCapabilities: {
+          ...ALL_ACCOUNTS_SOURCE.capabilities,
+          supportsPricing: false,
+        },
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         isFallbackCatalogActive: true,
         accountSummaryCountsByAccountId: new Map([
           [ACCOUNT.id, 2],
@@ -654,7 +670,10 @@ describe("ModelList page flows", () => {
       buildState({
         currentAccount: sharedChatAccount,
         selectedSource: createAccountSource(sharedChatAccount),
-        sourceCapabilities: createAccountSource(sharedChatAccount).capabilities,
+        sourceCapabilities: {
+          ...createAccountSource(sharedChatAccount).capabilities,
+          supportsPricing: false,
+        },
         isFallbackCatalogActive: true,
         fallbackRuntimeKeyName: "SharedChat service credential",
         pricingData: {
@@ -698,7 +717,7 @@ describe("ModelList page flows", () => {
         currentAccount: null,
         sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         allAccountsFilterAccountIds: ["acc-1"],
         accountSummaryCountsByAccountId: new Map([
           [ACCOUNT.id, 2],
@@ -738,7 +757,7 @@ describe("ModelList page flows", () => {
         currentAccount: null,
         sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         accountSummaryCountsByAccountId: new Map([[SECOND_ACCOUNT.id, 1]]),
         accountQueryStates: [
           { account: ACCOUNT, errorType: null },
@@ -768,7 +787,7 @@ describe("ModelList page flows", () => {
         currentAccount: null,
         sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         accountSummaryCountsByAccountId: new Map([
           [ACCOUNT.id, 0],
           [SECOND_ACCOUNT.id, 0],
@@ -858,7 +877,7 @@ describe("ModelList page flows", () => {
         currentAccount: null,
         sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
         allAccountsFilterAccountIds: [ACCOUNT.id],
         accountSummaryCountsByAccountId: new Map(),
         accountQueryStates: [
@@ -1427,7 +1446,7 @@ describe("ModelList page flows", () => {
         currentAccount: null,
         sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
         pricingData: null,
-        pricingContexts: [{ accountId: ACCOUNT.id }],
+        pricingContexts: [ACCOUNT_PRICING_CONTEXT],
       }),
     )
 

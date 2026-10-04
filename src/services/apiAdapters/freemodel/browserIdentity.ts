@@ -12,7 +12,10 @@ export const freeModelBrowserIdentity: AccountBrowserIdentityCapability = {
     sessionKey: readIdentityCookieState(),
     async verify(read) {
       const body = await read({ url: `${origin}${FREEMODEL_ME_ENDPOINT}` })
-      return isRecord(body?.user) ? body.user.id : null
+      const id = isRecord(body?.user) ? body.user.id : undefined
+      return typeof id === "number" && Number.isSafeInteger(id) && id > 0
+        ? id
+        : null
     },
   }),
 }
