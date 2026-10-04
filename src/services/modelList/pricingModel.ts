@@ -118,6 +118,8 @@ export interface ModelPriceMetadata {
 }
 
 export interface ModelListSourceInfo {
+  /** Live models loaded using maintained routes after route discovery failed. */
+  inferenceRouteFallback?: boolean
   kind: ModelListSourceKind
   provider?: AccountSiteType
   catalogScope?: ModelCatalogScope

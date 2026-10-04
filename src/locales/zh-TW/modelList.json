@@ -273,6 +273,10 @@
   "groupRatioTooltip": "{{group}} 分組倍率: {{ratio}}x",
   "groupRatioUnavailable": "分組倍率不可用",
   "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",
+  "inferenceRouteFallbackNotice": {
+    "description": "無法取得最新線路資訊，已使用內建位址讀取模型清單。線路位址可能已過時；模型仍來自介面即時回傳。",
+    "title": "正在使用內建線路"
+  },
   "input": "輸入:",
   "input1MTokens": "輸入(1M tokens)",
   "keyDialog": {

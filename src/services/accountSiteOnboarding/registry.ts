@@ -8,6 +8,7 @@ import type {
   AccountBrowserIdentityCapability,
   AccountBrowserIdentityContext,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
+import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/accountDetection"
@@ -19,6 +20,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
@@ -39,6 +41,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: freeModelContentSessionExtractor,
+    identity: freeModelBrowserIdentity,
+  },
   {
     sessionExtractor: sub2ApiContentSessionExtractor,
     identity: sub2ApiBrowserIdentity,

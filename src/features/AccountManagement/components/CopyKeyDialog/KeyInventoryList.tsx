@@ -7,11 +7,15 @@ import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import { AccountKeyResourceItem } from "./AccountKeyResourceItem"
 import { RuntimeKeyItem } from "./RuntimeKeyItem"
 
 interface KeyInventoryListProps {
+  getCredentialProfile?: (
+    row: NativeKeyManagementRow,
+  ) => ApiCredentialProfile | undefined
   runtimeKeys: AccountRuntimeKey[]
   nativeKeyRows?: NativeKeyManagementRow[]
   expandedRuntimeKeys: Set<string>
@@ -38,6 +42,7 @@ interface KeyInventoryListProps {
 export function KeyInventoryList({
   runtimeKeys,
   nativeKeyRows = [],
+  getCredentialProfile,
   expandedRuntimeKeys,
   copiedRuntimeKeyId,
   onToggleRuntimeKey,
@@ -124,6 +129,7 @@ export function KeyInventoryList({
         <AccountKeyResourceItem
           key={row.rowKey}
           row={row}
+          associatedProfile={getCredentialProfile?.(row)}
           account={account}
           copiedRuntimeKeyId={copiedRuntimeKeyId}
           onCopyKey={onCopyKey}

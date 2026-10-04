@@ -75,4 +75,16 @@ describe("profile credential exports", () => {
       "https://ark.cn-beijing.volces.com/api/compatible",
     )
   })
+  it("preserves the selected FreeModel HQ endpoint for Anthropic exports", async () => {
+    const profile = buildApiCredentialProfile({
+      apiType: "anthropic",
+      baseUrl: "https://cc-hq.freemodel.dev",
+    })
+    const source = createProfileCredentialExportSource(profile)
+    expect(source.baseUrl).toBe("https://cc-hq.freemodel.dev")
+    expect(source.anthropicBaseUrl).toBeUndefined()
+    await expect(resolveCredentialExport(source)).resolves.toMatchObject({
+      baseUrl: "https://cc-hq.freemodel.dev",
+    })
+  })
 })

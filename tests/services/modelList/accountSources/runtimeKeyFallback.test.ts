@@ -149,7 +149,7 @@ const createSub2ApiModelCatalogAdapter = (
 })
 
 const createModelCatalogAdapter = (
-  siteType: typeof SITE_TYPES.SHAREDCHAT,
+  siteType: typeof SITE_TYPES.SHAREDCHAT | typeof SITE_TYPES.FREEMODEL,
   fetchModels = fetchSub2ApiRuntimeModelsMock,
 ) => ({
   siteType,
@@ -196,6 +196,25 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     loadModelPriceTableMock.mockResolvedValue({
       source: "synthetic-test",
       models: {},
+    })
+  })
+
+  it("preserves the local inference route fallback notice in the model snapshot", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValueOnce(
+      createModelCatalogAdapter(SITE_TYPES.FREEMODEL),
+    )
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce({
+      models: [{ id: "gpt-live" }],
+      inferenceRouteFallback: true,
+    })
+    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
+      account: { ...ACCOUNT, siteType: SITE_TYPES.FREEMODEL },
+      token: TOKEN,
+    })
+    expect(result.data.map((model) => model.model_name)).toEqual(["gpt-live"])
+    expect(result.model_list_source).toMatchObject({
+      inferenceRouteFallback: true,
+      supportsPricing: false,
     })
   })
 
@@ -503,6 +522,16 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
           apiKey: "sk-real-sub2api-secret",
         },
       }),
+      {
+        accountRequest: expect.objectContaining({
+          baseUrl: "https://sub2api.example.invalid",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: ACCOUNT.token,
+            userId: ACCOUNT.userId,
+          }),
+        }),
+      },
     )
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
     expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith(
@@ -570,6 +599,16 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
           apiKey: "sk-sharedchat-codex",
         },
       }),
+      {
+        accountRequest: expect.objectContaining({
+          baseUrl: "https://new.sharedchat.cc",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: ACCOUNT.token,
+            userId: ACCOUNT.userId,
+          }),
+        }),
+      },
     )
     expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
     expect(loadModelPriceTableMock).not.toHaveBeenCalled()
@@ -665,6 +704,16 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
           apiKey: "service-secret",
         },
       }),
+      {
+        accountRequest: expect.objectContaining({
+          baseUrl: "https://example.com",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: ACCOUNT.token,
+            userId: ACCOUNT.userId,
+          }),
+        }),
+      },
     )
     expect(result.data.map((model) => model.model_name)).toEqual([
       "claude-sonnet-4",
@@ -735,6 +784,17 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     )
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({ abortSignal: abortController.signal }),
+      {
+        accountRequest: expect.objectContaining({
+          baseUrl: "https://sub2api.example.invalid",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: ACCOUNT.token,
+            userId: ACCOUNT.userId,
+          }),
+          abortSignal: abortController.signal,
+        }),
+      },
     )
     expect(fetchSub2ApiAvailableGroupsMock).toHaveBeenCalledWith(
       expect.objectContaining({ abortSignal: abortController.signal }),

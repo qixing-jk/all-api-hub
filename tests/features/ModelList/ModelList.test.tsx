@@ -380,6 +380,51 @@ function createModelListData() {
 }
 
 describe("ModelList", () => {
+  it.each([true, false])(
+    "shows one notice for local route fallback with catalog-only status %s",
+    (catalogOnly) => {
+      const fixture = createModelListData()
+      mockUseModelListData.mockReturnValue({
+        ...fixture,
+        isFallbackCatalogActive: catalogOnly,
+        sourceCapabilities: { ...CAPABILITIES, supportsPricing: !catalogOnly },
+        pricingData: {
+          ...fixture.pricingData,
+          model_list_source: {
+            kind: "catalog-fallback",
+            inferenceRouteFallback: true,
+          },
+        },
+      })
+      const view = render(<ModelList />)
+      expect(
+        screen.getByText(
+          testI18n.t("modelList:inferenceRouteFallbackNotice.description"),
+        ),
+      ).toBeVisible()
+      expect(screen.getAllByRole("alert")).toHaveLength(1)
+      if (catalogOnly) {
+        expect(
+          screen.getByText(
+            testI18n.t("modelList:fallbackSourceNotice.description"),
+          ),
+        ).toBeVisible()
+      }
+      mockUseModelListData.mockReturnValue({
+        ...fixture,
+        isFallbackCatalogActive: catalogOnly,
+        sourceCapabilities: { ...CAPABILITIES, supportsPricing: !catalogOnly },
+      })
+      view.rerender(<ModelList />)
+      expect(
+        screen.queryByText(
+          testI18n.t("modelList:inferenceRouteFallbackNotice.description"),
+        ),
+      ).not.toBeInTheDocument()
+      expect(screen.queryAllByRole("alert")).toHaveLength(catalogOnly ? 1 : 0)
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseModelListData.mockReturnValue(createModelListData())
@@ -429,6 +474,24 @@ describe("ModelList", () => {
         ),
       ),
     ).toBeInTheDocument()
+  })
+
+  it("does not label a priced runtime catalog as discovery-only", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      isFallbackCatalogActive: true,
+    })
+    render(<ModelList />)
+    expect(
+      screen.queryByText(
+        testI18n.t("modelList:fallbackSourceNotice.description"),
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        testI18n.t("modelList:runtimeKeyFallbackSourceNotice.description"),
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("renders the personalized catalog fallback notice with model data", () => {

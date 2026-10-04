@@ -17,6 +17,7 @@ import type {
   SiteType,
   SiteTypeCapabilities,
 } from "./contracts/siteTypeCapabilities"
+import { freeModelCapabilities } from "./freemodel"
 import { grsaiCapabilities } from "./grsai"
 import { createKimiOpenPlatformCapabilities } from "./kimiOpenPlatform"
 import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
@@ -86,6 +87,7 @@ export function getSiteTypeCapabilities(
   if (siteType === SITE_TYPES.VO_API_V2) return voApiV2Capabilities
   if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
+  if (siteType === SITE_TYPES.FREEMODEL) return freeModelCapabilities
   if (siteType === SITE_TYPES.RIGHT_CODE) return rightCodeCapabilities
   if (siteType === SITE_TYPES.OPENROUTER) return openRouterCapabilities
   if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {

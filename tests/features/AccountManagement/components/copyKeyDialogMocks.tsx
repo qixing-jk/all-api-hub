@@ -99,6 +99,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
               inventorySecretAvailability: [
                 SITE_TYPES.AIHUBMIX,
                 SITE_TYPES.OPENROUTER,
+                SITE_TYPES.FREEMODEL,
               ].includes(siteType as any)
                 ? "create-response-only"
                 : "recoverable",
@@ -125,7 +126,11 @@ vi.mock(
         account: any,
         options: any,
       ) => {
-        if (account.siteType === SITE_TYPES.OPENROUTER)
+        if (
+          [SITE_TYPES.OPENROUTER, SITE_TYPES.FREEMODEL].includes(
+            account.siteType,
+          )
+        )
           return actual.fetchDisplayAccountKeyResourceInventory(
             account,
             options,
@@ -315,6 +320,7 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
 
 vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
   apiCredentialProfileLinks: {
+    list: async () => [],
     capture: async (input: { profile: unknown }) => {
       captureApiCredentialProfileMock(input)
       return {

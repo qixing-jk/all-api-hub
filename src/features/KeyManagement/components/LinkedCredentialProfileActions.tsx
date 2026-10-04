@@ -13,25 +13,27 @@ import {
   KeyResourceActionToolbar,
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  type ProductAnalyticsSurfaceId,
+} from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import { LinkedCredentialProfileDialogs } from "./LinkedCredentialProfileDialogs"
-import {
-  LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-  useLinkedCredentialProfileActions,
-} from "./useLinkedCredentialProfileActions"
+import { useLinkedCredentialProfileActions } from "./useLinkedCredentialProfileActions"
 
 /** Renders integrations and diagnostics that require a complete linked profile key. */
 export function LinkedCredentialProfileActions({
   managementActions,
   profile,
+  surfaceId,
 }: {
   managementActions?: ReactNode
   profile: ApiCredentialProfile
+  surfaceId?: ProductAnalyticsSurfaceId
 }) {
   const { t } = useTranslation("keyManagement")
-  const controller = useLinkedCredentialProfileActions(profile)
+  const controller = useLinkedCredentialProfileActions(profile, surfaceId)
 
   return (
     <>
@@ -54,7 +56,7 @@ export function LinkedCredentialProfileActions({
               KEY_MANAGEMENT_TEST_IDS.linkedProfileExportMenuButton
             }
             triggerAnalyticsAction={{
-              ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+              ...controller.analyticsContext,
               actionId:
                 PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu,
             }}

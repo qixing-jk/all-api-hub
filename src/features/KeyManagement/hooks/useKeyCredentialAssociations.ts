@@ -13,10 +13,7 @@ import type {
 } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfiles"
 
-import {
-  getCredentialAssociationForLocator,
-  KEY_CREDENTIAL_ASSOCIATION_STATES,
-} from "../credentialAssociations"
+import { getCredentialProfileForLocator } from "../credentialAssociations"
 
 type AssociationPickerTarget = {
   locator: AccountRuntimeKeyLocator
@@ -125,13 +122,8 @@ export function useKeyCredentialAssociations({
   )
 
   const getProfileForLocator = useCallback(
-    (locator: AccountRuntimeKeyLocator) => {
-      const association = getCredentialAssociationForLocator(links, locator)
-      if (association.status !== KEY_CREDENTIAL_ASSOCIATION_STATES.Linked) {
-        return undefined
-      }
-      return profiles.find((profile) => profile.id === association.profileId)
-    },
+    (locator: AccountRuntimeKeyLocator) =>
+      getCredentialProfileForLocator(links, profiles, locator),
     [links, profiles],
   )
 

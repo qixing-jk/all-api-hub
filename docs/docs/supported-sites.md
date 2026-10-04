@@ -23,6 +23,7 @@
 | RightCode | 商业 AI Agent 中转站，right.codes 与 rightapi.ai 为同一服务。插件支持余额与套餐、API Key 管理和模型价格。 | [官网](https://www.right.codes/) / [文档](https://docs.rightapi.ai/) |
 | Kimi 开放平台 | Kimi（Moonshot）官方开放平台，国际站与中国站是两套独立账号。插件以独立账号类型适配控制台会话识别与续期、组织余额、原生 API Key 管理与模型目录价格。 | [国际站](https://platform.kimi.ai/) / [中国站](https://platform.kimi.com/) |
 | Grsai | 商业 AI 模型聚合中转站，grsai.com 与 grsai.ai 为同一服务。插件支持余额与消耗、API Key 管理和模型价格。 | [官网](https://grsai.com/) |
+| FreeModel | 独立 Cookie 账户适配，支持储值余额、套餐窗口额度、API Key 列表与创建/删除、创建时保存一次性密钥、密钥可用模型（优先动态发现推理线路，失败时使用内置线路并提示），以及复制邀请链接（aff）。会话失效后需重新登录；不支持签到、密钥编辑和模型价格。 | [官网](https://freemodel.dev/) |
 | Super-API | Super-Api 全新 AI 模型接口管理与分发系统，仅供个人学习使用，请勿用于任何商业用途，本项目基于 NewAPI 开发。 | [官网](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | v-api | 基于 one-api 二开的功能强大的中转平台。 | 暂无 |
 | WONG公益站 | 暂无稳定公开官方描述。 | 暂无稳定公开官方链接 |

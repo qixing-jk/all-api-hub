@@ -282,6 +282,10 @@
   "groupRatioTooltip": "Gruppe {{group}} Verhältnis: {{ratio}}x",
   "groupRatioUnavailable": "Gruppenmultiplikator nicht verfügbar",
   "groupSelectionHint": "Lassen Sie dieses Feld leer, um einen Vergleich über alle Gruppen hinweg durchzuführen. Bei der Preissortierung wird der beste Preis innerhalb des ausgewählten Gruppensatzes verwendet",
+  "inferenceRouteFallbackNotice": {
+    "description": "Aktuelle Routeninformationen sind nicht verfügbar. Die Modellliste wurde über integrierte Adressen geladen, die veraltet sein können. Die Modelle stammen weiterhin aus aktuellen API-Antworten.",
+    "title": "Integrierte Routen werden verwendet"
+  },
   "input": "Eingabe:",
   "input1MTokens": "Eingabe (1 Mio. Token)",
   "keyDialog": {
