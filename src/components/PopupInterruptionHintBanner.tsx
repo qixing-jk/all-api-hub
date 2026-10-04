@@ -2,16 +2,23 @@ import { PanelRightOpen } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, Notice } from "~/components/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { ACCOUNT_MANAGEMENT_ROUTE_ACTIONS } from "~/features/AccountManagement/routeParams"
 import { cn } from "~/lib/utils"
 import {
   clearPopupInterruptionHint,
   getPopupInterruptionHint,
   type PopupInterruptionHint,
 } from "~/services/popupInterruptionHint"
-import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
-import { openSidePanelPage } from "~/utils/navigation"
+import { isExtensionPopup } from "~/utils/browser"
+import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import {
+  closeIfPopup,
+  openOrFocusOptionsMenuItem,
+  openSidePanelWithFallback,
+} from "~/utils/navigation"
 
 interface PopupInterruptionHintBannerProps {
   className?: string
@@ -27,11 +34,14 @@ export default function PopupInterruptionHintBanner({
   surfaceClassName,
 }: PopupInterruptionHintBannerProps) {
   const { t } = useTranslation("ui")
-  const { updateActionClickBehavior } = useUserPreferencesContext()
+  const inPopup = isExtensionPopup()
+  const sidePanelSupported = getSidePanelSupport().supported
   const [hint, setHint] = useState<PopupInterruptionHint | null>(null)
   const [isApplying, setIsApplying] = useState(false)
+  const [navigationFailed, setNavigationFailed] = useState(false)
 
   useEffect(() => {
+    if (!inPopup) return
     let cancelled = false
 
     void getPopupInterruptionHint().then((nextHint) => {
@@ -43,28 +53,32 @@ export default function PopupInterruptionHintBanner({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [inPopup])
 
-  if (!hint) {
+  if (!inPopup || !hint) {
     return null
   }
 
   const dismiss = async () => {
-    await clearPopupInterruptionHint()
+    await clearPopupInterruptionHint(hint)
     setHint(null)
   }
 
-  const handleUseSidepanel = async () => {
+  const handleContinue = async () => {
     setIsApplying(true)
+    setNavigationFailed(false)
+    const openOptions = () =>
+      openOrFocusOptionsMenuItem(MENU_ITEM_IDS.ACCOUNT, {
+        action: ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+      })
     try {
-      const writeResult = await updateActionClickBehavior("sidepanel")
-      if (!writeResult.ok) {
-        showUpdateToast(writeResult, t("popupInterruption.settingName"))
-        return
-      }
-
+      if (sidePanelSupported)
+        await openSidePanelWithFallback(undefined, openOptions)
+      else await openOptions()
       await dismiss()
-      await openSidePanelPage()
+      closeIfPopup()
+    } catch {
+      setNavigationFailed(true)
     } finally {
       setIsApplying(false)
     }
@@ -77,20 +91,32 @@ export default function PopupInterruptionHintBanner({
         className={surfaceClassName}
         icon={<PanelRightOpen className="h-3.5 w-3.5" />}
         title={t("popupInterruption.title")}
-        description={t("popupInterruption.description")}
+        description={
+          sidePanelSupported
+            ? t("popupInterruption.description")
+            : t("popupInterruption.optionsDescription")
+        }
         actions={
           <>
             <Button
               type="button"
               size="sm"
               className="min-h-(--density-control-tight) px-2.5 text-xs"
-              onClick={handleUseSidepanel}
+              onClick={handleContinue}
               loading={isApplying}
-              leftIcon={<PanelRightOpen className="h-3.5 w-3.5" />}
+              leftIcon={
+                sidePanelSupported ? (
+                  <PanelRightOpen className="h-3.5 w-3.5" />
+                ) : (
+                  <WorkflowTransitionIcon className="h-3.5 w-3.5" />
+                )
+              }
             >
               {isApplying
                 ? t("common:status.applying")
-                : t("popupInterruption.actions.useSidepanel")}
+                : sidePanelSupported
+                  ? t("popupInterruption.actions.useSidepanel")
+                  : t("popupInterruption.actions.useOptions")}
             </Button>
             <Button
               type="button"
@@ -98,12 +124,18 @@ export default function PopupInterruptionHintBanner({
               variant="ghost"
               className="dark:text-secondary-foreground text-muted-foreground hover:bg-warning-soft min-h-(--density-control-tight) px-2.5 text-xs"
               onClick={dismiss}
+              disabled={isApplying}
             >
               {t("popupInterruption.actions.keepPopup")}
             </Button>
           </>
         }
       />
+      {navigationFailed && (
+        <p role="alert" className="px-3 py-2 text-sm">
+          {t("popupInterruption.openFailed")}
+        </p>
+      )}
     </div>
   )
 }

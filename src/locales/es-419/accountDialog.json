@@ -17,7 +17,7 @@
     "openSecurityFailed": "No se pudo abrir la página. Abre Seguridad → Access Token manualmente en el sitio y vuelve aquí para pegar el token.",
     "pasteStep": "Copia de inmediato el Access Token completo, pégalo en el campo Access Token de abajo, revisa los datos de tu cuenta y guarda.",
     "popupHint": "Continúa en el panel lateral para conservar este formulario mientras verificas tu identidad y copias el token en el sitio. Si no se puede abrir el panel lateral, el formulario se abrirá en una página completa.",
-    "prepareFailed": "No se pudo conservar este formulario. Copia los datos que necesites antes de volver a abrir el formulario de cuenta en el panel lateral.",
+    "prepareFailed": "No se pudo guardar temporalmente el formulario. Copia la información que necesites conservar y vuelve a abrir el formulario en la página completa.",
     "restoreFailed": "No se pudo recuperar el formulario sin terminar. Es posible que haya vencido. Vuelve a abrir el formulario de cuenta.",
     "rotationWarning": "Solo en sitios antiguos con Generate / Regenerate: regenerar invalida el token anterior; actualiza las herramientas que lo usen. Crear un token de acceso con permisos no invalida los tokens existentes.",
     "title": "Ingresa un Access Token manualmente"

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import {
   clearPopupInterruptionHint,
   completePopupCriticalFlow,
@@ -13,6 +13,7 @@ import {
 
 describe("popupInterruptionHint", () => {
   beforeEach(async () => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
     await browser.storage.local.remove(STORAGE_KEYS.POPUP_INTERRUPTION_HINT)
   })
@@ -37,13 +38,146 @@ describe("popupInterruptionHint", () => {
   it("converts a persisted active flow into a hint on the next UI open", async () => {
     vi.setSystemTime(new Date("2026-06-13T08:01:00.000Z"))
 
-    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await browser.storage.local.set({
+      [STORAGE_KEYS.POPUP_INTERRUPTION_HINT]: {
+        flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+        status: "active",
+        startedAt: 1,
+      },
+    })
 
     await expect(getPopupInterruptionHint()).resolves.toMatchObject({
       flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       interruptedAt: Date.parse("2026-06-13T08:01:00.000Z"),
     })
+  })
+
+  it("does not classify a still-running flow as interrupted", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await expect(getPopupInterruptionHint()).resolves.toBeNull()
+    await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+  })
+
+  it("probes a persisted lease and recovers only after its owner disappears", async () => {
+    const leaseName = `${STORAGE_LOCKS.POPUP_CRITICAL_FLOW_PREFIX}other-popup`
+    let ownerAlive = true
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          callback: (lock: Lock | null) => unknown,
+        ) =>
+          callback(
+            name === leaseName && ownerAlive ? null : ({ name } as Lock),
+          ),
+      },
+    })
+    try {
+      await browser.storage.local.set({
+        [STORAGE_KEYS.POPUP_INTERRUPTION_HINT]: {
+          flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+          status: "active",
+          startedAt: 1,
+          ownerId: "other-popup",
+          leaseName,
+        },
+      })
+      await expect(getPopupInterruptionHint()).resolves.toBeNull()
+      ownerAlive = false
+      await expect(getPopupInterruptionHint()).resolves.toMatchObject({
+        status: "pending",
+        ownerId: "other-popup",
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("does not report a lease-backed flow as interrupted when probing is unavailable", async () => {
+    vi.stubGlobal("navigator", {})
+    try {
+      await browser.storage.local.set({
+        [STORAGE_KEYS.POPUP_INTERRUPTION_HINT]: {
+          flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+          status: "active",
+          startedAt: 1,
+          ownerId: "other-popup",
+          leaseName: `${STORAGE_LOCKS.POPUP_CRITICAL_FLOW_PREFIX}other-popup`,
+        },
+      })
+      await expect(getPopupInterruptionHint()).resolves.toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("checks flow ownership across extension contexts and detects teardown", async () => {
+    const held = new Set<string>()
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          options: LockOptions,
+          callback: (lock: Lock | null) => Promise<unknown>,
+        ) => {
+          if (options.ifAvailable && held.has(name)) return callback(null)
+          held.add(name)
+          try {
+            return await callback({ name } as Lock)
+          } finally {
+            held.delete(name)
+          }
+        },
+      },
+    })
+    try {
+      await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+      vi.resetModules()
+      const otherContext = await import("~/services/popupInterruptionHint")
+      await expect(otherContext.getPopupInterruptionHint()).resolves.toBeNull()
+      await markPopupClosedDuringCriticalFlow()
+      await expect(
+        otherContext.getPopupInterruptionHint(),
+      ).resolves.toMatchObject({ status: "pending" })
+    } finally {
+      await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("does not clear another popup's active flow when the old flow completes", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    vi.resetModules()
+    const otherContext = await import("~/services/popupInterruptionHint")
+    await otherContext.startPopupCriticalFlow(
+      POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+    )
+    await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    const stored = await browser.storage.local.get(
+      STORAGE_KEYS.POPUP_INTERRUPTION_HINT,
+    )
+    expect(stored[STORAGE_KEYS.POPUP_INTERRUPTION_HINT]).toMatchObject({
+      status: "active",
+    })
+    await otherContext.completePopupCriticalFlow(
+      POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+    )
+  })
+
+  it("keeps another popup's interruption hint when an older popup completes", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    vi.resetModules()
+    const otherContext = await import("~/services/popupInterruptionHint")
+    await otherContext.startPopupCriticalFlow(
+      POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+    )
+    await otherContext.markPopupClosedDuringCriticalFlow()
+    await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await expect(
+      otherContext.getPopupInterruptionHint(),
+    ).resolves.toMatchObject({ status: "pending" })
   })
 
   it("does not record a hint after the critical flow completes", async () => {
@@ -64,6 +198,40 @@ describe("popupInterruptionHint", () => {
       STORAGE_KEYS.POPUP_INTERRUPTION_HINT,
     )
     expect(stored[STORAGE_KEYS.POPUP_INTERRUPTION_HINT]).toBeUndefined()
+  })
+
+  it("dismisses the pending hint matching the banner snapshot", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await markPopupClosedDuringCriticalFlow()
+    const hint = await getPopupInterruptionHint()
+    expect(hint).not.toBeNull()
+    await clearPopupInterruptionHint(hint!)
+    await expect(getPopupInterruptionHint()).resolves.toBeNull()
+  })
+
+  it("does not dismiss a newly started flow when responding to an older hint", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await markPopupClosedDuringCriticalFlow()
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await clearPopupInterruptionHint()
+    const stored = await browser.storage.local.get(
+      STORAGE_KEYS.POPUP_INTERRUPTION_HINT,
+    )
+    expect(stored[STORAGE_KEYS.POPUP_INTERRUPTION_HINT]).toMatchObject({
+      status: "active",
+    })
+    await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+  })
+
+  it("does not dismiss a newer pending hint using an older banner snapshot", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await markPopupClosedDuringCriticalFlow()
+    const oldHint = await getPopupInterruptionHint()
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await markPopupClosedDuringCriticalFlow()
+    const newHint = await getPopupInterruptionHint()
+    await clearPopupInterruptionHint(oldHint!)
+    await expect(getPopupInterruptionHint()).resolves.toEqual(newHint)
   })
 
   it("queues a pending hint directly for development debugging", async () => {
@@ -112,10 +280,12 @@ describe("popupInterruptionHint", () => {
   })
 
   it("ignores storage remove failures when clearing hints", async () => {
-    vi.spyOn(browser.storage.local, "remove").mockRejectedValue(
-      new Error("remove failed"),
-    )
+    await debugQueuePopupInterruptionHint()
+    const removeSpy = vi
+      .spyOn(browser.storage.local, "remove")
+      .mockRejectedValue(new Error("remove failed"))
 
     await expect(clearPopupInterruptionHint()).resolves.toBeUndefined()
+    expect(removeSpy).toHaveBeenCalledOnce()
   })
 })

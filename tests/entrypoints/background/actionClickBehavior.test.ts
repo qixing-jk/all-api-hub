@@ -36,7 +36,7 @@ describe("background applyActionClickBehavior", () => {
     })
     getPreferencesStrict = vi.fn()
     loggerWarn = vi.fn()
-    openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
+    openSidePanelWithFallback = vi.fn().mockResolvedValue("sidepanel")
     openOptionsPage = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
@@ -601,6 +601,25 @@ describe("background applyActionClickBehavior", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
     })
     expect(trackerComplete).toHaveBeenCalledWith()
+  })
+
+  it("reports a failed side-panel attempt when toolbar navigation falls back to Options", async () => {
+    const { applyActionClickBehavior, setupActionClickBehaviorListener } =
+      await import("~/entrypoints/background/actionClickBehavior")
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "firefox-sidebar-action",
+    })
+    setupActionClickBehaviorListener()
+    await applyActionClickBehavior("sidepanel")
+    openSidePanelWithFallback.mockResolvedValueOnce("options")
+    await addActionClickListener.mock.calls[0]?.[0]({ id: 7, windowId: 9 })
+    expect(trackerComplete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("does not let tracker completion failures break successful toolbar clicks", async () => {

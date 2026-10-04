@@ -332,11 +332,15 @@
     "expand": "展開",
     "firefox": {
       "confirm": "確定",
+      "howOpenOptions": "在完整頁面繼續",
       "howOpenSidebar": "如何開啟側邊欄",
       "limitation": "Firefox 瀏覽器功能限制",
+      "openFailed": "暫時無法開啟側邊欄或完整頁面，請重試。",
+      "openOptions": "在完整頁面繼續",
       "openSidebar": "開啟側邊欄",
-      "popupLimitation": "在 Firefox 瀏覽器的彈窗中無法正常使用此功能。請使用側邊欄模式來新增帳號",
-      "sidebarInstruction": "點擊瀏覽器工具欄中的外掛圖示，然後選擇\"側邊欄\"選項來開啟側邊欄模式",
+      "optionsInstruction": "點擊下方按鈕，開啟擴充功能的完整帳號管理頁面。",
+      "popupLimitation": "Firefox 彈窗可能在開啟其他頁面時關閉。建議在側邊欄或完整頁面新增帳號。",
+      "sidebarInstruction": "點擊下方按鈕，在側邊欄繼續。無法開啟時會使用完整頁面。",
       "warningTitle": "功能限制提醒"
     },
     "kelivo": {
@@ -592,10 +596,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "繼續用彈窗",
-      "useSidepanel": "改用側邊欄"
+      "useOptions": "在完整頁面繼續",
+      "useSidepanel": "在側邊欄繼續"
     },
-    "description": "彈窗在帳戶自動識別期間關閉了。建議改用側邊欄完成新增帳戶流程。",
-    "settingName": "工具列點擊行為",
+    "description": "彈窗在帳號自動辨識期間關閉了。建議在側邊欄繼續新增帳號；無法開啟時會使用完整頁面。",
+    "openFailed": "暫時無法開啟側邊欄或完整頁面，請重試。",
+    "optionsDescription": "彈窗在帳號自動辨識期間關閉了。建議在完整頁面繼續新增帳號。",
     "title": "自動識別可能被中斷"
   },
   "repeatableInput": {

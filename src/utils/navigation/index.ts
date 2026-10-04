@@ -17,6 +17,7 @@ import {
   createWindow,
   focusTab,
   getExtensionURL,
+  getSidePanelSupport,
   hasWindowsAPI,
   openRuntimeOptionsPage,
   queryTabs as queryTabsApi,
@@ -278,12 +279,13 @@ export const openOrFocusOptionsPage = async (
  * @param fn Function to run before optional popup close.
  * @returns Wrapped function that preserves original return value.
  */
-const withPopupClose = <T extends any[]>(
-  fn: (...args: T) => Promise<void> | void,
+const withPopupClose = <T extends any[], R>(
+  fn: (...args: T) => Promise<R> | R,
 ) => {
   return async (...args: T) => {
-    await fn(...args)
+    const result = await fn(...args)
     closeIfPopup()
+    return result
   }
 }
 
@@ -893,25 +895,29 @@ export const openAutoCheckinPage = withPopupClose(
 )
 
 /**
- * Opens the side panel when available and otherwise falls back to the basic
- * settings page so callers never leave the user without a visible destination.
- * The fallback targets Basic settings because it already hosts side-panel
- * behavior controls and related guidance.
+ * Opens the side panel when available, otherwise continuing in Options.
+ * Account workflows can supply a fallback that preserves their creation intent.
  * When invoked from a toolbar action click, callers can forward the clicked tab
  * so Chromium receives the sidePanel.open request before user-gesture context is
  * lost to async tab lookup.
  */
 export const openSidePanelWithFallback = async (
   targetTab?: browser.tabs.Tab | null,
-) => {
-  try {
-    await _openSidePanel(targetTab)
-  } catch (error) {
-    logger.warn(
-      `Failed to open side panel, falling back to settings:\n${getErrorMessage(error)}`,
-    )
-    await openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
+  openFallback: () => Promise<void> = () =>
+    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.ACCOUNT),
+): Promise<"sidepanel" | "options"> => {
+  if (getSidePanelSupport().supported) {
+    try {
+      await _openSidePanel(targetTab)
+      return "sidepanel"
+    } catch (error) {
+      logger.warn(
+        `Failed to open side panel, continuing in Options:\n${getErrorMessage(error)}`,
+      )
+    }
   }
+  await openFallback()
+  return "options"
 }
 
 /**

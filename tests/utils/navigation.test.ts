@@ -7,6 +7,7 @@ import {
   createWindow,
   focusTab as focusTabApi,
   getExtensionURL,
+  getSidePanelSupport,
   hasWindowsAPI,
   openRuntimeOptionsPage as openRuntimeOptionsPageApi,
   openSidePanel as openSidePanelApi,
@@ -81,6 +82,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     hasWindowsAPI,
     openRuntimeOptionsPage,
     openSidePanel,
+    getSidePanelSupport: vi.fn(() => ({ supported: true })),
   }
 })
 
@@ -746,23 +748,39 @@ describe("navigation utilities", () => {
     expect(result).toEqual({ openedCount: 1, failedCount: 1 })
   })
 
-  it("openSidePanelWithFallback should open settings when side panel opening fails", async () => {
+  it("openSidePanelWithFallback should open the account page and report Options when side panel opening fails", async () => {
     mockedOpenSidePanel.mockRejectedValueOnce(new Error("fail"))
 
-    await openSidePanelWithFallback()
+    await expect(openSidePanelWithFallback()).resolves.toBe("options")
 
     await vi.waitFor(() => {
       expect(mockedCreateTab).toHaveBeenCalledWith(
-        `${OPTIONS_PAGE_URL}#basic`,
+        `${OPTIONS_PAGE_URL}#account`,
         true,
       )
     })
   })
 
+  it("skips the side panel API when unavailable and reports the Options destination", async () => {
+    vi.mocked(getSidePanelSupport).mockReturnValueOnce({
+      supported: false,
+      kind: "unsupported",
+      reason: "missing",
+    })
+    await expect(openSidePanelWithFallback()).resolves.toBe("options")
+    expect(mockedOpenSidePanel).not.toHaveBeenCalled()
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}#account`,
+      true,
+    )
+  })
+
   it("openSidePanelWithFallback should forward the clicked tab context", async () => {
     const clickedTab = { id: 7, windowId: 9 } as browser.tabs.Tab
 
-    await openSidePanelWithFallback(clickedTab)
+    await expect(openSidePanelWithFallback(clickedTab)).resolves.toBe(
+      "sidepanel",
+    )
 
     expect(mockedOpenSidePanel).toHaveBeenCalledWith(clickedTab)
   })

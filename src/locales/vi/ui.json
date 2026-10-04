@@ -332,11 +332,15 @@
     "expand": "Mở rộng",
     "firefox": {
       "confirm": "Xác nhận",
+      "howOpenOptions": "Tiếp tục ở trang đầy đủ",
       "howOpenSidebar": "Cách mở thanh bên",
       "limitation": "Giới hạn tính năng trên trình duyệt Firefox",
+      "openFailed": "Không thể mở bảng bên hoặc trang đầy đủ. Vui lòng thử lại.",
+      "openOptions": "Tiếp tục ở trang đầy đủ",
       "openSidebar": "Mở thanh bên",
-      "popupLimitation": "Không thể sử dụng bình thường tính năng này trong cửa sổ bật lên của trình duyệt Firefox. Vui lòng sử dụng chế độ thanh bên để thêm tài khoản",
-      "sidebarInstruction": "Nhấp vào biểu tượng tiện ích trong thanh công cụ của trình duyệt, sau đó chọn \"Thanh bên\" để mở chế độ thanh bên",
+      "optionsInstruction": "Dùng nút bên dưới để mở trang quản lý tài khoản đầy đủ của tiện ích.",
+      "popupLimitation": "Cửa sổ bật lên của Firefox có thể đóng khi mở trang khác. Hãy thêm tài khoản trong bảng bên hoặc trang đầy đủ.",
+      "sidebarInstruction": "Dùng nút bên dưới để tiếp tục trong bảng bên. Nếu không mở được, trang đầy đủ sẽ mở thay thế.",
       "warningTitle": "Nhắc nhở giới hạn tính năng"
     },
     "kelivo": {
@@ -592,10 +596,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "Tiếp tục dùng popup",
-      "useSidepanel": "Dùng thanh bên"
+      "useOptions": "Tiếp tục ở trang đầy đủ",
+      "useSidepanel": "Tiếp tục trong bảng bên"
     },
-    "description": "Cửa sổ bật lên đã đóng khi đang tự động nhận diện tài khoản. Hãy dùng thanh bên để thêm tài khoản ổn định hơn.",
-    "settingName": "Hành vi khi bấm thanh công cụ",
+    "description": "Cửa sổ bật lên đã đóng khi đang tự động nhận diện tài khoản. Tiếp tục trong bảng bên; nếu không mở được, trang đầy đủ sẽ được sử dụng.",
+    "openFailed": "Không thể mở bảng bên hoặc trang đầy đủ. Vui lòng thử lại.",
+    "optionsDescription": "Cửa sổ bật lên đã đóng khi đang tự động nhận diện tài khoản. Tiếp tục thêm tài khoản ở trang đầy đủ.",
     "title": "Tự động nhận diện có thể đã bị gián đoạn"
   },
   "repeatableInput": {

@@ -348,11 +348,15 @@
     "expand": "Expandir",
     "firefox": {
       "confirm": "Confirmar",
+      "howOpenOptions": "Continuar na página completa",
       "howOpenSidebar": "Como abrir a barra lateral",
       "limitation": "Limitação de recursos do navegador Firefox",
+      "openFailed": "Não foi possível abrir o painel lateral ou a página completa. Tente novamente.",
+      "openOptions": "Continuar na página completa",
       "openSidebar": "Abrir barra lateral",
-      "popupLimitation": "Este recurso não pode ser usado normalmente no pop-up do navegador Firefox. Use o modo da barra lateral para adicionar contas",
-      "sidebarInstruction": "Clique no ícone da extensão na barra de ferramentas do navegador e selecione a opção 'Barra lateral' para abrir o modo de barra lateral",
+      "optionsInstruction": "Use o botão abaixo para abrir a página completa de gerenciamento de contas da extensão.",
+      "popupLimitation": "O pop-up do Firefox pode fechar ao abrir outra página. Adicione contas no painel lateral ou na página completa.",
+      "sidebarInstruction": "Use o botão abaixo para continuar no painel lateral. Se ele não abrir, a página completa será aberta.",
       "warningTitle": "Lembrete de limitação de recursos"
     },
     "kelivo": {
@@ -612,10 +616,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "Manter pop-up",
-      "useSidepanel": "Usar barra lateral"
+      "useOptions": "Continuar na página completa",
+      "useSidepanel": "Continuar no painel lateral"
     },
-    "description": "O pop-up foi fechado enquanto a detecção automática da conta estava em execução. Use a barra lateral para um fluxo de adição de conta mais estável.",
-    "settingName": "Comportamento de clique na barra de ferramentas",
+    "description": "O pop-up fechou durante a detecção automática da conta. Continue no painel lateral; se ele não abrir, será usada a página completa.",
+    "openFailed": "Não foi possível abrir o painel lateral ou a página completa. Tente novamente.",
+    "optionsDescription": "O pop-up fechou durante a detecção automática da conta. Continue adicionando a conta na página completa.",
     "title": "A detecção automática pode ter sido interrompida"
   },
   "repeatableInput": {

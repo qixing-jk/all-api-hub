@@ -16,13 +16,17 @@ import type { AccountDialogRecoveryState } from "~/features/AccountManagement/co
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/hooks/useAccountDialogRecoveryReceiver"
 import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
+import {
   getAndClearPendingSponsorAddAccountPrefill,
   isAddAccountPrefill,
   watchPendingSponsorAddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import type { DisplaySiteData } from "~/types"
-import { isExtensionSidePanel } from "~/utils/browser"
+import { isExtensionOptions, isExtensionSidePanel } from "~/utils/browser"
 
 interface DialogOptions {
   mode: DialogMode
@@ -158,7 +162,12 @@ export const DialogStateProvider = ({
   )
 
   useEffect(() => {
-    if (!isExtensionSidePanel()) return
+    const optionsAddAccount =
+      isExtensionOptions() &&
+      new URLSearchParams(window.location.search).get(
+        ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action,
+      ) === ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add
+    if (!isExtensionSidePanel() && !optionsAddAccount) return
 
     let cancelled = false
 

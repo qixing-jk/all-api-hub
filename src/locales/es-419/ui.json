@@ -348,11 +348,15 @@
     "expand": "Expandir",
     "firefox": {
       "confirm": "Confirmar",
+      "howOpenOptions": "Continuar en la página completa",
       "howOpenSidebar": "Cómo abrir la barra lateral",
       "limitation": "Limitación de función del navegador Firefox",
+      "openFailed": "No se pudo abrir el panel lateral ni la página completa. Inténtalo de nuevo.",
+      "openOptions": "Continuar en la página completa",
       "openSidebar": "Abrir barra lateral",
-      "popupLimitation": "Esta función no se puede usar normalmente en el popup del navegador Firefox. Usa el modo de barra lateral para agregar cuentas",
-      "sidebarInstruction": "Haz clic en el ícono de la extensión en la barra de herramientas del navegador y luego selecciona la opción 'Sidebar' para abrir el modo de barra lateral",
+      "optionsInstruction": "Usa el botón de abajo para abrir la página completa de administración de cuentas de la extensión.",
+      "popupLimitation": "El popup de Firefox puede cerrarse al abrir otra página. Agrega cuentas en el panel lateral o en la página completa.",
+      "sidebarInstruction": "Usa el botón de abajo para continuar en el panel lateral. Si no se puede abrir, se abrirá la página completa.",
       "warningTitle": "Recordatorio de limitación de función"
     },
     "kelivo": {
@@ -612,10 +616,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "Mantener popup",
-      "useSidepanel": "Usar barra lateral"
+      "useOptions": "Continuar en la página completa",
+      "useSidepanel": "Continuar en el panel lateral"
     },
-    "description": "El popup se cerró mientras se ejecutaba la autodetección de cuenta. Usa la barra lateral para un flujo de agregar cuenta más estable.",
-    "settingName": "Comportamiento de clic en la barra de herramientas",
+    "description": "El popup se cerró durante la detección automática de la cuenta. Continúa en el panel lateral; si no se puede abrir, se usará la página completa.",
+    "openFailed": "No se pudo abrir el panel lateral ni la página completa. Inténtalo de nuevo.",
+    "optionsDescription": "El popup se cerró durante la detección automática de la cuenta. Continúa agregando la cuenta en la página completa.",
     "title": "La autodetección puede haberse interrumpido"
   },
   "repeatableInput": {

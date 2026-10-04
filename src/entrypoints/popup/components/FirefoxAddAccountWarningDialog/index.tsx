@@ -1,4 +1,5 @@
 import { TriangleAlert } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ActionGroup, Button } from "~/components/ui"
@@ -7,7 +8,8 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 interface FirefoxWarningDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
+  sidePanelSupported: boolean
 }
 
 /**
@@ -18,8 +20,22 @@ export default function FirefoxAddAccountWarningDialog({
   isOpen,
   onClose,
   onConfirm,
+  sidePanelSupported,
 }: FirefoxWarningDialogProps) {
   const { t } = useTranslation("ui")
+  const [isOpening, setIsOpening] = useState(false)
+  const [openFailed, setOpenFailed] = useState(false)
+  const handleConfirm = async () => {
+    setIsOpening(true)
+    setOpenFailed(false)
+    try {
+      await onConfirm()
+    } catch {
+      setOpenFailed(true)
+    } finally {
+      setIsOpening(false)
+    }
+  }
 
   const header = (
     <div className="flex items-center space-x-3">
@@ -53,14 +69,21 @@ export default function FirefoxAddAccountWarningDialog({
           </div>
           <div className="ml-3">
             <h3 className="text-warning-text text-xs font-medium">
-              {t("dialog.firefox.howOpenSidebar")}
+              {sidePanelSupported
+                ? t("dialog.firefox.howOpenSidebar")
+                : t("dialog.firefox.howOpenOptions")}
             </h3>
             <div className="text-warning-text mt-density-1 text-xs">
-              <p>{t("dialog.firefox.sidebarInstruction")}</p>
+              <p>
+                {sidePanelSupported
+                  ? t("dialog.firefox.sidebarInstruction")
+                  : t("dialog.firefox.optionsInstruction")}
+              </p>
             </div>
           </div>
         </div>
       </div>
+      {openFailed && <p role="alert">{t("dialog.firefox.openFailed")}</p>}
 
       {/* 按钮组 */}
       <ActionGroup
@@ -72,6 +95,7 @@ export default function FirefoxAddAccountWarningDialog({
           variant="secondary"
           className="flex-1"
           onClick={onClose}
+          disabled={isOpening}
           aria-label={t("dialog.firefox.confirm")}
         >
           {t("dialog.firefox.confirm")}
@@ -80,10 +104,17 @@ export default function FirefoxAddAccountWarningDialog({
           type="button"
           variant="default"
           className="flex-1"
-          onClick={onConfirm}
-          aria-label={t("dialog.firefox.openSidebar")}
+          onClick={handleConfirm}
+          loading={isOpening}
+          aria-label={
+            sidePanelSupported
+              ? t("dialog.firefox.openSidebar")
+              : t("dialog.firefox.openOptions")
+          }
         >
-          {t("dialog.firefox.openSidebar")}
+          {sidePanelSupported
+            ? t("dialog.firefox.openSidebar")
+            : t("dialog.firefox.openOptions")}
         </Button>
       </ActionGroup>
     </div>

@@ -328,11 +328,15 @@
     "expand": "展开",
     "firefox": {
       "confirm": "确定",
+      "howOpenOptions": "在完整页面继续",
       "howOpenSidebar": "如何打开侧边栏",
       "limitation": "Firefox 浏览器功能限制",
+      "openFailed": "暂时无法打开侧边栏或完整页面，请重试。",
+      "openOptions": "在完整页面继续",
       "openSidebar": "打开侧边栏",
-      "popupLimitation": "在 Firefox 浏览器的弹窗中无法正常使用此功能。请使用侧边栏模式来添加账号",
-      "sidebarInstruction": "点击浏览器工具栏中的插件图标，然后选择\"侧边栏\"选项来打开侧边栏模式",
+      "optionsInstruction": "点击下方按钮，打开扩展的完整账号管理页面。",
+      "popupLimitation": "Firefox 弹窗可能在打开其他页面时关闭。建议在侧边栏或完整页面添加账号。",
+      "sidebarInstruction": "点击下方按钮，在侧边栏继续。无法打开时会使用完整页面。",
       "warningTitle": "功能限制提醒"
     },
     "kelivo": {
@@ -586,10 +590,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "继续用弹窗",
-      "useSidepanel": "改用侧边栏"
+      "useOptions": "在完整页面继续",
+      "useSidepanel": "在侧边栏继续"
     },
-    "description": "弹窗在账号自动识别期间关闭了。建议改用侧边栏完成添加账号流程。",
-    "settingName": "工具栏点击行为",
+    "description": "弹窗在账号自动识别期间关闭了。建议在侧边栏继续添加账号；无法打开时会使用完整页面。",
+    "openFailed": "暂时无法打开侧边栏或完整页面，请重试。",
+    "optionsDescription": "弹窗在账号自动识别期间关闭了。建议在完整页面继续添加账号。",
     "title": "自动识别可能被中断"
   },
   "repeatableInput": {
