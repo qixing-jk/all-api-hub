@@ -282,6 +282,10 @@
   "groupRatioTooltip": "Group {{group}} ratio: {{ratio}}x",
   "groupRatioUnavailable": "Group multiplier unavailable",
   "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",
+  "inferenceRouteFallbackNotice": {
+    "description": "Current route information is unavailable. The model list was fetched using built-in addresses, which may be outdated. Models still come from live API responses.",
+    "title": "Using built-in routes"
+  },
   "input": "Input:",
   "input1MTokens": "Input (1M tokens)",
   "keyDialog": {

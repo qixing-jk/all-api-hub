@@ -272,6 +272,10 @@
   "groupRatioTooltip": "{{group}} 分组倍率: {{ratio}}x",
   "groupRatioUnavailable": "分组倍率不可用",
   "groupSelectionHint": "留空表示所有分组；价格排序会在已选分组范围内自动取最优价",
+  "inferenceRouteFallbackNotice": {
+    "description": "无法获取最新线路信息，已使用内置地址读取模型列表。线路地址可能已过时；模型仍来自接口实时返回。",
+    "title": "正在使用内置线路"
+  },
   "input": "输入:",
   "input1MTokens": "输入(1M tokens)",
   "keyDialog": {

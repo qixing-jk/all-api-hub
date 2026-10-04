@@ -30,6 +30,7 @@ export const SITE_TYPES = {
   CLI_PROXY_API: "cli-proxy-api",
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
+  FREEMODEL: "freemodel",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
@@ -64,6 +65,11 @@ export const AIHUBMIX_HOSTNAMES = [
 
 export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
 export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
+
+export const FREEMODEL_HOSTNAMES = ["freemodel.dev"] as const
+export const FREEMODEL_WEB_ORIGIN = "https://freemodel.dev"
+export const FREEMODEL_OPENAI_BASE_URL = "https://api.freemodel.dev/v1"
+export const FREEMODEL_ANTHROPIC_BASE_URL = "https://cc.freemodel.dev"
 
 /**
  * Right Code is served on three equivalent domains that share one account

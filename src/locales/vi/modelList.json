@@ -273,6 +273,10 @@
   "groupRatioTooltip": "Tỷ lệ nhóm {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Không có hệ số nhóm",
   "groupSelectionHint": "Để trống biểu thị tất cả các nhóm; việc sắp xếp giá sẽ tự động lấy mức giá tốt nhất trong phạm vi các nhóm đã chọn",
+  "inferenceRouteFallbackNotice": {
+    "description": "Không thể lấy thông tin tuyến mới nhất. Danh sách mô hình được lấy qua địa chỉ tích hợp, có thể đã lỗi thời. Mô hình vẫn đến từ phản hồi API trực tiếp.",
+    "title": "Đang dùng tuyến tích hợp"
+  },
   "input": "Đầu vào:",
   "input1MTokens": "Đầu vào (1M tokens)",
   "keyDialog": {

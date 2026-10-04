@@ -45,6 +45,7 @@ const collectedRequests = {
   rightCodeOverall: 0,
   kimiAccount: 0,
   grsaiAccount: 0,
+  freeModelAccount: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -86,6 +87,38 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
 }
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: {
+    baseUrl: "https://freemodel.dev",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://freemodel.dev/api/auth/me", () =>
+        HttpResponse.json({ user: { id: 7, name: "Example" } }),
+      ),
+      http.get("https://freemodel.dev/api/billing", () => {
+        collectedRequests.freeModelAccount += 1
+        return HttpResponse.json({
+          creditCents: 125,
+          signupCreditCents: 0,
+          subscription: { planId: "free", status: "canceled" },
+        })
+      }),
+      http.get("https://freemodel.dev/api/usage", () =>
+        HttpResponse.json({
+          window5h: { usedCents: 0, limitCents: 0 },
+          windowWeek: { usedCents: 0, limitCents: 0 },
+        }),
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.freeModelAccount).toBe(snapshotCount)
+    },
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: {
     baseUrl: "https://new-api-family.example.invalid",
     authType: AuthTypeEnum.AccessToken,
@@ -453,7 +486,7 @@ const createRequest = (siteType: AccountSiteType) => {
     accountId: `account-${siteType}`,
     auth: {
       authType: fixture.authType,
-      userId: "user-1",
+      userId: siteType === SITE_TYPES.FREEMODEL ? "7" : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -539,6 +572,7 @@ describe("AccountData availability producer conformance", () => {
       rightCodeOverall: 0,
       kimiAccount: 0,
       grsaiAccount: 0,
+      freeModelAccount: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

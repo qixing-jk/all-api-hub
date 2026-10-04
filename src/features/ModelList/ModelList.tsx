@@ -292,6 +292,14 @@ export default function ModelList(props: {
     !!currentAccount &&
     canListAccountRuntimeKeys(currentAccount) &&
     !canCreateAccountKeyResources(currentAccount)
+  const hasInferenceRouteFallback = Boolean(
+    pricingData?.model_list_source?.inferenceRouteFallback ||
+      pricingContexts.some(
+        ({ pricing }) => pricing.model_list_source?.inferenceRouteFallback,
+      ),
+  )
+  const showCatalogOnlyNotice =
+    isFallbackCatalogActive && !sourceCapabilities.supportsPricing
   const shouldShowSourceSetupEmptyState = !hasAnySources
   const shouldShowSourceSelectionEmptyState =
     !shouldShowSourceSetupEmptyState && !selectedSource
@@ -745,21 +753,31 @@ export default function ModelList(props: {
             />
           )}
 
-          {isFallbackCatalogActive && (
+          {(showCatalogOnlyNotice || hasInferenceRouteFallback) && (
             <Alert
-              variant="default"
+              variant={hasInferenceRouteFallback ? "warning" : "default"}
               className="mb-density-6"
               title={
-                isRuntimeKeyOnlyFallbackCatalog
-                  ? t("runtimeKeyFallbackSourceNotice.title")
-                  : t("fallbackSourceNotice.title")
+                hasInferenceRouteFallback
+                  ? t("inferenceRouteFallbackNotice.title")
+                  : isRuntimeKeyOnlyFallbackCatalog
+                    ? t("runtimeKeyFallbackSourceNotice.title")
+                    : t("fallbackSourceNotice.title")
               }
               description={
-                isRuntimeKeyOnlyFallbackCatalog
-                  ? t("runtimeKeyFallbackSourceNotice.description")
-                  : t("fallbackSourceNotice.description")
+                !showCatalogOnlyNotice
+                  ? t("inferenceRouteFallbackNotice.description")
+                  : isRuntimeKeyOnlyFallbackCatalog
+                    ? t("runtimeKeyFallbackSourceNotice.description")
+                    : t("fallbackSourceNotice.description")
               }
-            />
+            >
+              {showCatalogOnlyNotice && hasInferenceRouteFallback && (
+                <p className="text-sm">
+                  {t("inferenceRouteFallbackNotice.description")}
+                </p>
+              )}
+            </Alert>
           )}
 
           {isProviderCatalogFallbackActive && (

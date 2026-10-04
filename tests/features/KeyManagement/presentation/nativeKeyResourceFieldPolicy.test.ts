@@ -21,6 +21,14 @@ const request = {
 }
 
 describe("native key editor field policies", () => {
+  it("presents only FreeModel key name, matching the website", () => {
+    expect(
+      getNativeKeyResourceEditorPresentation(
+        SITE_TYPES.FREEMODEL,
+        "create",
+      ).policy.fields.map((field) => field.fieldId),
+    ).toEqual(["name"])
+  })
   it("presents Grsai budgets as credits with their own explanatory text", () => {
     const fields = getNativeKeyResourceEditorPresentation(
       SITE_TYPES.GRSAI,

@@ -273,6 +273,10 @@
   "groupRatioTooltip": "グループ {{group}} の倍率: {{ratio}}x",
   "groupRatioUnavailable": "グループ倍率を取得できません",
   "groupSelectionHint": "未選択なら全グループ対象です。価格ソートは選択済みグループ範囲内の最安値を使います",
+  "inferenceRouteFallbackNotice": {
+    "description": "最新のルート情報を取得できないため、組み込みのアドレスでモデル一覧を取得しました。アドレスが古い可能性があります。モデル情報は実際の API 応答に基づきます。",
+    "title": "組み込みルートを使用中"
+  },
   "input": "入力:",
   "input1MTokens": "入力（100 万トークン）",
   "keyDialog": {

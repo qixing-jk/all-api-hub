@@ -67,6 +67,10 @@ import {
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
   APIYI_HOSTNAME,
+  FREEMODEL_ANTHROPIC_BASE_URL,
+  FREEMODEL_HOSTNAMES,
+  FREEMODEL_OPENAI_BASE_URL,
+  FREEMODEL_WEB_ORIGIN,
   GRSAI_ACCOUNT_PATH,
   GRSAI_API_BASE_URL,
   GRSAI_DISPLAY_NAME,
@@ -174,6 +178,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.SUB2API,
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
+  SITE_TYPES.FREEMODEL,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
@@ -204,6 +209,57 @@ export const MANAGED_SITE_TYPE_ORDER = [
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 
 const ACCOUNT_SITE_DEFINITIONS = [
+  {
+    siteType: SITE_TYPES.FREEMODEL,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel,
+    onboarding: {
+      displayName: "FreeModel",
+      detection: { hostnames: FREEMODEL_HOSTNAMES },
+      routes: {
+        loginPath: "/",
+        usagePath: "/dashboard/usage",
+        adminCredentialsPath: "/dashboard/keys",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: FREEMODEL_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: FREEMODEL_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: FREEMODEL_WEB_ORIGIN,
+        managedChannelOrigin: FREEMODEL_OPENAI_BASE_URL,
+        duplicateOrigin: FREEMODEL_WEB_ORIGIN,
+        inferenceApiBaseUrls: {
+          openAiCompatible: FREEMODEL_OPENAI_BASE_URL,
+          anthropic: FREEMODEL_ANTHROPIC_BASE_URL,
+        },
+      },
+    },
+  },
   {
     siteType: SITE_TYPES.ONE_API,
     tokenKey: { optionalSkPrefix: true },

@@ -42,6 +42,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   VoApiV2: "voapiV2",
   Aihubmix: "aihubmix",
   SharedChat: "sharedchat",
+  FreeModel: "freemodel",
   RightCode: "rightcode",
   OpenRouter: "openrouter",
   KimiOpenPlatform: "kimiOpenPlatform",

@@ -291,6 +291,10 @@
   "groupRatioTooltip": "Multiplicador do grupo {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Multiplicador do grupo indisponível",
   "groupSelectionHint": "Deixe em branco para comparar todos os grupos; a ordenação por preço usa o melhor preço entre os grupos selecionados",
+  "inferenceRouteFallbackNotice": {
+    "description": "As informações atuais das rotas não estão disponíveis. A lista de modelos foi obtida usando endereços integrados que podem estar desatualizados. Os modelos continuam vindo de respostas atuais da API.",
+    "title": "Usando rotas integradas"
+  },
   "input": "Entrada:",
   "input1MTokens": "Entrada (1 milhão de tokens)",
   "keyDialog": {

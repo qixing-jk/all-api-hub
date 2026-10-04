@@ -9,6 +9,11 @@ export type ModelCatalogRequest = ApiServiceRequest & {
   }
 }
 
+/** Route fallback affects provenance, not the live model identifiers. */
+export type ModelCatalogResult =
+  | ModelDescriptor[]
+  | { models: ModelDescriptor[]; inferenceRouteFallback: true }
+
 export type ModelCatalogCapability = {
   /** Enrich selected-key visibility with provider pricing facts and fallbacks. */
   enrichPricing?(params: {
@@ -16,5 +21,9 @@ export type ModelCatalogCapability = {
     runtimeKey: AccountRuntimeKey
     models: readonly ModelDescriptor[]
   }): Promise<ModelCatalogSnapshot>
-  fetchModels(request: ModelCatalogRequest): Promise<ModelDescriptor[]>
+  /** Console auth stays separate from the inference-key request. */
+  fetchModels(
+    request: ModelCatalogRequest,
+    context?: { accountRequest: ApiServiceRequest },
+  ): Promise<ModelCatalogResult>
 }
