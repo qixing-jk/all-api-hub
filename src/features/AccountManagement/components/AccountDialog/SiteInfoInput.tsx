@@ -1,7 +1,6 @@
 import {
   CircleHelp,
   Cookie,
-  Globe2,
   Info,
   KeyRound,
   Pencil,
@@ -69,7 +68,8 @@ type SiteInfoInputProps =
 
 /**
  * Site information section displaying the URL input with contextual helpers
- * such as current-tab reuse, already-added warnings, and the sub2api hint.
+ * such as already-added warnings and the sub2api hint. The current-tab reuse
+ * action lives inside the URL field itself.
  * @param props Component props defining field values, detection state, and callbacks.
  * @param props.url Current site URL value.
  * @param props.onUrlChange Handler updating the site URL.
@@ -203,6 +203,8 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 enableRecentTabs={
                   !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
                 }
+                currentTabUrl={currentTabUrl}
+                onUseCurrentTab={onUseCurrentTab}
               />
             </div>
           </div>
@@ -224,6 +226,8 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               enableRecentTabs={
                 !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
               }
+              currentTabUrl={currentTabUrl}
+              onUseCurrentTab={onUseCurrentTab}
             />
           </div>
         </>
@@ -268,29 +272,6 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 {t("siteInfo.editNow")}
               </Button>
             )}
-          </div>
-        )}
-        {!isDetected && onUseCurrentTab && currentTabUrl && (
-          <div className="bg-primary-soft text-primary-soft-foreground py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
-            <div className="flex items-center">
-              <Info className="h-4 w-4" />
-              <span className="ml-1">{t("siteInfo.currentSite")}:</span>
-              <Tooltip content={currentTabUrl}>
-                <span className="ml-1 max-w-[150px] truncate font-medium">
-                  {currentTabUrl || t("siteInfo.unknown")}
-                </span>
-              </Tooltip>
-            </div>
-
-            <button
-              type="button"
-              onClick={onUseCurrentTab}
-              className="text-theme-800 disabled:text-faint-foreground dark:text-theme-200 dark:disabled:text-disabled-foreground flex items-center font-medium disabled:cursor-not-allowed"
-              disabled={!currentTabUrl}
-            >
-              <Globe2 className="mr-1 h-3 w-3" />
-              <span>{t("siteInfo.useCurrent")}</span>
-            </button>
           </div>
         )}
       </div>

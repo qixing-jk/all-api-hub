@@ -358,7 +358,7 @@ export function Modal({
   }
 
   const panelBaseClass = cn(
-    `flex flex-col max-h-[90vh] relative w-full ${sizeMap[size]} bg-popover text-popover-foreground rounded-2xl shadow-xl transform transition-all`,
+    `flex flex-col relative w-full ${sizeMap[size]} max-h-[calc(100dvh-2rem)] bg-popover text-popover-foreground rounded-2xl shadow-xl transform transition-all sm:max-h-[calc(100dvh-4rem)]`,
     panelClassName,
   )
 
@@ -385,7 +385,7 @@ export function Modal({
             ref={contentRef}
             aria-describedby={undefined}
             className={cn(
-              "fixed top-[50%] left-[50%] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] outline-none",
+              "fixed top-[50%] left-[50%] w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] outline-none sm:max-w-[calc(100%-2rem)]",
               Z_INDEX.modal,
             )}
             onEscapeKeyDown={handleEscapeKeyDown}
@@ -432,7 +432,7 @@ export function Modal({
               <span className="sr-only" aria-label={title} />
             </DialogPrimitive.Title>
             <div
-              className="py-density-4 flex items-center justify-center px-4"
+              className="sm:py-density-4 flex items-center justify-center px-2 py-2 sm:px-4"
               data-slot="modal-positioner"
               onPointerDown={handleBackdropPointerDown}
               onPointerCancel={handleBackdropPointerCancel}

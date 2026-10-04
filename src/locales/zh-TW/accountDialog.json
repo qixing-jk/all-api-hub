@@ -312,12 +312,10 @@
     },
     "cookieWarning": "推薦優先使用訪問令牌。Cookie 認證需要匯入會話 Cookie，且可能因過期/續期導致失效，需要失效後重新匯入；同站點多帳號需為每個帳號分別匯入，非必要不建議使用。",
     "currentLoginAlreadyAdded": "當前登入帳號已新增",
-    "currentSite": "當前站點",
     "editNow": "立即編輯",
     "recentTabSites": "從最近活躍的分頁選擇",
     "siteUrl": "網站 URL",
     "sub2apiHint": "Sub2API 使用短期 JWT，當失效時，擴充套件會自動使用臨時視窗嘗試獲取新的 JWT（需要在該站點已登入）。啟用“外掛託管會話”後，每個帳號可後臺自動獨立重新整理和續期認證，支援同站點多帳號。",
-    "unknown": "無法獲取",
     "useCurrent": "使用當前站點"
   },
   "title": {
