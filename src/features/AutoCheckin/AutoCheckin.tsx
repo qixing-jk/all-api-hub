@@ -22,8 +22,10 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import { useRegisterDevPanelSection } from "~/features/DevPanel"
 import toast from "~/lib/notify"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
   sendAutoCheckinMessage,
@@ -292,9 +294,10 @@ export default function AutoCheckin(props: {
 
     try {
       setIsLoading(true)
-      const [response, accountSetup] = await Promise.all([
+      const [response, accountSetup, providerEvidence] = await Promise.all([
         sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
         loadAutoCheckinAccountSetup(),
+        loginProviderEvidence.readAll(),
       ])
       // Read through the account, so an observation a later site-type edit
       // retired is not named on a result row.
@@ -318,7 +321,19 @@ export default function AutoCheckin(props: {
         )
 
         if (response.success) {
-          setStatus(response.data)
+          setStatus(
+            response.data
+              ? {
+                  ...response.data,
+                  accountsSnapshot: refreshAutoCheckinAccountSnapshots(
+                    response.data.accountsSnapshot ?? [],
+                    accountSetup.accounts,
+                    providerEvidence,
+                    autoCheckinEnabled,
+                  ),
+                }
+              : response.data,
+          )
         }
       }
 
@@ -335,7 +350,7 @@ export default function AutoCheckin(props: {
     }
 
     return null
-  }, [])
+  }, [autoCheckinEnabled])
 
   useEffect(() => {
     void loadStatus()
@@ -1162,6 +1177,7 @@ export default function AutoCheckin(props: {
       pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
       openingManualAccountId={openingManualAccountId}
       openingExternalCheckInAccountId={openingExternalCheckInAccountId}
+      onCheckInUpdated={loadStatus}
       onRetryAccount={handleRetryAccount}
       onVerifyAccountStatus={handleVerifyAccountStatus}
       onDisableAccount={handleDisableAccount}
@@ -1235,7 +1251,12 @@ export default function AutoCheckin(props: {
             results={accountResults}
             snapshots={snapshots}
             resultsContent={resultsContent}
-            readinessContent={<AccountSnapshotTable snapshots={snapshots} />}
+            readinessContent={
+              <AccountSnapshotTable
+                snapshots={snapshots}
+                onCheckInUpdated={loadStatus}
+              />
+            }
           />
         ) : (
           resultsContent

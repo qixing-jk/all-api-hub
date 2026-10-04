@@ -10,6 +10,7 @@ import {
   SNAPSHOT_STATUS_FILTER,
   type SnapshotReadinessFilter,
 } from "~/features/AutoCheckin/utils/snapshotFilters"
+import { CheckInRedetectionButton } from "~/features/CheckIn/CheckInRedetectionButton"
 import { CheckInFeedbackButton } from "~/features/CheckInFeedback/CheckInFeedbackButton"
 import { cn } from "~/lib/utils"
 import {
@@ -23,11 +24,13 @@ import ResultStatusBadge from "./ResultStatusBadge"
 
 interface AccountSnapshotTableRowProps {
   snapshot: AutoCheckinAccountSnapshot
+  onCheckInUpdated?: () => void | Promise<unknown>
 }
 
 /** Renders one account's readiness and latest execution state. */
 export default function AccountSnapshotTableRow({
   snapshot,
+  onCheckInUpdated,
 }: AccountSnapshotTableRowProps) {
   const { t } = useTranslation("autoCheckin")
   const reason = snapshot.skipReason ?? snapshot.lastResult?.reasonCode
@@ -127,6 +130,10 @@ export default function AccountSnapshotTableRow({
             >
               {readinessLabels[readinessCategory]}
             </span>
+            <CheckInRedetectionButton
+              accountId={snapshot.accountId}
+              onUpdated={onCheckInUpdated}
+            />
             <CheckInFeedbackButton
               accountId={snapshot.accountId}
               requestSupport={

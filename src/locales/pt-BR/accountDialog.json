@@ -235,6 +235,7 @@
     "autoDetectSuccess": "Detecção automática bem-sucedida!",
     "autoDetectTakingTooLong": "A detecção automática está demorando mais que o esperado. Abra o guia de solução de problemas.",
     "checkInRedetectAmbiguous": "Foram detectados vários métodos de check-in. Selecione um abaixo.",
+    "checkInRedetectChanged": "A conta ou as configurações de check-in mudaram. Detecte os métodos novamente antes de escolher.",
     "checkInRedetectDisabled": "Detecção concluída: este site não habilitou o check-in.",
     "checkInRedetectResolved": "Um método de check-in disponível foi detectado.",
     "checkInRedetectSaveRequired": "Salve as alterações para aplicar o resultado desta detecção.",

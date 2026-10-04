@@ -1,9 +1,7 @@
-import { FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS } from "~/constants/checkIn"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/accountDiscovery"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -12,13 +10,11 @@ import {
 import { SiteHealthStatus } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-/** Builds the canonical transient account/request used by dialog redetection. */
-function createAccountDialogCheckInDiscoveryContext(params: {
+/** Builds the canonical transient account from the current editor draft. */
+function createAccountDialogCheckInDiscoveryAccount(params: {
   draft: AccountDialogDraft
   url: string
   accountId?: string
-  tempWindowRequestSource: TempWindowRequestSource
-  protectionBypassExecution: ProtectionBypassExecution
 }) {
   const { draft } = params
   const cookieAuthSessionCookie = draft.cookieAuthSessionCookie.trim()
@@ -55,20 +51,7 @@ function createAccountDialogCheckInDiscoveryContext(params: {
       checkIn: draft.checkIn,
     },
   })
-  const request: ApiServiceRequest = {
-    baseUrl: params.url,
-    accountId: account.id,
-    ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
-    auth: {
-      authType: draft.authType,
-      userId: draft.userId.trim(),
-      accessToken: draft.accessToken.trim(),
-    },
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    protectionBypassExecution: params.protectionBypassExecution,
-  }
-
-  return { account, request }
+  return account
 }
 
 /**
@@ -82,23 +65,17 @@ export function discoverAccountDialogCheckInMethods(params: {
   accountId?: string
   tempWindowRequestSource: TempWindowRequestSource
 }): Promise<{
-  discovery: Awaited<ReturnType<typeof discoverCheckInMethods>>
+  discovery: Awaited<ReturnType<typeof discoverAccountCheckInMethods>>
   protectionBypassExecution: ProtectionBypassExecution
 }> {
   return withProtectionBypassUserCommand(
     PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
     params.tempWindowRequestSource,
     async (protectionBypassExecution) => {
-      const context = createAccountDialogCheckInDiscoveryContext({
-        ...params,
+      const account = createAccountDialogCheckInDiscoveryAccount(params)
+      const discovery = await discoverAccountCheckInMethods(account, {
+        tempWindowRequestSource: params.tempWindowRequestSource,
         protectionBypassExecution,
-      })
-      const discovery = await discoverCheckInMethods({
-        account: context.account,
-        config: params.draft.checkIn,
-        request: context.request,
-        perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
-        deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
       })
 
       return { discovery, protectionBypassExecution }

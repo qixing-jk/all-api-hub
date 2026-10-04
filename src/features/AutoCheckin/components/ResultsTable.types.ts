@@ -1,4 +1,5 @@
 export interface ResultsTableActionsProps {
+  onCheckInUpdated?: () => void | Promise<unknown>
   showDevActions?: boolean
   retryingAccountId?: string | null
   verifyingAccountId?: string | null

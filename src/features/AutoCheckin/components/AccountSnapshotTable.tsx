@@ -50,11 +50,13 @@ import TablePagination, {
 
 interface AccountSnapshotTableProps {
   snapshots: AutoCheckinAccountSnapshot[]
+  onCheckInUpdated?: () => void | Promise<unknown>
 }
 
 /** Account readiness and latest execution outcome in a sortable table. */
 export default function AccountSnapshotTable({
   snapshots,
+  onCheckInUpdated,
 }: AccountSnapshotTableProps) {
   const { t } = useTranslation("autoCheckin")
   const [keyword, setKeyword] = useState("")
@@ -302,6 +304,7 @@ export default function AccountSnapshotTable({
                 <AccountSnapshotTableRow
                   key={snapshot.accountId}
                   snapshot={snapshot}
+                  onCheckInUpdated={onCheckInUpdated}
                 />
               ))}
             </TableBody>

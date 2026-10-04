@@ -233,6 +233,7 @@
     "autoDetectSuccess": "自动识别成功！",
     "autoDetectTakingTooLong": "自动识别耗时较长？点击打开排查文档",
     "checkInRedetectAmbiguous": "检测到多种签到方式，请在下方选择。",
+    "checkInRedetectChanged": "账号或签到配置已变化，请重新检测后再选择。",
     "checkInRedetectDisabled": "检测完成：站点当前未启用签到功能。",
     "checkInRedetectResolved": "已检测到可用的签到方式。",
     "checkInRedetectSaveRequired": "请保存更改，以应用本次检测结果。",

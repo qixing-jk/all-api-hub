@@ -1,3 +1,7 @@
+import {
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_SELECTION_MODES,
+} from "~/constants/checkIn"
 import { isAccountSiteType } from "~/constants/siteType"
 import {
   AccountUpdateUserTimestampMode,
@@ -5,6 +9,7 @@ import {
   type AccountUpdateOptions,
 } from "~/services/accounts/accountDefaults"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { setCheckInSelection } from "~/services/checkin/autoCheckin/domain"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import {
   getAutoCheckinCandidateMethodIds,
@@ -22,7 +27,7 @@ import {
   type AccountWriteGuard,
 } from "~/services/core/accountWriteGuard"
 import type { SiteAccount } from "~/types"
-import type { CheckInMethodSelection } from "~/types/checkIn"
+import type { CheckInMethodId, CheckInMethodSelection } from "~/types/checkIn"
 import type { DeepPartial } from "~/types/utils"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
@@ -49,6 +54,20 @@ const hasSameCheckInCredentials = (
   account.account_info.access_token === snapshot.account_info.access_token &&
   account.cookieAuth?.sessionCookie === snapshot.cookieAuth?.sessionCookie
 
+/** A foreground probe or choice must still refer to the same request and discovery. */
+const isUserCheckInDiscoveryCurrent = (
+  account: SiteAccount,
+  snapshot: SiteAccount,
+) =>
+  hasSameCheckInCredentials(account, snapshot) &&
+  !account.disabled &&
+  account.checkIn.selection.mode === snapshot.checkIn.selection.mode &&
+  account.checkIn.selection.methodId === snapshot.checkIn.selection.methodId &&
+  account.checkIn.methodKnowledge.lastFullDiscoveryAt ===
+    snapshot.checkIn.methodKnowledge.lastFullDiscoveryAt &&
+  account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt ===
+    snapshot.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt
+
 /** Rejects discovery from an obsolete request, selection, or cooldown claim. */
 export const isAutomaticCheckInDiscoveryCurrent = (
   account: SiteAccount,
@@ -63,6 +82,55 @@ export const isAutomaticCheckInDiscoveryCurrent = (
     snapshot.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt
 
 class AccountCheckInState {
+  /** Commits a detected choice only while the dialog's identity, facts and selection remain current. */
+  async selectDetectedCheckInMethod(
+    snapshot: SiteAccount,
+    methodId: CheckInMethodId,
+  ): Promise<{ account: SiteAccount; applied: boolean } | null> {
+    return accountConfigStore.mutate<{
+      account: SiteAccount
+      applied: boolean
+    } | null>((config) => {
+      const index = config.accounts.findIndex(
+        (account) => account.id === snapshot.id,
+      )
+      const account = config.accounts[index]
+      if (!account) return { result: null, changed: false }
+      const candidates = getAutoCheckinCandidateMethodIds(
+        account.site_type,
+        account.site_url,
+      )
+      const isCurrent =
+        isUserCheckInDiscoveryCurrent(account, snapshot) &&
+        candidates.includes(methodId) &&
+        account.checkIn.methodKnowledge.methods[methodId]?.detection
+          ?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched &&
+        !account.checkIn.methodKnowledge.methods[methodId]?.detection
+          .lastUnknownAttempt
+      if (!isCurrent)
+        return {
+          result: { account, applied: false },
+          changed: false,
+        }
+      const checkIn = setCheckInSelection({
+        config: account.checkIn,
+        candidateMethodIds: candidates,
+        selection: { mode: CHECK_IN_SELECTION_MODES.Manual, methodId },
+      })
+      const nextAccount = applySiteAccountUpdates({
+        account,
+        updates: { checkIn },
+        now: Date.now(),
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+      config.accounts[index] = nextAccount
+      return {
+        result: { account: nextAccount, applied: true },
+        changed: true,
+      }
+    })
+  }
+
   /** Claims one bounded automatic discovery under the existing account write lock. */
   async claimAutomaticCheckInDiscovery(id: string): Promise<{
     account: SiteAccount
@@ -123,24 +191,15 @@ class AccountCheckInState {
     )
   }
 
-  /** Applies read-only save discovery without requiring automatic execution. */
-  async completePostSaveCheckInDiscovery(
+  /** Applies foreground discovery without requiring automatic execution. */
+  async completeUserCheckInDiscovery(
     snapshot: SiteAccount,
     discovered: SiteAccount["checkIn"],
   ): Promise<{ account: SiteAccount; applied: boolean } | null> {
     return this.completeCheckInDiscovery(
       snapshot,
       discovered,
-      (account, previous) =>
-        hasSameCheckInCredentials(account, previous) &&
-        !account.disabled &&
-        account.checkIn.selection.mode === previous.checkIn.selection.mode &&
-        account.checkIn.selection.methodId ===
-          previous.checkIn.selection.methodId &&
-        account.checkIn.methodKnowledge.lastFullDiscoveryAt ===
-          previous.checkIn.methodKnowledge.lastFullDiscoveryAt &&
-        account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt ===
-          previous.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
+      isUserCheckInDiscoveryCurrent,
     )
   }
 

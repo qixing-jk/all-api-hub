@@ -234,6 +234,7 @@
     "autoDetectSuccess": "Automatische Erkennung erfolgreich!",
     "autoDetectTakingTooLong": "Die automatische Erkennung dauert länger als erwartet. Anleitung zur Fehlerbehebung öffnen.",
     "checkInRedetectAmbiguous": "Mehrere Check-in-Methoden wurden erkannt. Wählen Sie unten eine aus.",
+    "checkInRedetectChanged": "Das Konto oder die Check-in-Einstellungen wurden geändert. Erkenne die Methoden erneut, bevor du eine auswählst.",
     "checkInRedetectDisabled": "Erkennung abgeschlossen: Diese Website hat den Check-in derzeit nicht aktiviert.",
     "checkInRedetectResolved": "Eine verfügbare Check-in-Methode wurde erkannt.",
     "checkInRedetectSaveRequired": "Speichern Sie die Änderungen, um dieses Erkennungsergebnis anzuwenden.",
