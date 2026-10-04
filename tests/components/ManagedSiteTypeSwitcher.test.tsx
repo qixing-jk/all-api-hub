@@ -177,16 +177,16 @@ describe("ManagedSiteTypeSwitcher", () => {
         (option) => option.textContent,
       ),
     ).toEqual([
+      "settings:managedSite.omniroute",
       "settings:managedSite.cliProxyApi",
       "settings:managedSite.newApi",
       "settings:managedSite.sub2api",
+      "settings:managedSite.gptLoad",
       "settings:managedSite.axonHub",
       "settings:managedSite.claudeCodeHub",
       "settings:managedSite.octopus",
       "settings:managedSite.veloera",
       "settings:managedSite.doneHub",
-      "settings:managedSite.omniroute",
-      "settings:managedSite.gptLoad",
     ])
   })
 
