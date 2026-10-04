@@ -5,12 +5,12 @@ import {
 } from "~/constants/extensionPages"
 import { getExtensionURL } from "~/utils/browser/browserApi"
 
-import { getDeviceTypeInfo, isDesktopDevice, isMobileDevice } from "./device"
+import { getDeviceTypeInfo, isDesktopDevice } from "./device"
 
 export { detectBrowserFamily } from "./userAgent"
 
 export type ExtensionStoreId = "chrome" | "edge" | "firefox"
-export { getDeviceTypeInfo, isDesktopDevice, isMobileDevice }
+export { getDeviceTypeInfo, isDesktopDevice }
 /**
  * Checks whether the current extension runtime is Firefox.
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.

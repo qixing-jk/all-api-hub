@@ -22,9 +22,9 @@ import {
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/contracts"
 import {
+  isDesktopDevice,
   isExtensionPopup,
   isExtensionSidePanel,
-  isMobileDevice,
 } from "~/utils/browser"
 
 import ActionButtons from "./components/ActionButtons"
@@ -87,12 +87,12 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
   const { t } = useTranslation(["bookmark", "apiCredentialProfiles"])
   const { isLoading } = useUserPreferencesContext()
   const inSidePanel = isExtensionSidePanel()
-  const onMobile = isMobileDevice()
+  const isDesktopPopup = inPopup && isDesktopDevice()
   const [activeView, setActiveView] = useState<PopupViewType>("accounts")
   const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null)
   const viewConfig = usePopupViewRegistry({
     isPopup: inPopup,
-    scrollParent: inPopup && !onMobile ? scrollParent : null,
+    scrollParent: isDesktopPopup ? scrollParent : null,
   })
 
   const activeViewConfig = viewConfig[activeView]
@@ -123,19 +123,16 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
     }
   }, [inPopup])
 
-  const popupWidthClass = onMobile ? "w-full" : inSidePanel ? "" : "w-full"
-
-  const popupHeightClass = onMobile ? "" : inSidePanel ? "" : "h-full"
-
   return (
     <DevPanelProvider surface={inSidePanel ? "sidepanel" : "popup"}>
       <div
         ref={setScrollParent}
         data-testid={POPUP_TEST_IDS.scrollContainer}
         className={cn(
-          "bg-background flex flex-col overflow-y-auto",
-          popupWidthClass,
-          popupHeightClass,
+          "bg-background flex w-full flex-col overflow-y-auto",
+          // Desktop action popups scroll inside their bounded document. Other
+          // surfaces fill the viewport and retain document scrolling.
+          isDesktopPopup ? "h-full" : "min-h-dvh",
         )}
       >
         <HeaderSection
