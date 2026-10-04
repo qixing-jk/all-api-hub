@@ -17,7 +17,9 @@ test("mobile log viewer retains history and receives live logs across page lifet
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   await seedUserPreferences(await getServiceWorker(context), {
-    logging: { consoleEnabled: true, level: "debug" },
+    // Debug startup migrations can exhaust the 1,000-entry budget on CI.
+    // Test retained history with Info; eviction is covered by storage tests.
+    logging: { consoleEnabled: true, level: "info" },
   })
   const optionsUrl = `chrome-extension://${extensionId}/options.html?tab=general&anchor=${SETTINGS_ANCHORS.LOGGING_HISTORY}#basic`
   await page.goto(optionsUrl)
@@ -97,12 +99,17 @@ test("mobile log viewer retains history and receives live logs across page lifet
   await page.evaluate(async (action) => {
     await chrome.runtime.sendMessage({
       action,
-      event: "background-history-smoke",
-      details: { requestId: "background-history-trace" },
+      event: "detection_finished",
+      details: {
+        diagnosticScope: "account_detection",
+        requestId: "background-history-trace",
+      },
     })
   }, RuntimeActionIds.CloudflareGuardLog)
   await dialog
     .getByRole("textbox", { name: "Search message, scope or request ID" })
     .fill("background-history-trace")
-  await expect(dialog.getByText("CFGuardRelay", { exact: true })).toBeVisible()
+  await expect(
+    dialog.getByText("AccountDetectionRelay", { exact: true }),
+  ).toBeVisible()
 })
