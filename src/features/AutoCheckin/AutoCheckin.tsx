@@ -308,6 +308,19 @@ export default function AutoCheckin(props: {
         })),
       )
 
+      let displayStatus = response.success ? response.data : null
+      if (import.meta.env.DEV && response.success) {
+        const { appendDevCheckInFixtureSnapshots } = await import(
+          "~/services/checkin/autoCheckin/devDiscoveryFixtures"
+        )
+        const snapshots = await appendDevCheckInFixtureSnapshots(
+          displayStatus?.accountsSnapshot ?? [],
+          accountSetup.accounts,
+        )
+        if (snapshots.length)
+          displayStatus = { ...displayStatus, accountsSnapshot: snapshots }
+      }
+
       if (loadId === latestStatusLoadIdRef.current) {
         setAccountSetupState(accountSetup.state)
         setSiteTypeMismatches(siteTypeMismatches)
@@ -322,17 +335,17 @@ export default function AutoCheckin(props: {
 
         if (response.success) {
           setStatus(
-            response.data
+            displayStatus
               ? {
-                  ...response.data,
+                  ...displayStatus,
                   accountsSnapshot: refreshAutoCheckinAccountSnapshots(
-                    response.data.accountsSnapshot ?? [],
+                    displayStatus.accountsSnapshot ?? [],
                     accountSetup.accounts,
                     providerEvidence,
                     autoCheckinEnabled,
                   ),
                 }
-              : response.data,
+              : displayStatus,
           )
         }
       }

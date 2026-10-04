@@ -229,7 +229,9 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
     useFixtureAccountsDevSection(
       isPanelOpen &&
         surface === "options" &&
-        (page === MENU_ITEM_IDS.ACCOUNT || page === MENU_ITEM_IDS.OVERVIEW),
+        (page === MENU_ITEM_IDS.ACCOUNT ||
+          page === MENU_ITEM_IDS.OVERVIEW ||
+          page === MENU_ITEM_IDS.AUTO_CHECKIN),
     ),
   )
   useRegisterDevPanelSection(

@@ -20,12 +20,18 @@ export interface CheckInDiscoveryContext {
 }
 
 /** Uses the same authenticated, bounded read-only probe for drafts and saved accounts. */
-export function discoverAccountCheckInMethods(
+export async function discoverAccountCheckInMethods(
   account: SiteAccount,
   context: CheckInDiscoveryContext,
   observedAt?: number,
 ) {
+  const registry = import.meta.env.DEV
+    ? await (
+        await import("./devDiscoveryFixtures")
+      ).resolveDevCheckInDiscoveryRegistry(account)
+    : undefined
   return discoverCheckInMethods({
+    registry,
     account,
     config: account.checkIn,
     observedAt,
