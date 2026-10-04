@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useId, useState, type ReactNode } from "react"
 
 import { Button, Input, Label, Textarea } from "~/components/ui"
@@ -195,7 +195,7 @@ export function ResourceJsonField({
                 })}
                 onClick={() => updateRows(rows.filter((_, i) => i !== index))}
               >
-                <Trash2 className="size-4" />
+                <X className="size-4" />
               </Button>
             </div>
           ))}

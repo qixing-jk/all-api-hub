@@ -93,8 +93,9 @@ export function useKiloCodeProfileModelDiscovery({
       buildProviderModelDiscoveryCacheKey([
         runtimeKey.baseUrl,
         runtimeKey.tokenKey,
+        runtimeKey.requestHeaders,
       ]),
-    [runtimeKey.baseUrl, runtimeKey.tokenKey],
+    [runtimeKey.baseUrl, runtimeKey.tokenKey, runtimeKey.requestHeaders],
   )
   const discoverySources = useMemo(
     () =>
@@ -106,6 +107,7 @@ export function useKiloCodeProfileModelDiscovery({
               cacheKey: discoveryCacheKey,
               baseUrl: runtimeKey.baseUrl,
               resolveApiKey: async () => runtimeKey.tokenKey,
+              requestHeaders: runtimeKey.requestHeaders,
             },
           ],
     [
@@ -113,6 +115,7 @@ export function useKiloCodeProfileModelDiscovery({
       discoveryCacheKey,
       runtimeKey.baseUrl,
       runtimeKey.tokenKey,
+      runtimeKey.requestHeaders,
       selectionId,
     ],
   )

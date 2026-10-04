@@ -667,6 +667,7 @@ export function BatchVerifyModelsDialog({
             ? {
                 baseUrl: item.source.profile.baseUrl,
                 apiKey: item.source.profile.apiKey,
+                requestHeaders: item.source.profile.requestHeaders,
                 runtimeKeyName: undefined,
               }
             : await (async () => {
@@ -744,6 +745,10 @@ export function BatchVerifyModelsDialog({
             const result = await runApiVerificationProbe({
               baseUrl: credentials.baseUrl,
               apiKey: credentials.apiKey,
+              requestHeaders:
+                item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+                  ? item.source.profile.requestHeaders
+                  : undefined,
               apiType,
               mode: verificationMode,
               modelId: item.modelId,
@@ -765,6 +770,7 @@ export function BatchVerifyModelsDialog({
               item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
                 ? filterRedactions([
                     item.source.profile.apiKey,
+                    ...Object.values(item.source.profile.requestHeaders ?? {}),
                     item.source.profile.baseUrl,
                   ])
                 : filterRedactions([
@@ -844,6 +850,7 @@ export function BatchVerifyModelsDialog({
           item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? filterRedactions([
                 item.source.profile.apiKey,
+                ...Object.values(item.source.profile.requestHeaders ?? {}),
                 item.source.profile.baseUrl,
               ])
             : filterRedactions([

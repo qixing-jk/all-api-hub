@@ -150,6 +150,7 @@ export function CursorPlusExportDialog({
         cacheKey: discoveryCacheKey,
         baseUrl: source.baseUrl,
         resolveApiKey: source.resolveApiKey,
+        requestHeaders: source.requestHeaders,
       },
     ],
     [discoveryCacheKey, source],

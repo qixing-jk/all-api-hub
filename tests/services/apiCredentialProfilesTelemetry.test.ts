@@ -1180,6 +1180,7 @@ describe("api credential profile telemetry", () => {
   it("uses a dedicated bearer token for a cross-origin custom telemetry URL", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Custom Bearer",
+      requestHeaders: { "x-private": "profile-only" },
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       baseUrl: "https://custom-bearer.example.com/api/agents",
       apiKey: "sk-custom-bearer",
@@ -1200,6 +1201,12 @@ describe("api credential profile telemetry", () => {
 
     await refreshApiCredentialProfileTelemetry(profile.id)
 
+    const requestHeaders = new Headers(
+      (
+        fetchMock.mock.calls as unknown as Array<[string, RequestInit]>
+      )[0]?.[1]?.headers,
+    )
+    expect(requestHeaders.get("x-private")).toBeNull()
     expect(fetchMock).toHaveBeenCalledWith(
       "https://telemetry.example.com/api/telemetry/usage?period=today",
       expect.objectContaining({

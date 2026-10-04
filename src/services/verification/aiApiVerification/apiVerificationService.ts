@@ -17,6 +17,7 @@ type RunApiVerificationProbeParams = {
   probeId: ApiVerificationProbeId
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
@@ -54,6 +55,7 @@ export async function runApiVerificationProbe(
   return registryEntry.run({
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
+    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
     apiType: params.apiType,
     modelId: resolvedModelId,
     mode: params.mode,

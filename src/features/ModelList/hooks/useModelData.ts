@@ -1365,6 +1365,7 @@ function useProfileModelData(
         apiType: currentProfile.apiType,
         baseUrl: currentProfile.baseUrl,
         apiKey: currentProfile.apiKey,
+        requestHeaders: currentProfile.requestHeaders,
         abortSignal: signal,
       })
     },
@@ -1378,6 +1379,7 @@ function useProfileModelData(
 
     const secretsToRedact = [
       currentProfile.apiKey,
+      ...Object.values(currentProfile.requestHeaders ?? {}),
       currentProfile.baseUrl,
     ].filter(Boolean)
 

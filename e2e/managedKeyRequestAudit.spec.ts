@@ -128,6 +128,6 @@ for (const action of ["check", "single import", "batch import"] as const) {
     }
     await expect.poll(() => detailReads).toBe(2)
     expect(searches).toBe(2)
-    expect(groupReads).toBe(action === "check" ? 0 : 1)
+    await expect.poll(() => groupReads).toBe(action === "check" ? 0 : 1)
   })
 }

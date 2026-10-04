@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { SiteHealthStatus } from "~/types"
 
 const storageData = new Map<string, any>()
 
@@ -25,6 +26,93 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 describe("apiCredentialProfilesStorage", () => {
+  it.each(["create", "capture"])(
+    "directs duplicate %s callers to edit differing headers without modifying the profile",
+    async (operation) => {
+      const input = {
+        name: "Headers",
+        apiType: API_TYPES.OPENAI,
+        baseUrl: "https://api.example",
+        apiKey: "key",
+        requestHeaders: { "x-client": "old" },
+      }
+      const original = await apiCredentialProfilesStorage.createProfile(input)
+      const changed = { ...input, requestHeaders: { "x-client": "new" } }
+      const task =
+        operation === "create"
+          ? apiCredentialProfilesStorage.createProfileWithCreationStatus(
+              changed,
+            )
+          : apiCredentialProfilesStorage.captureProfile({
+              profile: changed,
+              linkedBy: "creation-response",
+            })
+      await expect(task).rejects.toThrow(
+        "apiCredentialProfiles:dialog.errors.duplicateRequestHeaders",
+      )
+      expect(
+        await apiCredentialProfilesStorage.getProfileById(original.id),
+      ).toEqual(original)
+      expect(await apiCredentialProfilesStorage.createProfile(input)).toEqual(
+        original,
+      )
+    },
+  )
+  it("round-trips normalized headers through storage and import, and clears them explicitly", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Headers",
+      apiType: API_TYPES.OPENAI,
+      baseUrl: "https://api.example",
+      apiKey: "key",
+      requestHeaders: { "X-Client": " custom " },
+    })
+    expect(profile.requestHeaders).toEqual({ "x-client": "custom" })
+    const exported = await apiCredentialProfilesStorage.exportConfig()
+    await apiCredentialProfilesStorage.clearAllData()
+    await apiCredentialProfilesStorage.importConfig(exported)
+    expect(
+      (await apiCredentialProfilesStorage.getProfileById(profile.id))
+        ?.requestHeaders,
+    ).toEqual({ "x-client": "custom" })
+    await apiCredentialProfilesStorage.updateProfile(profile.id, {
+      notes: "metadata",
+    })
+    expect(
+      (await apiCredentialProfilesStorage.getProfileById(profile.id))
+        ?.requestHeaders,
+    ).toEqual({ "x-client": "custom" })
+    const cleared = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      { requestHeaders: {} },
+    )
+    expect(cleared.requestHeaders).toEqual({})
+  })
+
+  it("does not persist a telemetry response from before the headers were edited", async () => {
+    const original = await apiCredentialProfilesStorage.createProfile({
+      name: "Headers",
+      apiType: API_TYPES.OPENAI,
+      baseUrl: "https://api.example",
+      apiKey: "key",
+      requestHeaders: { "x-client": "old" },
+    })
+    await apiCredentialProfilesStorage.updateProfile(original.id, {
+      requestHeaders: { "x-client": "new" },
+    })
+    await apiCredentialProfilesStorage.updateTelemetrySnapshot(
+      original.id,
+      {
+        health: { status: SiteHealthStatus.Healthy },
+        lastSyncTime: 1,
+        attempts: [],
+      },
+      original,
+    )
+    expect(
+      (await apiCredentialProfilesStorage.getProfileById(original.id))
+        ?.telemetrySnapshot,
+    ).toBeUndefined()
+  })
   beforeEach(async () => {
     storageData.clear()
     await apiCredentialProfilesStorage.clearAllData()

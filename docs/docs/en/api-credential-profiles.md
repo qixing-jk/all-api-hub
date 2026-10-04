@@ -76,6 +76,16 @@ Currently supports classification and verification by API type. Common types inc
 
 If you are unsure which type to choose, follow the provider's documentation. When it gives no specific guidance, try `OpenAI Compatible` first. If you temporarily use another API type for verification, the interface will clearly indicate that this is only a temporary override and will not change the saved credential type.
 
+### Request header overrides
+
+If a channel requires a specific `User-Agent` or another custom header, expand **`Request header overrides`** at the bottom of the add/edit credential form, enter the header name and value, and save. For example, enter `User-Agent` and the UA required by the channel. Use × at the end of a row to remove it.
+
+- Headers apply to this credential's model discovery, API/CLI verification, and same-origin balance/usage queries inside the extension. Cross-origin custom query URLs do not inherit them.
+- Custom values replace defaults with the same header name. Browser-controlled headers such as `Host`, `Cookie`, `Origin`, and `Sec-*` cannot be overridden.
+- Chrome/Edge require network request modification permission for `User-Agent` overrides. Saving requests permission; if denied, enable it in permission management and retry.
+- Requests with custom headers do not follow redirects. Enter the final API address.
+- Header values are masked by default and are stored in local credentials and backups. Configure headers separately in external clients after exporting.
+
 ## Balance and Usage Queries
 
 ### Allowance Overview

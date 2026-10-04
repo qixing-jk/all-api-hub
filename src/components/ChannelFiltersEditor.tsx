@@ -1,11 +1,4 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  Loader2,
-  Plus,
-  Settings2,
-  Trash2,
-} from "lucide-react"
+import { ArrowDown, ArrowUp, Loader2, Plus, Settings2, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { CompactMultiSelect, Input, Textarea } from "~/components/ui"
@@ -239,7 +232,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       aria-label={t("filters.labels.delete")}
                       className="text-muted-foreground hover:text-destructive-text"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

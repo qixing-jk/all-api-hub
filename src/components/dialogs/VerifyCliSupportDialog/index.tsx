@@ -259,6 +259,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           apiType: profile.apiType,
           baseUrl: profile.baseUrl,
           apiKey: profile.apiKey,
+          requestHeaders: profile.requestHeaders,
           abortSignal: abortController.signal,
         }),
       )
@@ -275,6 +276,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
       const message = toSanitizedErrorSummary(error, [
         profile.apiKey,
+        ...Object.values(profile.requestHeaders ?? {}),
         profile.baseUrl,
       ])
 
@@ -319,6 +321,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     const secretsToRedact = new Set<string>(
       filterRedactions([
         activeApiKey ?? undefined,
+        ...Object.values(profile?.requestHeaders ?? {}),
         sourceAccount?.token ?? undefined,
         sourceAccount?.cookieAuthSessionCookie ?? undefined,
         ...(accountRuntimeKey
@@ -406,6 +409,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         mode: executedMode,
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
+        requestHeaders: profile?.requestHeaders,
         modelId: resolvedModelId,
         abortSignal,
       })

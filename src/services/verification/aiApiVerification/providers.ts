@@ -6,6 +6,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createAnthropicSdkAuth } from "~/services/aiApi/anthropic/auth"
 import { createGoogleSdkAuth } from "~/services/aiApi/google/auth"
 import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
+import { createHeaderOverrideFetch } from "~/services/apiTransport/headerOverrides"
 
 import type { ApiVerificationApiType } from "./types"
 import { API_TYPES } from "./types"
@@ -30,6 +31,7 @@ const requireProtocolApiBaseUrl = (
 type CreateModelParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   modelId: string
 }
@@ -44,6 +46,7 @@ export function createModel(params: CreateModelParams) {
       name: "all-api-hub",
       baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
       apiKey: params.apiKey,
+      fetch: createHeaderOverrideFetch(params.requestHeaders),
     })(params.modelId)
   }
 
@@ -51,19 +54,28 @@ export function createModel(params: CreateModelParams) {
     return createOpenAI({
       baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
       apiKey: params.apiKey,
+      fetch: createHeaderOverrideFetch(params.requestHeaders),
     })(params.modelId)
   }
 
   if (params.apiType === API_TYPES.ANTHROPIC) {
     return createAnthropic({
       baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
-      ...createAnthropicSdkAuth(params.baseUrl, params.apiKey),
+      ...createAnthropicSdkAuth(
+        params.baseUrl,
+        params.apiKey,
+        params.requestHeaders,
+      ),
     })(params.modelId)
   }
 
   return createGoogleGenerativeAI({
     baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
-    ...createGoogleSdkAuth(params.baseUrl, params.apiKey),
+    ...createGoogleSdkAuth(
+      params.baseUrl,
+      params.apiKey,
+      params.requestHeaders,
+    ),
   })(params.modelId)
 }
 
@@ -73,10 +85,12 @@ export function createModel(params: CreateModelParams) {
 export function createOpenAIProvider(params: {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
 }) {
   return createOpenAI({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.OPENAI, params.baseUrl),
     apiKey: params.apiKey,
+    fetch: createHeaderOverrideFetch(params.requestHeaders),
   })
 }
 
@@ -86,9 +100,14 @@ export function createOpenAIProvider(params: {
 export function createGoogleProvider(params: {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
 }) {
   return createGoogleGenerativeAI({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.GOOGLE, params.baseUrl),
-    ...createGoogleSdkAuth(params.baseUrl, params.apiKey),
+    ...createGoogleSdkAuth(
+      params.baseUrl,
+      params.apiKey,
+      params.requestHeaders,
+    ),
   })
 }

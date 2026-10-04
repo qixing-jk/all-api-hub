@@ -32,6 +32,27 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
 }))
 
 describe("modelCatalog", () => {
+  it.each([API_TYPES.OPENAI_COMPATIBLE, API_TYPES.ANTHROPIC, API_TYPES.GOOGLE])(
+    "passes credential headers to %s model discovery",
+    async (apiType) => {
+      const requestHeaders = { "user-agent": "client/1" }
+      await fetchApiCredentialModelIds({
+        apiType,
+        baseUrl: "https://api.example",
+        apiKey: "key",
+        requestHeaders,
+      })
+      const fetcher =
+        apiType === API_TYPES.ANTHROPIC
+          ? fetchAnthropicModelIdsMock
+          : apiType === API_TYPES.GOOGLE
+            ? fetchGoogleModelIdsMock
+            : fetchOpenAICompatibleModelIdsMock
+      expect(fetcher).toHaveBeenCalledWith(
+        expect.objectContaining({ requestHeaders }),
+      )
+    },
+  )
   beforeEach(() => {
     fetchAnthropicModelIdsMock.mockReset()
     fetchGoogleModelIdsMock.mockReset()

@@ -17,6 +17,7 @@ import {
 type ProbeRunnerParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
@@ -45,6 +46,9 @@ export const apiVerificationProbeRegistry: Record<
         await runModelsProbe({
           baseUrl: params.baseUrl,
           apiKey: params.apiKey,
+          ...(params.requestHeaders
+            ? { requestHeaders: params.requestHeaders }
+            : {}),
           apiType: params.apiType,
           abortSignal: params.abortSignal,
         })
@@ -57,6 +61,9 @@ export const apiVerificationProbeRegistry: Record<
       runTextGenerationProbe({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         apiType: params.apiType,
         modelId: params.modelId as string,
         mode: params.mode,
@@ -69,6 +76,9 @@ export const apiVerificationProbeRegistry: Record<
       runToolCallingProbe({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         apiType: params.apiType,
         modelId: params.modelId as string,
         mode: params.mode,
@@ -81,6 +91,9 @@ export const apiVerificationProbeRegistry: Record<
       runStructuredOutputProbe({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         apiType: params.apiType,
         modelId: params.modelId as string,
         mode: params.mode,
@@ -93,6 +106,9 @@ export const apiVerificationProbeRegistry: Record<
       runWebSearchProbe({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         apiType: params.apiType,
         modelId: params.modelId as string,
         mode: params.mode,

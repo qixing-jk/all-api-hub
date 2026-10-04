@@ -11,6 +11,7 @@ import {
   Modal,
 } from "~/components/ui"
 import { fetchOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
+import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import {
@@ -139,6 +140,7 @@ export function ClaudeCodeRouterImportDialog(
           const apiKey = await source.resolveApiKey()
           const models = await fetchOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
+            requestHeaders: source.requestHeaders,
             apiKey,
           })
           const options = (models || [])
@@ -153,7 +155,10 @@ export function ClaudeCodeRouterImportDialog(
             setUpstreamModelOptions(options)
           }
         } catch (error) {
-          logger.error("Failed to fetch upstream models", error)
+          logger.error(
+            "Failed to fetch upstream models",
+            sanitizeHeaderOverrideError(error, source.requestHeaders),
+          )
           if (isMounted) {
             setUpstreamModelOptions([])
           }

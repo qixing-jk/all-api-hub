@@ -29,6 +29,7 @@ describe("useProviderModelDiscovery", () => {
               selectionId: "example-selection",
               cacheKey,
               baseUrl,
+              requestHeaders: { "x-client": apiKey },
               resolveApiKey: async () => apiKey,
             },
           ],
@@ -54,6 +55,7 @@ describe("useProviderModelDiscovery", () => {
     expect(fetchModelIds).toHaveBeenLastCalledWith({
       baseUrl: "https://new.example.invalid",
       apiKey: "new-key",
+      requestHeaders: { "x-client": "new-key" },
     })
 
     await act(async () => {

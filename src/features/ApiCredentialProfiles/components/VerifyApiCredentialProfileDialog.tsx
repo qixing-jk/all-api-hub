@@ -332,6 +332,7 @@ export function VerifyApiCredentialProfileDialog({
             apiType: nextApiType,
             baseUrl: profile.baseUrl,
             apiKey: profile.apiKey,
+            requestHeaders: profile.requestHeaders,
             abortSignal: abortController.signal,
           }),
         )
@@ -364,6 +365,7 @@ export function VerifyApiCredentialProfileDialog({
 
         const message = toSanitizedErrorSummary(error, [
           profile.apiKey,
+          ...Object.values(profile.requestHeaders ?? {}),
           profile.baseUrl,
         ])
 
@@ -547,6 +549,7 @@ export function VerifyApiCredentialProfileDialog({
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
+        requestHeaders: profile.requestHeaders,
         apiType,
         mode: executedMode,
         modelId: modelForProbe || undefined,
@@ -610,6 +613,7 @@ export function VerifyApiCredentialProfileDialog({
 
       const sanitizedMessage = toSanitizedErrorSummary(error, [
         profile.apiKey,
+        ...Object.values(profile.requestHeaders ?? {}),
         profile.baseUrl,
       ])
       logger.error("Probe failed", {
@@ -800,6 +804,7 @@ export function VerifyApiCredentialProfileDialog({
       logger.error("Probe suite failed", {
         message: toSanitizedErrorSummary(error, [
           profile.apiKey,
+          ...Object.values(profile.requestHeaders ?? {}),
           profile.baseUrl,
         ]),
       })

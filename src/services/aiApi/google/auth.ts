@@ -61,6 +61,7 @@ function replaceGoogleCredential(
 export function createGoogleSdkAuth(
   baseUrl: string,
   apiKey: string,
+  requestHeaders?: Record<string, string>,
 ): GoogleSdkAuthConfig {
   const initialMode = getGoogleAuthMode(baseUrl)
 
@@ -68,6 +69,7 @@ export function createGoogleSdkAuth(
     // Keep apiKey explicit so the Google provider emits its native header first.
     apiKey,
     fetch: createUnauthorizedFallbackFetch({
+      requestHeaders,
       initialMode,
       fallbackMode: GOOGLE_AUTH_MODES.Bearer,
       replaceCredential: (request, mode) =>

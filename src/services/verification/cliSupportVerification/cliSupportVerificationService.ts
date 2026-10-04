@@ -10,6 +10,7 @@ type RunCliSupportToolParams = {
   toolId: CliToolId
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   mode?: ApiVerificationMode
   /**
    * Model id to use for this tool simulation.
@@ -32,6 +33,7 @@ export async function runCliSupportTool(
   return runCliSupportToolFromRegistry(params.toolId, {
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
+    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
     mode: params.mode,
     modelId: params.modelId,
     abortSignal: params.abortSignal,

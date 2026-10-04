@@ -127,6 +127,8 @@ export interface ApiTransportRequestObserver {
 }
 
 export interface ApiTransportRequest {
+  /** Credential-owned headers applied last by the extension transport. */
+  requestHeaders?: Record<string, string>
   requestScheduling?: RequestScheduling
   auth: AuthConfig
   baseUrl: string
@@ -169,6 +171,7 @@ export interface FetchApiOptions {
 }
 
 export interface OpenAIAuthParams {
+  requestHeaders?: Record<string, string>
   requestScheduling?: RequestScheduling
   baseUrl: string
   apiKey: string

@@ -13,6 +13,7 @@ import type { CliSupportResult, CliToolId } from "./types"
 type CliToolRunnerParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   mode?: ApiVerificationMode
   modelId?: string
   abortSignal?: AbortSignal
@@ -71,6 +72,9 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "claude",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         mode: params.mode,
         apiType: CLI_TOOL_CONFIG.claude.apiType,
         modelId: params.modelId,
@@ -85,6 +89,9 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "codex",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         mode: params.mode,
         apiType: CLI_TOOL_CONFIG.codex.apiType,
         modelId: params.modelId,
@@ -99,6 +106,9 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "gemini",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
         mode: params.mode,
         apiType: CLI_TOOL_CONFIG.gemini.apiType,
         modelId: params.modelId,

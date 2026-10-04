@@ -40,6 +40,15 @@ const mockResolveDisplayAccountRuntimeKeySecret = vi.fn()
 const mockFetchOpenAICompatibleModels = vi.fn()
 const mockImportToClaudeCodeRouter = vi.fn()
 const mockShowResultToast = vi.fn()
+const { mockLoggerError } = vi.hoisted(() => ({ mockLoggerError: vi.fn() }))
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: mockLoggerError,
+  }),
+}))
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
   const promise = new Promise<T>((promiseResolve) => {
@@ -88,6 +97,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 describe("ClaudeCodeRouterImportDialog", () => {
   beforeEach(() => {
+    mockLoggerError.mockReset()
     mockResolveDisplayAccountRuntimeKeySecret.mockReset()
     mockFetchOpenAICompatibleModels.mockReset()
     mockImportToClaudeCodeRouter.mockReset()
@@ -704,51 +714,69 @@ describe("ClaudeCodeRouterImportDialog", () => {
     })
   })
 
-  it("imports profile-backed credentials without requiring account API context", async () => {
-    const user = userEvent.setup()
-    const profile: ApiCredentialProfile = {
-      id: "profile-1",
-      name: "Profile Provider",
-      apiType: "openai-compatible",
-      baseUrl: "https://profile.example.com",
-      apiKey: "sk-profile",
-      tagIds: [],
-      notes: "",
-      createdAt: 1,
-      updatedAt: 2,
-    }
-    mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
-      new Error("account_api_context_missing_user_id"),
-    )
-    mockFetchOpenAICompatibleModels.mockResolvedValueOnce([{ id: "gpt-4o" }])
-
-    render(
-      <ClaudeCodeRouterImportDialog
-        isOpen={true}
-        onClose={() => {}}
-        source={createProfileCredentialExportSource(profile)}
-        routerBaseUrl="https://router.example.com"
-      />,
-    )
-
-    await waitFor(() => {
-      expect(mockFetchOpenAICompatibleModels).toHaveBeenCalledWith({
+  it.each([false, true])(
+    "imports profile-backed credentials without requiring account API context and redacts model errors (failure=%s)",
+    async (failure) => {
+      const user = userEvent.setup()
+      const profile: ApiCredentialProfile = {
+        id: "profile-1",
+        name: "Profile Provider",
+        apiType: "openai-compatible",
         baseUrl: "https://profile.example.com",
         apiKey: "sk-profile",
-      })
-    })
-
-    await user.click(
-      await screen.findByRole("button", { name: "common:actions.import" }),
-    )
-
-    await waitFor(() => {
-      expect(mockImportToClaudeCodeRouter).toHaveBeenCalledWith(
-        expect.objectContaining({
-          providerApiKey: "sk-profile",
-        }),
+        requestHeaders: { "x-client": "header-sensitive-value" },
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 2,
+      }
+      mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
+        new Error("account_api_context_missing_user_id"),
       )
-    })
-    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
-  })
+      if (failure)
+        mockFetchOpenAICompatibleModels.mockRejectedValueOnce(
+          new Error("Upstream rejected header-sensitive-value"),
+        )
+      else
+        mockFetchOpenAICompatibleModels.mockResolvedValueOnce([
+          { id: "gpt-4o" },
+        ])
+
+      render(
+        <ClaudeCodeRouterImportDialog
+          isOpen={true}
+          onClose={() => {}}
+          source={createProfileCredentialExportSource(profile)}
+          routerBaseUrl="https://router.example.com"
+        />,
+      )
+
+      await waitFor(() => {
+        expect(mockFetchOpenAICompatibleModels).toHaveBeenCalledWith({
+          baseUrl: "https://profile.example.com",
+          apiKey: "sk-profile",
+          requestHeaders: { "x-client": "header-sensitive-value" },
+        })
+      })
+
+      await user.click(
+        await screen.findByRole("button", { name: "common:actions.import" }),
+      )
+
+      await waitFor(() => {
+        expect(mockImportToClaudeCodeRouter).toHaveBeenCalledWith(
+          expect.objectContaining({
+            providerApiKey: "sk-profile",
+          }),
+        )
+      })
+      expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+      if (failure) {
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          "Failed to fetch upstream models",
+          "Upstream rejected [REDACTED]",
+        )
+      }
+    },
+  )
 })

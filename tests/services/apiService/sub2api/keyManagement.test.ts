@@ -565,18 +565,21 @@ describe("apiService sub2api key management service", () => {
         throw new Error(`Unexpected endpoint: ${options?.endpoint}`)
       })
 
-      let queue = Promise.resolve()
+      const queues = new Map<string, Promise<unknown>>()
       vi.stubGlobal("navigator", {
         locks: {
           request: async (
-            _name: string,
+            name: string,
             _options: unknown,
             callback: () => Promise<unknown>,
           ) => {
-            const run = queue.then(callback)
-            queue = run.then(
-              () => undefined,
-              () => undefined,
+            const run = (queues.get(name) ?? Promise.resolve()).then(callback)
+            queues.set(
+              name,
+              run.then(
+                () => undefined,
+                () => undefined,
+              ),
             )
             return run
           },

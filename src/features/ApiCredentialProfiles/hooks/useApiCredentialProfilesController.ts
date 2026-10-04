@@ -76,6 +76,7 @@ type SaveApiCredentialProfileInput = {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   tagIds: string[]
   notes: string
   sourceUrl?: string
@@ -446,6 +447,7 @@ export function useApiCredentialProfilesController() {
             apiType: input.apiType,
             baseUrl: input.baseUrl,
             apiKey: input.apiKey,
+            requestHeaders: input.requestHeaders,
             tagIds: input.tagIds,
             notes: input.notes,
             sourceUrl: input.sourceUrl,
@@ -458,6 +460,7 @@ export function useApiCredentialProfilesController() {
             apiType: input.apiType,
             baseUrl: input.baseUrl,
             apiKey: input.apiKey,
+            requestHeaders: input.requestHeaders,
             tagIds: input.tagIds,
             notes: input.notes,
             sourceUrl: input.sourceUrl,

@@ -1,3 +1,4 @@
+import { createHeaderOverrideFetch } from "~/services/apiTransport/headerOverrides"
 import { createDeploymentProbeMemory } from "~/services/core/deploymentProbeMemory"
 
 export const API_AUTH_MODES = {
@@ -19,6 +20,7 @@ type UnauthorizedFallbackParams<TMode extends string, TResult> = {
 }
 
 type UnauthorizedFallbackFetchParams<TMode extends string> = {
+  requestHeaders?: Record<string, string>
   initialMode: TMode
   fallbackMode: TMode
   replaceCredential: (request: Request, mode: TMode) => Request
@@ -85,6 +87,7 @@ export async function executeWithUnauthorizedFallback<
 export function createUnauthorizedFallbackFetch<TMode extends string>(
   params: UnauthorizedFallbackFetchParams<TMode>,
 ): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
+  const fetch = createHeaderOverrideFetch(params.requestHeaders)
   return async (input, init) => {
     const request = new Request(input, init)
 

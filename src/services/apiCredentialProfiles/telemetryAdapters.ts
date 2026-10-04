@@ -77,6 +77,7 @@ async function queryOpenAiBilling(
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openAiBilling.subscription,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
   const subscriptionData = dataLike(subscription.json)
   const directBalance = readNumber(subscriptionData.balance)
@@ -98,6 +99,7 @@ async function queryOpenAiBilling(
     baseUrl: profile.baseUrl,
     endpoint: usageEndpoint,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
 
   return {
@@ -117,6 +119,7 @@ async function queryDeepSeekBalance(
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.deepSeekBalance,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
 
   return {
@@ -138,6 +141,7 @@ async function queryGlmQuota(
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.glmQuota,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
     authTokenMode: API_AUTH_TOKEN_MODES.Raw,
   })
 
@@ -158,6 +162,7 @@ async function queryKimiQuota(
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiQuota,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
 
   return {
@@ -175,6 +180,7 @@ async function queryKimiOpenPlatformBalance(
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
 
   return {
@@ -198,6 +204,7 @@ async function queryOpenCodeGoUsage(
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openCodeGoUsage,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
 
   return {
@@ -217,6 +224,7 @@ async function queryNewApiTokenUsage(
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.newApiTokenUsage,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
   const data = dataLike(result.json)
   const totalGranted = readNumber(data.total_granted)
@@ -262,6 +270,7 @@ async function querySub2ApiUsage(
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.sub2ApiUsage,
     bearerToken: profile.apiKey,
+    requestHeaders: profile.requestHeaders,
   })
   const data = dataLike(result.json)
   const usage = isRecord(data.usage) ? data.usage : {}
@@ -314,6 +323,9 @@ async function queryCustomReadOnlyEndpoint(
   )
   const result = await fetchTelemetryJson({
     baseUrl: requestTarget.baseUrl,
+    requestHeaders: requestTarget.isCrossOrigin
+      ? undefined
+      : profile.requestHeaders,
     endpoint: requestTarget.endpoint,
     bearerToken:
       config.customEndpoint.bearerToken ??
@@ -339,6 +351,7 @@ export async function queryModels(
       apiType: profile.apiType,
       baseUrl: profile.baseUrl,
       apiKey: profile.apiKey,
+      requestHeaders: profile.requestHeaders,
     })
     attempts.push(
       createAttempt(
@@ -350,7 +363,7 @@ export async function queryModels(
         modelIds.length > 0
           ? `Fetched ${modelIds.length} models`
           : "No models returned",
-        [profile.apiKey],
+        [profile.apiKey, ...Object.values(profile.requestHeaders ?? {})],
       ),
     )
     return {
@@ -363,7 +376,7 @@ export async function queryModels(
         API_CREDENTIAL_TELEMETRY_SOURCES.Models,
         getModelsEndpoint(profile),
         error,
-        [profile.apiKey],
+        [profile.apiKey, ...Object.values(profile.requestHeaders ?? {})],
       ),
     )
     return undefined

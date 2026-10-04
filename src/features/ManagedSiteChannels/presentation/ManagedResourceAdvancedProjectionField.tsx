@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -188,7 +188,7 @@ export function ManagedResourceAdvancedProjectionField({
                       )
                     }
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    <X className="size-4" aria-hidden />
                   </Button>
                 </div>,
               ],
