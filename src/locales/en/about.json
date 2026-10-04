@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "Starred",
   "copyrightAck": "Copyright & Acknowledgements",
   "description": "Find the extension version, changelog and project links, get help or report a problem.",
   "devMaintenance": "Development & Maintenance",
@@ -77,5 +78,6 @@
   "title": "About",
   "upcomingFeatures": "Upcoming Features",
   "version": "Version:",
+  "viewRepo": "Visit repository",
   "visitHomepage": "Visit Homepage"
 }

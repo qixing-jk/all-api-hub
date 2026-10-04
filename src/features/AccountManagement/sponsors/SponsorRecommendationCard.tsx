@@ -1,9 +1,8 @@
 import type { TFunction } from "i18next"
-import { Bookmark, Plus } from "lucide-react"
+import { Bookmark } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, IconButton } from "~/components/ui"
 import {
   SPONSOR_RECOMMENDATION_ACTION_KINDS,
@@ -11,6 +10,7 @@ import {
   type SponsorRecommendationActionKind,
 } from "~/features/AccountManagement/sponsors/analytics"
 import { type SponsorRecommendationSurface } from "~/features/AccountManagement/sponsors/constants"
+import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import {
   SPONSOR_SUPPORT_STATUS,
   type AddAccountPrefill,
@@ -113,25 +113,6 @@ function getMainActionLabel(
     case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
     default:
       return t("sponsor.actions.visitProvider")
-  }
-}
-
-/** Renders the compact row icon that matches its current action. */
-function renderMainActionIcon(actionKind: SponsorMainActionKind) {
-  switch (actionKind) {
-    case SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount:
-      return <Plus aria-hidden="true" className="h-3.5 w-3.5" />
-    case SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback:
-      return <Bookmark aria-hidden="true" className="h-3.5 w-3.5" />
-    case SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback:
-      return (
-        <ApiCredentialLibraryIcon aria-hidden="true" className="h-3.5 w-3.5" />
-      )
-    case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
-    default:
-      return (
-        <WorkflowTransitionIcon aria-hidden="true" className="h-3.5 w-3.5" />
-      )
   }
 }
 
@@ -263,7 +244,7 @@ export function SponsorRecommendationCard({
       <button
         type="button"
         className={cn(
-          "focus-visible:ring-ring/50 gap-y-density-2 py-density-1-5 flex min-h-(--density-control) min-w-0 flex-1 items-center gap-x-2 rounded-[var(--corner-inner-radius)] px-2.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
+          "focus-visible:ring-ring/50 gap-y-density-2 py-density-1-5 flex min-h-(--density-control) min-w-0 flex-1 items-center gap-x-2.5 rounded-[var(--corner-inner-radius)] px-2.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
           isIntegratedMainAction
             ? "text-theme-700 hover:bg-theme-100/70 dark:text-theme-300 dark:hover:bg-theme-900/30"
             : "dark:text-foreground dark:hover:bg-secondary/70 text-secondary-foreground hover:bg-muted",
@@ -272,16 +253,7 @@ export function SponsorRecommendationCard({
         aria-label={`${mainActionLabel}: ${item.name}`}
         data-testid={getMainActionTestId(mainActionKind)}
       >
-        <span
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-xs",
-            isIntegratedMainAction
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "dark:bg-secondary dark:text-secondary-foreground bg-muted text-muted-foreground",
-          )}
-        >
-          {renderMainActionIcon(mainActionKind)}
-        </span>
+        <SponsorBrandIcon sponsorId={item.id} name={item.name} size="sm" />
         <span className="min-w-0 flex-1">
           <span className="gap-y-density-1-5 flex min-w-0 items-center gap-x-1.5">
             <span className="truncate text-sm leading-5 font-medium">

@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "已 Star",
   "copyrightAck": "版權與致謝",
   "description": "查看擴充功能版本、更新紀錄與專案連結，取得協助或回報問題。",
   "devMaintenance": "開發與維護",
@@ -77,5 +78,6 @@
   "title": "關於",
   "upcomingFeatures": "即將支援",
   "version": "版本號:",
+  "viewRepo": "造訪倉庫",
   "visitHomepage": "訪問官網"
 }

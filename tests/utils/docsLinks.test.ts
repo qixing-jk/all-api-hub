@@ -13,6 +13,7 @@ import {
   getDocsHomepageUrl,
   getDocsManualAddGuideUrl,
   getDocsPageUrl,
+  getDocsSponsorsUrl,
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsNtfyUrl,
   getGitHubPagesRawChangelogIndexUrl,
@@ -82,6 +83,13 @@ describe("docsLinks", () => {
 
     expect(url).toContain("/ja/")
     expect(url.endsWith("#community")).toBe(true)
+  })
+
+  it("builds a sponsors url on the localized docs homepage", () => {
+    const url = getDocsSponsorsUrl("ja")
+
+    expect(url).toContain("/ja/")
+    expect(url.endsWith("#sponsors")).toBe(true)
   })
 
   it("builds channel-specific task notification docs urls", () => {

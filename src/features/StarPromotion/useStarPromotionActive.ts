@@ -8,21 +8,29 @@ import { trackStarPromotionPromptShown } from "~/services/productAnalytics/starP
 import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 
+interface StarPromotionStateResult {
+  isActive: boolean
+  isStarred: boolean
+  isLoading: boolean
+}
+
 /**
- * Reports whether the star promotion is still active, for the low-key CTA
- * surfaces (feedback menu, update log, permission onboarding) that show a star
- * link only while the promotion is unresolved.
+ * Tracks the star promotion lifecycle state.
  *
- * Stays `false` until the stored state has been read, so a promoted action
- * never appears for a user who already starred. Pass `enabled: false` while the
- * host surface is hidden (a closed dialog) to skip the storage read.
+ * Stays `isStarred: false` and `isActive: false` while loading (`isLoading: true`),
+ * ensuring surfaces do not prematurely flash an "already starred" badge before
+ * the persistent storage state resolves.
  */
-export function useStarPromotionActive(enabled = true): boolean {
-  const [isActive, setIsActive] = useState(false)
+function useStarPromotionState(enabled = true): StarPromotionStateResult {
+  const [result, setResult] = useState<StarPromotionStateResult>({
+    isActive: false,
+    isStarred: false,
+    isLoading: true,
+  })
 
   useEffect(() => {
     if (!enabled) {
-      setIsActive(false)
+      setResult({ isActive: false, isStarred: false, isLoading: false })
       return
     }
 
@@ -33,7 +41,11 @@ export function useStarPromotionActive(enabled = true): boolean {
     ) => {
       observedRevision += 1
       if (!cancelled) {
-        setIsActive(state.status === STAR_PROMOTION_STATUSES.Active)
+        setResult({
+          isActive: state.status === STAR_PROMOTION_STATUSES.Active,
+          isStarred: state.status === STAR_PROMOTION_STATUSES.Completed,
+          isLoading: false,
+        })
       }
     }
     const initialRevision = observedRevision
@@ -51,7 +63,29 @@ export function useStarPromotionActive(enabled = true): boolean {
     }
   }, [enabled])
 
-  return isActive
+  return result
+}
+
+/**
+ * Reports whether the star promotion is still active, for the low-key CTA
+ * surfaces (feedback menu, update log, permission onboarding) that show a star
+ * link only while the promotion is unresolved.
+ *
+ * Stays `false` until the stored state has been read, so a promoted action
+ * never appears for a user who already starred. Pass `enabled: false` while the
+ * host surface is hidden (a closed dialog) to skip the storage read.
+ */
+export function useStarPromotionActive(enabled = true): boolean {
+  return useStarPromotionState(enabled).isActive
+}
+
+/**
+ * Reports whether the repository is confirmed starred (status === "completed").
+ * Stays `false` while loading so that "already starred" indicators do not flash
+ * prematurely before stored state arrives.
+ */
+export function useIsStarred(enabled = true): boolean {
+  return useStarPromotionState(enabled).isStarred
 }
 
 /** Records one impression whenever a promotion surface becomes visible. */

@@ -494,14 +494,18 @@
   },
   "feedback": {
     "bugReport": "Einen Fehler melden",
+    "clickAnywhereToClose": "Zum Schließen ins Leere klicken",
     "community": "Community-Gruppen",
     "discussion": "Starten Sie eine Diskussion",
     "featureRequest": "Fordern Sie eine Funktion an",
     "languageRequest": "Fordern Sie eine neue Sprache an",
     "siteSupportRequest": "Website-Unterstützung anfordern",
+    "sponsor": "Sponsoren",
+    "sponsorTitle": "Sponsoren und Unterstützung ansehen",
     "starOnGithub": "Stern auf GitHub vergeben",
     "trigger": "Feedback",
-    "triggerTooltip": "Feedback-Verknüpfungen öffnen"
+    "triggerTooltip": "Feedback-Verknüpfungen öffnen",
+    "wechat": "WeChat-Gruppe"
   },
   "modelListInput": {
     "actions": {
@@ -657,6 +661,12 @@
     "shortRow": "Schlüssel {{number}}",
     "show": "Schlüssel anzeigen",
     "title": "API-Schlüssel"
+  },
+  "sidebarFooter": {
+    "community": "Community",
+    "docs": "Doku",
+    "github": "GitHub",
+    "sponsor": "Sponsor"
   },
   "starPromotion": {
     "actions": {

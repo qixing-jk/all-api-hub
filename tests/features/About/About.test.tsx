@@ -1,8 +1,16 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import About from "~/features/About/About"
 import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
 import { render, screen } from "~~/tests/test-utils/render"
+
+const { useIsStarredMock } = vi.hoisted(() => ({
+  useIsStarredMock: vi.fn(),
+}))
+
+vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
+  useIsStarred: () => useIsStarredMock(),
+}))
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   useReleaseUpdateStatus: () => ({
@@ -20,6 +28,10 @@ vi.mock("~/features/ProductTour", () => ({
 }))
 
 describe("About", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useIsStarredMock.mockReturnValue(false) // not starred yet
+  })
   it("shows feedback and support links wired to the shared destinations", async () => {
     render(<About />, { withReleaseUpdateStatusProvider: false })
 
@@ -57,5 +69,42 @@ describe("About", () => {
       communityLink.compareDocumentPosition(discussionLink) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+
+  it("renders unstarred GitHub repo card with 'starRepo' button and no badge", async () => {
+    render(<About />, { withReleaseUpdateStatusProvider: false })
+
+    const starLink = await screen.findByRole("link", {
+      name: "about:starRepo",
+    })
+    expect(starLink).toBeInTheDocument()
+
+    expect(
+      screen.queryByTestId("about-github-already-starred"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("about-github-starred-badge"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders starred GitHub repo card with 'viewRepo' button, badge, and no self-report action", async () => {
+    useIsStarredMock.mockReturnValue(true) // starred
+
+    render(<About />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByRole("link", { name: "about:viewRepo" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "about:starRepo" }),
+    ).not.toBeInTheDocument()
+
+    const badge = screen.getByTestId("about-github-starred-badge")
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveTextContent("about:alreadyStarred")
+
+    expect(
+      screen.queryByTestId("about-github-already-starred"),
+    ).not.toBeInTheDocument()
   })
 })

@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "Đã gắn sao",
   "copyrightAck": "Bản quyền và Lời cảm ơn",
   "description": "Xem phiên bản, lịch sử thay đổi và liên kết dự án; nhận trợ giúp hoặc báo lỗi.",
   "devMaintenance": "Phát triển và bảo trì",
@@ -77,5 +78,6 @@
   "title": "Giới thiệu",
   "upcomingFeatures": "Tính năng sắp ra mắt",
   "version": "Phiên bản:",
+  "viewRepo": "Truy cập kho mã",
   "visitHomepage": "Truy cập trang chủ"
 }

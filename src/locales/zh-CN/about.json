@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "已 Star",
   "copyrightAck": "版权与致谢",
   "description": "查看扩展版本、更新记录与项目链接，获取帮助或反馈问题。",
   "devMaintenance": "开发与维护",
@@ -77,5 +78,6 @@
   "title": "关于",
   "upcomingFeatures": "即将支持",
   "version": "版本号:",
+  "viewRepo": "访问仓库",
   "visitHomepage": "访问官网"
 }

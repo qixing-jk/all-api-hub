@@ -3,6 +3,7 @@ import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
 import { getHomepage } from "~/utils/navigation/packageMeta"
 
 const DOCS_COMMUNITY_ANCHOR = "community"
+const DOCS_SPONSORS_ANCHOR = "sponsors"
 const DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR = "feishu"
 const DOCS_TASK_NOTIFICATIONS_DINGTALK_ANCHOR = "dingtalk"
 const DOCS_TASK_NOTIFICATIONS_WECOM_ANCHOR = "wecom"
@@ -82,6 +83,15 @@ export const getDocsTaskNotificationsNtfyUrl = (language?: string) => {
 export const getDocsCommunityUrl = (language?: string) => {
   const url = new URL(getDocsHomepageUrl(language))
   url.hash = DOCS_COMMUNITY_ANCHOR
+  return url.toString()
+}
+
+/**
+ * Resolve the shared sponsors section on the localized docs homepage.
+ */
+export const getDocsSponsorsUrl = (language?: string) => {
+  const url = new URL(getDocsHomepageUrl(language))
+  url.hash = DOCS_SPONSORS_ANCHOR
   return url.toString()
 }
 

@@ -167,3 +167,4 @@ export {
 } from "~/constants/designTokens"
 
 export { CompactTagFilter } from "./CompactTagFilter"
+export { ImageLightbox, type ImageLightboxProps } from "./ImageLightbox"

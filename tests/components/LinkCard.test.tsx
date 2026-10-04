@@ -65,4 +65,15 @@ describe("LinkCard", () => {
     const flexContainer = container.querySelector("div.flex.h-full.space-x-4")
     expect(flexContainer).toBeInTheDocument()
   })
+
+  it("should render optional badge", async () => {
+    render(
+      <LinkCard
+        {...defaultProps}
+        badge={<span data-testid="test-badge">Badge</span>}
+      />,
+    )
+
+    expect(await screen.findByTestId("test-badge")).toBeInTheDocument()
+  })
 })
