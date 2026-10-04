@@ -94,6 +94,7 @@
   --destructive-indicator: var(--color-semantic-error-600);
   --info-indicator: var(--color-semantic-info-600);
   --neutral-indicator: var(--status-neutral-base);
+  --star: #e3b341;
   /* Pricing categories convey different units, not success or warning. */
   --pricing-input: var(--link);
   --pricing-input-soft: var(--primary-soft);
@@ -177,6 +178,7 @@
     var(--status-neutral-base),
     white 35%
   );
+  --star: #e3b341;
   --success-text: var(--color-semantic-success-300);
   --success-soft: color-mix(
     in srgb,

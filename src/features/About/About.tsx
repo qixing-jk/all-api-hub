@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next"
 import {
   Bug,
-  Code2,
   Download,
+  Github,
   Globe2,
   Info,
   Languages,
@@ -21,6 +21,7 @@ import { Heading4 } from "~/components/ui"
 import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
 import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
 import { ProductTourReplayCard } from "~/features/ProductTour"
+import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
 import { isNotEmptyArray } from "~/utils"
 import type { ExtensionStoreId } from "~/utils/browser"
 import { detectExtensionStore } from "~/utils/browser"
@@ -51,6 +52,8 @@ const getStoreLabel = (t: TFunction, storeId: ExtensionStoreId) => {
 export default function About() {
   const { t, i18n } = useTranslation("about")
   const version = packageJson.version
+  const isStarActive = useStarPromotionActive()
+  const isStarred = !isStarActive
 
   // 从工具函数获取元数据
   const homepage = getDocsHomepageUrl(i18n.language)
@@ -115,13 +118,24 @@ export default function About() {
           <Heading4 className="mb-density-4">{t("projectLinks")}</Heading4>
           <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <LinkCard
-              Icon={Code2}
-              title={t("githubRepo")}
-              description={t("githubDesc")}
+              Icon={isStarred ? Star : Github}
+              title={t("about:githubRepo")}
+              description={t("about:githubDesc")}
               href={feedbackDestinations.repository}
-              buttonText={t("starRepo")}
-              buttonVariant="default"
-              iconClass="text-foreground"
+              buttonText={isStarred ? t("about:viewRepo") : t("about:starRepo")}
+              buttonVariant={isStarred ? "secondary" : "default"}
+              iconClass={isStarred ? "text-star fill-star" : "text-foreground"}
+              badge={
+                isStarred ? (
+                  <span
+                    data-testid="about-github-starred-badge"
+                    className="bg-warning-soft text-warning-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                  >
+                    <Star className="fill-star text-star size-3" />
+                    <span>{t("about:alreadyStarred")}</span>
+                  </span>
+                ) : null
+              }
             />
             <LinkCard
               Icon={Globe2}

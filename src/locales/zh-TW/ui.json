@@ -482,14 +482,18 @@
   },
   "feedback": {
     "bugReport": "反饋問題",
+    "clickAnywhereToClose": "點擊空白處關閉",
     "community": "社羣交流群",
     "discussion": "參與討論",
     "featureRequest": "提出功能建議",
     "languageRequest": "請求支援新語言",
     "siteSupportRequest": "反饋未適配站點",
+    "sponsor": "贊助支持",
+    "sponsorTitle": "查看贊助商與贊助支持",
     "starOnGithub": "去 GitHub 點個 Star",
     "trigger": "反饋",
-    "triggerTooltip": "開啟反饋快捷入口"
+    "triggerTooltip": "開啟反饋快捷入口",
+    "wechat": "微信群"
   },
   "modelListInput": {
     "actions": {
@@ -643,6 +647,12 @@
     "shortRow": "金鑰 {{number}}",
     "show": "查看金鑰",
     "title": "API 金鑰"
+  },
+  "sidebarFooter": {
+    "community": "社區",
+    "docs": "文檔",
+    "github": "GitHub",
+    "sponsor": "贊助支持"
   },
   "starPromotion": {
     "actions": {

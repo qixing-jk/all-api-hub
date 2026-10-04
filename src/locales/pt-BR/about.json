@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "Com estrela",
   "copyrightAck": "Direitos Autorais e Agradecimentos",
   "description": "Consulte a versão, o histórico de alterações e os links do projeto, obtenha ajuda ou relate um problema.",
   "devMaintenance": "Desenvolvimento e Manutenção",
@@ -70,5 +71,6 @@
   "title": "Sobre",
   "upcomingFeatures": "Próximos recursos",
   "version": "Versão:",
+  "viewRepo": "Visitar repositório",
   "visitHomepage": "Visitar página inicial"
 }

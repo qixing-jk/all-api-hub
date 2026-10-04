@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "Mit Stern markiert",
   "copyrightAck": "Urheberrecht und Danksagungen",
   "description": "Version, Änderungsprotokoll und Projektlinks finden, Hilfe erhalten oder ein Problem melden.",
   "devMaintenance": "Entwicklung & Wartung",
@@ -70,5 +71,6 @@
   "title": "Über",
   "upcomingFeatures": "Kommende Funktionen",
   "version": "Version:",
+  "viewRepo": "Repository besuchen",
   "visitHomepage": "Homepage besuchen"
 }

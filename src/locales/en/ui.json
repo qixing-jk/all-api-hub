@@ -489,14 +489,18 @@
   },
   "feedback": {
     "bugReport": "Report a bug",
+    "clickAnywhereToClose": "Click anywhere to close",
     "community": "Community groups",
     "discussion": "Start a discussion",
     "featureRequest": "Request a feature",
     "languageRequest": "Request a new language",
     "siteSupportRequest": "Request site support",
+    "sponsor": "Sponsor",
+    "sponsorTitle": "View sponsors and support",
     "starOnGithub": "Star on GitHub",
     "trigger": "Feedback",
-    "triggerTooltip": "Open feedback shortcuts"
+    "triggerTooltip": "Open feedback shortcuts",
+    "wechat": "WeChat group"
   },
   "modelListInput": {
     "actions": {
@@ -651,6 +655,12 @@
     "shortRow": "Key {{number}}",
     "show": "Show key",
     "title": "API Keys"
+  },
+  "sidebarFooter": {
+    "community": "Community",
+    "docs": "Docs",
+    "github": "GitHub",
+    "sponsor": "Sponsor"
   },
   "starPromotion": {
     "actions": {

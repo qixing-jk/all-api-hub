@@ -500,14 +500,18 @@
   },
   "feedback": {
     "bugReport": "Reportar un bug",
+    "clickAnywhereToClose": "Haz clic en cualquier lugar para cerrar",
     "community": "Grupos de comunidad",
     "discussion": "Iniciar una discusión",
     "featureRequest": "Solicitar una función",
     "languageRequest": "Solicitar un idioma nuevo",
     "siteSupportRequest": "Solicitar soporte de sitio",
+    "sponsor": "Patrocinar",
+    "sponsorTitle": "Ver patrocinadores y apoyo",
     "starOnGithub": "Dar una estrella en GitHub",
     "trigger": "Comentarios",
-    "triggerTooltip": "Abrir accesos rapidos de comentarios"
+    "triggerTooltip": "Abrir accesos rapidos de comentarios",
+    "wechat": "Grupo de WeChat"
   },
   "modelListInput": {
     "actions": {
@@ -665,6 +669,12 @@
     "shortRow": "Clave {{number}}",
     "show": "Mostrar clave",
     "title": "Claves API"
+  },
+  "sidebarFooter": {
+    "community": "Comunidad",
+    "docs": "Docs",
+    "github": "GitHub",
+    "sponsor": "Patrocinar"
   },
   "starPromotion": {
     "actions": {

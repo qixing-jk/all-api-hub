@@ -14,6 +14,7 @@ import {
   getMenuCategoryLabel,
   getMenuItemLabel,
 } from "~/features/OptionsMenu/getMenuItemLabel"
+import { OptionsSidebarFooter } from "~/features/OptionsMenu/OptionsSidebarFooter"
 import {
   PRODUCT_TOUR_CATEGORY_TARGETS,
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
@@ -303,6 +304,11 @@ function OptionsSidebar({
                 )
               })}
             </nav>
+
+            <OptionsSidebarFooter
+              isCollapsed={shouldShowCollapsedState}
+              onMenuItemClick={onMenuItemClick}
+            />
           </div>
         </div>
       </motion.aside>

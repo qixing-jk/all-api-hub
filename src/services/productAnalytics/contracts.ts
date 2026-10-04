@@ -984,6 +984,7 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   SidepanelHeader: "sidepanel_header",
   SidepanelViewTabs: "sidepanel_view_tabs",
   OptionsStarPromotionCard: "options_star_promotion_card",
+  OptionsSidebarStarItem: "options_sidebar_star_item",
   UpdateLogDialogStarPrompt: "update_log_dialog_star_prompt",
   FeedbackMenuStarItem: "feedback_menu_star_item",
   PermissionOnboardingStarCta: "permission_onboarding_star_cta",

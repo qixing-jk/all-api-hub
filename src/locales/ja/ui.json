@@ -482,14 +482,18 @@
   },
   "feedback": {
     "bugReport": "不具合を報告",
+    "clickAnywhereToClose": "何もない場所をクリックして閉じる",
     "community": "コミュニティグループ",
     "discussion": "ディスカッションを開始",
     "featureRequest": "機能要望を送る",
     "languageRequest": "新しい言語をリクエスト",
     "siteSupportRequest": "サイト対応を依頼",
+    "sponsor": "スポンサー",
+    "sponsorTitle": "スポンサーと支援を確認",
     "starOnGithub": "GitHub で Star を付ける",
     "trigger": "フィードバック",
-    "triggerTooltip": "フィードバックショートカットを開く"
+    "triggerTooltip": "フィードバックショートカットを開く",
+    "wechat": "WeChat グループ"
   },
   "modelListInput": {
     "actions": {
@@ -643,6 +647,12 @@
     "shortRow": "キー {{number}}",
     "show": "キーを表示",
     "title": "API キー"
+  },
+  "sidebarFooter": {
+    "community": "コミュニティ",
+    "docs": "ドキュメント",
+    "github": "GitHub",
+    "sponsor": "スポンサー"
   },
   "starPromotion": {
     "actions": {
