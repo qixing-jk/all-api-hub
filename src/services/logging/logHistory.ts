@@ -147,7 +147,10 @@ export async function listLogHistory(): Promise<LogHistoryEntry[]> {
     const existing = await readEntries()
     const entries = pruneEntries(existing)
     if (JSON.stringify(entries) !== JSON.stringify(existing)) {
-      await storage.set(STORAGE_KEYS.LOG_HISTORY, { version: 1, entries })
+      // Cleanup is best effort; a write failure must not hide readable history.
+      await storage
+        .set(STORAGE_KEYS.LOG_HISTORY, { version: 1, entries })
+        .catch(() => undefined)
     }
     return entries
   })

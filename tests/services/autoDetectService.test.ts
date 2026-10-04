@@ -621,6 +621,50 @@ describe("autoDetectSmart", () => {
     expect(mockSendRuntimeMessage).toHaveBeenCalled()
   })
 
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN])(
+    "uses bypass-aware classification for an existing session without a recognized site type: %s",
+    async (classifiedType) => {
+      mockGetActiveOrAllTabs.mockResolvedValue([
+        { id: 10, active: true, url: "chrome-extension://test/options.html" },
+      ])
+      browserAny.tabs.query.mockResolvedValue([
+        { id: 20, url: "https://example.invalid/dashboard" },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "12" },
+      })
+      mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
+        execution ? classifiedType : SITE_TYPES.UNKNOWN,
+      )
+      mockSendRuntimeMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "88", siteTypeHint: SITE_TYPES.NEW_API },
+      })
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: classifiedType === SITE_TYPES.UNKNOWN ? "88" : "12",
+        },
+        autoDetectContext: {
+          strategy:
+            classifiedType === SITE_TYPES.UNKNOWN
+              ? AUTO_DETECT_STRATEGIES.BackgroundTempContext
+              : AUTO_DETECT_STRATEGIES.ExistingTab,
+        },
+      })
+      expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+        "https://example.invalid",
+        testExecution,
+      )
+    },
+  )
+
   it("does not read an incognito site's account from regular Options", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       { id: 10, active: true, url: "chrome-extension://test/options.html" },

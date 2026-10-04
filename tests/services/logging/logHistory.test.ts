@@ -72,6 +72,22 @@ describe("local log history", () => {
     expect(await listLogHistory()).toEqual([])
   })
 
+  it("returns readable history when optional pruning write-back fails", async () => {
+    await storage.set(STORAGE_KEYS.LOG_HISTORY, {
+      version: 1,
+      entries: [
+        entry("recent"),
+        entry("expired", now - LOG_HISTORY_RETENTION_MS - 1),
+      ],
+    })
+    vi.spyOn(browser.storage.local, "set").mockRejectedValueOnce(
+      new Error("quota exceeded"),
+    )
+    await expect(listLogHistory()).resolves.toEqual([
+      expect.objectContaining({ id: "recent" }),
+    ])
+  })
+
   it("redacts credentials in messages, nested payloads and errors before persistence", async () => {
     await appendLogHistory({
       ...entry("private"),

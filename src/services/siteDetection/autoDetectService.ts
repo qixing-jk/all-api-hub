@@ -1028,17 +1028,26 @@ async function runAutoDetectSmart(
           })
         : null
       if (session) {
+        const sessionSiteType = normalizeSiteTypeHint(session.siteTypeHint)
         const result = await combineUserDataAndSiteType(
           {
             ...userDataFromBrowserSession(session),
             siteTypeHint:
-              normalizeSiteTypeHint(session.siteTypeHint) ?? siteType,
+              sessionSiteType && sessionSiteType !== SITE_TYPES.UNKNOWN
+                ? sessionSiteType
+                : siteType !== SITE_TYPES.UNKNOWN
+                  ? siteType
+                  : undefined,
           },
           detectionUrl,
           protectionBypassExecution,
           diagnostics,
         )
-        if (result.success) {
+        if (
+          result.success &&
+          result.data &&
+          result.data.siteType !== SITE_TYPES.UNKNOWN
+        ) {
           return withAutoDetectContext(
             result,
             createAutoDetectContext({
