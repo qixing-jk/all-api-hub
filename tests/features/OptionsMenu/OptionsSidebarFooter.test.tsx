@@ -7,12 +7,12 @@ import { OptionsSidebarFooter } from "~/features/OptionsMenu/OptionsSidebarFoote
 import { createTab } from "~/utils/browser/browserApi"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { useStarPromotionActiveMock } = vi.hoisted(() => ({
-  useStarPromotionActiveMock: vi.fn(),
+const { useIsStarredMock } = vi.hoisted(() => ({
+  useIsStarredMock: vi.fn(),
 }))
 
 vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
-  useStarPromotionActive: () => useStarPromotionActiveMock(),
+  useIsStarred: () => useIsStarredMock(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -42,7 +42,7 @@ const render = (ui: React.ReactElement) =>
 describe("OptionsSidebarFooter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useStarPromotionActiveMock.mockReturnValue(true) // active = not starred yet
+    useIsStarredMock.mockReturnValue(false) // not starred yet
   })
 
   it("renders 4 footer links in expanded mode when not yet starred", () => {
@@ -78,7 +78,7 @@ describe("OptionsSidebarFooter", () => {
   })
 
   it("renders starred state correctly (golden style, opens repo)", () => {
-    useStarPromotionActiveMock.mockReturnValue(false) // completed = already starred
+    useIsStarredMock.mockReturnValue(true) // already starred
 
     render(<OptionsSidebarFooter isCollapsed={false} />)
 
@@ -136,5 +136,12 @@ describe("OptionsSidebarFooter", () => {
     expect(docsBtn).toHaveAttribute("aria-label")
     expect(sponsorBtn).toHaveAttribute("aria-label")
     expect(communityBtn).toHaveAttribute("aria-label")
+
+    // Clicking docs in collapsed mode opens documentation
+    fireEvent.click(docsBtn)
+    expect(createTab).toHaveBeenCalledWith(
+      expect.stringContaining("http"),
+      true,
+    )
   })
 })

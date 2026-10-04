@@ -4,12 +4,12 @@ import About from "~/features/About/About"
 import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
 import { render, screen } from "~~/tests/test-utils/render"
 
-const { useStarPromotionActiveMock } = vi.hoisted(() => ({
-  useStarPromotionActiveMock: vi.fn(),
+const { useIsStarredMock } = vi.hoisted(() => ({
+  useIsStarredMock: vi.fn(),
 }))
 
 vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
-  useStarPromotionActive: () => useStarPromotionActiveMock(),
+  useIsStarred: () => useIsStarredMock(),
 }))
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
@@ -30,7 +30,7 @@ vi.mock("~/features/ProductTour", () => ({
 describe("About", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useStarPromotionActiveMock.mockReturnValue(true) // active = not starred yet
+    useIsStarredMock.mockReturnValue(false) // not starred yet
   })
   it("shows feedback and support links wired to the shared destinations", async () => {
     render(<About />, { withReleaseUpdateStatusProvider: false })
@@ -88,7 +88,7 @@ describe("About", () => {
   })
 
   it("renders starred GitHub repo card with 'viewRepo' button, badge, and no self-report action", async () => {
-    useStarPromotionActiveMock.mockReturnValue(false) // completed = starred
+    useIsStarredMock.mockReturnValue(true) // starred
 
     render(<About />, { withReleaseUpdateStatusProvider: false })
 

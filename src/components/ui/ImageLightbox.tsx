@@ -78,7 +78,7 @@ export function ImageLightbox({
             />
           </div>
           <p className="text-muted-foreground pointer-events-none mt-3 text-xs select-none">
-            {t("ui:feedback.clickAnywhereToClose", "点击任意空白处关闭")}
+            {t("ui:feedback.clickAnywhereToClose")}
           </p>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

@@ -21,7 +21,7 @@ import { Heading4 } from "~/components/ui"
 import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
 import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
 import { ProductTourReplayCard } from "~/features/ProductTour"
-import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import { useIsStarred } from "~/features/StarPromotion/useStarPromotionActive"
 import { isNotEmptyArray } from "~/utils"
 import type { ExtensionStoreId } from "~/utils/browser"
 import { detectExtensionStore } from "~/utils/browser"
@@ -52,8 +52,7 @@ const getStoreLabel = (t: TFunction, storeId: ExtensionStoreId) => {
 export default function About() {
   const { t, i18n } = useTranslation("about")
   const version = packageJson.version
-  const isStarActive = useStarPromotionActive()
-  const isStarred = !isStarActive
+  const isStarred = useIsStarred()
 
   // 从工具函数获取元数据
   const homepage = getDocsHomepageUrl(i18n.language)

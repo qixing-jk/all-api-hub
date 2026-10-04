@@ -2,7 +2,7 @@ import { BookOpen, Heart, Star, Users } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { REPO_URL } from "~/constants/about"
-import { useStarPromotionActive } from "~/features/StarPromotion/useStarPromotionActive"
+import { useIsStarred } from "~/features/StarPromotion/useStarPromotionActive"
 import { cn } from "~/lib/utils"
 import { createTab } from "~/utils/browser/browserApi"
 import { getDocsHomepageUrl } from "~/utils/navigation/docsLinks"
@@ -25,8 +25,7 @@ export function OptionsSidebarFooter({
   isCollapsed = false,
 }: OptionsSidebarFooterProps) {
   const { t, i18n } = useTranslation(["ui", "about"])
-  const isStarActive = useStarPromotionActive()
-  const isStarred = !isStarActive
+  const isStarred = useIsStarred()
 
   const handleStarClick = () => {
     void createTab(REPO_URL, true)

@@ -61,4 +61,20 @@ describe("ImageLightbox", () => {
     fireEvent.click(lightbox)
     expect(handleClose).toHaveBeenCalledTimes(1)
   })
+
+  it("invokes onClose when pressing Escape", () => {
+    const handleClose = vi.fn()
+    render(
+      <ImageLightbox
+        isOpen={true}
+        onClose={handleClose}
+        src="/test.png"
+        alt="Test Image"
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(handleClose).toHaveBeenCalled()
+  })
 })

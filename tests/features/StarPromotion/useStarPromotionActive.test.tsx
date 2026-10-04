@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  useIsStarred,
   useStarPromotionActive,
   useStarPromotionPromptImpression,
 } from "~/features/StarPromotion/useStarPromotionActive"
@@ -113,5 +114,25 @@ describe("useStarPromotionActive", () => {
     rerender({ visible: false })
     rerender({ visible: true })
     expect(trackPromptShownMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports isStarred only after resolving to completed status", async () => {
+    getStateMock.mockResolvedValue({ status: "completed" })
+
+    const { result } = renderHook(() => useIsStarred())
+    // Initially false while loading
+    expect(result.current).toBe(false)
+
+    await waitFor(() => expect(result.current).toBe(true))
+  })
+
+  it("keeps isStarred false when status is active", async () => {
+    getStateMock.mockResolvedValue({ status: "active" })
+
+    const { result } = renderHook(() => useIsStarred())
+    expect(result.current).toBe(false)
+
+    await waitFor(() => expect(getStateMock).toHaveBeenCalledTimes(1))
+    expect(result.current).toBe(false)
   })
 })
