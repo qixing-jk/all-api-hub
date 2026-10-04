@@ -1034,7 +1034,7 @@ describe("BookmarkAccountImportDialog", () => {
           selectedCount: 1,
           successCount: 1,
           failureCount: 0,
-          skippedCount: 0,
+          skippedCount: 1,
           readyCount: 1,
           blockedCount: 1,
         }),
@@ -1440,96 +1440,115 @@ describe("BookmarkAccountImportDialog", () => {
     })
   })
 
-  it("retries only incomplete candidates and keeps successful results", async () => {
-    const user = userEvent.setup()
-    getBrowserBookmarkTreeMock.mockResolvedValueOnce({
-      success: true,
-      tree: bookmarkTreeWith([
-        "https://one.example/path",
-        "https://two.example/path",
-      ]),
-    })
-    runBookmarkAccountImportMock
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            candidateId: "bookmark-import:https://one.example",
-            url: "https://one.example",
-            status: "success",
-            accountId: "one",
-          },
-          {
-            candidateId: "bookmark-import:https://two.example",
-            url: "https://two.example",
-            status: "failed",
-            failureCategory: "detection",
-            safeMessageKey:
-              "ui:dialog.bookmarkAccountImport.failures.detection",
-            siteType: "new-api",
-            authType: "cookie",
-          },
-        ],
-        successCount: 1,
-        failureCount: 1,
-        skippedCount: 0,
+  it.each([false, true])(
+    "retries only incomplete candidates and keeps successful totals (reload fails: %s)",
+    async (reloadFails) => {
+      const user = userEvent.setup()
+      getBrowserBookmarkTreeMock.mockResolvedValueOnce({
+        success: true,
+        tree: bookmarkTreeWith([
+          "https://one.example/path",
+          "https://two.example/path",
+        ]),
       })
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            candidateId: "bookmark-import:https://two.example",
-            url: "https://two.example",
-            status: "success",
-            accountId: "two",
-          },
-        ],
-        successCount: 1,
-        failureCount: 0,
-        skippedCount: 0,
+      runBookmarkAccountImportMock
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              candidateId: "bookmark-import:https://one.example",
+              url: "https://one.example",
+              status: "success",
+              accountId: "one",
+            },
+            {
+              candidateId: "bookmark-import:https://two.example",
+              url: "https://two.example",
+              status: "failed",
+              failureCategory: "detection",
+              safeMessageKey:
+                "ui:dialog.bookmarkAccountImport.failures.detection",
+              siteType: "new-api",
+              authType: "cookie",
+            },
+          ],
+          successCount: 1,
+          failureCount: 1,
+          skippedCount: 0,
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              candidateId: "bookmark-import:https://two.example",
+              url: "https://two.example",
+              status: "success",
+              accountId: "two",
+            },
+          ],
+          successCount: 1,
+          failureCount: 0,
+          skippedCount: 0,
+        })
+      renderDialog()
+      await allowBookmarksAndScanSelected(user)
+      await user.click(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportImportButton,
+        ),
+      )
+      await user.click(
+        await screen.findByRole("button", {
+          name: "ui:dialog.bookmarkAccountImport.actions.openAddAccount",
+        }),
+      )
+      expect(openAddAccountMock).toHaveBeenCalledWith({
+        source: "bookmark-import",
+        siteUrl: "https://two.example",
+        siteType: "new-api",
+        authType: "cookie",
       })
-    renderDialog()
-    await allowBookmarksAndScanSelected(user)
-    await user.click(
-      screen.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportImportButton,
-      ),
-    )
-    await user.click(
-      await screen.findByRole("button", {
-        name: "ui:dialog.bookmarkAccountImport.actions.openAddAccount",
-      }),
-    )
-    expect(openAddAccountMock).toHaveBeenCalledWith({
-      source: "bookmark-import",
-      siteUrl: "https://two.example",
-      siteType: "new-api",
-      authType: "cookie",
-    })
-    await user.click(
-      screen.getByRole("button", {
-        name: "ui:dialog.bookmarkAccountImport.actions.retryFailed",
-      }),
-    )
-    await waitFor(() =>
-      expect(runBookmarkAccountImportMock).toHaveBeenCalledTimes(2),
-    )
-    expect(
-      runBookmarkAccountImportMock.mock.calls[1]?.[0].candidates.map(
-        (candidate: { url: string }) => candidate.url,
-      ),
-    ).toEqual(["https://two.example"])
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", {
+      if (reloadFails) {
+        loadAccountDataMock.mockRejectedValueOnce(new Error("reload failed"))
+      }
+      await user.click(
+        screen.getByRole("button", {
           name: "ui:dialog.bookmarkAccountImport.actions.retryFailed",
         }),
-      ).not.toBeInTheDocument(),
-    )
-    expect(screen.getByText("https://one.example")).toBeVisible()
-    expect(screen.getByText("https://two.example")).toBeVisible()
-    expect(
-      screen.getAllByText("ui:dialog.bookmarkAccountImport.status.imported"),
-    ).toHaveLength(2)
-  })
+      )
+      await waitFor(() =>
+        expect(runBookmarkAccountImportMock).toHaveBeenCalledTimes(2),
+      )
+      expect(
+        runBookmarkAccountImportMock.mock.calls[1]?.[0].candidates.map(
+          (candidate: { url: string }) => candidate.url,
+        ),
+      ).toEqual(["https://two.example"])
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", {
+            name: "ui:dialog.bookmarkAccountImport.actions.retryFailed",
+          }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(screen.getByText("https://one.example")).toBeVisible()
+      expect(screen.getByText("https://two.example")).toBeVisible()
+      expect(
+        screen.getAllByText("ui:dialog.bookmarkAccountImport.status.imported"),
+      ).toHaveLength(2)
+      expect(completeProductAnalyticsActionMock).toHaveBeenLastCalledWith(
+        reloadFails
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: expect.objectContaining({
+            selectedCount: 2,
+            successCount: 2,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
+      )
+    },
+  )
 
   it("keeps prior results and recovery available when a retry cannot start", async () => {
     const user = userEvent.setup()
@@ -1612,6 +1631,12 @@ describe("BookmarkAccountImportDialog", () => {
       expect(
         await screen.findByText("Added=1 incomplete=0 skipped=1"),
       ).toBeVisible()
+      expect(completeProductAnalyticsActionMock).toHaveBeenLastCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: expect.objectContaining({ skippedCount: 1 }),
+        }),
+      )
     } finally {
       testI18n.removeResourceBundle("en", "ui")
     }

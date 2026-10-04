@@ -614,6 +614,13 @@ export function useBookmarkAccountImportDialog(
         setStage(retryFailed ? "results" : "review")
         return
       }
+      let displayedResult = {
+        ...importResult,
+        skippedCount:
+          importResult.skippedCount +
+          candidates.length -
+          importCandidates.length,
+      }
       if (retryFailed) {
         const retriedRows = new Map(
           importResult.rows.map((row) => [row.candidateId, row]),
@@ -621,21 +628,14 @@ export function useBookmarkAccountImportDialog(
         const rows = result.rows.map(
           (row) => retriedRows.get(row.candidateId) ?? row,
         )
-        setResult({
+        displayedResult = {
           rows,
           successCount: rows.filter((row) => row.status === "success").length,
           failureCount: rows.filter((row) => row.status === "failed").length,
           skippedCount: result.skippedCount,
-        })
-      } else {
-        setResult({
-          ...importResult,
-          skippedCount:
-            importResult.skippedCount +
-            candidates.length -
-            importCandidates.length,
-        })
+        }
       }
+      setResult(displayedResult)
 
       try {
         await loadAccountData()
@@ -647,10 +647,10 @@ export function useBookmarkAccountImportDialog(
             failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
             itemCount: candidates.length,
-            selectedCount: importCandidates.length,
-            successCount: importResult.successCount,
-            failureCount: importResult.failureCount,
-            skippedCount: importResult.skippedCount,
+            selectedCount: selectedCandidates.length,
+            successCount: displayedResult.successCount,
+            failureCount: displayedResult.failureCount,
+            skippedCount: displayedResult.skippedCount,
             readyCount: scanSummary.readyCount,
             blockedCount: scanSummary.duplicateCount,
           },
@@ -660,17 +660,17 @@ export function useBookmarkAccountImportDialog(
       }
 
       tracker.complete(
-        importResult.failureCount > 0
+        displayedResult.failureCount > 0
           ? PRODUCT_ANALYTICS_RESULTS.Failure
           : PRODUCT_ANALYTICS_RESULTS.Success,
         {
-          ...(importResult.failureCount > 0
+          ...(displayedResult.failureCount > 0
             ? {
                 errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
               }
             : {}),
           insights: {
-            ...(importResult.failureCount > 0
+            ...(displayedResult.failureCount > 0
               ? {
                   failureReason:
                     PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
@@ -678,10 +678,10 @@ export function useBookmarkAccountImportDialog(
                 }
               : {}),
             itemCount: candidates.length,
-            selectedCount: importCandidates.length,
-            successCount: importResult.successCount,
-            failureCount: importResult.failureCount,
-            skippedCount: importResult.skippedCount,
+            selectedCount: selectedCandidates.length,
+            successCount: displayedResult.successCount,
+            failureCount: displayedResult.failureCount,
+            skippedCount: displayedResult.skippedCount,
             readyCount: scanSummary.readyCount,
             blockedCount: scanSummary.duplicateCount,
           },
