@@ -154,7 +154,7 @@ export async function listAllGptLoadGroups(
     )
       throw error
     // A deployment that predates the modern route falls through to the classic
-    // paginated walk; the caller only needs some usable inventory shape.
+    // paginated walk to obtain the complete inventory.
   }
 
   const collected: GptLoadGroup[] = []
@@ -176,11 +176,16 @@ export async function listAllGptLoadGroups(
     }
 
     if (groups.length < GPT_LOAD_PAGE_SIZE) return collected
-    if (added === 0) return collected
+    if (added === 0)
+      throw new GptLoadApiError(
+        "gpt-load group inventory is incomplete: repeated page",
+      )
     if (total !== null && collected.length >= total) return collected
   }
 
-  return collected
+  throw new GptLoadApiError(
+    "gpt-load group inventory is incomplete: pagination limit reached",
+  )
 }
 
 /**

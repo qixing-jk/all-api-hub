@@ -40,6 +40,31 @@ const errorEnvelope = (code: string, message: string, status = 400) =>
   HttpResponse.json({ code, message }, { status })
 
 describe("gpt-load transport", () => {
+  it.each(["repeated", "capped"])(
+    "rejects incomplete classic inventories (%s)",
+    async (mode) => {
+      server.use(
+        http.get(
+          `${BASE_URL}/api/modern/groups`,
+          () => new HttpResponse(null, { status: 404 }),
+        ),
+        http.get(`${BASE_URL}/api/groups`, ({ request }) => {
+          const page =
+            mode === "repeated"
+              ? 1
+              : Number(new URL(request.url).searchParams.get("page"))
+          return envelope({
+            items: Array.from({ length: 100 }, (_, index) => ({
+              id: (page - 1) * 100 + index + 1,
+              name: `Group ${page}-${index}`,
+              channel_id: "openai",
+            })),
+          })
+        }),
+      )
+      await expect(listAllGptLoadGroups(config)).rejects.toThrow(/incomplete/i)
+    },
+  )
   it("rejects malformed create and settings responses", async () => {
     server.use(
       http.post(`${BASE_URL}/api/groups`, () => envelope(null)),
