@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("devMode", () => {
@@ -41,6 +42,34 @@ describe("devMode", () => {
         ...(await importOriginal<typeof import("~/utils/core/environment")>()),
         isDevelopmentMode: () => false,
       }))
+    })
+
+    it("reacts to toggles and storage events and removes its listeners on unmount", async () => {
+      const { useDevUnlocked, toggleDevUnlocked } = await import(
+        "~/utils/core/devMode"
+      )
+      const remove = vi.spyOn(window, "removeEventListener")
+      const { result, unmount } = renderHook(useDevUnlocked)
+      expect(result.current).toBe(false)
+      act(() => {
+        toggleDevUnlocked()
+      })
+      expect(result.current).toBe(true)
+      act(() => {
+        window.localStorage.clear()
+        window.dispatchEvent(new StorageEvent("storage"))
+      })
+      expect(result.current).toBe(false)
+      unmount()
+      expect(remove).toHaveBeenCalledWith("storage", expect.any(Function))
+    })
+
+    it("treats inaccessible storage as locked", async () => {
+      const { isDevUnlocked } = await import("~/utils/core/devMode")
+      vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
+        throw new Error("blocked")
+      })
+      expect(isDevUnlocked()).toBe(false)
     })
 
     it("reports isDevUnlocked as false by default", async () => {

@@ -171,7 +171,10 @@ export async function invokeBrowserApi(
 
 let sandboxIframe: HTMLIFrameElement | null = null
 let sandboxReady = false
-let sandboxReadyWaiters: Array<() => void> = []
+let sandboxReadyWaiters: Array<{
+  resolve: (iframe: HTMLIFrameElement) => void
+  reject: (error: Error) => void
+}> = []
 let sandboxMessageListenerAttached = false
 const pendingExecutions = new Map<
   string,
@@ -188,7 +191,7 @@ function attachSandboxMessageListener(): void {
   window.addEventListener("message", async (event) => {
     // Authenticate sender: only accept messages from our sandbox iframe
     if (
-      sandboxIframe?.contentWindow &&
+      !sandboxIframe?.contentWindow ||
       event.source !== sandboxIframe.contentWindow
     ) {
       return
@@ -201,7 +204,7 @@ function attachSandboxMessageListener(): void {
 
     if (data.type === "SANDBOX_READY") {
       sandboxReady = true
-      sandboxReadyWaiters.forEach((cb) => cb())
+      sandboxReadyWaiters.forEach((waiter) => waiter.resolve(sandboxIframe!))
       sandboxReadyWaiters = []
       return
     }
@@ -294,7 +297,7 @@ function ensureSandboxIframe(): Promise<HTMLIFrameElement> {
       if (sandboxReady) {
         return resolve(sandboxIframe)
       }
-      sandboxReadyWaiters.push(() => resolve(sandboxIframe!))
+      sandboxReadyWaiters.push({ resolve, reject })
       return
     }
 
@@ -305,7 +308,8 @@ function ensureSandboxIframe(): Promise<HTMLIFrameElement> {
     iframe.src = sandboxUrl
     iframe.style.display = "none"
 
-    sandboxReadyWaiters.push(() => resolve(iframe))
+    sandboxReady = false
+    sandboxReadyWaiters.push({ resolve, reject })
 
     const timeout = setTimeout(() => {
       if (!sandboxReady) {
@@ -316,12 +320,18 @@ function ensureSandboxIframe(): Promise<HTMLIFrameElement> {
           sandboxIframe = null
         }
         sandboxReady = false
+        const waiters = sandboxReadyWaiters
         sandboxReadyWaiters = []
-        reject(new Error("Sandbox iframe initialization timed out"))
+        waiters.forEach((waiter) =>
+          waiter.reject(new Error("Sandbox iframe initialization timed out")),
+        )
       }
     }, 5000)
 
-    sandboxReadyWaiters.push(() => clearTimeout(timeout))
+    sandboxReadyWaiters.push({
+      resolve: () => clearTimeout(timeout),
+      reject: () => clearTimeout(timeout),
+    })
 
     sandboxIframe = iframe
     document.body.appendChild(iframe)

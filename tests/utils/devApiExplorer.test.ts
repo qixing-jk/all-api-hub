@@ -135,6 +135,59 @@ describe("devApiExplorer", () => {
   })
 
   describe("PRESET_PROBES", () => {
+    it("reports absent API namespaces and denied cookie/DNR permissions", async () => {
+      ;(globalThis as any).chrome = {}
+      const probe = (id: string) => PRESET_PROBES.find((p) => p.id === id)!
+      for (const id of ["tabs-active", "storage-engines", "runtime-env"]) {
+        await expect(probe(id).run("ui")).rejects.toThrow()
+      }
+      for (const id of ["alarms-lifecycle", "sidepanel-check", "dnr-rules"]) {
+        expect(await probe(id).run("ui")).toMatchObject({ supported: false })
+      }
+      ;(globalThis as any).chrome = {
+        cookies: { getAll: vi.fn().mockRejectedValue(new Error("Denied")) },
+        declarativeNetRequest: {
+          getDynamicRules: vi.fn().mockRejectedValue(new Error("Denied")),
+        },
+        runtime: {
+          getManifest: () => ({}),
+          getPlatformInfo: vi.fn().mockRejectedValue(new Error("Unsupported")),
+        },
+      }
+      expect(await probe("cookies-access").run("ui")).toMatchObject({
+        permissionGranted: false,
+        error: "Denied",
+      })
+      expect(await probe("dnr-rules").run("ui")).toMatchObject({
+        supported: false,
+        error: "Denied",
+      })
+      expect(await probe("runtime-env").run("ui")).toMatchObject({
+        platformInfo: "getPlatformInfo unsupported",
+      })
+    })
+
+    it("reports a supported empty current-window tab query and storage without local support", async () => {
+      ;(globalThis as any).chrome = {
+        tabs: { query: vi.fn().mockResolvedValue([]) },
+        storage: { sync: {} },
+      }
+      expect(
+        await PRESET_PROBES.find((p) => p.id === "tabs-active")!.run("ui"),
+      ).toMatchObject({
+        supportedCurrentWindow: true,
+        tabCount: 0,
+        firstTab: null,
+      })
+      expect(
+        await PRESET_PROBES.find((p) => p.id === "storage-engines")!.run("ui"),
+      ).toMatchObject({
+        hasLocal: false,
+        hasSync: true,
+        localWriteVerified: false,
+      })
+    })
+
     it("runs tabs-active probe with currentWindow fallback", async () => {
       const probe = PRESET_PROBES.find((p) => p.id === "tabs-active")!
       const mockQuery = vi.fn().mockImplementation(async (query: any) => {

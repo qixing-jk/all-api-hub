@@ -25,6 +25,18 @@ describe("dev pages section", () => {
     vi.mocked(navigateWithinOptionsPage).mockResolvedValue(undefined)
   })
 
+  it("navigates to the Browser API Lab route", async () => {
+    renderDevPanelSection(useDevPagesSection)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Browser API Lab" }),
+    )
+    await waitFor(() => {
+      expect(navigateWithinOptionsPage).toHaveBeenCalledWith(
+        `#${DEV_MENU_ITEM_IDS.BROWSER_API_LAB}`,
+      )
+    })
+  })
+
   it("navigates to the mesh gradient lab route", async () => {
     renderDevPanelSection(useDevPagesSection)
 
