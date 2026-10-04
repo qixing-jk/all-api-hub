@@ -196,6 +196,7 @@ describe("background onSuspend temp-context cleanup", () => {
       },
     }))
     vi.doMock("~/utils/core/logger", () => ({
+      setLogHistoryWriter: vi.fn(),
       createLogger: vi.fn(() => ({
         debug: vi.fn(),
         error: loggerErrorMock,

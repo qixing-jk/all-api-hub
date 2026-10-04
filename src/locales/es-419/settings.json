@@ -290,9 +290,37 @@
     "toggleLabel": "Advertir antes de agregar duplicados"
   },
   "logging": {
-    "consoleEnabled": "Habilitar registro en consola",
-    "consoleEnabledDesc": "Cuando está deshabilitado, All API Hub no emitirá ninguna salida de consola en ningún nivel (incluidos errores).",
-    "description": "Controla el registro en consola para diagnóstico y solución de problemas.",
+    "consoleEnabled": "Activar registros",
+    "consoleEnabledDesc": "Al desactivar, se detienen la salida de consola y los nuevos registros locales.",
+    "description": "Configura la salida de registros y el historial de diagnóstico local.",
+    "history": {
+      "allContexts": "Todos los orígenes",
+      "allLevels": "Todos los niveles",
+      "allTime": "Todos los registros guardados",
+      "clearDescription": "Eliminar todos los registros guardados en este dispositivo.",
+      "clearError": "No se pudieron borrar los registros",
+      "clearTitle": "Borrar registros locales",
+      "context": "Origen",
+      "copied": "Registros copiados",
+      "copy": "Copiar registros filtrados",
+      "copyError": "No se pudieron copiar los registros",
+      "description": "Este dispositivo conserva hasta {{limit}} registros de las últimas {{hours}} horas, a partir de la activación. Establece el nivel mínimo en Depuración para más detalles.",
+      "details": "Detalles",
+      "empty": "No hay registros coincidentes. Activa el registro, reproduce el problema y vuelve aquí.",
+      "entryDescription": "Sigue los registros de todas las páginas de la extensión en vivo o consulta el historial reciente.",
+      "lastHour": "Última hora",
+      "lastMinutes": "Últimos 5 minutos",
+      "level": "Nivel de registro",
+      "loadError": "No se pudieron leer los registros. Se conservan los registros mostrados. Intenta de nuevo.",
+      "more": "Cargar registros anteriores",
+      "open": "Ver registros",
+      "pause": "Pausar actualizaciones",
+      "period": "Período",
+      "resume": "Reanudar actualizaciones en vivo",
+      "search": "Buscar mensaje, módulo o ID de solicitud",
+      "showing": "Mostrando {{visible}} / {{total}}",
+      "title": "Registros recientes"
+    },
     "levels": {
       "debug": "Debug",
       "error": "Error",
@@ -300,7 +328,7 @@
       "warn": "Warn"
     },
     "minLevel": "Nivel mínimo de registro",
-    "minLevelDesc": "Cuando el registro en consola está habilitado, los logs por debajo de este nivel se suprimen.",
+    "minLevelDesc": "Los registros por debajo del nivel seleccionado no se muestran ni se guardan.",
     "title": "Registro"
   },
   "managedSite": {

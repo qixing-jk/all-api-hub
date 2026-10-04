@@ -290,9 +290,37 @@
     "toggleLabel": "Warn before adding duplicates"
   },
   "logging": {
-    "consoleEnabled": "Enable console logging",
-    "consoleEnabledDesc": "When disabled, All API Hub will not emit any console output at any level (including errors).",
-    "description": "Control console logging for troubleshooting and diagnostics.",
+    "consoleEnabled": "Enable logging",
+    "consoleEnabledDesc": "When disabled, console output and new local log recording stop.",
+    "description": "Configure log output and local diagnostic history.",
+    "history": {
+      "allContexts": "All sources",
+      "allLevels": "All levels",
+      "allTime": "All retained logs",
+      "clearDescription": "Delete all log entries retained on this device.",
+      "clearError": "Failed to clear logs",
+      "clearTitle": "Clear local logs",
+      "context": "Source",
+      "copied": "Logs copied",
+      "copy": "Copy filtered logs",
+      "copyError": "Failed to copy logs",
+      "description": "This device retains up to {{limit}} entries from the last {{hours}} hours. Events are recorded after logging is enabled; set Minimum log level to Debug for more detail.",
+      "details": "Details",
+      "empty": "No matching logs. Enable logging, reproduce the issue, then return here.",
+      "entryDescription": "Follow logs from all extension pages live or review recent history.",
+      "lastHour": "Last hour",
+      "lastMinutes": "Last 5 minutes",
+      "level": "Log level",
+      "loadError": "Failed to read logs. Previously displayed entries are retained. Please retry.",
+      "more": "Load older logs",
+      "open": "View logs",
+      "pause": "Pause updates",
+      "period": "Time range",
+      "resume": "Resume live updates",
+      "search": "Search message, scope or request ID",
+      "showing": "Showing {{visible}} / {{total}}",
+      "title": "Recent logs"
+    },
     "levels": {
       "debug": "Debug",
       "error": "Error",
@@ -300,7 +328,7 @@
       "warn": "Warn"
     },
     "minLevel": "Minimum log level",
-    "minLevelDesc": "When console logging is enabled, logs below this level are suppressed.",
+    "minLevelDesc": "Logs below the selected level are neither emitted nor saved.",
     "title": "Logging"
   },
   "managedSite": {

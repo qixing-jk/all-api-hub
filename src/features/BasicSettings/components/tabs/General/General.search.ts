@@ -6,6 +6,8 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
+import { LOGGING_SETTINGS_TARGET_IDS } from "./searchTargets"
+
 const PRODUCT_ANALYTICS_BREADCRUMBS = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.general",
@@ -48,7 +50,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:logging",
     "general",
-    "logging",
+    LOGGING_SETTINGS_TARGET_IDS.section,
     "settings:logging.title",
     204,
     { keywordKeys: ["common:actions.reset"] },
@@ -74,6 +76,25 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 ]
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
+  buildControlDefinition(
+    "control:logging-history",
+    "general",
+    LOGGING_SETTINGS_TARGET_IDS.history,
+    "settings:logging.history.title",
+    540,
+    {
+      descriptionKey: "settings:logging.history.entryDescription",
+      keywords: [
+        "log",
+        "history",
+        "live",
+        "diagnostics",
+        "日志",
+        "实时",
+        "历史",
+      ],
+    },
+  ),
   buildControlDefinition(
     "control:appearance-content-width",
     "general",
@@ -303,7 +324,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:logging-enabled",
     "general",
-    "logging-console-enabled",
+    LOGGING_SETTINGS_TARGET_IDS.enabled,
     "settings:logging.consoleEnabled",
     507,
     {
@@ -319,7 +340,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:logging-min-level",
     "general",
-    "logging-min-level",
+    LOGGING_SETTINGS_TARGET_IDS.level,
     "settings:logging.minLevel",
     508,
     {

@@ -290,9 +290,37 @@
     "toggleLabel": "新增重複帳號前提醒"
   },
   "logging": {
-    "consoleEnabled": "啟用控制台日誌",
-    "consoleEnabledDesc": "關閉後，All API Hub 不會在瀏覽器控制台輸出任何日誌（包括錯誤）。",
-    "description": "控制是否在瀏覽器控制台輸出日誌，用於排查問題。",
+    "consoleEnabled": "啟用日誌",
+    "consoleEnabledDesc": "關閉後停止主控台輸出和新日誌記錄。",
+    "description": "設定日誌輸出與本機歷史記錄。",
+    "history": {
+      "allContexts": "全部來源",
+      "allLevels": "全部層級",
+      "allTime": "全部保留的日誌",
+      "clearDescription": "刪除本機保留的全部日誌記錄。",
+      "clearError": "清除日誌失敗",
+      "clearTitle": "清除本機日誌",
+      "context": "來源",
+      "copied": "日誌已複製",
+      "copy": "複製篩選結果",
+      "copyError": "複製日誌失敗",
+      "description": "本機保留最近 {{hours}} 小時內最多 {{limit}} 筆日誌。只記錄啟用日誌後的事件；將最低日誌層級設為偵錯可記錄詳細過程。",
+      "details": "詳細資料",
+      "empty": "沒有符合的日誌。啟用日誌後重現問題，再返回檢視。",
+      "entryDescription": "即時檢視各頁面的日誌，也可回看最近記錄。",
+      "lastHour": "最近 1 小時",
+      "lastMinutes": "最近 5 分鐘",
+      "level": "日誌層級",
+      "loadError": "讀取日誌失敗，保留上次顯示的記錄。請重試。",
+      "more": "載入更早的日誌",
+      "open": "檢視日誌",
+      "pause": "暫停更新",
+      "period": "時間範圍",
+      "resume": "恢復即時更新",
+      "search": "搜尋訊息、模組或請求編號",
+      "showing": "顯示 {{visible}} / {{total}} 筆",
+      "title": "最近日誌"
+    },
     "levels": {
       "debug": "除錯",
       "error": "錯誤",
@@ -300,7 +328,7 @@
       "warn": "警告"
     },
     "minLevel": "最小日誌級別",
-    "minLevelDesc": "啟用控制台日誌後，僅輸出不低於該級別的日誌。",
+    "minLevelDesc": "低於所選層級的日誌不會輸出或儲存。",
     "title": "日誌"
   },
   "managedSite": {

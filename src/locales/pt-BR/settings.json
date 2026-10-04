@@ -290,9 +290,37 @@
     "toggleLabel": "Avisar antes de adicionar duplicatas"
   },
   "logging": {
-    "consoleEnabled": "Ativar registro do console",
-    "consoleEnabledDesc": "Quando desabilitado, All API Hub não emitirá nenhuma saída de console em nenhum nível (incluindo erros).",
-    "description": "Registro do console de controle para solução de problemas e diagnósticos.",
+    "consoleEnabled": "Ativar logs",
+    "consoleEnabledDesc": "Quando desativado, a saída do console e os novos registros locais são interrompidos.",
+    "description": "Configure a saída de logs e o histórico de diagnóstico local.",
+    "history": {
+      "allContexts": "Todas as origens",
+      "allLevels": "Todos os níveis",
+      "allTime": "Todos os logs salvos",
+      "clearDescription": "Excluir todos os logs mantidos neste dispositivo.",
+      "clearError": "Não foi possível limpar os logs",
+      "clearTitle": "Limpar logs locais",
+      "context": "Origem",
+      "copied": "Logs copiados",
+      "copy": "Copiar logs filtrados",
+      "copyError": "Não foi possível copiar os logs",
+      "description": "Este dispositivo mantém até {{limit}} registros das últimas {{hours}} horas após ativar os logs. Defina o nível mínimo como Depuração para mais detalhes.",
+      "details": "Detalhes",
+      "empty": "Nenhum log correspondente. Ative os logs, reproduza o problema e volte aqui.",
+      "entryDescription": "Acompanhe os logs de todas as páginas da extensão ao vivo ou consulte o histórico recente.",
+      "lastHour": "Última hora",
+      "lastMinutes": "Últimos 5 minutos",
+      "level": "Nível do log",
+      "loadError": "Não foi possível ler os logs. Os registros exibidos foram mantidos. Tente novamente.",
+      "more": "Carregar logs anteriores",
+      "open": "Ver logs",
+      "pause": "Pausar atualizações",
+      "period": "Período",
+      "resume": "Retomar atualizações ao vivo",
+      "search": "Buscar mensagem, módulo ou ID da solicitação",
+      "showing": "Exibindo {{visible}} / {{total}}",
+      "title": "Logs recentes"
+    },
     "levels": {
       "debug": "Depurar",
       "error": "Erro",
@@ -300,7 +328,7 @@
       "warn": "Avisar"
     },
     "minLevel": "Nível mínimo de registro",
-    "minLevelDesc": "Quando o log do console está ativado, os logs abaixo desse nível são suprimidos.",
+    "minLevelDesc": "Logs abaixo do nível selecionado não são emitidos nem salvos.",
     "title": "Registro"
   },
   "managedSite": {
