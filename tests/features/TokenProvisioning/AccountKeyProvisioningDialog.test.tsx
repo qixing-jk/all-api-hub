@@ -7,7 +7,11 @@ import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accoun
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
-const { prepare } = vi.hoisted(() => ({ prepare: vi.fn() }))
+const { prepare, notify } = vi.hoisted(() => ({
+  prepare: vi.fn(),
+  notify: { success: vi.fn(), info: vi.fn(), error: vi.fn() },
+}))
+vi.mock("~/lib/notify", () => ({ default: notify }))
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
@@ -83,7 +87,10 @@ const setup = () => {
 }
 
 describe("foreground account key provisioning", () => {
-  beforeEach(() => prepare.mockReset())
+  beforeEach(() => {
+    prepare.mockReset()
+    vi.clearAllMocks()
+  })
 
   it("finishes an automatic plan without requiring a result-dialog click", async () => {
     const automatic = entry("automatic")
@@ -260,4 +267,32 @@ describe("foreground account key provisioning", () => {
       ).not.toBeInTheDocument(),
     )
   })
+
+  it.each(["confirmed", "uncertain"] as const)(
+    "reports a detached %s mutation and stops subsequent writes",
+    async (outcome) => {
+      const pending = createDeferred<any>()
+      const first = entry("first"),
+        second = entry("second")
+      first.create.mockReturnValue(pending.promise)
+      prepare.mockResolvedValue({ coveredCount: 0, entries: [first, second] })
+      const { unmount } = setup()
+      await waitFor(() => expect(first.create).toHaveBeenCalledOnce())
+      unmount()
+      await act(async () => {
+        if (outcome === "confirmed") pending.resolve({ ref: null, facts: null })
+        else
+          pending.reject(
+            new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
+          )
+      })
+      expect(second.create).not.toHaveBeenCalled()
+      if (outcome === "confirmed")
+        expect(notify.info).toHaveBeenCalledWith("1 / 2; 0")
+      else
+        expect(notify.error).toHaveBeenCalledWith(
+          "keyManagement:native.editor.feedback.uncertain",
+        )
+    },
+  )
 })
