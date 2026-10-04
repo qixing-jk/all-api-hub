@@ -289,6 +289,31 @@
     "toggleDesc": "同じサイトの同じユーザー ID が保存済みの場合に確認します。OpenRouter では同一の Management Key を確認します。",
     "toggleLabel": "重複追加前に警告する"
   },
+  "gptLoad": {
+    "description": "自己ホストの gpt-load インスタンスを管理します。軽量な Go 製 AI ゲートウェイで、リクエストをプロバイダのチャンネル間で負荷分散します。",
+    "fields": {
+      "baseUrlDesc": "gpt-load ダッシュボードのベース URL（例：https://gateway.example.com）。",
+      "baseUrlLabel": "ゲートウェイアドレス",
+      "baseUrlPlaceholder": "https://gateway.example.com",
+      "hideManagementKey": "管理キーを非表示",
+      "managementKeyDesc": "ゲートウェイのルート AUTH_KEY。管理 API へのベアラートークンとして使われ、ワークスペースのチャンネルキーと同等の権限を持ちます。",
+      "managementKeyLabel": "管理キー",
+      "managementKeyPlaceholder": "ゲートウェイ設定の AUTH_KEY",
+      "showManagementKey": "管理キーを表示"
+    },
+    "title": "gpt-load",
+    "validation": {
+      "description": "上記のキーで 1 回リクエストを送り、ゲートウェイに到達でき、キーが受け入れられることを確認します。",
+      "failed": "ゲートウェイに接続できませんでした: {{error}}",
+      "insufficientPrivilege": "管理キーの権限が不足しています: {{error}}",
+      "invalidCredential": "管理キーが拒否されました: {{error}}",
+      "missingFields": "先にゲートウェイアドレスと管理キーを入力してください",
+      "success": "接続を確認しました",
+      "title": "接続を確認",
+      "validate": "接続を確認",
+      "validating": "確認中…"
+    }
+  },
   "logging": {
     "consoleEnabled": "コンソールログを有効化",
     "consoleEnabledDesc": "無効にすると、All API Hub はエラーを含むすべてのレベルでコンソール出力を行いません。",
@@ -326,6 +351,7 @@
         "title": "セルフホスト AI ゲートウェイを設定"
       }
     },
+    "gptLoad": "gpt-load",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

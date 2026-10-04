@@ -76,6 +76,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       token: "oma_live_placeholder",
     },
   },
+  {
+    siteType: SITE_TYPES.GPT_LOAD,
+    config: {
+      baseUrl: "http://gpt-load.example.invalid:3001/",
+      managementKey: "gpt-load-management-key-placeholder",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -107,6 +114,12 @@ const getRawTargetValues = (
       ]
     case SITE_TYPES.OMNIROUTE:
       return [runtimeConfig.config.baseUrl, "admin", runtimeConfig.config.token]
+    case SITE_TYPES.GPT_LOAD:
+      return [
+        runtimeConfig.config.baseUrl,
+        "admin",
+        runtimeConfig.config.managementKey,
+      ]
     default:
       return [
         runtimeConfig.config.baseUrl,
@@ -140,6 +153,7 @@ const changeCompatibleIdentity = (
     case SITE_TYPES.SUB2API:
     case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.OMNIROUTE:
+    case SITE_TYPES.GPT_LOAD:
       return null
     default:
       return {

@@ -25,6 +25,7 @@ const {
   SUB2API,
   CLI_PROXY_API,
   OMNIROUTE,
+  GPT_LOAD,
 } = SITE_TYPES
 
 type NativeChannelTypeBySite = {
@@ -39,6 +40,9 @@ type NativeChannelTypeBySite = {
   // OmniRoute channel types are built-in provider slugs or compatible node ids,
   // so the native vocabulary is open-ended rather than a fixed enum.
   [OMNIROUTE]: string
+  // gpt-load channel types are the gateway's built-in driver ids (openai,
+  // anthropic, openai_compatible, ...), so the vocabulary is open-ended too.
+  [GPT_LOAD]: string
 }
 
 /**
@@ -77,7 +81,9 @@ const routes: readonly TypeRoute[] = [
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
     [SUB2API]: "openai",
     [OMNIROUTE]: "openai",
+    [GPT_LOAD]: "openai",
   },
+
   {
     [NEW_API]: { targetType: NewApiType.OpenAI, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.OpenAI, remappedType: true },
@@ -93,7 +99,13 @@ const routes: readonly TypeRoute[] = [
       remappedType: true,
     },
     [OMNIROUTE]: { targetType: "openai", remappedType: true },
+    [GPT_LOAD]: {
+      sourceTypes: ["openai_compatible"],
+      targetType: "openai",
+      remappedType: true,
+    },
   },
+
   {
     [NEW_API]: { targetType: NewApiType.OpenAI, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.OpenAI, remappedType: true },
@@ -133,7 +145,9 @@ const routes: readonly TypeRoute[] = [
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
     [SUB2API]: "anthropic",
     [OMNIROUTE]: "anthropic",
+    [GPT_LOAD]: "anthropic",
   },
+
   {
     [NEW_API]: { targetType: NewApiType.Anthropic, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.Anthropic, remappedType: true },
@@ -153,7 +167,13 @@ const routes: readonly TypeRoute[] = [
       remappedType: true,
     },
     [OMNIROUTE]: { targetType: "anthropic", remappedType: true },
+    [GPT_LOAD]: {
+      sourceTypes: ["claude", "antigravity"],
+      targetType: "anthropic",
+      remappedType: true,
+    },
   },
+
   {
     [NEW_API]: NewApiType.Gemini,
     [CLI_PROXY_API]: "gemini-api-key",
@@ -164,7 +184,9 @@ const routes: readonly TypeRoute[] = [
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
     [SUB2API]: "gemini",
     [OMNIROUTE]: "gemini",
+    [GPT_LOAD]: "gemini",
   },
+
   {
     [NEW_API]: { targetType: NewApiType.Gemini, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.Gemini, remappedType: true },
@@ -183,7 +205,13 @@ const routes: readonly TypeRoute[] = [
       remappedType: true,
     },
     [OMNIROUTE]: { targetType: "gemini", remappedType: true },
+    [GPT_LOAD]: {
+      sourceTypes: ["google_vertex"],
+      targetType: "gemini",
+      remappedType: true,
+    },
   },
+
   {
     [NEW_API]: NewApiType.VertexAi,
     [VELOERA]: VeloeraType.VertexAi,
@@ -204,7 +232,9 @@ const routes: readonly TypeRoute[] = [
     [DONE_HUB]: DoneHubType.DeepSeek,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
     [OMNIROUTE]: "deepseek",
+    [GPT_LOAD]: "deepseek",
   },
+
   {
     [NEW_API]: { targetType: NewApiType.DeepSeek, remappedType: true },
     [VELOERA]: { targetType: VeloeraType.DeepSeek, remappedType: true },
@@ -224,7 +254,9 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Azure,
     [VELOERA]: VeloeraType.Azure,
     [DONE_HUB]: DoneHubType.AzureOpenAI,
+    [GPT_LOAD]: "azure_openai",
   },
+
   {
     [NEW_API]: NewApiType.Ollama,
     [VELOERA]: VeloeraType.Ollama,
@@ -273,13 +305,17 @@ const routes: readonly TypeRoute[] = [
     [NEW_API]: NewApiType.Zhipu,
     [VELOERA]: VeloeraType.Zhipu,
     [DONE_HUB]: DoneHubType.Zhipu,
+    [GPT_LOAD]: "zhipuai",
   },
+
   {
     [NEW_API]: NewApiType.Ali,
     [VELOERA]: VeloeraType.Ali,
     [DONE_HUB]: DoneHubType.Ali,
     [OMNIROUTE]: "alibaba",
+    [GPT_LOAD]: "alibaba",
   },
+
   {
     [NEW_API]: NewApiType.Xunfei,
     [VELOERA]: VeloeraType.Xunfei,
@@ -296,7 +332,9 @@ const routes: readonly TypeRoute[] = [
     [DONE_HUB]: DoneHubType.OpenRouter,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
     [OMNIROUTE]: "openrouter",
+    [GPT_LOAD]: "openrouter",
   },
+
   {
     [NEW_API]: NewApiType.AIProxyLibrary,
     [VELOERA]: VeloeraType.AiProxyLibrary,
@@ -315,7 +353,9 @@ const routes: readonly TypeRoute[] = [
     [VELOERA]: VeloeraType.Moonshot,
     [DONE_HUB]: DoneHubType.Moonshot,
     [OMNIROUTE]: "moonshot",
+    [GPT_LOAD]: "moonshotai",
   },
+
   {
     [NEW_API]: NewApiType.Zhipu_v4,
   },
@@ -331,13 +371,17 @@ const routes: readonly TypeRoute[] = [
   {
     [NEW_API]: NewApiType.Aws,
     [VELOERA]: VeloeraType.Aws,
+    [GPT_LOAD]: "aws_bedrock",
   },
+
   {
     [NEW_API]: NewApiType.Cohere,
     [VELOERA]: VeloeraType.Cohere,
     [DONE_HUB]: DoneHubType.Cohere,
     [OMNIROUTE]: "cohere",
+    [GPT_LOAD]: "cohere",
   },
+
   {
     [NEW_API]: NewApiType.MiniMax,
     [VELOERA]: VeloeraType.MiniMax,
@@ -368,13 +412,17 @@ const routes: readonly TypeRoute[] = [
     [VELOERA]: VeloeraType.SiliconFlow,
     [DONE_HUB]: DoneHubType.SiliconFlow,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
+    [GPT_LOAD]: "siliconflow",
   },
+
   {
     [NEW_API]: NewApiType.Mistral,
     [VELOERA]: VeloeraType.Mistral,
     [DONE_HUB]: DoneHubType.Mistral,
     [OMNIROUTE]: "mistral",
+    [GPT_LOAD]: "mistral",
   },
+
   {
     [NEW_API]: NewApiType.MokaAI,
     [VELOERA]: VeloeraType.MokaAI,
@@ -384,7 +432,9 @@ const routes: readonly TypeRoute[] = [
     [VELOERA]: VeloeraType.VolcEngine,
     [OCTOPUS]: OctopusType.Volcengine,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
+    [GPT_LOAD]: "volcengine",
   },
+
   {
     [NEW_API]: NewApiType.BaiduV2,
     [VELOERA]: VeloeraType.BaiduV2,
@@ -401,7 +451,9 @@ const routes: readonly TypeRoute[] = [
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.XAI,
     [SUB2API]: "grok",
     [OMNIROUTE]: "xai",
+    [GPT_LOAD]: "xai",
   },
+
   {
     [NEW_API]: NewApiType.Coze,
     [DONE_HUB]: DoneHubType.Coze,
@@ -435,7 +487,9 @@ const routes: readonly TypeRoute[] = [
     [CLI_PROXY_API]: "codex-api-key",
     [DONE_HUB]: DoneHubType.Codex,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
+    [GPT_LOAD]: "codex",
   },
+
   {
     [NEW_API]: NewApiType.AdvancedCustom,
   },

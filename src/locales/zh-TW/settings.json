@@ -289,6 +289,31 @@
     "toggleDesc": "同一站台的使用者 ID 已儲存時才提示確認。OpenRouter 依相同的 Management Key 判斷重複。",
     "toggleLabel": "新增重複帳號前提醒"
   },
+  "gptLoad": {
+    "description": "管理自架設的 gpt-load 執行個體：一款輕量 Go AI 閘道，會在各渠道間對請求做負載平衡。",
+    "fields": {
+      "baseUrlDesc": "gpt-load 控制面板的基底位址（例如 https://gateway.example.com）。",
+      "baseUrlLabel": "閘道位址",
+      "baseUrlPlaceholder": "https://gateway.example.com",
+      "hideManagementKey": "隱藏管理金鑰",
+      "managementKeyDesc": "閘道的根 AUTH_KEY，以 Bearer 權杖存取管理 API；與工作區任一渠道金鑰具同等權限。",
+      "managementKeyLabel": "管理金鑰",
+      "managementKeyPlaceholder": "閘道設定中的 AUTH_KEY",
+      "showManagementKey": "顯示管理金鑰"
+    },
+    "title": "gpt-load",
+    "validation": {
+      "description": "使用上方金鑰發送一次請求，驗證閘道可連線且金鑰有效。",
+      "failed": "無法連線閘道：{{error}}",
+      "insufficientPrivilege": "管理金鑰權限不足：{{error}}",
+      "invalidCredential": "管理金鑰被拒絕：{{error}}",
+      "missingFields": "請先填寫閘道位址與管理金鑰",
+      "success": "連線驗證成功",
+      "title": "測試連線",
+      "validate": "測試連線",
+      "validating": "檢測中…"
+    }
+  },
   "logging": {
     "consoleEnabled": "啟用控制台日誌",
     "consoleEnabledDesc": "關閉後，All API Hub 不會在瀏覽器控制台輸出任何日誌（包括錯誤）。",
@@ -326,6 +351,7 @@
         "title": "設定自建 AI 閘道"
       }
     },
+    "gptLoad": "gpt-load",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

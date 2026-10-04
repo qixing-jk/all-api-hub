@@ -192,6 +192,23 @@
         "label": "Zusätzliches Modellpräfix",
         "placeholder": "z. B. deepseek"
       },
+      "gptLoadBaseUrl": {
+        "help": "The upstream address this channel forwards requests to. Leave it empty on a known provider to let the gateway use the provider's own endpoint."
+      },
+      "gptLoadKey": {
+        "help": "A key this group can use. The gateway keeps a per-group credential pool: add rows here to import a key and remove rows to drop it."
+      },
+      "gptLoadPriceMultiplier": {
+        "help": "Scales the channel's reported cost for balance and rate accounting (for example 1.5).",
+        "label": "Price multiplier"
+      },
+      "gptLoadProvider": {
+        "help": "The gpt-load driver id for this channel (for example openai, anthropic, gemini). Use the load button to read the drivers your gateway actually ships."
+      },
+      "gptLoadWeight": {
+        "help": "A manual load-balancing weight. Higher values draw proportionally more traffic; leave empty to use the gateway default.",
+        "label": "Weight"
+      },
       "manualModels": {
         "label": "Manuelle Modelle"
       },

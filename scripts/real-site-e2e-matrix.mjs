@@ -145,6 +145,15 @@ const REAL_SITE_E2E_MATRIX = [
     spec: "e2e/realSite/cliProxyApiProviders.spec.ts",
   },
   {
+    id: "gpt-load-managed-site",
+    category: REAL_SITE_E2E_CATEGORIES.managedSite,
+    label: "Managed Site / gpt-load Groups",
+    env_prefix: "GPT_LOAD",
+    kind: "managed-site",
+    managed_site_target: "gpt-load",
+    spec: "e2e/realSite/gptLoadGroups.spec.ts",
+  },
+  {
     id: "nutstore-webdav",
     category: REAL_SITE_E2E_CATEGORIES.webdav,
     label: "WebDAV / Nutstore",

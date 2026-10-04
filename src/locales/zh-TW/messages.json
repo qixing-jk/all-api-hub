@@ -113,6 +113,10 @@
       "userIdNumeric": "使用者 ID 必須是數字"
     }
   },
+  "gptLoad": {
+    "configMissing": "請先在設定中設定 gpt-load 部署位址與管理金鑰",
+    "noChannelsToSync": "沒有可同步的渠道"
+  },
   "grsai": {
     "openApiTokenRejected": "這是 Grsai 使用者資訊頁顯示的 Token，它是給平台開放介面用的，主控台並不會接受它。請用「自動識別」讀取已登入的主控台工作階段，或改為貼上主控台工作階段 token。",
     "sessionExpired": "儲存的 Grsai 主控台工作階段已過期（一次工作階段約 30 天）。請先在 Grsai 主控台重新登入，再用「自動識別」重新新增帳號。"

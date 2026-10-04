@@ -78,6 +78,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.claudeCodeHub"
   | "settings:managedSite.sub2api"
   | "settings:managedSite.omniroute"
+  | "settings:managedSite.gptLoad"
 
 export type ManagedSiteMessagesKey =
   | "cliProxyApi"
@@ -89,6 +90,7 @@ export type ManagedSiteMessagesKey =
   | "claudecodehub"
   | "sub2api"
   | "omniroute"
+  | "gptLoad"
 
 export interface ManagedResourceProductPolicy {
   /** Official upstream installation or quick-start guide. */

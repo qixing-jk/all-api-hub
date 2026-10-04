@@ -75,6 +75,7 @@
     "e2e:cdp:ai-router": "node scripts/test-ai-router-e2e-live.mjs",
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
     "e2e:cdp:omniroute": "node scripts/test-omniroute-e2e-live.mjs",
+    "e2e:cdp:gpt-load": "node scripts/test-gpt-load-e2e-live.mjs",
     "e2e:cdp:kimi": "node scripts/test-kimi-e2e-live.mjs",
     "e2e:cdp:grsai": "node scripts/test-grsai-e2e-live.mjs",
     "prepare": "husky"

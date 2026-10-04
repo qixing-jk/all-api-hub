@@ -156,6 +156,7 @@
 | Claude Code Hub | 面向团队的多供应商 AI API 代理与运营平台，统一接入 Claude、OpenAI Compatible、Codex 与 Gemini，并支持弹性调度、监控与价格管理。 | [GitHub](https://github.com/ding113/claude-code-hub) |
 | Octopus | 面向个人的 LLM API 聚合服务。 | [GitHub](https://github.com/bestruirui/octopus) |
 | [OmniRoute](./omniroute-integration.md) | 自建 AI 网关，内置大量 provider，支持作用域访问令牌与连接级上游地址覆盖。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | 自建 AI 网关（Go 编写），分组即渠道驱动＋密钥池，架构轻量、内置驱动丰富。 | [GitHub](https://github.com/tbphp/gpt-load) |
 | Veloera | 本项目已停止维护。 | [GitHub](https://github.com/Veloera/Veloera) |
 | DoneHub | 本项目是基于 one-hub 二次开发而来的。 | [GitHub](https://github.com/deanxv/done-hub) |
 

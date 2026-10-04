@@ -83,6 +83,10 @@ import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
+import {
+  DEFAULT_GPT_LOAD_CONFIG,
+  type GptLoadConfig,
+} from "~/types/gptLoadConfig"
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import {
@@ -302,6 +306,8 @@ interface UserPreferencesContextType {
   sub2ApiManagedSiteAdminToken: string
   omniRouteBaseUrl: string
   omniRouteToken: string
+  gptLoadBaseUrl: string
+  gptLoadManagementKey: string
   managedSiteType: ManagedSiteType
   cliProxyApiBaseUrl: string
   cliProxyApiManagementKey: string
@@ -532,6 +538,19 @@ interface UserPreferencesContextType {
   resetAxonHubConfig: () => PreferenceWritePromise
   resetClaudeCodeHubConfig: () => PreferenceWritePromise
   resetSub2ApiManagedSiteConfig: () => PreferenceWritePromise
+  updateGptLoadBaseUrl: (
+    baseUrl: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateGptLoadManagementKey: (
+    managementKey: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateGptLoadConfig: (
+    updates: Partial<GptLoadConfig>,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  resetGptLoadConfig: () => PreferenceWritePromise
   resetOmniRouteConfig: () => PreferenceWritePromise
   resetNewApiModelSyncConfig: () => PreferenceWritePromise
   resetCliProxyApiConfig: () => PreferenceWritePromise
@@ -1346,6 +1365,24 @@ export const UserPreferencesProvider = ({
     [persistPreferenceUpdates],
   )
 
+  const updateGptLoadBaseUrl = useCallback(
+    async (baseUrl: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ gptLoad: { baseUrl } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateGptLoadManagementKey = useCallback(
+    async (managementKey: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ gptLoad: { managementKey } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateGptLoadConfig = useCallback(
+    async (updates: Partial<GptLoadConfig>, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ gptLoad: updates }, options),
+    [persistPreferenceUpdates],
+  )
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const result = await userPreferences.updateManagedSiteType(siteType)
@@ -1849,6 +1886,16 @@ export const UserPreferencesProvider = ({
     return result
   }, [reloadPreferencesAndTrackSnapshots])
 
+  const resetGptLoadConfig = useCallback(async () => {
+    const result = await userPreferences.resetGptLoadConfig()
+    if (result.ok) {
+      await reloadPreferencesAndTrackSnapshots({
+        gptLoad: DEFAULT_GPT_LOAD_CONFIG,
+      })
+    }
+    return result
+  }, [reloadPreferencesAndTrackSnapshots])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const result = await userPreferences.resetNewApiModelSyncConfig()
     if (
@@ -2072,6 +2119,11 @@ export const UserPreferencesProvider = ({
       preferences?.omniroute?.baseUrl || DEFAULT_OMNIROUTE_CONFIG.baseUrl,
     omniRouteToken:
       preferences?.omniroute?.token || DEFAULT_OMNIROUTE_CONFIG.token,
+    gptLoadBaseUrl:
+      preferences?.gptLoad?.baseUrl || DEFAULT_GPT_LOAD_CONFIG.baseUrl,
+    gptLoadManagementKey:
+      preferences?.gptLoad?.managementKey ||
+      DEFAULT_GPT_LOAD_CONFIG.managementKey,
     managedSiteType: preferences?.managedSiteType || SITE_TYPES.NEW_API,
     cliProxyApiBaseUrl: preferences?.cliProxyApi?.baseUrl || "",
     cliProxyApiManagementKey: preferences?.cliProxyApi?.adminToken || "",
@@ -2171,6 +2223,10 @@ export const UserPreferencesProvider = ({
     resetAxonHubConfig,
     resetClaudeCodeHubConfig,
     resetSub2ApiManagedSiteConfig,
+    updateGptLoadBaseUrl,
+    updateGptLoadManagementKey,
+    updateGptLoadConfig,
+    resetGptLoadConfig,
     resetOmniRouteConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyApiConfig,

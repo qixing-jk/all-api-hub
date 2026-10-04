@@ -63,6 +63,20 @@ function selectedIds(matrix: ReturnType<typeof runMatrix>) {
 }
 
 describe("GitHub real-site E2E matrix selection", () => {
+  it("registers gpt-load as an independent managed-site regression target", () => {
+    expect(runMatrix("managed-site", "gpt-load-managed-site").include).toEqual([
+      expect.objectContaining({
+        id: "gpt-load-managed-site",
+        env_prefix: "GPT_LOAD",
+        managed_site_target: "gpt-load",
+        spec: "e2e/realSite/gptLoadGroups.spec.ts",
+      }),
+    ])
+    const output = runMatrixWithOutput("managed-site", "gpt-load-managed-site")
+    expect(atIndex(output, "has_parallel")).toBe("true")
+    expect(atIndex(output, "has_new_api")).toBe("false")
+    expect(atIndex(output, "has_sub2api")).toBe("false")
+  })
   it("registers CLIProxyAPI as an independent managed-site target", () => {
     expect(runMatrix("managed-site", "cli-proxy-api").include).toEqual([
       expect.objectContaining({

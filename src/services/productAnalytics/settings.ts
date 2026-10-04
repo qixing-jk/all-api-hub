@@ -182,7 +182,8 @@ function isManagedSiteType(
     value === SITE_TYPES.CLAUDE_CODE_HUB ||
     value === SITE_TYPES.CLI_PROXY_API ||
     value === SITE_TYPES.SUB2API ||
-    value === SITE_TYPES.OMNIROUTE
+    value === SITE_TYPES.OMNIROUTE ||
+    value === SITE_TYPES.GPT_LOAD
   )
 }
 
@@ -230,6 +231,12 @@ function isCliProxyApiConfigured(
 
 function isOmniRouteConfigured(config: UserPreferences["omniroute"]): boolean {
   return Boolean(config && hasText(config.baseUrl) && hasText(config.token))
+}
+
+function isGptLoadConfigured(config: UserPreferences["gptLoad"]): boolean {
+  return Boolean(
+    config && hasText(config.baseUrl) && hasText(config.managementKey),
+  )
 }
 
 function isClaudeCodeRouterConfigured(
@@ -455,6 +462,7 @@ function buildManagedSiteSnapshot(
     ),
     cli_proxy_configured: isCliProxyApiConfigured(preferences.cliProxyApi),
     omniroute_configured: isOmniRouteConfigured(preferences.omniroute),
+    gpt_load_configured: isGptLoadConfigured(preferences.gptLoad),
     claude_code_router_configured: isClaudeCodeRouterConfigured(
       preferences.claudeCodeRouter,
     ),
@@ -754,6 +762,7 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
     "axonHub" in patch ||
     "claudeCodeHub" in patch ||
     "omniroute" in patch ||
+    "gptLoad" in patch ||
     "cliProxyApi" in patch ||
     "claudeCodeRouter" in patch
   ) {

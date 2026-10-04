@@ -3,6 +3,7 @@ import type { TFunction } from "i18next"
 import { AXON_HUB_CHANNEL_FIELD_IDS } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCodeHub"
 import { DONE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/doneHub"
+import { GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/gptLoad"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
 import { OCTOPUS_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/octopus"
 import {
@@ -270,6 +271,14 @@ const nativeTablePresentationPolicies: Partial<
         [OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.LastError]: (t) =>
           t("managedSiteChannels:editor.fields.omnirouteLastError.label"),
       },
+    },
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
+  },
+  [SITE_TYPES.GPT_LOAD]: {
+    semantics: {
+      baseUrlFieldId: GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS.Status,
     },
     defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,

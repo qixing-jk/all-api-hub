@@ -15,6 +15,7 @@ Confirmed source-available targets in this suite:
 - DoneHub: Go server source, web source, Docker/deployment files.
 - Veloera: Go server source, web source, Docker/deployment files.
 - Sub2API: dedicated auth model and real-site helper.
+- gpt-load: Go control plane, embedded web UI, runnable source build and Docker deployment.
 
 Provider compatibility checks:
 
@@ -65,6 +66,55 @@ Run all real-site specs:
 ```bash
 pnpm e2e:real-site
 ```
+
+## gpt-load managed gateway
+
+The managed-site matrix includes `gpt-load-managed-site`, using
+`gptLoadGroups.spec.ts` and the shared extension fixture. It requires the root
+management key, not a downstream access key:
+
+```env
+AAH_E2E_GPT_LOAD_BASE_URL=http://127.0.0.1:3001
+AAH_E2E_GPT_LOAD_MANAGEMENT_KEY=replace-with-AUTH_KEY
+```
+
+The spec creates a uniquely named group through the extension with two
+nonfunctional keys and an `.invalid` upstream. It verifies native settings,
+credential IDs and models, renames the group and appends a key through the UI,
+checks preservation, then deletes through the UI and verifies cleanup. On
+failure, native cleanup deletes only that run's assigned group ID (or exact
+unique name after a lost create response). Authenticated traces, videos and
+screenshots stay disabled. This tests the management contract, not inference.
+The target is independent of account-test credentials.
+
+For a repeatable disposable backend, use the server source revision verified
+with this suite: `tbphp/gpt-load@82115ac676216bdcafde921e610cc03ce67118ad`
+(reports `2.0.0-dev`). Use the Go toolchain declared in its `go.mod`; this
+revision includes the embedded management UI and can run without Docker:
+
+```bash
+git clone https://github.com/tbphp/gpt-load.git gpt-load-e2e
+cd gpt-load-e2e
+git checkout 82115ac676216bdcafde921e610cc03ce67118ad
+go build -o gpt-load-e2e .
+PORT=3001 DATA_DIR=./e2e-data AUTH_KEY=disposable-test-admin ./gpt-load-e2e
+# In another terminal: curl http://127.0.0.1:3001/health
+```
+
+Use a free port and a new data directory; do not reuse an operator's database.
+Set the two test variables to this instance, then run from all-api-hub:
+
+```bash
+AAH_E2E_REAL_SITE_CATEGORY=managed-site AAH_E2E_MANAGED_SITE_TARGET=gpt-load pnpm exec playwright test e2e/realSite/gptLoadGroups.spec.ts --project=chromium --workers=1
+```
+
+`pnpm e2e:real-site:managed-site` also includes this target. CI uses the same
+matrix and `AAH_E2E_GPT_LOAD_BASE_URL` / `AAH_E2E_GPT_LOAD_MANAGEMENT_KEY`
+secrets; it reports missing configuration explicitly. After a local run, stop
+only the disposable process you started and remove its run-owned `e2e-data`
+directory if no longer needed. The spec itself verifies group cleanup.
+Hosted forks still need deployment-specific checks. The dedicated
+`pnpm e2e:cdp:gpt-load` runner separately tests the live development browser.
 
 Run one real-site category locally:
 

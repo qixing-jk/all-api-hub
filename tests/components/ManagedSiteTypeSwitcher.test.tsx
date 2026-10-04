@@ -186,6 +186,7 @@ describe("ManagedSiteTypeSwitcher", () => {
       "settings:managedSite.veloera",
       "settings:managedSite.doneHub",
       "settings:managedSite.omniroute",
+      "settings:managedSite.gptLoad",
     ])
   })
 
