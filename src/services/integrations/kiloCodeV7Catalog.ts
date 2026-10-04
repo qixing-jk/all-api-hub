@@ -23,6 +23,8 @@ export type KiloCodeProviderNpm =
   (typeof KILO_CODE_PROVIDER_PROTOCOL_NPM)[KiloCodeProviderProtocol]
 
 export interface KiloCodeRuntimeKeyExportInput {
+  /** Used only for model discovery within the extension. */
+  requestHeaders?: Record<string, string>
   accountId: string
   siteName: string
   baseUrl: string

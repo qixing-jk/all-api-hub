@@ -718,6 +718,14 @@ const _fetchApiWithMapper = async <T, TResult>(
         )
       }
 
+      // Credential overrides are owned by extension fetch. Do not silently
+      // retry through a page context that cannot honor their UA isolation.
+      if (
+        request.requestHeaders &&
+        Object.keys(request.requestHeaders).length
+      ) {
+        return await primaryRequest()
+      }
       if (dispatchedContext.forceTempWindow) return await fallback()
 
       return await executeWithCurrentTabContentPreference<T, TResult>(

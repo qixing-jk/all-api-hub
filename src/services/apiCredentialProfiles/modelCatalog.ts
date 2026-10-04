@@ -15,6 +15,7 @@ interface FetchApiCredentialModelCatalogParams {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   abortSignal?: AbortSignal
 }
 
@@ -31,6 +32,9 @@ export async function fetchApiCredentialModelIds(
     return fetchOpenAICompatibleModelIds({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
+      ...(params.requestHeaders
+        ? { requestHeaders: params.requestHeaders }
+        : {}),
       abortSignal: params.abortSignal,
     })
   }
@@ -39,6 +43,9 @@ export async function fetchApiCredentialModelIds(
     return fetchAnthropicModelIds({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
+      ...(params.requestHeaders
+        ? { requestHeaders: params.requestHeaders }
+        : {}),
       abortSignal: params.abortSignal,
     })
   }
@@ -47,6 +54,9 @@ export async function fetchApiCredentialModelIds(
     return fetchGoogleModelIds({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
+      ...(params.requestHeaders
+        ? { requestHeaders: params.requestHeaders }
+        : {}),
       abortSignal: params.abortSignal,
     })
   }

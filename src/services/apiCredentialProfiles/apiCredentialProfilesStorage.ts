@@ -19,6 +19,7 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkStorage"
 import { coerceApiCredentialTelemetryCustomEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
 import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetrySnapshotCodec"
+import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -62,6 +63,7 @@ export type ApiCredentialProfileCreateInput = {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   tagIds?: string[]
   notes?: string
   sourceUrl?: string
@@ -385,7 +387,9 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
       isSameTelemetryConfig(newerTelemetryConfig, telemetryConfig)
         ? newer.telemetrySnapshot
         : undefined,
-      isSameTelemetryConfig(olderTelemetryConfig, telemetryConfig)
+      isSameTelemetryConfig(olderTelemetryConfig, telemetryConfig) &&
+        JSON.stringify(normalizeHeaderOverrides(older.requestHeaders)) ===
+          JSON.stringify(normalizeHeaderOverrides(newer.requestHeaders))
         ? older.telemetrySnapshot
         : undefined,
     )
@@ -505,6 +509,9 @@ export function coerceApiCredentialProfilesConfigWithRemap(
       apiType,
       baseUrl,
       apiKey,
+      ...(candidate.requestHeaders !== undefined
+        ? { requestHeaders: normalizeHeaderOverrides(candidate.requestHeaders) }
+        : {}),
       tagIds,
       notes: notes.trim(),
       ...(sourceUrl !== undefined ? { sourceUrl } : {}),
@@ -633,6 +640,9 @@ const createNormalizedProfile = (
     apiType: input.apiType,
     baseUrl: normalizedBaseUrl,
     apiKey: normalizedKey,
+    ...(input.requestHeaders !== undefined
+      ? { requestHeaders: normalizeHeaderOverrides(input.requestHeaders) }
+      : {}),
     tagIds: normalizeTagIdList(input.tagIds),
     notes: typeof input.notes === "string" ? input.notes.trim() : "",
     ...(sourceUrl !== undefined ? { sourceUrl } : {}),
@@ -1227,7 +1237,7 @@ class ApiCredentialProfilesStorageService {
     id: string,
     updates: ApiCredentialProfileUpdateInput,
   ): Promise<ApiCredentialProfile> {
-    const { profile, hasCredentialIdentityChanged, profileIdRemap } =
+    const { profile, hasRequestContextChanged, profileIdRemap } =
       await this.withStorageWriteLock(async () => {
         const config = cloneConfig(await this.readConfig())
         const profiles = Array.isArray(config.profiles) ? config.profiles : []
@@ -1284,6 +1294,12 @@ class ApiCredentialProfilesStorageService {
           nextTelemetryConfig,
           currentTelemetryConfig,
         )
+        const nextRequestHeaders = normalizeHeaderOverrides(
+          updates.requestHeaders ?? current.requestHeaders,
+        )
+        const hasRequestHeadersChanged =
+          JSON.stringify(nextRequestHeaders) !==
+          JSON.stringify(normalizeHeaderOverrides(current.requestHeaders))
         const nextExpiresAt =
           updates.expiresAt !== undefined
             ? coerceOptionalTimestamp(updates.expiresAt)
@@ -1297,6 +1313,9 @@ class ApiCredentialProfilesStorageService {
           apiType: nextApiType,
           baseUrl: nextBaseUrl,
           apiKey: nextApiKey,
+          ...(updates.requestHeaders !== undefined || current.requestHeaders
+            ? { requestHeaders: nextRequestHeaders }
+            : {}),
           tagIds:
             updates.tagIds !== undefined
               ? normalizeTagIdList(updates.tagIds)
@@ -1320,7 +1339,8 @@ class ApiCredentialProfilesStorageService {
             nextApiType !== current.apiType ||
             nextBaseUrl !== current.baseUrl ||
             nextApiKey !== current.apiKey ||
-            hasTelemetryConfigChanged
+            hasTelemetryConfigChanged ||
+            hasRequestHeadersChanged
               ? undefined
               : current.telemetrySnapshot,
           updatedAt: Date.now(),
@@ -1371,7 +1391,8 @@ class ApiCredentialProfilesStorageService {
 
         return {
           profile: resolveSaved(),
-          hasCredentialIdentityChanged,
+          hasRequestContextChanged:
+            hasCredentialIdentityChanged || hasRequestHeadersChanged,
           profileIdRemap,
         }
       })
@@ -1381,7 +1402,7 @@ class ApiCredentialProfilesStorageService {
     // are handed over in one call so the verification store removes before it
     // remaps; doing it in two calls would lose the twin's results.
     await reconcileVerificationOwners({
-      removeProfileIds: hasCredentialIdentityChanged ? [id] : [],
+      removeProfileIds: hasRequestContextChanged ? [id] : [],
       remapProfileIds: profileIdRemap,
     })
 
@@ -1394,6 +1415,7 @@ class ApiCredentialProfilesStorageService {
   async updateTelemetrySnapshot(
     id: string,
     snapshot: ApiCredentialTelemetrySnapshot,
+    expectedProfile?: ApiCredentialProfile,
   ): Promise<ApiCredentialProfile> {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await this.readConfig())
@@ -1402,6 +1424,20 @@ class ApiCredentialProfilesStorageService {
       if (!current) {
         throw new Error("Profile not found.")
       }
+
+      if (
+        expectedProfile &&
+        (getIdentityKey(current) !== getIdentityKey(expectedProfile) ||
+          JSON.stringify(normalizeHeaderOverrides(current.requestHeaders)) !==
+            JSON.stringify(
+              normalizeHeaderOverrides(expectedProfile.requestHeaders),
+            ) ||
+          !isSameTelemetryConfig(
+            coerceApiCredentialTelemetryConfig(current.telemetryConfig),
+            coerceApiCredentialTelemetryConfig(expectedProfile.telemetryConfig),
+          ))
+      )
+        return current
 
       const telemetrySnapshot = coerceTelemetrySnapshot(snapshot)
       if (!telemetrySnapshot) {

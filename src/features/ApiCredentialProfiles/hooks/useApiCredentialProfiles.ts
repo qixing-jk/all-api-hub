@@ -21,6 +21,7 @@ type CreateProfileInput = {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   tagIds?: string[]
   notes?: string
   sourceUrl?: string

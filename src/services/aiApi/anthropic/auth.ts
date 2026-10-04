@@ -74,6 +74,7 @@ function replaceAnthropicCredential(
 export function createAnthropicSdkAuth(
   baseUrl: string,
   apiKey: string,
+  requestHeaders?: Record<string, string>,
 ): AnthropicSdkAuthConfig {
   const initialMode = getAnthropicAuthMode(baseUrl)
 
@@ -82,6 +83,7 @@ export function createAnthropicSdkAuth(
     // can initialize without reading unavailable environment variables.
     apiKey,
     fetch: createUnauthorizedFallbackFetch({
+      requestHeaders,
       initialMode,
       fallbackMode: ANTHROPIC_AUTH_MODES.Bearer,
       replaceCredential: (request, mode) =>

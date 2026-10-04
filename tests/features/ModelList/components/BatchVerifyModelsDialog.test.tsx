@@ -258,6 +258,7 @@ describe("BatchVerifyModelsDialog", () => {
     const user = userEvent.setup()
     const profile = {
       id: "profile-mode",
+      requestHeaders: { "x-client": "batch-profile" },
       name: "Profile",
       baseUrl: "https://example.invalid",
       apiKey: "sk-synthetic",
@@ -306,7 +307,11 @@ describe("BatchVerifyModelsDialog", () => {
     )
     for (const modelId of ["gpt-a", "gpt-b"]) {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
-        expect.objectContaining({ modelId, mode: "non-streaming" }),
+        expect.objectContaining({
+          modelId,
+          mode: "non-streaming",
+          requestHeaders: { "x-client": "batch-profile" },
+        }),
       )
       expect(
         await screen.findByTestId(

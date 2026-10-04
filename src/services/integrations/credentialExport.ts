@@ -13,6 +13,8 @@ export interface CredentialExportData {
  * needs it. Resource inventories and account authentication stay with its owner.
  */
 export interface CredentialExportSource {
+  /** Headers for model discovery inside the extension, not external configuration. */
+  requestHeaders?: Record<string, string>
   /** Stable credential selection identity, including native scope when present. */
   id: string
   /** Provider identity used by account/profile-based desktop integrations. */

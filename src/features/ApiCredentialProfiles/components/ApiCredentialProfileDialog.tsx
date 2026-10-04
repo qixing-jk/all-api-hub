@@ -1,4 +1,4 @@
-import { KeyRound, Pencil, Plus } from "lucide-react"
+import { KeyRound, Pencil, Plus, X } from "lucide-react"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -28,6 +28,11 @@ import {
   isSupportedApiCredentialTelemetryEndpoint,
   type ApiCredentialTelemetryJsonPathField,
 } from "~/services/apiCredentialProfiles/telemetryConfig"
+import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import {
+  OPTIONAL_PERMISSION_IDS,
+  requestPermissionDetailed,
+} from "~/services/permissions/permissionManager"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -68,6 +73,7 @@ type SaveProfileInput = {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   tagIds: string[]
   notes: string
   sourceUrl: string
@@ -143,6 +149,9 @@ export function ApiCredentialProfileDialog({
   )
   const [baseUrl, setBaseUrl] = useState("")
   const [apiKey, setApiKey] = useState("")
+  const [requestHeaderRows, setRequestHeaderRows] = useState<
+    Array<{ id: number; name: string; value: string }>
+  >([])
   const [tagIds, setTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
   const [sourceUrl, setSourceUrl] = useState("")
@@ -162,6 +171,7 @@ export function ApiCredentialProfileDialog({
     name?: string
     baseUrl?: string
     apiKey?: string
+    requestHeaders?: string
     telemetryEndpoint?: string
     telemetryJsonPaths?: string
   }>({})
@@ -188,6 +198,11 @@ export function ApiCredentialProfileDialog({
       setApiType(profile.apiType)
       setBaseUrl(profile.baseUrl ?? "")
       setApiKey(profile.apiKey ?? "")
+      setRequestHeaderRows(
+        Object.entries(profile.requestHeaders ?? {}).map(
+          ([name, value], id) => ({ id, name, value }),
+        ),
+      )
       setTagIds(profile.tagIds ?? [])
       setNotes(profile.notes ?? "")
       setSourceUrl(profile.sourceUrl ?? "")
@@ -207,6 +222,7 @@ export function ApiCredentialProfileDialog({
     setApiType(API_TYPES.OPENAI_COMPATIBLE)
     setBaseUrl(addPrefill?.baseUrl ?? "")
     setApiKey("")
+    setRequestHeaderRows([])
     setTagIds([])
     setNotes("")
     setSourceUrl("")
@@ -257,6 +273,21 @@ export function ApiCredentialProfileDialog({
       label: labels[field],
     }))
   }, [t])
+
+  const buildRequestHeaders = () => {
+    const rows = requestHeaderRows.filter(
+      ({ name, value }) => name.trim() || value.trim(),
+    )
+    const names = rows.map(({ name }) => name.trim().toLowerCase())
+    if (new Set(names).size !== names.length) {
+      throw new Error(
+        t("apiCredentialProfiles:dialog.errors.requestHeadersInvalid"),
+      )
+    }
+    return normalizeHeaderOverrides(
+      Object.fromEntries(rows.map(({ name, value }) => [name, value])),
+    )
+  }
 
   const validate = () => {
     const nextErrors: typeof errors = {}
@@ -314,6 +345,13 @@ export function ApiCredentialProfileDialog({
       }
     }
 
+    try {
+      buildRequestHeaders()
+    } catch {
+      nextErrors.requestHeaders = t(
+        "apiCredentialProfiles:dialog.errors.requestHeadersInvalid",
+      )
+    }
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0 ? normalizedBaseUrl : null
   }
@@ -366,12 +404,33 @@ export function ApiCredentialProfileDialog({
 
     setIsSaving(true)
     try {
+      const requestHeaders = buildRequestHeaders()
+      if (
+        requestHeaders["user-agent"] !== undefined &&
+        import.meta.env.BROWSER !== "firefox"
+      ) {
+        // Request from the Save gesture; background refreshes never prompt.
+        const result = await requestPermissionDetailed(
+          OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
+        )
+        if (!result.success) {
+          setErrors({
+            requestHeaders: t(
+              "apiCredentialProfiles:dialog.errors.userAgentPermission",
+            ),
+          })
+          return
+        }
+      }
       await onSave({
         id: profile?.id,
         name: name.trim(),
         apiType,
         baseUrl: normalizedBaseUrl,
         apiKey: apiKey.trim(),
+        ...(requestHeaderRows.length || profile?.requestHeaders
+          ? { requestHeaders }
+          : {}),
         tagIds,
         notes: notes.trim(),
         sourceUrl: sourceUrl.trim(),
@@ -825,6 +884,122 @@ export function ApiCredentialProfileDialog({
               </div>
             </details>
           )}
+
+          <details
+            open={requestHeaderRows.length > 0}
+            className="border-border py-density-3 rounded-lg border px-3"
+          >
+            <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
+              {t("apiCredentialProfiles:dialog.requestHeaders.title")}
+            </summary>
+            <div className="mt-density-3 space-y-density-3">
+              {requestHeaderRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="gap-density-3 grid grid-cols-[minmax(0,1fr)_auto] items-end sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto]"
+                >
+                  <FormField
+                    className="col-span-2 min-w-0 sm:col-span-1"
+                    label={t(
+                      "apiCredentialProfiles:dialog.requestHeaders.name",
+                    )}
+                    htmlFor={`api-credential-header-name-${row.id}`}
+                  >
+                    <Input
+                      id={`api-credential-header-name-${row.id}`}
+                      containerClassName="w-full"
+                      placeholder="User-Agent"
+                      value={row.name}
+                      disabled={isSaving}
+                      onChange={(event) =>
+                        setRequestHeaderRows((rows) =>
+                          rows.map((item) =>
+                            item.id === row.id
+                              ? { ...item, name: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <FormField
+                    className="min-w-0"
+                    label={t(
+                      "apiCredentialProfiles:dialog.requestHeaders.value",
+                    )}
+                    htmlFor={`api-credential-header-value-${row.id}`}
+                  >
+                    <Input
+                      id={`api-credential-header-value-${row.id}`}
+                      containerClassName="w-full"
+                      placeholder={t(
+                        "apiCredentialProfiles:dialog.requestHeaders.value",
+                      )}
+                      type="password"
+                      revealable
+                      revealLabels={{
+                        show: t("keyManagement:actions.showKey"),
+                        hide: t("keyManagement:actions.hideKey"),
+                      }}
+                      value={row.value}
+                      disabled={isSaving}
+                      onChange={(event) =>
+                        setRequestHeaderRows((rows) =>
+                          rows.map((item) =>
+                            item.id === row.id
+                              ? { ...item, value: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    disabled={isSaving}
+                    aria-label={t(
+                      "apiCredentialProfiles:dialog.requestHeaders.remove",
+                    )}
+                    onClick={() =>
+                      setRequestHeaderRows((rows) =>
+                        rows.filter((item) => item.id !== row.id),
+                      )
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSaving}
+                onClick={() =>
+                  setRequestHeaderRows((rows) => [
+                    ...rows,
+                    {
+                      id: Math.max(-1, ...rows.map((row) => row.id)) + 1,
+                      name: "",
+                      value: "",
+                    },
+                  ])
+                }
+              >
+                <Plus className="h-4 w-4" />
+                {t("apiCredentialProfiles:dialog.requestHeaders.add")}
+              </Button>
+              {errors.requestHeaders && (
+                <p role="alert" className="text-destructive-text text-xs">
+                  {errors.requestHeaders}
+                </p>
+              )}
+              <p className="text-muted-foreground text-xs">
+                {t("apiCredentialProfiles:dialog.requestHeaders.hint")}
+              </p>
+            </div>
+          </details>
 
           <div className="text-muted-foreground text-xs">
             {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {

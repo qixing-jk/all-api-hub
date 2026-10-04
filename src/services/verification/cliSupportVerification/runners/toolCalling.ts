@@ -12,6 +12,7 @@ interface RunCliToolCallingSimulationParams {
   toolId: CliToolId
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
@@ -39,6 +40,7 @@ export async function runCliToolCallingSimulation(
   const probeResult = await runApiVerificationProbe({
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
+    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
     apiType: params.apiType,
     mode: params.mode,
     modelId: params.modelId,

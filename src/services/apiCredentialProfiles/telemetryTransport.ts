@@ -20,6 +20,7 @@ const TELEMETRY_REQUEST_TIMEOUT_MS = 10_000
 /** Fetches one read-only telemetry endpoint and normalizes transport failures. */
 export async function fetchTelemetryJson(params: {
   baseUrl: string
+  requestHeaders?: Record<string, string>
   endpoint: string
   bearerToken?: string
   authTokenMode?: ApiAuthTokenMode
@@ -28,6 +29,7 @@ export async function fetchTelemetryJson(params: {
     const response = await fetchApiResponse<unknown>(
       {
         baseUrl: params.baseUrl,
+        requestHeaders: params.requestHeaders,
         auth: {
           authType: params.bearerToken
             ? AuthTypeEnum.AccessToken

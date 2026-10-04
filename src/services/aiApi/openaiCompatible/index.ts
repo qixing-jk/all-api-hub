@@ -1,4 +1,5 @@
 import { ApiError } from "~/services/apiTransport/errors"
+import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type {
   OpenAIAuthParams,
@@ -52,6 +53,7 @@ export const discoverOpenAICompatibleModels = async (
   if (!baseUrl) throw new Error("Invalid OpenAI-compatible API base URL")
   const candidateBaseUrls = resolveCandidateModelBaseUrls(baseUrl)
   const request = {
+    requestHeaders: params.requestHeaders,
     ...(params.requestScheduling
       ? { requestScheduling: params.requestScheduling }
       : {}),
@@ -95,12 +97,18 @@ export const discoverOpenAICompatibleModels = async (
         continue
       }
 
-      logger.error("Failed to fetch upstream model list", error)
+      logger.error(
+        "Failed to fetch upstream model list",
+        sanitizeHeaderOverrideError(error, params.requestHeaders),
+      )
       throw error
     }
   }
 
-  logger.error("Failed to fetch upstream model list", lastError)
+  logger.error(
+    "Failed to fetch upstream model list",
+    sanitizeHeaderOverrideError(lastError, params.requestHeaders),
+  )
   throw lastError
 }
 

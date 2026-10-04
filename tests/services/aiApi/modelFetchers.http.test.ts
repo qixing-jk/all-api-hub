@@ -6,6 +6,47 @@ import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { server } from "~~/tests/msw/server"
 
 describe("AI API model fetcher HTTP routing", () => {
+  it("applies credential headers on every Anthropic page and the Bearer retry", async () => {
+    const hits: Array<{ client: string | null; page: string | null }> = []
+    server.use(
+      http.get(
+        "https://header-anthropic.example.invalid/v1/models",
+        ({ request }) => {
+          hits.push({
+            client: request.headers.get("x-client"),
+            page: new URL(request.url).searchParams.get("after_id"),
+          })
+          if (!request.headers.has("authorization"))
+            return HttpResponse.json(
+              { error: { message: "use bearer" } },
+              { status: 401 },
+            )
+          if (!new URL(request.url).searchParams.has("after_id"))
+            return HttpResponse.json({
+              data: [{ id: "first" }],
+              has_more: true,
+              last_id: "first",
+            })
+          return HttpResponse.json({
+            data: [{ id: "second" }],
+            has_more: false,
+          })
+        },
+      ),
+    )
+    await expect(
+      fetchAnthropicModelIds({
+        baseUrl: "https://header-anthropic.example.invalid",
+        apiKey: "key",
+        requestHeaders: { "x-client": "credential" },
+      }),
+    ).resolves.toEqual(["first", "second"])
+    expect(hits).toEqual([
+      { client: "credential", page: null },
+      { client: "credential", page: null },
+      { client: "credential", page: "first" },
+    ])
+  })
   it("uses a complete Anthropic mount without repeating v1", async () => {
     const hit = vi.fn()
     server.use(

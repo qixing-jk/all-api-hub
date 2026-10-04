@@ -44,6 +44,7 @@ export async function refreshApiCredentialProfileTelemetry(
   })
   const secrets = prepareTelemetrySecrets([
     profile.apiKey,
+    ...Object.values(profile.requestHeaders ?? {}),
     config.customEndpoint?.bearerToken,
   ])
   const modes = resolveTelemetryModes(profile, config)
@@ -100,6 +101,7 @@ export async function refreshApiCredentialProfileTelemetry(
   await apiCredentialProfilesStorage.updateTelemetrySnapshot(
     profile.id,
     snapshot,
+    profile,
   )
   return snapshot
 }

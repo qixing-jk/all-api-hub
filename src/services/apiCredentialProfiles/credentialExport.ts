@@ -59,8 +59,14 @@ export function createProfileCredentialExportSource(
     baseUrl,
     ...(anthropicBaseUrl ? { anthropicBaseUrl } : {}),
     notes: profile.notes,
+    requestHeaders: profile.requestHeaders,
     cacheKey: hashProviderCatalogValue(
-      JSON.stringify([profile.id, profile.baseUrl, profile.apiKey]),
+      JSON.stringify([
+        profile.id,
+        profile.baseUrl,
+        profile.apiKey,
+        profile.requestHeaders,
+      ]),
     ),
     resolveApiKey: async () => profile.apiKey,
   }

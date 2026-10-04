@@ -21,6 +21,7 @@ import { runProbeGeneration } from "./probeGeneration"
 type RunWebSearchProbeParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
@@ -35,7 +36,10 @@ export async function runWebSearchProbe(
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
   const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
-  const secretsToRedact = [params.apiKey]
+  const secretsToRedact = [
+    params.apiKey,
+    ...Object.values(params.requestHeaders ?? {}),
+  ]
 
   if (params.apiType === API_TYPES.ANTHROPIC) {
     return {
@@ -57,6 +61,9 @@ export async function runWebSearchProbe(
       const provider = createOpenAIProvider({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
       })
 
       const prompt = "Use web search to find one recent headline about AI SDK."
@@ -111,6 +118,9 @@ export async function runWebSearchProbe(
       const google = createGoogleProvider({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        ...(params.requestHeaders
+          ? { requestHeaders: params.requestHeaders }
+          : {}),
       })
 
       const prompt =

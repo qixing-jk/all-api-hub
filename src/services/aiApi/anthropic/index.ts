@@ -1,4 +1,5 @@
 import { executeWithUnauthorizedFallback } from "~/services/aiApi/authFallback"
+import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -17,6 +18,7 @@ import { decodeAnthropicResponseError } from "./responseError"
 type AnthropicAuthParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   abortSignal?: AbortSignal
 }
 
@@ -45,6 +47,7 @@ export async function fetchAnthropicModelIds(
   const baseUrl = toVersionedProtocolMount("anthropic", params.baseUrl)
   if (!baseUrl) throw new Error("Invalid Anthropic API base URL")
   const request = {
+    requestHeaders: params.requestHeaders,
     baseUrl,
     auth: { authType: AuthTypeEnum.None },
   }
@@ -102,7 +105,10 @@ export async function fetchAnthropicModelIds(
       if (!hasMore || !lastId || lastId === afterId) break
       afterId = lastId
     } catch (error) {
-      logger.error("Failed to fetch anthropic model list", { endpoint, error })
+      logger.error("Failed to fetch anthropic model list", {
+        endpoint,
+        error: sanitizeHeaderOverrideError(error, params.requestHeaders),
+      })
       throw error
     }
   }

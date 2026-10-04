@@ -104,8 +104,16 @@ export function KiloCodeProfileExportDialog({
       tokenId: 0,
       tokenName: t("common:labels.apiKey"),
       tokenKey: profile.apiKey,
+      requestHeaders: profile.requestHeaders,
     }),
-    [profile.apiKey, profile.baseUrl, profile.id, profile.name, t],
+    [
+      profile.apiKey,
+      profile.baseUrl,
+      profile.id,
+      profile.name,
+      profile.requestHeaders,
+      t,
+    ],
   )
   const {
     invalidProfile,

@@ -9,6 +9,7 @@ import {
 
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
+import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import {
   hashProviderCatalogValue,
   normalizeProviderCatalogModelIds,
@@ -34,6 +35,7 @@ export interface ProviderModelDiscoveryInventory {
 }
 
 interface ProviderModelDiscoverySource {
+  requestHeaders?: Record<string, string>
   selectionId: string
   /** Changes whenever credentials or endpoint facts can change discovery output. */
   cacheKey: string
@@ -44,6 +46,7 @@ interface ProviderModelDiscoverySource {
 type FetchProviderModelIds = (input: {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
 }) => Promise<string[] | null | undefined>
 
 const EMPTY_INVENTORY: ProviderModelDiscoveryInventory = {
@@ -193,6 +196,9 @@ export function useProviderModelDiscovery({
         // protocol root: one canonical input regardless of which shape the
         // caller stored or derived.
         const upstreamModelIds = await fetchModelIds({
+          ...(source.requestHeaders
+            ? { requestHeaders: source.requestHeaders }
+            : {}),
           baseUrl:
             toProtocolRoot("openai-compatible", source.baseUrl) ??
             source.baseUrl,
@@ -218,7 +224,10 @@ export function useProviderModelDiscovery({
           },
         }))
       } catch (error) {
-        logger.warn("Failed to fetch upstream model list", error)
+        logger.warn(
+          "Failed to fetch upstream model list",
+          sanitizeHeaderOverrideError(error, source.requestHeaders),
+        )
         if (
           !isMountedRef.current ||
           !isOpenRef.current ||

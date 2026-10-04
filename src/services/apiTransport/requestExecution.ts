@@ -2,6 +2,7 @@ import {
   composeAbortSignals,
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
+import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
   resolveSiteRequestLimitKey,
   withSiteApiRequestLease,
@@ -23,6 +24,7 @@ type RequestExecutionControls = Pick<
   | "requestScheduling"
   | "bypassSiteRequestLimit"
   | "observer"
+  | "requestHeaders"
 >
 
 interface PreparedHttpRequest {
@@ -88,7 +90,11 @@ export async function executePreparedRequest<T>(
             options,
             dispatch: async () => {
               onDispatch()
-              const response = await fetch(prepared.url, options)
+              const response = await fetchWithHeaderOverrides(
+                prepared.url,
+                options,
+                request.requestHeaders,
+              )
               onResponse()
               return response
             },

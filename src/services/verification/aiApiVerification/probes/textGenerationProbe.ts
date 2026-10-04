@@ -20,6 +20,7 @@ import { runProbeGeneration } from "./probeGeneration"
 type RunTextGenerationProbeParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
@@ -36,13 +37,19 @@ export async function runTextGenerationProbe(
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
   const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
-  const secretsToRedact = [params.apiKey]
+  const secretsToRedact = [
+    params.apiKey,
+    ...Object.values(params.requestHeaders ?? {}),
+  ]
 
   try {
     const prompt = TEXT_GENERATION_PROMPT
     const model = createModel({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
+      ...(params.requestHeaders
+        ? { requestHeaders: params.requestHeaders }
+        : {}),
       apiType: params.apiType,
       modelId: params.modelId,
     })

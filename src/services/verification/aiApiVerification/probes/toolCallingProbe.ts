@@ -22,6 +22,7 @@ import { runProbeGeneration } from "./probeGeneration"
 type RunToolCallingProbeParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
@@ -63,13 +64,19 @@ export async function runToolCallingProbe(
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
   const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
-  const secretsToRedact = [params.apiKey]
+  const secretsToRedact = [
+    params.apiKey,
+    ...Object.values(params.requestHeaders ?? {}),
+  ]
   const prompt = TOOL_CALLING_PROMPT
 
   try {
     const model = createModel({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
+      ...(params.requestHeaders
+        ? { requestHeaders: params.requestHeaders }
+        : {}),
       apiType: params.apiType,
       modelId: params.modelId,
     })

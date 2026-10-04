@@ -96,6 +96,14 @@ vi.mock("~/services/verification/aiApiVerification/i18n", () => ({
 }))
 
 const trackProductAnalyticsActionStartedMock = vi.fn()
+const requestPermissionDetailedMock = vi.hoisted(() => vi.fn())
+
+vi.mock("~/services/permissions/permissionManager", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/permissions/permissionManager")
+  >()),
+  requestPermissionDetailed: requestPermissionDetailedMock,
+}))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: (...args: any[]) =>
@@ -158,6 +166,104 @@ function renderDialog(
 }
 
 describe("ApiCredentialProfileDialog", () => {
+  it("places labeled request header fields after the credential settings", () => {
+    renderDialog({
+      profile: buildProfile({ requestHeaders: { "x-client": "test" } }),
+    })
+    const headerName = screen.getByLabelText(
+      "apiCredentialProfiles:dialog.requestHeaders.name",
+    )
+    const headerValue = screen.getByLabelText(
+      "apiCredentialProfiles:dialog.requestHeaders.value",
+    )
+    expect(headerName).toHaveAttribute("id")
+    expect(headerValue).toHaveAttribute("id")
+    const telemetry = screen.getByLabelText(
+      "apiCredentialProfiles:dialog.fields.telemetryPreset",
+    )
+    expect(
+      telemetry.compareDocumentPosition(headerName) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+  it("edits masked request headers and can clear them", async () => {
+    const { onSave } = renderDialog({
+      profile: buildProfile({ requestHeaders: { "x-client": "old" } }),
+    })
+    const value = screen.getByLabelText(
+      "apiCredentialProfiles:dialog.requestHeaders.value",
+    )
+    expect(value).toHaveAttribute("type", "password")
+    fireEvent.change(value, { target: { value: "new" } })
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ requestHeaders: { "x-client": "new" } }),
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:dialog.requestHeaders.remove",
+      }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    await waitFor(() =>
+      expect(onSave).toHaveBeenLastCalledWith(
+        expect.objectContaining({ requestHeaders: {} }),
+      ),
+    )
+  })
+
+  it("requests UA permission from Save and retains edits when permission is denied", async () => {
+    requestPermissionDetailedMock
+      .mockResolvedValueOnce({ success: false })
+      .mockResolvedValueOnce({ success: true })
+    const { onSave } = renderDialog({
+      profile: buildProfile({ requestHeaders: { "user-agent": "client/1" } }),
+    })
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "apiCredentialProfiles:dialog.errors.userAgentPermission",
+    )
+    expect(onSave).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestHeaders: { "user-agent": "client/1" },
+        }),
+      ),
+    )
+    expect(requestPermissionDetailedMock).toHaveBeenCalledWith(
+      "declarativeNetRequestWithHostAccess",
+    )
+  })
+
+  it("rejects duplicate and browser-controlled header names before saving", async () => {
+    const { onSave } = renderDialog({ profile: buildProfile() })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:dialog.requestHeaders.add",
+      }),
+    )
+    fireEvent.change(
+      screen.getByLabelText("apiCredentialProfiles:dialog.requestHeaders.name"),
+      { target: { value: "Host" } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.requestHeaders.value",
+      ),
+      { target: { value: "other.example" } },
+    )
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+    expect(onSave).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:dialog.errors.requestHeadersInvalid",
+      ),
+    ).toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     trackProductAnalyticsActionStartedMock.mockReset()

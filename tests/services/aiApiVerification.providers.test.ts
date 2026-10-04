@@ -24,6 +24,36 @@ vi.mock("@ai-sdk/openai-compatible", () => ({
 }))
 
 describe("aiApiVerification providers", () => {
+  it.each(["openai", "openai-compatible", "anthropic", "google"] as const)(
+    "applies header overrides to %s SDK requests",
+    async (apiType) => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response("ok"))
+      vi.stubGlobal("fetch", fetchMock)
+      const { createModel } = await import(
+        "~/services/verification/aiApiVerification/providers"
+      )
+      const model = createModel({
+        apiType,
+        baseUrl: "https://headers.example",
+        apiKey: "key",
+        modelId: "test",
+        requestHeaders: { "x-client": "credential" },
+      }) as unknown as { config: { fetch: typeof fetch } }
+      await model.config.fetch("https://headers.example/v1/test", {
+        method: "POST",
+        body: "{}",
+      })
+      const [input, init] = fetchMock.mock.calls[0] as unknown as [
+        RequestInfo,
+        RequestInit,
+      ]
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      )
+      expect(headers.get("x-client")).toBe("credential")
+      expect(init.redirect).toBe("error")
+    },
+  )
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.resetModules()
@@ -81,6 +111,7 @@ describe("aiApiVerification providers", () => {
         name: "all-api-hub",
         baseURL: "https://proxy.example.com/api/v1",
         apiKey: "sk-compatible",
+        fetch: expect.any(Function),
       },
     })
   })
@@ -122,6 +153,7 @@ describe("aiApiVerification providers", () => {
       config: {
         baseURL: "https://openai-proxy.example.com/v1",
         apiKey: "sk-openai",
+        fetch: expect.any(Function),
       },
     })
   })
@@ -306,6 +338,7 @@ describe("aiApiVerification providers", () => {
       config: {
         baseURL: "https://proxy.example.com/custom/v1",
         apiKey: "sk-openai",
+        fetch: expect.any(Function),
       },
     })
     expect(googleProvider("gemini-2.0-flash")).toEqual({

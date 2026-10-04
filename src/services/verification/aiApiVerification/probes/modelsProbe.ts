@@ -22,6 +22,7 @@ import {
 type RunModelsProbeParams = {
   baseUrl: string
   apiKey: string
+  requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   abortSignal?: AbortSignal
 }
@@ -78,6 +79,9 @@ export async function runModelsProbe(
         return fetchOpenAICompatibleModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          ...(params.requestHeaders
+            ? { requestHeaders: params.requestHeaders }
+            : {}),
           abortSignal: params.abortSignal,
         })
       }
@@ -86,6 +90,9 @@ export async function runModelsProbe(
         return fetchAnthropicModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          ...(params.requestHeaders
+            ? { requestHeaders: params.requestHeaders }
+            : {}),
           abortSignal: params.abortSignal,
         })
       }
@@ -94,6 +101,9 @@ export async function runModelsProbe(
         return fetchGoogleModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          ...(params.requestHeaders
+            ? { requestHeaders: params.requestHeaders }
+            : {}),
           abortSignal: params.abortSignal,
         })
       }
@@ -140,7 +150,10 @@ export async function runModelsProbe(
       throw error
     }
 
-    const summary = toSanitizedErrorSummary(error, [params.apiKey])
+    const summary = toSanitizedErrorSummary(error, [
+      params.apiKey,
+      ...Object.values(params.requestHeaders ?? {}),
+    ])
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
 
     return {

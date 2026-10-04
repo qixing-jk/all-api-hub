@@ -366,7 +366,7 @@ describe("OpenAI-compatible model fetchers", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
     expect(mockLoggerError).toHaveBeenCalledWith(
       "Failed to fetch upstream model list",
-      fallbackError,
+      "fallback endpoint unavailable",
     )
   })
 })

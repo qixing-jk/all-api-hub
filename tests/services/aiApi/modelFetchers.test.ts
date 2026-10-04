@@ -102,9 +102,12 @@ describe("AI API model fetchers", () => {
     })
 
     it("logs and rethrows API failures", async () => {
-      const failure = Object.assign(new Error("anthropic forbidden"), {
-        statusCode: 403,
-      })
+      const failure = Object.assign(
+        new Error("anthropic forbidden private-value"),
+        {
+          statusCode: 403,
+        },
+      )
       mocks.fetchApi.mockRejectedValueOnce(failure)
 
       const { fetchAnthropicModelIds } = await import(
@@ -115,6 +118,7 @@ describe("AI API model fetchers", () => {
         fetchAnthropicModelIds({
           baseUrl: "https://anthropic.example.test",
           apiKey: "synthetic-anthropic-key",
+          requestHeaders: { "x-client-secret": "private-value" },
         }),
       ).rejects.toThrow("anthropic forbidden")
 
@@ -124,7 +128,7 @@ describe("AI API model fetchers", () => {
         "Failed to fetch anthropic model list",
         expect.objectContaining({
           endpoint: "models?limit=200",
-          error: failure,
+          error: "anthropic forbidden [REDACTED]",
         }),
       )
     })
@@ -381,7 +385,7 @@ describe("AI API model fetchers", () => {
         "Failed to fetch google model list",
         expect.objectContaining({
           endpoint: "models",
-          error: failure,
+          error: "google down",
         }),
       )
     })

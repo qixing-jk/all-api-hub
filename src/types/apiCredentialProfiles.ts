@@ -5,7 +5,7 @@ import type { HealthStatus } from "~/types"
 /**
  * Current schema version for the API credential profiles storage payload.
  */
-export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 7
+export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 8
 
 export const API_CREDENTIAL_PROFILE_LINK_STATES = {
   Active: "active",
@@ -306,6 +306,8 @@ export type ApiCredentialTelemetrySnapshot = {
  * include the raw value.
  */
 export type ApiCredentialProfile = {
+  /** Optional request overrides. Values may be secrets and must never be logged. */
+  requestHeaders?: Record<string, string>
   id: string
   name: string
   apiType: ApiVerificationApiType
