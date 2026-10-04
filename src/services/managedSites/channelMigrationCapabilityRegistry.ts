@@ -3,6 +3,7 @@ import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/ma
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { cliProxyApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/cliProxyApiMigration"
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
+import { gptLoadManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/gptLoadMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
 import { omniRouteManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/omnirouteMigration"
@@ -49,6 +50,10 @@ const registrations: readonly {
   {
     siteType: SITE_TYPES.OMNIROUTE,
     capability: omniRouteManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.GPT_LOAD,
+    capability: gptLoadManagedSiteMigrationCapability,
   },
 ]
 

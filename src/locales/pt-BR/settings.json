@@ -289,6 +289,31 @@
     "toggleDesc": "Peça confirmação quando o mesmo ID de usuário já estiver salvo para este site. No OpenRouter, verifique se a Management Key é idêntica.",
     "toggleLabel": "Avisar antes de adicionar duplicatas"
   },
+  "gptLoad": {
+    "description": "Manage a self-hosted gpt-load instance: a lightweight Go AI gateway that load balances requests across provider channels.",
+    "fields": {
+      "baseUrlDesc": "The base URL of your gpt-load dashboard (for example https://gateway.example.com).",
+      "baseUrlLabel": "Gateway address",
+      "baseUrlPlaceholder": "https://gateway.example.com",
+      "hideManagementKey": "Hide management key",
+      "managementKeyDesc": "The gateway's root AUTH_KEY, presented to the management API as a bearer token. It holds the same power as every workspace channel key.",
+      "managementKeyLabel": "Management key",
+      "managementKeyPlaceholder": "The AUTH_KEY from your gateway config",
+      "showManagementKey": "Show management key"
+    },
+    "title": "gpt-load",
+    "validation": {
+      "description": "Send one request with the key above to verify the gateway is reachable and the key is accepted.",
+      "failed": "Could not reach the gateway: {{error}}",
+      "insufficientPrivilege": "The management key lacks permission: {{error}}",
+      "invalidCredential": "The management key was rejected: {{error}}",
+      "missingFields": "Enter the gateway address and management key first",
+      "success": "Connection verified",
+      "title": "Check connection",
+      "validate": "Check connection",
+      "validating": "Checking…"
+    }
+  },
   "logging": {
     "consoleEnabled": "Ativar logs",
     "consoleEnabledDesc": "Quando desativado, a saída do console e os novos registros locais são interrompidos.",
@@ -354,6 +379,7 @@
         "title": "Configure seu gateway de IA auto-hospedado"
       }
     },
+    "gptLoad": "gpt-load",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

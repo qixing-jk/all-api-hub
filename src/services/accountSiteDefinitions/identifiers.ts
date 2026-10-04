@@ -34,6 +34,7 @@ export const SITE_TYPES = {
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
+  GPT_LOAD: "gpt-load",
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
   GRSAI: "grsai",

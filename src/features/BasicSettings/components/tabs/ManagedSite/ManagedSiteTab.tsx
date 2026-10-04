@@ -26,6 +26,7 @@ import AxonHubSettings from "./AxonHubSettings"
 import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
 import CliProxyApiSettings from "./CliProxyApiSettings"
 import DoneHubSettings from "./DoneHubSettings"
+import GptLoadSettings from "./GptLoadSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
 import ModelRedirectSettings from "./ModelRedirectSettings"
@@ -108,6 +109,8 @@ export default function ManagedSiteTab() {
         return <Sub2ApiSettings />
       case SITE_TYPES.OMNIROUTE:
         return <OmniRouteSettings />
+      case SITE_TYPES.GPT_LOAD:
+        return <GptLoadSettings />
       case SITE_TYPES.NEW_API:
       default:
         return <NewApiSettings />

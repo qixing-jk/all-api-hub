@@ -192,6 +192,23 @@
         "label": "额外模型前缀",
         "placeholder": "例如：deepseek"
       },
+      "gptLoadBaseUrl": {
+        "help": "该渠道转发请求的上游地址；已知提供商留空时，由网关使用提供商自身的端点。"
+      },
+      "gptLoadKey": {
+        "help": "该分组可用的密钥。网关按分组保存密钥池：在此新增行即可导入密钥，删除行即移除密钥。"
+      },
+      "gptLoadPriceMultiplier": {
+        "help": "对渠道上报的成本进行倍率核算（例如 1.5），用于余额与限速统计。",
+        "label": "计费倍率"
+      },
+      "gptLoadProvider": {
+        "help": "该渠道所用的 gpt-load 驱动 id（例如 openai、anthropic、gemini）。可使用“加载”按钮读取该网关实际支持的驱动列表。"
+      },
+      "gptLoadWeight": {
+        "help": "手动负载均衡权重；数值越大分到的流量比例越高；留空则使用网关默认值。",
+        "label": "权重"
+      },
       "manualModels": {
         "label": "手动模型"
       },

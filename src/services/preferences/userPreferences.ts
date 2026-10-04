@@ -77,6 +77,10 @@ import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
 } from "~/types/doneHubConfig"
+import {
+  DEFAULT_GPT_LOAD_CONFIG,
+  type GptLoadConfig,
+} from "~/types/gptLoadConfig"
 import type { LegacyCliProxyApiConfig } from "~/types/legacyCliProxyApiConfig"
 import {
   getDefaultLoggingPreferences,
@@ -376,6 +380,9 @@ export interface UserPreferences {
   // OmniRoute 管理站点配置（Base URL + 作用域访问令牌）
   omniroute?: OmniRouteConfig
 
+  // gpt-load 管理站点配置（Base URL + 管理密钥）
+  gptLoad?: GptLoadConfig
+
   // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
 
@@ -609,6 +616,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
   sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
   omniroute: DEFAULT_OMNIROUTE_CONFIG,
+  gptLoad: DEFAULT_GPT_LOAD_CONFIG,
   managedSiteType: SITE_TYPES.NEW_API,
   cliProxyApi: DEFAULT_CLI_PROXY_API_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -1404,6 +1412,20 @@ class UserPreferencesService {
     })
   }
 
+  /** Update gpt-load managed-site config (deployment URL + management key). */
+  async updateGptLoadConfig(
+    config: Partial<GptLoadConfig>,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ gptLoad: config })
+  }
+
+  /** Reset gpt-load managed-site config. */
+  async resetGptLoadConfig(): Promise<PreferenceWriteResult> {
+    return this.savePreferences({
+      gptLoad: DEFAULT_PREFERENCES.gptLoad,
+    })
+  }
+
   /**
    * Update managed site type (new-api, veloera, done-hub, or octopus).
    */
@@ -1430,6 +1452,7 @@ class UserPreferencesService {
       | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
       | OmniRouteConfig
+      | GptLoadConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
@@ -1443,12 +1466,15 @@ class UserPreferencesService {
       | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
       | OmniRouteConfig
+      | GptLoadConfig
     if (siteType === SITE_TYPES.CLI_PROXY_API) {
       config = prefs.cliProxyApi ?? DEFAULT_CLI_PROXY_API_CONFIG
     } else if (siteType === SITE_TYPES.AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
     } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
+    } else if (siteType === SITE_TYPES.GPT_LOAD) {
+      config = prefs.gptLoad || DEFAULT_GPT_LOAD_CONFIG
     } else if (siteType === SITE_TYPES.OMNIROUTE) {
       config = prefs.omniroute || DEFAULT_OMNIROUTE_CONFIG
     } else if (siteType === SITE_TYPES.SUB2API) {

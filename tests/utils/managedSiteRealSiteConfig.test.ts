@@ -1,9 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  resolveGptLoadManagedSiteConfig,
   resolveNewApiManagedSiteConfig,
   resolveSub2ApiManagedSiteConfig,
 } from "~~/e2e/utils/realSite/managedSiteConfig"
+
+describe("gpt-load managed-site real-site config", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("requires its own root management key without using another admin token", () => {
+    vi.stubEnv("AAH_E2E_GPT_LOAD_BASE_URL", "http://127.0.0.1:3001")
+    vi.stubEnv("AAH_E2E_GPT_LOAD_MANAGEMENT_KEY", "")
+    vi.stubEnv("AAH_E2E_GPT_LOAD_ADMIN_TOKEN", "downstream-key")
+    expect(resolveGptLoadManagedSiteConfig()).toEqual({
+      config: null,
+      missingEnvKeys: ["AAH_E2E_GPT_LOAD_MANAGEMENT_KEY"],
+    })
+  })
+
+  it("trims configuration and retains a self-hosted HTTP base URL", () => {
+    vi.stubEnv("AAH_E2E_GPT_LOAD_BASE_URL", " http://127.0.0.1:3001 ")
+    vi.stubEnv("AAH_E2E_GPT_LOAD_MANAGEMENT_KEY", " test-management-key ")
+    expect(resolveGptLoadManagedSiteConfig()).toEqual({
+      config: {
+        baseUrl: "http://127.0.0.1:3001",
+        managementKey: "test-management-key",
+      },
+      missingEnvKeys: [],
+    })
+  })
+})
 
 describe("Sub2API managed-site real-site config", () => {
   afterEach(() => {

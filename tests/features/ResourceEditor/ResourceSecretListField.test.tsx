@@ -147,6 +147,11 @@ describe("ResourceSecretListField", () => {
       expect(row(1).getByText("Previous disable reason")).toBeVisible()
     },
   )
+  it("exposes a stable per-row secret input test id for automation", () => {
+    render(<Harness />)
+    expect(row(1).getByTestId("credentials-secret-input-0")).toBeVisible()
+    expect(row(2).getByTestId("credentials-secret-input-1")).toBeVisible()
+  })
   it("changes one key's enabled state without revealing or replacing either key", async () => {
     const user = userEvent.setup()
     const load = vi.fn()

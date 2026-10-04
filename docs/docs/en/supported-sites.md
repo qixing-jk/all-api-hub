@@ -155,6 +155,7 @@ If you are also building your own backend system, All API Hub supports importing
 | Claude Code Hub | A multi-vendor AI API proxy and operating platform for teams, unifying access to Claude, OpenAI Compatible, Codex, and Gemini, with support for elastic scheduling, monitoring, and price management. | [GitHub](https://github.com/ding113/claude-code-hub) |
 | Octopus | Personal LLM API aggregation service. | [GitHub](https://github.com/bestruirui/octopus) |
 | [OmniRoute](./omniroute-integration.md) | Self-hosted AI gateway with a large built-in provider catalogue, scoped access tokens, and connection-level upstream address overrides. | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | Lightweight self-hosted AI gateway (Go); a group is one channel driver plus its credential pool. | [GitHub](https://github.com/tbphp/gpt-load) |
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | DoneHub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 

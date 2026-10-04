@@ -353,6 +353,7 @@ function SecretRow({
           </Label>
           <Input
             id={`${id}-secret`}
+            data-testid={`${descriptor.fieldId}-secret-input-${index}`}
             type={revealed ? "text" : "password"}
             value={displayValue}
             autoComplete="new-password"

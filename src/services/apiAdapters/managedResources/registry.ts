@@ -6,6 +6,7 @@ import { axonHubManagedResourceRegistration } from "./axonHub"
 import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
 import { cliProxyApiManagedResourceRegistration } from "./cliProxyApi"
 import { doneHubManagedResourceRegistration } from "./doneHub"
+import { gptLoadManagedResourceRegistration } from "./gptLoad"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { octopusManagedResourceRegistration } from "./octopus"
 import { omniRouteManagedResourceRegistration } from "./omniroute"
@@ -22,6 +23,7 @@ const MANAGED_RESOURCE_REGISTRATIONS = [
   sub2ApiManagedResourceRegistration,
   veloeraManagedResourceRegistration,
   omniRouteManagedResourceRegistration,
+  gptLoadManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 
 const managedResourceKey = (
