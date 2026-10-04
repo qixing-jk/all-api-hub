@@ -2,6 +2,13 @@
   "copyrightAck": "Derechos de autor y agradecimientos",
   "description": "Consulta la versión, el historial de cambios y los enlaces del proyecto, obtén ayuda o reporta un problema.",
   "devMaintenance": "Desarrollo y mantenimiento",
+  "devMode": {
+    "activatedToast": "🛠️ ¡Modo de desarrollador activado! Funciones del laboratorio Dev desbloqueadas.",
+    "alreadyDevToast": "Actualmente en entorno de desarrollo (wxt dev). El modo de desarrollador permanece habilitado.",
+    "deactivatedToast": "Modo de desarrollador desactivado.",
+    "tooltipDev": "Ejecutando en entorno de desarrollo (wxt dev)",
+    "tooltipProd": "Haz clic 7 veces para alternar el modo de desarrollador"
+  },
   "features": "Funciones",
   "feedbackSection": {
     "bugReport": {

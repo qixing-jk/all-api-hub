@@ -2,6 +2,13 @@
   "copyrightAck": "版权与致谢",
   "description": "查看扩展版本、更新记录与项目链接，获取帮助或反馈问题。",
   "devMaintenance": "开发与维护",
+  "devMode": {
+    "activatedToast": "🛠️ 开发者模式已激活！全部 Dev 实验室已解锁",
+    "alreadyDevToast": "当前处于开发构建环境 (wxt dev)，开发者模式默认保持启用",
+    "deactivatedToast": "已退出开发者模式",
+    "tooltipDev": "当前处于开发调试环境 (wxt dev)",
+    "tooltipProd": "连续点击 7 次可切换开发者模式"
+  },
   "features": "功能特性",
   "feedbackSection": {
     "bugReport": {

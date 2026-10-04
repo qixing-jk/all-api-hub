@@ -2,6 +2,13 @@
   "copyrightAck": "Bản quyền và Lời cảm ơn",
   "description": "Xem phiên bản, lịch sử thay đổi và liên kết dự án; nhận trợ giúp hoặc báo lỗi.",
   "devMaintenance": "Phát triển và bảo trì",
+  "devMode": {
+    "activatedToast": "🛠️ Đã kích hoạt chế độ nhà phát triển! Mở khóa các tính năng phòng thí nghiệm Dev.",
+    "alreadyDevToast": "Hiện đang chạy trong môi trường phát triển (wxt dev). Chế độ nhà phát triển luôn được bật theo mặc định.",
+    "deactivatedToast": "Đã tắt chế độ nhà phát triển.",
+    "tooltipDev": "Đang chạy trong môi trường phát triển (wxt dev)",
+    "tooltipProd": "Nhấp 7 lần để chuyển đổi chế độ nhà phát triển"
+  },
   "features": "Tính năng",
   "feedbackSection": {
     "bugReport": {

@@ -172,10 +172,94 @@ export async function invokeBrowserApi(
 let sandboxIframe: HTMLIFrameElement | null = null
 let sandboxReady = false
 let sandboxReadyWaiters: Array<() => void> = []
+let sandboxMessageListenerAttached = false
 const pendingExecutions = new Map<
   string,
   (res: { success: boolean; data?: unknown; error?: string }) => void
 >()
+
+/**
+ * Attaches the window message listener for sandbox communication once.
+ */
+function attachSandboxMessageListener(): void {
+  if (sandboxMessageListenerAttached || typeof window === "undefined") return
+  sandboxMessageListenerAttached = true
+
+  window.addEventListener("message", async (event) => {
+    // Authenticate sender: only accept messages from our sandbox iframe
+    if (
+      sandboxIframe?.contentWindow &&
+      event.source !== sandboxIframe.contentWindow
+    ) {
+      return
+    }
+
+    const data = event.data
+    if (!data || typeof data !== "object" || data.source !== "aah-sandbox") {
+      return
+    }
+
+    if (data.type === "SANDBOX_READY") {
+      sandboxReady = true
+      sandboxReadyWaiters.forEach((cb) => cb())
+      sandboxReadyWaiters = []
+      return
+    }
+
+    if (data.type === "RPC_REQUEST") {
+      const { rpcId, path, args } = data
+      try {
+        const res = await invokeBrowserApi(path, args, "ui")
+        try {
+          sandboxIframe?.contentWindow?.postMessage(
+            {
+              source: "aah-sandbox-host",
+              type: "RPC_RESPONSE",
+              rpcId,
+              success: res.success,
+              data: res.data,
+              error: res.error,
+            },
+            "*",
+          )
+        } catch {
+          sandboxIframe?.contentWindow?.postMessage(
+            {
+              source: "aah-sandbox-host",
+              type: "RPC_RESPONSE",
+              rpcId,
+              success: res.success,
+              data: JSON.parse(JSON.stringify(res.data)),
+              error: res.error,
+            },
+            "*",
+          )
+        }
+      } catch (e: any) {
+        sandboxIframe?.contentWindow?.postMessage(
+          {
+            source: "aah-sandbox-host",
+            type: "RPC_RESPONSE",
+            rpcId,
+            success: false,
+            error: e.message,
+          },
+          "*",
+        )
+      }
+      return
+    }
+
+    if (data.type === "EXECUTION_RESULT") {
+      const { runId, success, result, error } = data
+      const waiter = pendingExecutions.get(runId)
+      if (waiter) {
+        pendingExecutions.delete(runId)
+        waiter({ success, data: result, error })
+      }
+    }
+  })
+}
 
 /**
  * Returns the resolved runtime URL for the sandbox page.
@@ -214,73 +298,7 @@ function ensureSandboxIframe(): Promise<HTMLIFrameElement> {
       return
     }
 
-    // Set up message listener for sandbox RPC and execution results
-    window.addEventListener("message", async (event) => {
-      const data = event.data
-      if (!data || typeof data !== "object" || data.source !== "aah-sandbox") {
-        return
-      }
-
-      if (data.type === "SANDBOX_READY") {
-        sandboxReady = true
-        sandboxReadyWaiters.forEach((cb) => cb())
-        sandboxReadyWaiters = []
-        return
-      }
-
-      if (data.type === "RPC_REQUEST") {
-        const { rpcId, path, args } = data
-        try {
-          const res = await invokeBrowserApi(path, args, "ui")
-          try {
-            sandboxIframe?.contentWindow?.postMessage(
-              {
-                source: "aah-sandbox-host",
-                type: "RPC_RESPONSE",
-                rpcId,
-                success: res.success,
-                data: res.data,
-                error: res.error,
-              },
-              "*",
-            )
-          } catch {
-            sandboxIframe?.contentWindow?.postMessage(
-              {
-                source: "aah-sandbox-host",
-                type: "RPC_RESPONSE",
-                rpcId,
-                success: res.success,
-                data: JSON.parse(JSON.stringify(res.data)),
-                error: res.error,
-              },
-              "*",
-            )
-          }
-        } catch (e: any) {
-          sandboxIframe?.contentWindow?.postMessage(
-            {
-              source: "aah-sandbox-host",
-              type: "RPC_RESPONSE",
-              rpcId,
-              success: false,
-              error: e.message,
-            },
-            "*",
-          )
-        }
-        return
-      }
-
-      if (data.type === "EXECUTION_RESULT") {
-        const { runId, success, result, error } = data
-        const waiter = pendingExecutions.get(runId)
-        if (waiter) {
-          pendingExecutions.delete(runId)
-          waiter({ success, data: result, error })
-        }
-      }
-    })
+    attachSandboxMessageListener()
 
     const iframe = document.createElement("iframe")
     iframe.id = "__aah_dev_sandbox__"
@@ -291,14 +309,22 @@ function ensureSandboxIframe(): Promise<HTMLIFrameElement> {
 
     const timeout = setTimeout(() => {
       if (!sandboxReady) {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe)
+        }
+        if (sandboxIframe === iframe) {
+          sandboxIframe = null
+        }
+        sandboxReady = false
+        sandboxReadyWaiters = []
         reject(new Error("Sandbox iframe initialization timed out"))
       }
     }, 5000)
 
     sandboxReadyWaiters.push(() => clearTimeout(timeout))
 
-    document.body.appendChild(iframe)
     sandboxIframe = iframe
+    document.body.appendChild(iframe)
   })
 }
 
@@ -359,7 +385,7 @@ export async function evaluateJsSnippet(
     }
   }
 
-  // 1. Primary: Sandboxed execution (allows eval under MV3 CSP + proxies chrome.* API)
+  // Sandboxed execution (allows eval under MV3 CSP + proxies chrome.* API)
   try {
     const sandboxResult = await runInSandbox(code)
     return {
@@ -371,46 +397,12 @@ export async function evaluateJsSnippet(
       timestamp,
     }
   } catch (sandboxErr) {
-    // 2. Secondary fallback: Direct Function constructor if sandbox cannot be spawned
-    try {
-      const chromeApi = getRawExtensionApi()
-      const browserApi = chromeApi
-
-      const runner = new Function(
-        "chrome",
-        "browser",
-        "context",
-        `return (async () => {\n${code}\n})()`,
-      )
-
-      const data = await runner(chromeApi, browserApi, {
-        window: typeof window !== "undefined" ? window : undefined,
-        document: typeof document !== "undefined" ? document : undefined,
-        navigator: typeof navigator !== "undefined" ? navigator : undefined,
-        context,
-      })
-
-      return {
-        success: true,
-        data,
-        durationMs: Math.round(performance.now() - startTime),
-        context,
-        timestamp,
-      }
-    } catch (err: any) {
-      let errorMsg = getErrorMessage(err)
-
-      if (err?.name === "EvalError" || errorMsg.includes("unsafe-eval")) {
-        errorMsg = `Sandbox initialization failed (${getErrorMessage(sandboxErr)}), and the host environment restricts new Function on the main page. Consider using the Structured API Invoker.`
-      }
-
-      return {
-        success: false,
-        error: errorMsg,
-        durationMs: Math.round(performance.now() - startTime),
-        context,
-        timestamp,
-      }
+    return {
+      success: false,
+      error: `Sandbox execution failed: ${getErrorMessage(sandboxErr)}`,
+      durationMs: Math.round(performance.now() - startTime),
+      context,
+      timestamp,
     }
   }
 }
@@ -635,15 +627,23 @@ export const PRESET_PROBES: ApiProbe[] = [
     category: "device",
     supportedContexts: ["ui"],
     run: async () => {
+      const win = typeof window !== "undefined" ? window : (globalThis as any)
+      const screenObj = win.screen || {
+        width: 0,
+        height: 0,
+        availWidth: 0,
+        availHeight: 0,
+      }
+      const nav = typeof navigator !== "undefined" ? navigator : ({} as any)
       return {
-        userAgent: navigator.userAgent,
-        userAgentData: (navigator as any).userAgentData?.brands ?? "N/A",
-        platform: navigator.platform,
-        screen: `${window.screen.width} × ${window.screen.height}`,
-        availScreen: `${window.screen.availWidth} × ${window.screen.availHeight}`,
-        devicePixelRatio: window.devicePixelRatio,
-        maxTouchPoints: navigator.maxTouchPoints,
-        isSecureContext: window.isSecureContext,
+        userAgent: nav.userAgent || "N/A",
+        userAgentData: (nav as any).userAgentData?.brands ?? "N/A",
+        platform: nav.platform || "N/A",
+        screen: `${screenObj.width} × ${screenObj.height}`,
+        availScreen: `${screenObj.availWidth} × ${screenObj.availHeight}`,
+        devicePixelRatio: win.devicePixelRatio || 1,
+        maxTouchPoints: nav.maxTouchPoints || 0,
+        isSecureContext: Boolean(win.isSecureContext),
       }
     },
   },
@@ -663,10 +663,11 @@ export const DEFAULT_SNIPPETS: CodeSnippet[] = [
     code: `const tabs = await chrome.tabs.query({ active: true });\nreturn tabs.map(t => ({ id: t.id, title: t.title, url: t.url }));`,
   },
   {
-    id: "list-chrome-apis",
-    name: "Inspect Chrome APIs",
-    description: "List all available API properties on global chrome object",
-    code: `const apiKeys = Object.keys(chrome || {}).sort();\nreturn {\n  count: apiKeys.length,\n  namespaces: apiKeys\n};`,
+    id: "inspect-manifest",
+    name: "Inspect Manifest",
+    description:
+      "Retrieve extension manifest and platform info via runtime RPC",
+    code: `const manifest = await chrome.runtime.getManifest();\nconst platform = await chrome.runtime.getPlatformInfo();\nreturn {\n  name: manifest.name,\n  version: manifest.version,\n  manifestVersion: manifest.manifest_version,\n  permissions: manifest.permissions,\n  platform,\n};`,
   },
   {
     id: "ping-background",

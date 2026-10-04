@@ -22,23 +22,23 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
 
     timerRef.current = setTimeout(() => {
       clickCountRef.current = 0
-    }, 2500)
+    }, 3000)
 
-    if (clickCountRef.current >= 5) {
+    if (clickCountRef.current >= 7) {
       clickCountRef.current = 0
       if (timerRef.current) clearTimeout(timerRef.current)
       const result = toggleDevUnlocked()
       if (result === "already_dev") {
-        toast.info("当前处于开发构建环境 (wxt dev)，开发者模式默认保持启用")
+        toast.info(t("devMode.alreadyDevToast"))
         return
       }
       if (result === "unlocked") {
-        toast.success("🛠️ 开发者模式已激活！全部 Dev 实验室已解锁")
+        toast.success(t("devMode.activatedToast"))
         setTimeout(() => {
           if (typeof window !== "undefined") window.location.reload()
         }, 500)
       } else {
-        toast.info("已退出开发者模式")
+        toast.info(t("devMode.deactivatedToast"))
         setTimeout(() => {
           if (typeof window !== "undefined") window.location.reload()
         }, 500)
@@ -74,9 +74,7 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
                 <span
                   onClick={handleVersionClick}
                   title={
-                    isDev
-                      ? "当前处于开发调试环境 (wxt dev)"
-                      : "连续点击 5 次可切换开发者模式"
+                    isDev ? t("devMode.tooltipDev") : t("devMode.tooltipProd")
                   }
                   className="text-foreground ml-2 cursor-pointer font-medium transition-opacity select-none active:opacity-60"
                 >

@@ -85,21 +85,41 @@ export default function BrowserApiLab() {
     try {
       let data: unknown
       if (context === "background") {
-        const bgRes = await invokeBrowserApi(
-          probe.id === "tabs-active"
-            ? "tabs.query"
-            : probe.id === "alarms-lifecycle"
-              ? "alarms.getAll"
-              : probe.id === "storage-engines"
-                ? "storage.local.get"
-                : "runtime.getPlatformInfo",
-          probe.id === "tabs-active"
-            ? [{ active: true }]
-            : probe.id === "storage-engines"
-              ? [null]
-              : [],
-          "background",
-        )
+        let apiPath = "runtime.getPlatformInfo"
+        let apiArgs: unknown[] = []
+
+        switch (probe.id) {
+          case "tabs-active":
+            apiPath = "tabs.query"
+            apiArgs = [{ active: true }]
+            break
+          case "storage-engines":
+            apiPath = "storage.local.get"
+            apiArgs = [null]
+            break
+          case "cookies-access":
+            apiPath = "cookies.getAll"
+            apiArgs = [{ domain: "google.com" }]
+            break
+          case "alarms-lifecycle":
+            apiPath = "alarms.getAll"
+            apiArgs = []
+            break
+          case "runtime-env":
+            apiPath = "runtime.getPlatformInfo"
+            apiArgs = []
+            break
+          case "dnr-rules":
+            apiPath = "declarativeNetRequest.getDynamicRules"
+            apiArgs = []
+            break
+          default:
+            throw new Error(
+              `Probe ${probe.id} is not supported in background context`,
+            )
+        }
+
+        const bgRes = await invokeBrowserApi(apiPath, apiArgs, "background")
         if (!bgRes.success) {
           throw new Error(bgRes.error || "Background execution failed")
         }

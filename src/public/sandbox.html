@@ -44,6 +44,9 @@
       Reflect.set(window, "browser", browserProxy)
 
       window.addEventListener("message", async (event) => {
+        if (event.source !== window.parent) {
+          return
+        }
         const data = event.data
         if (!data || typeof data !== "object" || data.source !== "aah-sandbox-host") {
           return

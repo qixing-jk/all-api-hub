@@ -2,6 +2,13 @@
   "copyrightAck": "著作権と謝辞",
   "description": "拡張機能のバージョン、変更履歴、プロジェクトのリンクを確認し、ヘルプや問題報告にアクセスします。",
   "devMaintenance": "開発と保守",
+  "devMode": {
+    "activatedToast": "🛠️ 開発者モードが有効化されました！すべての Dev ラボが利用可能です。",
+    "alreadyDevToast": "現在開発ビルド環境 (wxt dev) で実行中です。開発者モードはデフォルトで有効のままです。",
+    "deactivatedToast": "開発者モードを終了しました。",
+    "tooltipDev": "開発環境で実行中 (wxt dev)",
+    "tooltipProd": "7回クリックして開発者モードを切り替えます"
+  },
   "features": "機能",
   "feedbackSection": {
     "bugReport": {
