@@ -16,7 +16,10 @@ import {
 } from "~/services/history/dailyBalanceHistory/scheduler"
 import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
 import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
-import { appendLogHistory } from "~/services/logging/logHistory"
+import {
+  appendLogHistory,
+  clearLogHistory,
+} from "~/services/logging/logHistory"
 import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
 import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
@@ -192,6 +195,13 @@ export function setupRuntimeMessageListeners() {
             )
             sendResponse({ success: true })
           })
+          .catch(() => sendResponse({ success: false }))
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.LogHistoryClear) {
+        void clearLogHistory()
+          .then(() => sendResponse({ success: true }))
           .catch(() => sendResponse({ success: false }))
         return true
       }

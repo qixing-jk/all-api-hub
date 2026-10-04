@@ -82,6 +82,7 @@ export const RuntimeActionIds = {
     "check",
   ),
   CloudflareGuardLog: "cloudflareGuardLog",
+  LogHistoryClear: "logHistory:clear",
 
   CloseTempWindow: "closeTempWindow",
   GetInternalTabIds: "getInternalTabIds",

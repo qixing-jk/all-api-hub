@@ -17,11 +17,16 @@ import { testI18n } from "~~/tests/test-utils/i18n"
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   clear: vi.fn(),
+  send: vi.fn(),
   subscribe: vi.fn(),
   error: vi.fn(),
 }))
 vi.mock("~/lib/notify", () => ({
   default: { success: vi.fn(), error: mocks.error },
+}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+  sendRuntimeActionMessage: mocks.send,
 }))
 vi.mock("~/services/logging/logHistory", () => ({
   LOG_HISTORY_LIMIT: 1000,
@@ -55,6 +60,7 @@ describe("log history viewer", () => {
     vi.clearAllMocks()
     mocks.list.mockResolvedValue([entry("Earlier session")])
     mocks.clear.mockResolvedValue(undefined)
+    mocks.send.mockResolvedValue({ success: true })
     mocks.subscribe.mockImplementation((listener: () => void) => {
       changed = listener
       return unsubscribe
@@ -74,6 +80,24 @@ describe("log history viewer", () => {
     expect(unsubscribe).toHaveBeenCalled()
     renderViewer()
     expect(await screen.findByText("Earlier session")).toBeInTheDocument()
+  })
+
+  it("clears through the background queue owner instead of the settings context", async () => {
+    const user = userEvent.setup()
+    renderViewer()
+    await screen.findByText("Earlier session")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.clear",
+      }),
+    )
+    await waitFor(() =>
+      expect(mocks.send).toHaveBeenCalledWith({ action: "logHistory:clear" }),
+    )
+    expect(mocks.clear).not.toHaveBeenCalled()
   })
 
   it("freezes displayed logs while paused and catches up when resumed", async () => {
@@ -250,7 +274,7 @@ describe("log history viewer", () => {
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
     confirmation = within(screen.getByRole("dialog"))
-    mocks.clear.mockRejectedValueOnce(new Error("write unavailable"))
+    mocks.send.mockResolvedValueOnce({ success: false })
     await user.click(
       confirmation.getByRole("button", { name: "common:actions.clear" }),
     )

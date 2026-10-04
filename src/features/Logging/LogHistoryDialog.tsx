@@ -15,10 +15,10 @@ import {
 } from "~/components/ui"
 import toast from "~/lib/notify"
 import {
-  clearLogHistory,
   listLogHistory,
   subscribeToLogHistory,
 } from "~/services/logging/logHistory"
+import { clearLogHistoryFromBackground } from "~/services/logging/logHistoryClient"
 import { LOG_CONTEXTS, LOG_LEVELS, type LogHistoryEntry } from "~/types/logging"
 
 const PAGE_SIZE = 100
@@ -127,7 +127,7 @@ export default function LogHistoryDialog() {
   const clearHistory = async () => {
     setIsClearing(true)
     try {
-      await clearLogHistory()
+      await clearLogHistoryFromBackground()
       setIsClearOpen(false)
       await reload()
     } catch {

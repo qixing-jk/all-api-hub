@@ -152,6 +152,20 @@ describe("local log history", () => {
     ])
   })
 
+  it("clear discards failed batches before a new producer retries", async () => {
+    vi.spyOn(browser.storage.local, "get").mockRejectedValueOnce(
+      new Error("read failed"),
+    )
+    await expect(appendLogHistory(entry("before-clear"))).rejects.toThrow(
+      "read failed",
+    )
+    await clearLogHistory()
+    await appendLogHistory(entry("after-clear"))
+    expect((await listLogHistory()).map((row) => row.id)).toEqual([
+      "after-clear",
+    ])
+  })
+
   it("bounds the stored byte size even for large Unicode details", async () => {
     await Promise.all(
       Array.from({ length: 250 }, (_, index) =>

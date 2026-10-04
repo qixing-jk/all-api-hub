@@ -35,6 +35,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   let handleOpenRouterManagementKeyAction: ReturnType<typeof vi.fn>
   let handleTempContextDebugMessage: ReturnType<typeof vi.fn>
   let appendLogHistory: ReturnType<typeof vi.fn>
+  let clearLogHistory: ReturnType<typeof vi.fn>
 
   beforeAll(async () => {
     getCookieHeaderForUrlResult = vi.fn()
@@ -48,7 +49,11 @@ describe("setupRuntimeMessageListeners routing", () => {
     handleOpenRouterManagementKeyAction = vi.fn()
     handleTempContextDebugMessage = vi.fn()
     appendLogHistory = vi.fn()
-    vi.doMock("~/services/logging/logHistory", () => ({ appendLogHistory }))
+    clearLogHistory = vi.fn()
+    vi.doMock("~/services/logging/logHistory", () => ({
+      appendLogHistory,
+      clearLogHistory,
+    }))
 
     vi.doMock("~/entrypoints/background/tempContextDebug", () => ({
       isTempContextDebugAction: (action: unknown) =>
@@ -161,6 +166,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     handleOpenRouterManagementKeyAction.mockReset().mockResolvedValue(undefined)
     handleTempContextDebugMessage.mockReset().mockResolvedValue(undefined)
     appendLogHistory.mockReset().mockResolvedValue(undefined)
+    clearLogHistory.mockReset().mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -227,6 +233,32 @@ describe("setupRuntimeMessageListeners routing", () => {
         {},
         resolve,
       ),
+    )
+    expect(failed).toEqual({ success: false })
+  })
+
+  it("clears the background producer queue before acknowledging and reports failures", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    let finish!: () => void
+    clearLogHistory.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const respond = vi.fn()
+    runtimeMessageListener?.({ action: "logHistory:clear" }, {}, respond)
+    expect(clearLogHistory).toHaveBeenCalledTimes(1)
+    expect(respond).not.toHaveBeenCalled()
+    finish()
+    await vi.waitFor(() =>
+      expect(respond).toHaveBeenCalledWith({ success: true }),
+    )
+    clearLogHistory.mockRejectedValueOnce(new Error("storage failed"))
+    const failed = await new Promise((resolve) =>
+      runtimeMessageListener?.({ action: "logHistory:clear" }, {}, resolve),
     )
     expect(failed).toEqual({ success: false })
   })
