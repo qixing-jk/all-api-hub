@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { ACCOUNT_SITE_TYPES } from "~/constants/siteType"
 import {
   createKeyProvisioningPreviewAccount,
+  getKeyProvisioningPreviewProfile,
   prepareKeyProvisioningPreview,
 } from "~/features/DevPanel/keyProvisioningPreview"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -66,6 +67,9 @@ describe("key provisioning preview plans", () => {
       try {
         const account = createKeyProvisioningPreviewAccount(siteType)
         for (const mode of ["default", "all-groups"] as const) {
+          expect(
+            getKeyProvisioningPreviewProfile(siteType, mode).description,
+          ).toMatch(/key|group|channel/i)
           if (
             !getSiteTypeCapabilities(siteType).account?.keyResourceManagement
           ) {
@@ -118,5 +122,49 @@ describe("key provisioning preview plans", () => {
         await prepareKeyProvisioningPreview(account, "all-groups")
       ).entries.every((entry) => !entry.editor),
     ).toBe(true)
+  })
+
+  it("simulates inventory and native option failures without sending requests", async () => {
+    const covered = await prepareKeyProvisioningPreview(
+      createKeyProvisioningPreviewAccount("new-api"),
+      "all-groups",
+      { scenario: "covered" },
+    )
+    expect(covered).toEqual({ coveredCount: 2, entries: [] })
+    const account = createKeyProvisioningPreviewAccount("voapi-v2")
+    await expect(
+      prepareKeyProvisioningPreview(account, "default", {
+        scenario: "inventory-failure",
+      }),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+    const plan = await prepareKeyProvisioningPreview(account, "default", {
+      scenario: "option-failure",
+    })
+    await expect(
+      plan.entries[0]!.editor!.loadOptions!("groups", {}),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+  })
+
+  it("validates and submits native preview input without remote writes", async () => {
+    const created = vi.fn()
+    const plan = await prepareKeyProvisioningPreview(
+      createKeyProvisioningPreviewAccount("voapi-v2"),
+      "default",
+      { onCreated: created },
+    )
+    const target = plan.entries[0]!
+    expect(
+      target.editor!.resolveDestinationScopeKey(target.editor!.initialValues),
+    ).toBe("preview")
+    await expect(target.create()).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    expect(created).not.toHaveBeenCalled()
+    const result = await target.create({
+      ...target.editor!.initialValues,
+      groups: ["1"],
+    })
+    expect(result.ref).toBeTruthy()
+    expect(created).toHaveBeenCalledOnce()
   })
 })

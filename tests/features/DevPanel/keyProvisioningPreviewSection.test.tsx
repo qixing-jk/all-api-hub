@@ -54,6 +54,55 @@ function setup() {
 }
 
 describe("key provisioning dev preview", () => {
+  it("lets AIHubMix previews cancel or confirm before creation and closes the preview", async () => {
+    const user = setup()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Dev: Preview key provisioning",
+      }),
+    )
+    await user.click(screen.getByRole("combobox", { name: "Site type" }))
+    await user.click(screen.getByRole("option", { name: "AIHubMix" }))
+    await user.click(screen.getByRole("button", { name: "Start preview" }))
+    await user.click(
+      await screen.findByRole("button", { name: "稍后手动创建" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "现在创建并查看" }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Start preview" }))
+    await user.click(
+      await screen.findByRole("button", { name: "现在创建并查看" }),
+    )
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Simulate save" },
+        { timeout: 3000 },
+      ),
+    )
+    await user.click(
+      within(screen.getByRole("dialog", { name: "立即保存完整密钥" }))
+        .getAllByRole("button", { name: "关闭" })
+        .at(-1)!,
+    )
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "准备账号密钥" }))
+        .getAllByRole("button", { name: "关闭" })
+        .at(-1)!,
+    )
+    expect(
+      screen.getByRole("status", { name: "Preview results" }),
+    ).toHaveTextContent("Created in preview: 1")
+    await user.click(
+      within(
+        screen.getByRole("dialog", { name: "Key provisioning preview" }),
+      ).getByRole("button", { name: "common:actions.close" }),
+    )
+    expect(
+      screen.queryByRole("dialog", { name: "Key provisioning preview" }),
+    ).not.toBeInTheDocument()
+  })
   it("registers a preview entry and lists every site type", async () => {
     const user = setup()
     await user.click(

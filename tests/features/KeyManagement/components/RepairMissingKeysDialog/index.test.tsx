@@ -64,6 +64,25 @@ const {
 let mockProgress: AccountKeyRepairProgress
 let mockIsStarting = false
 
+vi.mock(
+  "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog",
+  () => ({
+    AccountKeyProvisioningDialog: ({
+      account,
+      mode,
+      onClose,
+    }: {
+      account: DisplaySiteData
+      mode: string
+      onClose: () => void
+    }) => (
+      <button onClick={onClose}>
+        Finish {account.name} {mode}
+      </button>
+    ),
+  }),
+)
+
 function buildRepairProgress(
   state: AccountKeyRepairProgress["state"] = ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
   overrides: Partial<AccountKeyRepairProgress> = {},
@@ -361,6 +380,63 @@ function buildRepairImportCandidate(
 }
 
 describe("RepairMissingKeysDialog", () => {
+  it("continues a current input-blocked repair in the foreground and closes it independently", async () => {
+    const account = buildAccount()
+    const user = userEvent.setup()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "interactive-job",
+    })
+    const props = {
+      isOpen: true,
+      onClose: vi.fn(),
+      accounts: [account],
+      startOnOpen: false,
+    }
+    const view = render(<RepairMissingKeysDialog {...props} />)
+    await screen.findByRole("progressbar")
+    mockProgress = buildRepairProgress(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      {
+        jobId: "interactive-job",
+        results: [
+          buildAccountResult({
+            accountId: account.id,
+            accountName: account.name,
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey,
+          }),
+        ],
+      },
+    )
+    view.rerender(<RepairMissingKeysDialog {...props} />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:provisioning.continue",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: `Finish ${account.name} all-groups` }),
+    )
+    expect(
+      screen.queryByRole("button", {
+        name: `Finish ${account.name} all-groups`,
+      }),
+    ).not.toBeInTheDocument()
+    expect(props.onClose).not.toHaveBeenCalled()
+    expect(mockHandleStartAudit).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:provisioning.continue",
+      }),
+    )
+    view.rerender(<RepairMissingKeysDialog {...props} isOpen={false} />)
+    view.rerender(<RepairMissingKeysDialog {...props} />)
+    expect(
+      screen.queryByRole("button", {
+        name: `Finish ${account.name} all-groups`,
+      }),
+    ).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsStarting = false

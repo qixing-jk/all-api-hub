@@ -128,6 +128,21 @@ const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
   ...overrides,
 })
 
+it("rejects requirement-bound creation editors unless their adapter explicitly supports binding", async () => {
+  const definition = createDefinition()
+  const session =
+    await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+  await expect(
+    session.openCreateEditor(
+      SCOPE.scopeKey,
+      undefined,
+      undefined,
+      "opaque-requirement",
+    ),
+  ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+  expect(definition.createEditor).not.toHaveBeenCalled()
+})
+
 const openSession = (definition = createDefinition()) =>
   defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
 

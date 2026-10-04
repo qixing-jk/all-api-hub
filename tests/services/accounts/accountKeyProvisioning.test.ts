@@ -254,4 +254,53 @@ describe("interactive account key provisioning plans", () => {
       (await prepareAccountKeyProvisioning(account, "default")).entries,
     ).toHaveLength(0)
   })
+
+  it("validates native input before writing and permits a fresh plan after a proved failure", async () => {
+    const { nativeEditor } = setup()
+    const plan = await prepareAccountKeyProvisioning(account, "default")
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    expect(nativeEditor.submit).not.toHaveBeenCalled()
+    nativeEditor.validate.mockReturnValue({ valid: true })
+    const next = await prepareAccountKeyProvisioning(account, "default")
+    await expect(next.entries[0]!.create({ quota: 10 })).resolves.toMatchObject(
+      { ref },
+    )
+    expect(nativeEditor.submit).toHaveBeenCalledWith(
+      { quota: 10 },
+      expect.any(Object),
+    )
+  })
+
+  it("returns confirmed creation even when the detail read fails", async () => {
+    const { session } = setup()
+    session.openCollection.mockRejectedValue(new Error("detail unavailable"))
+    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+    await expect(plan.entries[0]!.create()).resolves.toEqual({
+      ref,
+      facts: null,
+    })
+  })
+
+  it("rejects a proved non-write without retaining an uncertain guard", async () => {
+    const { session } = setup()
+    session.provisioning.provision.mockResolvedValueOnce({
+      certainty: "not-applied",
+      failure: { code: "unavailable" },
+    } as never)
+    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    const next = await prepareAccountKeyProvisioning(account, "all-groups")
+    await expect(next.entries[0]!.create()).resolves.toMatchObject({ ref })
+  })
+
+  it("rejects providers without native key management", async () => {
+    context.mockReturnValue({ request: {} })
+    await expect(
+      prepareAccountKeyProvisioning(account, "default"),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+  })
 })

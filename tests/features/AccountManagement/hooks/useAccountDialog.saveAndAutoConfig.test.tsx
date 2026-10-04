@@ -956,6 +956,82 @@ describe("useAccountDialog save and auto-config flows", () => {
     },
   )
 
+  it.each(["display", "stored", "missing", "failed"])(
+    "finishes the saved account workflow with a %s provisioning owner",
+    async (ownerSource) => {
+      mockAutoProvisionKeyOnAccountAdd(
+        true,
+        ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      )
+      const account = buildSiteAccount({
+        id: "saved-account-id",
+        site_type: SITE_TYPES.NEW_API,
+      })
+      const display = accountStorage.convertToDisplayData(account)
+      const read = vi.spyOn(accountStorage, "getDisplayDataById")
+      if (ownerSource === "failed")
+        read.mockRejectedValue(new Error("Read failed"))
+      else read.mockResolvedValue(ownerSource === "display" ? display : null)
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+        ownerSource === "stored" ? account : null,
+      )
+      const onSuccess = vi.fn()
+      const { result } = renderAddHook({ onSuccess })
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await fillStandardAddAccountDraft(result)
+      await act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      })
+      if (ownerSource === "display" || ownerSource === "stored") {
+        expect(result.current.state.postSaveKeyProvisioning).toMatchObject({
+          account: display,
+          mode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+        })
+        expect(onSuccess).not.toHaveBeenCalled()
+        await act(async () => {
+          result.current.handlers.handlePostSaveKeyProvisioningClose()
+        })
+      }
+      expect(result.current.state.postSaveKeyProvisioning).toBeNull()
+      expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+    },
+  )
+
+  it("ignores a provisioning owner lookup that finishes after the account view closes", async () => {
+    mockAutoProvisionKeyOnAccountAdd(
+      true,
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+    )
+    const account = buildSiteAccount({
+      id: "saved-account-id",
+      site_type: SITE_TYPES.NEW_API,
+    })
+    let resolve!: (value: DisplaySiteData) => void
+    const read = vi.spyOn(accountStorage, "getDisplayDataById").mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    const onSuccess = vi.fn()
+    const { result } = renderAddHook({ onSuccess })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await fillStandardAddAccountDraft(result)
+    let save!: ReturnType<typeof result.current.handlers.handleSaveAccount>
+    await act(async () => {
+      save = result.current.handlers.handleSaveAccount()
+    })
+    await waitFor(() => expect(read).toHaveBeenCalled())
+    await act(async () => {
+      await result.current.handlers.handleClose()
+    })
+    await act(async () => {
+      resolve(accountStorage.convertToDisplayData(account))
+      await save
+    })
+    expect(result.current.state.postSaveKeyProvisioning).toBeNull()
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+  })
+
   it("defers account data refresh after a successful manual save", async () => {
     const refreshSpy = vi
       .spyOn(accountStorage, "refreshAccount")
@@ -1921,6 +1997,31 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).toBe(false)
   })
 
+  it("completes account saving when foreground AIHubMix creation returns no new secret", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const account = buildSiteAccount({
+      id: "saved-account-id",
+      site_type: SITE_TYPES.AIHUBMIX,
+    })
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(account)
+    const onSuccess = vi.fn()
+    const { result } = renderAddHook({ onSuccess })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await fillAihubmixAccountDraft(result)
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
+    )
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+  })
+
   it("shows the AIHubMix one-time key after the user confirms foreground creation", async () => {
     mockAutoProvisionKeyOnAccountAdd(true)
     const savedSiteAccount = buildSiteAccount({
@@ -1990,6 +2091,10 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    await act(async () => {
+      await result.current.handlers.handlePostSaveOneTimeSecretClose()
+    })
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
   })
 
   it("uses converted AIHubMix display data when saved display data is unavailable during foreground key creation", async () => {

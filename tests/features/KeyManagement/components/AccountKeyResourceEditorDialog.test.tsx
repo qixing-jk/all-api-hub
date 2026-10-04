@@ -755,6 +755,45 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
   })
 
+  it("clears a required dependent selection when its parent changes", async () => {
+    const onValuesChange = vi.fn()
+    const original = editor()
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...original,
+          fields: original.fields.map((descriptor) =>
+            descriptor.fieldId === field.LimitMode &&
+            descriptor.type === "select"
+              ? {
+                  ...descriptor,
+                  optionLoader: { dependsOn: [field.Workspace] },
+                }
+              : descriptor,
+          ),
+        }}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        onValuesChange={onValuesChange}
+        onLoadOptions={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.workspace\.label/,
+      }),
+    )
+    fireEvent.click(screen.getByRole("option", { name: "Next team" }))
+    expect(onValuesChange).toHaveBeenLastCalledWith(
+      1,
+      expect.objectContaining({
+        [field.Workspace]: "workspace-next",
+        [field.LimitMode]: "",
+      }),
+    )
+  })
+
   it("waits for an explicit request before loading manual options and preserves the selection on dependency changes", async () => {
     const onLoadOptions = vi.fn()
     const onValuesChange = vi.fn()

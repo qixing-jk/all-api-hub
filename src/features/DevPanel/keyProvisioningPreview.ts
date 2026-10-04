@@ -215,10 +215,6 @@ export async function prepareKeyProvisioningPreview(
           target?.id,
         )
         groupField = "groups"
-        if (target)
-          groupOptions = groupOptions.filter(
-            (group) => group.value === String(target.id),
-          )
       } else if (
         mode === "default" &&
         account.siteType === SITE_TYPES.SUB2API &&

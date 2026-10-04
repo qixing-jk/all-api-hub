@@ -192,6 +192,7 @@ const {
     handleAihubmixPostSaveKeyPromptConfirm: vi.fn(),
     shouldDeferAccountSaveSuccess: vi.fn(),
     handlePostSaveOneTimeSecretClose: vi.fn(),
+    handlePostSaveKeyProvisioningClose: vi.fn(),
     handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
     handlePostSaveSub2ApiTokenCreated: vi.fn(),
     getPostSaveSub2ApiDialogHandlers: vi.fn(),
@@ -264,7 +265,27 @@ function resetMockState() {
     postSaveSub2ApiAccount: null,
     postSaveSub2ApiDialogSessionId: null,
   })
+  mockState.postSaveKeyProvisioning = null
 }
+
+vi.mock(
+  "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog",
+  () => ({
+    AccountKeyProvisioningDialog: ({
+      account,
+      mode,
+      onClose,
+    }: {
+      account: { name: string }
+      mode: string
+      onClose: () => void
+    }) => (
+      <button onClick={onClose}>
+        Finish {account.name} {mode}
+      </button>
+    ),
+  }),
+)
 
 vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: (props: {
@@ -398,6 +419,29 @@ vi.mock("~/utils/navigation", () => ({
 }))
 
 describe("AccountDialog", () => {
+  it("lets the saved account provisioning dialog complete its owning workflow", async () => {
+    mockState.postSaveKeyProvisioning = {
+      account: buildDisplaySiteData({ name: "Saved account" }),
+      mode: "all-groups",
+    }
+    render(
+      <AccountDialog
+        isOpen
+        mode={DIALOG_MODES.ADD}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "Finish Saved account all-groups" }),
+      )
+    expect(
+      mockHandlers.handlePostSaveKeyProvisioningClose,
+    ).toHaveBeenCalledTimes(1)
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     Object.defineProperty(navigator, "clipboard", {

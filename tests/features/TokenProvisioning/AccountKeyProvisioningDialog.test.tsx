@@ -35,10 +35,25 @@ vi.mock(
       onSubmit,
       onClose,
       notice,
+      onLoadOptions,
+      onValuesChange,
     }: any) =>
       editor ? (
         <div role="dialog" aria-label="Input">
           <p>{notice}</p>
+          <p>{JSON.stringify(editor.feedback)}</p>
+          <p>{JSON.stringify(editor.optionsByField)}</p>
+          <p>{JSON.stringify(editor.optionFailuresByField)}</p>
+          <button
+            onClick={() =>
+              onLoadOptions(editor.editorId, "models", editor.values)
+            }
+          >
+            Load options
+          </button>
+          <button onClick={() => onValuesChange(editor.editorId, { quota: 7 })}>
+            Edit values
+          </button>
           <button onClick={() => onSubmit(editor.editorId, { quota: 5 })}>
             Accept input
           </button>
@@ -87,6 +102,36 @@ const setup = () => {
 }
 
 describe("foreground account key provisioning", () => {
+  it.each([false, true])(
+    "ignores a stale option load after a newer successful request (reject=%s)",
+    async (reject) => {
+      const user = userEvent.setup()
+      const manual = entry("manual", true)
+      const pending =
+        createDeferred<readonly { value: string; displayLabel: string }[]>()
+      manual
+        .editor!.loadOptions.mockReturnValueOnce(pending.promise)
+        .mockResolvedValueOnce([
+          { value: "new", displayLabel: "Newest choice" },
+        ])
+      prepare.mockResolvedValue({ coveredCount: 0, entries: [manual] })
+      setup()
+      await user.click(
+        await screen.findByRole("button", { name: "Load options" }),
+      )
+      await user.click(screen.getByRole("button", { name: "Load options" }))
+      await screen.findByText(/Newest choice/)
+      await act(async () => {
+        if (reject) pending.reject(new Error("Stale failure"))
+        else pending.resolve([{ value: "old", displayLabel: "Stale choice" }])
+      })
+      expect(screen.getByText(/Newest choice/)).toBeVisible()
+      expect(
+        screen.queryByText(/Stale choice|unexpected/),
+      ).not.toBeInTheDocument()
+      expect(manual.create).not.toHaveBeenCalled()
+    },
+  )
   beforeEach(() => {
     prepare.mockReset()
     vi.clearAllMocks()
@@ -172,31 +217,34 @@ describe("foreground account key provisioning", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("lets the in-flight write settle when cancelled and preserves its one-time secret", async () => {
-    const user = userEvent.setup()
-    const pending = createDeferred<any>()
-    const first = entry("first"),
-      second = entry("second")
-    first.create.mockReturnValue(pending.promise)
-    prepare.mockResolvedValue({ coveredCount: 0, entries: [first, second] })
-    const { onClose } = setup()
-    await waitFor(() => expect(first.create).toHaveBeenCalledOnce())
-    await user.click(
-      await screen.findByRole("button", { name: "common:actions.cancel" }),
-    )
-    expect(onClose).not.toHaveBeenCalled()
-    await act(async () =>
-      pending.resolve({
-        ref: null,
-        facts: null,
-        createdSecret: { secret: "retained" },
-      }),
-    )
-    await screen.findByRole("dialog", { name: "Secret" })
-    await user.click(screen.getByRole("button", { name: "Secret handled" }))
-    await screen.findByText("keyManagement:provisioning.cancelled")
-    expect(second.create).not.toHaveBeenCalled()
-  })
+  it.each(["cancel", "close"])(
+    "lets the in-flight write settle after %s and preserves its one-time secret",
+    async (action) => {
+      const user = userEvent.setup()
+      const pending = createDeferred<any>()
+      const first = entry("first"),
+        second = entry("second")
+      first.create.mockReturnValue(pending.promise)
+      prepare.mockResolvedValue({ coveredCount: 0, entries: [first, second] })
+      const { onClose } = setup()
+      await waitFor(() => expect(first.create).toHaveBeenCalledOnce())
+      await user.click(
+        await screen.findByRole("button", { name: `common:actions.${action}` }),
+      )
+      expect(onClose).not.toHaveBeenCalled()
+      await act(async () =>
+        pending.resolve({
+          ref: null,
+          facts: null,
+          createdSecret: { secret: "retained" },
+        }),
+      )
+      await screen.findByRole("dialog", { name: "Secret" })
+      await user.click(screen.getByRole("button", { name: "Secret handled" }))
+      await screen.findByText("keyManagement:provisioning.cancelled")
+      expect(second.create).not.toHaveBeenCalled()
+    },
+  )
 
   it("ignores an old source plan after the account changes", async () => {
     const pending = createDeferred<any>()
@@ -293,6 +341,83 @@ describe("foreground account key provisioning", () => {
         expect(notify.error).toHaveBeenCalledWith(
           "keyManagement:native.editor.feedback.uncertain",
         )
+    },
+  )
+
+  it("closes an already covered plan without writes", async () => {
+    prepare.mockResolvedValue({ coveredCount: 1, entries: [] })
+    const { onClose } = setup()
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+  })
+
+  it("reports preparation failures and permits closing", async () => {
+    const user = userEvent.setup()
+    prepare.mockRejectedValue(new Error("inventory failed"))
+    const { onClose } = setup()
+    await screen.findByRole("alert")
+    await user.click(
+      screen.getAllByRole("button", { name: "common:actions.close" }).at(-1)!,
+    )
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("keeps invalid input editable and loads native options from updated values", async () => {
+    const user = userEvent.setup()
+    const manual = entry("manual", true)
+    manual.editor!.validate = vi
+      .fn()
+      .mockReturnValueOnce({
+        valid: false,
+        issues: [{ fieldId: "quota", code: "out_of_range" }],
+      })
+      .mockReturnValue({ valid: true })
+    manual.editor!.loadOptions.mockResolvedValue([
+      { value: "new-model", displayLabel: "New model" },
+    ])
+    prepare.mockResolvedValue({ coveredCount: 0, entries: [manual] })
+    setup()
+    await user.click(
+      await screen.findByRole("button", { name: "Accept input" }),
+    )
+    expect(manual.create).not.toHaveBeenCalled()
+    expect(screen.getByText(/validation_failed/)).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Edit values" }))
+    await user.click(screen.getByRole("button", { name: "Load options" }))
+    expect(manual.editor!.loadOptions).toHaveBeenCalledWith(
+      "models",
+      { quota: 7 },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    expect(await screen.findByText(/new-model/)).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Accept input" }))
+    await waitFor(() => expect(manual.create).toHaveBeenCalledOnce())
+  })
+
+  it.each([true, false])(
+    "shows option failure and recovers through reloading (native error: %s)",
+    async (nativeError) => {
+      const user = userEvent.setup()
+      const manual = entry("manual", true)
+      manual
+        .editor!.loadOptions.mockRejectedValueOnce(
+          nativeError
+            ? new AccountKeyResourceError({ code: "unavailable" })
+            : new Error("options failed"),
+        )
+        .mockResolvedValue([{ value: "recovered", displayLabel: "Recovered" }])
+      prepare.mockResolvedValue({ coveredCount: 0, entries: [manual] })
+      setup()
+      await user.click(
+        await screen.findByRole("button", { name: "Load options" }),
+      )
+      expect(
+        await screen.findByText(
+          new RegExp(nativeError ? "unavailable" : "unexpected"),
+        ),
+      ).toBeVisible()
+      await user.click(screen.getByRole("button", { name: "Load options" }))
+      expect(await screen.findByText(/recovered/)).toBeVisible()
+      expect(manual.create).not.toHaveBeenCalled()
     },
   )
 })

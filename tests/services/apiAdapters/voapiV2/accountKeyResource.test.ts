@@ -70,6 +70,23 @@ const rawKey = (overrides: Partial<VoApiV2Key>): VoApiV2Key => ({
 })
 
 describe("VoAPI v2 account key resources", () => {
+  it.each([
+    { groups: [] },
+    { groups: [{ id: 0, requirementKey: "0", displayName: "Invalid" }] },
+  ])(
+    "rejects missing or invalid group requirements before writing: %j",
+    async ({ groups }) => {
+      mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValue(groups)
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+      await expect(session.provisioning!.provision("0")).rejects.toMatchObject({
+        failure: { code: "validation_failed" },
+      })
+      expect(mockCreateVoApiV2Key).not.toHaveBeenCalled()
+    },
+  )
   it("pins an input editor to an exact missing requirement even when labels repeat", async () => {
     mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValue([
       { id: 9, requirementKey: "9", displayName: "Duplicate", description: "" },
