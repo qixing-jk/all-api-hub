@@ -95,6 +95,65 @@ describe("Modal", () => {
     expect(secondTrigger).toHaveFocus()
   })
 
+  it("keeps a narrow gutter on small viewports and widens it from sm up", () => {
+    render(
+      <Modal isOpen onClose={() => undefined} size="lg" title="Sized modal">
+        <button type="button">Sized modal action</button>
+      </Modal>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(screen.getByRole("dialog")).toHaveClass(
+      "max-w-[calc(100%-1rem)]",
+      "sm:max-w-[calc(100%-2rem)]",
+    )
+    expect(
+      document.querySelector('[data-slot="modal-positioner"]'),
+    ).toHaveClass("px-2", "sm:px-4", "py-2", "sm:py-density-4")
+  })
+
+  it("ceils the panel at the gutter-adjusted viewport height instead of 90vh", () => {
+    render(
+      <Modal isOpen onClose={() => undefined} size="lg" title="Sized modal">
+        <button type="button">Sized modal action</button>
+      </Modal>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    // The panel owns the ceiling so its own body stays the scroll region, and
+    // the value tracks the positioner's vertical gutter instead of a fixed
+    // 90vh, which left a dead band above and below a 600px popup.
+    expect(document.querySelector('[data-slot="modal-panel"]')).toHaveClass(
+      "max-h-[calc(100dvh-2rem)]",
+      "sm:max-h-[calc(100dvh-4rem)]",
+    )
+    expect(document.querySelector('[data-slot="modal-panel"]')).not.toHaveClass(
+      "max-h-[90vh]",
+    )
+    expect(
+      document.querySelector('[data-slot="modal-positioner"]'),
+    ).not.toHaveClass("py-density-4")
+  })
+
+  it("lets the caller replace the panel height ceiling", () => {
+    render(
+      <Modal
+        isOpen
+        onClose={() => undefined}
+        size="lg"
+        title="Tall modal"
+        panelClassName="max-h-[calc(100dvh-0.5rem)]"
+      >
+        <button type="button">Tall modal action</button>
+      </Modal>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    const panel = document.querySelector('[data-slot="modal-panel"]')
+    expect(panel).toHaveClass("max-h-[calc(100dvh-0.5rem)]")
+    expect(panel).not.toHaveClass("max-h-[calc(100dvh-2rem)]")
+  })
+
   it("notifies after a controlled close restores focus", async () => {
     const user = userEvent.setup()
     const onCloseComplete = vi.fn()
