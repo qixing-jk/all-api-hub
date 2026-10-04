@@ -1,5 +1,42 @@
 # Changelog
 
+## [4.3.0](https://github.com/qixing-jk/all-api-hub/compare/v4.2.0...v4.3.0) (2026-10-04)
+
+
+### Features
+
+* **accounts:** choose recent tab sites from the URL field ([#1600](https://github.com/qixing-jk/all-api-hub/issues/1600)) ([67290a0](https://github.com/qixing-jk/all-api-hub/commit/67290a045649314ee69ffc3479f4b7c787467c83))
+* **accounts:** improve bookmark import recovery and guidance ([#1605](https://github.com/qixing-jk/all-api-hub/issues/1605)) ([9920d37](https://github.com/qixing-jk/all-api-hub/commit/9920d3798f291efd460f2bb2ad91cf34838bfb6c))
+* **accounts:** reuse the current site in the URL field and fit the add-account dialog to small screens ([#1612](https://github.com/qixing-jk/all-api-hub/issues/1612)) ([f375f1d](https://github.com/qixing-jk/all-api-hub/commit/f375f1d5b46bf317ec64e3f8752f602c9d14d2ae))
+* **api-credentials:** support request header overrides ([#1604](https://github.com/qixing-jk/all-api-hub/issues/1604)) ([4e5351f](https://github.com/qixing-jk/all-api-hub/commit/4e5351f16dba1d334c13db3fba4cb7822c7a5b75))
+* **checkin:** display authoritative rewards in execution results ([#1595](https://github.com/qixing-jk/all-api-hub/issues/1595)) ([c192cad](https://github.com/qixing-jk/all-api-hub/commit/c192cad6254cf040bd5f83a1e27bfe5ca200dfef))
+* **checkin:** optimize auto-detect discovery with early probe and silence false warnings on unsupported sites ([#1587](https://github.com/qixing-jk/all-api-hub/issues/1587)) ([8f2baf2](https://github.com/qixing-jk/all-api-hub/commit/8f2baf26a63d059a58e8b76d95d8e184fd0732a4))
+* **checkin:** support ToolCode growth-center daily check-in ([#1599](https://github.com/qixing-jk/all-api-hub/issues/1599)) ([44cb377](https://github.com/qixing-jk/all-api-hub/commit/44cb37765d381e098dfdf6a1ef84f6c90726841e))
+* **checkin:** unify method redetection across account actions ([#1611](https://github.com/qixing-jk/all-api-hub/issues/1611)) ([05f4552](https://github.com/qixing-jk/all-api-hub/commit/05f4552ea11c383b3b2bc5950b63824dd568b1dc))
+* **credential-library:** monitor remaining allowance across credentials ([#1591](https://github.com/qixing-jk/all-api-hub/issues/1591)) ([29d8942](https://github.com/qixing-jk/all-api-hub/commit/29d8942049177e015738a652a123012821622409))
+* **credential-profiles:** record the source page where a shared key was found ([#1597](https://github.com/qixing-jk/all-api-hub/issues/1597)) ([ef167db](https://github.com/qixing-jk/all-api-hub/commit/ef167db399dfa825a469d206bfbafb96992e194e))
+* **dev:** add Browser API Lab and developer mode unlock easter egg ([#1603](https://github.com/qixing-jk/all-api-hub/issues/1603)) ([14417cb](https://github.com/qixing-jk/all-api-hub/commit/14417cbde115e9e00d1ae4d671a9b852a0f62927))
+* **diagnostics:** add recent logs and reuse signed-in tabs for detection ([#1610](https://github.com/qixing-jk/all-api-hub/issues/1610)) ([8d74638](https://github.com/qixing-jk/all-api-hub/commit/8d7463862e685ed4276790cacd559d9ac5c2a20b))
+* **diagnostics:** explain account detection failures across browser contexts ([#1592](https://github.com/qixing-jk/all-api-hub/issues/1592)) ([dedb5bd](https://github.com/qixing-jk/all-api-hub/commit/dedb5bd7ef2ab0725145b46edd830c9895601fc1))
+* **freemodel:** support cookie accounts, API keys and model discovery ([#1601](https://github.com/qixing-jk/all-api-hub/issues/1601)) ([f4764de](https://github.com/qixing-jk/all-api-hub/commit/f4764de95ba5fa9a60d5849eb0ea8588b89bbc45))
+* **grsai:** support console accounts and native key management ([#1594](https://github.com/qixing-jk/all-api-hub/issues/1594)) ([c94cdc0](https://github.com/qixing-jk/all-api-hub/commit/c94cdc0129200875f76d4055bd27aca40ecd5f65))
+* **key-management:** surface progress and success for native key mutations ([#1590](https://github.com/qixing-jk/all-api-hub/issues/1590)) ([fe36df3](https://github.com/qixing-jk/all-api-hub/commit/fe36df353bfafc567ab22cdfbb7389ea31a6f589))
+* **kimi:** add Kimi Open Platform accounts with model catalogs and CNY/USD pricing ([#1578](https://github.com/qixing-jk/all-api-hub/issues/1578)) ([2291640](https://github.com/qixing-jk/all-api-hub/commit/22916401a1b45cd1eb78d1083650c9734e33d72b))
+* **managed-sites:** add gpt-load group management and migration ([#1607](https://github.com/qixing-jk/all-api-hub/issues/1607)) ([43b3aae](https://github.com/qixing-jk/all-api-hub/commit/43b3aaeda89dd2a6458bc8da87b3eb00e1362bd4))
+* **new-api:** adapt account detection to rc.41 scoped access tokens ([#1579](https://github.com/qixing-jk/all-api-hub/issues/1579)) ([0954678](https://github.com/qixing-jk/all-api-hub/commit/09546784f37df6398ffd967464f873def45d9400))
+* **omniroute:** add self-hosted gateway channel management ([#1577](https://github.com/qixing-jk/all-api-hub/issues/1577)) ([50261d5](https://github.com/qixing-jk/all-api-hub/commit/50261d57756c3e4a846642edf35e2a04dc2fe2f8))
+* **options:** add sidebar footer with docs, star, sponsors, and community popover ([#1608](https://github.com/qixing-jk/all-api-hub/issues/1608)) ([e561141](https://github.com/qixing-jk/all-api-hub/commit/e561141078fff525d5af28d22cbc74318608818b))
+* **tooling:** reuse shared local env across worktrees ([#1583](https://github.com/qixing-jk/all-api-hub/issues/1583)) ([8b78340](https://github.com/qixing-jk/all-api-hub/commit/8b7834027baffdaf67ec2da7404c81dbc13ab497))
+
+
+### Bug Fixes
+
+* **checkin:** recover discovery after save and improve method diagnostics ([#1598](https://github.com/qixing-jk/all-api-hub/issues/1598)) ([b23adba](https://github.com/qixing-jk/all-api-hub/commit/b23adba895f6de629236c702d71079e3e3d91671))
+* **dev:** make browser startup opt-out ([455e1ce](https://github.com/qixing-jk/all-api-hub/commit/455e1ce63c08dfc746dea1ce5c5b3e705e26f2cb))
+* **exports:** give each consumer the protocol address shape it owns ([#1584](https://github.com/qixing-jk/all-api-hub/issues/1584)) ([f8d9475](https://github.com/qixing-jk/all-api-hub/commit/f8d9475e232081bcbb2ce86961b6f8d9dcfe164b))
+* **popup:** continue account flows in Options when side panels are unavailable ([#1602](https://github.com/qixing-jk/all-api-hub/issues/1602)) ([329b867](https://github.com/qixing-jk/all-api-hub/commit/329b86781a9074d09a40e2fb7710d741865674ae))
+* **popup:** fill mobile and tablet extension viewports ([#1606](https://github.com/qixing-jk/all-api-hub/issues/1606)) ([8c83998](https://github.com/qixing-jk/all-api-hub/commit/8c8399825698a8dd1c4ca961dece10167b809a06))
+
 ## [4.2.0](https://github.com/qixing-jk/all-api-hub/compare/v4.1.0...v4.2.0) (2026-09-30)
 
 
