@@ -1,20 +1,16 @@
 import { useCallback, useRef, useState } from "react"
 
-import {
-  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
-  CHECK_IN_METHOD_AVAILABILITIES,
-  CHECK_IN_METHOD_DETECTION_OUTCOMES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
-} from "~/constants/checkIn"
+import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { AccountSiteType } from "~/constants/siteType"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
 import { discoverAccountDialogCheckInMethods } from "~/features/AccountManagement/components/AccountDialog/checkInDiscovery"
+import { createCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
 import type {
   AccountCheckInRedetectionFeedback,
   AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import { mergeUserOwnedCheckInDraft } from "~/services/checkin/autoCheckin/state"
 import type { ProductAnalyticsActionInsights } from "~/services/productAnalytics/actions"
@@ -183,25 +179,6 @@ export function useAccountCheckInRedetection({
             : "none",
         }),
       })
-      const selectedStatus = getSelectedCheckInStatus({
-        config: discovery.config,
-        siteType: requestedSiteType,
-        siteUrl: requestedUrl,
-      })
-      const selectedMethodDisabled =
-        discovery.decision.outcome ===
-          CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved &&
-        selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-        selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
-      const unknownReasons = [
-        ...new Set(
-          Object.values(discovery.detections).flatMap((detection) =>
-            detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
-              ? [detection.reason]
-              : [],
-          ),
-        ),
-      ]
       // A method that resolved needs no type advice; every other outcome is a
       // candidate for a stored type the site itself no longer agrees with. The
       // reading shares this click's bypass context; the policy still decides.
@@ -237,14 +214,20 @@ export function useAccountCheckInRedetection({
         await siteTypeObservations.clear(accountId, requestedSiteType)
       }
       setCheckInRedetectionFeedback({
-        kind: "completed",
-        decisionOutcome: discovery.decision.outcome,
-        selectedMethodDisabled,
-        saveRequired:
-          mode === DIALOG_MODES.EDIT &&
-          discovery.decision.outcome !==
-            CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown,
-        unknownReasons,
+        ...createCheckInRedetectionFeedback({
+          config: discovery.config,
+          decision: discovery.decision,
+          state: inspectAccountCheckIn({
+            config: discovery.config,
+            siteType: requestedSiteType,
+            siteUrl: requestedUrl,
+          }),
+          detections: discovery.detections,
+          saveRequired:
+            mode === DIALOG_MODES.EDIT &&
+            discovery.decision.outcome !==
+              CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown,
+        }),
         ...(siteTypeSuggestion ? { siteTypeSuggestion } : {}),
       })
     } catch (error) {

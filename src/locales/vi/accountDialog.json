@@ -233,6 +233,7 @@
     "autoDetectSuccess": "Tự động nhận dạng thành công!",
     "autoDetectTakingTooLong": "Tự động nhận dạng mất quá nhiều thời gian? Nhấp để mở tài liệu khắc phục sự cố",
     "checkInRedetectAmbiguous": "Đã phát hiện nhiều phương thức điểm danh. Hãy chọn một phương thức bên dưới.",
+    "checkInRedetectChanged": "Tài khoản hoặc cài đặt điểm danh đã thay đổi. Hãy dò lại phương thức trước khi chọn.",
     "checkInRedetectDisabled": "Đã hoàn tất phát hiện: trang web hiện chưa bật tính năng điểm danh.",
     "checkInRedetectResolved": "Đã phát hiện một phương thức điểm danh khả dụng.",
     "checkInRedetectSaveRequired": "Hãy lưu thay đổi để áp dụng kết quả phát hiện này.",

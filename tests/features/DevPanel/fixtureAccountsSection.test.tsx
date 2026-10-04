@@ -7,16 +7,19 @@ import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 
 const {
   addDevFixtureAccountsMock,
+  addDevCheckInFixtureAccountsMock,
   clearDevFixtureAccountsMock,
   countDevFixtureAccountsMock,
 } = vi.hoisted(() => ({
   addDevFixtureAccountsMock: vi.fn(),
+  addDevCheckInFixtureAccountsMock: vi.fn(),
   clearDevFixtureAccountsMock: vi.fn(),
   countDevFixtureAccountsMock: vi.fn(),
 }))
 
 vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   addDevFixtureAccounts: addDevFixtureAccountsMock,
+  addDevCheckInFixtureAccounts: addDevCheckInFixtureAccountsMock,
   clearDevFixtureAccounts: clearDevFixtureAccountsMock,
   countDevFixtureAccounts: countDevFixtureAccountsMock,
 }))
@@ -36,6 +39,7 @@ describe("fixture accounts dev section", () => {
     vi.clearAllMocks()
     countDevFixtureAccountsMock.mockResolvedValue(0)
     addDevFixtureAccountsMock.mockResolvedValue(5)
+    addDevCheckInFixtureAccountsMock.mockResolvedValue(5)
     clearDevFixtureAccountsMock.mockResolvedValue(0)
   })
 
@@ -71,6 +75,21 @@ describe("fixture accounts dev section", () => {
     await waitFor(() => {
       expect(addDevFixtureAccountsMock).toHaveBeenCalledWith(1)
     })
+  })
+
+  it("adds check-in scenarios through a direct dev action", async () => {
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Dev: Add check-in discovery scenarios",
+      }),
+    )
+    await waitFor(() =>
+      expect(addDevCheckInFixtureAccountsMock).toHaveBeenCalledOnce(),
+    )
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+      "Dev: added 5 check-in scenario account(s)",
+    )
   })
 
   it("reports the error message when adding fixtures fails", async () => {

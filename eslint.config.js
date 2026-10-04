@@ -96,6 +96,15 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Each entry also lists the allowed import targets as prefix matches, so a
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
+  // Development-only discovery fixtures stay outside production detection and UI loading.
+  {
+    file: "src/services/checkin/autoCheckin/accountDiscovery.ts",
+    imports: ["./devDiscoveryFixtures"],
+  },
+  {
+    file: "src/features/AutoCheckin/AutoCheckin.tsx",
+    imports: ["~/services/checkin/autoCheckin/devDiscoveryFixtures"],
+  },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
   {
     file: "src/components/ui/datePickerLocale.ts",

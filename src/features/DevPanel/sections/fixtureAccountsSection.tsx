@@ -1,10 +1,11 @@
-import { FlaskConical, Plus, Trash2 } from "lucide-react"
+import { CalendarCheck2, FlaskConical, Plus, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import toast from "~/lib/notify"
 
 import {
+  addDevCheckInFixtureAccounts,
   addDevFixtureAccounts,
   clearDevFixtureAccounts,
   countDevFixtureAccounts,
@@ -34,11 +35,18 @@ export function useFixtureAccountsDevSection(
   }, [isPanelOpen, refreshCount])
 
   const handleAdd = useCallback(
-    async (count: number) => {
+    async (count?: number) => {
       setPendingAction("add")
       try {
-        const added = await addDevFixtureAccounts(count)
-        toast.success(`Dev: added ${added} fixture account(s)`)
+        const added =
+          count === undefined
+            ? await addDevCheckInFixtureAccounts()
+            : await addDevFixtureAccounts(count)
+        toast.success(
+          count === undefined
+            ? `Dev: added ${added} check-in scenario account(s)`
+            : `Dev: added ${added} fixture account(s)`,
+        )
         await refreshCount()
       } catch (error) {
         toast.error(
@@ -75,10 +83,23 @@ export function useFixtureAccountsDevSection(
       id: "fixture-accounts",
       title: "Fixture accounts",
       icon: FlaskConical,
-      description: "Pure-local accounts for testing list and stats UIs.",
-      pages: [MENU_ITEM_IDS.ACCOUNT, MENU_ITEM_IDS.OVERVIEW],
+      description:
+        "Add check-in scenarios, refresh the page, then redetect from an account's More menu or Auto Check-in's Readiness tab. Multiple methods opens the real chooser; selecting a method keeps it on the next retry. Add fresh scenarios to test again. Automatic check-in stays off. Clear removes all registered fixture accounts.",
+      pages: [
+        MENU_ITEM_IDS.ACCOUNT,
+        MENU_ITEM_IDS.OVERVIEW,
+        MENU_ITEM_IDS.AUTO_CHECKIN,
+      ],
       surfaces: ["options"],
       actions: [
+        {
+          id: "add-checkin-scenarios",
+          label: "Dev: Add check-in discovery scenarios",
+          icon: CalendarCheck2,
+          loading: pendingAction === "add",
+          disabled: pendingAction !== null,
+          run: () => handleAdd(),
+        },
         {
           id: "add-five",
           label: "Dev: Add 5 fixture accounts",

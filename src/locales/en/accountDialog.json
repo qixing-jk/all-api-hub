@@ -234,6 +234,7 @@
     "autoDetectSuccess": "Auto-detect successful!",
     "autoDetectTakingTooLong": "Auto-detect is taking longer than expected. Open troubleshooting guide.",
     "checkInRedetectAmbiguous": "Multiple check-in methods were detected. Select one below.",
+    "checkInRedetectChanged": "The account or check-in settings changed. Re-detect the methods before choosing again.",
     "checkInRedetectDisabled": "Detection complete: this site has not enabled check-in.",
     "checkInRedetectResolved": "An available check-in method was detected.",
     "checkInRedetectSaveRequired": "Save changes to apply this detection result.",

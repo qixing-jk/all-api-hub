@@ -9,6 +9,7 @@ import {
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/accountDiscovery"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/postSaveDiscovery"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -152,6 +153,189 @@ afterEach(() => {
 })
 
 describe("post-save check-in discovery", () => {
+  it("retires a pending choice when the account is deleted", async () => {
+    saveAccount()
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+    const result = await redetectSavedAccountCheckIn("account", context)
+    storageData.set(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      createDefaultAccountStorageConfig(NOW),
+    )
+    expect(
+      await accountCheckInState.selectDetectedCheckInMethod(
+        result!.account,
+        GENIUS,
+      ),
+    ).toBeNull()
+  })
+
+  it.each(["selection", "newer discovery", "disabled", "unmatched method"])(
+    "rejects a pending method choice after %s",
+    async (change) => {
+      saveAccount()
+      atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+      const result = await redetectSavedAccountCheckIn("account", context)
+      await updateAccount((account) => {
+        if (change === "disabled") return { ...account, disabled: true }
+        if (change === "selection")
+          return {
+            ...account,
+            checkIn: {
+              ...account.checkIn,
+              selection: { mode: "manual", methodId: PRO },
+            },
+          }
+        if (change === "newer discovery")
+          return {
+            ...account,
+            checkIn: {
+              ...account.checkIn,
+              methodKnowledge: {
+                ...account.checkIn.methodKnowledge,
+                lastFullDiscoveryAt: NOW + 10,
+              },
+            },
+          }
+        return {
+          ...account,
+          checkIn: {
+            ...account.checkIn,
+            methodKnowledge: {
+              ...account.checkIn.methodKnowledge,
+              methods: {
+                ...account.checkIn.methodKnowledge.methods,
+                [GENIUS]: { detection: detection("unsupported") },
+              },
+            },
+          },
+        }
+      })
+      const selected = await accountCheckInState.selectDetectedCheckInMethod(
+        result!.account,
+        GENIUS,
+      )
+      expect(selected?.applied).toBe(false)
+      expect(selected?.account.checkIn.selection.methodId).not.toBe(GENIUS)
+    },
+  )
+
+  it("preserves unrelated settings edited while a method choice is open", async () => {
+    saveAccount()
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+    const result = await redetectSavedAccountCheckIn("account", context)
+    await updateAccount((account) => ({
+      ...account,
+      notes: "new note",
+      checkIn: { ...account.checkIn, automaticExecutionEnabled: false },
+    }))
+    const selected = await accountCheckInState.selectDetectedCheckInMethod(
+      result!.account,
+      GENIUS,
+    )
+    expect(selected?.applied).toBe(true)
+    expect(selected?.account.notes).toBe("new note")
+    expect(selected?.account.checkIn.automaticExecutionEnabled).toBe(false)
+  })
+
+  it("does not save an explicitly cancelled detection", async () => {
+    saveAccount()
+    const controller = new AbortController()
+    atIndex(detectors, 0).mockImplementationOnce(async () => {
+      controller.abort()
+      return detection("matched")
+    })
+    const result = await redetectSavedAccountCheckIn("account", {
+      ...context,
+      signal: controller.signal,
+    })
+    expect(result).toBeNull()
+    expect(storageSet).not.toHaveBeenCalled()
+  })
+
+  it("adopts a sole matched replacement when the prior manual method is unsupported", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: GENIUS }
+    saveAccount(account)
+    const result = await redetectSavedAccountCheckIn(account.id, context)
+    expect(result?.account.checkIn.selection.methodId).toBe(PRO)
+    expect(result?.requiresSelection).toBe(false)
+  })
+
+  it("explicit redetection probes even after a completed discovery and keeps intent off", async () => {
+    const account = createAccount()
+    account.checkIn.automaticExecutionEnabled = false
+    account.checkIn.methodKnowledge.lastFullDiscoveryAt = NOW
+    saveAccount(account)
+    const result = await redetectSavedAccountCheckIn(account.id, context)
+    expect(result?.applied).toBe(true)
+    expect(result?.account.checkIn.selection.methodId).toBe(PRO)
+    expect(result?.account.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(
+      result?.account.checkIn.methodKnowledge.lastFullDiscoveryAt,
+    ).toBeGreaterThan(NOW)
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
+  it("returns a choice for multiple matches and persists only the chosen method", async () => {
+    saveAccount()
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+    const result = await redetectSavedAccountCheckIn("account", context)
+    expect(result?.requiresSelection).toBe(true)
+    expect(result?.account.checkIn.selection.methodId).toBeUndefined()
+    const selected = await accountCheckInState.selectDetectedCheckInMethod(
+      result!.account,
+      GENIUS,
+    )
+    expect(selected?.applied).toBe(true)
+    expect(selected?.account.checkIn.selection).toEqual({
+      mode: "manual",
+      methodId: GENIUS,
+    })
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
+  it("keeps an existing manual choice without asking again when multiple methods match", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: PRO }
+    saveAccount(account)
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+    const result = await redetectSavedAccountCheckIn("account", context)
+    expect(result?.requiresSelection).toBe(false)
+    expect(result?.account.checkIn.selection).toEqual(account.checkIn.selection)
+  })
+
+  it("rejects a dialog choice when credentials change and preserves unrelated edits", async () => {
+    saveAccount()
+    atIndex(detectors, 1).mockResolvedValue(detection("matched"))
+    const result = await redetectSavedAccountCheckIn("account", context)
+    await updateAccount((account) => ({
+      ...account,
+      notes: "new note",
+      account_info: { ...account.account_info, access_token: "rotated" },
+    }))
+    const selected = await accountCheckInState.selectDetectedCheckInMethod(
+      result!.account,
+      GENIUS,
+    )
+    expect(selected?.applied).toBe(false)
+    expect(selected?.account.notes).toBe("new note")
+    expect(selected?.account.checkIn.selection.methodId).toBeUndefined()
+  })
+
+  it("does not offer stale discovery results when the account changes during probing", async () => {
+    saveAccount()
+    atIndex(detectors, 0).mockImplementationOnce(async () => {
+      await updateAccount((account) => ({
+        ...account,
+        account_info: { ...account.account_info, access_token: "rotated" },
+      }))
+      return detection("matched")
+    })
+    const result = await redetectSavedAccountCheckIn("account", context)
+    expect(result?.applied).toBe(false)
+    expect(result?.requiresSelection).toBe(false)
+  })
+
   it("selects ToolCode after save without enabling automatic execution or posting", async () => {
     const account = createAccount()
     account.checkIn.automaticExecutionEnabled = false
@@ -175,7 +359,7 @@ describe("post-save check-in discovery", () => {
     async (change) => {
       const account = saveAccount()
       const complete = vi
-        .spyOn(accountCheckInState, "completePostSaveCheckInDiscovery")
+        .spyOn(accountCheckInState, "completeUserCheckInDiscovery")
         .mockImplementationOnce(async () => {
           if (change === "deleted") {
             storageData.set(

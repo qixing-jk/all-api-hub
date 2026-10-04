@@ -233,6 +233,7 @@
     "autoDetectSuccess": "自動識別成功！",
     "autoDetectTakingTooLong": "自動識別耗時較長？點擊開啟排查文件",
     "checkInRedetectAmbiguous": "偵測到多種簽到方式，請在下方選擇。",
+    "checkInRedetectChanged": "帳號或簽到設定已變更，請重新偵測後再選擇。",
     "checkInRedetectDisabled": "偵測完成：站點目前未啟用簽到功能。",
     "checkInRedetectResolved": "已偵測到可用的簽到方式。",
     "checkInRedetectSaveRequired": "請儲存變更，以套用本次偵測結果。",

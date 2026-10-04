@@ -3,7 +3,9 @@ import type { TFunction } from "i18next"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
@@ -15,10 +17,55 @@ import {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInAccountState,
+  CheckInConfig,
+  CheckInDiscoveryDecision,
+  CheckInMethodDetection,
   CheckInMethodId,
   CheckInMethodSelection,
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
+
+/** Classifies read-only discovery once for draft notices and saved-account feedback. */
+export function createCheckInRedetectionFeedback(input: {
+  config: CheckInConfig
+  state: CheckInAccountState
+  decision: CheckInDiscoveryDecision
+  detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
+  saveRequired: boolean
+}): Extract<AccountCheckInRedetectionFeedback, { kind: "completed" }> {
+  const { selectionState } = input.state
+  const { decision } = input
+  const selectedStatus =
+    selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+      ? input.config.methodKnowledge.methods[selectionState.methodId]?.status
+      : undefined
+  const retainedManualChoice =
+    input.config.selection.mode === CHECK_IN_SELECTION_MODES.Manual &&
+    selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+  const decisionOutcome =
+    retainedManualChoice &&
+    decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
+      ? CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
+      : decision.outcome
+  return {
+    kind: "completed",
+    decisionOutcome,
+    selectedMethodDisabled:
+      decisionOutcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved &&
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+    saveRequired: input.saveRequired,
+    unknownReasons: [
+      ...new Set(
+        Object.values(input.detections).flatMap((detection) =>
+          detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
+            ? [detection.reason]
+            : [],
+        ),
+      ),
+    ],
+  }
+}
 
 /** Returns the user-facing label and source disclosure for one method. */
 export function getCheckInMethodPresentation(

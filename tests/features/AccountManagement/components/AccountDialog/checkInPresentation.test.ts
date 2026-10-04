@@ -12,6 +12,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  createCheckInRedetectionFeedback,
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
@@ -66,6 +67,43 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it("keeps an inconclusive probe visible instead of reporting an older disabled status", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
+    })
+    config.methodKnowledge.methods[methodId] = {
+      detection: {
+        outcome: "matched",
+        evidence: { source: "probe", observedAt: 1 },
+      },
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        evidence: { source: "probe", observedAt: 1 },
+      },
+    }
+    const feedback = createCheckInRedetectionFeedback({
+      config,
+      state: inspectAccountCheckIn({ config, siteType: SITE_TYPES.NEW_API }),
+      decision: {
+        outcome: "unknown",
+        matchedMethodIds: [],
+        unknownMethodIds: [methodId],
+      },
+      detections: {
+        [methodId]: { outcome: "unknown", reason: "network", attemptedAt: 2 },
+      },
+      saveRequired: false,
+    })
+    expect(feedback.selectedMethodDisabled).toBe(false)
+    expect(getCheckInRedetectionFeedbackPresentation(t, feedback)?.title).toBe(
+      "messages.checkInRedetectUnknown",
+    )
+  })
+
   it("keeps an unsupported manual selection stale rather than unconfirmed", () => {
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
     const config = createCompatibilityCheckInConfig({

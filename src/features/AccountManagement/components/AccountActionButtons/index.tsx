@@ -49,6 +49,7 @@ import {
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
+import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import toast from "~/lib/notify"
@@ -73,6 +74,7 @@ import {
   isAutomaticCheckInConfiguredForAccount,
 } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
@@ -306,6 +308,12 @@ export default function AccountActionButtons({
     loadAccountData,
   } = useAccountDataContext()
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
+  const {
+    redetect,
+    isPending: isRedetectingCheckIn,
+    selectionDialog,
+    onMenuCloseAutoFocus,
+  } = useCheckInRedetection(site.id, loadAccountData)
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
   const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
@@ -315,6 +323,7 @@ export default function AccountActionButtons({
     string | null
   >(null)
   const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
+  const moreActionsTriggerRef = useRef<HTMLButtonElement | null>(null)
   const quickCheckinInFlightRef = useRef(false)
   const disableToggleInFlightRef = useRef(false)
   const suppressMoreActionsFocusRestoreRef = useRef(false)
@@ -1077,6 +1086,7 @@ export default function AccountActionButtons({
               variant="ghost"
               size="sm"
               aria-label={t("common:actions.more")}
+              ref={moreActionsTriggerRef}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton}
             >
               <Ellipsis className="h-4 w-4" />
@@ -1086,6 +1096,7 @@ export default function AccountActionButtons({
           <DropdownMenuContent
             align="end"
             onCloseAutoFocus={(event) => {
+              onMenuCloseAutoFocus(event)
               if (suppressMoreActionsFocusRestoreRef.current) {
                 event.preventDefault()
                 suppressMoreActionsFocusRestoreRef.current = false
@@ -1187,6 +1198,22 @@ export default function AccountActionButtons({
                   disabled={refreshingAccountId === site.id}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
                 />
+
+                {getAutoCheckinCandidateMethodIds(site.siteType, site.baseUrl)
+                  .length > 0 && (
+                  <AccountActionMenuItem
+                    onClick={() => {
+                      setIsMoreActionsOpen(false)
+                      void redetect(moreActionsTriggerRef.current ?? undefined)
+                    }}
+                    icon={CalendarCheck2}
+                    label={t("accountDialog:form.redetectCheckInMethods")}
+                    loading={isRedetectingCheckIn}
+                    loadingLabel={t(
+                      "accountDialog:form.redetectingCheckInMethods",
+                    )}
+                  />
+                )}
 
                 {isQuickCheckinEligible && (
                   <ProductAnalyticsScope
@@ -1320,6 +1347,7 @@ export default function AccountActionButtons({
         </DropdownMenu>
       </div>
       {feedbackDialog}
+      {selectionDialog}
       {manualInviteLinkPayload !== null ? (
         <InviteLinkManualCopyDialog
           payload={manualInviteLinkPayload}

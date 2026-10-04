@@ -22,8 +22,10 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import { useRegisterDevPanelSection } from "~/features/DevPanel"
 import toast from "~/lib/notify"
+import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
   sendAutoCheckinMessage,
@@ -292,9 +294,10 @@ export default function AutoCheckin(props: {
 
     try {
       setIsLoading(true)
-      const [response, accountSetup] = await Promise.all([
+      const [response, accountSetup, providerEvidence] = await Promise.all([
         sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
         loadAutoCheckinAccountSetup(),
+        loginProviderEvidence.readAll(),
       ])
       // Read through the account, so an observation a later site-type edit
       // retired is not named on a result row.
@@ -304,6 +307,19 @@ export default function AutoCheckin(props: {
           siteType: account.site_type,
         })),
       )
+
+      let displayStatus = response.success ? response.data : null
+      if (import.meta.env.DEV && response.success) {
+        const { appendDevCheckInFixtureSnapshots } = await import(
+          "~/services/checkin/autoCheckin/devDiscoveryFixtures"
+        )
+        const snapshots = await appendDevCheckInFixtureSnapshots(
+          displayStatus?.accountsSnapshot ?? [],
+          accountSetup.accounts,
+        )
+        if (snapshots.length)
+          displayStatus = { ...displayStatus, accountsSnapshot: snapshots }
+      }
 
       if (loadId === latestStatusLoadIdRef.current) {
         setAccountSetupState(accountSetup.state)
@@ -318,7 +334,19 @@ export default function AutoCheckin(props: {
         )
 
         if (response.success) {
-          setStatus(response.data)
+          setStatus(
+            displayStatus
+              ? {
+                  ...displayStatus,
+                  accountsSnapshot: refreshAutoCheckinAccountSnapshots(
+                    displayStatus.accountsSnapshot ?? [],
+                    accountSetup.accounts,
+                    providerEvidence,
+                    autoCheckinEnabled,
+                  ),
+                }
+              : displayStatus,
+          )
         }
       }
 
@@ -335,7 +363,7 @@ export default function AutoCheckin(props: {
     }
 
     return null
-  }, [])
+  }, [autoCheckinEnabled])
 
   useEffect(() => {
     void loadStatus()
@@ -1162,6 +1190,7 @@ export default function AutoCheckin(props: {
       pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
       openingManualAccountId={openingManualAccountId}
       openingExternalCheckInAccountId={openingExternalCheckInAccountId}
+      onCheckInUpdated={loadStatus}
       onRetryAccount={handleRetryAccount}
       onVerifyAccountStatus={handleVerifyAccountStatus}
       onDisableAccount={handleDisableAccount}
@@ -1235,7 +1264,12 @@ export default function AutoCheckin(props: {
             results={accountResults}
             snapshots={snapshots}
             resultsContent={resultsContent}
-            readinessContent={<AccountSnapshotTable snapshots={snapshots} />}
+            readinessContent={
+              <AccountSnapshotTable
+                snapshots={snapshots}
+                onCheckInUpdated={loadStatus}
+              />
+            }
           />
         ) : (
           resultsContent

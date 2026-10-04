@@ -1,12 +1,13 @@
 import {
   Ban,
+  CalendarCheck2,
   CalendarDays,
   Ellipsis,
   MessageSquarePlus,
   RefreshCw,
   Trash2,
 } from "lucide-react"
-import type { ComponentProps } from "react"
+import { useRef, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
@@ -63,6 +65,7 @@ function DirectResultActionButton({
 /** Renders direct and overflow actions for one execution-result row. */
 export default function ResultsTableRowActions({
   result,
+  onCheckInUpdated,
   showDevActions,
   retryingAccountId,
   verifyingAccountId,
@@ -88,6 +91,13 @@ export default function ResultsTableRowActions({
   ])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
   const accountId = result.accountId
+  const moreActionsTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const {
+    redetect,
+    isPending: isRedetecting,
+    selectionDialog,
+    onMenuCloseAutoFocus,
+  } = useCheckInRedetection(accountId, onCheckInUpdated)
   const forceShowActions = Boolean(showDevActions)
   const isOpeningSite = pendingOpeningSiteAccountIds?.has(accountId) ?? false
   const isFailedResult = result.status === CHECKIN_RESULT_STATUS.FAILED
@@ -150,7 +160,8 @@ export default function ResultsTableRowActions({
     isOpeningSite ||
     disablingAccountId === accountId ||
     deletingAccountId === accountId
-  const isAnyActionPending = isPrimaryActionPending || isSecondaryActionPending
+  const isAnyActionPending =
+    isPrimaryActionPending || isSecondaryActionPending || isRedetecting
 
   return (
     <ProductAnalyticsScope
@@ -158,6 +169,7 @@ export default function ResultsTableRowActions({
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable}
     >
       {feedbackDialog}
+      {selectionDialog}
       <div className="gap-y-density-1-5 flex items-center justify-end gap-x-1.5 whitespace-nowrap">
         {showDirectFeedback && (
           <DirectResultActionButton
@@ -215,13 +227,17 @@ export default function ResultsTableRowActions({
             <Button
               size="icon-sm"
               variant="ghost"
+              ref={moreActionsTriggerRef}
               aria-label={t("common:actions.more")}
               disabled={isAnyActionPending}
               loading={isAnyActionPending}
               leftIcon={<Ellipsis className="h-4 w-4" />}
             />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            onCloseAutoFocus={onMenuCloseAutoFocus}
+          >
             <ProductAnalyticsScope
               featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
             >
@@ -270,6 +286,15 @@ export default function ResultsTableRowActions({
                 </DropdownMenuItem>
               ) : null}
             </ProductAnalyticsScope>
+            <DropdownMenuItem
+              onClick={() =>
+                void redetect(moreActionsTriggerRef.current ?? undefined)
+              }
+              disabled={isRedetecting}
+            >
+              <CalendarCheck2 className="h-4 w-4" />
+              {t("accountDialog:form.redetectCheckInMethods")}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleFeedback}>
               <MessageSquarePlus className="h-4 w-4" />
               {feedbackLabel}

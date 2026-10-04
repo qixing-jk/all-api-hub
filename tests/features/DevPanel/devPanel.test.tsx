@@ -95,6 +95,7 @@ vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
 vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   countDevFixtureAccounts: vi.fn(async () => 0),
   addDevFixtureAccounts: vi.fn(async () => 0),
+  addDevCheckInFixtureAccounts: vi.fn(async () => 5),
   clearDevFixtureAccounts: vi.fn(async () => 0),
 }))
 
@@ -209,7 +210,11 @@ describe("DevPanel", () => {
       screen.getByRole("button", { name: "Dev: Trigger update log" }),
     ).toBeVisible()
     expect(devPages).toHaveAttribute("aria-expanded", "false")
-    expect(screen.queryByText("Fixture accounts")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "Dev: Add check-in discovery scenarios",
+      }),
+    ).toBeVisible()
   })
 
   it("shows account fixtures on account pages but not on the credential page", async () => {

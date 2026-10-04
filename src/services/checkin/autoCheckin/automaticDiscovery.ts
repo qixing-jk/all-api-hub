@@ -1,13 +1,11 @@
-import { FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS } from "~/constants/checkIn"
 import {
   accountCheckInState,
   isAutomaticCheckInDiscoveryCurrent,
 } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/accountDiscovery"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
-import { getEffectiveAuthType } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -45,26 +43,11 @@ export async function prepareAutomaticCheckIn(input: {
     ) {
       return { account, discovered: false }
     }
-    const discovery = await discoverCheckInMethods({
+    const discovery = await discoverAccountCheckInMethods(
       account,
-      config: account.checkIn,
-      perAdapterTimeoutMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
-      deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
-      observedAt:
-        account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
-      request: {
-        accountId: account.id,
-        baseUrl: account.site_url,
-        auth: {
-          authType: getEffectiveAuthType(account),
-          userId: account.account_info.id,
-          accessToken: account.account_info.access_token,
-        },
-        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-        tempWindowRequestSource: input.context.tempWindowRequestSource,
-        protectionBypassExecution: input.context.protectionBypassExecution,
-      },
-    })
+      input.context,
+      account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
+    )
     if (!(await input.isAutomaticExecutionEnabled())) {
       return {
         account: await accountQueries.getAccountById(account.id),

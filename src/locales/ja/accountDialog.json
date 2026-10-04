@@ -233,6 +233,7 @@
     "autoDetectSuccess": "自動検出に成功しました",
     "autoDetectTakingTooLong": "自動検出に想定より時間がかかっています。トラブルシューティングガイドを開いてください。",
     "checkInRedetectAmbiguous": "複数のチェックイン方法が検出されました。下から選択してください。",
+    "checkInRedetectChanged": "アカウントまたはチェックイン設定が変更されました。再検出してから選択してください。",
     "checkInRedetectDisabled": "検出が完了しました。サイト側でチェックインが有効になっていません。",
     "checkInRedetectResolved": "利用可能なチェックイン方法を検出しました。",
     "checkInRedetectSaveRequired": "この検出結果を適用するには、変更を保存してください。",
