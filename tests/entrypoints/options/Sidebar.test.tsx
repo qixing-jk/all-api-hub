@@ -48,6 +48,11 @@ vi.mock("framer-motion", () => {
   }
 })
 
+vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
+  useStarPromotionActive: () => true,
+  useIsStarred: () => false,
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()

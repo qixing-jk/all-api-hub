@@ -130,6 +130,7 @@
   --color-destructive-indicator: var(--destructive-indicator);
   --color-info-indicator: var(--info-indicator);
   --color-neutral-indicator: var(--neutral-indicator);
+  --color-star: var(--star);
   --color-pricing-input: var(--pricing-input);
   --color-pricing-input-soft: var(--pricing-input-soft);
   --color-pricing-output: var(--pricing-output);

@@ -487,14 +487,18 @@
   },
   "feedback": {
     "bugReport": "Báo cáo lỗi",
+    "clickAnywhereToClose": "Nhấp vào bất kỳ đâu để đóng",
     "community": "Nhóm cộng đồng",
     "discussion": "Tham gia thảo luận",
     "featureRequest": "Đề xuất tính năng",
     "languageRequest": "Yêu cầu ngôn ngữ mới",
     "siteSupportRequest": "Phản hồi trang web chưa được hỗ trợ",
+    "sponsor": "Tài trợ",
+    "sponsorTitle": "Xem nhà tài trợ và hỗ trợ",
     "starOnGithub": "Gắn sao trên GitHub",
     "trigger": "Phản hồi",
-    "triggerTooltip": "Mở lối tắt phản hồi"
+    "triggerTooltip": "Mở lối tắt phản hồi",
+    "wechat": "Nhóm WeChat"
   },
   "modelListInput": {
     "actions": {
@@ -649,6 +653,12 @@
     "shortRow": "Khóa {{number}}",
     "show": "Hiện khóa",
     "title": "Khóa API"
+  },
+  "sidebarFooter": {
+    "community": "Cộng đồng",
+    "docs": "Tài liệu",
+    "github": "GitHub",
+    "sponsor": "Tài trợ"
   },
   "starPromotion": {
     "actions": {

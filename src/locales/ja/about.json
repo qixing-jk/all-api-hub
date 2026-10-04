@@ -1,4 +1,5 @@
 {
+  "alreadyStarred": "Star 済み",
   "copyrightAck": "著作権と謝辞",
   "description": "拡張機能のバージョン、変更履歴、プロジェクトのリンクを確認し、ヘルプや問題報告にアクセスします。",
   "devMaintenance": "開発と保守",
@@ -77,5 +78,6 @@
   "title": "この拡張機能について",
   "upcomingFeatures": "今後の機能",
   "version": "バージョン:",
+  "viewRepo": "リポジトリを見る",
   "visitHomepage": "ホームページを開く"
 }

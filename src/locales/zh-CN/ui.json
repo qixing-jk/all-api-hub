@@ -483,14 +483,18 @@
   },
   "feedback": {
     "bugReport": "反馈问题",
+    "clickAnywhereToClose": "点击空白处关闭",
     "community": "社区交流群",
     "discussion": "参与讨论",
     "featureRequest": "提出功能建议",
     "languageRequest": "请求支持新语言",
     "siteSupportRequest": "反馈未适配站点",
+    "sponsor": "赞助支持",
+    "sponsorTitle": "查看赞助商与赞助支持",
     "starOnGithub": "去 GitHub 点个 Star",
     "trigger": "反馈",
-    "triggerTooltip": "打开反馈快捷入口"
+    "triggerTooltip": "打开反馈快捷入口",
+    "wechat": "微信群"
   },
   "modelListInput": {
     "actions": {
@@ -643,6 +647,12 @@
     "shortRow": "密钥 {{number}}",
     "show": "查看密钥",
     "title": "API 密钥"
+  },
+  "sidebarFooter": {
+    "community": "社区",
+    "docs": "文档",
+    "github": "GitHub",
+    "sponsor": "赞助支持"
   },
   "starPromotion": {
     "actions": {
