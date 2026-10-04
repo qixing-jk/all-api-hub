@@ -1141,6 +1141,21 @@ describe("browserApi getSidePanelSupport", () => {
     expect(support.supported).toBe(true)
   })
 
+  it("propagates a window-only opening failure without disabling capability", async () => {
+    const failure = new Error("window opening rejected")
+    const open = vi.fn().mockRejectedValue(failure)
+    ;(globalThis as any).browser = {}
+    ;(globalThis as any).chrome = { sidePanel: { open } }
+    const { openSidePanel, getSidePanelSupport } = await import(
+      "~/utils/browser/browserApi"
+    )
+    await expect(
+      openSidePanel({ windowId: 9 } as browser.tabs.Tab),
+    ).rejects.toBe(failure)
+    expect(open).toHaveBeenCalledExactlyOnceWith({ windowId: 9 })
+    expect(getSidePanelSupport().supported).toBe(true)
+  })
+
   it("opens the Firefox sidebar action directly", async () => {
     const open = vi.fn().mockResolvedValue(undefined)
     ;(globalThis as any).browser = {

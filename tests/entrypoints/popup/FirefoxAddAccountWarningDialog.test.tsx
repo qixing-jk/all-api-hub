@@ -5,6 +5,31 @@ import FirefoxAddAccountWarningDialog from "~/entrypoints/popup/components/Firef
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("Firefox add-account continuation", () => {
+  it("offers sidebar continuation and cancellation when supported", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <FirefoxAddAccountWarningDialog
+        isOpen
+        onClose={onClose}
+        onConfirm={vi.fn()}
+        sidePanelSupported
+      />,
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.firefox.openSidebar",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText("ui:dialog.firefox.howOpenSidebar")).toBeVisible()
+    expect(
+      screen.getByText("ui:dialog.firefox.sidebarInstruction"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "ui:dialog.firefox.confirm" }),
+    )
+    expect(onClose).toHaveBeenCalledOnce()
+  })
   it("recommends a full page when sidebar support is missing", async () => {
     render(
       <FirefoxAddAccountWarningDialog

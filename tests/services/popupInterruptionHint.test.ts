@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import {
   clearPopupInterruptionHint,
   completePopupCriticalFlow,
@@ -57,6 +57,60 @@ describe("popupInterruptionHint", () => {
     await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
     await expect(getPopupInterruptionHint()).resolves.toBeNull()
     await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+  })
+
+  it("probes a persisted lease and recovers only after its owner disappears", async () => {
+    const leaseName = `${STORAGE_LOCKS.POPUP_CRITICAL_FLOW_PREFIX}other-popup`
+    let ownerAlive = true
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          callback: (lock: Lock | null) => unknown,
+        ) =>
+          callback(
+            name === leaseName && ownerAlive ? null : ({ name } as Lock),
+          ),
+      },
+    })
+    try {
+      await browser.storage.local.set({
+        [STORAGE_KEYS.POPUP_INTERRUPTION_HINT]: {
+          flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+          status: "active",
+          startedAt: 1,
+          ownerId: "other-popup",
+          leaseName,
+        },
+      })
+      await expect(getPopupInterruptionHint()).resolves.toBeNull()
+      ownerAlive = false
+      await expect(getPopupInterruptionHint()).resolves.toMatchObject({
+        status: "pending",
+        ownerId: "other-popup",
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("does not report a lease-backed flow as interrupted when probing is unavailable", async () => {
+    vi.stubGlobal("navigator", {})
+    try {
+      await browser.storage.local.set({
+        [STORAGE_KEYS.POPUP_INTERRUPTION_HINT]: {
+          flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
+          status: "active",
+          startedAt: 1,
+          ownerId: "other-popup",
+          leaseName: `${STORAGE_LOCKS.POPUP_CRITICAL_FLOW_PREFIX}other-popup`,
+        },
+      })
+      await expect(getPopupInterruptionHint()).resolves.toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it("checks flow ownership across extension contexts and detects teardown", async () => {
@@ -144,6 +198,15 @@ describe("popupInterruptionHint", () => {
       STORAGE_KEYS.POPUP_INTERRUPTION_HINT,
     )
     expect(stored[STORAGE_KEYS.POPUP_INTERRUPTION_HINT]).toBeUndefined()
+  })
+
+  it("dismisses the pending hint matching the banner snapshot", async () => {
+    await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
+    await markPopupClosedDuringCriticalFlow()
+    const hint = await getPopupInterruptionHint()
+    expect(hint).not.toBeNull()
+    await clearPopupInterruptionHint(hint!)
+    await expect(getPopupInterruptionHint()).resolves.toBeNull()
   })
 
   it("does not dismiss a newly started flow when responding to an older hint", async () => {
