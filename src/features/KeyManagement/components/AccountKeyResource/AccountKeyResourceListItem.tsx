@@ -1,5 +1,5 @@
-import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { Pencil, Trash2 } from "lucide-react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
@@ -9,7 +9,6 @@ import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/
 import { LinkedCredentialProfileActions } from "~/features/KeyManagement/components/LinkedCredentialProfileActions"
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
-import toast from "~/lib/notify"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type {
@@ -19,7 +18,6 @@ import type {
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { maskSecretForDisplay } from "~/utils/core/formatters"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 import type {
@@ -27,7 +25,7 @@ import type {
   NativeKeyManagementRowAction,
 } from "../../types"
 import { RuntimeKeyHeader } from "../RuntimeKeyActions/RuntimeKeyHeader"
-import { useRuntimeKeyDisclosure } from "../RuntimeKeyActions/useRuntimeKeyDisclosure"
+import { useAccountKeySecretDisclosure } from "./useAccountKeySecretDisclosure"
 
 /** Composes one native account-key resource with the shared key-resource card. */
 export function AccountKeyResourceListItem({
@@ -91,17 +89,20 @@ export function AccountKeyResourceListItem({
   const recoverable = supportsRecoverableAccountRuntimeKeySecrets(
     account.siteType,
   )
-  const disclosure = useRuntimeKeyDisclosure(account, runtimeKey)
-  const [visibleSecretProfileId, setVisibleSecretProfileId] = useState<
-    string | null
-  >(null)
-  const associatedProfileWithSecret = associatedProfile?.apiKey.trim()
-    ? associatedProfile
-    : undefined
-  const isSecretVisible =
-    associatedProfileWithSecret !== undefined &&
-    visibleSecretProfileId === associatedProfileWithSecret.id
-  const hasAssociatedSecret = Boolean(associatedProfileWithSecret)
+  const {
+    secret,
+    secretControls,
+    associatedProfileWithSecret,
+    hasAssociatedSecret,
+    copy: copyDisclosedKey,
+  } = useAccountKeySecretDisclosure({
+    account,
+    runtimeKey,
+    recoverable,
+    associatedProfile,
+    maskedLabel: row.facts.maskedLabel,
+    displayName: row.facts.displayName,
+  })
   const presentation = cardAdapter.buildPresentation(row, t, {
     hasAssociatedSecret,
   })
@@ -158,86 +159,6 @@ export function AccountKeyResourceListItem({
   ) : (
     managementActions
   )
-  const secret = recoverable
-    ? disclosure.secret ?? presentation.maskedLabel
-    : associatedProfileWithSecret
-      ? isSecretVisible
-        ? associatedProfileWithSecret.apiKey
-        : maskSecretForDisplay(associatedProfileWithSecret.apiKey)
-      : presentation.maskedLabel
-  const copyAssociatedSecret = async () => {
-    if (!associatedProfileWithSecret) return
-    try {
-      await navigator.clipboard.writeText(associatedProfileWithSecret.apiKey)
-      toast.success(
-        t("keyManagement:messages.keyCopied", {
-          name: presentation.title,
-        }),
-      )
-    } catch {
-      toast.error(t("keyManagement:messages.copyFailed"))
-    }
-  }
-  const secretControls = recoverable ? (
-    <IconButton
-      type="button"
-      size="sm"
-      variant="ghost"
-      loading={disclosure.resolving}
-      aria-label={
-        disclosure.visible ? t("actions.hideKey") : t("actions.showKey")
-      }
-      tooltip={disclosure.visible ? t("actions.hideKey") : t("actions.showKey")}
-      onClick={() => void disclosure.toggle()}
-    >
-      {disclosure.visible ? (
-        <EyeOff aria-hidden="true" className="h-4 w-4" />
-      ) : (
-        <Eye aria-hidden="true" className="h-4 w-4" />
-      )}
-    </IconButton>
-  ) : hasAssociatedSecret ? (
-    <>
-      {/* These local disclosure actions do not resolve provider secrets, so the
-          existing provider reveal/copy analytics would misclassify them. */}
-      <IconButton
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-label={
-          isSecretVisible
-            ? t("keyManagement:actions.hideKey")
-            : t("keyManagement:actions.showKey")
-        }
-        tooltip={
-          isSecretVisible
-            ? t("keyManagement:actions.hideKey")
-            : t("keyManagement:actions.showKey")
-        }
-        onClick={() =>
-          setVisibleSecretProfileId(
-            isSecretVisible ? null : associatedProfileWithSecret?.id ?? null,
-          )
-        }
-      >
-        {isSecretVisible ? (
-          <EyeOff aria-hidden="true" className="h-4 w-4" />
-        ) : (
-          <Eye aria-hidden="true" className="h-4 w-4" />
-        )}
-      </IconButton>
-      <IconButton
-        type="button"
-        size="sm"
-        variant="ghost"
-        aria-label={t("common:actions.copyKey")}
-        tooltip={t("common:actions.copyKey")}
-        onClick={() => void copyAssociatedSecret()}
-      >
-        <Copy aria-hidden="true" className="h-4 w-4" />
-      </IconButton>
-    </>
-  ) : undefined
 
   return (
     <KeyResourceCard
@@ -254,7 +175,7 @@ export function AccountKeyResourceListItem({
                 runtimeKey={runtimeKey}
                 actionPolicy={presentation.actions}
                 association={association}
-                copyKey={disclosure.copy}
+                copyKey={copyDisclosedKey}
                 handleEditKey={() => onEdit(row.facts.ref)}
                 handleDeleteKey={() => onDelete(row.facts.ref)}
                 onOpenDeeplinkExport={onOpenDeeplinkExport}

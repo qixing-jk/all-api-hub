@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
@@ -35,7 +36,7 @@ type ActiveDialog =
   | "verify-cli"
   | null
 
-export const LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT = {
+const LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
   surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -46,7 +47,12 @@ const logger = createLogger("LinkedCredentialProfileActions")
 /** Owns complete-key integration state and side effects for a linked profile. */
 export function useLinkedCredentialProfileActions(
   profile: ApiCredentialProfile,
+  surfaceId: ProductAnalyticsSurfaceId = PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
 ) {
+  const analyticsContext = {
+    ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+    surfaceId,
+  }
   const { t } = useTranslation(["keyManagement", "messages"])
   const {
     claudeCodeRouterApiKey,
@@ -69,7 +75,7 @@ export function useLinkedCredentialProfileActions(
 
   const handleCherryStudio = () => {
     const tracker = startProductAnalyticsAction({
-      ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+      ...analyticsContext,
       actionId:
         PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
     })
@@ -104,8 +110,8 @@ export function useLinkedCredentialProfileActions(
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
-      surfaceId: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT.surfaceId,
-      entrypoint: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT.entrypoint,
+      surfaceId: analyticsContext.surfaceId,
+      entrypoint: analyticsContext.entrypoint,
     })
 
     try {
@@ -149,6 +155,7 @@ export function useLinkedCredentialProfileActions(
   }
 
   return {
+    analyticsContext,
     activeDialog,
     claudeCodeRouterApiKey,
     claudeCodeRouterBaseUrl,

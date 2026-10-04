@@ -4,6 +4,7 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
+  type ApiCredentialProfile,
   type ApiCredentialProfileLink,
 } from "~/types/apiCredentialProfiles"
 
@@ -114,4 +115,16 @@ export const getCredentialAssociationForLocator = (
     associationId: match.id,
     profileId: match.profileId,
   }
+}
+
+/** Returns a local profile only for one confirmed link to the exact key locator. */
+export const getCredentialProfileForLocator = (
+  links: readonly ApiCredentialProfileLink[],
+  profiles: readonly ApiCredentialProfile[],
+  locator: AccountRuntimeKeyLocator,
+): ApiCredentialProfile | undefined => {
+  const association = getCredentialAssociationForLocator(links, locator)
+  return association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked
+    ? profiles.find((profile) => profile.id === association.profileId)
+    : undefined
 }

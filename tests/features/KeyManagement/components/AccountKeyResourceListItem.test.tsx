@@ -6,7 +6,6 @@ import { AccountKeyResourceListItem as NativeAccountKeyResourceListItem } from "
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
-import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
@@ -200,7 +199,7 @@ describe("AccountKeyResourceListItem", () => {
   it("exposes complete-key actions from a linked credential profile", async () => {
     const user = userEvent.setup()
     server.use(
-      http.get("https://api.example.invalid/v1/v1/models", () =>
+      http.get("https://api.example.invalid/v1/models", () =>
         HttpResponse.json({ data: { object: "list", data: [] } }),
       ),
     )
@@ -229,9 +228,7 @@ describe("AccountKeyResourceListItem", () => {
       { withUserPreferencesProvider: true, withThemeProvider: false },
     )
 
-    expect(
-      await screen.findByText(maskSecretForDisplay("complete-example-secret")),
-    ).toBeVisible()
+    expect(await screen.findByText(row.facts.maskedLabel!)).toBeVisible()
     const showButton = await screen.findByRole("button", {
       name: "keyManagement:actions.showKey",
     })
@@ -324,9 +321,7 @@ describe("AccountKeyResourceListItem", () => {
     )
 
     expect(screen.queryByText(nextProfile.apiKey)).not.toBeInTheDocument()
-    expect(
-      screen.getByText(maskSecretForDisplay(nextProfile.apiKey)),
-    ).toBeVisible()
+    expect(screen.getByText(row.facts.maskedLabel!)).toBeVisible()
     expect(
       screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     ).toBeVisible()

@@ -9,12 +9,17 @@ import {
 import { Alert, Modal, Spinner } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
+import { getCredentialProfileForLocator } from "~/features/KeyManagement/credentialAssociations"
+import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { DefaultTokenGroupSelectionDialog } from "~/features/TokenProvisioning/components/DefaultTokenGroupSelectionDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
@@ -42,6 +47,12 @@ export default function CopyKeyDialog({
   account,
 }: CopyKeyDialogProps) {
   const keyManagementT = useTranslation("keyManagement").t
+  const { profiles, isLoading: profilesLoading } = useApiCredentialProfiles()
+  const {
+    links,
+    isLoading: linksLoading,
+    error: linksError,
+  } = useApiCredentialProfileLinks()
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const [isCreateEditorReady, setIsCreateEditorReady] = useState(false)
   const [deeplinkExportRequest, setDeeplinkExportRequest] =
@@ -88,9 +99,18 @@ export default function CopyKeyDialog({
           source: "CopyKeyDialog",
         })
       : undefined
+  const getCredentialProfile = (row: NativeKeyManagementRow) => {
+    if (profilesLoading || linksLoading || linksError) return undefined
+    return getCredentialProfileForLocator(links, profiles, {
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+      ref: row.facts.ref,
+    })
+  }
   const showCreateResponseOnlyWarning =
     account !== null &&
-    !supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
+    !supportsRecoverableAccountRuntimeKeySecrets(account.siteType) &&
+    (nativeKeyRows.length === 0 ||
+      nativeKeyRows.some((row) => !getCredentialProfile(row)?.apiKey.trim()))
   const isOpeningCreateEditor = isAddTokenDialogOpen && !isCreateEditorReady
 
   const handleOpenAddTokenDialog = () => {
@@ -142,6 +162,7 @@ export default function CopyKeyDialog({
       <KeyInventoryList
         runtimeKeys={runtimeKeys}
         nativeKeyRows={nativeKeyRows}
+        getCredentialProfile={getCredentialProfile}
         expandedRuntimeKeys={expandedRuntimeKeys}
         copiedRuntimeKeyId={copiedRuntimeKeyId}
         onToggleRuntimeKey={toggleRuntimeKeyExpansion}

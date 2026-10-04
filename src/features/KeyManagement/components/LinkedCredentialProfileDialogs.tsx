@@ -12,10 +12,7 @@ import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfil
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
-import {
-  LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-  type LinkedCredentialProfileActionsController,
-} from "./useLinkedCredentialProfileActions"
+import { type LinkedCredentialProfileActionsController } from "./useLinkedCredentialProfileActions"
 
 interface LinkedCredentialProfileDialogsProps {
   controller: LinkedCredentialProfileActionsController
@@ -43,7 +40,7 @@ export function LinkedCredentialProfileDialogs({
           request={createProfileDeeplinkExportRequest({
             target: DEEPLINK_EXPORT_TARGETS.CCSwitch,
             source: exportSource,
-            baseContext: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            baseContext: controller.analyticsContext,
           })}
           onClose={closeDialog}
         />
@@ -54,7 +51,7 @@ export function LinkedCredentialProfileDialogs({
           request={createProfileDeeplinkExportRequest({
             target: DEEPLINK_EXPORT_TARGETS.AiToolbox,
             source: exportSource,
-            baseContext: LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            baseContext: controller.analyticsContext,
           })}
           onClose={closeDialog}
         />
@@ -66,7 +63,7 @@ export function LinkedCredentialProfileDialogs({
           onClose={closeDialog}
           source={exportSource}
           analyticsContext={{
-            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            ...controller.analyticsContext,
             actionId:
               PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileCursorPlusProviderConfig,
           }}
@@ -87,7 +84,7 @@ export function LinkedCredentialProfileDialogs({
           onClose={closeDialog}
           initialValue={profile}
           analyticsContext={{
-            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            ...controller.analyticsContext,
             actionId:
               PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
           }}
@@ -102,7 +99,7 @@ export function LinkedCredentialProfileDialogs({
           routerBaseUrl={claudeCodeRouterBaseUrl ?? ""}
           routerApiKey={claudeCodeRouterApiKey}
           analyticsContext={{
-            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            ...controller.analyticsContext,
             actionId:
               PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
           }}

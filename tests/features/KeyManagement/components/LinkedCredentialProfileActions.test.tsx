@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { LinkedCredentialProfileActions } from "~/features/KeyManagement/components/LinkedCredentialProfileActions"
 import type { LinkedCredentialProfileActionsController } from "~/features/KeyManagement/components/useLinkedCredentialProfileActions"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
@@ -25,7 +26,6 @@ const {
 vi.mock(
   "~/features/KeyManagement/components/useLinkedCredentialProfileActions",
   () => ({
-    LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT: {},
     useLinkedCredentialProfileActions: useLinkedCredentialProfileActionsMock,
   }),
 )
@@ -62,6 +62,7 @@ describe("LinkedCredentialProfileActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useLinkedCredentialProfileActionsMock.mockReturnValue({
+      analyticsContext: {},
       activeDialog: null,
       handleCherryStudio: handleCherryStudioMock,
       handleClaudeCodeRouter: handleClaudeCodeRouterMock,
@@ -70,6 +71,21 @@ describe("LinkedCredentialProfileActions", () => {
       managedSiteType: "new-api",
       openDialog: openDialogMock,
     } as unknown as LinkedCredentialProfileActionsController)
+  })
+
+  it("preserves the originating surface for quick-list actions", () => {
+    render(
+      <LinkedCredentialProfileActions
+        profile={profile}
+        surfaceId={
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
+        }
+      />,
+    )
+    expect(useLinkedCredentialProfileActionsMock).toHaveBeenCalledWith(
+      profile,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+    )
   })
 
   it("renders the real import and management surfaces", async () => {
