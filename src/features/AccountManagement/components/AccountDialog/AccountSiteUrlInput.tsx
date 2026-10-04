@@ -50,7 +50,11 @@ export function AccountSiteUrlInput({
 
   useEffect(() => {
     let cancelled = false
-    if (!enableRecentTabs) return
+    if (!enableRecentTabs) {
+      setOptions((prev) => (prev.length === 0 ? prev : []))
+      setBrowseRecentSites(false)
+      return
+    }
 
     /** Loads unique web origins, keeping each site's most recently active tab title. */
     async function loadRecentSites() {
@@ -80,6 +84,9 @@ export function AccountSiteUrlInput({
         if (!cancelled) setOptions([...sites.values()])
       } catch (error) {
         logger.warn("Could not load recent tab sites", { error })
+        if (!cancelled) {
+          setOptions((prev) => (prev.length === 0 ? prev : []))
+        }
       }
     }
 

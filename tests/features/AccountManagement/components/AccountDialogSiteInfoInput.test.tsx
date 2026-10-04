@@ -236,6 +236,77 @@ describe("AccountDialog SiteInfoInput", () => {
     ).not.toBeInTheDocument()
     expect(props.onUrlChange).not.toHaveBeenCalled()
   })
+
+  it("clears recent site options when recent tabs are disabled and does not retain stale options on re-enable", async () => {
+    let resolveSecondQuery!: (tabs: { url: string; title: string }[]) => void
+    const props = createAddModeProps()
+    props.currentTabUrl = null
+    mockGetAllTabs.mockResolvedValueOnce([
+      {
+        url: "https://initial.example/home",
+        title: "Initial",
+        lastAccessed: 10,
+      },
+    ])
+
+    const { rerender } = render(<SiteInfoInput {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:siteInfo.recentTabSites",
+      }),
+    ).toBeInTheDocument()
+
+    // Disable recent tabs by providing a currentTabUrl
+    rerender(
+      <SiteInfoInput
+        {...withSitePolicy({
+          ...props,
+          currentTabUrl: "https://current.example",
+        })}
+      />,
+    )
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:siteInfo.recentTabSites",
+      }),
+    ).not.toBeInTheDocument()
+
+    // Configure the next query to stay pending
+    mockGetAllTabs.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSecondQuery = resolve
+      }),
+    )
+
+    // Re-enable recent tabs
+    rerender(
+      <SiteInfoInput
+        {...withSitePolicy({
+          ...props,
+          currentTabUrl: null,
+        })}
+      />,
+    )
+
+    // While pending, stale options must not be shown
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:siteInfo.recentTabSites",
+      }),
+    ).not.toBeInTheDocument()
+
+    // Once resolved, new options appear
+    resolveSecondQuery([
+      { url: "https://updated.example/home", title: "Updated" },
+    ])
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:siteInfo.recentTabSites",
+      }),
+    ).toBeInTheDocument()
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
