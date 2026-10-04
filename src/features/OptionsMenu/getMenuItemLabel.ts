@@ -54,6 +54,8 @@ export function getMenuItemLabel(
       return t("ui:navigation.importExport")
     case MENU_ITEM_IDS.ABOUT:
       return t("ui:navigation.about")
+    case DEV_MENU_ITEM_IDS.BROWSER_API_LAB:
+      return t("ui:navigation.browserApiLab")
     case DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB:
       return t("ui:navigation.meshGradientLab")
     case DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW:

@@ -541,6 +541,7 @@
     "basic": "Cài đặt",
     "batchCheckin": "Điểm danh hàng loạt",
     "bookmark": "Quản lý dấu trang",
+    "browserApiLab": "Phòng thử nghiệm API trình duyệt (Dev)",
     "categories": {
       "api": "API",
       "automation": "Tự động hóa",

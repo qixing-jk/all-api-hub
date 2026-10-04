@@ -88,6 +88,14 @@ export function useDevPagesSection(): DevPanelSection {
       surfaces: ["options"],
       actions: [
         {
+          id: "open-browser-api-lab",
+          label: "Open Browser API Lab",
+          run: () =>
+            void navigateWithinOptionsPage(
+              `#${DEV_MENU_ITEM_IDS.BROWSER_API_LAB}`,
+            ),
+        },
+        {
           id: "open-mesh-gradient-lab",
           label: "Open Mesh Gradient Lab",
           run: () =>

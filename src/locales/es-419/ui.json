@@ -561,6 +561,7 @@
     "basic": "Ajustes",
     "batchCheckin": "Check-in por lotes",
     "bookmark": "Gestión de marcadores",
+    "browserApiLab": "Laboratorio de API del navegador (Dev)",
     "categories": {
       "api": "API",
       "automation": "Automatización",

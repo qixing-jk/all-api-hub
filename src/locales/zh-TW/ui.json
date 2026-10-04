@@ -541,6 +541,7 @@
     "basic": "設定",
     "batchCheckin": "批量簽到",
     "bookmark": "書籤管理",
+    "browserApiLab": "瀏覽器 API 實驗室 (Dev)",
     "categories": {
       "api": "介面",
       "automation": "自動化",

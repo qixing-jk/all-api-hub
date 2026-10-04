@@ -132,6 +132,15 @@ export default defineConfig({
           description: "__MSG_manifest_commands_browser_action__",
         },
       },
+      sandbox: {
+        pages: ["sandbox.html"],
+      },
+      content_security_policy: {
+        extension_pages:
+          "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+        sandbox:
+          "sandbox allow-scripts; script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+      },
     }
   },
   vite: (env) => {

@@ -541,6 +541,7 @@
     "basic": "設定",
     "batchCheckin": "一括チェックイン",
     "bookmark": "ブックマーク管理",
+    "browserApiLab": "ブラウザ API ラボ（開発用）",
     "categories": {
       "api": "API",
       "automation": "自動化",
