@@ -316,7 +316,7 @@ describe("foreground account key provisioning", () => {
     )
   })
 
-  it.each(["confirmed", "uncertain"] as const)(
+  it.each(["confirmed", "uncertain", "rejected"] as const)(
     "reports a detached %s mutation and stops subsequent writes",
     async (outcome) => {
       const pending = createDeferred<any>()
@@ -329,9 +329,13 @@ describe("foreground account key provisioning", () => {
       unmount()
       await act(async () => {
         if (outcome === "confirmed") pending.resolve({ ref: null, facts: null })
-        else
+        else if (outcome === "uncertain")
           pending.reject(
             new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
+          )
+        else
+          pending.reject(
+            new AccountKeyResourceError({ code: "validation_failed" }),
           )
       })
       expect(second.create).not.toHaveBeenCalled()
@@ -339,7 +343,9 @@ describe("foreground account key provisioning", () => {
         expect(notify.info).toHaveBeenCalledWith("1 / 2; 0")
       else
         expect(notify.error).toHaveBeenCalledWith(
-          "keyManagement:native.editor.feedback.uncertain",
+          outcome === "uncertain"
+            ? "keyManagement:native.editor.feedback.uncertain"
+            : "keyManagement:native.editor.feedback.error",
         )
     },
   )

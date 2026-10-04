@@ -560,6 +560,41 @@ describe("VoAPI v2 account key resources", () => {
     })
   })
 
+  it.each(["rejected", "uncertain"])(
+    "preserves %s automatic writes without creating replacements",
+    async (outcome) => {
+      mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValue([
+        { id: 9, requirementKey: "9", displayName: "Priority" },
+      ])
+      mockFetchAllVoApiV2RawKeys.mockResolvedValue([])
+      mockCreateVoApiV2Key.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (outcome === "rejected")
+          throw new ApiError(
+            "denied",
+            undefined,
+            "/keys",
+            API_ERROR_CODES.BUSINESS_ERROR,
+          )
+        throw new Error("response lost")
+      })
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+      await expect(session.provisioning!.provision("9")).resolves.toMatchObject(
+        {
+          certainty:
+            outcome === "rejected" ? "not-applied" : "possibly-applied",
+        },
+      )
+      expect(mockCreateVoApiV2Key).toHaveBeenCalledOnce()
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(
+        outcome === "rejected" ? 1 : 2,
+      )
+    },
+  )
+
   it("defaults new editors to unlimited while preserving explicit finite limits", async () => {
     expect(voApiV2AccountKeyResources.defaultCreation).toBe(
       "select-requirement",
