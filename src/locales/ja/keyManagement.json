@@ -585,6 +585,13 @@
   },
   "pleaseAddAccount": "先にアカウントを追加してください",
   "pleaseSelectAccount": "アカウントを選択してください",
+  "provisioning": {
+    "cancelled": "停止しました。作成済みのキーは保持されます。",
+    "continue": "入力して続行",
+    "input": "{{label}} · {{current}} / {{total}}。すべての入力が完了してからキーを作成します。",
+    "progress": "作成済み {{created}} / {{total}}、既存の対応数：{{covered}}。",
+    "title": "アカウントキーを準備"
+  },
   "refreshTokenList": "キー一覧を更新",
   "repairMissingKeys": {
     "action": "キーをチェック",

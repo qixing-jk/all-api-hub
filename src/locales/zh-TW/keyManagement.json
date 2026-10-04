@@ -585,6 +585,13 @@
   },
   "pleaseAddAccount": "請先新增帳號",
   "pleaseSelectAccount": "請選擇帳號",
+  "provisioning": {
+    "cancelled": "已停止，已建立的金鑰會保留。",
+    "continue": "繼續處理",
+    "input": "{{label}} · {{current}} / {{total}}。填寫完所有參數後再建立金鑰。",
+    "progress": "已建立 {{created}} / {{total}}，已有涵蓋：{{covered}}。",
+    "title": "準備帳號金鑰"
+  },
   "refreshTokenList": "重新整理金鑰列表",
   "repairMissingKeys": {
     "action": "金鑰檢查",

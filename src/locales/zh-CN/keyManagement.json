@@ -585,6 +585,13 @@
   },
   "pleaseAddAccount": "请先添加账号",
   "pleaseSelectAccount": "请选择账号",
+  "provisioning": {
+    "cancelled": "已停止，已创建的密钥会保留。",
+    "continue": "继续处理",
+    "input": "{{label}} · {{current}} / {{total}}。填写完所有参数后再创建密钥。",
+    "progress": "已创建 {{created}} / {{total}}，已有覆盖：{{covered}}。",
+    "title": "准备账号密钥"
+  },
   "refreshTokenList": "刷新密钥列表",
   "repairMissingKeys": {
     "action": "密钥检查",

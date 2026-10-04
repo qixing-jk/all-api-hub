@@ -605,6 +605,13 @@
   },
   "pleaseAddAccount": "Agrega una cuenta primero",
   "pleaseSelectAccount": "Selecciona una cuenta",
+  "provisioning": {
+    "cancelled": "Detenido. Se conservan las claves ya creadas.",
+    "continue": "Continuar con intervención del usuario",
+    "input": "{{label}} · {{current}} / {{total}}. Completa todos los datos antes de crear las claves.",
+    "progress": "Creadas {{created}} / {{total}}; ya cubiertas: {{covered}}.",
+    "title": "Preparar claves de la cuenta"
+  },
   "refreshTokenList": "Actualizar lista de claves",
   "repairMissingKeys": {
     "action": "Comprobación de claves",

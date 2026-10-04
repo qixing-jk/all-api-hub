@@ -5,6 +5,8 @@ import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { Alert, Button, Modal } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog"
+import { canCreateAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { DisplaySiteData } from "~/types"
 import type { AccountKeyRepairOutcome } from "~/types/accountKeyAutoProvisioning"
@@ -13,6 +15,7 @@ import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisionin
 import { ManagedSiteTokenBatchExportDialog } from "../ManagedSiteTokenBatchExportDialog"
 import { RepairInvalidKeysDeleteConfirm } from "./RepairInvalidKeysDeleteConfirm"
 import {
+  canContinueRepairWithUserInput,
   filterRepairInvalidResources,
   filterRepairResults,
   getRepairOutcomeCounts,
@@ -45,6 +48,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const { managedSiteType } = useUserPreferencesContext()
 
   const [searchTerm, setSearchTerm] = useState("")
+  const [interactiveAccountId, setInteractiveAccountId] = useState<
+    string | null
+  >(null)
   const [outcomeFilter, setOutcomeFilter] =
     useState<AccountKeyRepairOutcome | null>(null)
   const [activeView, setActiveView] = useState<RepairResultView>(
@@ -132,6 +138,26 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed ||
     progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed ||
     progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled
+  const continuableAccountIds = new Set(
+    isTerminalProgress
+      ? visibleResults
+          .filter(
+            (result) =>
+              canContinueRepairWithUserInput(result) &&
+              accounts.some(
+                (account) =>
+                  account.id === result.accountId &&
+                  canCreateAccountKeyResources(account),
+              ),
+          )
+          .map((result) => result.accountId)
+      : [],
+  )
+  const interactiveAccount = accounts.find(
+    (account) =>
+      account.id === interactiveAccountId &&
+      canCreateAccountKeyResources(account),
+  )
   const isPreviousResult =
     Boolean(progress) &&
     isTerminalProgress &&
@@ -170,6 +196,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
   useEffect(() => {
     if (!isOpen) {
+      setInteractiveAccountId(null)
       setSearchTerm("")
       setOutcomeFilter(null)
       setActiveView(REPAIR_RESULT_VIEWS.AccountCoverage)
@@ -380,6 +407,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             ) : null}
 
             <RepairMissingKeysResultsPanel
+              continuableAccountIds={continuableAccountIds}
+              onContinue={setInteractiveAccountId}
               activeView={activeView}
               deleteResultMessage={deleteResultMessage}
               filteredInvalidResources={filteredInvalidResources}
@@ -415,6 +444,13 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
           t={t}
         />
       </Modal>
+      {isOpen && interactiveAccount ? (
+        <AccountKeyProvisioningDialog
+          account={interactiveAccount}
+          mode="all-groups"
+          onClose={() => setInteractiveAccountId(null)}
+        />
+      ) : null}
       <ManagedSiteTokenBatchExportDialog
         isOpen={isOpen && repairCreatedImport.isBatchImportOpen}
         onClose={repairCreatedImport.closeBatchImport}

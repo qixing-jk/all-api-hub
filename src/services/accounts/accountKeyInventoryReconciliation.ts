@@ -234,7 +234,7 @@ const collectInventoryIssues = (
   return mergeInventoryIssues(issues)
 }
 
-const analyzeSnapshot = (
+export const analyzeAccountKeyProvisioningSnapshot = (
   snapshot: AccountKeyProvisioningSnapshot,
   expectedRequirementIdentities?: readonly string[],
 ) => {
@@ -301,7 +301,7 @@ export async function reconcileAccountKeyInventory(
     ? { signal: options.signal }
     : undefined
   const snapshot = await provisioning.inspect(operationOptions)
-  const initialAnalysis = analyzeSnapshot(snapshot)
+  const initialAnalysis = analyzeAccountKeyProvisioningSnapshot(snapshot)
   const requirementIdentities = initialAnalysis.requirementIdentities
   let coveredRequirementKeys = initialAnalysis.coveredRequirementKeys
   const requirementResults: AccountKeyReconciliationRequirementResult[] = []
@@ -406,7 +406,7 @@ export async function reconcileAccountKeyInventory(
       let coveredAfterUncertain = false
       try {
         const refreshedSnapshot = await provisioning.inspect(operationOptions)
-        const refreshedAnalysis = analyzeSnapshot(
+        const refreshedAnalysis = analyzeAccountKeyProvisioningSnapshot(
           refreshedSnapshot,
           requirementIdentities,
         )

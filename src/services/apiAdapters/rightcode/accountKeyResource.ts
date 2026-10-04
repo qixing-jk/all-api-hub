@@ -221,7 +221,7 @@ const changedKeys = (
 export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.RIGHT_CODE,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "requires-input",
+  defaultCreation: "editor-defaults",
   openConfig: async (input, options): Promise<Config> => {
     const channels = toRightCodeChannelInfos(
       await fetchRightCodeEffectiveUpstreams(

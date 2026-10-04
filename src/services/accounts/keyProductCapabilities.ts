@@ -1,4 +1,5 @@
 import type { SiteType } from "~/constants/siteType"
+import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
@@ -110,7 +111,12 @@ const canUseAccountKeyProductCapabilities = <
   }
 
   if (account.authType === AuthTypeEnum.Cookie) {
-    return hasToken || hasCookie
+    return (
+      hasToken ||
+      hasCookie ||
+      getAccountSiteProductProfile(account.siteType).auth
+        .usesBrowserCookieSession === true
+    )
   }
 
   return false

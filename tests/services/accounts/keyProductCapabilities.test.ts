@@ -59,13 +59,13 @@ describe("native account key product capabilities", () => {
     ).toBe(true)
     expect(
       canRunAccountDefaultTokenAutomation({ ...account, siteType: "voapi-v2" }),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       canRunAccountDefaultTokenAutomation({
         ...account,
         siteType: "openrouter",
       }),
-    ).toBe(false)
+    ).toBe(true)
   })
   it.each([
     { disabled: true },

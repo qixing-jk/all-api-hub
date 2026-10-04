@@ -295,6 +295,8 @@ export interface AccountKeyResourceSession {
     scopeKey: string,
     options?: ResourceOperationOptions,
     intent?: AccountKeyCreationIntent,
+    /** Provider-owned placement identity for a missing provisioning requirement. */
+    provisioningRequirementKey?: string,
   ): Promise<AccountKeyResourceEditor>
 }
 

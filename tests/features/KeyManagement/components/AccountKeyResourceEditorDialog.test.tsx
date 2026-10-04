@@ -23,6 +23,7 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
@@ -30,6 +31,43 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it("keeps the native RightCode command valid after changing the model dependency", async () => {
+  const user = userEvent.setup()
+  const submit = vi.fn()
+  const definition = createRightCodeKeyEditor({
+    channels: [
+      { id: 1, name: "Default", prefix: "/default", models: ["example-model"] },
+      { id: 2, name: "Premium", prefix: "/premium", models: ["other-model"] },
+    ],
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.RIGHT_CODE,
+        mode: "create",
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+      }}
+      onClose={vi.fn()}
+      onSubmit={submit}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  const channel = screen
+    .getAllByRole("combobox")
+    .find((element) => element.id === "resource-editor-channel")!
+  await user.click(channel)
+  await user.click(screen.getByRole("option", { name: /Default/ }))
+  await user.click(
+    screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+  )
+  expect(submit).toHaveBeenCalledOnce()
+  expect(definition.validate(submit.mock.calls[0]![1]).valid).toBe(true)
+})
 const nativeRequest = {
   baseUrl: "https://example.invalid",
   auth: {

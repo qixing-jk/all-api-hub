@@ -869,7 +869,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
       dialogMode: DIALOG_MODES.ADD,
       skipAutoProvision: false,
-      expectPrompt: true,
+      expectPrompt: false,
     },
     {
       scenario: "automatic creation is skipped for this save",
@@ -945,6 +945,13 @@ describe("useAccountDialog save and auto-config flows", () => {
         expect(
           mockOpenDefaultTokenQuickCreateDialogForAccount,
         ).not.toHaveBeenCalled()
+        expect(result.current.state.postSaveKeyProvisioning).toMatchObject({
+          account: savedDisplayData,
+          mode: provisioningMode,
+        })
+        expect(
+          mockValidateAndSaveAccount.mock.calls.at(-1)?.at(-1),
+        ).toMatchObject({ skipAutoProvisionKeyOnAccountAdd: true })
       }
     },
   )

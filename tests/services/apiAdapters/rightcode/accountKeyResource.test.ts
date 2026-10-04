@@ -107,7 +107,7 @@ describe("rightCodeAccountKeyResources", () => {
     expect(rightCodeAccountKeyResources.inventorySecretAvailability).toBe(
       "recoverable",
     )
-    expect(rightCodeAccountKeyResources.defaultCreation).toBe("requires-input")
+    expect(rightCodeAccountKeyResources.defaultCreation).toBe("editor-defaults")
   })
 
   it("projects the channel address onto the runtime key so exports use the right endpoint", async () => {

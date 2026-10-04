@@ -12,7 +12,10 @@ import {
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
+import {
+  getAccountSiteProductProfile,
+  shouldDecorateAccountApiRequestWithAuthSession,
+} from "~/services/accounts/accountSiteProfile"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
@@ -162,6 +165,8 @@ const createAccountApiContextFromSource = (
 
   if (
     source.authType === AuthTypeEnum.Cookie &&
+    !getAccountSiteProductProfile(source.siteType).auth
+      .usesBrowserCookieSession &&
     !hasNonEmptyString(accessToken) &&
     !hasNonEmptyString(cookie)
   ) {

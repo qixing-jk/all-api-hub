@@ -30,6 +30,8 @@ import {
 import { useRepairResultListMaxHeight } from "./useRepairResultListMaxHeight"
 
 interface RepairMissingKeysResultsPanelProps {
+  continuableAccountIds?: ReadonlySet<string>
+  onContinue?: (accountId: string) => void
   activeView: RepairResultView
   deleteResultMessage: string
   filteredInvalidResources: AccountKeyRepairInvalidResource[]
@@ -54,6 +56,8 @@ interface RepairMissingKeysResultsPanelProps {
  * Coordinates result view switching, search, filtering, and result lists.
  */
 export function RepairMissingKeysResultsPanel({
+  continuableAccountIds,
+  onContinue,
   activeView,
   deleteResultMessage,
   filteredInvalidResources,
@@ -284,6 +288,8 @@ export function RepairMissingKeysResultsPanel({
               />
             ) : (
               <RepairAccountCoverageList
+                continuableAccountIds={continuableAccountIds}
+                onContinue={readOnly ? undefined : onContinue}
                 filteredResults={filteredResults}
                 searchTerm={searchTerm}
                 t={t}

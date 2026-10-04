@@ -135,7 +135,7 @@
   "autoProvisionKeyOnAccountAdd": {
     "description": "添加账号后自动准备 API 密钥，可选择默认密钥或所有可用分组。",
     "manualHint": "已保存的账号可在“密钥管理 → {{actionLabel}}”中手动补齐所有可用分组的密钥。",
-    "modeDescription": "默认模式仅在账号没有密钥时创建一个；所有分组模式为每个缺少可用密钥的分组创建一个。需要手动处理的分组会给出提示。",
+    "modeDescription": "默认模式在没有有效密钥时准备一个；全部分组模式补齐各个缺失分组，没有分组要求的站点则准备一个默认密钥。两种模式都可弹窗补充参数或处理一次性密钥。",
     "modeLabel": "自动创建范围",
     "modes": {
       "allGroups": "所有可用分组",

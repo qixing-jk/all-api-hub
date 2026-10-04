@@ -82,6 +82,8 @@ export type AccountKeyResourceDefinition<
     options?: ResourceOperationOptions,
   ): Promise<AccountKeyScopeInventory>
   provisioning?: {
+    /** True only when createEditor validates and binds an opaque requirement identity. */
+    supportsEditor?: boolean
     inspect(
       config: TConfig,
       options?: ResourceOperationOptions,
@@ -137,6 +139,7 @@ export type AccountKeyResourceDefinition<
     options?: ResourceOperationOptions,
     scopeInventory?: AccountKeyScopeInventory,
     intent?: AccountKeyCreationIntent,
+    provisioningRequirementKey?: string,
   ): Promise<AccountKeyResourceEditorDefinition<TCreateCommand>>
   editEditor(
     config: TConfig,
@@ -819,7 +822,17 @@ export function defineAccountKeyResourceCapability<
           refreshScopeInventory: (scopeOptions) =>
             loadScopeInventory(scopeOptions, true),
           openCollection,
-          openCreateEditor: async (scopeKey: string, editorOptions, intent) => {
+          openCreateEditor: async (
+            scopeKey: string,
+            editorOptions,
+            intent,
+            provisioningRequirementKey,
+          ) => {
+            if (
+              provisioningRequirementKey !== undefined &&
+              !provisioningDefinition?.supportsEditor
+            )
+              throw new AccountKeyResourceError({ code: "unavailable" })
             const resolvedScope = await resolveScope(scopeKey, editorOptions)
             const editorScopeInventory = cachedScopeInventory
             if (!editorScopeInventory) throw unexpectedFailure()
@@ -838,6 +851,7 @@ export function defineAccountKeyResourceCapability<
                   editorOptions,
                   editorScopeInventory,
                   intent,
+                  provisioningRequirementKey,
                 ),
               mapFailure,
             )

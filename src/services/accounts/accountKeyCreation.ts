@@ -95,13 +95,8 @@ export async function prepareDefaultAccountKeyCreation(
   const snapshot = await provisioning.inspect(options)
   if (snapshot.partialFailure)
     throw new AccountKeyResourceError(snapshot.partialFailure)
-  const requirements = snapshot.requirements.filter((requirement) => {
-    const { preferredGroup, allowedGroups } = options.intent ?? {}
-    return (
-      (!preferredGroup || requirement.displayName === preferredGroup) &&
-      (!allowedGroups || allowedGroups.includes(requirement.displayName))
-    )
-  })
+  // Creation intents have already been delegated to the native editor above.
+  const requirements = snapshot.requirements
   if (!requirements.length) return { kind: "input-required" }
   let result: Promise<AccountKeyCreationResult> | undefined
   const create = (requirementKey: string) => {

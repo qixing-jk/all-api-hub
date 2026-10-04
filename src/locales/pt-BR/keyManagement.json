@@ -605,6 +605,13 @@
   },
   "pleaseAddAccount": "Adicione uma conta primeiro",
   "pleaseSelectAccount": "Selecione uma conta",
+  "provisioning": {
+    "cancelled": "Interrompido. As chaves já criadas são mantidas.",
+    "continue": "Continuar com intervenção do usuário",
+    "input": "{{label}} · {{current}} / {{total}}. Preencha todos os dados antes de criar as chaves.",
+    "progress": "Criadas {{created}} / {{total}}; já cobertas: {{covered}}.",
+    "title": "Preparar chaves da conta"
+  },
   "refreshTokenList": "Atualizar lista de chaves",
   "repairMissingKeys": {
     "action": "Verificar chaves",

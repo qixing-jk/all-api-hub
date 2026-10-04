@@ -19,6 +19,7 @@ import { SponsorRecommendationsSection } from "~/features/AccountManagement/spon
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
@@ -544,6 +545,14 @@ export default function AccountDialog({
         onCancel={handlers.handleAihubmixPostSaveKeyPromptCancel}
         onConfirm={handlers.handleAihubmixPostSaveKeyPromptConfirm}
       />
+
+      {state.postSaveKeyProvisioning ? (
+        <AccountKeyProvisioningDialog
+          account={state.postSaveKeyProvisioning.account}
+          mode={state.postSaveKeyProvisioning.mode}
+          onClose={handlers.handlePostSaveKeyProvisioningClose}
+        />
+      ) : null}
 
       {state.postSaveSub2ApiAccount ? (
         <AddTokenDialog

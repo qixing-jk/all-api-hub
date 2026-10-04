@@ -135,7 +135,7 @@
   "autoProvisionKeyOnAccountAdd": {
     "description": "Nach dem Hinzufügen eines Kontos API-Schlüssel vorbereiten: einen Standardschlüssel oder Schlüssel für alle verfügbaren Gruppen.",
     "manualHint": "Für gespeicherte Konten können fehlende Schlüssel aller verfügbaren Gruppen unter Schlüsselverwaltung → {{actionLabel}} ergänzt werden.",
-    "modeDescription": "Standard erstellt nur dann einen Schlüssel, wenn das Konto noch keinen hat. Alle Gruppen erstellt einen Schlüssel für jede Gruppe ohne nutzbaren Schlüssel. Gruppen mit manuellem Handlungsbedarf werden gemeldet.",
+    "modeDescription": "Standard bereitet einen Schlüssel vor, wenn kein aktiver vorhanden ist. Alle Gruppen ergänzt fehlende Gruppen; Seiten ohne Gruppenanforderungen erhalten einen Standardschlüssel. Beide Modi können einen Dialog für erforderliche Eingaben oder einmalig sichtbare Schlüssel öffnen.",
     "modeLabel": "Umfang der automatischen Erstellung",
     "modes": {
       "allGroups": "Alle verfügbaren Gruppen",

@@ -77,6 +77,8 @@ export type AccountSiteIdentityProfile = {
 }
 
 export type AccountSiteAuthProfile = {
+  /** The provider verifies the browser cookie session rather than saved credentials. */
+  usesBrowserCookieSession?: boolean
   allowedAuthTypes: readonly AuthTypeEnum[]
   defaultAuthType: AuthTypeEnum
   defaultAuthHostnames: readonly string[]

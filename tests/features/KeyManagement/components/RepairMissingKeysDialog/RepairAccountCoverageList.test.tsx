@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairAccountCoverageList } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairAccountCoverageList"
@@ -73,6 +73,21 @@ function renderList(
 }
 
 describe("RepairAccountCoverageList", () => {
+  it("offers an explicit foreground continuation for input-required accounts", async () => {
+    const user = userEvent.setup()
+    const onContinue = vi.fn()
+    renderList({
+      filteredResults: [
+        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked }),
+      ],
+      continuableAccountIds: new Set(["account-1"]),
+      onContinue,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "Continue with user input" }),
+    )
+    expect(onContinue).toHaveBeenCalledWith("account-1")
+  })
   it("renders the empty state when no account results match", () => {
     renderList({ filteredResults: [] })
 

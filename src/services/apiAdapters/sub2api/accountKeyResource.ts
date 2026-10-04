@@ -1,6 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
@@ -264,7 +263,7 @@ const provisionRequirement = async (
     request,
     execute: async (mutationRequest) =>
       await createSub2ApiKey(mutationRequest, {
-        name: DEFAULT_AUTO_PROVISION_KEY_NAME,
+        name: getDefaultAccountKeyName(),
         group_id: groupId,
         quota: 0,
       }),

@@ -341,7 +341,7 @@ describe("Account Dialog site policy", () => {
     ).toBeUndefined()
   })
 
-  it("does not substitute one-time default-key creation for all-group provisioning", () => {
+  it("defers save completion so full coverage can use foreground interaction", () => {
     expect(
       shouldDeferAccountSaveSuccessForAccountDialogSite({
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
@@ -351,7 +351,7 @@ describe("Account Dialog site policy", () => {
           ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it("keeps post-save decisions policy-driven", () => {
@@ -407,7 +407,7 @@ describe("Account Dialog site policy", () => {
           ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
-    ).toBe(false)
+    ).toBe(true)
 
     expect(
       shouldDeferAccountSaveSuccessForAccountDialogSite({

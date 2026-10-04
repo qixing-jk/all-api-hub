@@ -135,7 +135,7 @@
   "autoProvisionKeyOnAccountAdd": {
     "description": "Prepara claves API al agregar una cuenta: una clave predeterminada o claves para todos los grupos disponibles.",
     "manualHint": "Para cuentas guardadas, usa Administración de claves → {{actionLabel}} para completar las claves faltantes de todos los grupos disponibles.",
-    "modeDescription": "El modo predeterminado crea una clave solo si la cuenta no tiene ninguna. Todos los grupos crea una clave para cada grupo sin una clave utilizable. Se indican los grupos que requieren configuración manual.",
+    "modeDescription": "El modo predeterminado prepara una clave si no hay ninguna activa. Todas las agrupaciones completa los grupos faltantes; los sitios sin grupos preparan una clave predeterminada. Ambos modos pueden abrir un diálogo para ingresar datos o guardar claves que solo se muestran una vez.",
     "modeLabel": "Alcance de la creación automática",
     "modes": {
       "allGroups": "Todos los grupos disponibles",

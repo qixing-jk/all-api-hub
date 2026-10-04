@@ -595,6 +595,13 @@
   },
   "pleaseAddAccount": "Please add an account first",
   "pleaseSelectAccount": "Please select account",
+  "provisioning": {
+    "cancelled": "Stopped. Keys already created are retained.",
+    "continue": "Continue with user input",
+    "input": "{{label}} · {{current}} / {{total}}. Complete all inputs before any keys are created.",
+    "progress": "Created {{created}} / {{total}}; already covered: {{covered}}.",
+    "title": "Prepare account keys"
+  },
   "refreshTokenList": "Refresh Key List",
   "repairMissingKeys": {
     "action": "Key check",
