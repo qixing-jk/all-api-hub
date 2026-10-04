@@ -49,7 +49,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: isExtensionPopupMock,
   isExtensionSidePanel: () => false,
-  isMobileDevice: () => false,
+  isDesktopDevice: () => true,
 }))
 
 vi.mock("~/services/popupInterruptionHint", () => ({
