@@ -169,12 +169,12 @@ function OptionsSidebar({
             aria-disabled={isCollapsePending}
             onClick={handleCollapseButtonClick}
             style={{ top: "calc(50vh - var(--options-header-height))" }}
-            className="border-sidebar-border bg-sidebar text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute right-0 z-10 hidden h-13 w-6 translate-x-1/2 -translate-y-1/2 rounded-full border shadow-sm md:inline-flex"
+            className="border-sidebar-border bg-sidebar text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute right-0 z-10 hidden h-8 w-5 translate-x-1/2 -translate-y-1/2 rounded-full border p-0 shadow-xs md:inline-flex"
           >
             {shouldShowCollapsedState ? (
-              <ChevronRight className="size-3.5" />
+              <ChevronRight className="size-3" />
             ) : (
-              <ChevronLeft className="size-3.5" />
+              <ChevronLeft className="size-3" />
             )}
           </Button>
         )}
