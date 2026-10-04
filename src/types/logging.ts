@@ -9,6 +9,30 @@
 
 export type LogLevel = "debug" | "info" | "warn" | "error"
 
+export const LOG_CONTEXTS = [
+  "Background",
+  "Content",
+  "Popup",
+  "Options",
+  "SidePanel",
+  "Unknown",
+] as const
+export type ExtensionLogContext = (typeof LOG_CONTEXTS)[number]
+
+/** A bounded, credential-redacted local diagnostic entry. */
+export interface LogHistoryEntry {
+  id: string
+  timestamp: number
+  level: LogLevel
+  context: ExtensionLogContext
+  scope: string
+  message: string
+  details: string | null
+}
+
+/** Bound details before they cross an extension messaging boundary. */
+export const LOG_HISTORY_DETAILS_LIMIT = 8000
+
 export const LOG_LEVELS: readonly LogLevel[] = [
   "debug",
   "info",
@@ -18,14 +42,14 @@ export const LOG_LEVELS: readonly LogLevel[] = [
 
 export interface LoggingPreferences {
   /**
-   * Master switch for console logging.
+   * Master switch for console logging and new local diagnostic history entries.
    *
-   * When disabled, no log output is emitted at any level (including errors).
+   * When disabled, no logs are emitted or recorded at any level (including errors).
    */
   consoleEnabled: boolean
 
   /**
-   * Minimum log level that will be emitted when console logging is enabled.
+   * Minimum log level emitted and recorded when logging is enabled.
    */
   level: LogLevel
 }

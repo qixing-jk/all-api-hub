@@ -428,6 +428,302 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it.each(["empty", "failed"])(
+    "does not read another tab when the active browser context is %s",
+    async (queryResult) => {
+      if (queryResult === "failed")
+        mockGetActiveOrAllTabs.mockRejectedValue(new Error("tabs unavailable"))
+      else mockGetActiveOrAllTabs.mockResolvedValue([])
+      browserAny.tabs.query.mockResolvedValue([
+        { id: 20, url: "https://example.invalid", incognito: false },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "12", siteTypeHint: SITE_TYPES.NEW_API },
+      })
+      mockFetchUserInfo.mockResolvedValue(null)
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+      expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+      expect(result.autoDetectContext?.strategy).not.toBe(
+        AUTO_DETECT_STRATEGIES.ExistingTab,
+      )
+    },
+  )
+
+  it("skips passive classification without eligible tabs and preserves bypass classification for fallback", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid", incognito: true },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "88" },
+    })
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
+    expect(result.success).toBe(true)
+    expect(mockGetAccountSiteType).not.toHaveBeenCalledWith(
+      "https://example.invalid",
+    )
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+      "https://example.invalid",
+      testExecution,
+    )
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it("reads the logged-in site tab when Options is active and temporary detection cannot read a user ID", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+      { id: 20, active: false, url: "https://example.invalid/dashboard" },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "12",
+        user: { id: 12, username: "alice" },
+      },
+    })
+    mockFetchUserInfo.mockResolvedValue(null)
+
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        userId: "12",
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          tabId: 20,
+          origin: "https://example.invalid",
+        },
+      },
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.ExistingTab,
+        currentTabMatched: false,
+      },
+    })
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+    expect(mockGetAccountSiteType).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { incognito: false, cookieStoreId: undefined },
+    { incognito: true, cookieStoreId: undefined },
+    { incognito: false, cookieStoreId: "container-1" },
+  ])(
+    "keeps existing-tab detection within the Options browser context %j",
+    async (browserContext) => {
+      const optionsTab = {
+        id: 10,
+        active: true,
+        url: "chrome-extension://test/options.html",
+        ...browserContext,
+      }
+      mockGetActiveOrAllTabs.mockResolvedValue([optionsTab])
+      browserAny.tabs.query.mockResolvedValue([
+        optionsTab,
+        {
+          id: 21,
+          url: "https://example.invalid/dashboard",
+          incognito: !browserContext.incognito,
+        },
+        {
+          id: 22,
+          url: "https://other.example.invalid/dashboard",
+          ...browserContext,
+        },
+        ...(browserContext.cookieStoreId
+          ? [
+              {
+                id: 23,
+                url: "https://example.invalid",
+                cookieStoreId: "container-2",
+              },
+            ]
+          : []),
+        { id: 20, url: "https://example.invalid/dashboard", ...browserContext },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "12", siteTypeHint: SITE_TYPES.NEW_API },
+      })
+
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          userId: "12",
+          fetchContext: {
+            tabId: 20,
+            ...(browserContext.incognito ? { incognito: true } : {}),
+            ...(browserContext.cookieStoreId
+              ? { cookieStoreId: browserContext.cookieStoreId }
+              : {}),
+          },
+        },
+      })
+      expect(browserAny.tabs.sendMessage).toHaveBeenCalledTimes(1)
+      expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(
+        20,
+        expect.anything(),
+      )
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+      expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+        "https://example.invalid",
+      )
+    },
+  )
+
+  it("keeps background fallback when an existing site tab has no usable session", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid/dashboard" },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({ success: false })
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "88", user: { id: 88, username: "background-user" } },
+    })
+
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { userId: "88" },
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      },
+    })
+    expect(mockSendRuntimeMessage).toHaveBeenCalled()
+  })
+
+  it("records an existing-tab classification failure and recovers through background detection", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid/dashboard" },
+    ])
+    mockGetAccountSiteType.mockRejectedValueOnce(
+      new Error("passive probe failed"),
+    )
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "88", siteTypeHint: SITE_TYPES.NEW_API },
+    })
+    const diagnostics = createAccountDetectionDiagnostics({
+      requestId: "existing-tab-failure",
+    })
+    const record = vi.spyOn(diagnostics, "record")
+    const result = await autoDetectSmartProduction(
+      "https://example.invalid",
+      testExecution,
+      diagnostics,
+    )
+    expect(result).toMatchObject({
+      success: true,
+      data: { userId: "88" },
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      },
+    })
+    expect(record).toHaveBeenCalledWith(
+      "source_failed",
+      expect.objectContaining({
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        error: "passive probe failed",
+      }),
+    )
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN])(
+    "uses bypass-aware classification for an existing session without a recognized site type: %s",
+    async (classifiedType) => {
+      mockGetActiveOrAllTabs.mockResolvedValue([
+        { id: 10, active: true, url: "chrome-extension://test/options.html" },
+      ])
+      browserAny.tabs.query.mockResolvedValue([
+        { id: 20, url: "https://example.invalid/dashboard" },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "12" },
+      })
+      mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
+        execution ? classifiedType : SITE_TYPES.UNKNOWN,
+      )
+      mockSendRuntimeMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "88", siteTypeHint: SITE_TYPES.NEW_API },
+      })
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: classifiedType === SITE_TYPES.UNKNOWN ? "88" : "12",
+        },
+        autoDetectContext: {
+          strategy:
+            classifiedType === SITE_TYPES.UNKNOWN
+              ? AUTO_DETECT_STRATEGIES.BackgroundTempContext
+              : AUTO_DETECT_STRATEGIES.ExistingTab,
+        },
+      })
+      expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+        "https://example.invalid",
+        testExecution,
+      )
+    },
+  )
+
+  it("does not read an incognito site's account from regular Options", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid/dashboard", incognito: true },
+    ])
+    mockFetchUserInfo.mockResolvedValue(null)
+
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
+
+    expect(result.success).toBe(false)
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).toHaveBeenCalled()
+  })
+
   it("returns a current-tab fetch context when current-tab detection succeeds", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {

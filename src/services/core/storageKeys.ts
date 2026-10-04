@@ -21,6 +21,8 @@ export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
+  /** Serializes local diagnostic log history writes and clears. */
+  LOG_HISTORY: "all-api-hub:log-history",
   /** Serializes the shared cooldown for passive browser identity requests. */
   ACCOUNT_BROWSER_IDENTITY_RATE_LIMIT:
     "all-api-hub:account-browser-identity-rate-limit",
@@ -272,6 +274,8 @@ export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
  * specific storage module so discovery and auditing remain straightforward.
  */
 export const STORAGE_KEYS = {
+  /** Local logs are bounded and excluded from account backup/sync. */
+  LOG_HISTORY: "logHistory_v1",
   PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
   /**
    * Development-only registry of account ids created by the dev panel fixture

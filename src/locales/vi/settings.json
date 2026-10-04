@@ -315,9 +315,37 @@
     }
   },
   "logging": {
-    "consoleEnabled": "Bật nhật ký console",
-    "consoleEnabledDesc": "Sau khi tắt, All API Hub sẽ không xuất bất kỳ nhật ký nào trong console trình duyệt (bao gồm lỗi).",
-    "description": "Kiểm soát việc xuất nhật ký trong console trình duyệt để hỗ trợ xử lý sự cố.",
+    "consoleEnabled": "Bật nhật ký",
+    "consoleEnabledDesc": "Khi tắt, đầu ra bảng điều khiển và việc ghi nhật ký cục bộ mới sẽ dừng.",
+    "description": "Cấu hình đầu ra nhật ký và lịch sử chẩn đoán cục bộ.",
+    "history": {
+      "allContexts": "Tất cả nguồn",
+      "allLevels": "Tất cả mức",
+      "allTime": "Tất cả nhật ký đã lưu",
+      "clearDescription": "Xóa tất cả nhật ký được giữ trên thiết bị này.",
+      "clearError": "Không thể xóa nhật ký",
+      "clearTitle": "Xóa nhật ký cục bộ",
+      "context": "Nguồn",
+      "copied": "Đã sao chép nhật ký",
+      "copy": "Sao chép nhật ký đã lọc",
+      "copyError": "Không thể sao chép nhật ký",
+      "description": "Hiển thị tối đa {{limit}} bản ghi cục bộ trong {{hours}} giờ qua. Việc dọn dẹp bản ghi hết hạn diễn ra khi ghi hoặc xem nhật ký. Bật nhật ký để ghi lại sự kiện; đặt mức nhật ký tối thiểu thành Gỡ lỗi để có thêm chi tiết.",
+      "details": "Chi tiết",
+      "empty": "Không có nhật ký phù hợp. Bật nhật ký, tái hiện sự cố rồi quay lại đây.",
+      "entryDescription": "Theo dõi trực tiếp nhật ký từ các trang của tiện ích hoặc xem lịch sử gần đây.",
+      "lastHour": "1 giờ gần nhất",
+      "lastMinutes": "5 phút gần nhất",
+      "level": "Mức nhật ký",
+      "loadError": "Không thể đọc nhật ký. Các mục đang hiển thị được giữ lại. Vui lòng thử lại.",
+      "more": "Tải nhật ký cũ hơn",
+      "open": "Xem nhật ký",
+      "pause": "Tạm dừng cập nhật",
+      "period": "Khoảng thời gian",
+      "resume": "Tiếp tục cập nhật trực tiếp",
+      "search": "Tìm thông báo, mô-đun hoặc ID yêu cầu",
+      "showing": "Hiển thị {{visible}} / {{total}}",
+      "title": "Nhật ký gần đây"
+    },
     "levels": {
       "debug": "Gỡ lỗi",
       "error": "Lỗi",
@@ -325,7 +353,7 @@
       "warn": "Cảnh báo"
     },
     "minLevel": "Cấp nhật ký tối thiểu",
-    "minLevelDesc": "Sau khi bật nhật ký console, chỉ xuất nhật ký không thấp hơn cấp này.",
+    "minLevelDesc": "Nhật ký dưới mức đã chọn không được xuất hoặc lưu.",
     "title": "Nhật ký"
   },
   "managedSite": {

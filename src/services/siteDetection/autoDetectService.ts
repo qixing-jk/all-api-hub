@@ -21,7 +21,11 @@ import {
 } from "~/constants/siteType"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
+  getAccountBrowserSessionTabs,
+  readAccountBrowserSessionFromExistingTabs,
   readAccountBrowserSessionFromTab,
+  type AccountBrowserSession,
+  type ReadAccountBrowserSessionFromExistingTabsOptions,
 } from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
@@ -104,6 +108,24 @@ interface CurrentTabUserDataResult {
   contentScriptUnavailable: boolean
   strategy: AutoDetectAnalyticsContext["strategy"]
   fetchContext: AutoDetectFetchContext
+}
+
+/** Preserves provider authentication and the selected tab's fetch context. */
+function userDataFromBrowserSession(
+  session: AccountBrowserSession,
+): UserDataResult {
+  return {
+    userId: session.userId,
+    user: session.user,
+    accessToken: session.accessToken,
+    ...(session.transientAuth ? { transientAuth: session.transientAuth } : {}),
+    sub2apiAuth: session.sub2apiAuth,
+    ...(session.kimiOpenPlatformAuth
+      ? { kimiOpenPlatformAuth: session.kimiOpenPlatformAuth }
+      : {}),
+    siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
+    fetchContext: session.fetchContext,
+  }
 }
 
 /**
@@ -716,20 +738,7 @@ async function getUserDataFromCurrentTab(
 
     if (session) {
       return {
-        userData: {
-          userId: session.userId,
-          user: session.user,
-          accessToken: session.accessToken,
-          ...(session.transientAuth
-            ? { transientAuth: session.transientAuth }
-            : {}),
-          sub2apiAuth: session.sub2apiAuth,
-          ...(session.kimiOpenPlatformAuth
-            ? { kimiOpenPlatformAuth: session.kimiOpenPlatformAuth }
-            : {}),
-          siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
-          fetchContext,
-        },
+        userData: { ...userDataFromBrowserSession(session), fetchContext },
         contentScriptUnavailable,
         strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
         fetchContext,
@@ -870,6 +879,8 @@ async function runAutoDetectSmart(
   let shouldHintCurrentTabReload = false
   let currentTabReloadHintResult: AutoDetectResult | null = null
   let browserFallbackContext: AutoDetectFetchContext | undefined
+  let currentTabMatched = false
+  let browserContext: ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"]
 
   // 1. 尝试从当前标签页获取（最快，无需创建新窗口）
   if (capabilities.hasTabs) {
@@ -877,6 +888,14 @@ async function runAutoDetectSmart(
       // On mobile, currentWindow may be unsupported; fall back to first available tab
       const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
+      if (currentTab) {
+        browserContext = {
+          incognito: currentTab.incognito === true,
+          ...(currentTab.cookieStoreId
+            ? { cookieStoreId: currentTab.cookieStoreId }
+            : {}),
+        }
+      }
       browserFallbackContext = createBrowserContextFromTab(currentTab)
       if (browserFallbackContext) {
         logger.debug("Prepared browser-context fallback for auto-detect", {
@@ -900,6 +919,7 @@ async function runAutoDetectSmart(
           currentUrl.origin === targetUrl.origin &&
           typeof currentTab.id === "number"
         ) {
+          currentTabMatched = true
           logger.info("当前标签页匹配目标站点，使用当前标签页方式", {
             url,
             currentTabUrl: currentTab.url,
@@ -981,6 +1001,69 @@ async function runAutoDetectSmart(
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       reason: "tabs_unavailable",
     })
+  }
+
+  // Options is itself the active tab. Reuse a logged-in target tab before
+  // opening a temporary page, keeping normal/incognito/container sessions apart.
+  if (capabilities.hasTabs && browserContext && !currentTabMatched) {
+    try {
+      // This attempt must not acquire a temporary page merely to detect the
+      // site type. The ordinary background fallback retains bypass intent.
+      const candidateTabs = await getAccountBrowserSessionTabs(
+        detectionUrl,
+        browserContext,
+        diagnostics,
+      )
+      const siteType = candidateTabs.length
+        ? await getAccountSiteType(detectionUrl)
+        : undefined
+      const session = siteType
+        ? await readAccountBrowserSessionFromExistingTabs({
+            baseUrl: detectionUrl,
+            siteType,
+            browserContext,
+            candidateTabs,
+            protectionBypassExecution,
+            diagnostics,
+          })
+        : null
+      if (session) {
+        const sessionSiteType = normalizeSiteTypeHint(session.siteTypeHint)
+        const result = await combineUserDataAndSiteType(
+          {
+            ...userDataFromBrowserSession(session),
+            siteTypeHint:
+              sessionSiteType && sessionSiteType !== SITE_TYPES.UNKNOWN
+                ? sessionSiteType
+                : siteType !== SITE_TYPES.UNKNOWN
+                  ? siteType
+                  : undefined,
+          },
+          detectionUrl,
+          protectionBypassExecution,
+          diagnostics,
+        )
+        if (
+          result.success &&
+          result.data &&
+          result.data.siteType !== SITE_TYPES.UNKNOWN
+        ) {
+          return withAutoDetectContext(
+            result,
+            createAutoDetectContext({
+              strategy: AUTO_DETECT_STRATEGIES.ExistingTab,
+              siteType: result.data?.siteType,
+              fetchContext: session.fetchContext,
+            }),
+          )
+        }
+      }
+    } catch (error) {
+      diagnostics?.record("source_failed", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        error: getErrorMessage(error),
+      })
+    }
   }
 
   // 2. 如果支持 runtime/background messaging，使用 Background 方式

@@ -128,6 +128,30 @@ async function importFreshLogger(options?: {
 }
 
 describe("unified logger runtime/bootstrap behavior", () => {
+  it("reads Plasmo-serialized logging preferences on startup and storage changes", async () => {
+    const storage = createPromiseStorageApi(
+      JSON.stringify({ logging: { consoleEnabled: true, level: "info" } }),
+    )
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { createLogger } = await importFreshLogger({
+      browserApi: storage.api,
+    })
+    const logger = createLogger("SerializedPreferences")
+    logger.warn("enabled from persisted JSON")
+    expect(warn).toHaveBeenCalledTimes(1)
+    storage.getListener()?.(
+      {
+        [USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES]: {
+          newValue: JSON.stringify({
+            logging: { consoleEnabled: false, level: "debug" },
+          }),
+        },
+      },
+      "local",
+    )
+    logger.warn("disabled by serialized update")
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.useRealTimers()

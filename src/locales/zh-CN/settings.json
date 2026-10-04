@@ -315,9 +315,37 @@
     }
   },
   "logging": {
-    "consoleEnabled": "启用控制台日志",
-    "consoleEnabledDesc": "关闭后，All API Hub 不会在浏览器控制台输出任何日志（包括错误）。",
-    "description": "控制是否在浏览器控制台输出日志，用于排查问题。",
+    "consoleEnabled": "启用日志",
+    "consoleEnabledDesc": "关闭后停止控制台输出和新日志记录。",
+    "description": "设置日志输出与本机历史记录。",
+    "history": {
+      "allContexts": "全部来源",
+      "allLevels": "全部级别",
+      "allTime": "全部保留的日志",
+      "clearDescription": "删除本机保留的全部日志记录。",
+      "clearError": "清空日志失败",
+      "clearTitle": "清空本机日志",
+      "context": "来源",
+      "copied": "日志已复制",
+      "copy": "复制筛选结果",
+      "copyError": "复制日志失败",
+      "description": "显示最近 {{hours}} 小时内最多 {{limit}} 条本机日志；记录或查看日志时清理过期条目。只记录启用日志后的事件；将最低日志级别设为调试可记录详细过程。",
+      "details": "详情",
+      "empty": "没有匹配的日志。启用日志后重现问题，再返回查看。",
+      "entryDescription": "实时查看各页面的日志，也可回看最近记录。",
+      "lastHour": "最近 1 小时",
+      "lastMinutes": "最近 5 分钟",
+      "level": "日志级别",
+      "loadError": "读取日志失败，保留上次显示的记录。请重试。",
+      "more": "加载更早的日志",
+      "open": "查看日志",
+      "pause": "暂停更新",
+      "period": "时间范围",
+      "resume": "恢复实时更新",
+      "search": "搜索消息、模块或请求编号",
+      "showing": "显示 {{visible}} / {{total}} 条",
+      "title": "最近日志"
+    },
     "levels": {
       "debug": "调试",
       "error": "错误",
@@ -325,7 +353,7 @@
       "warn": "警告"
     },
     "minLevel": "最小日志级别",
-    "minLevelDesc": "启用控制台日志后，仅输出不低于该级别的日志。",
+    "minLevelDesc": "低于所选级别的日志不会输出或保存。",
     "title": "日志"
   },
   "managedSite": {

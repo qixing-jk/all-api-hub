@@ -34,6 +34,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   let executeProtectionBypassTask: ReturnType<typeof vi.fn>
   let handleOpenRouterManagementKeyAction: ReturnType<typeof vi.fn>
   let handleTempContextDebugMessage: ReturnType<typeof vi.fn>
+  let appendLogHistory: ReturnType<typeof vi.fn>
+  let clearLogHistory: ReturnType<typeof vi.fn>
 
   beforeAll(async () => {
     getCookieHeaderForUrlResult = vi.fn()
@@ -46,6 +48,12 @@ describe("setupRuntimeMessageListeners routing", () => {
     executeProtectionBypassTask = vi.fn()
     handleOpenRouterManagementKeyAction = vi.fn()
     handleTempContextDebugMessage = vi.fn()
+    appendLogHistory = vi.fn()
+    clearLogHistory = vi.fn()
+    vi.doMock("~/services/logging/logHistory", () => ({
+      appendLogHistory,
+      clearLogHistory,
+    }))
 
     vi.doMock("~/entrypoints/background/tempContextDebug", () => ({
       isTempContextDebugAction: (action: unknown) =>
@@ -157,6 +165,8 @@ describe("setupRuntimeMessageListeners routing", () => {
     executeProtectionBypassTask.mockReset().mockResolvedValue({ success: true })
     handleOpenRouterManagementKeyAction.mockReset().mockResolvedValue(undefined)
     handleTempContextDebugMessage.mockReset().mockResolvedValue(undefined)
+    appendLogHistory.mockReset().mockResolvedValue(undefined)
+    clearLogHistory.mockReset().mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -179,6 +189,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/entrypoints/background/protectionBypassCoordinator")
     vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
     vi.doUnmock("~/entrypoints/background/tempContextDebug")
+    vi.doUnmock("~/services/logging/logHistory")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
     vi.doUnmock("~/services/webdav/webdavAutoSyncService")
     vi.doUnmock("~/services/history/dailyBalanceHistory/scheduler")
@@ -187,6 +198,69 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/siteAnnouncements/scheduler")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("acknowledges relayed history only after persistence and reports write failures", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    let persist!: () => void
+    appendLogHistory.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        persist = resolve
+      }),
+    )
+    const respond = vi.fn()
+    const logEntry = { id: "relayed-record", message: "account read" }
+    expect(
+      runtimeMessageListener?.(
+        { action: RuntimeActionIds.CloudflareGuardLog, logEntry },
+        {},
+        respond,
+      ),
+    ).toBe(true)
+    expect(appendLogHistory).toHaveBeenCalledWith(logEntry)
+    expect(respond).not.toHaveBeenCalled()
+    persist()
+    await vi.waitFor(() =>
+      expect(respond).toHaveBeenCalledWith({ success: true }),
+    )
+    appendLogHistory.mockRejectedValueOnce(new Error("storage failed"))
+    const failed = await new Promise((resolve) =>
+      runtimeMessageListener?.(
+        { action: RuntimeActionIds.CloudflareGuardLog, logEntry },
+        {},
+        resolve,
+      ),
+    )
+    expect(failed).toEqual({ success: false })
+  })
+
+  it("clears the background producer queue before acknowledging and reports failures", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    let finish!: () => void
+    clearLogHistory.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const respond = vi.fn()
+    runtimeMessageListener?.({ action: "logHistory:clear" }, {}, respond)
+    expect(clearLogHistory).toHaveBeenCalledTimes(1)
+    expect(respond).not.toHaveBeenCalled()
+    finish()
+    await vi.waitFor(() =>
+      expect(respond).toHaveBeenCalledWith({ success: true }),
+    )
+    clearLogHistory.mockRejectedValueOnce(new Error("storage failed"))
+    const failed = await new Promise((resolve) =>
+      runtimeMessageListener?.({ action: "logHistory:clear" }, {}, resolve),
+    )
+    expect(failed).toEqual({ success: false })
   })
 
   it("executes developer API methods with their receiver and returns properties or errors", async () => {

@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest"
 
+import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import {
   generalSearchControls,
   generalSearchSections,
 } from "~/features/BasicSettings/components/tabs/General/General.search"
+import { LOGGING_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/General/searchTargets"
 
 describe("general settings search definitions", () => {
+  it("keeps the log history control and its deep-link target in general settings", () => {
+    const control = generalSearchControls.find(
+      (item) => item.id === "control:logging-history",
+    )
+    expect(control?.targetId).toBe(LOGGING_SETTINGS_TARGET_IDS.history)
+    expect(control?.keywords).toContain("实时")
+    expect(
+      BASIC_SETTINGS_ANCHOR_TO_TAB[LOGGING_SETTINGS_TARGET_IDS.history],
+    ).toBe("general")
+  })
   it("makes local reset discoverable through its existing section deep link", () => {
     for (const id of [
       "section:display",

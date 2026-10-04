@@ -1,16 +1,16 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { LoggingPreferences, LogLevel } from "~/types/logging"
-import { getDefaultLoggingPreferences } from "~/types/logging"
+import type {
+  ExtensionLogContext,
+  LoggingPreferences,
+  LogLevel,
+} from "~/types/logging"
+import {
+  getDefaultLoggingPreferences,
+  LOG_HISTORY_DETAILS_LIMIT,
+} from "~/types/logging"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
-
-type ExtensionLogContext =
-  | "Background"
-  | "Content"
-  | "Popup"
-  | "Options"
-  | "SidePanel"
-  | "Unknown"
 
 interface Logger {
   debug: (message: string, details?: unknown) => void
@@ -55,6 +55,15 @@ let currentPreferences: LoggingPreferences = getDefaultLoggingPreferences()
 
 let unsubscribeStorageListener: (() => void) | null = null
 let initialPreferenceLoadStarted = false
+let historyWriter: ((entry: unknown) => Promise<void>) | undefined
+let logSequence = 0
+
+/** Register the background-owned persistent sink without importing services here. */
+export function setLogHistoryWriter(
+  writer: ((entry: unknown) => Promise<void>) | undefined,
+) {
+  historyWriter = writer
+}
 
 /**
  * Creates a scoped logger that emits leveled, prefixed logs to the browser console
@@ -166,6 +175,12 @@ function safeLog(
   try {
     if (!shouldEmit(level)) return
 
+    try {
+      recordLocalHistory(level, scope, message, details)
+    } catch {
+      // An unavailable history sink must not suppress console output.
+    }
+
     const sink = getConsoleSink(level)
     if (!sink) return
 
@@ -191,6 +206,45 @@ function shouldEmit(level: LogLevel): boolean {
   const preferences = currentPreferences
   if (!preferences.consoleEnabled) return false
   return LOG_LEVEL_RANK[level] >= LOG_LEVEL_RANK[preferences.level]
+}
+
+/** Persist in the background; other contexts reuse the existing diagnostic relay. */
+function recordLocalHistory(
+  level: LogLevel,
+  scope: string,
+  message: string,
+  details: unknown,
+) {
+  const timestamp = Date.now()
+  const sanitizedDetails =
+    typeof details === "undefined" ? null : sanitizeLogDetails(details, true)
+  const detailsText =
+    sanitizedDetails == null ? null : JSON.stringify(sanitizedDetails)
+  const logEntry = {
+    id: `${timestamp}-${++logSequence}-${Math.random().toString(36).slice(2, 10)}`,
+    timestamp,
+    level,
+    context: currentContext,
+    scope: sanitizeSensitiveErrorText(scope).slice(0, 120),
+    message: sanitizeSensitiveErrorText(String(message)).slice(0, 500),
+    details:
+      detailsText == null
+        ? null
+        : detailsText.length > LOG_HISTORY_DETAILS_LIMIT
+          ? `${detailsText.slice(0, LOG_HISTORY_DETAILS_LIMIT)}…`
+          : detailsText,
+  }
+  if (currentContext === "Background") {
+    void historyWriter?.(logEntry).catch(() => {})
+    return
+  }
+  const runtime = getExtensionApi()?.runtime
+  if (typeof runtime?.sendMessage !== "function") return
+  const result = runtime.sendMessage({
+    action: RuntimeActionIds.CloudflareGuardLog,
+    logEntry,
+  })
+  if (result && typeof result.catch === "function") void result.catch(() => {})
 }
 
 /**
@@ -239,10 +293,13 @@ function getConsoleSink(
 /**
  * Sanitizes log details before output.
  */
-function sanitizeLogDetails(details: unknown): unknown {
+export function sanitizeLogDetails(
+  details: unknown,
+  redactText = false,
+): unknown {
   try {
     const activePath = new WeakSet<object>()
-    return sanitizeValue(details, undefined, activePath)
+    return sanitizeValue(details, undefined, activePath, redactText)
   } catch {
     return "[Unserializable]"
   }
@@ -257,18 +314,34 @@ function sanitizeValue(
   activePath: WeakSet<object>,
   redactErrorText = false,
 ): unknown {
-  if (typeof keyHint === "string" && isSensitiveKey(keyHint)) {
+  if (
+    typeof keyHint === "string" &&
+    (isSensitiveKey(keyHint) ||
+      (redactErrorText &&
+        /^(?:sid|session[_-]?id|refresh[_-]?secret|session[_-]?secret|x[-_]auth[-_]session|set[_-]?cookie|auth(?:entication)?[_-]?(?:bundle|payload|headers))$/i.test(
+          keyHint,
+        )))
+  ) {
     return REDACTED_PLACEHOLDER
   }
 
   if (typeof value === "string") {
+    if (redactErrorText && /^\s*[{[]/.test(value)) {
+      try {
+        return JSON.stringify(
+          sanitizeValue(JSON.parse(value), undefined, activePath, true),
+        )
+      } catch {
+        // Non-JSON backend text still receives the standard text redaction.
+      }
+    }
     if (typeof keyHint === "string" && URL_LIKE_KEY.test(keyHint)) {
       return sanitizeUrlForLog(value)
     }
     if (/^https?:\/\//i.test(value)) {
       return sanitizeUrlForLog(value)
     }
-    return value
+    return redactErrorText ? sanitizeSensitiveErrorText(value) : value
   }
 
   if (
@@ -379,7 +452,8 @@ function isSensitiveKey(key: string): boolean {
  */
 function applyPreferencesFromStoredValue(stored: unknown) {
   try {
-    const maybePrefs = stored as any
+    // Plasmo stores JSON strings; raw browser storage events do not decode them.
+    const maybePrefs = typeof stored === "string" ? JSON.parse(stored) : stored
     const logging = maybePrefs?.logging as
       | Partial<LoggingPreferences>
       | undefined

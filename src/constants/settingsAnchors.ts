@@ -1,4 +1,8 @@
 export const SETTINGS_ANCHORS = {
+  LOGGING: "logging",
+  LOGGING_ENABLED: "logging-console-enabled",
+  LOGGING_LEVEL: "logging-min-level",
+  LOGGING_HISTORY: "logging-history",
   APPEARANCE: "appearance",
   APPEARANCE_LANGUAGE: "appearance-language",
   APPEARANCE_THEME_MODE: "appearance-theme-mode",

@@ -315,9 +315,37 @@
     }
   },
   "logging": {
-    "consoleEnabled": "Konsolenprotokollierung aktivieren",
-    "consoleEnabledDesc": "Wenn deaktiviert, gibt All API Hub auf keiner Ebene eine Konsolenausgabe aus (einschließlich Fehlern).",
-    "description": "Protokollierung der Steuerkonsole zur Fehlerbehebung und Diagnose.",
+    "consoleEnabled": "Protokollierung aktivieren",
+    "consoleEnabledDesc": "Bei Deaktivierung werden Konsolenausgabe und neue lokale Protokolle gestoppt.",
+    "description": "Protokollausgabe und lokalen Diagnoseverlauf konfigurieren.",
+    "history": {
+      "allContexts": "Alle Quellen",
+      "allLevels": "Alle Stufen",
+      "allTime": "Alle gespeicherten Protokolle",
+      "clearDescription": "Alle auf diesem Gerät gespeicherten Protokolle löschen.",
+      "clearError": "Protokolle konnten nicht gelöscht werden",
+      "clearTitle": "Lokale Protokolle löschen",
+      "context": "Quelle",
+      "copied": "Protokolle kopiert",
+      "copy": "Gefilterte Protokolle kopieren",
+      "copyError": "Protokolle konnten nicht kopiert werden",
+      "description": "Zeigt bis zu {{limit}} lokale Einträge der letzten {{hours}} Stunden. Veraltete Einträge werden beim Aufzeichnen oder Anzeigen von Protokollen bereinigt. Aktiviere die Protokollierung, um Ereignisse aufzuzeichnen; stelle die Mindestprotokollstufe für mehr Details auf Debug.",
+      "details": "Details",
+      "empty": "Keine passenden Protokolle. Protokollierung aktivieren, das Problem reproduzieren und hierher zurückkehren.",
+      "entryDescription": "Protokolle aller Erweiterungsseiten live verfolgen oder den Verlauf ansehen.",
+      "lastHour": "Letzte Stunde",
+      "lastMinutes": "Letzte 5 Minuten",
+      "level": "Protokollstufe",
+      "loadError": "Protokolle konnten nicht gelesen werden. Bereits angezeigte Einträge bleiben erhalten. Bitte erneut versuchen.",
+      "more": "Ältere Protokolle laden",
+      "open": "Protokolle anzeigen",
+      "pause": "Aktualisierung pausieren",
+      "period": "Zeitraum",
+      "resume": "Live-Aktualisierung fortsetzen",
+      "search": "Nach Meldung, Modul oder Anfrage-ID suchen",
+      "showing": "Anzeige {{visible}} / {{total}}",
+      "title": "Letzte Protokolle"
+    },
     "levels": {
       "debug": "Debug",
       "error": "Fehler",
@@ -325,7 +353,7 @@
       "warn": "Warnung"
     },
     "minLevel": "Mindestprotokollstufe",
-    "minLevelDesc": "Wenn die Konsolenprotokollierung aktiviert ist, werden Protokolle unterhalb dieser Ebene unterdrückt.",
+    "minLevelDesc": "Protokolle unter der gewählten Stufe werden weder ausgegeben noch gespeichert.",
     "title": "Protokollierung"
   },
   "managedSite": {

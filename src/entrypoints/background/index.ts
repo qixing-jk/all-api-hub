@@ -7,6 +7,7 @@ import {
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
+import { appendLogHistory } from "~/services/logging/logHistory"
 import {
   hasNewOptionalPermissions,
   setLastSeenOptionalPermissions,
@@ -39,7 +40,7 @@ import {
   onSuspend,
 } from "~/utils/browser/browserApi"
 import { isTestMode } from "~/utils/core/environment"
-import { createLogger } from "~/utils/core/logger"
+import { createLogger, setLogHistoryWriter } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import {
@@ -76,6 +77,7 @@ function shouldAutoOpenPermissionsOnboarding(): boolean {
 }
 
 export default defineBackground(() => {
+  setLogHistoryWriter(appendLogHistory)
   logger.debug("Hello background", { id: getRuntimeId() })
 
   setupActionClickBehaviorListener()

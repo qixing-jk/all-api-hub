@@ -29,6 +29,7 @@ export type AutoDetectFailureReason =
 
 export const AUTO_DETECT_STRATEGIES = {
   CurrentTab: "current_tab",
+  ExistingTab: "existing_tab",
   BackgroundTempContext: "background_temp_context",
   DirectApi: "direct_api",
   FallbackApi: "fallback_api",

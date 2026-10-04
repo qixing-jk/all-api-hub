@@ -16,6 +16,10 @@ import {
 } from "~/services/history/dailyBalanceHistory/scheduler"
 import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
 import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
+import {
+  appendLogHistory,
+  clearLogHistory,
+} from "~/services/logging/logHistory"
 import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
 import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
@@ -195,7 +199,20 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
+      if (request.action === RuntimeActionIds.LogHistoryClear) {
+        void clearLogHistory()
+          .then(() => sendResponse({ success: true }))
+          .catch(() => sendResponse({ success: false }))
+        return true
+      }
+
       if (request.action === RuntimeActionIds.CloudflareGuardLog) {
+        if (request.logEntry) {
+          void appendLogHistory(request.logEntry)
+            .then(() => sendResponse({ success: true }))
+            .catch(() => sendResponse({ success: false }))
+          return true
+        }
         try {
           const isAccountDiagnostic =
             request.details?.diagnosticScope === "account_detection"

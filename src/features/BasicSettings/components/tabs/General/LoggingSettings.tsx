@@ -1,8 +1,10 @@
 import type { TFunction } from "i18next"
-import { SlidersHorizontal, Terminal } from "lucide-react"
+import { History, SlidersHorizontal, Terminal } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   Card,
   CardItem,
   CardList,
@@ -13,11 +15,26 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import LogHistoryDialog from "~/features/Logging/LogHistoryDialog"
+import {
+  LOG_HISTORY_LIMIT,
+  LOG_HISTORY_RETENTION_MS,
+} from "~/services/logging/logHistory"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { LOG_LEVELS, type LogLevel } from "~/types/logging"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+
+import { LOGGING_SETTINGS_TARGET_IDS } from "./searchTargets"
 
 /**
  * Resolve the localized label for a supported log level.
@@ -39,6 +56,7 @@ function getLogLevelLabel(t: TFunction, level: LogLevel) {
  * Settings section for unified logger preferences (console enablement + minimum level).
  */
 export default function LoggingSettings() {
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const { t } = useTranslation("settings")
   const {
     loggingConsoleEnabled,
@@ -62,7 +80,7 @@ export default function LoggingSettings() {
 
   return (
     <SettingSection
-      id="logging"
+      id={LOGGING_SETTINGS_TARGET_IDS.section}
       title={t("logging.title")}
       description={t("logging.description")}
       onReset={resetLoggingSettings}
@@ -75,7 +93,7 @@ export default function LoggingSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
-            id="logging-console-enabled"
+            id={LOGGING_SETTINGS_TARGET_IDS.enabled}
             icon={
               <Terminal className="text-muted-foreground dark:text-secondary-foreground h-5 w-5" />
             }
@@ -90,7 +108,7 @@ export default function LoggingSettings() {
           />
 
           <CardItem
-            id="logging-min-level"
+            id={LOGGING_SETTINGS_TARGET_IDS.level}
             icon={
               <SlidersHorizontal className="text-muted-foreground dark:text-secondary-foreground h-5 w-5" />
             }
@@ -111,6 +129,36 @@ export default function LoggingSettings() {
                   </SelectContent>
                 </Select>
               </div>
+            }
+          />
+          <CardItem
+            icon={<History className="text-muted-foreground size-5" />}
+            title={t("logging.history.title")}
+            description={t("logging.history.entryDescription")}
+            rightContent={
+              <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    id={LOGGING_SETTINGS_TARGET_IDS.history}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {t("logging.history.open")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="flex h-[min(90dvh,56rem)] max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+                  <DialogHeader className="py-density-4 shrink-0 border-b px-4 pr-12 text-left">
+                    <DialogTitle>{t("logging.history.title")}</DialogTitle>
+                    <DialogDescription>
+                      {t("logging.history.description", {
+                        hours: LOG_HISTORY_RETENTION_MS / 3600000,
+                        limit: LOG_HISTORY_LIMIT,
+                      })}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <LogHistoryDialog />
+                </DialogContent>
+              </Dialog>
             }
           />
         </CardList>

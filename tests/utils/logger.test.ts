@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { LoggingPreferences } from "~/types/logging"
 import {
   createLogger,
   setLoggerContext,
   setLoggingPreferences,
+  setLogHistoryWriter,
 } from "~/utils/core/logger"
 
 /**
@@ -43,12 +45,70 @@ describe("unified logger", () => {
   })
 
   afterEach(() => {
+    setLogHistoryWriter(undefined)
     ;(console as any).debug = originalConsole.debug
     ;(console as any).info = originalConsole.info
     ;(console as any).warn = originalConsole.warn
     ;(console as any).error = originalConsole.error
     ;(console as any).log = originalConsole.log
     vi.restoreAllMocks()
+  })
+
+  it("records only enabled levels in the background history sink", () => {
+    const writer = vi.fn().mockResolvedValue(undefined)
+    setLogHistoryWriter(writer)
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    enableLogging({ level: "info" })
+    const logger = createLogger("AccountDetection")
+    logger.debug("not retained")
+    logger.info("Reading session", {
+      requestId: "detection-1",
+      access_token: "history-secret",
+    })
+    enableLogging({ consoleEnabled: false })
+    logger.error("disabled")
+    expect(writer).toHaveBeenCalledTimes(1)
+    expect(writer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: "info",
+        context: "Background",
+        scope: "AccountDetection",
+        message: "Reading session",
+        details: expect.stringContaining("detection-1"),
+      }),
+    )
+    expect(JSON.stringify(writer.mock.calls)).not.toContain("history-secret")
+  })
+
+  it("relays bounded sanitized entries through the existing content log action", () => {
+    const send = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue({ success: true })
+    vi.spyOn(console, "info").mockImplementation(() => {})
+    setLoggerContext("Content")
+    createLogger("SessionReader").info("Request Bearer relay-secret", {
+      session: { sid: "sid-secret" },
+      padding: "x".repeat(20000),
+    })
+    expect(send).toHaveBeenCalledWith({
+      action: RuntimeActionIds.CloudflareGuardLog,
+      logEntry: expect.objectContaining({
+        context: "Content",
+        message: "Request Bearer [REDACTED]",
+      }),
+    })
+    const payload = send.mock.calls[0]?.[0] as any
+    expect(payload.logEntry.details.length).toBeLessThanOrEqual(8001)
+    expect(JSON.stringify(payload)).not.toContain("sid-secret")
+  })
+
+  it("keeps console output when the history sink throws", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {})
+    setLogHistoryWriter(() => {
+      throw new Error("history unavailable")
+    })
+    createLogger("HistoryFailure").info("still visible")
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("still visible"))
   })
 
   it("gates emission by minimum level", () => {
