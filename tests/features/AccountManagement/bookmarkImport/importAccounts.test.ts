@@ -12,6 +12,94 @@ const createAutoDetectResponse = (
 ): AccountAutoDetectResponse => ({ kind: "detected", ...response })
 
 describe("runBookmarkAccountImport", () => {
+  it.each([
+    {
+      failureCategory: "verification",
+      failure: {
+        autoDetectFailureReason: "access_token_verification_required",
+      },
+    },
+    {
+      failureCategory: "login",
+      failure: {
+        detailedError: { type: "unauthorized", message: "private error" },
+      },
+    },
+  ])(
+    "keeps only safe recovery hints for $failureCategory failures",
+    async ({ failureCategory, failure }) => {
+      const result = await runBookmarkAccountImport({
+        candidates: [
+          {
+            id: "one",
+            url: "https://one.example",
+            normalizedOrigin: "https://one.example",
+            status: "ready",
+            selectedByDefault: true,
+            sourceBookmarkCount: 1,
+          },
+        ],
+        autoDetectAccount: vi.fn().mockResolvedValue({
+          kind: "detected",
+          success: false,
+          message: "private message",
+          ...failure,
+          recoveryData: {
+            siteType: SITE_TYPES.NEW_API,
+            authType: AuthTypeEnum.Cookie,
+            accessToken: "private-token",
+            userId: "private-id",
+          },
+        }),
+      })
+      expect(result.rows[0]).toMatchObject({
+        failureCategory,
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.Cookie,
+      })
+      expect(JSON.stringify(result)).not.toContain("private")
+    },
+  )
+
+  it("preserves Kimi authentication when saving a detected account", async () => {
+    const kimiOpenPlatformAuth = {
+      refreshToken: "kimi-refresh",
+      organizationId: "organization",
+    }
+    const validateAndSaveAccount = vi
+      .fn()
+      .mockResolvedValue({ success: true, accountId: "one" })
+    await runBookmarkAccountImport({
+      candidates: [
+        {
+          id: "one",
+          url: "https://one.example",
+          normalizedOrigin: "https://one.example",
+          status: "ready",
+          selectedByDefault: true,
+          sourceBookmarkCount: 1,
+        },
+      ],
+      autoDetectAccount: vi.fn().mockResolvedValue({
+        kind: "detected",
+        success: true,
+        data: {
+          siteName: "Kimi",
+          username: "user",
+          accessToken: "token",
+          userId: "one",
+          exchangeRate: null,
+          kimiOpenPlatformAuth,
+        },
+      }),
+      validateAndSaveAccount,
+    })
+    expect(validateAndSaveAccount.mock.calls[0]?.[16]).toEqual({
+      deferDataRefresh: true,
+      kimiOpenPlatformAuth,
+    })
+  })
+
   it("reuses one onboarding execution for every selected candidate", async () => {
     const protectionBypassExecution = {
       version: PROTECTION_BYPASS_EXECUTION_VERSION,

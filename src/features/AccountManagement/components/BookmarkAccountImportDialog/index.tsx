@@ -2,11 +2,11 @@ import type { TFunction } from "i18next"
 import {
   BookmarkPlus,
   CheckCircle2,
+  CircleAlert,
   FolderOpen,
   ListChecks,
   Loader2,
   ShieldCheck,
-  XCircle,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -19,13 +19,18 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { cn } from "~/lib/utils"
 
 import type { BookmarkAccountImportFailureCategory } from "../../bookmarkImport/types"
-import { useBookmarkAccountImportDialog } from "../../bookmarkImport/useBookmarkAccountImportDialog"
+import {
+  useBookmarkAccountImportDialog,
+  type BookmarkAccountImportDialogRuntime,
+} from "../../bookmarkImport/useBookmarkAccountImportDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "../../testIds"
 import { BookmarkTreeSelector } from "./BookmarkTreeSelector"
 
 interface BookmarkAccountImportDialogProps {
   isOpen: boolean
   onClose: () => void
+  runtime?: BookmarkAccountImportDialogRuntime
+  devNotice?: string
 }
 
 const errorMessageKeys = {
@@ -67,6 +72,10 @@ function translateFailureCategory(
   switch (category) {
     case "detection":
       return t("ui:dialog.bookmarkAccountImport.failures.detection")
+    case "login":
+      return t("ui:dialog.bookmarkAccountImport.failures.login")
+    case "verification":
+      return t("ui:dialog.bookmarkAccountImport.failures.verification")
     case "save":
       return t("ui:dialog.bookmarkAccountImport.failures.save")
     case "unknown":
@@ -91,7 +100,7 @@ function CandidateStatusBadge({
   }
 
   return (
-    <Badge variant="success">
+    <Badge variant="secondary">
       {t("ui:dialog.bookmarkAccountImport.status.ready")}
     </Badge>
   )
@@ -101,9 +110,11 @@ function CandidateStatusBadge({
 export default function BookmarkAccountImportDialog({
   isOpen,
   onClose,
+  runtime,
+  devNotice,
 }: BookmarkAccountImportDialogProps) {
   const { t } = useTranslation()
-  const dialog = useBookmarkAccountImportDialog()
+  const dialog = useBookmarkAccountImportDialog(runtime)
   const importCount = dialog.selectedCandidates.length
   const batchImportSteps = [
     {
@@ -158,6 +169,14 @@ export default function BookmarkAccountImportDialog({
           {translateImportCount(t, importCount)}
         </Button>
       </ActionGroup>
+    ) : dialog.stage === "results" && dialog.result.failureCount > 0 ? (
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => void dialog.startImport(true)}
+      >
+        {t("ui:dialog.bookmarkAccountImport.actions.retryFailed")}
+      </Button>
     ) : null
 
   return (
@@ -175,6 +194,7 @@ export default function BookmarkAccountImportDialog({
       header={header}
       footer={footer}
     >
+      {devNotice && <Alert compact variant="warning" description={devNotice} />}
       {dialog.stage === "permission-needed" && (
         <div className="space-y-density-4">
           {dialog.error ? (
@@ -277,6 +297,11 @@ export default function BookmarkAccountImportDialog({
 
       {dialog.stage === "review" && (
         <div className="space-y-density-4">
+          <Alert
+            compact
+            variant="default"
+            description={t("ui:dialog.bookmarkAccountImport.bestEffortHelp")}
+          />
           {dialog.error === "import-failed" && (
             <Alert
               compact
@@ -357,6 +382,20 @@ export default function BookmarkAccountImportDialog({
 
       {dialog.stage === "results" && (
         <div className="space-y-density-4">
+          {dialog.error === "import-failed" && (
+            <Alert
+              compact
+              variant="warning"
+              description={t(errorMessageKeys["import-failed"])}
+            />
+          )}
+          {dialog.result.failureCount > 0 && (
+            <Alert
+              compact
+              variant="default"
+              description={t("ui:dialog.bookmarkAccountImport.recoveryHelp")}
+            />
+          )}
           {dialog.error === "reload-failed" && (
             <Alert
               compact
@@ -387,8 +426,8 @@ export default function BookmarkAccountImportDialog({
                         aria-hidden="true"
                       />
                     ) : (
-                      <XCircle
-                        className="text-destructive-text h-4 w-4"
+                      <CircleAlert
+                        className="text-warning-text h-4 w-4"
                         aria-hidden="true"
                       />
                     )}

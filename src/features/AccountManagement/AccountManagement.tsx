@@ -21,6 +21,7 @@ import { Button } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import BookmarkAccountImportDevPreview from "~/features/AccountManagement/bookmarkImport/BookmarkAccountImportDevPreview"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import BookmarkAccountImportDialog from "~/features/AccountManagement/components/BookmarkAccountImportDialog"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
@@ -536,6 +537,7 @@ function AccountManagementContent({
       {isBookmarkImportDialogOpen && (
         <BookmarkAccountImportDialog isOpen onClose={onCloseBookmarkImport} />
       )}
+      <BookmarkAccountImportDevPreview />
     </div>
   )
 }

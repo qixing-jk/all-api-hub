@@ -70,21 +70,25 @@
         "collapseFolder": "摺疊資料夾",
         "expandAll": "全部展開",
         "expandFolder": "展開資料夾",
-        "importSelected_other": "匯入所選項目（{{count}}）",
+        "importSelected_other": "新增所選項目（{{count}}）",
         "invertSelected": "反選",
-        "openAddAccount": "開啟新增帳號",
+        "openAddAccount": "手動完善",
+        "retryFailed": "重試未完成項目",
         "scanSelected": "掃描所選範圍",
         "selectAll": "全選"
       },
       "apiUnavailable": "目前瀏覽器未向擴充功能開放原生書籤介面。",
+      "bestEffortHelp": "會盡量自動完成新增，部分站點可能需要你先登入、完成驗證或補充資訊。",
       "bookmarkCount_one": "{{count}} 個書籤",
       "bookmarkCount_other": "{{count}} 個書籤",
-      "description": "批量掃描瀏覽器書籤中的帳號站點，並在匯入前檢視候選項。",
+      "description": "從收藏的站點批次新增帳號，省去逐一輸入。",
       "empty": "瀏覽器沒有傳回任何書籤。",
       "failures": {
-        "detection": "自動偵測無法讀取此站點。",
-        "save": "帳號無法儲存。",
-        "unknown": "匯入失敗。"
+        "detection": "還需要一些帳號資訊，可重試或手動完善。",
+        "login": "請先登入此站點，再重試新增。",
+        "save": "請檢查並補充帳號資訊後再新增。",
+        "unknown": "暫未完成新增，可重試或手動完善。",
+        "verification": "此站點需要你完成驗證，可點擊「手動完善」繼續。"
       },
       "folderCount_one": "{{count}} 個資料夾",
       "folderCount_other": "{{count}} 個資料夾",
@@ -93,16 +97,17 @@
       "includeExisting": "包含已有已儲存帳號的站點",
       "initialSteps": {
         "chooseScope": "選擇書籤範圍",
-        "review": "預覽可匯入站點",
+        "review": "確認待新增站點",
         "skipExisting": "預設略過已有帳號"
       },
-      "initialValue": "如果你之前用瀏覽器書籤收藏了各個中轉站，可以一次掃描這些書籤，批量產生帳號候選。匯入前會先讓你選擇書籤範圍並檢視結果，已有帳號預設略過。",
+      "initialValue": "選擇收藏中轉站的書籤，確認站點後即可批次新增，已有帳號預設略過。",
       "noCandidates": "未找到可匯入的網頁書籤網址。",
       "permissionDenied": "未授予書籤權限。你可以不關閉此對話框並重試。",
       "permissionNeeded": "書籤存取是可選權限，僅會在本次批量匯入時請求。",
       "readFailed": "無法讀取瀏覽器書籤樹。",
+      "recoveryHelp": "剩餘帳號可登入後重試，也可以點擊「手動完善」繼續新增。",
       "reloadFailed": "匯入已完成，但帳號資料無法重新載入。如果新帳號未顯示，請重新整理帳號列表後重試。",
-      "resultSummary": "已匯入 {{success}} 個，失敗 {{failed}} 個，略過 {{skipped}} 個。",
+      "resultSummary": "已新增 {{success}} 個，待完善 {{failed}} 個，略過 {{skipped}} 個。",
       "scanning": "正在掃描瀏覽器書籤...",
       "scopeHelp": "掃描只會產生候選預覽，匯入前可以返回這裡調整選擇。",
       "searchEmpty": "未找到相符的書籤範圍",
@@ -113,7 +118,7 @@
       "status": {
         "duplicate_other": "預設略過。已有已儲存帳號符合數：{{count}}",
         "imported": "已匯入",
-        "ready": "可匯入"
+        "ready": "待新增"
       },
       "title": "從書籤匯入帳號",
       "untitledFolder": "未命名資料夾"

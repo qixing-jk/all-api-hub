@@ -242,6 +242,7 @@ const siteTypeImportOwners = [
   "src/entrypoints/content/messageHandlers/handlers/storage.ts", // Unknown-site input fallback.
   "src/features/AccountManagement/bookmarkImport/candidates.ts", // Unknown detection result.
   "src/features/AccountManagement/bookmarkImport/importAccounts.ts", // Unknown imported account identity.
+  "src/features/AccountManagement/bookmarkImport/BookmarkAccountImportDevPreview.tsx", // Development fixtures for account import recovery.
   "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
   "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
   "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Default identity and explicit provider onboarding results.

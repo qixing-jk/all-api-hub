@@ -70,22 +70,26 @@
         "collapseFolder": "Ordner einklappen",
         "expandAll": "Alles erweitern",
         "expandFolder": "Ordner erweitern",
-        "importSelected_one": "Ausgewählte importieren ({{count}})",
-        "importSelected_other": "Ausgewählte importieren ({{count}})",
+        "importSelected_one": "Ausgewählte hinzufügen ({{count}})",
+        "importSelected_other": "Ausgewählte hinzufügen ({{count}})",
         "invertSelected": "Ausgewählte umkehren",
-        "openAddAccount": "Konto hinzufügen öffnen",
+        "openAddAccount": "Manuell ergänzen",
+        "retryFailed": "Unvollständige Einträge erneut versuchen",
         "scanSelected": "Ausgewählten Bereich scannen",
         "selectAll": "Alles auswählen"
       },
       "apiUnavailable": "Dieser Browser stellt der Erweiterung keine nativen Lesezeichen zur Verfügung.",
+      "bestEffortHelp": "Wir versuchen, die Konten automatisch hinzuzufügen. Manche Seiten benötigen eine Anmeldung, Verifizierung oder ergänzende Angaben.",
       "bookmarkCount_one": "{{count}} Lesezeichen",
       "bookmarkCount_other": "{{count}} Lesezeichen",
-      "description": "Scannen Sie Browser-Lesezeichen-URLs stapelweise und prüfen Sie vor dem Import die Kandidaten für Kontoseiten.",
+      "description": "Füge Konten von deinen gespeicherten Seiten gesammelt hinzu.",
       "empty": "Es wurden keine Browser-Lesezeichen zurückgegeben.",
       "failures": {
-        "detection": "Die automatische Erkennung konnte diese Website nicht lesen.",
-        "save": "Das Konto konnte nicht gespeichert werden.",
-        "unknown": "Der Import ist fehlgeschlagen."
+        "detection": "Einige Kontodaten fehlen noch. Versuche es erneut oder ergänze sie manuell.",
+        "login": "Melde dich bei dieser Seite an und versuche das Hinzufügen erneut.",
+        "save": "Prüfe und ergänze die Kontodaten vor dem Hinzufügen.",
+        "unknown": "Das Hinzufügen ist noch nicht abgeschlossen. Versuche es erneut oder ergänze manuell.",
+        "verification": "Diese Seite benötigt eine Verifizierung. Wähle „Manuell ergänzen“, um fortzufahren."
       },
       "folderCount_one": "{{count}} Ordner",
       "folderCount_other": "{{count}} Ordner",
@@ -94,16 +98,17 @@
       "includeExisting": "Websites einbeziehen, die bereits über gespeicherte Konten verfügen",
       "initialSteps": {
         "chooseScope": "Lesezeichenordner auswählen",
-        "review": "Importkandidaten prüfen",
+        "review": "Seiten zum Hinzufügen prüfen",
         "skipExisting": "Bestehende Konten standardmäßig überspringen"
       },
-      "initialValue": "Scannen Sie Browser-Lesezeichen stapelweise und verwandeln Sie gespeicherte Relay-Websites in Kontokandidaten. Sie wählen zuerst die Lesezeichenordner aus, überprüfen die Kandidaten vor dem Import und vorhandene Konten werden standardmäßig übersprungen.",
+      "initialValue": "Wähle deine gespeicherten Relay-Seiten, prüfe die Liste und füge sie gemeinsam hinzu. Bestehende Konten werden standardmäßig übersprungen.",
       "noCandidates": "Es wurden keine importierbaren Web-Lesezeichen-URLs gefunden.",
       "permissionDenied": "Die Lesezeichenberechtigung wurde nicht erteilt. Sie können es erneut versuchen, ohne dieses Dialogfeld zu schließen.",
       "permissionNeeded": "Der Zugriff auf Lesezeichen ist optional und wird nur für diesen Batch-Import angefordert.",
       "readFailed": "Der Browser-Lesezeichenbaum konnte nicht gelesen werden.",
+      "recoveryHelp": "Melde dich für die übrigen Konten an und versuche es erneut oder wähle „Manuell ergänzen“.",
       "reloadFailed": "Der Import wurde abgeschlossen, aber die Kontodaten konnten nicht neu geladen werden. Aktualisieren Sie die Kontoliste und versuchen Sie es erneut, wenn die neuen Konten nicht sichtbar sind.",
-      "resultSummary": "Importiert {{success}}, fehlgeschlagen {{failed}}, übersprungen {{skipped}}.",
+      "resultSummary": "Hinzugefügt: {{success}}, unvollständig: {{failed}}, übersprungen: {{skipped}}.",
       "scanning": "Browser-Lesezeichen scannen...",
       "scopeHelp": "Beim Scannen wird nur eine Vorschau erstellt. Sie können hierher zurückkehren, um die Auswahl vor dem Import anzupassen.",
       "searchEmpty": "Keine passenden Lesezeichenbereiche",
@@ -115,7 +120,7 @@
         "duplicate_one": "Standardmäßig übersprungen. Anzahl vorhandener Übereinstimmungen mit gespeicherten Konten: {{count}}",
         "duplicate_other": "Standardmäßig übersprungen. Anzahl vorhandener Übereinstimmungen mit gespeicherten Konten: {{count}}",
         "imported": "Importiert",
-        "ready": "Bereit zum Import"
+        "ready": "Zum Hinzufügen"
       },
       "title": "Konten aus Lesezeichen importieren",
       "untitledFolder": "Unbenannter Ordner"

@@ -70,21 +70,25 @@
         "collapseFolder": "Thu gọn thư mục",
         "expandAll": "Mở rộng tất cả",
         "expandFolder": "Mở rộng thư mục",
-        "importSelected_other": "Nhập mục đã chọn ({{count}})",
+        "importSelected_other": "Thêm các mục đã chọn ({{count}})",
         "invertSelected": "Đảo chọn",
-        "openAddAccount": "Mở Thêm tài khoản",
+        "openAddAccount": "Hoàn tất thủ công",
+        "retryFailed": "Thử lại các mục chưa hoàn tất",
         "scanSelected": "Quét phạm vi đã chọn",
         "selectAll": "Chọn tất cả"
       },
       "apiUnavailable": "Trình duyệt này không cung cấp cây dấu trang cho tiện ích.",
+      "bestEffortHelp": "Chúng tôi sẽ cố gắng thêm tự động. Một số trang có thể cần bạn đăng nhập, xác minh hoặc bổ sung thông tin.",
       "bookmarkCount_one": "{{count}} dấu trang",
       "bookmarkCount_other": "{{count}} dấu trang",
-      "description": "Quét hàng loạt URL dấu trang trong trình duyệt và xem lại các ứng viên trang tài khoản trước khi nhập.",
+      "description": "Thêm cùng lúc tài khoản từ các trang đã lưu trong dấu trang.",
       "empty": "Trình duyệt không trả về dấu trang nào.",
       "failures": {
-        "detection": "Tự động phát hiện không đọc được trang này.",
-        "save": "Không thể lưu tài khoản.",
-        "unknown": "Nhập thất bại."
+        "detection": "Cần bổ sung một số thông tin tài khoản. Thử lại hoặc hoàn tất thủ công.",
+        "login": "Đăng nhập trang này rồi thử thêm lại.",
+        "save": "Kiểm tra và bổ sung thông tin tài khoản trước khi thêm.",
+        "unknown": "Chưa hoàn tất việc thêm. Thử lại hoặc hoàn tất thủ công.",
+        "verification": "Trang này cần xác minh. Chọn “Hoàn tất thủ công” để tiếp tục."
       },
       "folderCount_one": "{{count}} thư mục",
       "folderCount_other": "{{count}} thư mục",
@@ -93,16 +97,17 @@
       "includeExisting": "Bao gồm các trang đã có tài khoản đã lưu",
       "initialSteps": {
         "chooseScope": "Chọn thư mục dấu trang",
-        "review": "Xem lại ứng viên nhập",
+        "review": "Kiểm tra các trang cần thêm",
         "skipExisting": "Bỏ qua tài khoản đã có theo mặc định"
       },
-      "initialValue": "Quét hàng loạt dấu trang trình duyệt và biến các trang trung chuyển đã lưu thành ứng viên tài khoản. Bạn chọn thư mục dấu trang trước, xem lại ứng viên trước khi nhập, và tài khoản đã có sẽ được bỏ qua theo mặc định.",
+      "initialValue": "Chọn dấu trang của các trang trung chuyển, kiểm tra danh sách rồi thêm cùng lúc. Tài khoản hiện có được bỏ qua theo mặc định.",
       "noCandidates": "Không tìm thấy URL dấu trang web nào có thể nhập.",
       "permissionDenied": "Chưa cấp quyền dấu trang. Bạn có thể thử lại mà không cần đóng hộp thoại này.",
       "permissionNeeded": "Quyền truy cập dấu trang là tùy chọn và chỉ được yêu cầu cho lần nhập hàng loạt này.",
       "readFailed": "Không thể đọc cây dấu trang của trình duyệt.",
+      "recoveryHelp": "Với tài khoản còn lại, đăng nhập rồi thử lại hoặc chọn “Hoàn tất thủ công” để tiếp tục.",
       "reloadFailed": "Quá trình nhập đã hoàn tất, nhưng không thể tải lại dữ liệu tài khoản. Hãy làm mới danh sách tài khoản và thử lại nếu tài khoản mới chưa hiển thị.",
-      "resultSummary": "Đã nhập {{success}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
+      "resultSummary": "Đã thêm {{success}}, chưa hoàn tất {{failed}}, bỏ qua {{skipped}}.",
       "scanning": "Đang quét dấu trang trong trình duyệt...",
       "scopeHelp": "Quá trình quét chỉ tạo bản xem trước ứng viên. Bạn có thể quay lại đây để điều chỉnh lựa chọn trước khi nhập.",
       "searchEmpty": "Không có phạm vi dấu trang phù hợp",
@@ -113,7 +118,7 @@
       "status": {
         "duplicate_other": "Mặc định bỏ qua. Số kết quả khớp tài khoản đã lưu: {{count}}",
         "imported": "Đã nhập",
-        "ready": "Sẵn sàng nhập"
+        "ready": "Chờ thêm"
       },
       "title": "Nhập tài khoản từ dấu trang",
       "untitledFolder": "Thư mục chưa đặt tên"
