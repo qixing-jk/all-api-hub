@@ -314,6 +314,7 @@
     "currentLoginAlreadyAdded": "当前登录账号已添加",
     "currentSite": "当前站点",
     "editNow": "立即编辑",
+    "recentTabSites": "从最近活跃的标签页选择",
     "siteUrl": "网站 URL",
     "sub2apiHint": "Sub2API 使用短期 JWT，当失效时，扩展会自动使用临时窗口尝试获取新的 JWT（需要在该站点已登录）。启用“插件托管会话”后，每个账号可后台自动独立刷新和续期认证，支持同站点多账号。",
     "unknown": "无法获取",

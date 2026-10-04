@@ -316,6 +316,7 @@
     "currentLoginAlreadyAdded": "Login atual já adicionado",
     "currentSite": "Site atual",
     "editNow": "Editar agora",
+    "recentTabSites": "Escolher entre as abas ativas recentemente",
     "siteUrl": "URL do site",
     "sub2apiHint": "O Sub2API usa JWTs de curta duração. Quando eles expirarem, a extensão tentará obter automaticamente um novo JWT em uma janela temporária (é preciso estar conectado ao site). Com a \"Sessão hospedada pela extensão\" ativada, cada conta pode atualizar e renovar sua autenticação de forma independente em segundo plano, permitindo várias contas no mesmo site.",
     "unknown": "Não foi possível obter",
