@@ -28,6 +28,7 @@ import type { DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 import { createLogger } from "~/utils/core/logger"
 
+import { presentDetachedOneTimeSecret } from "./DetachedOneTimeSecretDialog"
 import { OneTimeSecretDialog } from "./OneTimeSecretDialog"
 
 const logger = createLogger("AccountKeyProvisioningDialog")
@@ -68,7 +69,7 @@ function ProvisioningSession({
   getSecretSaveAction,
   autoCopySecret,
 }: ProvisioningDialogProps) {
-  const { t } = useTranslation(["keyManagement", "common"])
+  const { t, i18n } = useTranslation(["keyManagement", "common"])
   const [plan, setPlan] = useState<AccountKeyProvisioningPlan | null>(null)
   const [editor, setEditor] =
     useState<AccountKeyResourceEditorDialogState | null>(null)
@@ -97,6 +98,22 @@ function ProvisioningSession({
   const optionGenerations = useRef(new Map<string, number>())
   const closeRef = useRef(onClose)
   closeRef.current = onClose
+  const secretRef = useRef<CreatedRuntimeSecret | null>(null)
+  const getSaveAction = (result: CreatedRuntimeSecret) =>
+    getSecretSaveAction
+      ? getSecretSaveAction(result)
+      : buildOneTimeApiKeyProfileSaveAction({
+          result,
+          t,
+          logger,
+          source: "AccountKeyProvisioningDialog",
+        })
+  const handOffSecret = (result: CreatedRuntimeSecret) => {
+    presentDetachedOneTimeSecret(
+      { result, saveAction: getSaveAction(result), autoCopy: autoCopySecret },
+      i18n,
+    )
+  }
 
   const setCurrentEditor = (
     next: AccountKeyResourceEditorDialogState | null,
@@ -144,11 +161,23 @@ function ProvisioningSession({
         const entry = current.entries[cursor.current]!
         // Cancellation requests stop subsequent writes; an in-flight create must settle first.
         const result = await entry.create(values.current.get(entry.key))
-        if (!active.current) return
         cursor.current += 1
+        if (!active.current) {
+          if (result.createdSecret) handOffSecret(result.createdSecret)
+          else
+            toast.info(
+              t("keyManagement:provisioning.progress", {
+                created: cursor.current,
+                total: current.entries.length,
+                covered: current.coveredCount,
+              }),
+            )
+          return
+        }
         setCreatedCount(cursor.current)
         if (result.createdSecret) {
           hadInteraction.current = true
+          secretRef.current = result.createdSecret
           setSecret(result.createdSecret)
           setPhase("secret")
           return
@@ -168,7 +197,16 @@ function ProvisioningSession({
         setPhase(stopped.current ? "cancelled" : "finished")
       }
     } catch (error) {
-      fail(error)
+      if (active.current) fail(error)
+      else
+        toast.error(
+          t(
+            error instanceof AccountKeyResourceError &&
+              error.failure.code === "mutation_state_uncertain"
+              ? "keyManagement:native.editor.feedback.uncertain"
+              : "keyManagement:native.editor.feedback.error",
+          ),
+        )
     } finally {
       running.current = false
     }
@@ -200,7 +238,11 @@ function ProvisioningSession({
     return () => {
       active.current = false
       stopped.current = true
-      abort.abort()
+      if (!running.current) abort.abort()
+      if (secretRef.current) {
+        handOffSecret(secretRef.current)
+        secretRef.current = null
+      }
     }
     // The keyed owner fixes account/mode for this session; renders must never restart writes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -293,16 +335,7 @@ function ProvisioningSession({
       })
     }
   }
-  const saveAction = secret
-    ? getSecretSaveAction
-      ? getSecretSaveAction(secret)
-      : buildOneTimeApiKeyProfileSaveAction({
-          result: secret,
-          t,
-          logger,
-          source: "AccountKeyProvisioningDialog",
-        })
-    : undefined
+  const saveAction = secret ? getSaveAction(secret) : undefined
   const loadingVisible = useNativeResourceEditorLoadingVisibility(
     phase === "loading" || phase === "creating"
       ? { attemptId: 1, reveal: "delayed" }
@@ -341,6 +374,7 @@ function ProvisioningSession({
         result={secret}
         saveAction={saveAction}
         onClose={() => {
+          secretRef.current = null
           setSecret(null)
           void run()
         }}

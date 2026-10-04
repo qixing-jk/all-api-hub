@@ -210,4 +210,54 @@ describe("foreground account key provisioning", () => {
     )
     expect(stale.create).not.toHaveBeenCalled()
   })
+
+  it("hands off a settled one-time secret after the owner unmounts without aborting the write", async () => {
+    const user = userEvent.setup()
+    const pending = createDeferred<any>()
+    const first = entry("first"),
+      second = entry("second")
+    first.create.mockReturnValue(pending.promise)
+    prepare.mockResolvedValue({ coveredCount: 0, entries: [first, second] })
+    const { unmount } = setup()
+    await waitFor(() => expect(first.create).toHaveBeenCalledOnce())
+    const signal = prepare.mock.calls[0]![2].signal as AbortSignal
+    unmount()
+    expect(signal.aborted).toBe(false)
+    await act(async () =>
+      pending.resolve({
+        ref: null,
+        facts: null,
+        createdSecret: { secret: "detached-secret" },
+      }),
+    )
+    expect(await screen.findByText("detached-secret")).toBeVisible()
+    expect(second.create).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "Secret handled" }))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Secret" }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it("keeps an already displayed secret available when its parent closes", async () => {
+    const user = userEvent.setup()
+    const first = entry("first")
+    first.create.mockResolvedValue({
+      ref: null,
+      facts: null,
+      createdSecret: { secret: "visible-secret" },
+    } as never)
+    prepare.mockResolvedValue({ coveredCount: 0, entries: [first] })
+    const { unmount } = setup()
+    await screen.findByText("visible-secret")
+    unmount()
+    expect(await screen.findByText("visible-secret")).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Secret handled" }))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Secret" }),
+      ).not.toBeInTheDocument(),
+    )
+  })
 })

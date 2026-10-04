@@ -32,6 +32,7 @@ either scope. Existing active keys or covered requirements MUST NOT be duplicate
 - **THEN** no subsequent creation MUST start
 - **AND** confirmed keys and their creation count MUST be retained
 - **AND** an in-flight write MUST settle and its response-only secret MUST remain available
+- **AND** closing the parent view or replacing its credential source MUST hand off an in-flight or displayed secret to a foreground dialog that remains available until explicitly handled
 - **AND** reopening MUST NOT replay uncertain or unreconciled writes
 
 #### Scenario: A background repair cannot complete without user input
