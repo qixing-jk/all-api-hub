@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useId, useState } from "react"
 
 import { Button, IconButton, Input, Textarea } from "~/components/ui"
@@ -151,7 +151,7 @@ export function ResourceTextEntriesField({
                       )
                     }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </IconButton>
                 </div>
               )

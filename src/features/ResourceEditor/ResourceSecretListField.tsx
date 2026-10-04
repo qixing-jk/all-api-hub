@@ -1,12 +1,5 @@
 import type { TFunction } from "i18next"
-import {
-  ChevronDown,
-  Eye,
-  EyeOff,
-  LoaderCircle,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { ChevronDown, Eye, EyeOff, LoaderCircle, Plus, X } from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 
 import { Button, IconButton, Input, Label, Switch } from "~/components/ui"
@@ -343,7 +336,7 @@ function SecretRow({
           disabled={disabled || !canRemove}
           onClick={onRemove}
         >
-          <Trash2 className="h-4 w-4" />
+          <X className="h-4 w-4" />
         </IconButton>
       </div>
       <div
