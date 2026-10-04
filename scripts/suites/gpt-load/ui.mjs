@@ -16,7 +16,7 @@ import { dismissModals } from "../../cdp/ui-driver.mjs"
  *
  * The dev profile is shared with the operator's daily browsing, so preferences
  * are patched inside a sandbox that restores the original bytes, and the
- * throwaway group is removed in a `finally`.
+ * cleanup always runs and preserves the original UI failure.
  */
 
 const REPO_ROOT = path.resolve(
@@ -212,6 +212,8 @@ export async function runGptLoadUiTest({
   const createdName = `${runPrefix} Channel`
   let seededName
   let createdThroughUi = false
+  let uiFailed = false
+  let uiError
 
   // A leftover from an interrupted earlier run would break the "appears once"
   // assertion below, so clear this run's prefix before it can exist.
@@ -396,18 +398,35 @@ export async function runGptLoadUiTest({
         }
       },
     )
-  } finally {
-    // The UI normally owns cleanup; this covers a failure between create and
-    // delete so a live run never leaves a group behind.
-    if (createdThroughUi || (await api.hasGroupNamed(createdName))) {
-      const removed = await api.deleteNamed(createdName)
-      console.log(`  🧹 兜底清理临时分组: 已删除 ${removed} 条`)
-    }
-    if (seededName && (await api.hasGroupNamed(seededName))) {
-      const removed = await api.deleteNamed(seededName)
-      console.log(`  🧹 兜底清理种子分组: 已删除 ${removed} 条`)
+  } catch (error) {
+    uiFailed = true
+    uiError = error
+  }
+  // The UI normally owns cleanup; this covers a failure between create and
+  // delete so a live run never leaves a group behind.
+  let cleanupError
+  let cleanupFailed = false
+  for (const [name, expectedPresent] of [
+    [createdName, createdThroughUi],
+    [seededName, false],
+  ]) {
+    if (!name) continue
+    try {
+      if (expectedPresent || (await api.hasGroupNamed(name))) {
+        const removed = await api.deleteNamed(name)
+        if (await api.hasGroupNamed(name)) {
+          throw new Error(`gpt-load UI cleanup 未完成，仍存在分组: ${name}`)
+        }
+        console.log(`  🧹 兜底清理分组: 已删除 ${removed} 条`)
+      }
+    } catch (error) {
+      cleanupFailed = true
+      cleanupError ??= error
+      console.warn(`  ⚠️ gpt-load UI cleanup 失败: ${name}`, error)
     }
   }
+  if (uiFailed) throw uiError
+  if (cleanupFailed) throw cleanupError
 
   console.log("\n  ✅ gpt-load live UI 实测全部完成，沙盒现场已复原。")
 }

@@ -175,7 +175,13 @@ export async function listAllGptLoadGroups(
       added += 1
     }
 
-    if (groups.length < GPT_LOAD_PAGE_SIZE) return collected
+    if (groups.length < GPT_LOAD_PAGE_SIZE) {
+      if (total !== null && collected.length < total)
+        throw new GptLoadApiError(
+          "gpt-load group inventory is incomplete: short page before reported total",
+        )
+      return collected
+    }
     if (added === 0)
       throw new GptLoadApiError(
         "gpt-load group inventory is incomplete: repeated page",

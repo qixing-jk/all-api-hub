@@ -40,6 +40,32 @@ const errorEnvelope = (code: string, message: string, status = 400) =>
   HttpResponse.json({ code, message }, { status })
 
 describe("gpt-load transport", () => {
+  it.each(["flat", "nested"])(
+    "rejects a short page that leaves the known total unmet (%s)",
+    async (shape) => {
+      server.use(
+        http.get(
+          `${BASE_URL}/api/modern/groups`,
+          () => new HttpResponse(null, { status: 404 }),
+        ),
+        http.get(`${BASE_URL}/api/groups`, ({ request }) => {
+          const page = Number(new URL(request.url).searchParams.get("page"))
+          return envelope({
+            items: Array.from({ length: page === 1 ? 100 : 1 }, (_, index) => ({
+              id: index + 1,
+              name: `Group ${index}`,
+              channel_id: "openai",
+            })),
+            ...(shape === "flat"
+              ? { total_items: 101 }
+              : { pagination: { total_items: 101 } }),
+          })
+        }),
+      )
+      await expect(listAllGptLoadGroups(config)).rejects.toThrow(/incomplete/i)
+    },
+  )
+
   it.each(["repeated", "capped"])(
     "rejects incomplete classic inventories (%s)",
     async (mode) => {
