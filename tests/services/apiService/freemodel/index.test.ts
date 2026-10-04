@@ -244,8 +244,10 @@ describe("FreeModel integration", () => {
       ),
     )
     const nodes = await fetchFreeModelNodes(request)
-    expect(nodes[0].label).toContain("Custom")
-    expect(nodes[1].label).toBe("Claude · cc.freemodel.dev")
+    expect(nodes.map((node) => node.label)).toEqual([
+      "OpenAI · Custom · api.freemodel.dev",
+      "Claude · cc.freemodel.dev",
+    ])
     expect(() =>
       resolveFreeModelRoutes(nodes, "https://api.freemodel.dev?key=private"),
     ).toThrow("Invalid FreeModel route")

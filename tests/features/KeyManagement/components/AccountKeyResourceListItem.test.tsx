@@ -58,7 +58,10 @@ const row: NativeKeyManagementRow = {
 describe("AccountKeyResourceListItem", () => {
   it("reveals and hides a recoverable provider key through the shared controls", async () => {
     const user = userEvent.setup()
-    const account = createAccount({ id: row.accountId, siteType: row.siteType })
+    const account = createAccount({
+      id: row.accountId,
+      siteType: row.facts.ref.siteType,
+    })
     const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
       account,
       row.facts,
