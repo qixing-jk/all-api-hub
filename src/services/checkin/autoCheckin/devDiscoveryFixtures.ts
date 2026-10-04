@@ -13,36 +13,9 @@ import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
 import type { CheckInMethodDetection } from "~/types/checkIn"
 
 import { buildAutoCheckinAccountSnapshot } from "./accountSnapshot"
+import { getDevCheckInFixtureScenario } from "./devDiscoveryFixtureIdentity"
 import { autoCheckinMethodRegistry } from "./providers"
-import {
-  AUTO_CHECKIN_METHOD_DEFINITIONS,
-  createAutoCheckinMethodRegistry,
-} from "./providers/registry"
-
-export const DEV_CHECK_IN_FIXTURE_ORIGIN =
-  "https://fixture-checkin.example.invalid"
-export const DEV_CHECK_IN_FIXTURE_SITE_TYPE =
-  AUTO_CHECKIN_METHOD_DEFINITIONS[
-    AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
-  ].siteTypes[0]
-export const DEV_CHECK_IN_SCENARIOS = [
-  { id: "single", label: "Single method" },
-  { id: "multiple", label: "Multiple methods" },
-  { id: "manual", label: "Manual choice" },
-  { id: "failed", label: "Detection failed" },
-  { id: "unsupported", label: "Unsupported" },
-] as const
-
-/** Require a registered fixture and its exact synthetic identity before simulating. */
-function resolveScenario(account: SiteAccount) {
-  if (account.site_type !== DEV_CHECK_IN_FIXTURE_SITE_TYPE) return undefined
-  if (account.site_url !== DEV_CHECK_IN_FIXTURE_ORIGIN) return undefined
-  return DEV_CHECK_IN_SCENARIOS.find(
-    ({ id }) =>
-      account.account_info.access_token === `dev-checkin-${id}` &&
-      account.account_info.id === `dev-checkin-${id}`,
-  )
-}
+import { createAutoCheckinMethodRegistry } from "./providers/registry"
 
 /** Development data must be owned by the fixture registry, even after a rename. */
 async function readRegisteredIds(): Promise<Set<string>> {
@@ -62,7 +35,9 @@ export async function appendDevCheckInFixtureSnapshots(
   accounts: SiteAccount[],
 ): Promise<AutoCheckinAccountSnapshot[]> {
   if (!import.meta.env.DEV) return snapshots
-  const fixtures = accounts.filter((account) => resolveScenario(account))
+  const fixtures = accounts.filter((account) =>
+    getDevCheckInFixtureScenario(account),
+  )
   if (!fixtures.length) return snapshots
   const registeredIds = await readRegisteredIds()
   const existingIds = new Set(snapshots.map((snapshot) => snapshot.accountId))
@@ -82,7 +57,7 @@ export async function appendDevCheckInFixtureSnapshots(
 /** Override only the read-only detection adapters of exact, registered fixtures. */
 export async function resolveDevCheckInDiscoveryRegistry(account: SiteAccount) {
   if (!import.meta.env.DEV) return undefined
-  const scenario = resolveScenario(account)
+  const scenario = getDevCheckInFixtureScenario(account)
   if (!scenario) return undefined
   if (!(await readRegisteredIds()).has(account.id)) return undefined
 

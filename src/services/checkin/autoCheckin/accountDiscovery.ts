@@ -6,6 +6,7 @@ import {
 } from "~/constants/checkIn"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { getDevCheckInFixtureScenario } from "~/services/checkin/autoCheckin/devDiscoveryFixtureIdentity"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getEffectiveAuthType } from "~/services/checkin/autoCheckin/providers/shared"
@@ -25,11 +26,12 @@ export async function discoverAccountCheckInMethods(
   context: CheckInDiscoveryContext,
   observedAt?: number,
 ) {
-  const registry = import.meta.env.DEV
-    ? await (
-        await import("./devDiscoveryFixtures")
-      ).resolveDevCheckInDiscoveryRegistry(account)
-    : undefined
+  const registry =
+    import.meta.env.DEV && getDevCheckInFixtureScenario(account)
+      ? await (
+          await import("./devDiscoveryFixtures")
+        ).resolveDevCheckInDiscoveryRegistry(account)
+      : undefined
   return discoverCheckInMethods({
     registry,
     account,

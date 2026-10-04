@@ -14,7 +14,7 @@ import {
   DEV_CHECK_IN_FIXTURE_ORIGIN,
   DEV_CHECK_IN_FIXTURE_SITE_TYPE,
   DEV_CHECK_IN_SCENARIOS,
-} from "~/services/checkin/autoCheckin/devDiscoveryFixtures"
+} from "~/services/checkin/autoCheckin/devDiscoveryFixtureIdentity"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
