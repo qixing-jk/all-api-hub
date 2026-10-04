@@ -621,6 +621,46 @@ describe("autoDetectSmart", () => {
     expect(mockSendRuntimeMessage).toHaveBeenCalled()
   })
 
+  it("records an existing-tab classification failure and recovers through background detection", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 20, url: "https://example.invalid/dashboard" },
+    ])
+    mockGetAccountSiteType.mockRejectedValueOnce(
+      new Error("passive probe failed"),
+    )
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: { userId: "88", siteTypeHint: SITE_TYPES.NEW_API },
+    })
+    const diagnostics = createAccountDetectionDiagnostics({
+      requestId: "existing-tab-failure",
+    })
+    const record = vi.spyOn(diagnostics, "record")
+    const result = await autoDetectSmartProduction(
+      "https://example.invalid",
+      testExecution,
+      diagnostics,
+    )
+    expect(result).toMatchObject({
+      success: true,
+      data: { userId: "88" },
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      },
+    })
+    expect(record).toHaveBeenCalledWith(
+      "source_failed",
+      expect.objectContaining({
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        error: "passive probe failed",
+      }),
+    )
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+  })
+
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN])(
     "uses bypass-aware classification for an existing session without a recognized site type: %s",
     async (classifiedType) => {

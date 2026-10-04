@@ -48,6 +48,23 @@ describe("local log history", () => {
     ])
   })
 
+  it.each([
+    undefined,
+    { version: 2, entries: [] },
+    { version: 1, entries: null },
+  ])(
+    "starts empty for absent or unsupported stored history: %j",
+    async (stored) => {
+      if (stored === undefined) await storage.remove(STORAGE_KEYS.LOG_HISTORY)
+      else await storage.set(STORAGE_KEYS.LOG_HISTORY, stored)
+      expect(await listLogHistory()).toEqual([])
+      await appendLogHistory(entry("new-history"))
+      expect((await listLogHistory()).map((row) => row.id)).toEqual([
+        "new-history",
+      ])
+    },
+  )
+
   it("evicts expired and overflowing entries", async () => {
     await storage.set(STORAGE_KEYS.LOG_HISTORY, {
       version: 1,
