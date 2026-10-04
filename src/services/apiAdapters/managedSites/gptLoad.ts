@@ -13,7 +13,7 @@ import type {
 import { requireOpaqueManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   listAllGptLoadGroups,
-  listGptLoadChannelCatalog,
+  listGptLoadModelIds,
 } from "~/services/apiService/gptLoad"
 import {
   readGptLoadGroupBaseUrl,
@@ -53,17 +53,6 @@ function gptLoadGroupMatchesSource(
   return resolveGptLoadFirstPartyChannel(searchTarget) === group.channel_id
 }
 
-/**
- * Reads the channel ids the deployment actually ships.
- *
- * The gateway's `GET /api/channels` catalogue is authoritative for what the
- * create editor can offer, so this is read live rather than hard-coded.
- */
-async function listGptLoadChannelIds(config: GptLoadConfig): Promise<string[]> {
-  const catalog = await listGptLoadChannelCatalog(config)
-  return catalog.map((entry) => entry.channel_id)
-}
-
 const gptLoadManagedSiteConfig: ManagedSiteConfigCapability<GptLoadConfig> =
   createManagedSiteConfigCapability(
     SITE_TYPES.GPT_LOAD,
@@ -71,7 +60,7 @@ const gptLoadManagedSiteConfig: ManagedSiteConfigCapability<GptLoadConfig> =
   )
 
 const gptLoadManagedSiteQueries: ManagedSiteQueriesCapability<GptLoadConfig> = {
-  accountAvailableModels: { fetch: listGptLoadChannelIds },
+  accountAvailableModels: { fetch: (config) => listGptLoadModelIds(config) },
 }
 
 const gptLoadManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {

@@ -1,11 +1,14 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  checkValidGptLoadConfig,
+  fetchGptLoadChannelSecretKey,
   prepareGptLoadChannelFormData,
   resolveGptLoadChannelTarget,
   validateGptLoadCredential,
 } from "~/services/managedSites/providers/gptLoad"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_GPT_LOAD_CONFIG,
   normalizeGptLoadBaseUrl,
@@ -13,6 +16,7 @@ import {
 import { server } from "~~/tests/msw/server"
 
 const BASE_URL = "https://gpt-load.example.invalid"
+afterEach(() => vi.restoreAllMocks())
 
 const sessionOk = () =>
   HttpResponse.json({
@@ -34,6 +38,69 @@ describe("gpt-load config normalization", () => {
 })
 
 describe("validateGptLoadCredential", () => {
+  it("reports forbidden credentials without retrying", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/auth/session`, () =>
+        HttpResponse.json({ message: "forbidden" }, { status: 403 }),
+      ),
+    )
+    expect(
+      await validateGptLoadCredential({
+        baseUrl: BASE_URL,
+        credential: "fake",
+      }),
+    ).toMatchObject({ status: "insufficient-privilege" })
+  })
+
+  it("validates saved config and contains storage failures", async () => {
+    const prefs = vi.spyOn(userPreferences, "getPreferences")
+    prefs.mockResolvedValue({
+      gptLoad: { baseUrl: "", managementKey: "" },
+    } as any)
+    expect(await checkValidGptLoadConfig()).toBe(false)
+    prefs.mockResolvedValue({
+      gptLoad: { baseUrl: BASE_URL, managementKey: "fake" },
+    } as any)
+    server.use(
+      http.get(`${BASE_URL}/api/auth/session`, sessionOk),
+      http.get(`${BASE_URL}/api/groups`, () =>
+        HttpResponse.json({ code: 0, data: { items: [] } }),
+      ),
+    )
+    expect(await checkValidGptLoadConfig()).toBe(true)
+    prefs.mockRejectedValue(new Error("storage unavailable"))
+    expect(await checkValidGptLoadConfig()).toBe(false)
+  })
+
+  it("rejects empty and unrevealable pools instead of guessing a key", async () => {
+    const config = { baseUrl: BASE_URL, managementKey: "fake" }
+    await expect(fetchGptLoadChannelSecretKey(config, "NaN")).rejects.toThrow(
+      /Invalid/,
+    )
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
+        HttpResponse.json({ code: 0, data: { items: [] } }),
+      ),
+    )
+    await expect(fetchGptLoadChannelSecretKey(config, 1)).rejects.toThrow(
+      /no credentials/,
+    )
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
+        HttpResponse.json({
+          code: 0,
+          data: { items: [{ credential_id: 11 }] },
+        }),
+      ),
+      http.post(
+        `${BASE_URL}/api/groups/1/credentials/11/reveal`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    )
+    await expect(fetchGptLoadChannelSecretKey(config, 1)).rejects.toThrow(
+      /readable/,
+    )
+  })
   beforeEach(() => {
     server.resetHandlers()
   })

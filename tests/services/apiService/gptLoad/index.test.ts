@@ -40,6 +40,88 @@ const errorEnvelope = (code: string, message: string, status = 400) =>
   HttpResponse.json({ code, message }, { status })
 
 describe("gpt-load transport", () => {
+  it("rejects malformed create and settings responses", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/groups`, () => envelope(null)),
+      http.get(`${BASE_URL}/api/groups/1/settings`, () => envelope(null)),
+      http.put(`${BASE_URL}/api/groups/1/settings`, () => envelope(null)),
+    )
+    await expect(
+      createGptLoadGroup(config, {
+        name: "A",
+        channelId: "openai",
+        connectionType: "api_key",
+        params: {},
+        models: [],
+        credentials: ["fake"],
+      }),
+    ).rejects.toMatchObject({ confirmedNonApplication: false })
+    await expect(getGptLoadGroupSettings(config, 1)).rejects.toThrow(
+      /invalid group settings/,
+    )
+    await expect(
+      updateGptLoadGroupSettings(config, 1, {
+        enabled: false,
+        priceMultiplier: "2",
+        weightManual: 20,
+      }),
+    ).rejects.toThrow(/invalid group settings/)
+  })
+
+  it("accepts a canonical group create response and ignores malformed model items", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/groups`, () =>
+        envelope({ group: { id: 9, name: "Created" } }),
+      ),
+      http.get(`${BASE_URL}/api/models`, () =>
+        envelope({ items: [null, 3, {}, { client_model: " real " }] }),
+      ),
+    )
+    expect(
+      await createGptLoadGroup(config, {
+        name: "A",
+        channelId: "openai",
+        connectionType: "api_key",
+        params: {},
+        models: [],
+        credentials: ["fake"],
+      }),
+    ).toMatchObject({ id: 9, name: "Created" })
+    expect(await listGptLoadModelIds(config)).toEqual(["real"])
+  })
+  it.each([401, 403, 423, 500])(
+    "does not retry modern inventory failures (%s) on the classic route",
+    async (status) => {
+      let classicReads = 0
+      server.use(
+        http.get(`${BASE_URL}/api/modern/groups`, () =>
+          errorEnvelope("FAILED", "failure", status),
+        ),
+        http.get(`${BASE_URL}/api/groups`, () => {
+          classicReads++
+          return envelope({ items: [] })
+        }),
+      )
+      await expect(listAllGptLoadGroups(config)).rejects.toMatchObject({
+        status,
+      })
+      expect(classicReads).toBe(0)
+    },
+  )
+
+  it("rejects an incomplete model catalogue at the pagination cap", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/models`, () =>
+        envelope({
+          items: Array.from({ length: 100 }, (_, index) => ({
+            client_model: `model-${index}`,
+          })),
+        }),
+      ),
+    )
+    await expect(listGptLoadModelIds(config)).rejects.toThrow(/incomplete/i)
+  })
+
   beforeEach(() => {
     server.resetHandlers()
   })

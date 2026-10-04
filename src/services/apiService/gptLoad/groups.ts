@@ -147,7 +147,12 @@ export async function listAllGptLoadGroups(
   try {
     const modern = await listGptLoadModernGroups(config, options)
     if (modern.length > 0) return modern
-  } catch {
+  } catch (error) {
+    if (
+      !(error instanceof GptLoadApiError) ||
+      (error.status !== 404 && error.status !== 405)
+    )
+      throw error
     // A deployment that predates the modern route falls through to the classic
     // paginated walk; the caller only needs some usable inventory shape.
   }
@@ -216,9 +221,12 @@ export async function listGptLoadModelIds(
         ids.add(clientModel.trim())
       }
     }
-    if (items.length < GPT_LOAD_PAGE_SIZE) break
+    if (items.length < GPT_LOAD_PAGE_SIZE)
+      return [...ids].sort((left, right) => left.localeCompare(right))
   }
-  return [...ids].sort((left, right) => left.localeCompare(right))
+  throw new GptLoadApiError(
+    "gpt-load model catalogue is incomplete: pagination limit reached",
+  )
 }
 
 /** Reads one group's editable settings. */

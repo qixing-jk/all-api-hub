@@ -181,7 +181,28 @@ test("gpt-load persists group edits, multiple keys and models, then deletes only
         ),
       ).toEqual([model])
 
-      const remove = await openManagedSiteChannelRowActions(page, renamed)
+      // Saving scalar settings without touching the key list must preserve it.
+      const settingsOnly = await openManagedSiteChannelRowActions(page, renamed)
+      await page
+        .getByTestId(
+          getManagedSiteChannelRowEditActionTestId(settingsOnly.rowTestToken),
+        )
+        .click()
+      await dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput).fill(name)
+      await dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+      await expect(dialog).toBeHidden({ timeout: 30_000 })
+      expect((await read(`/api/groups/${groupId}/settings`)).name).toBe(name)
+      expect(
+        (
+          await read(`/api/groups/${groupId}/credentials?page=1&page_size=100`)
+        ).items.map((item: { credential_id: number }) => item.credential_id),
+      ).toEqual(
+        credentials.items.map(
+          (item: { credential_id: number }) => item.credential_id,
+        ),
+      )
+
+      const remove = await openManagedSiteChannelRowActions(page, name)
       await page
         .getByTestId(
           getManagedSiteChannelRowDeleteActionTestId(remove.rowTestToken),

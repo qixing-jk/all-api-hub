@@ -816,12 +816,14 @@ export async function openGptLoadNativeResourceOperations(
       )
       const records: CredentialRecord[] = []
       for (const credential of credentials) {
-        const key = await revealGptLoadGroupCredential(
-          config,
-          locator,
-          credential.credential_id,
-          { signal: operationOptions?.signal },
-        ).catch(() => "")
+        const key = await runRead(nativeConfig, operationOptions, () =>
+          revealGptLoadGroupCredential(
+            config,
+            locator,
+            credential.credential_id,
+            { signal: operationOptions?.signal },
+          ),
+        )
         records.push({
           id: String(credential.credential_id),
           key,
@@ -867,7 +869,7 @@ export async function openGptLoadNativeResourceOperations(
       throwIfAborted(operationOptions)
       const groupId = detail.group.id
 
-      const dirty: Promise<void>[] = []
+      const steps: (() => Promise<unknown>)[] = []
       const patch: {
         name?: string
         params?: Record<string, unknown>
@@ -890,7 +892,7 @@ export async function openGptLoadNativeResourceOperations(
         patch.weightManual = command.weight
       }
       if (Object.keys(patch).length > 0) {
-        dirty.push(
+        steps.push(() =>
           updateGptLoadGroupSettings(config, groupId, patch, {
             signal: operationOptions?.signal,
           }).then(() => {}),
@@ -916,7 +918,9 @@ export async function openGptLoadNativeResourceOperations(
             : "",
         )
         .filter(Boolean)
-      const deleteIds = [...existingIds].filter(
+      const deleteIds = (
+        command.credentialPatch ? [...existingIds] : []
+      ).filter(
         (id) =>
           !entryIds.has(String(id)) ||
           entries.some(
@@ -928,14 +932,14 @@ export async function openGptLoadNativeResourceOperations(
       )
 
       if (importKeys.length > 0) {
-        dirty.push(
+        steps.push(() =>
           importGptLoadGroupCredentials(config, groupId, importKeys, {
             signal: operationOptions?.signal,
           }).then(() => {}),
         )
       }
       for (const credentialId of deleteIds) {
-        dirty.push(
+        steps.push(() =>
           deleteGptLoadGroupCredential(config, groupId, credentialId, {
             signal: operationOptions?.signal,
           }).then(() => {}),
@@ -948,27 +952,19 @@ export async function openGptLoadNativeResourceOperations(
         oldModelSet.size !== newModelSet.size ||
         [...oldModelSet].some((model) => !newModelSet.has(model))
       if (modelChanged) {
-        dirty.push(
+        steps.push(() =>
           updateGptLoadGroupModels(config, groupId, command.models, {
             signal: operationOptions?.signal,
           }).then(() => {}),
         )
       }
 
-      await Promise.all(dirty)
-
       return await runGptLoadMutation<GptLoadGroupDetail>({
         effect: gptLoadChannelEffect("resource-updated", groupId),
+        steps,
         execute: async () => {
           const updated = await readDetail(groupId, operationOptions)
           return updated
-        },
-        successData: () => {
-          return {
-            group: detail.group,
-            models: command.models,
-            credentials: detail.credentials,
-          }
         },
       })
     },

@@ -58,9 +58,11 @@ export async function runGptLoadProbe({
   console.log("  ✅ 管理密钥以 admin 主体通过校验")
 
   const catalog = await call(root, managementKey, "/api/channels")
-  const channelCount = Array.isArray(catalog.payload?.data?.items)
-    ? catalog.payload.data.items.length
-    : 0
+  if (!catalog.ok || !Array.isArray(catalog.payload?.data?.items)) {
+    console.warn(`  ❌ 渠道驱动目录不可用: HTTP ${catalog.status}`)
+    return { ok: false, channelCount: 0, groupCount: 0 }
+  }
+  const channelCount = catalog.payload.data.items.length
   console.log(`  ✅ 渠道驱动目录可用: ${channelCount} 个驱动`)
 
   const groups = await call(
@@ -68,7 +70,11 @@ export async function runGptLoadProbe({
     managementKey,
     "/api/groups?page=1&page_size=1",
   )
-  const groupCount = groups.payload?.data?.pagination?.total_items ?? 0
+  const groupCount = groups.payload?.data?.pagination?.total_items
+  if (!groups.ok || !Number.isSafeInteger(groupCount) || groupCount < 0) {
+    console.warn(`  ❌ 分组清单不可用: HTTP ${groups.status}`)
+    return { ok: false, channelCount, groupCount: 0 }
+  }
   console.log(`  ✅ 分组清单可读: ${groupCount} 条`)
 
   if (!allowWrite) {
@@ -98,25 +104,25 @@ export async function runGptLoadProbe({
     return { ok: false, channelCount, groupCount }
   }
 
-  const readBack = await call(
-    root,
-    managementKey,
-    `/api/groups/${groupId}/settings`,
-  )
-  const readBackName = readBack.payload?.data?.name
-  if (readBackName !== name) {
-    console.warn(`  ❌ 回读不一致: ${readBackName}`)
-    return { ok: false, channelCount, groupCount }
+  let verified = false
+  let cleanedUp = false
+  try {
+    const readBack = await call(
+      root,
+      managementKey,
+      `/api/groups/${groupId}/settings`,
+    )
+    verified = readBack.ok && readBack.payload?.data?.name === name
+    if (!verified) console.warn("  ❌ 回读不一致或请求失败")
+  } finally {
+    const deleted = await call(root, managementKey, `/api/groups/${groupId}`, {
+      method: "DELETE",
+      body: "{}",
+    })
+    cleanedUp = deleted.ok
+    if (!cleanedUp)
+      console.warn(`  ❌ 删除失败: HTTP ${deleted.status} / group=${groupId}`)
   }
-
-  const deleted = await call(root, managementKey, `/api/groups/${groupId}`, {
-    method: "DELETE",
-    body: "{}",
-  })
-  if (!deleted.ok) {
-    console.warn(`  ❌ 删除失败: HTTP ${deleted.status}`)
-    return { ok: false, channelCount, groupCount }
-  }
-  console.log("  ✅ 写入轮完成: 创建 → 回读 → 删除")
-  return { ok: true, channelCount, groupCount }
+  if (verified && cleanedUp) console.log("  ✅ 写入轮完成: 创建 → 回读 → 删除")
+  return { ok: verified && cleanedUp, channelCount, groupCount }
 }

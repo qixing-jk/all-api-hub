@@ -53,6 +53,39 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { resolveManagedResourceTestPolicy } from "~~/tests/test-utils/managedResourceFieldPolicy"
 
 describe("Octopus native editor vocabulary", () => {
+  it.each(["create", "edit"] as const)(
+    "uses gpt-load vocabulary for the %s editor",
+    (mode) => {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.GPT_LOAD,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )!
+      const t = ((key: string) => key) as TFunction
+      const labels = policy.fields.map((field) => field.resolveLabel(t))
+      expect(labels).toContain("channelDialog:fields.name.label")
+      expect(labels).toContain(
+        "managedSiteChannels:editor.fields.gptLoadPriceMultiplier.label",
+      )
+      const helps = policy.fields
+        .map((field) => field.resolveHelp?.(t))
+        .filter(Boolean)
+      expect(helps).toContain(
+        "managedSiteChannels:editor.fields.gptLoadKey.help",
+      )
+      expect(helps).toContain(
+        "managedSiteChannels:editor.fields.gptLoadBaseUrl.help",
+      )
+      if (mode === "edit")
+        expect(labels).toContain(
+          "managedSiteChannels:editor.fields.gptLoadWeight.label",
+        )
+      else
+        expect(helps).toContain(
+          "managedSiteChannels:editor.fields.gptLoadProvider.help",
+        )
+    },
+  )
   it("exposes native outbound types and only the supported channel controls", () => {
     for (const mode of ["create", "edit"] as const) {
       const policy = getManagedResourceFieldPolicy(

@@ -2,6 +2,7 @@ import { GptLoadApiError } from "~/services/apiService/gptLoad"
 import {
   createManagedSiteMutationSequence,
   type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationStepAttempt,
 } from "~/services/managedSites/mutations"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -45,16 +46,32 @@ const toGptLoadDiagnostic = (error: GptLoadApiError) => {
 export const runGptLoadMutation = async <TData, TResult = TData>(input: {
   effect: ManagedSiteMutationConfirmedEffect
   execute(): Promise<TData>
+  /** Separate writes from the final read so each applied step is retained. */
+  steps?: readonly (() => Promise<unknown>)[]
   successData?: (data: TData) => TResult
 }) => {
   const sequence = createManagedSiteMutationSequence({ idempotent: false })
-  const attempt = sequence.beginStep()
+  let attempt:
+    | ManagedSiteMutationStepAttempt<ManagedSiteMutationConfirmedEffect>
+    | undefined
   try {
+    for (const step of input.steps ?? []) {
+      attempt = sequence.beginStep()
+      await step()
+      attempt.markPossiblyDispatched()
+      attempt.markResponseReceived()
+      attempt.confirmEffect(input.effect)
+      attempt.complete()
+      attempt = undefined
+    }
+    if (input.steps === undefined) attempt = sequence.beginStep()
     const data = await input.execute()
-    attempt.markPossiblyDispatched()
-    attempt.markResponseReceived()
-    attempt.confirmEffect(input.effect)
-    attempt.complete()
+    if (attempt) {
+      attempt.markPossiblyDispatched()
+      attempt.markResponseReceived()
+      attempt.confirmEffect(input.effect)
+      attempt.complete()
+    }
     return sequence.finish({
       finalState: "confirmed",
       data: input.successData
@@ -62,7 +79,16 @@ export const runGptLoadMutation = async <TData, TResult = TData>(input: {
         : (data as unknown as TResult),
     })
   } catch (error) {
-    if (!(error instanceof GptLoadApiError) || !error.dispatch) {
+    if (input.steps !== undefined && !attempt) {
+      return sequence.finish({
+        finalState: "unconfirmed",
+        diagnostic: {
+          message: getErrorMessage(error, "gpt-load readback failed"),
+          raw: error,
+        },
+      })
+    }
+    if (!attempt || !(error instanceof GptLoadApiError) || !error.dispatch) {
       throw error
     }
     if (error.dispatch === "dispatched") attempt.markPossiblyDispatched()

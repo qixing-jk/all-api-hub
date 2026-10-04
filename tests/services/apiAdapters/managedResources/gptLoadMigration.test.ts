@@ -87,6 +87,28 @@ const useGroupDetailHandlers = (overrides?: {
 }
 
 describe("gpt-load migration routing", () => {
+  it("blocks the entire source credential pool when a later reveal fails", async () => {
+    mocks.getPreferences.mockResolvedValue({ gptLoad: config })
+    useGroupDetailHandlers()
+    server.use(
+      http.post(`${BASE_URL}/api/groups/1/credentials/12/reveal`, () =>
+        HttpResponse.json(
+          { code: "UNAUTHORIZED", message: "expired" },
+          { status: 401 },
+        ),
+      ),
+    )
+    await expect(
+      gptLoadManagedSiteMigrationCapability.source!.resolveCredential(
+        selection("1"),
+      ),
+    ).resolves.toMatchObject({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
   it("admits the drivers it has a route for and rejects the rest", () => {
     expect(
       isManagedSiteMigrationSourceType(SITE_TYPES.GPT_LOAD, "openai"),
@@ -129,6 +151,69 @@ describe("gpt-load migration routing", () => {
 })
 
 describe("gpt-load migration source", () => {
+  it("normalizes mid-reveal cancellation and prevents a partial migration", async () => {
+    useGroupDetailHandlers()
+    const controller = new AbortController()
+    server.use(
+      http.post(`${BASE_URL}/api/groups/1/credentials/11/reveal`, () => {
+        controller.abort()
+        return envelope({ credential: { api_key: "sk-first" } })
+      }),
+    )
+    await expect(
+      gptLoadManagedSiteMigrationCapability.source!.resolveCredential(
+        selection("1"),
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
+  it("validates source scope and blocks invalid identities", async () => {
+    const context =
+      await gptLoadManagedSiteMigrationCapability.source!
+        .createSelectionValidationContext!()
+    expect(context.isValid(selection("1"))).toBe(true)
+    const wrongScope = {
+      ...selection("1"),
+      ref: { ...selection("1").ref, scopeKey: "https://other.invalid" },
+    }
+    expect(context.isValid(wrongScope)).toBe(false)
+    for (const invalid of [wrongScope, selection("0"), selection("NaN")]) {
+      expect(
+        await gptLoadManagedSiteMigrationCapability.source!.prepare(invalid),
+      ).toMatchObject({ status: "blocked" })
+      expect(
+        await gptLoadManagedSiteMigrationCapability.source!.resolveCredential(
+          invalid,
+        ),
+      ).toMatchObject({ status: "blocked" })
+    }
+  })
+
+  it("reports missing plaintext and propagates cancellation", async () => {
+    useGroupDetailHandlers({ credentialIds: [] })
+    expect(
+      await gptLoadManagedSiteMigrationCapability.source!.resolveCredential(
+        selection("1"),
+      ),
+    ).toMatchObject({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    })
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      gptLoadManagedSiteMigrationCapability.source!.prepare(selection("1"), {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    await expect(
+      gptLoadManagedSiteMigrationCapability.source!.resolveCredential(
+        selection("1"),
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     server.resetHandlers()
@@ -217,6 +302,69 @@ describe("gpt-load migration target", () => {
       hasMultiKeyState: false,
     },
   }
+
+  const targetCommand = () => ({
+    source: newApiOpenAiSource,
+    targetSiteType: SITE_TYPES.GPT_LOAD,
+    projection: {
+      name: "Test",
+      type: "openai",
+      baseUrl: "",
+      models: [],
+      groups: [],
+      enabled: true,
+    },
+    credential: "sk-fake",
+  })
+
+  it.each([
+    [400, "failed"],
+    [500, "uncertain"],
+  ])("preserves target mutation certainty (%s)", async (status, outcome) => {
+    server.use(
+      http.post(`${BASE_URL}/api/groups`, () =>
+        HttpResponse.json({ code: "FAILED", message: "failed" }, { status }),
+      ),
+    )
+    expect(
+      await gptLoadManagedSiteMigrationCapability.target!.create(
+        targetCommand(),
+      ),
+    ).toMatchObject({ status: outcome })
+  })
+
+  it("rejects invalid target input without writing and reports unavailable config", async () => {
+    const target = gptLoadManagedSiteMigrationCapability.target!
+    expect(
+      await target.create({
+        ...targetCommand(),
+        targetSiteType: SITE_TYPES.NEW_API,
+      }),
+    ).toMatchObject({ status: "failed" })
+    expect(
+      await target.create({ ...targetCommand(), credential: " " }),
+    ).toMatchObject({ status: "failed" })
+    mocks.getPreferences.mockResolvedValue({})
+    expect(await target.create(targetCommand())).toMatchObject({
+      status: "failed",
+      failureCode: "target_unavailable",
+    })
+    mocks.getPreferences.mockRejectedValue(new Error("storage failed"))
+    expect(await target.create(targetCommand())).toMatchObject({
+      status: "failed",
+      failureCode: "unexpected",
+    })
+  })
+
+  it("propagates cancellation before target dispatch", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      gptLoadManagedSiteMigrationCapability.target!.create(targetCommand(), {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
 
   it("prepares a target projection with the mapped driver", async () => {
     const prepared =
