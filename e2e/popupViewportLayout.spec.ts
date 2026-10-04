@@ -77,6 +77,11 @@ for (const device of devices) {
             () => document.documentElement.scrollWidth <= window.innerWidth,
           ),
         ).toBe(true)
+        expect(
+          await container.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true)
       }
     })
   }
