@@ -11,6 +11,10 @@ import {
   type CliProxyApiConfig,
 } from "~/types/cliProxyApiConfig"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
+import {
+  normalizeGptLoadBaseUrl,
+  type GptLoadConfig,
+} from "~/types/gptLoadConfig"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import {
@@ -33,6 +37,7 @@ export type ManagedSiteRuntimeConfig =
     }
   | { siteType: typeof SITE_TYPES.SUB2API; config: Sub2ApiManagedSiteConfig }
   | { siteType: typeof SITE_TYPES.OMNIROUTE; config: OmniRouteConfig }
+  | { siteType: typeof SITE_TYPES.GPT_LOAD; config: GptLoadConfig }
 
 export type ManagedSiteRuntimeConfigValue = ManagedSiteRuntimeConfig["config"]
 export type ManagedSiteRuntimeConfigForType<TSiteType extends ManagedSiteType> =
@@ -54,6 +59,7 @@ export function getManagedSiteRuntimePrincipal(
     case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.SUB2API:
     case SITE_TYPES.OMNIROUTE:
+    case SITE_TYPES.GPT_LOAD:
       return "admin"
     default:
       return runtimeConfig.config.userId.trim()
@@ -100,6 +106,13 @@ export function hasManagedSiteRuntimeConfigInputForType(
   if (siteType === SITE_TYPES.OMNIROUTE) {
     const config = preferences.omniroute
     return Boolean(config && [config.baseUrl, config.token].some(hasText))
+  }
+
+  if (siteType === SITE_TYPES.GPT_LOAD) {
+    const config = preferences.gptLoad
+    return Boolean(
+      config && [config.baseUrl, config.managementKey].some(hasText),
+    )
   }
 
   if (
@@ -207,6 +220,20 @@ export function resolveManagedSiteRuntimeConfigForType<
     return {
       siteType,
       config: { ...config, baseUrl: normalizeOmniRouteBaseUrl(config.baseUrl) },
+    } as ManagedSiteRuntimeConfigForType<TSiteType>
+  }
+
+  if (siteType === SITE_TYPES.GPT_LOAD) {
+    const config = preferences.gptLoad
+    if (!config || !hasText(config.baseUrl) || !hasText(config.managementKey)) {
+      return null
+    }
+    return {
+      siteType,
+      config: {
+        ...config,
+        baseUrl: normalizeGptLoadBaseUrl(config.baseUrl),
+      },
     } as ManagedSiteRuntimeConfigForType<TSiteType>
   }
 

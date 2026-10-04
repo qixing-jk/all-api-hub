@@ -16,6 +16,10 @@ import {
   DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/doneHub"
 import {
+  GPT_LOAD_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  GPT_LOAD_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/gptLoad"
+import {
   NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
@@ -189,21 +193,23 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
 
 export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 
-// GitHub stars snapshot (2026-09-11), descending; refresh deliberately rather
-// than fetching popularity during UI rendering. Counts from each upstream repo:
-// CLIProxyAPI 51356, new-api 47873, sub2api 41221, axonhub 5203,
-// claude-code-hub 3365, octopus 2619, Veloera 1638, done-hub 805. OmniRoute is
-// listed last: it is self-hosted only and has no comparable public count.
+// GitHub stars snapshot (2026-10-04), descending; refresh deliberately rather
+// than fetching popularity during UI rendering. Sources: github.com/<repo>:
+// diegosouzapw/OmniRoute 72850, router-for-me/CLIProxyAPI 54110,
+// QuantumNous/new-api 49256, Wei-Shaw/sub2api 43283, tbphp/gpt-load 7044,
+// looplj/axonhub 5334, ding113/claude-code-hub 3390,
+// bestruirui/octopus 2668, Veloera/Veloera 1633, deanxv/done-hub 808.
 export const MANAGED_SITE_TYPE_ORDER = [
+  SITE_TYPES.OMNIROUTE,
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
   SITE_TYPES.SUB2API,
+  SITE_TYPES.GPT_LOAD,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.OCTOPUS,
   SITE_TYPES.VELOERA,
   SITE_TYPES.DONE_HUB,
-  SITE_TYPES.OMNIROUTE,
 ] as const
 
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
@@ -997,6 +1003,34 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       settingsTarget: {
         ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
         anchor: SETTINGS_ANCHORS.OMNIROUTE,
+      },
+    },
+  },
+  {
+    // gpt-load is a self-hosted Go AI gateway. It owns no upstream account of
+    // its own (no balance, plan, or check-in) and exposes no enumerable official
+    // hostname, so it is managed-only with no account scope and no detection.
+    // Its management object is a group: one channel driver, a credential pool,
+    // and a model list. Not a New API-family alias: its control plane is
+    // `/api/*` behind the root AUTH_KEY bearer, with a `{code,message,data}`
+    // envelope whose error `code` is a string.
+    siteType: SITE_TYPES.GPT_LOAD,
+    scopes: MANAGED_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/groups",
+        tokens: "/access-keys",
+      },
+      labelKey: "settings:managedSite.gptLoad",
+      getStartedUrl: "https://github.com/tbphp/gpt-load#-quick-start",
+      messagesKey: "gptLoad",
+      tableFieldIds: GPT_LOAD_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: GPT_LOAD_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      settingsTarget: {
+        ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
+        anchor: SETTINGS_ANCHORS.GPT_LOAD,
       },
     },
   },

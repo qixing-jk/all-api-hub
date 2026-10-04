@@ -192,6 +192,23 @@
         "label": "額外模型前綴",
         "placeholder": "例如：deepseek"
       },
+      "gptLoadBaseUrl": {
+        "help": "該渠道轉送請求的上游位址；已知提供商留空時，由閘道使用提供商自身的端點。"
+      },
+      "gptLoadKey": {
+        "help": "該分組可用的金鑰。閘道按分組保存金鑰池：在此新增列即匯入金鑰，刪除列即移除金鑰。"
+      },
+      "gptLoadPriceMultiplier": {
+        "help": "對渠道回報的成本進行倍率核算（例如 1.5），用於餘額與限速統計。",
+        "label": "計費倍率"
+      },
+      "gptLoadProvider": {
+        "help": "該渠道所用的 gpt-load 驅動 id（例如 openai、anthropic、gemini）。可使用「載入」按鈕讀取該閘道實際支援的驅動列表。"
+      },
+      "gptLoadWeight": {
+        "help": "手動負載平衡權重；數值越大分到的流量比例越高；留空則使用閘道預設值。",
+        "label": "權重"
+      },
       "manualModels": {
         "label": "手動模型"
       },

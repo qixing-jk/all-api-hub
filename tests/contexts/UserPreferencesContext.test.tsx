@@ -174,6 +174,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetClaudeCodeHubConfig: vi.fn(),
       resetSub2ApiManagedSiteConfig: vi.fn(),
       resetOmniRouteConfig: vi.fn(),
+      resetGptLoadConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyApiConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -270,6 +271,45 @@ const renderProvider = async (
 }
 
 describe("UserPreferencesContext", () => {
+  it("persists gpt-load fields and reloads reset state only after a successful write", async () => {
+    const context = await renderProvider()
+    await act(async () => {
+      expect(
+        (await context.updateGptLoadBaseUrl("http://lan.invalid")).ok,
+      ).toBe(true)
+      expect((await context.updateGptLoadManagementKey("fake-key")).ok).toBe(
+        true,
+      )
+    })
+    expect(preferencePersistence.getPersistedPreferences().gptLoad).toEqual({
+      baseUrl: "http://lan.invalid",
+      managementKey: "fake-key",
+    })
+    mockedUserPreferences.resetGptLoadConfig.mockImplementation(async () => {
+      const preferences = deepOverride(
+        preferencePersistence.getPersistedPreferences(),
+        { gptLoad: DEFAULT_PREFERENCES.gptLoad },
+      )
+      preferencePersistence.setPersistedPreferences(preferences)
+      return { ok: true, preferences }
+    })
+    await act(async () => {
+      expect((await context.resetGptLoadConfig()).ok).toBe(true)
+    })
+    expect(latestContext?.gptLoadManagementKey).toBe("")
+    await act(async () => {
+      expect(
+        (await context.updateGptLoadBaseUrl("http://retained.lan")).ok,
+      ).toBe(true)
+    })
+    mockedUserPreferences.resetGptLoadConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    await act(async () => {
+      expectFailedWrite(await context.resetGptLoadConfig())
+    })
+    expect(latestContext?.gptLoadBaseUrl).toBe("http://retained.lan")
+  })
   it("persists an OmniRoute token and reloads the reset configuration only after successful writes", async () => {
     const context = await renderProvider()
     await act(async () => {

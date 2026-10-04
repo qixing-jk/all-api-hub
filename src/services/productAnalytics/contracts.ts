@@ -1247,6 +1247,7 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
   CliProxyApi: SITE_TYPES.CLI_PROXY_API,
   Sub2Api: SITE_TYPES.SUB2API,
   OmniRoute: SITE_TYPES.OMNIROUTE,
+  GptLoad: SITE_TYPES.GPT_LOAD,
 } as const
 
 export type ProductAnalyticsManagedSiteType =
@@ -1488,6 +1489,7 @@ export type ProductAnalyticsEventPayloadMap = {
     claude_code_hub_configured?: boolean
     cli_proxy_configured?: boolean
     omniroute_configured?: boolean
+    gpt_load_configured?: boolean
     claude_code_router_configured?: boolean
     concurrency?: number
     rate_limit_rpm?: number

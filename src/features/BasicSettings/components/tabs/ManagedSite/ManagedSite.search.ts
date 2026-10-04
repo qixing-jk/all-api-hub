@@ -20,6 +20,10 @@ import {
   managedSiteDoneHubSearchSections,
 } from "./ManagedSiteDoneHub.search"
 import {
+  managedSiteGptLoadSearchControls,
+  managedSiteGptLoadSearchSections,
+} from "./ManagedSiteGptLoad.search"
+import {
   managedSiteNewApiSearchControls,
   managedSiteNewApiSearchSections,
 } from "./ManagedSiteNewApi.search"
@@ -46,6 +50,7 @@ export const managedSiteSearchSections = [
   ...managedSiteClaudeCodeHubSearchSections,
   ...managedSiteSub2ApiSearchSections,
   ...managedSiteOmniRouteSearchSections,
+  ...managedSiteGptLoadSearchSections,
 ]
 
 export const managedSiteSearchControls = [
@@ -58,4 +63,5 @@ export const managedSiteSearchControls = [
   ...managedSiteClaudeCodeHubSearchControls,
   ...managedSiteSub2ApiSearchControls,
   ...managedSiteOmniRouteSearchControls,
+  ...managedSiteGptLoadSearchControls,
 ]

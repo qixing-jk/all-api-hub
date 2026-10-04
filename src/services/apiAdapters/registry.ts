@@ -24,6 +24,7 @@ import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "./managedSites/claudeCodeHub"
 import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
+import { gptLoadManagedSiteCapabilities } from "./managedSites/gptLoad"
 import { newApiManagedSiteCapabilities } from "./managedSites/newApi"
 import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
 import { omniRouteManagedSiteCapabilities } from "./managedSites/omniroute"
@@ -47,6 +48,7 @@ const managedSitesBySiteType = {
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteCapabilities,
   [SITE_TYPES.SUB2API]: sub2ApiManagedSiteCapabilities,
   [SITE_TYPES.OMNIROUTE]: omniRouteManagedSiteCapabilities,
+  [SITE_TYPES.GPT_LOAD]: gptLoadManagedSiteCapabilities,
 } satisfies Record<ManagedSiteType, ManagedSiteCapabilities>
 
 const withManagedSites = (

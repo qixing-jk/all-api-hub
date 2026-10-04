@@ -116,6 +116,7 @@ export default defineUserConfig({
               '/self-hosted-site-management',
               '/cliproxyapi-integration',
               '/omniroute-integration',
+              '/gpt-load-integration',
               '/model-redirect',
               '/new-api-security-verification',
             ]
@@ -214,6 +215,7 @@ export default defineUserConfig({
               '/en/self-hosted-site-management',
               '/en/cliproxyapi-integration',
               '/en/omniroute-integration',
+              '/en/gpt-load-integration',
               '/en/model-redirect',
               '/en/new-api-security-verification',
             ]
@@ -312,6 +314,7 @@ export default defineUserConfig({
               '/ja/self-hosted-site-management',
               '/ja/cliproxyapi-integration',
               '/ja/omniroute-integration',
+              '/ja/gpt-load-integration',
               '/ja/model-redirect',
               '/ja/new-api-security-verification',
             ]

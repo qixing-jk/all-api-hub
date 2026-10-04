@@ -155,6 +155,7 @@
 | Claude Code Hub | チーム向けのマルチベンダー AI API プロキシおよび運用プラットフォーム。Claude、OpenAI Compatible、Codex、Gemini を統一的に統合し、弾力的なスケジューリング、監視、および価格管理をサポートします。 | [GitHub](https://github.com/ding113/claude-code-hub) |
 | Octopus | 個人向けの LLM API 集約サービス。 | [GitHub](https://github.com/bestruirui/octopus) |
 | [OmniRoute](./omniroute-integration.md) | セルフホストの AI ゲートウェイ。多数の provider を内蔵し、スコープ付きアクセストークンと接続単位の上流アドレス上書きに対応します。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | 軽量なセルフホスト AI ゲートウェイ（Go 製）。グループはチャンネルドライバとキープールで構成されます。 | [GitHub](https://github.com/tbphp/gpt-load) |
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | DoneHub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
 

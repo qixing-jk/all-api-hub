@@ -19,6 +19,15 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
+  it("uses gpt-load recovery messages", () => {
+    const t = ((key: string) => key) as TFunction
+    expect(getManagedSiteConfigMissingMessage(t, "gptLoad")).toBe(
+      "messages:gptLoad.configMissing",
+    )
+    expect(getManagedSiteNoChannelsToSyncMessage(t, "gptLoad")).toBe(
+      "messages:gptLoad.noChannelsToSync",
+    )
+  })
   it("uses OmniRoute recovery messages", () => {
     const t = ((key: string) => key) as TFunction
     expect(getManagedSiteConfigMissingMessage(t, "omniroute")).toBe(

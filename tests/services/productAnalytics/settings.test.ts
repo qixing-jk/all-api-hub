@@ -504,6 +504,7 @@ describe("settings product analytics snapshots", () => {
         claude_code_hub_configured: false,
         cli_proxy_configured: false,
         omniroute_configured: false,
+        gpt_load_configured: false,
         claude_code_router_configured: false,
       },
       {

@@ -5,6 +5,7 @@ import { AxonHubIcon } from "~/components/icons/AxonHubIcon"
 import { ClaudeCodeHubIcon } from "~/components/icons/ClaudeCodeHubIcon"
 import { CliProxyApiIcon } from "~/components/icons/CliProxyApiIcon"
 import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
+import { GptLoadIcon } from "~/components/icons/GptLoadIcon"
 import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
@@ -54,6 +55,10 @@ export function ManagedSiteIcon({
 
   if (siteType === SITE_TYPES.OMNIROUTE) {
     return <OmniRouteIcon size={size} />
+  }
+
+  if (siteType === SITE_TYPES.GPT_LOAD) {
+    return <GptLoadIcon size={size} />
   }
 
   if (siteType === SITE_TYPES.CLI_PROXY_API) {

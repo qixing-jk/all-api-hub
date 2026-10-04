@@ -31,6 +31,28 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 
 describe("managed-site runtime config resolver", () => {
   it.each([
+    [{ baseUrl: "", managementKey: "" }, false],
+    [{ baseUrl: "http://gateway.lan", managementKey: "" }, true],
+    [{ baseUrl: "", managementKey: "saved-key" }, true],
+  ] as const)(
+    "detects partial gpt-load configuration %j",
+    (gptLoad, expected) => {
+      const preferences = buildUserPreferences({ gptLoad })
+      expect(
+        hasManagedSiteRuntimeConfigInputForType(
+          preferences,
+          SITE_TYPES.GPT_LOAD,
+        ),
+      ).toBe(expected)
+      expect(
+        resolveManagedSiteRuntimeConfigForType(
+          preferences,
+          SITE_TYPES.GPT_LOAD,
+        ),
+      ).toBeNull()
+    },
+  )
+  it.each([
     { baseUrl: "", token: "" },
     { baseUrl: "https://gateway.invalid", token: "" },
     { baseUrl: "", token: "oma_test" },

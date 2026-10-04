@@ -138,6 +138,28 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("ManagedSiteTab", () => {
+  it("renders gpt-load settings without offering unsupported model synchronization", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.GPT_LOAD,
+        gptLoadBaseUrl: "https://gateway.invalid",
+        gptLoadManagementKey: "fake",
+        preferences: {
+          lastUpdated: 1,
+          managedSiteType: SITE_TYPES.GPT_LOAD,
+          gptLoad: {
+            baseUrl: "https://gateway.invalid",
+            managementKey: "fake",
+          },
+        },
+      }),
+    )
+    render(<ManagedSiteTab />)
+    expect(await screen.findByText("settings:gptLoad.title")).toBeVisible()
+    expect(
+      screen.queryByTestId("managed-site-model-sync-settings"),
+    ).not.toBeInTheDocument()
+  })
   it("renders OmniRoute settings and its unsupported model-sync message", async () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({

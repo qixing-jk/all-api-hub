@@ -379,6 +379,15 @@ const getTypeText = (
   ) {
     return type.trim()
   }
+  // gpt-load channel types are the gateway's own driver ids, so the id is the
+  // only vocabulary the preview can show without inventing a translation.
+  if (
+    siteType === SITE_TYPES.GPT_LOAD &&
+    typeof type === "string" &&
+    type.trim()
+  ) {
+    return type.trim()
+  }
   return resolveUnsupportedChannelTypeLabel(t)
 }
 

@@ -235,6 +235,10 @@ function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
     return [config.config.token]
   }
 
+  if (config.siteType === SITE_TYPES.GPT_LOAD) {
+    return [config.config.managementKey]
+  }
+
   return [config.config.adminToken]
 }
 

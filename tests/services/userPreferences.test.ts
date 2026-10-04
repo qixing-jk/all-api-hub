@@ -25,6 +25,31 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("merges gpt-load connection fields and resets only its own config", async () => {
+    await userPreferences.savePreferences({
+      gptLoad: { baseUrl: "http://gateway.lan", managementKey: "old" },
+      currencyType: "USD",
+    })
+    expect(
+      (
+        await userPreferences.updateGptLoadConfig({
+          baseUrl: "https://gateway.invalid",
+        })
+      ).ok,
+    ).toBe(true)
+    expect(
+      (await userPreferences.updateGptLoadConfig({ managementKey: "new" })).ok,
+    ).toBe(true)
+    expect((await userPreferences.getPreferences()).gptLoad).toEqual({
+      baseUrl: "https://gateway.invalid",
+      managementKey: "new",
+    })
+    expect((await userPreferences.resetGptLoadConfig()).ok).toBe(true)
+    expect(await userPreferences.getPreferences()).toMatchObject({
+      gptLoad: DEFAULT_PREFERENCES.gptLoad,
+      currencyType: "USD",
+    })
+  })
   it("retains sidebar collapse and content width across independent appearance writes", async () => {
     await userPreferences.savePreferences({
       appearance: { sidebarCollapsed: true },

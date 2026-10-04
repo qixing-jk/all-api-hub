@@ -459,6 +459,7 @@ describe("managedResourceMigrationPresentation", () => {
       "Codex (Responses API)",
     ],
     [SITE_TYPES.AXON_HUB, 14, "Unsupported type"],
+    [SITE_TYPES.GPT_LOAD, " openai_compatible ", "openai_compatible"],
     [SITE_TYPES.CLAUDE_CODE_HUB, 14, "Unsupported type"],
   ] as const)(
     "shows the native %s source type %s without New API label fallback",

@@ -289,6 +289,31 @@
     "toggleDesc": "同一站点的用户 ID 已保存时才提示确认。OpenRouter 按相同的 Management Key 判断重复。",
     "toggleLabel": "添加重复账号前提醒"
   },
+  "gptLoad": {
+    "description": "管理自托管的 gpt-load 实例：一款轻量 Go AI 网关，将在各渠道间对请求做负载均衡。",
+    "fields": {
+      "baseUrlDesc": "gpt-load 控制面板的基地址（例如 https://gateway.example.com）。",
+      "baseUrlLabel": "网关地址",
+      "baseUrlPlaceholder": "https://gateway.example.com",
+      "hideManagementKey": "隐藏管理密钥",
+      "managementKeyDesc": "网关的根 AUTH_KEY，作为 Bearer 令牌访问管理 API；它与工作区任一渠道密钥具有同等权限。",
+      "managementKeyLabel": "管理密钥",
+      "managementKeyPlaceholder": "网关配置中的 AUTH_KEY",
+      "showManagementKey": "显示管理密钥"
+    },
+    "title": "gpt-load",
+    "validation": {
+      "description": "使用上方密钥发送一次请求，验证网关可达且密钥有效。",
+      "failed": "无法连接网关：{{error}}",
+      "insufficientPrivilege": "管理密钥权限不足：{{error}}",
+      "invalidCredential": "管理密钥被拒绝：{{error}}",
+      "missingFields": "请先填写网关地址与管理密钥",
+      "success": "连接验证成功",
+      "title": "测试连接",
+      "validate": "测试连接",
+      "validating": "检测中…"
+    }
+  },
   "logging": {
     "consoleEnabled": "启用控制台日志",
     "consoleEnabledDesc": "关闭后，All API Hub 不会在浏览器控制台输出任何日志（包括错误）。",
@@ -326,6 +351,7 @@
         "title": "配置自建 AI 网关"
       }
     },
+    "gptLoad": "gpt-load",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",
