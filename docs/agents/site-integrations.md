@@ -15,6 +15,15 @@ When working on a site type:
 3. Verify upstream behavior before making definitive claims when backend differences matter.
 4. If missing upstream evidence blocks a protocol decision, ask for the target deployment, fork, version, or a redacted trace. State assumptions and continue independent work; do not repeatedly request evidence already supplied.
 
+## Gateway presentation order
+
+Plugin gateway/managed-site selectors and navigation use `MANAGED_SITE_TYPE_ORDER` in `src/services/accountSiteDefinitions/definitions.ts` as their shared presentation order. Adding a gateway includes choosing its position; registration order or appending at the end is not a popularity decision.
+
+- For open-source gateways with comparable public repositories, sort by upstream GitHub stars descending. Verify counts live when adding a gateway or revising the order; refresh the compared repositories together and record repository sources, counts, and the snapshot date beside the order constant. Keep this a deliberate static snapshot rather than fetching popularity during UI rendering.
+- Use traffic or adoption evidence where stars are unavailable or insufficient to distinguish candidates. Record the source, measurement period, and rationale; compare the same metric and period. Do not combine stars and visits into an invented score or substitute a guessed traffic ranking. Self-hosting alone does not mean a public repository has no star count.
+- Keep equal-ranked sites in their existing relative order. Place sites without comparable evidence after the ranked group and record the reason; revisit that exception when the site changes. If evidence cannot be retrieved, disclose the provisional placement in the task report.
+- Update the existing public-order assertion in `tests/services/accountSiteDefinitions/registry.test.ts` and check affected selectors/navigation for hard-coded lists that bypass the registry. Preserve saved-account/user-customized ordering; `ACCOUNT_SITE_TYPE_ORDER` has its own compatibility order and is not implicitly covered by this gateway ranking rule.
+
 ## Managed-channel display contract
 
 A native channel workspace renders two surfaces from one accepted projection: the table columns named by `tableFieldIds` and the detail dialog's rows named by `detailFieldIds`. A field in either list renders only when all three of these exist, so adding one to a list is a promise:
