@@ -77,9 +77,8 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   webExt: {
-    // 避免开发模式下默认唤起系统未经配置且无登录态的 Chrome 空白窗口
-    // 调试与真实测试统一由 `pnpm browser:cdp` 管理共享 Profile
-    disabled: process.env.WXT_OPEN_BROWSER !== "1",
+    // Keep WXT's default startup; opt out via dev:no-browser or the CDP runner.
+    disabled: process.env.WXT_OPEN_BROWSER === "0",
   },
   manifest: (env) => {
     const projectPath = getProjectRootPath()

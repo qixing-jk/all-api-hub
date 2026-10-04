@@ -59,9 +59,24 @@ For Firefox:
 pnpm dev:firefox
 ```
 
+These commands automatically open a browser with the extension loaded, following
+WXT's default behavior. To start only the dev server without opening a browser:
+
+```bash
+pnpm dev:no-browser
+# Firefox:
+pnpm dev:no-browser -b firefox
+```
+
+When needed, `pnpm browser:cdp` opens a debugging browser with the Chrome extension
+loaded automatically and reuses an existing debugging window. It can also start
+the dev server itself. Alternatively, load the extension in your own browser as
+described below. `WXT_OPEN_BROWSER=0` also disables automatic browser startup for
+the regular dev commands.
+
 The dev server listens on `http://127.0.0.1:3000`, and the pages it generates load their scripts from that exact address. Pass `--host` to bind elsewhere. If the browser reaches a different loopback address than the server bound (for example it resolves `localhost` to IPv6 `::1`), or a system proxy intercepts loopback requests, every extension page stays blank with `net::ERR_CONNECTION_REFUSED`.
 
-4. **Load the extension in your browser**
+4. **Load the extension in your own browser (optional)**
 
 - Chrome: Navigate to `chrome://extensions/`, enable "Developer mode", click "Load unpacked", and select the `.output/chrome-mv3-dev` directory.
 - Firefox: Navigate to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select `manifest.json` inside the `.output/firefox-mv2-dev` directory.

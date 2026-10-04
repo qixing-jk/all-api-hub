@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "wxt",
+    "dev:no-browser": "node scripts/dev-no-browser.mjs",
     "dev:firefox": "wxt -b firefox",
     "dev:mobile:firefox": "node scripts/android-dev.js",
     "build": "wxt build",
