@@ -8,6 +8,38 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.3.0
+This release adds support for Kimi Open Platform, FreeModel, and Grsai accounts, introduces OmniRoute and gpt-load self-hosted gateway management, adds allowance monitoring to the API credential library, and comprehensively improves automatic check-in, account addition, and export workflows.
+
+- **New Features:**
+  - **`Kimi Open Platform` account support**: Add domestic and international Kimi Open Platform accounts, view balances and model lists, create, rename, or delete API keys directly within the extension, and export base URLs for external clients. Model pricing synchronizes with official published rates and displays in native currencies (CNY/USD). See [Supported Sites](./supported-sites.md).
+  - **`FreeModel` and `Grsai` site support**:
+    - **FreeModel**: Add accounts using web session cookies, view balances, plan allowances, and invitation links, manage and create API keys, and save one-time keys directly to the credential library. See [Supported Sites](./supported-sites.md).
+    - **Grsai**: Automatically detect logged-in Grsai accounts, synchronize balances and usage, and create, edit, or delete API keys in the extension. See [Supported Sites](./supported-sites.md).
+  - **`OmniRoute` and `gpt-load` self-hosted gateway management**:
+    - **OmniRoute**: Connect to your self-hosted OmniRoute gateway to view and manage channels, quickly import account keys and API credentials, or migrate between channels. See [OmniRoute Management](./omniroute-integration.md) and [Self-Hosted Site Management](./self-hosted-site-management.md).
+    - **gpt-load**: Connect to self-hosted gpt-load gateways to manage groups and models, and import keys and credentials into target groups with one click. See [gpt-load Management](./gpt-load-integration.md).
+  - **API credential allowance monitoring**: The credential library now shows remaining quotas, progress meters, and reset countdowns. It also estimates how long your balance will last based on recent daily spending, and highlights credentials running low in the overview. See [API Credential Profiles](./api-credential-profiles.md).
+  - **API credential custom request headers**: For APIs that require special headers or custom User-Agents, credentials now support configuring custom request headers that apply when checking connections or fetching models. Sensitive header values are masked in the UI. See [API Credential Profiles](./api-credential-profiles.md).
+  - **`ToolCode` growth-center daily check-in**: ToolCode sites using Sub2API now support automatic daily check-in via the growth center, with status verification before submission to avoid duplicate attempts. See [Automatic Check-in](./auto-checkin.md).
+  - **Authoritative rewards in check-in results**: When a check-in completes and the site returns a specific credit reward, the amount is displayed directly next to the result message and converted to your preferred currency. See [Automatic Check-in](./auto-checkin.md).
+  - **Settings sidebar footer shortcuts**: Added a persistent shortcut bar at the bottom of the Settings sidebar for quick access to documentation, starring the repository on GitHub, viewing verified sponsors, and joining community chat channels.
+  - **Local troubleshooting logs**: Added a recent log viewer in "Settings → General → Logs" to inspect recent entries when diagnosing issues, complete with filtering and one-click copying for issue reports. See [Overview](./options-overview.md).
+
+- **Experience Improvements:**
+  - **Add Account quick fill and compact layout**: The site URL input includes a "Use current tab" shortcut button; when no web page is open, the dropdown recommends recently visited sites. The dialog layout has been streamlined for smaller screens and mobile viewports, allowing longer forms to scroll smoothly inside the dialog. See [Add Account](./add-account.md).
+  - **Bookmark import retry and manual recovery**: Batch bookmark imports clearly display counts for added, incomplete, and skipped items. Incomplete items (such as those requiring login or CAPTCHA) can be retried without re-adding successful entries, or continued via "Finish manually" with prefilled details. See [Bookmark Management](./bookmark-management.md).
+  - **Check-in method redetection**: You can trigger "Redetect check-in method" at any time from account menus or check-in tables. A newly identified method is adopted automatically, and a picker dialog appears if multiple methods are available. Discovery also runs automatically after saving or refreshing accounts, and confirmed unsupported sites will not show distracting unselected method warnings. See [Automatic Check-in](./auto-checkin.md).
+  - **Instant key deletion feedback**: When deleting an API key, the row is removed immediately with a success message instead of freezing while waiting for a background refresh; bookmark and duplicate-account dialogs also close promptly once completed. See [Key Management](./key-management.md).
+  - **Reuse existing open tabs for detection**: Account auto-detection prioritizes open tabs where you are already signed in, reducing unnecessary popup windows and providing clearer messages if detection fails. See [Troubleshooting Guide for Auto-Identification](./auto-detect.md).
+  - **Record credential source pages**: Saving or importing external credentials now supports recording the source web page address to easily track where a key came from. See [API Credential Profiles](./api-credential-profiles.md).
+
+- **Bug Fixes:**
+  - **Client export address compatibility**: Fixed an issue where exporting configurations to external tools (such as Claude Code or Gemini CLI) resulted in doubled or missing `/v1` path segments; Volcengine Ark Coding Plan accounts automatically route to their dedicated endpoint when exported for Claude. See [Quick Export](./quick-export.md).
+  - **Mobile and tablet popup sizing**: Fixed an issue where extension popups on mobile or tablet browsers were constrained to desktop dimensions, ensuring the popup properly fills the available screen width.
+  - **Fallback to Settings when side panels are unavailable**: In browser environments where side panels cannot be opened (such as certain Firefox setups), account setup automatically continues in the full Settings page instead of staying stuck in a loading state.
+  - **New API access token guidance**: Adapted to scoped access tokens in newer New API deployments; when a site requires manually creating a token, the dialog clearly explains how to generate it in the site's security settings rather than reporting an ambiguous failure. See [Add Account](./add-account.md).
+
 ## 4.2.0
 This release adds support for Rix API 6.x sites and AI-ROUTER accounts, brings page transition animations to settings, and fixes today's income display and leftover blank pages.
 
