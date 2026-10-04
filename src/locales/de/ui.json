@@ -338,11 +338,15 @@
     "expand": "Erweitern",
     "firefox": {
       "confirm": "Bestätigen",
+      "howOpenOptions": "Auf der vollständigen Seite fortfahren",
       "howOpenSidebar": "So öffnen Sie die Seitenleiste",
       "limitation": "Firefox Browser-Funktionseinschränkung",
+      "openFailed": "Die Seitenleiste oder vollständige Seite konnte nicht geöffnet werden. Bitte erneut versuchen.",
+      "openOptions": "Auf der vollständigen Seite fortfahren",
       "openSidebar": "Seitenleiste öffnen",
-      "popupLimitation": "Diese Funktion kann im Firefox-Popup nicht zuverlässig verwendet werden. Verwenden Sie zum Hinzufügen von Konten bitte die Seitenleiste.",
-      "sidebarInstruction": "Klicken Sie auf das Erweiterungssymbol in der Browser-Symbolleiste und wählen Sie dann die Option „Seitenleiste“, um den Seitenleistenmodus zu öffnen",
+      "optionsInstruction": "Mit der Schaltfläche unten öffnen Sie die vollständige Kontoverwaltung der Erweiterung.",
+      "popupLimitation": "Das Firefox-Popup kann sich beim Öffnen einer anderen Seite schließen. Fügen Sie Konten in der Seitenleiste oder auf der vollständigen Seite hinzu.",
+      "sidebarInstruction": "Mit der Schaltfläche unten öffnen Sie die Seitenleiste. Falls das fehlschlägt, wird die vollständige Seite geöffnet.",
       "warningTitle": "Erinnerung an Funktionseinschränkungen"
     },
     "kelivo": {
@@ -599,10 +603,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "Popup geöffnet lassen",
-      "useSidepanel": "Seitenleiste verwenden"
+      "useOptions": "Auf der vollständigen Seite fortfahren",
+      "useSidepanel": "In der Seitenleiste fortfahren"
     },
-    "description": "Das Popup wurde geschlossen, während die automatische Kontoerkennung ausgeführt wurde. Verwenden Sie die Seitenleiste für einen gleichmäßigeren Ablauf beim Hinzufügen von Konten.",
-    "settingName": "Klickverhalten der Symbolleiste",
+    "description": "Das Popup wurde während der automatischen Kontoerkennung geschlossen. Fahren Sie in der Seitenleiste fort. Falls sie sich nicht öffnen lässt, wird die vollständige Seite geöffnet.",
+    "openFailed": "Die Seitenleiste oder vollständige Seite konnte nicht geöffnet werden. Bitte erneut versuchen.",
+    "optionsDescription": "Das Popup wurde während der automatischen Kontoerkennung geschlossen. Fahren Sie auf der vollständigen Seite fort.",
     "title": "Die automatische Erkennung wurde möglicherweise unterbrochen"
   },
   "repeatableInput": {

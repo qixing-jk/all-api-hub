@@ -48,8 +48,14 @@ const handleOpenSidePanelActionClick = async (tab: browser.tabs.Tab) => {
   })
 
   try {
-    await openSidePanelWithFallback(tab)
-    tracker.complete()
+    const destination = await openSidePanelWithFallback(tab)
+    if (destination === "options") {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+    } else {
+      tracker.complete()
+    }
   } catch (error) {
     tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

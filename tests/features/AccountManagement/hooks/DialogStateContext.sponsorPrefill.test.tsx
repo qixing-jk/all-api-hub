@@ -13,6 +13,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 const accountDialogProps = vi.hoisted(() => ({
   current: null as any,
   renderCount: 0,
+  inOptions: false,
 }))
 
 const loadAccountDataMock = vi.hoisted(() => vi.fn())
@@ -89,6 +90,7 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   return {
     ...actual,
     isExtensionSidePanel: isExtensionSidePanelMock,
+    isExtensionOptions: () => accountDialogProps.inOptions,
   }
 })
 
@@ -122,6 +124,8 @@ describe("DialogStateContext sponsor prefill", () => {
     accountDialogProps.current = null
     accountDialogProps.renderCount = 0
     vi.clearAllMocks()
+    accountDialogProps.inOptions = false
+    window.history.replaceState(null, "", "/")
     isExtensionSidePanelMock.mockReturnValue(false)
     isAddAccountPrefillMock.mockImplementation((value: unknown) => {
       return (
@@ -140,6 +144,33 @@ describe("DialogStateContext sponsor prefill", () => {
     getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValue(null)
     watchPendingSponsorAddAccountPrefillMock.mockReturnValue(
       stopWatchingPendingSponsorAddAccountPrefillMock,
+    )
+  })
+
+  it("restores pending sponsor intent in the Options add-account fallback", async () => {
+    accountDialogProps.inOptions = true
+    window.history.replaceState(null, "", "/?action=add#account")
+    getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValueOnce({
+      source: "sponsor",
+      sponsorId: "aihubmix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      siteUrl: "https://aihubmix.com",
+    })
+    render(
+      <DialogStateProvider>
+        <Harness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+    expect(await screen.findByTestId("account-dialog")).toHaveTextContent(
+      "aihubmix",
+    )
+    expect(accountDialogProps.current.prefill.siteUrl).toBe(
+      "https://aihubmix.com",
     )
   })
 

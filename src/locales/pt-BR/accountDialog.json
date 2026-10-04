@@ -17,7 +17,7 @@
     "openSecurityFailed": "Não foi possível abrir a página. Abra Segurança → Access Token manualmente no site e volte aqui para colar o token.",
     "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",
     "popupHint": "Continue no painel lateral para manter este formulário enquanto verifica sua identidade e copia o token no site. Se o painel lateral não puder ser aberto, o formulário será aberto em uma página completa.",
-    "prepareFailed": "Não foi possível preservar este formulário. Copie os dados necessários antes de reabrir o formulário de conta no painel lateral.",
+    "prepareFailed": "Não foi possível salvar o formulário temporariamente. Copie as informações que precisa manter e reabra o formulário na página completa.",
     "restoreFailed": "Não foi possível restaurar o formulário incompleto. Ele pode ter expirado. Reabra o formulário de conta.",
     "rotationWarning": "Somente em sites antigos com Generate / Regenerate: gerar novamente invalida o token anterior; atualize as ferramentas que o utilizam. Criar um token de acesso com permissões não invalida os tokens existentes.",
     "title": "Insira um Access Token manualmente"

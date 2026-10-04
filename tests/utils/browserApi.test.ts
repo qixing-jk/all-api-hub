@@ -963,27 +963,20 @@ describe("browserApi getSidePanelSupport", () => {
     vi.doUnmock("~/utils/browser/device")
   })
 
-  it("marks support as unsupported after an observed open failure", async () => {
-    ;(globalThis as any).browser = {
-      sidebarAction: {
-        open: vi.fn().mockRejectedValue(new Error("fail")),
-      },
-    }
+  it("keeps side panel capability available after a transient open failure and allows retry", async () => {
+    const open = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("user gesture expired"))
+      .mockResolvedValueOnce(undefined)
+    ;(globalThis as any).browser = { sidebarAction: { open } }
     ;(globalThis as any).chrome = {}
-
     const { getSidePanelSupport, openSidePanel } = await import(
       "~/utils/browser/browserApi"
     )
-
-    await expect(openSidePanel()).rejects.toThrow("fail")
-
-    const result = getSidePanelSupport()
-    expect(result.supported).toBe(false)
-    expect(result.kind).toBe("unsupported")
-    if (result.supported) {
-      throw new Error("Expected getSidePanelSupport to return unsupported")
-    }
-    expect(result.reason).toContain("open failed")
+    await expect(openSidePanel()).rejects.toThrow("user gesture expired")
+    expect(getSidePanelSupport().supported).toBe(true)
+    await expect(openSidePanel()).resolves.toBeUndefined()
+    expect(open).toHaveBeenCalledTimes(2)
   })
 
   it("returns unsupported when neither side panel API is available", async () => {
@@ -1145,7 +1138,7 @@ describe("browserApi getSidePanelSupport", () => {
     )
 
     const support = getSidePanelSupport()
-    expect(support.supported).toBe(false)
+    expect(support.supported).toBe(true)
   })
 
   it("opens the Firefox sidebar action directly", async () => {

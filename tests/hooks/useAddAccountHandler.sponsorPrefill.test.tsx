@@ -10,8 +10,10 @@ const { openAddAccountMock, showFirefoxWarningDialogMock } = vi.hoisted(() => ({
   showFirefoxWarningDialogMock: vi.fn(),
 }))
 
-const { openSidePanelPageMock } = vi.hoisted(() => ({
+const { openSidePanelPageMock, openOptionsMock, runtime } = vi.hoisted(() => ({
   openSidePanelPageMock: vi.fn(),
+  openOptionsMock: vi.fn(),
+  runtime: { inPopup: true, supported: true },
 }))
 
 vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
@@ -34,11 +36,14 @@ vi.mock("~/utils/browser", async (importOriginal) => {
     isDesktopDevice: () => true,
     isExtensionSidePanel: () => false,
     isFirefox: () => true,
+    isExtensionPopup: () => runtime.inPopup,
   }
 })
 
 vi.mock("~/utils/navigation", () => ({
-  openSidePanelPage: openSidePanelPageMock,
+  openSidePanelWithFallback: openSidePanelPageMock,
+  openOrFocusOptionsMenuItem: openOptionsMock,
+  closeIfPopup: vi.fn(),
 }))
 
 vi.mock(
@@ -55,9 +60,37 @@ vi.mock(
   }),
 )
 
+vi.mock("~/utils/browser/browserApi", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+  getSidePanelSupport: () => ({ supported: runtime.supported }),
+}))
+
 describe("useAddAccountHandler sponsor prefill", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    runtime.inPopup = true
+    runtime.supported = true
+  })
+
+  it("adds accounts directly in Options instead of recommending a side panel", () => {
+    runtime.inPopup = false
+    const { result } = renderHook(() => useAddAccountHandler())
+    act(() => result.current.handleAddAccountClick())
+    expect(showFirefoxWarningDialogMock).not.toHaveBeenCalled()
+    expect(openAddAccountMock).toHaveBeenCalledWith(null)
+  })
+
+  it("offers and opens the Options add-account page when Firefox has no usable sidebar", async () => {
+    runtime.supported = false
+    const { result } = renderHook(() => useAddAccountHandler())
+    act(() => result.current.handleAddAccountClick())
+    expect(showFirefoxWarningDialogMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      false,
+    )
+    await showFirefoxWarningDialogMock.mock.calls[0]?.[0]()
+    expect(openOptionsMock).toHaveBeenCalledWith("account", { action: "add" })
+    expect(openSidePanelPageMock).not.toHaveBeenCalled()
   })
 
   it("persists sponsor prefill before opening the Firefox side-panel warning target", async () => {

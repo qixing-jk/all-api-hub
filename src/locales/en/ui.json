@@ -338,11 +338,15 @@
     "expand": "Expand",
     "firefox": {
       "confirm": "Confirm",
+      "howOpenOptions": "Continue in full page",
       "howOpenSidebar": "How to Open Sidebar",
       "limitation": "Firefox Browser Feature Limitation",
+      "openFailed": "Unable to open the side panel or full page. Please try again.",
+      "openOptions": "Continue in full page",
       "openSidebar": "Open Sidebar",
-      "popupLimitation": "This feature cannot be used normally in the popup of Firefox browser. Please use the sidebar mode to add accounts",
-      "sidebarInstruction": "Click on the extension icon in the browser toolbar, then select the 'Sidebar' option to open the sidebar mode",
+      "optionsInstruction": "Use the button below to open the extension’s full account management page.",
+      "popupLimitation": "The Firefox popup may close when another page opens. Add accounts in the side panel or full page.",
+      "sidebarInstruction": "Use the button below to continue in the side panel. If it cannot open, the full page will open instead.",
       "warningTitle": "Feature Limitation Reminder"
     },
     "kelivo": {
@@ -599,10 +603,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "Keep popup",
-      "useSidepanel": "Use sidebar"
+      "useOptions": "Continue in full page",
+      "useSidepanel": "Continue in side panel"
     },
-    "description": "The popup closed while account auto-detect was running. Use the sidebar for a steadier add-account flow.",
-    "settingName": "Toolbar click behavior",
+    "description": "The popup closed during account auto-detection. Continue adding the account in the side panel, with a full-page fallback if it cannot open.",
+    "openFailed": "Unable to open the side panel or full page. Please try again.",
+    "optionsDescription": "The popup closed during account auto-detection. Continue adding the account in the full page.",
     "title": "Auto-detect may have been interrupted"
   },
   "repeatableInput": {

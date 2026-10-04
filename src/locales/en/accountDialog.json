@@ -17,7 +17,7 @@
     "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
     "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
     "popupHint": "Continue in the side panel to keep this form while you verify your identity and copy the token on the site. If the side panel cannot open, the form will open in a full page.",
-    "prepareFailed": "Could not preserve this form. Copy any details you need before reopening the account form in the side panel.",
+    "prepareFailed": "Unable to stage the current form. Copy any information you need to keep, then reopen the account form in the full page.",
     "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
     "rotationWarning": "Only on legacy sites with Generate / Regenerate: regenerating invalidates the old token, so update other tools that use it. Creating a scoped access token does not invalidate existing tokens.",
     "title": "Enter an Access Token manually"

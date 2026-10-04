@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client"
 
+import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { openSidePanelPage } from "~/utils/navigation"
 
 import FirefoxAddAccountWarningDialog from "./index"
@@ -11,7 +12,8 @@ import FirefoxAddAccountWarningDialog from "./index"
  * that they want to add an account in a non-side-panel context.
  */
 export function showFirefoxWarningDialog(
-  onConfirm: () => void = openSidePanelPage,
+  onConfirm: () => void | Promise<unknown> = openSidePanelPage,
+  sidePanelSupported = getSidePanelSupport().supported,
 ) {
   const container = document.createElement("div")
   document.body.appendChild(container)
@@ -26,9 +28,10 @@ export function showFirefoxWarningDialog(
     <FirefoxAddAccountWarningDialog
       isOpen={true}
       onClose={handleClose}
-      onConfirm={() => {
+      sidePanelSupported={sidePanelSupported}
+      onConfirm={async () => {
+        await onConfirm()
         handleClose()
-        onConfirm?.()
       }}
     />,
   )

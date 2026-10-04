@@ -2,174 +2,136 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
-import {
-  clearPopupInterruptionHint,
-  POPUP_CRITICAL_FLOWS,
-} from "~/services/popupInterruptionHint"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { openSidePanelPage } from "~/utils/navigation"
+import { POPUP_CRITICAL_FLOWS } from "~/services/popupInterruptionHint"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const {
-  mockClearPopupInterruptionHint,
-  mockGetPopupInterruptionHint,
-  mockOpenSidePanelPage,
-  mockShowUpdateToast,
-  mockUpdateActionClickBehavior,
-} = vi.hoisted(() => ({
-  mockClearPopupInterruptionHint: vi.fn(),
-  mockGetPopupInterruptionHint: vi.fn(),
-  mockOpenSidePanelPage: vi.fn(),
-  mockShowUpdateToast: vi.fn(),
-  mockUpdateActionClickBehavior: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  clearHint: vi.fn(),
+  getHint: vi.fn(),
+  openSidePanel: vi.fn(),
+  openOptions: vi.fn(),
+  closePopup: vi.fn(),
+  updatePreference: vi.fn(),
+  supported: true,
+  inPopup: true,
 }))
-
-vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/popupInterruptionHint")>()
-
-  return {
-    ...actual,
-    clearPopupInterruptionHint: mockClearPopupInterruptionHint,
-    getPopupInterruptionHint: mockGetPopupInterruptionHint,
-  }
-})
-
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
-
-  return {
-    ...actual,
-    openSidePanelPage: mockOpenSidePanelPage,
-  }
-})
-
-vi.mock("~/utils/feedback/preferenceFeedback", () => ({
-  showUpdateToast: mockShowUpdateToast,
+vi.mock("~/services/popupInterruptionHint", async (original) => ({
+  ...(await original<typeof import("~/services/popupInterruptionHint")>()),
+  clearPopupInterruptionHint: mocks.clearHint,
+  getPopupInterruptionHint: mocks.getHint,
 }))
-
-vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
-
-  return {
-    ...actual,
-    UserPreferencesProvider: ({ children }: { children: React.ReactNode }) =>
-      children,
-    useUserPreferencesContext: () => ({
-      updateActionClickBehavior: mockUpdateActionClickBehavior,
-    }),
-  }
-})
+vi.mock("~/utils/browser", () => ({ isExtensionPopup: () => mocks.inPopup }))
+vi.mock("~/utils/browser/browserApi", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+  getSidePanelSupport: () => ({ supported: mocks.supported }),
+}))
+vi.mock("~/utils/navigation", async (original) => ({
+  ...(await original<typeof import("~/utils/navigation")>()),
+  openSidePanelWithFallback: mocks.openSidePanel,
+  openOrFocusOptionsMenuItem: mocks.openOptions,
+  closeIfPopup: mocks.closePopup,
+}))
+vi.mock("~/contexts/UserPreferencesContext", async (original) => ({
+  ...(await original<typeof import("~/contexts/UserPreferencesContext")>()),
+  UserPreferencesProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+  useUserPreferencesContext: () => ({
+    updateActionClickBehavior: mocks.updatePreference,
+  }),
+}))
 
 describe("PopupInterruptionHintBanner", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUpdateActionClickBehavior.mockResolvedValue({
-      ok: true,
-      preferences: DEFAULT_PREFERENCES,
-    })
-    mockOpenSidePanelPage.mockResolvedValue(undefined)
-    mockClearPopupInterruptionHint.mockResolvedValue(undefined)
-  })
-
-  it("shows a sidebar guidance banner when account auto-detect was interrupted", async () => {
-    mockGetPopupInterruptionHint.mockResolvedValue({
+    mocks.supported = true
+    mocks.inPopup = true
+    mocks.getHint.mockResolvedValue({
       flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
       status: "pending",
       startedAt: 1,
       interruptedAt: 2,
     })
-
-    render(<PopupInterruptionHintBanner />)
-
-    expect(await screen.findByText("ui:popupInterruption.title")).toBeVisible()
-    expect(screen.getByText("ui:popupInterruption.description")).toBeVisible()
-    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite")
-    expect(screen.getByRole("status").className).toContain("bg-warning-soft")
+    mocks.clearHint.mockResolvedValue(undefined)
+    mocks.openSidePanel.mockResolvedValue("sidepanel")
+    mocks.openOptions.mockResolvedValue(undefined)
   })
-
-  it("saves the sidepanel preference, opens it, and clears the hint", async () => {
+  it("offers a one-time side panel continuation without changing toolbar preferences", async () => {
     const user = userEvent.setup()
-    mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
-      status: "pending",
-      startedAt: 1,
-      interruptedAt: 2,
-    })
-
     render(<PopupInterruptionHintBanner />)
-
     await user.click(
       await screen.findByRole("button", {
         name: "ui:popupInterruption.actions.useSidepanel",
       }),
     )
-
-    expect(mockUpdateActionClickBehavior).toHaveBeenCalledWith("sidepanel")
-    expect(mockClearPopupInterruptionHint).toHaveBeenCalled()
-    expect(mockOpenSidePanelPage).toHaveBeenCalled()
-    await waitFor(() => {
-      expect(
-        screen.queryByText("ui:popupInterruption.title"),
-      ).not.toBeInTheDocument()
-    })
+    expect(mocks.openSidePanel).toHaveBeenCalled()
+    expect(mocks.updatePreference).not.toHaveBeenCalled()
+    expect(mocks.clearHint).toHaveBeenCalled()
+    expect(mocks.closePopup).toHaveBeenCalled()
   })
-
-  it("keeps the hint visible when saving the sidepanel preference fails", async () => {
+  it("recommends and actually opens Options when side panels are unavailable", async () => {
+    mocks.supported = false
     const user = userEvent.setup()
-    const writeFailure = {
-      ok: false,
-      reason: { type: "storage-error", error: new Error("save failed") },
-    }
-    mockUpdateActionClickBehavior.mockResolvedValue(writeFailure)
-    mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
-      status: "pending",
-      startedAt: 1,
-      interruptedAt: 2,
-    })
-
     render(<PopupInterruptionHintBanner />)
-
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:popupInterruption.actions.useOptions",
+      }),
+    )
+    expect(mocks.openOptions).toHaveBeenCalledWith("account", { action: "add" })
+    expect(mocks.openSidePanel).not.toHaveBeenCalled()
+    expect(mocks.updatePreference).not.toHaveBeenCalled()
+    expect(mocks.clearHint).toHaveBeenCalled()
+  })
+  it("keeps recovery guidance and the popup available when navigation fails", async () => {
+    mocks.openSidePanel.mockRejectedValue(new Error("navigation unavailable"))
+    const user = userEvent.setup()
+    render(<PopupInterruptionHintBanner />)
     await user.click(
       await screen.findByRole("button", {
         name: "ui:popupInterruption.actions.useSidepanel",
       }),
     )
-
-    expect(mockClearPopupInterruptionHint).not.toHaveBeenCalled()
-    expect(mockOpenSidePanelPage).not.toHaveBeenCalled()
-    expect(mockShowUpdateToast).toHaveBeenCalledWith(
-      writeFailure,
-      "ui:popupInterruption.settingName",
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "ui:popupInterruption.openFailed",
     )
+    expect(mocks.clearHint).not.toHaveBeenCalled()
+    expect(mocks.closePopup).not.toHaveBeenCalled()
     expect(screen.getByText("ui:popupInterruption.title")).toBeVisible()
   })
-
-  it("clears the hint when the user keeps using the popup", async () => {
+  it("does not clear the hint or close the popup before navigation succeeds", async () => {
+    const navigation = createDeferred<"sidepanel">()
+    mocks.openSidePanel.mockReturnValue(navigation.promise)
     const user = userEvent.setup()
-    mockGetPopupInterruptionHint.mockResolvedValue({
-      flow: POPUP_CRITICAL_FLOWS.AccountAutoDetect,
-      status: "pending",
-      startedAt: 1,
-      interruptedAt: 2,
-    })
-
     render(<PopupInterruptionHintBanner />)
-
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:popupInterruption.actions.useSidepanel",
+      }),
+    )
+    expect(mocks.clearHint).not.toHaveBeenCalled()
+    expect(mocks.closePopup).not.toHaveBeenCalled()
+    navigation.resolve("sidepanel")
+    await waitFor(() => expect(mocks.clearHint).toHaveBeenCalled())
+  })
+  it("does not recommend leaving a side panel or Options page", async () => {
+    mocks.inPopup = false
+    render(<PopupInterruptionHintBanner />)
+    await waitFor(() =>
+      expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+    )
+    expect(mocks.getHint).not.toHaveBeenCalled()
+  })
+  it("dismisses guidance without navigating when keeping the popup", async () => {
+    const user = userEvent.setup()
+    render(<PopupInterruptionHintBanner />)
     await user.click(
       await screen.findByRole("button", {
         name: "ui:popupInterruption.actions.keepPopup",
       }),
     )
-
-    expect(clearPopupInterruptionHint).toHaveBeenCalled()
-    expect(openSidePanelPage).not.toHaveBeenCalled()
-    await waitFor(() => {
-      expect(
-        screen.queryByText("ui:popupInterruption.title"),
-      ).not.toBeInTheDocument()
-    })
+    expect(mocks.clearHint).toHaveBeenCalled()
+    expect(mocks.openSidePanel).not.toHaveBeenCalled()
+    expect(mocks.openOptions).not.toHaveBeenCalled()
   })
 })

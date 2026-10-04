@@ -332,11 +332,15 @@
     "expand": "展開",
     "firefox": {
       "confirm": "確認",
+      "howOpenOptions": "全画面ページで続行",
       "howOpenSidebar": "サイドバーの開き方",
       "limitation": "Firefox ブラウザの機能制限",
+      "openFailed": "サイドパネルまたは全画面ページを開けません。もう一度お試しください。",
+      "openOptions": "全画面ページで続行",
       "openSidebar": "サイドバーを開く",
-      "popupLimitation": "この機能は Firefox ブラウザのポップアップでは正常に利用できません。アカウント追加にはサイドバーモードを使用してください",
-      "sidebarInstruction": "ブラウザツールバーの拡張機能アイコンをクリックし、「サイドバー」オプションを選んでサイドバーモードを開いてください",
+      "optionsInstruction": "下のボタンで拡張機能のアカウント管理ページを開きます。",
+      "popupLimitation": "Firefox のポップアップは別のページを開くと閉じることがあります。サイドパネルまたは全画面ページでアカウントを追加してください。",
+      "sidebarInstruction": "下のボタンでサイドパネルに移動します。開けない場合は全画面ページを使用します。",
       "warningTitle": "機能制限のお知らせ"
     },
     "kelivo": {
@@ -592,10 +596,12 @@
   "popupInterruption": {
     "actions": {
       "keepPopup": "ポップアップを使い続ける",
-      "useSidepanel": "サイドバーを使う"
+      "useOptions": "全画面ページで続行",
+      "useSidepanel": "サイドパネルで続行"
     },
-    "description": "アカウントの自動検出中にポップアップが閉じました。より安定した追加フローにはサイドバーを使ってください。",
-    "settingName": "ツールバークリック時の動作",
+    "description": "アカウントの自動検出中にポップアップが閉じました。サイドパネルで追加を続けてください。開けない場合は全画面ページを使用します。",
+    "openFailed": "サイドパネルまたは全画面ページを開けません。もう一度お試しください。",
+    "optionsDescription": "アカウントの自動検出中にポップアップが閉じました。全画面ページで追加を続けてください。",
     "title": "自動検出が中断された可能性があります"
   },
   "repeatableInput": {

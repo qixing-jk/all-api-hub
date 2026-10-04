@@ -17,7 +17,7 @@
     "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
     "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
     "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du dich auf der Website verifizierst und das Token kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
-    "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopiere benötigte Angaben, bevor du das Kontoformular in der Seitenleiste erneut öffnest.",
+    "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopieren Sie wichtige Angaben und öffnen Sie das Kontoformular auf der vollständigen Seite erneut.",
     "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
     "rotationWarning": "Nur auf älteren Sites mit Generate / Regenerate: Die Neugenerierung macht das alte Token ungültig. Aktualisiere andere Tools, die es nutzen. Ein neues Zugriffstoken mit Berechtigungen macht vorhandene Tokens nicht ungültig.",
     "title": "Access Token manuell eingeben"

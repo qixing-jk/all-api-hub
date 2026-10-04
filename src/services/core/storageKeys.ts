@@ -114,6 +114,10 @@ export const STORAGE_LOCKS = {
   STAR_PROMOTION: "all-api-hub:star-promotion",
   /** Exclusive claim of a popup account draft by its destination view. */
   ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
+  /** Serializes interruption records without overwriting another popup's flow. */
+  POPUP_INTERRUPTION_HINT: "all-api-hub:popup-interruption-hint",
+  /** Per-flow liveness leases, released by the browser when a popup is destroyed. */
+  POPUP_CRITICAL_FLOW_PREFIX: "all-api-hub:popup-critical-flow:",
   /**
    * Exclusive lock used for read-modify-write sequences touching the
    * development-only fixture account id registry.
