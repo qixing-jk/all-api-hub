@@ -1,48 +1,16 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_BROWSER_SESSION_SOURCES,
-  resolveAccountBrowserSession,
-  type AccountBrowserSession,
-} from "~/services/accountBrowserSession"
+  createBrowserTokenResync,
+  type BrowserResyncedToken,
+} from "~/services/accountBrowserSession/resyncToken"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-type VoApiV2ResyncedToken = {
-  accessToken: string
-  userId: string
-  username?: string
-  source:
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
-}
-
-const VOAPI_V2_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
-  [ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-} as const satisfies Record<
-  AccountBrowserSession["source"],
-  VoApiV2ResyncedToken["source"]
->
-
-const normalizeString = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : ""
-
-const isVoApiV2Session = (session: AccountBrowserSession): boolean =>
-  session.siteType === SITE_TYPES.VO_API_V2 ||
-  session.siteTypeHint === SITE_TYPES.VO_API_V2
-
-const hasUsableDashboardJwt = (session: AccountBrowserSession): boolean =>
-  isVoApiV2Session(session) && normalizeString(session.accessToken).length > 0
-
-const resolveUsername = (session: AccountBrowserSession): string | undefined =>
-  normalizeString(session.user?.username) ||
-  normalizeString(session.user?.display_name) ||
-  normalizeString(session.user?.email) ||
-  undefined
+const resyncToken = createBrowserTokenResync({
+  siteType: SITE_TYPES.VO_API_V2,
+  requestIdPrefix: "voapi-v2-token-resync",
+  usernameFields: ["username", "display_name", "email"],
+})
 
 /**
  * Re-sync a VoAPI v2 dashboard JWT from logged-in browser-session state.
@@ -55,27 +23,10 @@ export async function resyncVoApiV2AuthToken(
   baseUrl: string,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<VoApiV2ResyncedToken | null> {
-  const session = await resolveAccountBrowserSession({
+): Promise<BrowserResyncedToken | null> {
+  return resyncToken({
     baseUrl,
-    siteType: SITE_TYPES.VO_API_V2,
-    useExistingTabs: true,
-    useTempWindow: true,
-    requestIdPrefix: "voapi-v2-token-resync",
-    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-    isUsableSession: hasUsableDashboardJwt,
+    tempWindowRequestSource,
+    protectionBypassExecution,
   })
-
-  const accessToken = normalizeString(session?.accessToken)
-  if (!session || !accessToken) return null
-
-  const username = resolveUsername(session)
-
-  return {
-    accessToken,
-    userId: session.userId,
-    ...(username ? { username } : {}),
-    source: VOAPI_V2_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE[session.source],
-  }
 }

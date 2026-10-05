@@ -1,54 +1,16 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_BROWSER_SESSION_SOURCES,
-  resolveAccountBrowserSession,
-  type AccountBrowserSession,
-} from "~/services/accountBrowserSession"
+  createBrowserTokenResync,
+  type BrowserResyncedToken,
+} from "~/services/accountBrowserSession/resyncToken"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-const normalizeString = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : ""
-
-type RightCodeResyncedToken = {
-  accessToken: string
-  userId: string
-  username?: string
-  source:
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
-}
-
-const RIGHTCODE_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
-  [ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-} as const satisfies Record<
-  AccountBrowserSession["source"],
-  RightCodeResyncedToken["source"]
->
-
-const isRightCodeSession = (session: AccountBrowserSession): boolean =>
-  session.siteType === SITE_TYPES.RIGHT_CODE ||
-  session.siteTypeHint === SITE_TYPES.RIGHT_CODE
-
-const hasUsableToken = (
-  session: AccountBrowserSession,
-  expectedUserId?: string | number,
-): boolean =>
-  isRightCodeSession(session) &&
-  normalizeString(session.accessToken).length > 0 &&
-  (!expectedUserId ||
-    normalizeString(session.userId) === normalizeString(expectedUserId))
-
-const resolveUsername = (session: AccountBrowserSession): string | undefined =>
-  normalizeString(session.user?.username) ||
-  normalizeString(session.user?.display_name) ||
-  normalizeString(session.user?.email) ||
-  undefined
+const resyncToken = createBrowserTokenResync({
+  siteType: SITE_TYPES.RIGHT_CODE,
+  requestIdPrefix: "rightcode-token-resync",
+  usernameFields: ["username", "display_name", "email"],
+})
 
 /**
  * Re-sync the account token from logged-in browser-session state.
@@ -64,34 +26,11 @@ export async function resyncRightCodeAuthToken(
   expectedUserId?: string | number,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<RightCodeResyncedToken | null> {
-  const session = await resolveAccountBrowserSession({
+): Promise<BrowserResyncedToken | null> {
+  return resyncToken({
     baseUrl,
-    siteType: SITE_TYPES.RIGHT_CODE,
-    useExistingTabs: true,
-    useTempWindow: true,
-    requestIdPrefix: "rightcode-token-resync",
-    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-    isUsableSession: (candidate) => hasUsableToken(candidate, expectedUserId),
+    expectedUserId,
+    tempWindowRequestSource,
+    protectionBypassExecution,
   })
-
-  const accessToken = normalizeString(session?.accessToken)
-  if (!session || !accessToken) return null
-
-  if (
-    expectedUserId &&
-    normalizeString(session.userId) !== normalizeString(expectedUserId)
-  ) {
-    return null
-  }
-
-  const username = resolveUsername(session)
-
-  return {
-    accessToken,
-    userId: session.userId,
-    ...(username ? { username } : {}),
-    source: RIGHTCODE_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE[session.source],
-  }
 }
