@@ -446,7 +446,8 @@ export default function SiteAnnouncementsPage({
       if (!failure) {
         const counts = results.flatMap((result) =>
           result.status === "fulfilled" &&
-          typeof result.value?.data === "number"
+          result.value?.success &&
+          typeof result.value.data === "number"
             ? [result.value.data]
             : [],
         )

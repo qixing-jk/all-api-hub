@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import keyManagement from "~/locales/en/keyManagement.json"
+import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import {
   LAOZHANG_BILLING_TYPES as billing,
@@ -87,7 +88,7 @@ describe("LaoZhang native key settings", () => {
         definition.validate({
           ...definition.initialValues,
           [laoZhangFields.TranslationApiKey]: secret,
-        }),
+        } as unknown as EditableResourceProjection),
       ).toMatchObject({
         valid: false,
         issues: expect.arrayContaining([
@@ -105,7 +106,7 @@ describe("LaoZhang native key settings", () => {
       [laoZhangFields.TranslationBaseUrl]: "https://translation.example",
       [laoZhangFields.TranslationModel]: "model",
       [laoZhangFields.TranslationApiKey]: {
-        kind: "replace",
+        kind: "replace" as const,
         value: " replacement ",
       },
     }
