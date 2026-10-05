@@ -6,7 +6,7 @@ import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { digestAnnouncementFingerprint } from "~/services/siteAnnouncements/identity"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import type { SiteAnnouncementStoreState } from "~/types/siteAnnouncements"
@@ -47,6 +47,92 @@ function countIdentityMarkers(
 }
 
 describe("siteAnnouncementStorage", () => {
+  it.each([undefined, 1500])(
+    "updates a known unread message from upstream read evidence %s",
+    async (readAt) => {
+      const site = {
+        siteKey: "account:laozhang:a:https://api2.laozhang.ai",
+        siteName: "LaoZhang",
+        siteType: "laozhang" as const,
+        baseUrl: "https://api2.laozhang.ai",
+        accountId: "a",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+        status: SITE_ANNOUNCEMENT_STATUS.Success,
+      }
+      const record = {
+        ...site,
+        title: "Message",
+        content: "Body",
+        fingerprint: "known-message",
+        read: false,
+      }
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [record],
+        now: 1000,
+      })
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [{ ...record, read: true, readAt }],
+        now: 2000,
+      })
+      expect(await siteAnnouncementStorage.listRecords()).toEqual([
+        expect.objectContaining({
+          read: true,
+          readAt: readAt ?? 2000,
+          firstSeenAt: 1000,
+        }),
+      ])
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [record],
+        now: 3000,
+      })
+      expect(await siteAnnouncementStorage.listRecords()).toEqual([
+        expect.objectContaining({ read: true, readAt: readAt ?? 2000 }),
+      ])
+    },
+  )
+
+  it("persists account read booleans without requiring an upstream read timestamp", async () => {
+    const site = {
+      siteKey: "account:laozhang:a:https://api2.laozhang.ai",
+      siteName: "LaoZhang",
+      siteType: "laozhang" as const,
+      baseUrl: "https://api2.laozhang.ai",
+      accountId: "a",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    }
+    const input = {
+      ...site,
+      title: "Read message",
+      content: "Body",
+      fingerprint: "message-1",
+      read: true,
+    }
+    const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site,
+      records: [input],
+      now: 1000,
+    })
+    expect(created).toEqual([])
+    expect(await siteAnnouncementStorage.listRecords()).toEqual([
+      expect.objectContaining({
+        sourceScope: "account",
+        read: true,
+        readAt: 1000,
+      }),
+    ])
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site,
+      records: [{ ...input, read: false }],
+      now: 2000,
+    })
+    expect(await siteAnnouncementStorage.listRecords()).toEqual([
+      expect.objectContaining({ read: true, readAt: 1000 }),
+    ])
+  })
   beforeEach(async () => {
     vi.restoreAllMocks()
     const storage = new Storage({ area: "local" })
@@ -58,24 +144,24 @@ describe("siteAnnouncementStorage", () => {
 
     const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
         lastCheckedAt: 1000,
         lastSuccessAt: 1000,
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Notice",
           content: "Hello",
           createdAt: 900,
@@ -98,24 +184,24 @@ describe("siteAnnouncementStorage", () => {
     vi.spyOn(Date, "now").mockReturnValue(2000)
     const repeated = await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
         lastCheckedAt: 2000,
         lastSuccessAt: 2000,
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Notice",
           content: "Hello",
           fingerprint: "same",
@@ -176,14 +262,14 @@ describe("siteAnnouncementStorage", () => {
       expectedContent,
       expectedReadAt,
     }) => {
-      const siteKey = "notice:new-api:https://example.invalid"
+      const siteKey = "site:new-api:https://example.invalid"
       const site = {
         siteKey,
         siteName: "Example",
         siteType: "new-api" as const,
         baseUrl: "https://example.invalid",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       }
       const baseRecord = {
@@ -192,7 +278,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: site.siteType,
         baseUrl: site.baseUrl,
         accountId: site.accountId,
-        providerId: site.providerId,
+        sourceScope: site.sourceScope,
         fingerprint: "duplicate-order",
       }
 
@@ -232,23 +318,23 @@ describe("siteAnnouncementStorage", () => {
 
     const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
         lastCheckedAt: 3000,
         lastSuccessAt: 3000,
       },
       records: Array.from({ length: 101 }, (_, index) => ({
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         title: `Notice ${index}`,
         content: `Hello ${index}`,
         fingerprint: `fingerprint-${index}`,
@@ -262,12 +348,12 @@ describe("siteAnnouncementStorage", () => {
     const secondCreated = await siteAnnouncementStorage.upsertDiscoveredRecords(
       {
         site: {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           status: SITE_ANNOUNCEMENT_STATUS.Success,
           lastCheckedAt: 3000,
           lastSuccessAt: 3000,
@@ -275,12 +361,12 @@ describe("siteAnnouncementStorage", () => {
         records: Array.from({ length: 101 }, (_, index) => {
           const reversedIndex = 100 - index
           return {
-            siteKey: "notice:new-api:https://example.com",
+            siteKey: "site:new-api:https://example.com",
             siteName: "Example",
             siteType: "new-api" as const,
             baseUrl: "https://example.com",
             accountId: "account-1",
-            providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+            sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
             title: `Notice ${reversedIndex}`,
             content: `Hello ${reversedIndex}`,
             fingerprint: `fingerprint-${reversedIndex}`,
@@ -290,7 +376,7 @@ describe("siteAnnouncementStorage", () => {
     )
 
     expect(secondCreated).toHaveLength(0)
-    const siteKey = "notice:new-api:https://example.com"
+    const siteKey = "site:new-api:https://example.com"
     expect(
       Object.keys(
         (await siteAnnouncementStorage.getStore()).identityLedger[siteKey]!,
@@ -307,14 +393,14 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("marks every ledger identity read beyond the content cache", async () => {
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const site = {
       siteKey,
       siteName: "Example",
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const records = Array.from({ length: 101 }, (_, index) => ({
@@ -323,7 +409,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       title: `Notice ${index}`,
       content: `Body ${index}`,
       fingerprint: `mark-all-${index}`,
@@ -349,14 +435,14 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("marks newly discovered identities read after retention evicts their records", async () => {
-    const siteKey = "notice:new-api:https://retention.example.invalid"
+    const siteKey = "site:new-api:https://retention.example.invalid"
     const site = {
       siteKey,
       siteName: "Retention Example",
       siteType: "new-api" as const,
       baseUrl: "https://retention.example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const records = Array.from({ length: 101 }, (_, index) => ({
@@ -365,7 +451,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: site.siteType,
       baseUrl: site.baseUrl,
       accountId: site.accountId,
-      providerId: site.providerId,
+      sourceScope: site.sourceScope,
       title: `Historical notice ${index}`,
       content: `Historical body ${index}`,
       fingerprint: `historical-${index}`,
@@ -396,22 +482,22 @@ describe("siteAnnouncementStorage", () => {
   it("preserves the read invariant without creating a notification candidate for read imports", async () => {
     const created = await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Imported",
           content: "Body",
           fingerprint: "imported-read-at",
@@ -430,14 +516,14 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("imports provider read state onto a known unread identity marker", async () => {
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const site = {
       siteKey,
       siteName: "Example",
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const record = {
@@ -446,7 +532,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       title: "Notice",
       content: "Body",
       fingerprint: "provider-read-import",
@@ -492,12 +578,12 @@ describe("siteAnnouncementStorage", () => {
 
   it("keeps an older supplied timestamp from moving marker state backward", async () => {
     const site = {
-      siteKey: "notice:new-api:https://example.invalid",
+      siteKey: "site:new-api:https://example.invalid",
       siteName: "Example",
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const record = {
@@ -506,7 +592,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: site.siteType,
       baseUrl: site.baseUrl,
       accountId: site.accountId,
-      providerId: site.providerId,
+      sourceScope: site.sourceScope,
       title: "Notice",
       content: "Body",
       fingerprint: "monotonic-last-seen",
@@ -542,12 +628,12 @@ describe("siteAnnouncementStorage", () => {
     await expect(
       siteAnnouncementStorage.upsertDiscoveredRecords({
         site: {
-          siteKey: "notice:new-api:https://example.invalid",
+          siteKey: "site:new-api:https://example.invalid",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.invalid",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           status: SITE_ANNOUNCEMENT_STATUS.Success,
         },
         records: [],
@@ -558,12 +644,12 @@ describe("siteAnnouncementStorage", () => {
 
   it("projects a durable marker firstSeenAt onto an existing cached record", async () => {
     const storage = new Storage({ area: "local" })
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const fingerprint = "marker-projection"
     const digest = await digestAnnouncementFingerprint(fingerprint)
 
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         [siteKey]: {
           siteKey,
@@ -571,7 +657,7 @@ describe("siteAnnouncementStorage", () => {
           siteType: "new-api",
           baseUrl: "https://example.invalid",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           status: SITE_ANNOUNCEMENT_STATUS.Success,
           records: [
             {
@@ -581,7 +667,7 @@ describe("siteAnnouncementStorage", () => {
               siteType: "new-api",
               baseUrl: "https://example.invalid",
               accountId: "account-1",
-              providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+              sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
               title: "Cached",
               content: "Cached content",
               fingerprint,
@@ -606,7 +692,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: "new-api",
         baseUrl: "https://example.invalid",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
@@ -616,7 +702,7 @@ describe("siteAnnouncementStorage", () => {
           siteType: "new-api",
           baseUrl: "https://example.invalid",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Updated",
           content: "Updated content",
           fingerprint,
@@ -637,12 +723,12 @@ describe("siteAnnouncementStorage", () => {
 
   it("does not persist an exact repeated upsert", async () => {
     const site = {
-      siteKey: "notice:new-api:https://example.invalid",
+      siteKey: "site:new-api:https://example.invalid",
       siteName: "Example",
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const records = [
@@ -652,7 +738,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: site.siteType,
         baseUrl: site.baseUrl,
         accountId: site.accountId,
-        providerId: site.providerId,
+        sourceScope: site.sourceScope,
         title: "Notice",
         content: "Body",
         fingerprint: "exact-repeat",
@@ -678,22 +764,22 @@ describe("siteAnnouncementStorage", () => {
     await expect(
       siteAnnouncementStorage.upsertDiscoveredRecords({
         site: {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           status: SITE_ANNOUNCEMENT_STATUS.Success,
         },
         records: [
           {
-            siteKey: "notice:new-api:https://example.com",
+            siteKey: "site:new-api:https://example.com",
             siteName: "Example",
             siteType: "new-api",
             baseUrl: "https://example.com",
             accountId: "account-1",
-            providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+            sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
             title: "Notice",
             content: "Hello",
             fingerprint: "persist-failure",
@@ -705,7 +791,7 @@ describe("siteAnnouncementStorage", () => {
     await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([])
   })
 
-  it("sanitizes persisted records, status values, provider ids, and schema mismatches", async () => {
+  it("sanitizes persisted records, status values, source scopes, and schema mismatches", async () => {
     const storage = new Storage({ area: "local" })
 
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
@@ -722,12 +808,12 @@ describe("siteAnnouncementStorage", () => {
       schemaVersion: 1,
       sites: {
         invalid: null,
-        "notice:new-api:https://example.com": {
+        "site:new-api:https://example.com": {
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: "unknown",
+          sourceScope: "unknown",
           status: "mystery",
           lastCheckedAt: 200,
           lastSuccessAt: "bad",
@@ -737,12 +823,12 @@ describe("siteAnnouncementStorage", () => {
             null,
             {
               id: "valid-record",
-              siteKey: "notice:new-api:https://example.com",
+              siteKey: "site:new-api:https://example.com",
               siteName: "Example",
               siteType: "new-api",
               baseUrl: "https://example.com",
               accountId: "account-1",
-              providerId: "unknown",
+              sourceScope: "unknown",
               title: "Notice",
               content: "Hello",
               fingerprint: "valid-fingerprint",
@@ -761,15 +847,15 @@ describe("siteAnnouncementStorage", () => {
     await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([
       expect.objectContaining({
         id: "valid-record",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         lastSeenAt: 123,
         read: false,
       }),
     ])
     await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual([
       expect.objectContaining({
-        siteKey: "notice:new-api:https://example.com",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        siteKey: "site:new-api:https://example.com",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Never,
         lastSuccessAt: undefined,
         lastError: undefined,
@@ -780,7 +866,7 @@ describe("siteAnnouncementStorage", () => {
 
   it("migrates schema-v1 records into identity markers and preserves read timestamps", async () => {
     const storage = new Storage({ area: "local" })
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
       schemaVersion: 1,
       sites: {
@@ -814,7 +900,7 @@ describe("siteAnnouncementStorage", () => {
       await digestAnnouncementFingerprint("unread-fingerprint")
     const readDigest = await digestAnnouncementFingerprint("read-fingerprint")
 
-    expect(store.schemaVersion).toBe(2)
+    expect(store.schemaVersion).toBe(3)
     expect(store.sites[siteKey]?.records).toHaveLength(2)
     expect(store.sites[siteKey]?.records[0]?.siteKey).toBe(siteKey)
     expect(store.identityLedger[siteKey]).toEqual({
@@ -840,7 +926,7 @@ describe("siteAnnouncementStorage", () => {
 
   it("creates identity markers before truncating an oversized schema-v1 cache", async () => {
     const storage = new Storage({ area: "local" })
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const records = Array.from({ length: 101 }, (_, index) => {
       const suffix = index.toString().padStart(3, "0")
       return {
@@ -879,7 +965,7 @@ describe("siteAnnouncementStorage", () => {
 
   it("normalizes non-finite site timestamps while preserving valid sibling data", async () => {
     vi.spyOn(getSiteAnnouncementStorageBackend(), "get").mockResolvedValueOnce({
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         malformed: {
           lastCheckedAt: Number.NaN,
@@ -907,16 +993,16 @@ describe("siteAnnouncementStorage", () => {
     })
   })
 
-  it("drops a malformed schema-v2 identity ledger root while retaining valid sites", async () => {
+  it("drops a malformed schema-v3 identity ledger root while retaining valid sites", async () => {
     vi.spyOn(getSiteAnnouncementStorageBackend(), "get").mockResolvedValueOnce({
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         valid: {
           siteName: "Valid",
           siteType: "new-api",
           baseUrl: "https://example.invalid",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           status: SITE_ANNOUNCEMENT_STATUS.Success,
           records: [],
         },
@@ -933,9 +1019,9 @@ describe("siteAnnouncementStorage", () => {
     })
   })
 
-  it("self-heals schema-v2 ledger and cached record read state", async () => {
+  it("self-heals schema-v3 ledger and cached record read state", async () => {
     const storage = new Storage({ area: "local" })
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const forcedReadDigest = await digestAnnouncementFingerprint("forced-read")
     const missingMarkerDigest =
       await digestAnnouncementFingerprint("missing-marker")
@@ -943,7 +1029,7 @@ describe("siteAnnouncementStorage", () => {
       await digestAnnouncementFingerprint("enriched-read")
 
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         [siteKey]: {
           siteKey,
@@ -1038,7 +1124,7 @@ describe("siteAnnouncementStorage", () => {
     const validDigest = await digestAnnouncementFingerprint("valid")
     const siblingDigest = await digestAnnouncementFingerprint("sibling")
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         site: { records: [] },
         sibling: { records: [] },
@@ -1127,7 +1213,7 @@ describe("siteAnnouncementStorage", () => {
     },
     {
       name: "missing sites container",
-      stored: { schemaVersion: 2, identityLedger: {} },
+      stored: { schemaVersion: 3, identityLedger: {} },
       rejects: false,
       message: "Malformed site announcement store",
     },
@@ -1198,9 +1284,9 @@ describe("siteAnnouncementStorage", () => {
     expect(setSpy).not.toHaveBeenCalled()
   })
 
-  it("returns an empty schema-v2 store when the storage key is missing", async () => {
+  it("returns an empty schema-v3 store when the storage key is missing", async () => {
     await expect(siteAnnouncementStorage.getStore()).resolves.toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {},
       identityLedger: {},
     })
@@ -1208,10 +1294,10 @@ describe("siteAnnouncementStorage", () => {
 
   it("does not persist mutation no-ops", async () => {
     const storageApi = getSiteAnnouncementStorageBackend()
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     const digest = await digestAnnouncementFingerprint("already-read")
     await storageApi.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {
         [siteKey]: {
           siteKey,
@@ -1270,33 +1356,33 @@ describe("siteAnnouncementStorage", () => {
   it("updates notification state only for matching records and stores the last notified fingerprint", async () => {
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "First",
           content: "One",
           fingerprint: "fp-1",
         },
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Second",
           content: "Two",
           fingerprint: "fp-2",
@@ -1307,7 +1393,7 @@ describe("siteAnnouncementStorage", () => {
 
     const [latest, older] = await siteAnnouncementStorage.listRecords()
     await siteAnnouncementStorage.updateNotificationState(
-      "notice:new-api:https://example.com",
+      "site:new-api:https://example.com",
       [latest!.id],
       {
         notifiedAt: 555,
@@ -1322,7 +1408,7 @@ describe("siteAnnouncementStorage", () => {
       },
     )
     await siteAnnouncementStorage.updateNotificationState(
-      "notice:new-api:https://example.com",
+      "site:new-api:https://example.com",
       [],
       {
         notifiedAt: 999,
@@ -1355,7 +1441,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: "new-api",
         baseUrl: "https://a.example.com",
         accountId: "account-a",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
@@ -1365,7 +1451,7 @@ describe("siteAnnouncementStorage", () => {
           siteType: "new-api",
           baseUrl: "https://a.example.com",
           accountId: "account-a",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "A",
           content: "Body A",
           fingerprint: "site-a-record",
@@ -1379,7 +1465,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: "new-api",
         baseUrl: "https://b.example.com",
         accountId: "account-b",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
@@ -1389,7 +1475,7 @@ describe("siteAnnouncementStorage", () => {
           siteType: "new-api",
           baseUrl: "https://b.example.com",
           accountId: "account-b",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "B",
           content: "Body B",
           fingerprint: "site-b-record",
@@ -1424,7 +1510,7 @@ describe("siteAnnouncementStorage", () => {
     const identityLedger = createOversizedIdentityLedger()
 
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {},
       identityLedger,
     })
@@ -1434,7 +1520,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api",
       baseUrl: "https://example.invalid",
       accountId: "account-0",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     })
 
@@ -1465,7 +1551,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api" as const,
       baseUrl: "https://example.invalid",
       accountId: "account-limited",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     }
     const records = Array.from({ length: 101 }, (_, index) => ({
@@ -1510,7 +1596,7 @@ describe("siteAnnouncementStorage", () => {
     const identityLedger = createOversizedIdentityLedger(1)
 
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
-      schemaVersion: 2,
+      schemaVersion: 3,
       sites: {},
       identityLedger,
     })
@@ -1544,7 +1630,7 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("preserves discovered records when updating status", async () => {
-    const siteKey = "notice:new-api:https://example.invalid"
+    const siteKey = "site:new-api:https://example.invalid"
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
         siteKey,
@@ -1552,7 +1638,7 @@ describe("siteAnnouncementStorage", () => {
         siteType: "new-api",
         baseUrl: "https://example.invalid",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
       },
       records: [
@@ -1562,7 +1648,7 @@ describe("siteAnnouncementStorage", () => {
           siteType: "new-api",
           baseUrl: "https://example.invalid",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Notice",
           content: "Body",
           fingerprint: "status-preserves-record",
@@ -1576,7 +1662,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api",
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Error,
     })
 
@@ -1586,7 +1672,7 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("removes cached sites with their identity markers without touching the rest of the store", async () => {
-    const realSiteKey = "notice:new-api:https://example.invalid"
+    const realSiteKey = "site:new-api:https://example.invalid"
     const removedSiteKey = "dev-fixture:new-api:https://fixture.invalid"
     const createSite = (siteKey: string) => ({
       siteKey,
@@ -1594,7 +1680,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: "new-api" as const,
       baseUrl: siteKey.slice(siteKey.lastIndexOf("https://")),
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     })
     const createRecord = (
@@ -1607,7 +1693,7 @@ describe("siteAnnouncementStorage", () => {
       siteType: site.siteType,
       baseUrl: site.baseUrl,
       accountId: site.accountId,
-      providerId: site.providerId,
+      sourceScope: site.sourceScope,
       title: "Notice",
       content: "Body",
       fingerprint,
@@ -1646,20 +1732,20 @@ describe("siteAnnouncementStorage", () => {
   it("reports an empty removal for site keys the store does not hold", async () => {
     await expect(
       siteAnnouncementStorage.removeSites([
-        "notice:new-api:https://missing.invalid",
+        "site:new-api:https://missing.invalid",
       ]),
     ).resolves.toEqual({ sites: 0, records: 0 })
   })
 
   it("does not read or persist the store when no sites are requested", async () => {
-    const siteKey = "notice:new-api:https://kept.invalid"
+    const siteKey = "site:new-api:https://kept.invalid"
     await siteAnnouncementStorage.upsertSiteStatus({
       siteKey,
       siteName: "Kept",
       siteType: "new-api",
       baseUrl: "https://kept.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     })
     const storage = getSiteAnnouncementStorageBackend()
@@ -1685,12 +1771,12 @@ describe("siteAnnouncementStorage", () => {
 
     await expect(
       siteAnnouncementStorage.recordFailure({
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Error,
         error: "boom",
       }),

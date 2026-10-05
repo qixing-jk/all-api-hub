@@ -45,6 +45,7 @@ export function AccessTokenVerificationGuide({
   const [navigationFailed, setNavigationFailed] = useState(false)
   const { accessTokenPath } = getAccountSiteApiRouter(siteType)
   const isApiYi = siteType === SITE_TYPES.APIYI
+  const isLaozhang = siteType === SITE_TYPES.LAOZHANG
 
   const openAccessTokenPage = async () => {
     if (!siteUrl || !isHttpUrl(siteUrl) || !accessTokenPath) return
@@ -91,9 +92,11 @@ export function AccessTokenVerificationGuide({
           <>
             <ol className="space-y-density-1 list-decimal pl-5">
               <li>
-                {isApiYi
-                  ? t("accessTokenVerification.apiyi.generateStep")
-                  : t("accessTokenVerification.generateStep")}
+                {isLaozhang
+                  ? t("accessTokenVerification.laozhang.generateStep")
+                  : isApiYi
+                    ? t("accessTokenVerification.apiyi.generateStep")
+                    : t("accessTokenVerification.generateStep")}
               </li>
               <li>{t("accessTokenVerification.pasteStep")}</li>
             </ol>
@@ -108,9 +111,11 @@ export function AccessTokenVerificationGuide({
                   onClick={openAccessTokenPage}
                   leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
                 >
-                  {isApiYi
-                    ? t("accessTokenVerification.apiyi.openProfile")
-                    : t("accessTokenVerification.openSecurity")}
+                  {isLaozhang
+                    ? t("accessTokenVerification.laozhang.openProfile")
+                    : isApiYi
+                      ? t("accessTokenVerification.apiyi.openProfile")
+                      : t("accessTokenVerification.openSecurity")}
                 </Button>
               )}
               {manualAddGuideAnchor && (
@@ -119,9 +124,11 @@ export function AccessTokenVerificationGuide({
             </ActionGroup>
             {navigationFailed && (
               <p role="alert">
-                {isApiYi
-                  ? t("accessTokenVerification.apiyi.openProfileFailed")
-                  : t("accessTokenVerification.openSecurityFailed")}
+                {isLaozhang
+                  ? t("accessTokenVerification.laozhang.openProfileFailed")
+                  : isApiYi
+                    ? t("accessTokenVerification.apiyi.openProfileFailed")
+                    : t("accessTokenVerification.openSecurityFailed")}
               </p>
             )}
           </>

@@ -1,11 +1,11 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
   type SiteAnnouncementStoreState,
 } from "~/types/siteAnnouncements"
@@ -23,6 +23,7 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
@@ -32,7 +33,7 @@ const SITE_ANNOUNCEMENTS_URL = (extensionId: string) =>
 const POLLING_ACCOUNT_ID = "announcement-polling-account"
 const POLLING_SITE_NAME = "Announcement Polling Hub"
 const POLLING_SITE_URL = "https://announcement-polling.example.com"
-const POLLING_SITE_KEY = `notice:new-api:${POLLING_SITE_URL}`
+const POLLING_SITE_KEY = `site:new-api:${POLLING_SITE_URL}`
 const POLLING_NOTICE_TEXT =
   "Background polling notice. Scheduler fetched this through the MV3 alarm path."
 const POLLING_INTERVAL_MINUTES = 15
@@ -135,8 +136,9 @@ async function seedPollingAnnouncementScenario(
 
 function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
   const now = Date.now()
-  const newApiSiteKey = "notice:new-api:https://announcements-a.example.com"
-  const sub2apiSiteKey = "notice:sub2api:https://announcements-b.example.com"
+  const newApiSiteKey = "site:new-api:https://announcements-a.example.com"
+  const sub2apiSiteKey =
+    "account:sub2api:announcement-account-b:https://announcements-b.example.com"
 
   return {
     [newApiSiteKey]: {
@@ -145,7 +147,7 @@ function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
       siteType: SITE_TYPES.NEW_API,
       baseUrl: "https://announcements-a.example.com",
       accountId: "announcement-account-a",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
       lastCheckedAt: now,
       lastSuccessAt: now,
@@ -157,7 +159,7 @@ function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://announcements-a.example.com",
           accountId: "announcement-account-a",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Scheduled maintenance window",
           content: `# Maintenance details
 
@@ -184,7 +186,7 @@ The provider will rotate billing infrastructure tonight.
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://announcements-b.example.com",
       accountId: "announcement-account-b",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
       lastCheckedAt: now,
       lastSuccessAt: now,
@@ -196,7 +198,7 @@ The provider will rotate billing infrastructure tonight.
           siteType: SITE_TYPES.SUB2API,
           baseUrl: "https://announcements-b.example.com",
           accountId: "announcement-account-b",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
           title: "Model quota restored",
           content: "Sub2API quota has been restored for the public endpoint.",
           fingerprint: "announcement-record-b-fp",
@@ -287,7 +289,7 @@ test("filters cached site announcements and marks unread items as read", async (
     .poll(async () => {
       const store = await readSiteAnnouncementsStore(serviceWorker)
       return store?.sites[
-        "notice:new-api:https://announcements-a.example.com"
+        "site:new-api:https://announcements-a.example.com"
       ]?.records.find((record) => record.id === "announcement-record-a")
     })
     .toMatchObject({ read: true })
@@ -295,6 +297,104 @@ test("filters cached site announcements and marks unread items as read", async (
   await expect(
     page.getByText("No announcements match the current filters"),
   ).toBeVisible()
+})
+
+test("migrates legacy Sub2API read history when marking a cached announcement read", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    siteAnnouncementNotifications: {
+      enabled: false,
+      notificationEnabled: false,
+    },
+  })
+  const oldKey = "sub2api:legacy-account:https://legacy.example.com"
+  const newKey = "account:sub2api:legacy-account:https://legacy.example.com"
+  const site = {
+    siteKey: oldKey,
+    siteName: "Legacy announcement hub",
+    siteType: "sub2api",
+    baseUrl: "https://legacy.example.com",
+    accountId: "legacy-account",
+    providerId: "sub2api",
+    status: "success",
+    lastCheckedAt: 200,
+  }
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE,
+    {
+      schemaVersion: 2,
+      sites: {
+        [oldKey]: {
+          ...site,
+          records: [
+            {
+              ...site,
+              id: "legacy-read",
+              title: "Previously read notice",
+              content: "Read history",
+              fingerprint: "legacy-read",
+              firstSeenAt: 100,
+              lastSeenAt: 200,
+              read: true,
+              readAt: 150,
+              notifiedAt: 160,
+            },
+            {
+              ...site,
+              id: "legacy-unread",
+              title: "Legacy unread notice",
+              content: "Pending message",
+              fingerprint: "legacy-unread",
+              firstSeenAt: 110,
+              lastSeenAt: 200,
+              read: false,
+            },
+          ],
+        },
+      },
+      identityLedger: {},
+    },
+    { lock: STORAGE_LOCKS.SITE_ANNOUNCEMENTS },
+  )
+
+  await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expect(
+    page.getByRole("heading", { name: "Previously read notice" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Legacy unread notice" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Mark read", exact: true }).click()
+  await expect
+    .poll(async () => {
+      const store = await readSiteAnnouncementsStore(serviceWorker)
+      return store?.sites[newKey]?.records.every((record) => record.read)
+    })
+    .toBe(true)
+  const store = (await readSiteAnnouncementsStore(serviceWorker))!
+  expect(store.schemaVersion).toBe(3)
+  expect(store.sites[oldKey]).toBeUndefined()
+  expect(store.sites[newKey]?.sourceScope).toBe("account")
+  expect(
+    store.sites[newKey]?.records.find((record) => record.id === "legacy-read"),
+  ).toMatchObject({ read: true, readAt: 150, notifiedAt: 160 })
+  expect(JSON.stringify(store)).not.toContain('"providerId"')
+  await page.reload()
+  await expect(
+    page.getByRole("heading", { name: "Previously read notice" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Legacy unread notice" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Mark read", exact: true }),
+  ).toHaveCount(0)
 })
 
 test("refuses the announcement fixture dev message outside development mode", async ({
@@ -340,8 +440,7 @@ test("virtualizes long cached announcement histories while keeping the last anno
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  const archiveSiteKey =
-    "notice:new-api:https://announcement-archive.example.com"
+  const archiveSiteKey = "site:new-api:https://announcement-archive.example.com"
   const archiveSiteName = "Announcement Archive"
   const archiveSiteUrl = "https://announcement-archive.example.com"
   const archiveAccountId = "announcement-archive-account"
@@ -355,7 +454,7 @@ test("virtualizes long cached announcement histories while keeping the last anno
       siteType: SITE_TYPES.NEW_API,
       baseUrl: archiveSiteUrl,
       accountId: archiveAccountId,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
       lastCheckedAt: now,
       lastSuccessAt: now,
@@ -366,7 +465,7 @@ test("virtualizes long cached announcement histories while keeping the last anno
         siteType: SITE_TYPES.NEW_API,
         baseUrl: archiveSiteUrl,
         accountId: archiveAccountId,
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         title: `Archived announcement ${String(index).padStart(2, "0")}`,
         content: `Archived body ${index}`,
         fingerprint: `archived-announcement-${index}-fp`,
@@ -396,6 +495,272 @@ test("virtualizes long cached announcement histories while keeping the last anno
       )
       return lastCard.isVisible()
     })
+    .toBe(true)
+})
+
+for (const filter of ["site", "site type"] as const) {
+  test(`checks only the selected LaoZhang ${filter} with an empty announcement cache`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    const laozhangUrl = "https://laozhang-announcements.example.com"
+    const sub2apiUrl = "https://sub2api-announcements.example.com"
+    const laozhangKey = `site:laozhang:${laozhangUrl}`
+    const sub2apiKey = `account:sub2api:sub-account:${sub2apiUrl}`
+    let sub2apiRequests = 0
+    await context.route(`${laozhangUrl}/api/status`, (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: { announcements_enabled: true, announcements: [] },
+        },
+      }),
+    )
+    await context.route(`${laozhangUrl}/api/notice`, (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            content: "LaoZhang selected notice",
+            version: "",
+            audience: "mainland",
+          },
+        },
+      }),
+    )
+    await context.route(`${laozhangUrl}/api/user/messages**`, (route) =>
+      route.fulfill({
+        json: { success: true, data: { messages: [], total: 0 } },
+      }),
+    )
+    await context.route(`${sub2apiUrl}/api/v1/announcements**`, (route) => {
+      sub2apiRequests += 1
+      return route.fulfill({ json: { data: [] } })
+    })
+    await seedUserPreferences(serviceWorker, {
+      siteAnnouncementNotifications: {
+        enabled: false,
+        notificationEnabled: false,
+      },
+    })
+    await seedStoredAccounts(serviceWorker, [
+      createStoredAccount({
+        id: "lz-account",
+        site_name: "LaoZhang Filter Hub",
+        site_url: laozhangUrl,
+        site_type: SITE_TYPES.LAOZHANG,
+      }),
+      createStoredAccount({
+        id: "sub-account",
+        site_name: "Sub2API Filter Hub",
+        site_url: sub2apiUrl,
+        site_type: SITE_TYPES.SUB2API,
+      }),
+    ])
+    await seedSiteAnnouncementsStore(serviceWorker, {
+      [laozhangKey]: {
+        siteKey: laozhangKey,
+        siteName: "LaoZhang Filter Hub",
+        siteType: SITE_TYPES.LAOZHANG,
+        baseUrl: laozhangUrl,
+        accountId: "lz-account",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        status: SITE_ANNOUNCEMENT_STATUS.Never,
+        records: [],
+      },
+      [sub2apiKey]: {
+        siteKey: sub2apiKey,
+        siteName: "Sub2API Filter Hub",
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: sub2apiUrl,
+        accountId: "sub-account",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+        status: SITE_ANNOUNCEMENT_STATUS.Never,
+        records: [],
+      },
+    })
+    await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
+    await waitForExtensionRoot(page)
+    await expect(
+      page.getByRole("heading", { name: "Site Announcements", exact: true }),
+    ).toBeVisible()
+    if (filter === "site") {
+      await page.getByRole("combobox", { name: "Site", exact: true }).click()
+      await page.getByRole("option", { name: "LaoZhang Filter Hub" }).click()
+    } else {
+      await page.getByRole("combobox").nth(1).click()
+      await page.getByRole("option", { name: "laozhang", exact: true }).click()
+    }
+    await page
+      .getByRole("button", { name: "Check now", exact: true })
+      .first()
+      .click()
+    await expect(
+      page.getByRole("heading", {
+        name: "LaoZhang selected notice",
+        exact: true,
+      }),
+    ).toBeVisible()
+    const store = await readSiteAnnouncementsStore(serviceWorker)
+    expect(store?.sites[laozhangKey]).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    })
+    expect(store?.sites[sub2apiKey]).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Never,
+      records: [],
+    })
+    expect(store?.sites[sub2apiKey]?.lastCheckedAt).toBeUndefined()
+    expect(sub2apiRequests).toBe(0)
+  })
+}
+
+test("polls independent account Message centers alongside one shared public source", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const origin = "https://message-center.example.com"
+  const accountKey = (id: string) => `account:laozhang:${id}:${origin}`
+  const now = Date.now()
+  let publicRequests = 0
+  const pages: string[] = []
+  const readUsers: string[] = []
+  await context.route(`${origin}/api/status`, (route) =>
+    route.fulfill({ json: { success: true, data: { announcements: [] } } }),
+  )
+  await context.route(`${origin}/api/notice`, (route) => {
+    publicRequests += 1
+    return route.fulfill({
+      json: { success: true, data: { content: "Shared public notice" } },
+    })
+  })
+  await context.route(`${origin}/api/user/messages**`, (route) => {
+    const user = route.request().headers()["new-api-user"]!
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith("/read")) {
+      readUsers.push(user)
+      return route.fulfill({ json: { success: true } })
+    }
+    const currentPage = url.searchParams.get("page")!
+    pages.push(`${user}:${currentPage}`)
+    return route.fulfill({
+      json: {
+        success: true,
+        data: {
+          total: 2,
+          messages:
+            currentPage === "1"
+              ? [
+                  {
+                    id: 11,
+                    title: "Model available",
+                    content: "Ready",
+                    created_at: now / 1000,
+                    is_read: user === "2",
+                  },
+                ]
+              : [
+                  {
+                    id: 10,
+                    title: "Older maintenance",
+                    content: "Maintenance",
+                    created_at: (now - 60000) / 1000,
+                    is_read: true,
+                  },
+                ],
+        },
+      },
+    })
+  })
+  await seedUserPreferences(serviceWorker, {
+    siteAnnouncementNotifications: {
+      enabled: false,
+      notificationEnabled: false,
+    },
+  })
+  await seedStoredAccounts(
+    serviceWorker,
+    ["a", "b"].map((id, index) =>
+      createStoredAccount({
+        id,
+        site_name: `Account ${id}`,
+        site_url: origin,
+        site_type: SITE_TYPES.LAOZHANG,
+        account_info: { id: String(index + 1) },
+      }),
+    ),
+  )
+  await seedSiteAnnouncementsStore(
+    serviceWorker,
+    Object.fromEntries(
+      ["a", "b"].map((id) => [
+        accountKey(id),
+        {
+          siteKey: accountKey(id),
+          siteName: `Account ${id}`,
+          siteType: SITE_TYPES.LAOZHANG,
+          baseUrl: origin,
+          accountId: id,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+          status: SITE_ANNOUNCEMENT_STATUS.Success,
+          lastSuccessAt: now - 60000,
+          records: [],
+        },
+      ]),
+    ),
+  )
+  await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await page
+    .getByRole("button", { name: "Check now", exact: true })
+    .first()
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Model available", exact: true }),
+  ).toHaveCount(2)
+  expect(publicRequests).toBe(1)
+  expect(pages.sort()).toEqual(["1:1", "1:2", "2:1", "2:2"])
+  const store = await readSiteAnnouncementsStore(serviceWorker)
+  const message = store!.sites[accountKey("a")]!.records.find(
+    (record) => record.upstreamId === "11",
+  )!
+  expect(message.read).toBe(false)
+  expect(
+    store!.sites[accountKey("b")]!.records.find(
+      (record) => record.upstreamId === "11",
+    )?.read,
+  ).toBe(true)
+  // Selecting the site retains records from both account sources and the public source.
+  await page.getByRole("combobox", { name: "Site", exact: true }).click()
+  const option = page.getByRole("option").filter({ hasText: /Account/ })
+  await expect(option).toHaveCount(1)
+  await option.click()
+  await expect(
+    page.getByRole("heading", { name: "Model available", exact: true }),
+  ).toHaveCount(2)
+  await expect(
+    page.getByRole("heading", { name: "Shared public notice", exact: true }),
+  ).toBeVisible()
+  // Expansion uses the available action projected by the background source.
+  const messageHeader = page
+    .getByRole("button")
+    .filter({
+      has: page.getByRole("heading", { name: "Model available", exact: true }),
+    })
+    .filter({ hasText: "Account a" })
+  await expect(messageHeader).toHaveCount(1)
+  await messageHeader.click()
+  await expect.poll(() => readUsers).toEqual(["1"])
+  await expect
+    .poll(
+      async () =>
+        (await readSiteAnnouncementsStore(serviceWorker))!.sites[
+          accountKey("a")
+        ]!.records.find((record) => record.upstreamId === "11")?.read,
+    )
     .toBe(true)
 })
 
@@ -473,7 +838,7 @@ test("polls site announcements through the MV3 alarm scheduler and stores fetche
       siteType: SITE_TYPES.NEW_API,
       baseUrl: POLLING_SITE_URL,
       accountId: POLLING_ACCOUNT_ID,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       content: POLLING_NOTICE_TEXT,
       read: true,
     })
@@ -706,7 +1071,7 @@ test("skips early site announcement alarms while persisted cooldown is active", 
       siteType: SITE_TYPES.NEW_API,
       baseUrl: POLLING_SITE_URL,
       accountId: POLLING_ACCOUNT_ID,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
       lastCheckedAt,
       lastSuccessAt: lastCheckedAt,

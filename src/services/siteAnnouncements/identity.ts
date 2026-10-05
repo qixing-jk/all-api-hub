@@ -1,7 +1,31 @@
+import type { AccountSiteType } from "~/constants/siteType"
 import type {
+  AnnouncementSourceHandler,
+  AnnouncementSourceScope,
   SiteAnnouncementIdentityMarker,
   SiteAnnouncementStoreState,
 } from "~/types/siteAnnouncements"
+import { ANNOUNCEMENT_SOURCE_SCOPES } from "~/types/siteAnnouncements"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
+
+/** Builds identities uniformly from the source's visibility scope. */
+export function createAnnouncementSourceIdentity(
+  siteType: AccountSiteType,
+  scope: AnnouncementSourceScope,
+): Pick<AnnouncementSourceHandler, "scope" | "createSiteKey"> {
+  return {
+    scope,
+    createSiteKey: (input) => {
+      const origin = normalizeUrlForOriginKey(input.baseUrl, {
+        lowerCase: true,
+        stripTrailingSlashes: true,
+      })
+      if (scope === ANNOUNCEMENT_SOURCE_SCOPES.Site)
+        return `site:${siteType}:${origin}`
+      return `account:${siteType}:${input.accountId}:${origin}`
+    },
+  }
+}
 
 export interface SiteAnnouncementIdentityEntry {
   siteKey: string

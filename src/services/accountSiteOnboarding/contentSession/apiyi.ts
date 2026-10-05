@@ -5,7 +5,8 @@ import { isRecord } from "~/utils/core/object"
 
 import type { ContentSessionExtractor } from "../contracts"
 
-// https://api.apiyi.com/ (v29.8.9) stores its dashboard user in USER_STATE.user.
+// https://api.apiyi.com/ (v29.8.9) and https://api2.laozhang.ai/ (v31.1.5)
+// store their dashboard user in USER_STATE.user.
 // Forward identity only; its X-S-Token is unnecessary for the cookie API reads.
 const APIYI_USER_STATE_KEY = "USER_STATE"
 
@@ -18,9 +19,10 @@ export function readApiyiStoredUser() {
 export const apiyiContentSessionExtractor: ContentSessionExtractor = {
   id: "apiyi",
   canExtract: (context) =>
-    context.siteTypeHint === SITE_TYPES.APIYI &&
+    (context.siteTypeHint === SITE_TYPES.APIYI ||
+      context.siteTypeHint === SITE_TYPES.LAOZHANG) &&
     localStorage.getItem(APIYI_USER_STATE_KEY) !== null,
-  async extract() {
+  async extract(context) {
     const user = readApiyiStoredUser()
     if (!user) return null
 
@@ -31,10 +33,12 @@ export const apiyiContentSessionExtractor: ContentSessionExtractor = {
           ? { username: user.username }
           : {}),
       },
-      SITE_TYPES.APIYI,
+      context.siteTypeHint === SITE_TYPES.LAOZHANG
+        ? SITE_TYPES.LAOZHANG
+        : SITE_TYPES.APIYI,
     )
     if (!identity) return null
 
-    return { ...identity, siteTypeHint: SITE_TYPES.APIYI }
+    return { ...identity, siteTypeHint: context.siteTypeHint }
   },
 }

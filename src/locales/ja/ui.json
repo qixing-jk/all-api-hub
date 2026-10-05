@@ -635,6 +635,7 @@
   },
   "secretList": {
     "add": "キーを追加",
+    "clearedState": "保存済みのキーを削除します",
     "collapse": "API Key {{number}} を折りたたむ",
     "configured": "設定済み",
     "enableKey": "このキーを有効にする",

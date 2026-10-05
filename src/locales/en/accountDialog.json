@@ -13,6 +13,11 @@
     "destinationBusy": "There is an unfinished account form here. Save or close it to continue with the form from the popup.",
     "fullPageHint": "Continue in a full page to keep this form open while you copy the token on the site.",
     "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open Security → Access Token on the site, complete verification, and generate a token. Newer builds also ask which permissions and expiry to grant; grant all the permissions offered.",
+    "laozhang": {
+      "generateStep": "Use an existing complete System token, or open LaoZhang Profile → System token, complete the site security verification, then generate and save it immediately. The token is shown once; regenerating may replace the old token.",
+      "openProfile": "Open LaoZhang profile",
+      "openProfileFailed": "Could not open the page. Open LaoZhang Profile → System token manually, complete security verification, then copy the token and return here to enter it."
+    },
     "openSecurity": "Open site security settings",
     "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
     "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",

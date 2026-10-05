@@ -37,13 +37,57 @@ describe("sub2ApiSiteAnnouncements", () => {
       sub2ApiSiteAnnouncements.fetch(request, { unreadOnly: true }),
     ).resolves.toEqual([
       {
-        id: 12,
+        id: "12",
         title: "Deploy",
         content: "Maintenance",
+        createdAt: undefined,
+        updatedAt: undefined,
+        readAt: undefined,
       },
     ])
 
     expect(fetchSub2ApiAnnouncementsMock).toHaveBeenCalledWith(request, {
+      unreadOnly: true,
+    })
+  })
+
+  it("projects protocol fallbacks and timestamps into the shared announcement model", async () => {
+    fetchSub2ApiAnnouncementsMock.mockResolvedValueOnce([
+      {
+        id: null,
+        title: " ",
+        message: "fallback",
+        created_at: 1715000000,
+        updated_at: "2026-05-07T00:00:00Z",
+        read_at: "invalid",
+      },
+      {
+        id: 99,
+        body: "body",
+        created_at: "1715000000",
+        updated_at: "1715003600000",
+        read_at: "2026-05-07T01:00:00Z",
+      },
+    ])
+    await expect(sub2ApiSiteAnnouncements.fetch(request)).resolves.toEqual([
+      {
+        id: undefined,
+        title: " ",
+        content: "fallback",
+        createdAt: 1715000000000,
+        updatedAt: Date.parse("2026-05-07T00:00:00Z"),
+        readAt: undefined,
+      },
+      {
+        id: "99",
+        title: undefined,
+        content: "body",
+        createdAt: 1715000000000,
+        updatedAt: 1715003600000,
+        readAt: Date.parse("2026-05-07T01:00:00Z"),
+      },
+    ])
+    expect(fetchSub2ApiAnnouncementsMock).toHaveBeenLastCalledWith(request, {
       unreadOnly: true,
     })
   })

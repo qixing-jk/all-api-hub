@@ -13,6 +13,11 @@
     "destinationBusy": "這裡已有未完成的帳號表單。儲存或關閉後，將繼續從彈出視窗帶來的表單。",
     "fullPageHint": "在完整頁面繼續可保留目前的表單，切換到站點複製權杖時不會關閉。",
     "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，開啟站點的「安全設定 → Access Token」，完成驗證並產生權杖。新版站點還會要求選擇權限與有效期，請授予全部可用權限。",
+    "laozhang": {
+      "generateStep": "已有完整的 System token 時可直接填寫；否則開啟 LaoZhang「個人資料 → System token」，完成網站安全驗證後產生並立即儲存。權杖僅顯示一次，重新產生可能取代舊權杖。",
+      "openProfile": "開啟 LaoZhang 個人資料",
+      "openProfileFailed": "無法開啟頁面。請手動進入 LaoZhang「個人資料 → System token」，完成安全驗證後複製權杖，回到這裡填寫。"
+    },
     "openSecurity": "開啟站點安全設定",
     "openSecurityFailed": "無法開啟頁面。請手動進入站點的「安全設定 → Access Token」，複製權杖後回到這裡填寫。",
     "pasteStep": "立即複製完整的 Access Token，貼到下方「存取權杖」欄位，確認帳號資訊後儲存。",

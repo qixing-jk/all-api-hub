@@ -11,7 +11,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   type SiteAnnouncementRecord,
   type SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
@@ -49,12 +49,12 @@ const autoCheckinPanel: OptionsOverviewAutoCheckinPanel = {
 
 const announcementRecord = {
   id: "announcement-1",
-  siteKey: "notice:new-api:https://relay.example.invalid",
+  siteKey: "site:new-api:https://relay.example.invalid",
   siteName: "Relay",
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://relay.example.invalid",
   accountId: "account-1",
-  providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+  sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   title: "Announcement",
   content: "Summary",
   fingerprint: "announcement-fingerprint",
@@ -69,7 +69,7 @@ const announcementStatus = {
   siteType: SITE_TYPES.NEW_API,
   baseUrl: announcementRecord.baseUrl,
   accountId: announcementRecord.accountId,
-  providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+  sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   status: "error",
   lastCheckedAt: 1780450200000,
   records: [announcementRecord],

@@ -87,6 +87,7 @@ import {
   KIMI_GLOBAL_DISPLAY_NAME,
   KIMI_GLOBAL_HOSTNAMES,
   KIMI_HOSTNAMES,
+  LAOZHANG_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
   OPENROUTER_API_BASE_URL,
@@ -167,6 +168,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
   SITE_TYPES.APIYI,
+  SITE_TYPES.LAOZHANG,
   SITE_TYPES.MODELFLARE,
   SITE_TYPES.ANYROUTER,
   SITE_TYPES.VELOERA,
@@ -349,6 +351,41 @@ const ACCOUNT_SITE_DEFINITIONS = [
         loginPath: "/login",
         checkInPath: null,
         siteAnnouncementsPath: "/",
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.LAOZHANG,
+    tokenKey: { optionalSkPrefix: true },
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    onboarding: {
+      displayName: "LaoZhang API",
+      detection: {
+        hostnames: LAOZHANG_HOSTNAMES,
+        titlePatterns: [/\blaozhang\s*api\b/i],
+      },
+      // https://api2.laozhang.ai/account/profile, observed v31.1.5.
+      routes: {
+        pricingPath: "/account/pricing",
+        usagePath: "/log",
+        redeemPath: "/account/topup/recharge",
+        adminCredentialsPath: "/account/profile",
+        accessTokenPath: "/account/profile",
+        loginPath: "/login",
+        checkInPath: null,
+        siteAnnouncementsPath: "/account",
+      },
+    },
+    productProfile: {
+      auth: {
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: LAOZHANG_HOSTNAMES,
+      },
+      urls: {
+        recognizedHostnames: LAOZHANG_HOSTNAMES,
+        inferFromHostname: true,
+        duplicateOrigin: "https://api.laozhang.ai",
       },
     },
   },

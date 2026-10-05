@@ -2,13 +2,42 @@ import { describe, expect, it } from "vitest"
 
 import {
   compareIdentityEntriesOldestFirst,
+  createAnnouncementSourceIdentity,
   digestAnnouncementFingerprint,
   pruneIdentityLedger,
 } from "~/services/siteAnnouncements/identity"
 import type { SiteAnnouncementIdentityEntry } from "~/services/siteAnnouncements/identity"
+import { ANNOUNCEMENT_SOURCE_SCOPES } from "~/types/siteAnnouncements"
 import type { SiteAnnouncementStoreState } from "~/types/siteAnnouncements"
 
 describe("site announcement identities", () => {
+  it.each(["new-api", "laozhang", "sub2api"] as const)(
+    "uses scope-based identities for %s without provider-specific keys",
+    (siteType) => {
+      const input = {
+        siteType,
+        accountId: "a",
+        baseUrl: "https://Example.com/",
+      }
+      const site = createAnnouncementSourceIdentity(
+        siteType,
+        ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      )
+      const account = createAnnouncementSourceIdentity(
+        siteType,
+        ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      )
+      expect(site).toMatchObject({ scope: "site" })
+      expect(account).toMatchObject({ scope: "account" })
+      expect(site.createSiteKey(input)).toBe(
+        `site:${siteType}:https://example.com`,
+      )
+      expect(account.createSiteKey(input)).toBe(
+        `account:${siteType}:a:https://example.com`,
+      )
+    },
+  )
+
   it("uses lowercase SHA-256 over UTF-8 fingerprints", async () => {
     await expect(digestAnnouncementFingerprint("abc")).resolves.toBe(
       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",

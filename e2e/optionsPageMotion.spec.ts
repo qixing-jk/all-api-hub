@@ -3,7 +3,7 @@ import { expect, type Page } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import { test as extensionTest } from "~~/e2e/fixtures/extensionTest"
@@ -690,7 +690,7 @@ extensionTest(
   "visible announcement cards enter individually in a long virtualized list",
   async ({ context, extensionId, page }) => {
     const now = Date.now()
-    const siteKey = "notice:new-api:https://motion-announcements.example.com"
+    const siteKey = "site:new-api:https://motion-announcements.example.com"
     await seedSiteAnnouncementsStore(await getServiceWorker(context), {
       [siteKey]: {
         siteKey,
@@ -698,7 +698,7 @@ extensionTest(
         siteType: SITE_TYPES.NEW_API,
         baseUrl: "https://motion-announcements.example.com",
         accountId: "motion-announcement-account",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: SITE_ANNOUNCEMENT_STATUS.Success,
         lastCheckedAt: now,
         lastSuccessAt: now,
@@ -709,7 +709,7 @@ extensionTest(
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://motion-announcements.example.com",
           accountId: "motion-announcement-account",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: `Motion announcement ${index}`,
           content: `Motion announcement body ${index}`,
           fingerprint: `motion-announcement-${index}-fingerprint`,

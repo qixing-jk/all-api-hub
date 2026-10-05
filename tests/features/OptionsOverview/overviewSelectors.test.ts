@@ -40,8 +40,8 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
+  ANNOUNCEMENT_SOURCE_SCOPES,
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
 } from "~/types/siteAnnouncements"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import {
@@ -230,12 +230,12 @@ const autoCheckinStatusWithFailures: AutoCheckinStatus = {
 }
 
 const announcementStatus: SiteAnnouncementSiteState = {
-  siteKey: "notice:new-api:https://relay.example.invalid",
+  siteKey: "site:new-api:https://relay.example.invalid",
   siteName: "Relay",
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://relay.example.invalid",
   accountId: "healthy-account",
-  providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+  sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   status: "success",
   lastCheckedAt: 1780450200000,
   lastSuccessAt: 1780450200000,
@@ -249,7 +249,7 @@ const unreadAnnouncement: SiteAnnouncementRecord = {
   siteType: announcementStatus.siteType,
   baseUrl: announcementStatus.baseUrl,
   accountId: announcementStatus.accountId,
-  providerId: announcementStatus.providerId,
+  sourceScope: announcementStatus.sourceScope,
   title: "Announcement",
   content: "Summary",
   fingerprint: "announcement-fingerprint",

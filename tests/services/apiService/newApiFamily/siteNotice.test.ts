@@ -30,7 +30,7 @@ const request = {
 }
 
 describe("newApiFamily siteNotice", () => {
-  it("returns a non-empty notice string from a successful response", async () => {
+  it("projects a legacy notice string from a successful response", async () => {
     fetchApiMock.mockResolvedValueOnce({
       success: true,
       data: "Notice body",
@@ -44,6 +44,22 @@ describe("newApiFamily siteNotice", () => {
       }),
       { endpoint: "/api/notice" },
     )
+  })
+
+  it.each(
+    [
+      null,
+      [],
+      42,
+      {},
+      { content: 42 },
+      { content: "  " },
+      { content: "", title: "Unused" },
+      { content: "LaoZhang-only object", version: "v2", audience: "mainland" },
+    ].map((data) => [data]),
+  )("returns null for invalid notice data %j", async (data) => {
+    fetchApiMock.mockResolvedValueOnce({ success: true, data })
+    await expect(fetchSiteNotice(request)).resolves.toBeNull()
   })
 
   it("returns null for unsuccessful or malformed notice responses", async () => {

@@ -50,6 +50,7 @@ interface KeyManagementImplementation {
 
 interface AccountTokenPaginationOptions {
   startPage?: number
+  pageSizeParamName?: string
   detectsNormalizedFirstPage?: boolean
   trustsRequestedPageSize?: boolean
 }
@@ -72,6 +73,7 @@ export async function fetchAccountTokens(
 ): Promise<NewApiToken[]> {
   const {
     startPage = 1,
+    pageSizeParamName = "size",
     detectsNormalizedFirstPage = false,
     trustsRequestedPageSize = false,
   } = typeof options === "number" ? { startPage: options } : options
@@ -80,7 +82,7 @@ export async function fetchAccountTokens(
     async (page) => {
       const searchParams = new URLSearchParams({
         p: page.toString(),
-        size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
+        [pageSizeParamName]: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
       })
       const tokensData = await newApiFamilyRequests.data<unknown>(request, {
         endpoint: `/api/token/?${searchParams.toString()}`,

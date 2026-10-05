@@ -12,11 +12,11 @@ import {
 } from "~/services/siteAnnouncements/devFixtures"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 
-const REAL_SITE_KEY = "notice:new-api:https://example.invalid"
+const REAL_SITE_KEY = "site:new-api:https://example.invalid"
 const REAL_RECORD_FINGERPRINT = "real-record"
 
 /** Seeds one non-fixture site so fixture cleanup can be checked against it. */
@@ -28,7 +28,7 @@ async function seedRealAnnouncement() {
       siteType: SITE_TYPES.NEW_API,
       baseUrl: "https://example.invalid",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
     },
     records: [
@@ -38,7 +38,7 @@ async function seedRealAnnouncement() {
         siteType: SITE_TYPES.NEW_API,
         baseUrl: "https://example.invalid",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         title: "Real notice",
         content: "Body",
         fingerprint: REAL_RECORD_FINGERPRINT,

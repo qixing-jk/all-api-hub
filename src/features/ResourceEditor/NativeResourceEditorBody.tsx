@@ -20,6 +20,7 @@ import type {
   ResourceFieldOption,
   ResourceFieldValue,
   ResourceOperationOptions,
+  SecretEditIntent,
 } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   RESOURCE_FIELD_OPTION_LOAD_TRIGGERS,
@@ -46,6 +47,7 @@ import {
   ResourceAutomaticOptionFeedback,
   ResourceManualOptionControl,
 } from "./ResourceOptionLoadFeedback"
+import { ResourceSecretField } from "./ResourceSecretField"
 import { ResourceSecretListField } from "./ResourceSecretListField"
 import { ResourceTextEntriesField } from "./ResourceTextEntriesField"
 import {
@@ -260,6 +262,24 @@ export function NativeResourceEditorBody<TSection extends string>({
         <FieldMessage id={errorId} message={errorMessage} />
       ) : null
 
+    if (descriptor.type === RESOURCE_FIELD_TYPES.Secret) {
+      return (
+        <ResourceSecretField
+          key={descriptor.fieldId}
+          t={t}
+          id={id}
+          label={label}
+          descriptor={descriptor}
+          intent={values[descriptor.fieldId] as SecretEditIntent | undefined}
+          disabled={fieldDisabled}
+          hasErrors={Boolean(errorMessage)}
+          describedBy={describedBy}
+          help={help}
+          error={error}
+          onChange={(intent) => onValueChange(descriptor.fieldId, intent)}
+        />
+      )
+    }
     if (descriptor.type === RESOURCE_FIELD_TYPES.SecretList) {
       return (
         <div key={descriptor.fieldId}>

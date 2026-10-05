@@ -11,6 +11,7 @@ export const SITE_TYPES = {
   ONE_API: "one-api",
   NEW_API: "new-api",
   APIYI: "apiyi",
+  LAOZHANG: "laozhang",
   MODELFLARE: "ModelFlare",
   ANYROUTER: "anyrouter",
   VELOERA: "Veloera",
@@ -44,6 +45,15 @@ export const SITE_TYPES = {
 export type SiteType = (typeof SITE_TYPES)[keyof typeof SITE_TYPES]
 
 export const APIYI_HOSTNAME = "api.apiyi.com"
+
+// Official console/API routes: docs.laozhang.ai/api-manual and the console's
+// /api/status CustomAppList. Same account/System token verified 2026-10-05.
+export const LAOZHANG_HOSTNAMES = [
+  "api.laozhang.ai",
+  "api2.laozhang.ai",
+  "api-vip.laozhang.ai",
+  "api-cf.laozhang.ai",
+] as const
 
 export const AGENT_ROUTER_ORIGIN = "https://agentrouter.org"
 

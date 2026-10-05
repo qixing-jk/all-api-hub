@@ -70,6 +70,10 @@ export interface LogStatResponseData {
 }
 
 export interface TodayLogQueryConfig {
+  /** Offset from the family's one-based logical page to the wire page. */
+  pageIndexOffset?: number
+  /** Bare arrays require an empty page to prove that the collection is complete. */
+  paginateArraysUntilEmpty?: boolean
   endpoint?: string
   pageParamName?: string
   pageSizeParamName?: string

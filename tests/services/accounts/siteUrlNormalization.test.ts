@@ -12,6 +12,37 @@ import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/iden
 
 describe("siteUrlNormalization", () => {
   it.each([
+    "https://api.laozhang.ai",
+    "https://api2.laozhang.ai",
+    "https://api-vip.laozhang.ai",
+    "https://api-cf.laozhang.ai",
+  ])(
+    "compares LaoZhang alias %s while retaining its storage and export origin",
+    (url) => {
+      expect(
+        isSameAccountSiteOrigin(
+          { siteType: SITE_TYPES.LAOZHANG, url },
+          { url: "https://api.laozhang.ai/account/profile" },
+        ),
+      ).toBe(true)
+      expect(
+        normalizeAccountSiteProfileUrlForStorage({
+          siteType: SITE_TYPES.LAOZHANG,
+          url,
+        }),
+      ).toBe(url)
+      expect(
+        normalizeAccountSiteProfileUrlForManagedChannel({
+          siteType: SITE_TYPES.LAOZHANG,
+          url,
+        }),
+      ).toBe(url)
+      expect(normalizeAccountSiteProfileUrlForOriginKey({ url })).toBe(
+        "https://api.laozhang.ai",
+      )
+    },
+  )
+  it.each([
     ["https://openrouter.ai", true],
     [" https://openrouter.ai/settings/management-keys ", true],
     ["https://openrouter.ai:443/settings/management-keys", true],

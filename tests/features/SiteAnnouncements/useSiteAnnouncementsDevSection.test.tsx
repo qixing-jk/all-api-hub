@@ -29,7 +29,7 @@ vi.mock("~/lib/notify", () => {
 
 const FIXTURE_SITE_KEY =
   "dev-fixture:new-api:https://dev-fixture-alpha.example.invalid"
-const REAL_SITE_KEY = "notice:new-api:https://example.invalid"
+const REAL_SITE_KEY = "site:new-api:https://example.invalid"
 
 function createRecord(siteKey: string, id: string): SiteAnnouncementRecord {
   return {
@@ -39,7 +39,7 @@ function createRecord(siteKey: string, id: string): SiteAnnouncementRecord {
     siteType: "new-api",
     baseUrl: "https://example.invalid",
     accountId: "account-1",
-    providerId: "common",
+    sourceScope: "site",
     title: `Notice ${id}`,
     content: "Body",
     fingerprint: id,
@@ -59,7 +59,7 @@ function createSite(
     siteType: "new-api",
     baseUrl: "https://example.invalid",
     accountId: "account-1",
-    providerId: "common",
+    sourceScope: "site",
     status,
     records: [],
   }
@@ -268,7 +268,7 @@ describe("site announcements dev section", () => {
         createSite(FIXTURE_SITE_KEY, SITE_ANNOUNCEMENT_STATUS.Success),
         createSite(REAL_SITE_KEY, SITE_ANNOUNCEMENT_STATUS.Error),
         createSite(
-          "notice:new-api:https://other.invalid",
+          "site:new-api:https://other.invalid",
           SITE_ANNOUNCEMENT_STATUS.Unsupported,
         ),
       ],

@@ -16,6 +16,7 @@ import type {
 import { reportsRixApiV6TokenColumns } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
+import { withLaozhangKeySettings } from "./laozhangKeyResourceEditor"
 import { readPreservedTokenFields } from "./tokenPreservedFields"
 import type { NewApiFamilyTokenTransport } from "./tokenTransport"
 
@@ -185,7 +186,7 @@ export function createNewApiKeyEditor(
         }
       : {}),
   }
-  return {
+  const definition: AccountKeyResourceEditorDefinition<NewApiKeyEditCommand> = {
     fields: [
       { fieldId: field.Name, type: RESOURCE_FIELD_TYPES.Text, required: true },
       { fieldId: field.Unlimited, type: RESOURCE_FIELD_TYPES.Boolean },
@@ -396,4 +397,7 @@ export function createNewApiKeyEditor(
       }
     },
   }
+  return siteType === SITE_TYPES.LAOZHANG
+    ? withLaozhangKeySettings(definition)
+    : definition
 }

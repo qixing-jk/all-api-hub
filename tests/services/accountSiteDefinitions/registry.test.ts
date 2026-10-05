@@ -76,6 +76,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.ONE_API
   | typeof SITE_TYPES.NEW_API
   | typeof SITE_TYPES.APIYI
+  | typeof SITE_TYPES.LAOZHANG
   | typeof SITE_TYPES.MODELFLARE
   | typeof SITE_TYPES.ANYROUTER
   | typeof SITE_TYPES.VELOERA
@@ -347,6 +348,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.ONE_API,
       SITE_TYPES.NEW_API,
       SITE_TYPES.APIYI,
+      SITE_TYPES.LAOZHANG,
       SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,

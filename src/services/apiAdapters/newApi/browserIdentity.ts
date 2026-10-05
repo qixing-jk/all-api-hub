@@ -19,7 +19,7 @@ export const newApiBrowserIdentity: AccountBrowserIdentityCapability = {
     ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   observe({ origin, siteType, candidateUserIds }) {
     const user =
-      (siteType === SITE_TYPES.APIYI
+      (siteType === SITE_TYPES.APIYI || siteType === SITE_TYPES.LAOZHANG
         ? readApiyiStoredUser()
         : siteType === SITE_TYPES.V_API
           ? readVApiStoredUser()

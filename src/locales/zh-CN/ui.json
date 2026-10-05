@@ -629,6 +629,7 @@
   },
   "secretList": {
     "add": "添加密钥",
+    "clearedState": "保存的密钥将被清除",
     "collapse": "收起 API 密钥 {{number}}",
     "configured": "已配置",
     "enableKey": "启用此密钥",

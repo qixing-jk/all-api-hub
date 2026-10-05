@@ -32,6 +32,7 @@ import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messa
 import type {
   SiteAnnouncementCheckResult,
   SiteAnnouncementRecord,
+  SiteAnnouncementRecordView,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
@@ -50,7 +51,6 @@ import {
   buildSiteOptions,
   buildSiteTypeOptions,
   filterSiteAnnouncements,
-  isSub2ApiAnnouncement,
 } from "./utils"
 
 interface SiteAnnouncementsPageProps {
@@ -88,7 +88,7 @@ export default function SiteAnnouncementsPage({
 }: SiteAnnouncementsPageProps) {
   const { t, i18n } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
-  const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
+  const [records, setRecords] = useState<SiteAnnouncementRecordView[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isChecking, setIsChecking] = useState(false)
@@ -182,16 +182,34 @@ export default function SiteAnnouncementsPage({
   )
 
   const siteTypeOptions = useMemo(
-    () => buildSiteTypeOptions(records),
-    [records],
+    () => buildSiteTypeOptions(records, status),
+    [records, status],
   )
 
+  const selectedSourceKeys = useMemo(
+    () =>
+      siteOptions.find((option) => option.value === siteKey)?.sourceKeys ?? [
+        siteKey,
+      ],
+    [siteOptions, siteKey],
+  )
   const filteredRecords = useMemo(
-    () => filterSiteAnnouncements(records, { siteKey, siteType, unreadFilter }),
-    [records, siteKey, siteType, unreadFilter],
+    () =>
+      filterSiteAnnouncements(records, {
+        siteKey,
+        siteKeys: selectedSourceKeys,
+        siteType,
+        unreadFilter,
+      }),
+    [records, siteKey, selectedSourceKeys, siteType, unreadFilter],
   )
 
-  const selectedStatus = status.find((item) => item.siteKey === siteKey)
+  const selectedStatus =
+    status.find(
+      (item) =>
+        selectedSourceKeys.includes(item.siteKey) &&
+        item.status === SITE_ANNOUNCEMENT_STATUS.Error,
+    ) ?? status.find((item) => selectedSourceKeys.includes(item.siteKey))
   const aggregateFailedSiteCount = status.filter(
     (item) => item.status === SITE_ANNOUNCEMENT_STATUS.Error,
   ).length
@@ -200,11 +218,32 @@ export default function SiteAnnouncementsPage({
   ).length
   const hasAggregateIssues =
     aggregateFailedSiteCount + aggregateUnsupportedSiteCount > 0
-  const manualCheckAccountIds = useMemo(
-    () => [...new Set(filteredRecords.map((record) => record.accountId))],
-    [filteredRecords],
-  )
-  const shouldScopeManualCheck = records.length > 0
+  const manualCheckAccountIds = useMemo(() => {
+    const accountIds = filteredRecords.map((record) => record.accountId)
+    // A site may have no cached announcements yet. Its polling status still
+    // identifies the selected source; never turn that selection into "all".
+    if (unreadFilter === "all") {
+      for (const site of status) {
+        if (siteKey !== "all" && !selectedSourceKeys.includes(site.siteKey))
+          continue
+        if (siteType !== "all" && site.siteType !== siteType) continue
+        accountIds.push(site.accountId)
+      }
+    }
+    return [...new Set(accountIds)]
+  }, [
+    filteredRecords,
+    status,
+    siteKey,
+    selectedSourceKeys,
+    siteType,
+    unreadFilter,
+  ])
+  const shouldScopeManualCheck =
+    records.length > 0 ||
+    siteKey !== "all" ||
+    siteType !== "all" ||
+    unreadFilter !== "all"
   const canRunManualCheck =
     !isLoading && (!shouldScopeManualCheck || manualCheckAccountIds.length > 0)
   const unreadCount = records.filter((record) => !record.read).length
@@ -244,6 +283,7 @@ export default function SiteAnnouncementsPage({
   )
 
   const handleCheckNow = async (surfaceId: ProductAnalyticsSurfaceId) => {
+    if (!canRunManualCheck || isChecking) return
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CheckSiteAnnouncementsNow,
@@ -391,31 +431,49 @@ export default function SiteAnnouncementsPage({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     try {
-      const response = await sendSiteAnnouncementsMessage(
-        SiteAnnouncementsMessageTypes.MarkAllRead,
-        {
-          siteKey: siteKey === "all" ? undefined : siteKey,
-        },
+      const keys = siteKey === "all" ? [undefined] : selectedSourceKeys
+      const results = await Promise.allSettled(
+        keys.map((key) =>
+          sendSiteAnnouncementsMessage(
+            SiteAnnouncementsMessageTypes.MarkAllRead,
+            { siteKey: key },
+          ),
+        ),
       )
-      if (response?.success) {
-        if (typeof response.data === "number") {
+      const failure = results.find(
+        (result) => result.status === "rejected" || !result.value?.success,
+      )
+      if (!failure) {
+        const counts = results.flatMap((result) =>
+          result.status === "fulfilled" &&
+          result.value?.success &&
+          typeof result.value.data === "number"
+            ? [result.value.data]
+            : [],
+        )
+        if (counts.length === results.length) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: { itemCount: response.data },
+            insights: {
+              itemCount: counts.reduce((total, count) => total + count, 0),
+            },
           })
         } else {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
-        await loadData()
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         showResultToast({
           success: false,
-          message: getRuntimeMessageToastMessage(response),
+          message:
+            failure.status === "rejected"
+              ? getErrorMessage(failure.reason)
+              : getRuntimeMessageToastMessage(failure.value),
           errorFallback: t("messages.markAllReadFailed"),
         })
       }
+      await loadData()
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -441,7 +499,11 @@ export default function SiteAnnouncementsPage({
       return next
     })
 
-    if (isExpanding && isSub2ApiAnnouncement(record) && !record.read) {
+    if (
+      isExpanding &&
+      records.find((item) => item.id === record.id)?.canSyncRead &&
+      !record.read
+    ) {
       void handleMarkRead(record.id)
     }
   }
@@ -475,11 +537,9 @@ export default function SiteAnnouncementsPage({
         description={
           <>
             <span>
-              {t(
-                siteAnnouncementNotifications.enabled
-                  ? "description.enabledSummary"
-                  : "description.disabledSummary",
-              )}
+              {siteAnnouncementNotifications.enabled
+                ? t("description.enabledSummary")
+                : t("description.disabledSummary")}
             </span>{" "}
             {siteAnnouncementNotifications.enabled && (
               <>

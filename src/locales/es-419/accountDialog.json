@@ -13,6 +13,11 @@
     "destinationBusy": "Ya hay un formulario de cuenta sin terminar aquí. Guárdalo o ciérralo para continuar con el formulario de la ventana emergente.",
     "fullPageHint": "Continúa en una página completa para mantener abierto este formulario mientras copias el token en el sitio.",
     "generateStep": "Si ya tienes un Access Token válido y completo, úsalo directamente. De lo contrario, abre Seguridad → Access Token en el sitio, completa la verificación y genera un token. Las versiones más recientes también piden los permisos y la caducidad; concede todos los permisos disponibles.",
+    "laozhang": {
+      "generateStep": "Usa un System token completo existente o abre Perfil de LaoZhang → System token, completa la verificación de seguridad del sitio, genéralo y guárdalo de inmediato. El token se muestra una sola vez; regenerarlo puede reemplazar el anterior.",
+      "openProfile": "Abrir perfil de LaoZhang",
+      "openProfileFailed": "No se pudo abrir la página. Abre manualmente Perfil de LaoZhang → System token, completa la verificación de seguridad, copia el token y vuelve aquí para ingresarlo."
+    },
     "openSecurity": "Abrir la seguridad del sitio",
     "openSecurityFailed": "No se pudo abrir la página. Abre Seguridad → Access Token manualmente en el sitio y vuelve aquí para pegar el token.",
     "pasteStep": "Copia de inmediato el Access Token completo, pégalo en el campo Access Token de abajo, revisa los datos de tu cuenta y guarda.",

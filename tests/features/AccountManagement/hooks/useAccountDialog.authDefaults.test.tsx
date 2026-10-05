@@ -69,6 +69,33 @@ describe("useAccountDialog auth defaults", () => {
     vi.clearAllMocks()
   })
 
+  it.each([
+    "https://api.laozhang.ai",
+    "https://api2.laozhang.ai",
+    "https://api-vip.laozhang.ai",
+    "https://api-cf.laozhang.ai",
+  ])(
+    "defaults LaoZhang %s to Access Token and keeps an explicit Cookie choice",
+    async (siteUrl) => {
+      const { result } = renderAccountDialogHook({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      })
+      await act(async () => {
+        result.current.handlers.handleUrlChange(siteUrl)
+      })
+      expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+      await act(async () => {
+        result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+      })
+      await act(async () => {
+        result.current.handlers.handleUrlChange(`${siteUrl}/account/profile`)
+      })
+      expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+    },
+  )
+
   it("starts an unknown new-account draft with automatic check-in disabled", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,

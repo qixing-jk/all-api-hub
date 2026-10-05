@@ -34,6 +34,19 @@ const accountBootstrapOverrides: Partial<
   [SITE_TYPES.APIYI]: {
     getOrCreateAccessToken: apiyi.getAccessToken,
   },
+  [SITE_TYPES.LAOZHANG]: {
+    // LaoZhang v31.1.5: System tokens require POST + X-Security-Proof and
+    // are shown once. Cookie onboarding must never rotate or issue one.
+    // https://api2.laozhang.ai/account/profile
+    getOrCreateAccessToken: (request) =>
+      accountBootstrap.fetchUserInfo(request),
+    extractCheckInSupport: (status) =>
+      status &&
+      "CheckinEnabled" in status &&
+      typeof status.CheckinEnabled === "boolean"
+        ? status.CheckinEnabled
+        : undefined,
+  },
   [SITE_TYPES.ANYROUTER]: {
     probeCheckInSupport: anyrouter.fetchSupportCheckIn,
   },

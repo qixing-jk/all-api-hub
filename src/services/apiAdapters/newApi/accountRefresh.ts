@@ -3,6 +3,7 @@ import type { AccountRefreshCapability } from "~/services/apiAdapters/contracts/
 import * as accountRefresh from "~/services/apiService/newApiFamily/default/accountRefresh"
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
 import * as doneHub from "~/services/apiService/newApiFamily/variants/doneHub"
+import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
 import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
 import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
@@ -19,6 +20,13 @@ const accountRefreshOverrides: Partial<
   },
   [SITE_TYPES.DONE_HUB]: {
     refreshAccountData: doneHub.refreshAccountData,
+  },
+  [SITE_TYPES.LAOZHANG]: {
+    refreshAccountData: (request) =>
+      accountRefresh.refreshAccountData(
+        request,
+        LAOZHANG_TODAY_LOG_QUERY_CONFIG,
+      ),
   },
   [SITE_TYPES.RIX_API]: {
     refreshAccountData: rixApi.refreshAccountData,

@@ -657,6 +657,7 @@
   },
   "secretList": {
     "add": "Agregar clave",
+    "clearedState": "Se borrará la clave guardada",
     "collapse": "Contraer API Key {{number}}",
     "configured": "Configurado",
     "enableKey": "Habilitar esta clave",

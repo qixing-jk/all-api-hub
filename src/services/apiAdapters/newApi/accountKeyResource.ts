@@ -482,6 +482,22 @@ const collectValidatedInventoryTokens = async (
     ),
   )
 
+/** LaoZhang inventory omits writable settings; hydrate only the selected row. */
+const readEditableToken = async (
+  config: NewApiAccountKeyResourceConfig,
+  listed: NewApiToken,
+  options?: ResourceOperationOptions,
+): Promise<NewApiToken> => {
+  if (config.account.siteType !== SITE_TYPES.LAOZHANG) return listed
+  const detail = await config.transport.fetchTokenById(
+    requestWithOptions(config, options),
+    listed.id,
+  )
+  if (detail.id !== listed.id || detail.user_id !== listed.user_id)
+    throw new Error("token_identity_mismatch")
+  return detail
+}
+
 const toTokenUpdateRequest = (
   siteType: AccountSiteType,
   token: NewApiToken,
@@ -494,15 +510,17 @@ const renameProvisionedResource = async (
   options?: ResourceOperationOptions,
 ): Promise<NativeResourceMutationResult<void, ResourceFailure>> => {
   const tokenId = decodeTokenId(ref.resourceId)
-  const current = (await collectValidatedInventoryTokens(config, options)).find(
+  const listed = (await collectValidatedInventoryTokens(config, options)).find(
     (token) => token.id === tokenId,
   )
-  if (!current) {
+  if (!listed) {
     return {
       certainty: "not-applied",
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     }
   }
+
+  const current = await readEditableToken(config, listed, options)
 
   const explicitGroup = current.group?.trim() || ""
   const group =
@@ -644,7 +662,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
         await collectValidatedInventoryTokens(config, options)
       ).find((candidate) => candidate.id === tokenId)
       if (!token) throw new Error("token_not_found")
-      return token
+      return readEditableToken(config, token, options)
     },
     toListFacts: toFacts,
     toDetailFacts: toFacts,
@@ -680,10 +698,16 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
       }
       try {
         const after = await collectValidatedInventoryTokens(config, options)
-        const created = after.filter(
-          (token) =>
-            !beforeIds.has(token.id) &&
-            matchesNewApiTokenWrite(siteType, token, command.values),
+        const candidates = await Promise.all(
+          after
+            .filter(
+              (token) =>
+                !beforeIds.has(token.id) && token.name === command.values.name,
+            )
+            .map((token) => readEditableToken(config, token, options)),
+        )
+        const created = candidates.filter((token) =>
+          matchesNewApiTokenWrite(siteType, token, command.values),
         )
         const [createdToken] = created
         if (created.length === 1 && createdToken)
@@ -748,9 +772,12 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
         }
       }
       try {
-        const updated = (
+        const listed = (
           await collectValidatedInventoryTokens(config, options)
         ).find((token) => token.id === detail.id)
+        const updated = listed
+          ? await readEditableToken(config, listed, options)
+          : undefined
         // Quota can decrease between the write and this read. A lost response
         // still requires exact evidence when the user changed the quota itself.
         const allowQuotaConsumption =

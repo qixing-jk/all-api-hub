@@ -635,6 +635,7 @@
   },
   "secretList": {
     "add": "Thêm khóa",
+    "clearedState": "Khóa đã lưu sẽ bị xóa",
     "collapse": "Thu gọn API Key {{number}}",
     "configured": "Đã cấu hình",
     "enableKey": "Bật khóa này",

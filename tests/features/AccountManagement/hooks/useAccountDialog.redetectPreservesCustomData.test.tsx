@@ -1838,6 +1838,9 @@ describe("useAccountDialog re-detect preservation", () => {
     [SITE_TYPES.APIYI, "url"],
     [SITE_TYPES.APIYI, "site type"],
     [SITE_TYPES.APIYI, "auth type"],
+    [SITE_TYPES.LAOZHANG, "url"],
+    [SITE_TYPES.LAOZHANG, "site type"],
+    [SITE_TYPES.LAOZHANG, "auth type"],
   ] as const)(
     "keeps %s manual token recovery until the %s changes",
     async (siteType, changedField) => {

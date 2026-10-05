@@ -643,6 +643,7 @@
   },
   "secretList": {
     "add": "Add key",
+    "clearedState": "The saved key will be cleared",
     "collapse": "Collapse API Key {{number}}",
     "configured": "Configured",
     "enableKey": "Enable this key",

@@ -48,6 +48,8 @@ const DEFAULT_TODAY_LOG_QUERY_CONFIG: Required<
   extraParams: Record<string, string>
 } = {
   endpoint: "/api/log/self",
+  pageIndexOffset: 0,
+  paginateArraysUntilEmpty: false,
   pageParamName: "p",
   pageSizeParamName: "page_size",
   logTypeParamName: "type",
@@ -294,7 +296,7 @@ const fetchPaginatedLogs = async <T>(
           logType,
           timestampRange,
           {
-            page: currentPage,
+            page: currentPage + resolvedQueryConfig.pageIndexOffset,
             pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
           },
           resolvedQueryConfig,
@@ -322,7 +324,9 @@ const fetchPaginatedLogs = async <T>(
 
         const totalPages =
           normalizedLogData.total === null
-            ? 1
+            ? resolvedQueryConfig.paginateArraysUntilEmpty && items.length > 0
+              ? Infinity
+              : 1
             : Math.ceil(
                 normalizedLogData.total / REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
               )
@@ -615,15 +619,20 @@ export async function fetchTodayIncome(
  */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
+  queryConfig?: TodayLogQueryConfig,
 ): Promise<AccountData> {
   const resolvedCheckIn: CheckInConfig = request.checkIn
   const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
-  const todayUsagePromise = fetchTodayUsage(request, undefined, timestampRange)
+  const todayUsagePromise = fetchTodayUsage(
+    request,
+    queryConfig,
+    timestampRange,
+  )
   const todayIncomePromise = fetchTodayIncome(
     request,
-    undefined,
+    queryConfig,
     timestampRange,
   )
   const checkInPromise = refreshSelectedStatus({

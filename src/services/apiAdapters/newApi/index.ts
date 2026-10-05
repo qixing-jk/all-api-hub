@@ -6,6 +6,7 @@ import {
 import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/accountLogin"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
+import { laoZhangAccountAnnouncements } from "./accountAnnouncements"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
 import { createNewApiAccountCompletion } from "./accountCompletion"
 import { createNewApiAccountData } from "./accountData"
@@ -14,7 +15,7 @@ import { createNewApiAccountRefresh } from "./accountRefresh"
 import { createNewApiInviteLink } from "./inviteLink"
 import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
-import { newApiSiteNotice } from "./siteNotice"
+import { createNewApiSiteNotice } from "./siteNotice"
 import { newApiSiteStructuredAnnouncements } from "./siteStructuredAnnouncements"
 
 export const createNewApiCapabilities = (
@@ -24,14 +25,17 @@ export const createNewApiCapabilities = (
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   site: {
     announcements: newApiSiteStructuredAnnouncements,
-    notice: newApiSiteNotice,
+    notice: createNewApiSiteNotice(siteType),
   },
   account: {
+    ...(siteType === SITE_TYPES.LAOZHANG
+      ? { announcements: laoZhangAccountAnnouncements }
+      : {}),
     login: createNewApiAccountLogin(siteType),
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: createNewApiAccountCompletion(siteType),
-    inviteLink: createNewApiInviteLink(),
+    inviteLink: createNewApiInviteLink(siteType),
     keyResourceManagement: createNewApiAccountKeyResources(siteType),
     refresh: createNewApiAccountRefresh(siteType),
     modelPricing: createNewApiModelPricing(siteType),
