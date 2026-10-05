@@ -258,6 +258,119 @@ describe("useAccountKeyResourceController", () => {
     )
   })
 
+  it("does not replay a successful creation when the consumer handoff rejects", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-created")
+    const submit = vi.fn().mockResolvedValue({ facts })
+    const onCreated = vi.fn().mockRejectedValue(new Error("handoff failed"))
+    const session = recoverySession({
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+        submit,
+      }),
+    })
+    const { result } = renderRecoveryController(session, onCreated)
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(onCreated).toHaveBeenCalledOnce()
+    expect(submit).toHaveBeenCalledOnce()
+    expect(result.current.editor).toBeNull()
+    expect(session.openCollection).toHaveBeenCalledTimes(2)
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("does not load options for an editor that was already closed", async () => {
+    const loadOptions = vi.fn().mockResolvedValue([])
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue({
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: true }),
+          resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+          submit: vi.fn(),
+          loadOptions,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    act(() => result.current.closeEditor(editorId))
+    await act(async () => result.current.loadEditorOptions(editorId, "group"))
+    expect(loadOptions).not.toHaveBeenCalled()
+    expect(result.current.editor).toBeNull()
+    act(() =>
+      result.current.retryEditorOpening(result.current.editorOpening.attemptId),
+    )
+    expect(result.current.editorOpening.status).toBe("idle")
+  })
+
+  it("loads a selected account when it arrives after the route and reports an empty refresh accurately", async () => {
+    const session = recoverySession()
+    const open = vi.fn().mockResolvedValue(session)
+    mockNativeResourceSession(open)
+    const { result, rerender } = renderHook(
+      ({ accounts }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      { initialProps: { accounts: [] as ReturnType<typeof createAccount>[] } },
+    )
+    await act(async () => expect(result.current.refresh()).resolves.toBe(false))
+    expect(open).not.toHaveBeenCalled()
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      "failure",
+      expect.objectContaining({
+        insights: expect.objectContaining({ selectedCount: 0 }),
+      }),
+    )
+    rerender({ accounts: [createAccount("account-example")] })
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    expect(result.current.selectedScope).toEqual(recoveryScope)
+  })
+
+  it("keeps sibling keys unchanged while the edited key awaits a refresh", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const sibling = createFacts(recoveryScope.scopeKey, "key-sibling")
+    const updated = { ...facts, displayName: "Updated" }
+    const refresh = deferred<any>()
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [facts, sibling] })
+      .mockReturnValueOnce(refresh.promise)
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list,
+          openEditEditor: vi.fn().mockResolvedValue({
+            fields: [],
+            initialValues: {},
+            validate: () => ({ valid: true }),
+            submit: vi.fn().mockResolvedValue({ facts: updated }),
+          }),
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(2))
+    await act(async () => result.current.openEdit(facts.ref))
+    act(
+      () =>
+        void result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    expect(result.current.rows).toEqual([updated, sibling])
+    await act(async () => refresh.resolve({ items: [updated, sibling] }))
+    expect(result.current.rows).toEqual([updated, sibling])
+  })
+
   beforeEach(() => {
     createDisplayAccountApiContextMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
@@ -2739,7 +2852,7 @@ describe("useAccountKeyResourceController", () => {
     )
   })
 
-  it.each([false, true, "unavailable"] as const)(
+  it.each([false, true, "unavailable", "missing-runtime"] as const)(
     "deletes a native key from all-account mode (linked cleanup: %s)",
     async (cleanupLinkedChannels) => {
       cleanupMocks.prepare.mockReset().mockResolvedValue({ id: "pending" })
@@ -2762,15 +2875,18 @@ describe("useAccountKeyResourceController", () => {
       }
       const openCollection = vi.fn().mockResolvedValue(collection)
       const openNativeResources = vi.fn().mockResolvedValue({
-        runtimeKey: {
-          resolve: vi
-            .fn()
-            .mockResolvedValue(
-              cleanupLinkedChannels === "unavailable"
-                ? { kind: "unavailable" }
-                : { kind: "resolved", secret: "source-key" },
-            ),
-        },
+        runtimeKey:
+          cleanupLinkedChannels === "missing-runtime"
+            ? undefined
+            : {
+                resolve: vi
+                  .fn()
+                  .mockResolvedValue(
+                    cleanupLinkedChannels === "unavailable"
+                      ? { kind: "unavailable" }
+                      : { kind: "resolved", secret: "source-key" },
+                  ),
+              },
         resolveDefaultScope: vi.fn().mockResolvedValue({
           scopeKey: "scope-native",
           routeKey: "default",
@@ -2803,7 +2919,10 @@ describe("useAccountKeyResourceController", () => {
         result.current.confirmDelete(Boolean(cleanupLinkedChannels)),
       )
 
-      if (cleanupLinkedChannels === "unavailable") {
+      if (
+        cleanupLinkedChannels === "unavailable" ||
+        cleanupLinkedChannels === "missing-runtime"
+      ) {
         expect(collection.delete).not.toHaveBeenCalled()
         expect(cleanupMocks.prepare).not.toHaveBeenCalled()
         expect(result.current.deleteState.failure?.code).toBe("unavailable")
