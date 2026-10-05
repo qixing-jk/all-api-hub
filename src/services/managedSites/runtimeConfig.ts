@@ -1,265 +1,56 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { isManagedSiteAdminUserId } from "~/services/managedSites/utils/adminUserId"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type { AxonHubConfig } from "~/types/axonHubConfig"
-import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
-import {
-  normalizeCliProxyApiDeploymentUrl,
-  type CliProxyApiConfig,
-} from "~/types/cliProxyApiConfig"
-import type { DoneHubConfig } from "~/types/doneHubConfig"
-import {
-  normalizeGptLoadBaseUrl,
-  type GptLoadConfig,
-} from "~/types/gptLoadConfig"
-import type { NewApiConfig } from "~/types/newApiConfig"
-import type { OctopusConfig } from "~/types/octopusConfig"
-import {
-  normalizeOmniRouteBaseUrl,
-  type OmniRouteConfig,
-} from "~/types/omnirouteConfig"
-import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
-import type { VeloeraConfig } from "~/types/veloeraConfig"
 
-export type ManagedSiteRuntimeConfig =
-  | { siteType: typeof SITE_TYPES.CLI_PROXY_API; config: CliProxyApiConfig }
-  | { siteType: typeof SITE_TYPES.NEW_API; config: NewApiConfig }
-  | { siteType: typeof SITE_TYPES.DONE_HUB; config: DoneHubConfig }
-  | { siteType: typeof SITE_TYPES.VELOERA; config: VeloeraConfig }
-  | { siteType: typeof SITE_TYPES.OCTOPUS; config: OctopusConfig }
-  | { siteType: typeof SITE_TYPES.AXON_HUB; config: AxonHubConfig }
-  | {
-      siteType: typeof SITE_TYPES.CLAUDE_CODE_HUB
-      config: ClaudeCodeHubConfig
-    }
-  | { siteType: typeof SITE_TYPES.SUB2API; config: Sub2ApiManagedSiteConfig }
-  | { siteType: typeof SITE_TYPES.OMNIROUTE; config: OmniRouteConfig }
-  | { siteType: typeof SITE_TYPES.GPT_LOAD; config: GptLoadConfig }
+import {
+  getManagedSiteConfigRegistration,
+  type ManagedSiteRuntimeConfig,
+  type ManagedSiteRuntimeConfigForType,
+} from "./configRegistration"
 
-export type ManagedSiteRuntimeConfigValue = ManagedSiteRuntimeConfig["config"]
-export type ManagedSiteRuntimeConfigForType<TSiteType extends ManagedSiteType> =
-  Extract<ManagedSiteRuntimeConfig, { siteType: TSiteType }>
-export type ManagedSiteRuntimeConfigValueForType<
-  TSiteType extends ManagedSiteType,
-> = ManagedSiteRuntimeConfigForType<TSiteType>["config"]
+export type {
+  ManagedSiteRuntimeConfig,
+  ManagedSiteRuntimeConfigForType,
+  ManagedSiteRuntimeConfigValue,
+  ManagedSiteRuntimeConfigValueForType,
+} from "./configRegistration"
 
 /** Returns the configured principal used by the persisted v1 repair receipt. */
 export function getManagedSiteRuntimePrincipal(
   runtimeConfig: ManagedSiteRuntimeConfig,
 ): string {
-  switch (runtimeConfig.siteType) {
-    case SITE_TYPES.OCTOPUS:
-      return runtimeConfig.config.username.trim()
-    case SITE_TYPES.AXON_HUB:
-      return runtimeConfig.config.email.trim()
-    case SITE_TYPES.CLAUDE_CODE_HUB:
-    case SITE_TYPES.CLI_PROXY_API:
-    case SITE_TYPES.SUB2API:
-    case SITE_TYPES.OMNIROUTE:
-    case SITE_TYPES.GPT_LOAD:
-      return "admin"
-    default:
-      return runtimeConfig.config.userId.trim()
-  }
+  return getManagedSiteConfigRegistration(runtimeConfig.siteType)!.principal(
+    runtimeConfig.config,
+  )
 }
-
-const hasText = (value: unknown): value is string =>
-  typeof value === "string" && value.trim().length > 0
 
 /** Returns whether preferences contain any required-field input for a type. */
 export function hasManagedSiteRuntimeConfigInputForType(
   preferences: UserPreferences,
   siteType: ManagedSiteType,
 ): boolean {
-  if (siteType === SITE_TYPES.CLI_PROXY_API) {
-    const config = preferences.cliProxyApi
-    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
-  }
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    const config = preferences.octopus
-    return Boolean(
-      config &&
-        [config.baseUrl, config.username, config.password].some(hasText),
-    )
-  }
-
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    const config = preferences.axonHub
-    return Boolean(
-      config && [config.baseUrl, config.email, config.password].some(hasText),
-    )
-  }
-
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    const config = preferences.claudeCodeHub
-    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
-  }
-
-  if (siteType === SITE_TYPES.SUB2API) {
-    const config = preferences.sub2apiManagedSite
-    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
-  }
-
-  if (siteType === SITE_TYPES.OMNIROUTE) {
-    const config = preferences.omniroute
-    return Boolean(config && [config.baseUrl, config.token].some(hasText))
-  }
-
-  if (siteType === SITE_TYPES.GPT_LOAD) {
-    const config = preferences.gptLoad
-    return Boolean(
-      config && [config.baseUrl, config.managementKey].some(hasText),
-    )
-  }
-
-  if (
-    siteType === SITE_TYPES.DONE_HUB ||
-    siteType === SITE_TYPES.VELOERA ||
-    siteType === SITE_TYPES.NEW_API
-  ) {
-    const config =
-      siteType === SITE_TYPES.DONE_HUB
-        ? preferences.doneHub
-        : siteType === SITE_TYPES.VELOERA
-          ? preferences.veloera
-          : preferences.newApi
-    return Boolean(
-      config &&
-        [config.baseUrl, config.adminToken, config.userId].some(hasText),
-    )
-  }
-
-  const exhaustiveSiteType: never = siteType
-  void exhaustiveSiteType
-  return false
+  return (
+    getManagedSiteConfigRegistration(siteType)?.hasInput(preferences) ?? false
+  )
 }
 
-/**
- * Returns a complete access-token managed-site config when required fields exist.
- */
-function resolveAccessTokenConfig(
-  config: NewApiConfig | DoneHubConfig | VeloeraConfig | undefined,
-) {
-  if (!config) return null
-  if (!hasText(config.baseUrl) || !hasText(config.adminToken)) return null
-  if (!isManagedSiteAdminUserId(config.userId)) return null
-  return config
-}
-
-/**
- * Resolves the full runtime config for an explicit managed-site type.
- */
+/** Resolves a complete runtime config without supplying settings-only defaults. */
 export function resolveManagedSiteRuntimeConfigForType<
-  TSiteType extends ManagedSiteType,
+  Type extends ManagedSiteType,
 >(
   preferences: UserPreferences,
-  siteType: TSiteType,
-): ManagedSiteRuntimeConfigForType<TSiteType> | null {
-  if (siteType === SITE_TYPES.CLI_PROXY_API) {
-    const config = preferences.cliProxyApi
-    if (!config || !hasText(config.baseUrl) || !hasText(config.adminToken))
-      return null
-    return {
-      siteType,
-      config: {
-        ...config,
-        baseUrl: normalizeCliProxyApiDeploymentUrl(config.baseUrl),
-      },
-    } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    const config = preferences.octopus
-    if (
-      !config ||
-      !hasText(config.baseUrl) ||
-      !hasText(config.username) ||
-      !hasText(config.password)
-    ) {
-      return null
-    }
-    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    const config = preferences.axonHub
-    if (
-      !config ||
-      !hasText(config.baseUrl) ||
-      !hasText(config.email) ||
-      !hasText(config.password)
-    ) {
-      return null
-    }
-    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    const config = preferences.claudeCodeHub
-    if (!config || !hasText(config.baseUrl) || !hasText(config.adminToken)) {
-      return null
-    }
-    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.SUB2API) {
-    const config = preferences.sub2apiManagedSite
-    if (!config || !hasText(config.baseUrl) || !hasText(config.adminToken)) {
-      return null
-    }
-    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.OMNIROUTE) {
-    const config = preferences.omniroute
-    if (!config || !hasText(config.baseUrl) || !hasText(config.token)) {
-      return null
-    }
-    return {
-      siteType,
-      config: { ...config, baseUrl: normalizeOmniRouteBaseUrl(config.baseUrl) },
-    } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.GPT_LOAD) {
-    const config = preferences.gptLoad
-    if (!config || !hasText(config.baseUrl) || !hasText(config.managementKey)) {
-      return null
-    }
-    return {
-      siteType,
-      config: {
-        ...config,
-        baseUrl: normalizeGptLoadBaseUrl(config.baseUrl),
-      },
-    } as ManagedSiteRuntimeConfigForType<TSiteType>
-  }
-
-  if (siteType === SITE_TYPES.DONE_HUB) {
-    const config = resolveAccessTokenConfig(preferences.doneHub)
-    return config
-      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
-      : null
-  }
-
-  if (siteType === SITE_TYPES.VELOERA) {
-    const config = resolveAccessTokenConfig(preferences.veloera)
-    return config
-      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
-      : null
-  }
-
-  if (siteType === SITE_TYPES.NEW_API) {
-    const config = resolveAccessTokenConfig(preferences.newApi)
-    return config
-      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
-      : null
-  }
-
-  const exhaustiveSiteType: never = siteType
-  return exhaustiveSiteType
+  siteType: Type,
+): ManagedSiteRuntimeConfigForType<Type> | null {
+  const registration = getManagedSiteConfigRegistration(siteType)
+  // Preserve the legacy exhaustive fallback for unregistered runtime input.
+  if (!registration)
+    return siteType as unknown as ManagedSiteRuntimeConfigForType<Type>
+  const config = registration.resolve(preferences)
+  return config
+    ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<Type>)
+    : null
 }
 
 const hashStringForCache = (value: string) => {

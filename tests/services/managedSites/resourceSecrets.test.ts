@@ -61,6 +61,15 @@ describe("managed resource secrets", () => {
     ).toEqual(["runtime-token", "admin-token"])
   })
 
+  it("collects GPT-Load management credentials for diagnostic redaction", () => {
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://gpt-load.example.invalid",
+        managementKey: "gpt-load-management-secret",
+      }),
+    ).toEqual(["gpt-load-management-secret"])
+  })
+
   it("collects preserved Octopus header proxy and parameter override values", () => {
     const headerValue = "octopus-header-secret-placeholder"
     const channelProxy = "http://proxy-user:proxy-pass@example.invalid:8080"
