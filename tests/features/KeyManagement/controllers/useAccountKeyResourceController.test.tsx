@@ -371,6 +371,112 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.rows).toEqual([updated, sibling])
   })
 
+  it("ignores combined inventory results after its account selection is replaced", async () => {
+    const pending = deferred<any>()
+    const resolveDefaultScope = vi.fn().mockReturnValue(pending.promise)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue(recoverySession({ resolveDefaultScope })),
+    )
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount,
+        }),
+      {
+        initialProps: {
+          selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE as string,
+        },
+      },
+    )
+    await waitFor(() => expect(resolveDefaultScope).toHaveBeenCalledOnce())
+    rerender({ selectedAccount: "missing-account" })
+    await act(async () => pending.resolve(recoveryScope))
+    expect(result.current.rows).toEqual([])
+    expect(result.current.failures).toEqual({})
+    expect(result.current.mode).toBe(controllerModes.Single)
+  })
+
+  it("rejects a post-create refresh into a workspace removed from discovery", async () => {
+    const destination = {
+      ...recoveryScope,
+      scopeKey: "other",
+      routeKey: "other",
+      isDefault: false,
+    }
+    const listScopes = vi
+      .fn()
+      .mockResolvedValueOnce([recoveryScope, destination])
+      .mockResolvedValue([recoveryScope])
+    const submit = vi
+      .fn()
+      .mockResolvedValue({
+        facts: createFacts(destination.scopeKey, "key-created"),
+      })
+    const session = recoverySession({
+      listScopes,
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => destination.scopeKey,
+        submit,
+      }),
+    })
+    const { result } = renderRecoveryController(session)
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(result.current.failures["account-example"]).toMatchObject({
+      code: "validation_failed",
+    })
+    expect(session.openCollection).toHaveBeenCalledOnce()
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("keeps a one-time secret when another account is added without changing its route", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-created")
+    const createdSecret = {
+      correlation: { kind: "account-key-resource", ref: facts.ref },
+      displayName: "Created",
+      secret: "one-time-key",
+      secretAvailability: "create-response-only",
+      credential: {},
+    }
+    const session = recoverySession({
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+        submit: vi.fn().mockResolvedValue({ facts, createdSecret }),
+      }),
+    })
+    const open = vi.fn().mockResolvedValue(session)
+    mockNativeResourceSession(open)
+    const account = createAccount("account-example")
+    const { result, rerender } = renderHook(
+      ({ accounts }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount: account.id,
+          routeParams: { accountId: account.id, workspace: "team" },
+        }),
+      { initialProps: { accounts: [account] } },
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
+    const previousCalls = open.mock.calls.length
+    rerender({ accounts: [account, createAccount("unrelated")] })
+    expect(result.current.createdSecret).toEqual(createdSecret)
+    expect(open).toHaveBeenCalledTimes(previousCalls)
+  })
+
   beforeEach(() => {
     createDisplayAccountApiContextMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
