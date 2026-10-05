@@ -1228,3 +1228,36 @@ describe("Sub2API account key resources", () => {
     )
   })
 })
+
+it("keeps Sub2API dollar amounts unscaled in display facts", async () => {
+  mockFetchSub2ApiKeys
+    .mockReset()
+    .mockResolvedValue([token({ quota: 10, quota_used: 3 })])
+  mockFetchSub2ApiGroupDescriptors.mockReset().mockResolvedValue([])
+  const session = await sub2ApiAccountKeyResources.open({
+    account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+    request,
+  })
+  const facts = atIndex(
+    (await (await session.openCollection("account")).list()).items,
+    0,
+  )
+  expect(facts.displayFacts).toEqual([
+    {
+      fieldId: "quota",
+      kind: "money",
+      role: "total",
+      amountUsd: 10,
+      unlimited: false,
+    },
+    { fieldId: "quota_used", kind: "money", role: "used", amountUsd: 3 },
+    {
+      fieldId: "remainingQuotaUsd",
+      kind: "money",
+      role: "remaining",
+      amountUsd: 7,
+      unlimited: false,
+    },
+    { fieldId: "expires_at", kind: "expiry", timestampMs: "never" },
+  ])
+})

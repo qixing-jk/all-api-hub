@@ -20,6 +20,7 @@ import {
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -1448,12 +1449,14 @@ describe("KeyManagement native page integration", () => {
       })
       if (siteType === SITE_TYPES.NEW_API) {
         const nativeEditor = createNewApiKeyEditor(
-          siteType,
-          {} as never,
           {
-            fetchUserGroups: vi.fn().mockResolvedValue({}),
-            fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
-          } as never,
+            ...resolveNewApiKeyVariant(siteType),
+            transport: {
+              fetchUserGroups: vi.fn().mockResolvedValue({}),
+              fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+            } as never,
+          },
+          {} as never,
         )
         Object.assign(createEditor, nativeEditor)
       }
@@ -1624,12 +1627,14 @@ describe("KeyManagement native page integration", () => {
     })
     const scope = createScope("account", "account", "Account", true)
     const createEditor = createNewApiKeyEditor(
-      SITE_TYPES.NEW_API,
-      {} as never,
       {
-        fetchUserGroups: vi.fn().mockResolvedValue({}),
-        fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
-      } as never,
+        ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+        transport: {
+          fetchUserGroups: vi.fn().mockResolvedValue({}),
+          fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+        } as never,
+      },
+      {} as never,
     )
     const { session } = createNativeSession({
       scopes: [scope],

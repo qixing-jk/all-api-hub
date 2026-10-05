@@ -1,12 +1,22 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
+import {
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  type AccountKeyResourceEditorMode,
+} from "~/features/KeyManagement/constants"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
+import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
@@ -20,20 +30,83 @@ const request = {
   },
 }
 
+/** Supplies the same editor facts that the dialog passes in production. */
+function getPresentation(
+  siteType: string | undefined,
+  mode: AccountKeyResourceEditorMode,
+  options?: { fields: readonly ResourceFieldDescriptor[] },
+) {
+  const fields =
+    options?.fields ??
+    (getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+      ? createNewApiKeyEditor(
+          resolveNewApiKeyVariant(siteType as AccountSiteType),
+          request,
+        ).fields
+      : undefined)
+  return getNativeKeyResourceEditorPresentation(siteType, mode, { fields })
+}
+
 describe("native key editor field policies", () => {
+  it.each([
+    SITE_TYPES.ONE_API,
+    SITE_TYPES.MODELFLARE,
+    SITE_TYPES.RIX_API,
+    SITE_TYPES.LAOZHANG,
+  ])("renders %s field facts without knowing the variant", (siteType) => {
+    const editor = createNewApiKeyEditor(
+      resolveNewApiKeyVariant(siteType),
+      request,
+    )
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.NEW_API,
+      editorModes.Create,
+      { fields: editor.fields },
+    )
+    const resolved = resolveResourceFieldPolicy(
+      editor.fields,
+      presentation.policy,
+      presentation.sectionOrder,
+    )
+    expect(resolved.fields).toHaveLength(editor.fields.length)
+  })
+
+  it("uses descriptor nullability rather than the ModelFlare site type", () => {
+    const fields = [
+      { fieldId: "group", type: "select", nullable: true, options: [] },
+    ] as const
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.MODELFLARE,
+      editorModes.Create,
+      { fields },
+    )
+    expect(presentation.policy.fields.map((field) => field.fieldId)).toEqual([
+      "group",
+    ])
+    expect(
+      presentation.policy.fields[0]?.resolveNullableOptionLabel,
+    ).toBeDefined()
+    expect(() =>
+      resolveResourceFieldPolicy(
+        fields,
+        presentation.policy,
+        presentation.sectionOrder,
+      ),
+    ).not.toThrow()
+  })
+
   it("presents only FreeModel key name, matching the website", () => {
     expect(
-      getNativeKeyResourceEditorPresentation(
+      getPresentation(
         SITE_TYPES.FREEMODEL,
-        "create",
+        editorModes.Create,
       ).policy.fields.map((field) => field.fieldId),
     ).toEqual(["name"])
   })
   it("presents Grsai budgets as credits with their own explanatory text", () => {
-    const fields = getNativeKeyResourceEditorPresentation(
-      SITE_TYPES.GRSAI,
-      "edit",
-    ).policy.fields
+    const fields = getPresentation(SITE_TYPES.GRSAI, editorModes.Edit).policy
+      .fields
     const credits = fields.find((field) => field.fieldId === "credits")!
     const translate = ((key: string) => key) as TFunction
     expect(credits.resolveLabel(translate)).toBe(
@@ -53,16 +126,14 @@ describe("native key editor field policies", () => {
     "presents only the supported name field for %s",
     (siteType) => {
       expect(
-        getNativeKeyResourceEditorPresentation(
-          siteType,
-          "create",
-        ).policy.fields.map((field) => field.fieldId),
+        getPresentation(siteType, editorModes.Create).policy.fields.map(
+          (field) => field.fieldId,
+        ),
       ).toEqual(["name"])
       expect(
-        getNativeKeyResourceEditorPresentation(
-          siteType,
-          "edit",
-        ).policy.fields.map((field) => field.fieldId),
+        getPresentation(siteType, editorModes.Edit).policy.fields.map(
+          (field) => field.fieldId,
+        ),
       ).toEqual(["name"])
     },
   )
@@ -75,9 +146,9 @@ describe("native key editor field policies", () => {
   ] as const)(
     "provides actionable translated feedback for %s validation",
     (code, suffix) => {
-      const presentation = getNativeKeyResourceEditorPresentation(
+      const presentation = getPresentation(
         SITE_TYPES.NEW_API,
-        "create",
+        editorModes.Create,
       )
       const name = presentation.policy.fields.find(
         (field) => field.fieldId === "name",
@@ -96,9 +167,8 @@ describe("native key editor field policies", () => {
       const groups = [{ id: 11, displayName: "Priority" }]
       const editors = [
         createNewApiKeyEditor(
-          SITE_TYPES.NEW_API,
+          resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
           request,
-          resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
           undefined,
           intent,
         ),
@@ -124,10 +194,7 @@ describe("native key editor field policies", () => {
   )
 
   it("keeps group IDs out of generated names when option labels are unavailable", () => {
-    const presentation = getNativeKeyResourceEditorPresentation(
-      SITE_TYPES.SUB2API,
-      "create",
-    )
+    const presentation = getPresentation(SITE_TYPES.SUB2API, editorModes.Create)
     expect(
       presentation.getAutomaticName?.({ group_id: "11" }, {}),
     ).toBeUndefined()
@@ -143,12 +210,12 @@ describe("native key editor field policies", () => {
 
   it("does not treat a workspace as a token group", () => {
     expect(
-      getNativeKeyResourceEditorPresentation(SITE_TYPES.OPENROUTER, "create")
+      getPresentation(SITE_TYPES.OPENROUTER, editorModes.Create)
         .getAutomaticName,
     ).toBeUndefined()
   })
 
-  it.each(["create", "edit"] as const)(
+  it.each([editorModes.Create, editorModes.Edit] as const)(
     "renders every supported provider's %s projection",
     (mode) => {
       const editors = [
@@ -156,9 +223,8 @@ describe("native key editor field policies", () => {
           (siteType) => ({
             siteType,
             editor: createNewApiKeyEditor(
-              siteType,
+              resolveNewApiKeyVariant(siteType),
               request,
-              resolveNewApiFamilyTokenTransport(siteType),
             ),
           }),
         ),
@@ -174,7 +240,7 @@ describe("native key editor field policies", () => {
           siteType: SITE_TYPES.SUB2API,
           editor: createSub2ApiKeyEditor(
             request,
-            mode === "edit"
+            mode === editorModes.Edit
               ? {
                   id: 1,
                   name: "Example",
@@ -187,10 +253,9 @@ describe("native key editor field policies", () => {
         },
       ]
       for (const { siteType, editor } of editors) {
-        const presentation = getNativeKeyResourceEditorPresentation(
-          siteType,
-          mode,
-        )
+        const presentation = getPresentation(siteType, mode, {
+          fields: editor.fields,
+        })
         expect(
           () =>
             resolveResourceFieldPolicy(
@@ -212,19 +277,33 @@ describe("native key editor field policies", () => {
       "storage_location",
     ] as const
 
-    const withoutDeploymentFields = getNativeKeyResourceEditorPresentation(
+    const withoutDeploymentFields = getPresentation(
       SITE_TYPES.RIX_API,
-      "edit",
-      { describedFieldIds: ["name", "group", "quotaUsd"] },
+      editorModes.Edit,
+      {
+        fields: createNewApiKeyEditor(
+          resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
+          request,
+        ).fields.filter((field) =>
+          ["name", "group", "quotaUsd"].includes(field.fieldId),
+        ),
+      },
     ).policy.fields.map((field) => field.fieldId)
     for (const fieldId of deploymentFieldIds) {
       expect(withoutDeploymentFields).not.toContain(fieldId)
     }
 
-    const withDeploymentFields = getNativeKeyResourceEditorPresentation(
+    const withDeploymentFields = getPresentation(
       SITE_TYPES.RIX_API,
-      "edit",
-      { describedFieldIds: [...deploymentFieldIds, "name"] },
+      editorModes.Edit,
+      {
+        fields: createNewApiKeyEditor(
+          resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
+          request,
+        ).fields.filter((field) =>
+          [...deploymentFieldIds, "name"].includes(field.fieldId),
+        ),
+      },
     ).policy.fields.map((field) => field.fieldId)
     for (const fieldId of deploymentFieldIds) {
       expect(withDeploymentFields).toContain(fieldId)
@@ -232,10 +311,8 @@ describe("native key editor field policies", () => {
   })
 
   it("exposes the deployment-owned fields for Rix API keys only", () => {
-    const rixFields = getNativeKeyResourceEditorPresentation(
-      SITE_TYPES.RIX_API,
-      "edit",
-    ).policy.fields
+    const rixFields = getPresentation(SITE_TYPES.RIX_API, editorModes.Edit)
+      .policy.fields
     const rixFieldIds = rixFields.map((field) => field.fieldId)
     expect(rixFieldIds).toEqual(
       expect.arrayContaining([
@@ -310,9 +387,9 @@ describe("native key editor field policies", () => {
     )
 
     for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.SUPER_API]) {
-      const fieldIds = getNativeKeyResourceEditorPresentation(
+      const fieldIds = getPresentation(
         siteType,
-        "edit",
+        editorModes.Edit,
       ).policy.fields.map((field) => field.fieldId)
       for (const fieldId of [
         "unlimited_count",
@@ -329,10 +406,7 @@ describe("native key editor field policies", () => {
 
 it("does not infer OpenRouter behavior when the owner is absent or unknown", () => {
   for (const siteType of [undefined, "unknown-provider", SITE_TYPES.NEW_API]) {
-    const presentation = getNativeKeyResourceEditorPresentation(
-      siteType,
-      "create",
-    )
+    const presentation = getPresentation(siteType, editorModes.Create)
     expect(presentation.summary).toBeUndefined()
     expect(presentation.requireFreshOptions).toBeUndefined()
     expect(presentation.getOptionFeedback).toBeUndefined()
@@ -375,9 +449,9 @@ it.each([
 ] as const)(
   "provides native field labels for %s %s",
   (siteType, fieldId, label, placeholder) => {
-    const field = getNativeKeyResourceEditorPresentation(
+    const field = getPresentation(
       siteType,
-      "create",
+      editorModes.Create,
     ).policy.fields.find((field) => field.fieldId === fieldId)!
     const t = ((key: string) => key) as TFunction
     expect(field.resolveLabel?.(t)).toBe(`keyManagement:${label}`)
@@ -391,9 +465,9 @@ it.each([
 )
 
 it("configures RightCode key editor fields and automatic naming", () => {
-  const createPresentation = getNativeKeyResourceEditorPresentation(
+  const createPresentation = getPresentation(
     SITE_TYPES.RIGHT_CODE,
-    "create",
+    editorModes.Create,
   )
   expect(
     createPresentation.policy.fields.some((f) => f.fieldId === "channel"),
@@ -415,9 +489,9 @@ it("configures RightCode key editor fields and automatic naming", () => {
   )
   expect(autoName).toBe("Codex group (auto)")
 
-  const editPresentation = getNativeKeyResourceEditorPresentation(
+  const editPresentation = getPresentation(
     SITE_TYPES.RIGHT_CODE,
-    "edit",
+    editorModes.Edit,
   )
   expect(
     editPresentation.policy.fields.some((f) => f.fieldId === "is_active"),

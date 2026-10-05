@@ -17,7 +17,7 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
@@ -245,9 +245,8 @@ export async function prepareKeyProvisioningPreview(
         availableGroups.length > 1
       ) {
         definition = createNewApiKeyEditor(
-          account.siteType,
+          resolveNewApiKeyVariant(account.siteType),
           request,
-          resolveNewApiFamilyTokenTransport(account.siteType),
         )
         groupField = "group"
         groupOptions = groups.map((group) => ({

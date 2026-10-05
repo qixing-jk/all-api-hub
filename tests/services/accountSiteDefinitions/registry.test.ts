@@ -59,6 +59,53 @@ import { getManagedResourceRegistration } from "~/services/apiAdapters/managedRe
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
+describe("access-token verification guide metadata", () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "security", true],
+    [SITE_TYPES.APIYI, "apiyi", false],
+    [SITE_TYPES.LAOZHANG, "laozhang", false],
+  ])(
+    "declares the existing guide presentation for %s",
+    (siteType, copy, showRotationWarning) => {
+      expect(
+        getAccountSiteDefinition(siteType)?.onboarding
+          ?.accessTokenVerificationGuide,
+      ).toEqual({
+        copy,
+        showRotationWarning,
+      })
+    },
+  )
+
+  it("returns independent verification guide configuration in both projections", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.NEW_API)!
+    const projection = getAccountSiteOnboardingDefinitions().find(
+      (row) => row.siteType === SITE_TYPES.NEW_API,
+    )!
+    definition.onboarding!.accessTokenVerificationGuide!.showRotationWarning =
+      false
+    projection.accessTokenVerificationGuide!.copy = "apiyi"
+
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.NEW_API)?.onboarding
+        ?.accessTokenVerificationGuide,
+    ).toEqual({
+      copy: "security",
+      showRotationWarning: true,
+    })
+  })
+})
+
+it.each([
+  [SITE_TYPES.APIYI, "apiyi"],
+  [SITE_TYPES.LAOZHANG, "apiyi"],
+  [SITE_TYPES.V_API, "v-api"],
+])("declares the shared browser user storage for %s", (siteType, storage) => {
+  expect(
+    getAccountSiteDefinition(siteType)?.onboarding?.browserUserStorage,
+  ).toBe(storage)
+})
+
 it("does not expose an unsupported Grsai announcements route", () => {
   expect(
     getAccountSiteDefinition(SITE_TYPES.GRSAI)?.onboarding?.routes

@@ -62,7 +62,49 @@ const request = {
 
 describe("createNewApiAccountBootstrap", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+  })
+
+  it.each([
+    {
+      username: "",
+      displayName: "  Account label  ",
+      expected: "Account label",
+    },
+    {
+      username: "  login-name  ",
+      displayName: "Account label",
+      expected: "login-name",
+    },
+  ])(
+    "normalizes ModelFlare credential labels at the bootstrap interface: $expected",
+    async ({ username, displayName, expected }) => {
+      const payload = {
+        id: "user-1",
+        username,
+        access_token: "account-token",
+        user: { display_name: displayName },
+      }
+      mockFetchUserInfo.mockResolvedValueOnce(payload)
+      const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.MODELFLARE)
+      await expect(bootstrap.fetchUserInfo(request)).resolves.toMatchObject({
+        username: expected,
+        access_token: "account-token",
+      })
+    },
+  )
+
+  it("normalizes ModelFlare token labels from the acquisition transport", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "  login-name  ",
+      access_token: "account-token",
+    })
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.MODELFLARE)
+
+    await expect(bootstrap.getOrCreateAccessToken(request)).resolves.toEqual({
+      username: "login-name",
+      access_token: "account-token",
+    })
   })
 
   it("delegates New API-family bootstrap operations through the New API-family implementation", async () => {

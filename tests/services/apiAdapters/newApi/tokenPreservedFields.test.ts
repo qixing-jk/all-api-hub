@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { toNewApiTokenWrite } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { readPreservedTokenFields } from "~/services/apiAdapters/newApi/tokenPreservedFields"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 
 /**
@@ -43,7 +43,9 @@ const rixToken = {
 
 describe("Rix token write fields", () => {
   it("keeps the deployment-managed columns and drops the secret", () => {
-    const preserved = readPreservedTokenFields(SITE_TYPES.RIX_API, rixToken)
+    const preserved = resolveNewApiKeyVariant(
+      SITE_TYPES.RIX_API,
+    ).readPreservedFields(rixToken)
 
     expect(preserved).toMatchObject({
       unlimited_count: true,
@@ -74,9 +76,14 @@ describe("Rix token write fields", () => {
   })
 
   it("leaves other site types on the plain projection", () => {
-    expect(readPreservedTokenFields(SITE_TYPES.NEW_API, rixToken)).toEqual({})
+    expect(
+      resolveNewApiKeyVariant(SITE_TYPES.NEW_API).readPreservedFields(rixToken),
+    ).toEqual({})
 
-    const body = toNewApiTokenWrite(rixToken, SITE_TYPES.NEW_API)
+    const body = toNewApiTokenWrite(
+      rixToken,
+      resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+    )
     expect(body).not.toHaveProperty("unlimited_count")
     expect(body).not.toHaveProperty("group_only")
     expect(body.name).toBe("user group (auto)")
@@ -85,7 +92,7 @@ describe("Rix token write fields", () => {
   it("applies the owned projection on top of the preserved columns", () => {
     const body = toNewApiTokenWrite(
       { ...rixToken, remain_quota: 0, model_limits: "gpt-6-luna" },
-      SITE_TYPES.RIX_API,
+      resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
     )
 
     expect(body).toMatchObject({

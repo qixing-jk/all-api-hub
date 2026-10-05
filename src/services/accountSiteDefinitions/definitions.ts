@@ -315,6 +315,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
     },
     onboarding: {
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi,
+      accessTokenVerificationGuide: {
+        copy: "security",
+        showRotationWarning: true,
+      },
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],
         compatUserIdHeaderNames: ["New-API-User"],
@@ -340,6 +344,11 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       detection: { hostnames: [APIYI_HOSTNAME] },
+      browserUserStorage: "apiyi",
+      accessTokenVerificationGuide: {
+        copy: "apiyi",
+        showRotationWarning: false,
+      },
       routes: {
         // https://api.apiyi.com/account/pricing (v29.8.9)
         pricingPath: "/account/pricing",
@@ -361,6 +370,11 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       displayName: "LaoZhang API",
+      browserUserStorage: "apiyi",
+      accessTokenVerificationGuide: {
+        copy: "laozhang",
+        showRotationWarning: false,
+      },
       detection: {
         hostnames: LAOZHANG_HOSTNAMES,
         titlePatterns: [/\blaozhang\s*api\b/i],
@@ -1189,6 +1203,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         titlePatterns: [makeTitleRegex(SITE_TYPES.V_API)],
         compatUserIdHeaderNames: ["X-Api-User"],
       },
+      browserUserStorage: "v-api",
       routes: {
         usagePath: "/panel/log",
         checkInPath: "/panel/profile",

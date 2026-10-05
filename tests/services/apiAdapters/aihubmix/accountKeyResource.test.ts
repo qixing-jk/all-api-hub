@@ -264,12 +264,31 @@ it.each([
 
 it("preserves the last-use timestamp in safe resource facts", async () => {
   mocks.list.mockReset()
-  mocks.list.mockResolvedValue([key({ accessed_time: 1750000000 })])
+  mocks.list.mockResolvedValue([
+    key({
+      accessed_time: 1750000000,
+      remain_quota: 1000000,
+      used_quota: 500000,
+      unlimited_quota: false,
+    }),
+  ])
   const page = await (
     await (
       await aihubmixAccountKeyResources.open(input)
     ).openCollection("account")
   ).list()
+  expect(atIndex(page.items, 0).displayFacts).toEqual([
+    {
+      fieldId: "remain_quota",
+      kind: "money",
+      role: "remaining",
+      amountUsd: 2,
+      unlimited: false,
+    },
+    { fieldId: "used_quota", kind: "money", role: "used", amountUsd: 1 },
+    { fieldId: "expired_time", kind: "expiry", timestampMs: "never" },
+    { fieldId: "accessed_time", kind: "last-used", timestampMs: 1750000000000 },
+  ])
   expect(atIndex(page.items, 0).fields).toContainEqual({
     fieldId: "accessed_time",
     kind: "number",

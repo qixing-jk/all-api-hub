@@ -16,8 +16,9 @@ import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
-const { fetchModelPricingMock } = vi.hoisted(() => ({
+const { fetchModelPricingMock, oneHubPricingMock } = vi.hoisted(() => ({
   fetchModelPricingMock: vi.fn(),
+  oneHubPricingMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
@@ -27,7 +28,7 @@ vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
-  fetchModelPricing: vi.fn(),
+  fetchModelPricing: oneHubPricingMock,
 }))
 
 const request = {
@@ -61,6 +62,55 @@ const pricingResponse = (extensions: Record<string, unknown> = {}) => ({
 })
 
 describe("New API model pricing adapter", () => {
+  it.each([
+    [SITE_TYPES.ONE_HUB, false],
+    [SITE_TYPES.DONE_HUB, true],
+  ])(
+    "keeps canonical group evidence and the transport dialect for %s",
+    async (siteType, isDoneHub) => {
+      const catalog = {
+        data: [],
+        groupRatios: { vip: 0 },
+        groupAccess: { kind: "authoritative", usableGroups: ["vip"] },
+        success: true,
+      }
+      oneHubPricingMock.mockResolvedValueOnce(catalog)
+
+      await expect(
+        createNewApiModelPricing(siteType).fetchPricing(request),
+      ).resolves.toBe(catalog)
+      expect(oneHubPricingMock).toHaveBeenCalledExactlyOnceWith(
+        request,
+        isDoneHub,
+      )
+      expect(fetchModelPricingMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
+    "keeps access unknown for %s's empty unpriced catalog",
+    async (siteType) => {
+      oneHubPricingMock.mockResolvedValueOnce({
+        data: [],
+        groupRatios: {},
+        groupAccess: {
+          kind: "compatible-priced-fallback",
+          candidateGroups: [],
+        },
+        success: true,
+        model_list_source: { supportsPricing: false },
+      })
+
+      await expect(
+        createNewApiModelPricing(siteType).fetchPricing(request),
+      ).resolves.toMatchObject({
+        data: [],
+        groupAccess: { kind: "unavailable" },
+      })
+      expect(fetchModelPricingMock).not.toHaveBeenCalled()
+    },
+  )
+
   it("keeps access unknown for an empty catalog without pricing support", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
       pricingResponse({

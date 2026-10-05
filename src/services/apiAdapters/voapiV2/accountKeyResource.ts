@@ -3,6 +3,7 @@ import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
+import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -182,6 +183,22 @@ const toFacts = (
     legacyTokenId: key.id,
     notes: key.note,
   },
+  displayFacts: [
+    {
+      fieldId: "amount",
+      kind: "money",
+      role: "remaining",
+      amountUsd: Number(key.amount) || 0,
+      unlimited: key.boundlessAmount === true,
+    },
+    {
+      fieldId: "used",
+      kind: "money",
+      role: "used",
+      amountUsd: Number(key.used) || 0,
+    },
+    keyExpiryDisplayFact("expireTime", key.expireTime ?? -1),
+  ],
   fields: [
     {
       fieldId: "groups",

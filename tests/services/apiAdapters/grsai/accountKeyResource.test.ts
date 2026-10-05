@@ -64,6 +64,21 @@ const key = (overrides: Partial<GrsaiApiKey> = {}): GrsaiApiKey => ({
 const openSession = async () => await grsaiAccountKeyResources.open(openInput)
 
 describe("grsaiAccountKeyResources", () => {
+  it("declares Grsai credits as credits rather than monetary quota", async () => {
+    mockFetchGrsaiKeys.mockResolvedValue([
+      key({ type: 1, credits: 250, expireTime: 1893456000 }),
+    ])
+    const session = await openSession()
+    const facts = atIndex(
+      (await (await session.openCollection("account")).list()).items,
+      0,
+    )
+    expect(facts.displayFacts).toEqual([
+      { fieldId: "credits", kind: "credits", value: 250, unlimited: false },
+      { fieldId: "expires_at", kind: "expiry", timestampMs: 1893456000000 },
+    ])
+  })
+
   it.each(["default", "all-groups"] as const)(
     "prepares one unlimited key without group or quota input in %s mode",
     async (mode) => {

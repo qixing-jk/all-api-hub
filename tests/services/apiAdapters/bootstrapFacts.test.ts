@@ -35,6 +35,28 @@ const request = {
 describe("provider-neutral bootstrap facts", () => {
   beforeEach(() => vi.resetAllMocks())
 
+  it.each([SITE_TYPES.APIYI, SITE_TYPES.LAOZHANG])(
+    "reads existing %s credentials without issuing or rotating one",
+    async (siteType) => {
+      requestData.mockResolvedValue({
+        id: 42,
+        username: "owner",
+        access_token: null,
+      })
+      const bootstrap = createNewApiAccountBootstrap(siteType)
+      await expect(
+        bootstrap.getOrCreateAccessToken({
+          ...request,
+          auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+        }),
+      ).resolves.toMatchObject({ username: "owner", access_token: "" })
+      expect(requestData).toHaveBeenCalledExactlyOnceWith(expect.anything(), {
+        endpoint: "/api/user/self",
+      })
+      expect(requestEnvelope).not.toHaveBeenCalled()
+    },
+  )
+
   it.each([
     SITE_TYPES.NEW_API,
     SITE_TYPES.VELOERA,

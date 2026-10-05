@@ -1,24 +1,7 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
-import * as accountData from "~/services/apiService/newApiFamily/default/accountData"
-import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
-import * as doneHub from "~/services/apiService/newApiFamily/variants/doneHub"
-import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
-import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
-import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
-import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
-const accountDataOverrides: Partial<
-  Record<AccountSiteType, typeof accountData.fetchAccountData>
-> = {
-  [SITE_TYPES.ANYROUTER]: anyrouter.fetchAccountData,
-  [SITE_TYPES.DONE_HUB]: doneHub.fetchAccountData,
-  [SITE_TYPES.LAOZHANG]: (request) =>
-    accountData.fetchAccountData(request, LAOZHANG_TODAY_LOG_QUERY_CONFIG),
-  [SITE_TYPES.RIX_API]: rixApi.fetchAccountData,
-  [SITE_TYPES.VELOERA]: veloera.fetchAccountData,
-  [SITE_TYPES.WONG_GONGYI]: wong.fetchAccountData,
-}
+import { resolveNewApiAccountDataVariant } from "./accountDataVariant"
 
 /**
  * Create account-data loading bound to the New API-family site type.
@@ -26,9 +9,7 @@ const accountDataOverrides: Partial<
 export function createNewApiAccountData(
   siteType: AccountSiteType,
 ): AccountDataCapability {
-  const fetchAccountData =
-    accountDataOverrides[siteType] ??
-    accountData.defaultAccountDataImplementation.fetchAccountData
+  const { fetchAccountData } = resolveNewApiAccountDataVariant(siteType)
 
   return {
     fetchData: (request) => fetchAccountData(request),

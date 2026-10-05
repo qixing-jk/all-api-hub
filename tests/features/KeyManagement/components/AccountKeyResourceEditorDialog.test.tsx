@@ -11,13 +11,17 @@ import {
   type AccountKeyResourceEditorDialogProps,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import {
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  type AccountKeyResourceEditorMode,
+} from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -46,7 +50,7 @@ it("keeps the native RightCode command valid after changing the model dependency
       editor={{
         editorId: 1,
         siteType: SITE_TYPES.RIGHT_CODE,
-        mode: "create",
+        mode: editorModes.Create,
         fields: definition.fields,
         initialValues: definition.initialValues,
         values: definition.initialValues,
@@ -77,7 +81,7 @@ const nativeRequest = {
   },
 }
 
-const editor = (mode: "create" | "edit" = "create") => ({
+const editor = (mode: AccountKeyResourceEditorMode = editorModes.Create) => ({
   editorId: 1,
   siteType: SITE_TYPES.OPENROUTER,
   mode,
@@ -87,7 +91,7 @@ const editor = (mode: "create" | "edit" = "create") => ({
       fieldId: field.Workspace,
       type: "select" as const,
       required: true,
-      readOnly: mode === "edit",
+      readOnly: mode === editorModes.Edit,
       options: [
         { value: "workspace-example", displayLabel: "Example team" },
         { value: "workspace-next", displayLabel: "Next team" },
@@ -97,9 +101,9 @@ const editor = (mode: "create" | "edit" = "create") => ({
       fieldId: field.Creator,
       type: "select" as const,
       nullable: true,
-      readOnly: mode === "edit",
+      readOnly: mode === editorModes.Edit,
       options: [],
-      ...(mode === "create"
+      ...(mode === editorModes.Create
         ? { optionLoader: { dependsOn: [field.Workspace] } }
         : {}),
     },
@@ -124,9 +128,9 @@ const editor = (mode: "create" | "edit" = "create") => ({
       fieldId: field.ExpiresAt,
       type: "date-time" as const,
       nullable: true,
-      readOnly: mode === "edit",
+      readOnly: mode === editorModes.Edit,
     },
-    ...(mode === "edit"
+    ...(mode === editorModes.Edit
       ? [{ fieldId: field.Disabled, type: "boolean" as const }]
       : []),
     { fieldId: field.IncludeByokInLimit, type: "boolean" as const },
@@ -166,9 +170,8 @@ describe("AccountKeyResourceEditorDialog", () => {
         interpolation: { escapeValue: false },
       })
       const definition = createNewApiKeyEditor(
-        SITE_TYPES.NEW_API,
+        resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
         nativeRequest,
-        resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
       )
       render(
         <I18nextProvider i18n={locale}>
@@ -176,7 +179,7 @@ describe("AccountKeyResourceEditorDialog", () => {
             editor={{
               editorId: 1,
               siteType: SITE_TYPES.NEW_API,
-              mode: "create",
+              mode: editorModes.Create,
               fields: definition.fields,
               initialValues: definition.initialValues,
               values: definition.initialValues,
@@ -210,7 +213,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         editor={{
           editorId: 1,
           siteType: SITE_TYPES.SUB2API,
-          mode: "create",
+          mode: editorModes.Create,
           fields: definition.fields,
           initialValues: definition.initialValues,
           values: definition.initialValues,
@@ -228,16 +231,15 @@ describe("AccountKeyResourceEditorDialog", () => {
     expect(atIndex(submit.mock.calls, 0)[1]).not.toHaveProperty("expires_at")
   })
 
-  it.each(["create", "edit"] as const)(
+  it.each([editorModes.Create, editorModes.Edit] as const)(
     "updates generated names with the group while preserving custom names in %s mode",
     async (mode) => {
       const user = userEvent.setup()
       const onSubmit = vi.fn()
       const onValuesChange = vi.fn()
       const definition = createNewApiKeyEditor(
-        SITE_TYPES.NEW_API,
+        resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
         nativeRequest,
-        resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
       )
       render(
         <AccountKeyResourceEditorDialog
@@ -319,7 +321,7 @@ describe("AccountKeyResourceEditorDialog", () => {
           editor={{
             editorId: 1,
             siteType,
-            mode: "create",
+            mode: editorModes.Create,
             fields: definition.fields,
             initialValues: definition.initialValues,
             values: definition.initialValues,
@@ -386,7 +388,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         editor={{
           editorId: 1,
           siteType: SITE_TYPES.SUB2API,
-          mode: "edit",
+          mode: editorModes.Edit,
           fields: [
             { fieldId: "name", type: "text", required: true },
             { fieldId: "quota", type: "number", min: 0 },
@@ -434,7 +436,7 @@ describe("AccountKeyResourceEditorDialog", () => {
           opening={{
             attemptId: 1,
             status: "loading",
-            mode: "edit",
+            mode: editorModes.Edit,
             reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
           }}
           onCancelOpening={() => undefined}
@@ -473,7 +475,7 @@ describe("AccountKeyResourceEditorDialog", () => {
           opening={{
             attemptId: 1,
             status: "loading",
-            mode: "edit",
+            mode: editorModes.Edit,
             reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
           }}
           onCancelOpening={() => undefined}
@@ -487,7 +489,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       expect(screen.queryByRole("dialog")).toBeNull()
       rerender(
         <AccountKeyResourceEditorDialog
-          editor={editor("edit")}
+          editor={editor(editorModes.Edit)}
           opening={{ attemptId: 1, status: "idle" }}
           onClose={() => undefined}
           onSubmit={() => undefined}
@@ -515,7 +517,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       opening: {
         attemptId: 4,
         status: "failure",
-        mode: "create",
+        mode: editorModes.Create,
         failure: { code: "unavailable" },
       },
       onRetryOpening: retry,
@@ -557,7 +559,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 5,
           status: "loading",
-          mode: "create",
+          mode: editorModes.Create,
           reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
         }}
         onCancelOpening={cancel}
@@ -582,7 +584,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 6,
           status: "loading",
-          mode: "create",
+          mode: editorModes.Create,
           reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
         }}
         onCancelOpening={cancel}
@@ -600,7 +602,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 7,
           status: "failure",
-          mode: "create",
+          mode: editorModes.Create,
           failure: { code: "unavailable" },
         }}
         onCancelOpening={cancel}
@@ -688,7 +690,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     render(
       <AccountKeyResourceEditorDialog
         editor={{
-          ...editor("edit"),
+          ...editor(editorModes.Edit),
           feedback: {
             code: "validation_failed" as const,
             fieldIssues: [{ fieldId: field.Name, code: "required" as const }],
@@ -1223,7 +1225,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 1,
           status: "failure",
-          mode: "create",
+          mode: editorModes.Create,
           failure: { code: "unavailable" },
         }}
         onRetryOpening={() => undefined}
@@ -1245,7 +1247,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 1,
           status: "loading",
-          mode: "create",
+          mode: editorModes.Create,
           reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
         }}
         onCancelOpening={cancel}
@@ -1283,7 +1285,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 1,
           status: "failure",
-          mode: "edit",
+          mode: editorModes.Edit,
           failure: {
             code: "permission_denied",
             message: "Workspace policy blocks this key.",
@@ -1489,13 +1491,13 @@ describe("AccountKeyResourceEditorDialog", () => {
     render(
       <AccountKeyResourceEditorDialog
         editor={{
-          ...editor("edit"),
+          ...editor(editorModes.Edit),
           initialValues: {
-            ...editor("edit").initialValues,
+            ...editor(editorModes.Edit).initialValues,
             [field.ExpiresAt]: expiresAt,
           },
           values: {
-            ...editor("edit").values,
+            ...editor(editorModes.Edit).values,
             [field.ExpiresAt]: expiresAt,
           },
         }}
@@ -1941,7 +1943,7 @@ describe("AccountKeyResourceEditorDialog", () => {
                 ? {
                     attemptId: 1,
                     status: "loading",
-                    mode: "create",
+                    mode: editorModes.Create,
                     reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
                   }
                 : { attemptId: 1, status: "idle" }

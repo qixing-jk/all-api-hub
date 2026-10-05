@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import {
   clearRixApiDialectChoicesForTests,
   recordRixApiMajorVersion,
@@ -32,9 +32,8 @@ const probeCoreVersion = (majorVersion: number | undefined) => {
 
 const editorFieldIds = () =>
   createNewApiKeyEditor(
-    SITE_TYPES.RIX_API,
+    resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
     request,
-    resolveNewApiFamilyTokenTransport(SITE_TYPES.RIX_API),
   ).fields.map((field) => field.fieldId)
 
 describe("Rix API deployment token columns", () => {
@@ -47,6 +46,19 @@ describe("Rix API deployment token columns", () => {
     for (const fieldId of DEPLOYMENT_FIELD_IDS) {
       expect(editorFieldIds()).toContain(fieldId)
     }
+  })
+
+  it("declares the unconfigured storage node as a valid selectable empty value", () => {
+    const editor = createNewApiKeyEditor(
+      resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
+      request,
+    )
+    expect(
+      editor.fields.find((field) => field.fieldId === "storage_location"),
+    ).toMatchObject({ nullable: true })
+    const values = { ...editor.initialValues, storage_location: null }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    expect(editor.buildCommand(values).values.storage_location).toBe("")
   })
 
   it.each([6, 7])("keeps the 6.x columns on core version %s", async (major) => {

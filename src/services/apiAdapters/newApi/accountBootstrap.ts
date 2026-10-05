@@ -5,20 +5,15 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
-import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
-import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
-import {
-  readRixApiMajorVersion,
-  recordRixApiMajorVersion,
-} from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import * as veloeraCheckIn from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
+import { resolveNewApiAccountCredentialVariant } from "./accountCredentialVariant"
 import { resolveNewApiAccountRoutePath } from "./accountRoutes"
 
-type AccountBootstrapImplementation = Omit<
+type AccountBootstrapMetadataImplementation = Pick<
   typeof accountBootstrap.defaultAccountBootstrapImplementation,
-  "fetchSupportCheckIn"
+  "fetchSiteStatus" | "extractDefaultExchangeRate"
 > & {
   extractCheckInSupport: typeof accountBootstrap.extractCheckInSupport
   probeCheckInSupport?: typeof accountBootstrap.fetchSupportCheckIn
@@ -28,18 +23,10 @@ type NewApiAccountBootstrapOptions = Parameters<
   typeof accountBootstrap.getOrCreateAccessToken
 >[1]
 
-const accountBootstrapOverrides: Partial<
-  Record<AccountSiteType, Partial<AccountBootstrapImplementation>>
+const accountBootstrapMetadataOverrides: Partial<
+  Record<AccountSiteType, Partial<AccountBootstrapMetadataImplementation>>
 > = {
-  [SITE_TYPES.APIYI]: {
-    getOrCreateAccessToken: apiyi.getAccessToken,
-  },
   [SITE_TYPES.LAOZHANG]: {
-    // LaoZhang v31.1.5: System tokens require POST + X-Security-Proof and
-    // are shown once. Cookie onboarding must never rotate or issue one.
-    // https://api2.laozhang.ai/account/profile
-    getOrCreateAccessToken: (request) =>
-      accountBootstrap.fetchUserInfo(request),
     extractCheckInSupport: (status) =>
       status &&
       "CheckinEnabled" in status &&
@@ -49,13 +36,6 @@ const accountBootstrapOverrides: Partial<
   },
   [SITE_TYPES.ANYROUTER]: {
     probeCheckInSupport: anyrouter.fetchSupportCheckIn,
-  },
-  [SITE_TYPES.RIX_API]: {
-    // 6.x deployments report no numeric id, so identity resolution follows the
-    // fields the account definition declares, and they issue scoped admin keys
-    // instead of the personal access token the family default asks for.
-    fetchUserInfo: rixApi.fetchUserInfo,
-    getOrCreateAccessToken: rixApi.getOrCreateAccessToken,
   },
   [SITE_TYPES.VELOERA]: {
     extractCheckInSupport: veloeraCheckIn.extractCheckInSupport,
@@ -72,21 +52,21 @@ export function createNewApiAccountBootstrap(
   siteType: AccountSiteType,
   options?: NewApiAccountBootstrapOptions,
 ): AccountBootstrapCapability {
-  const implementation: AccountBootstrapImplementation = {
-    ...accountBootstrap.defaultAccountBootstrapImplementation,
+  const credentials = resolveNewApiAccountCredentialVariant(siteType)
+  const implementation: AccountBootstrapMetadataImplementation = {
+    fetchSiteStatus:
+      accountBootstrap.defaultAccountBootstrapImplementation.fetchSiteStatus,
+    extractDefaultExchangeRate:
+      accountBootstrap.defaultAccountBootstrapImplementation
+        .extractDefaultExchangeRate,
     extractCheckInSupport: accountBootstrap.extractCheckInSupport,
-    ...accountBootstrapOverrides[siteType],
+    ...accountBootstrapMetadataOverrides[siteType],
   }
 
   const loadBootstrapFacts: AccountBootstrapCapability["loadBootstrapFacts"] =
     async (request) => {
       const status = await implementation.fetchSiteStatus(request)
-      if (siteType === SITE_TYPES.RIX_API && request.baseUrl) {
-        recordRixApiMajorVersion(
-          request.baseUrl,
-          readRixApiMajorVersion(status),
-        )
-      }
+      credentials.observeSiteStatus(request, status)
       const facts: AccountBootstrapFacts = {}
       if (typeof status?.system_name === "string")
         facts.displayName = status.system_name
@@ -101,12 +81,12 @@ export function createNewApiAccountBootstrap(
   return {
     fetchUserInfo: (request) =>
       options?.expectedUserId
-        ? implementation.fetchUserInfo(request, options.expectedUserId)
-        : implementation.fetchUserInfo(request),
+        ? credentials.fetchUserInfo(request, options.expectedUserId)
+        : credentials.fetchUserInfo(request),
     getOrCreateAccessToken: (request) =>
       options
-        ? implementation.getOrCreateAccessToken(request, options)
-        : implementation.getOrCreateAccessToken(request),
+        ? credentials.getOrCreateAccessToken(request, options)
+        : credentials.getOrCreateAccessToken(request),
     loadBootstrapFacts,
     fetchCheckInSupport: async (request, facts) =>
       facts.checkInSupported ?? implementation.probeCheckInSupport?.(request),

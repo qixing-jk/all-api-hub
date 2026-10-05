@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { toNewApiTokenWrite } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
@@ -31,7 +31,7 @@ describe("LaoZhang protocol dispatch", () => {
       ),
     )
     await expect(
-      resolveNewApiFamilyTokenTransport(siteType).fetchTokenById(request, 1),
+      resolveNewApiKeyVariant(siteType).transport.fetchTokenById(request, 1),
     ).rejects.toThrow("Invalid LaoZhang token restrictions")
   })
 
@@ -67,7 +67,7 @@ describe("LaoZhang protocol dispatch", () => {
       ),
     )
     await expect(
-      resolveNewApiFamilyTokenTransport(siteType).fetchTokenById(request, 1),
+      resolveNewApiKeyVariant(siteType).transport.fetchTokenById(request, 1),
     ).resolves.toMatchObject({
       model_limits_enabled: true,
       model_limits: "gpt-test",
@@ -83,7 +83,7 @@ describe("LaoZhang protocol dispatch", () => {
         return HttpResponse.json({ success: true, data: body })
       }),
     )
-    const transport = resolveNewApiFamilyTokenTransport(siteType)
+    const transport = resolveNewApiKeyVariant(siteType).transport
     const values = {
       name: "test",
       remain_quota: 500000,
@@ -127,7 +127,7 @@ describe("LaoZhang protocol dispatch", () => {
       advertisement: "",
       ad_position: "",
     } as unknown as NewApiToken
-    const body = toNewApiTokenWrite(token, siteType)
+    const body = toNewApiTokenWrite(token, resolveNewApiKeyVariant(siteType))
     expect(body).toMatchObject({
       remark: "keep note",
       fallback_groups: "claude_code",
@@ -217,7 +217,7 @@ describe("LaoZhang protocol dispatch", () => {
       }),
     )
     const tokens =
-      await resolveNewApiFamilyTokenTransport(siteType).fetchAccountTokens(
+      await resolveNewApiKeyVariant(siteType).transport.fetchAccountTokens(
         request,
       )
     expect(tokens.map((token) => token.id)).toEqual([1, 2])
@@ -236,7 +236,7 @@ describe("LaoZhang protocol dispatch", () => {
         }),
       ),
     )
-    const transport = resolveNewApiFamilyTokenTransport(siteType)
+    const transport = resolveNewApiKeyVariant(siteType).transport
     expect(await transport.fetchAccountAvailableModels(request)).toEqual([
       "gpt-test",
     ])

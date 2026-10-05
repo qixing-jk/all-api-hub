@@ -11,6 +11,10 @@ import {
   Modal,
 } from "~/components/ui"
 import {
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  type AccountKeyResourceEditorMode,
+} from "~/features/KeyManagement/constants"
+import {
   NativeResourceEditorBody,
   type ResourceEditorControlledOptionState,
 } from "~/features/ResourceEditor/NativeResourceEditorBody"
@@ -37,7 +41,7 @@ export type AccountKeyResourceEditorDialogState = {
   /** Stable for the dialog session; changes only when opening a different editor. */
   editorId: number
   siteType: string
-  mode: "create" | "edit"
+  mode: AccountKeyResourceEditorMode
   fields: readonly ResourceFieldDescriptor[]
   initialValues: EditableResourceProjection
   values: EditableResourceProjection
@@ -210,7 +214,7 @@ export function AccountKeyResourceEditorDialog({
   const isOpening = activeEditor === null
   const editorMode = activeEditor?.mode ?? activeOpening?.mode
   const title =
-    editorMode === "create"
+    editorMode === editorModes.Create
       ? t("keyManagement:native.editor.title.create")
       : t("keyManagement:native.editor.title.edit")
   const requestClose = () => {
@@ -369,7 +373,7 @@ function AccountKeyResourceEditorDialogSession({
   const presentation = getNativeKeyResourceEditorPresentation(
     editor.siteType,
     editor.mode,
-    { describedFieldIds: editor.fields.map((field) => field.fieldId) },
+    { fields: editor.fields },
   )
   const [values, setValues] = useState<EditableResourceProjection>(() =>
     toEditorValues(editor.values, editor.fields),

@@ -161,7 +161,9 @@ describe("apiAdapters registry", () => {
 
   it("exposes the definition adapter family for every account site type", () => {
     for (const siteType of ACCOUNT_SITE_TYPES) {
-      expect(getSiteTypeCapabilities(siteType).family).toBe(
+      const capabilities = getSiteTypeCapabilities(siteType)
+      expect(capabilities.siteType).toBe(siteType)
+      expect(capabilities.family).toBe(
         getAccountSiteDefinition(siteType)?.adapterFamily,
       )
     }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountData"
+import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
 import { AuthTypeEnum } from "~/types"
 
 import { createCheckInConfig } from "../checkInFixtures"
@@ -12,15 +13,18 @@ const {
   doneHubFetchAccountData,
   veloeraFetchAccountData,
   wongFetchAccountData,
+  rixFetchAccountData,
 } = vi.hoisted(() => ({
   anyrouterFetchAccountData: vi.fn(),
   mockFetchAccountData: vi.fn(),
   doneHubFetchAccountData: vi.fn(),
   veloeraFetchAccountData: vi.fn(),
   wongFetchAccountData: vi.fn(),
+  rixFetchAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
+  fetchAccountData: mockFetchAccountData,
   defaultAccountDataImplementation: {
     fetchAccountData: mockFetchAccountData,
   },
@@ -28,18 +32,30 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
   fetchAccountData: anyrouterFetchAccountData,
+  refreshAccountData: vi.fn(),
+  fetchSupportCheckIn: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
   fetchAccountData: doneHubFetchAccountData,
+  refreshAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
   fetchAccountData: veloeraFetchAccountData,
+  refreshAccountData: vi.fn(),
+  fetchSupportCheckIn: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
   fetchAccountData: wongFetchAccountData,
+  refreshAccountData: vi.fn(),
+  fetchSupportCheckIn: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/rixApi", () => ({
+  fetchAccountData: rixFetchAccountData,
+  refreshAccountData: vi.fn(),
 }))
 
 const request = {
@@ -87,6 +103,7 @@ describe("createNewApiAccountData", () => {
     [SITE_TYPES.DONE_HUB, doneHubFetchAccountData],
     [SITE_TYPES.VELOERA, veloeraFetchAccountData],
     [SITE_TYPES.WONG_GONGYI, wongFetchAccountData],
+    [SITE_TYPES.RIX_API, rixFetchAccountData],
   ])(
     "uses the adapter-level account-data override for %s",
     async (siteType, loader) => {
@@ -100,4 +117,16 @@ describe("createNewApiAccountData", () => {
       expect(mockFetchAccountData).not.toHaveBeenCalled()
     },
   )
+
+  it("uses LaoZhang's log dialect while preserving the account request", async () => {
+    mockFetchAccountData.mockResolvedValueOnce(accountData)
+
+    await expect(
+      createNewApiAccountData(SITE_TYPES.LAOZHANG).fetchData(request),
+    ).resolves.toBe(accountData)
+    expect(mockFetchAccountData).toHaveBeenCalledWith(
+      request,
+      LAOZHANG_TODAY_LOG_QUERY_CONFIG,
+    )
+  })
 })

@@ -111,12 +111,21 @@ export interface ManagedResourceProductPolicy {
   }
 }
 
+/** Presentation choices for completing site-owned account credential verification. */
+export interface AccountSiteAccessTokenVerificationGuide {
+  copy: "security" | "apiyi" | "laozhang"
+  showRotationWarning: boolean
+}
+
 export interface AccountSiteDefinitionOnboardingMetadata {
   displayName?: string
   accountForm?: { fixedSiteUrl?: string; defaultSiteName?: string }
   detection?: AccountSiteDetectionMetadata
   routes: AccountSiteRouteConfig
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
+  accessTokenVerificationGuide?: AccountSiteAccessTokenVerificationGuide
+  /** Primary dashboard user store; absent keeps the compatible `user` store. */
+  browserUserStorage?: "apiyi" | "v-api"
 }
 
 /** Static login adoption; methods and their execution semantics belong to the registered adapter. */

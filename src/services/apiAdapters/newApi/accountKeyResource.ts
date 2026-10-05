@@ -1,9 +1,14 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { QUOTA_PER_USD } from "~/constants/money"
+import type { AccountSiteType } from "~/constants/siteType"
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import { validateApiTokenInventory } from "~/services/accountTokens/apiTokenKey"
+import {
+  keyExpiryDisplayFact,
+  keyLastUsedDisplayFacts,
+} from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -15,8 +20,6 @@ import {
 import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
-  ACCOUNT_KEY_PROVISIONING_UNKNOWN_PLACEMENT_REASONS,
-  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   type AccountKeyProvisionedResource,
@@ -50,22 +53,21 @@ import {
   type NewApiKeyEditCommand,
   type NewApiTokenWriteBody,
 } from "./keyResourceEditor"
-import { projectTokenCreatedAt } from "./tokenCreatedAt"
-import { tokenGroupFollowsAccount } from "./tokenGroup"
-import { projectNewApiTokenModelAccess } from "./tokenModelAccess"
 import {
-  resolveNewApiFamilyTokenTransport,
+  resolveNewApiKeyVariant,
   type NewApiFamilyTokenTransport,
-} from "./tokenTransport"
+  type NewApiKeyVariant,
+} from "./keyVariant"
+import { projectTokenCreatedAt } from "./tokenCreatedAt"
+import { projectNewApiTokenModelAccess } from "./tokenModelAccess"
 
 const ACCOUNT_SCOPE_KEY = "account"
-const ONE_API_SINGLETON_REQUIREMENT_KEY = "new-api-family:account-singleton"
-const GROUP_REQUIREMENT_PREFIX = "new-api-family:group:"
 
 type NewApiAccountKeyResourceConfig = {
   readonly account: AccountKeyResourceOpenInput["account"]
   readonly request: ApiServiceRequest
   readonly transport: NewApiFamilyTokenTransport
+  readonly variant: NewApiKeyVariant
 }
 
 const requestWithOptions = (
@@ -129,9 +131,6 @@ const tokenCoverage = (
   return ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown
 }
 
-const encodeGroupRequirementKey = (group: string): string =>
-  `${GROUP_REQUIREMENT_PREFIX}${encodeURIComponent(group)}`
-
 const createRef = (
   config: NewApiAccountKeyResourceConfig,
   tokenId: number,
@@ -156,66 +155,24 @@ const resolveAutoTemplateRenameTarget = (
   return currentName === targetDisplayName ? null : targetDisplayName
 }
 
-const loadRequirements = async (
+const loadRequirements = (
   config: NewApiAccountKeyResourceConfig,
   options?: ResourceOperationOptions,
-): Promise<readonly AccountKeyProvisioningRequirement[]> => {
-  if (config.account.siteType === SITE_TYPES.ONE_API) {
-    return [
-      {
-        requirementKey: ONE_API_SINGLETON_REQUIREMENT_KEY,
-        displayName: config.account.name?.trim() || config.request.baseUrl,
-        provisioning: {
-          kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
-        },
-      },
-    ]
-  }
-
-  const groups = await config.transport.fetchUserGroups(
-    requestWithOptions(config, options),
+): Promise<readonly AccountKeyProvisioningRequirement[]> =>
+  config.variant.group.loadRequirements(
+    () => config.transport.fetchUserGroups(requestWithOptions(config, options)),
+    config.account.name?.trim() || config.request.baseUrl,
   )
-  const normalizedGroups = Object.keys(groups)
-    .map((group) => group.trim())
-    .filter(Boolean)
-    .sort((left, right) => left.localeCompare(right))
-  if (new Set(normalizedGroups).size !== normalizedGroups.length) {
-    throw new Error("duplicate_group_requirement")
-  }
-  return normalizedGroups.map((group) => ({
-    requirementKey: encodeGroupRequirementKey(group),
-    displayName: group,
-    provisioning: {
-      kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
-    },
-  }))
-}
 
 const resolveRequirementGroup = async (
   config: NewApiAccountKeyResourceConfig,
   requirementKey: string,
   options?: ResourceOperationOptions,
-): Promise<string> => {
-  const requirement = (await loadRequirements(config, options)).find(
-    (candidate) => candidate.requirementKey === requirementKey,
+): Promise<string> =>
+  config.variant.group.resolveRequirementGroup(
+    await loadRequirements(config, options),
+    requirementKey,
   )
-  if (!requirement) throw new Error("invalid_requirement_key")
-  if (config.account.siteType === SITE_TYPES.ONE_API) return ""
-  if (!requirementKey.startsWith(GROUP_REQUIREMENT_PREFIX)) {
-    throw new Error("invalid_requirement_key")
-  }
-  try {
-    const group = decodeURIComponent(
-      requirementKey.slice(GROUP_REQUIREMENT_PREFIX.length),
-    )
-    if (!group || encodeGroupRequirementKey(group) !== requirementKey) {
-      throw new Error("invalid_requirement_key")
-    }
-    return group
-  } catch {
-    throw new Error("invalid_requirement_key")
-  }
-}
 
 const inspectProvisioning = async (
   config: NewApiAccountKeyResourceConfig,
@@ -223,7 +180,7 @@ const inspectProvisioning = async (
 ): Promise<AccountKeyProvisioningSnapshot> => {
   const tokens = await collectValidatedInventoryTokens(config, options)
   const requirements = await loadRequirements(config, options)
-  const followsAccountGroup = tokenGroupFollowsAccount(config.account.siteType)
+  const followsAccountGroup = config.variant.group.followsAccount
   const hasInheritedGroupToken =
     followsAccountGroup && tokens.some((token) => !token.group?.trim())
   let currentUserGroup: string | null = null
@@ -243,30 +200,11 @@ const inspectProvisioning = async (
       const group = token.group?.trim() || ""
       const effectiveGroup = group || currentUserGroup || ""
       const requirementKey = requirementByName.get(effectiveGroup)
-      const placement =
-        config.account.siteType === SITE_TYPES.ONE_API
-          ? {
-              kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-              requirementKeys: [ONE_API_SINGLETON_REQUIREMENT_KEY],
-            }
-          : requirementKey
-            ? {
-                kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
-                requirementKeys: [requirementKey],
-              }
-            : group
-              ? {
-                  kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Orphaned,
-                  placementKey: encodeGroupRequirementKey(group),
-                  displayName: group,
-                }
-              : followsAccountGroup
-                ? {
-                    kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown,
-                    reasonCode:
-                      ACCOUNT_KEY_PROVISIONING_UNKNOWN_PLACEMENT_REASONS.InheritedAccountGroupUnavailable,
-                  }
-                : { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown }
+      const placement = config.variant.group.resolvePlacement(
+        token,
+        requirementByName,
+        currentUserGroup,
+      )
       const renameTarget = requirementKey
         ? resolveAutoTemplateRenameTarget(token, effectiveGroup)
         : null
@@ -299,17 +237,15 @@ const provisionRequirement = async (
 
   const createResult = await runNativeResourceMutation({
     request: requestWithOptions(config, options),
-    execute: async (request) =>
-      await config.transport.createApiToken(request, {
-        name: getDefaultAccountKeyName(group),
-        unlimited_quota: true,
-        expired_time: -1,
-        remain_quota: 0,
-        allow_ips: "",
-        model_limits_enabled: false,
-        model_limits: "",
-        group,
-      }),
+    execute: async (request) => {
+      const editor = createNewApiKeyEditor(config.variant, request, undefined, {
+        preferredGroup: group,
+      })
+      return config.transport.createApiToken(
+        request,
+        editor.buildCommand(editor.initialValues).values,
+      )
+    },
     mapFailure,
     classifyError: (error) =>
       isApiBusinessError(error) ? "not-applied" : undefined,
@@ -350,11 +286,10 @@ const provisionRequirement = async (
       ),
     }
   }
-  const placementMatches =
-    config.account.siteType === SITE_TYPES.ONE_API
-      ? requirementKey === ONE_API_SINGLETON_REQUIREMENT_KEY
-      : encodeGroupRequirementKey(createdToken.group?.trim() || "") ===
-        requirementKey
+  const placementMatches = config.variant.group.matchesCreatedPlacement(
+    createdToken,
+    requirementKey,
+  )
   if (!placementMatches) {
     return {
       certainty: "possibly-applied",
@@ -433,6 +368,23 @@ const toFacts = (
     createdAt: projectTokenCreatedAt(token),
     notes: token.note,
   },
+  displayFacts: [
+    {
+      fieldId: "remainingQuota",
+      kind: "money",
+      role: "remaining",
+      amountUsd: token.remain_quota / QUOTA_PER_USD,
+      unlimited: token.unlimited_quota,
+    },
+    {
+      fieldId: "usedQuota",
+      kind: "money",
+      role: "used",
+      amountUsd: token.used_quota / QUOTA_PER_USD,
+    },
+    keyExpiryDisplayFact("expired_time", token.expired_time),
+    ...keyLastUsedDisplayFacts(token.accessed_time),
+  ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group?.trim() || "" },
     {
@@ -482,27 +434,19 @@ const collectValidatedInventoryTokens = async (
     ),
   )
 
-/** LaoZhang inventory omits writable settings; hydrate only the selected row. */
-const readEditableToken = async (
+/** Reads selected-row settings through the bound variant, including identity checks. */
+const readEditableToken = (
   config: NewApiAccountKeyResourceConfig,
   listed: NewApiToken,
   options?: ResourceOperationOptions,
-): Promise<NewApiToken> => {
-  if (config.account.siteType !== SITE_TYPES.LAOZHANG) return listed
-  const detail = await config.transport.fetchTokenById(
-    requestWithOptions(config, options),
-    listed.id,
-  )
-  if (detail.id !== listed.id || detail.user_id !== listed.user_id)
-    throw new Error("token_identity_mismatch")
-  return detail
-}
+): Promise<NewApiToken> =>
+  config.variant.readEditableToken(requestWithOptions(config, options), listed)
 
 const toTokenUpdateRequest = (
-  siteType: AccountSiteType,
+  variant: NewApiKeyVariant,
   token: NewApiToken,
   name: string,
-): NewApiTokenWriteBody => ({ ...toNewApiTokenWrite(token, siteType), name })
+): NewApiTokenWriteBody => ({ ...toNewApiTokenWrite(token, variant), name })
 
 const renameProvisionedResource = async (
   config: NewApiAccountKeyResourceConfig,
@@ -525,7 +469,7 @@ const renameProvisionedResource = async (
   const explicitGroup = current.group?.trim() || ""
   const group =
     explicitGroup ||
-    (tokenGroupFollowsAccount(config.account.siteType)
+    (config.variant.group.followsAccount
       ? await loadInheritedAccountGroup(config, options)
       : "") ||
     ""
@@ -550,11 +494,7 @@ const renameProvisionedResource = async (
       await config.transport.updateApiToken(
         request,
         current.id,
-        toTokenUpdateRequest(
-          config.account.siteType,
-          current,
-          targetDisplayName,
-        ),
+        toTokenUpdateRequest(config.variant, current, targetDisplayName),
       ),
     mapFailure,
     classifyError: (error) =>
@@ -600,12 +540,12 @@ const mapFailure = mapAccountKeyResourceFailure
 
 /** Confirm the editable command, allowing absent fork fields to retain their defaults. */
 const matchesNewApiTokenWrite = (
-  siteType: AccountSiteType,
+  variant: NewApiKeyVariant,
   token: NewApiToken,
   command: NewApiTokenWriteBody,
   allowQuotaConsumption = false,
 ) => {
-  const actual = toNewApiTokenWrite(token, siteType)
+  const actual = toNewApiTokenWrite(token, variant)
   return (Object.keys(command) as (keyof NewApiTokenWriteBody)[]).every(
     (key) =>
       resourceValuesEqual(actual[key], command[key]) ||
@@ -616,18 +556,17 @@ const matchesNewApiTokenWrite = (
 }
 
 /** Creates the New API-family native account-token resource capability. */
-export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
-  defineAccountKeyResourceCapability({
+export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
+  const variant = resolveNewApiKeyVariant(siteType)
+  return defineAccountKeyResourceCapability({
     siteType,
     inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-    defaultCreation:
-      siteType === SITE_TYPES.MODELFLARE
-        ? "select-requirement"
-        : "editor-defaults",
+    defaultCreation: variant.defaultCreation,
     openConfig: async (input) => ({
       account: input.account,
       request: input.request,
-      transport: resolveNewApiFamilyTokenTransport(siteType),
+      transport: variant.transport,
+      variant,
     }),
     listScopes: async (config): Promise<readonly AccountKeyScope[]> => [
       {
@@ -667,15 +606,9 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
     toListFacts: toFacts,
     toDetailFacts: toFacts,
     createEditor: async (config, _scope, _options, _inventory, intent) =>
-      createNewApiKeyEditor(
-        siteType,
-        config.request,
-        config.transport,
-        undefined,
-        intent,
-      ),
+      createNewApiKeyEditor(config.variant, config.request, undefined, intent),
     editEditor: (config, _scope, detail) =>
-      createNewApiKeyEditor(siteType, config.request, config.transport, detail),
+      createNewApiKeyEditor(config.variant, config.request, detail),
     create: async (config, _scope, command: NewApiKeyEditCommand, options) => {
       const before = await collectValidatedInventoryTokens(config, options)
       const beforeIds = new Set(before.map((token) => token.id))
@@ -707,7 +640,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
             .map((token) => readEditableToken(config, token, options)),
         )
         const created = candidates.filter((token) =>
-          matchesNewApiTokenWrite(siteType, token, command.values),
+          matchesNewApiTokenWrite(variant, token, command.values),
         )
         const [createdToken] = created
         if (created.length === 1 && createdToken)
@@ -733,7 +666,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
       command: NewApiKeyEditCommand,
       options,
     ) => {
-      const latest = toNewApiTokenWrite(detail, config.account.siteType)
+      const latest = toNewApiTokenWrite(detail, config.variant)
       const values = mergeResourceEdits(
         command.baseline,
         command.values,
@@ -785,7 +718,7 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
           values.remain_quota === latest.remain_quota
         return updated &&
           matchesNewApiTokenWrite(
-            siteType,
+            variant,
             updated,
             values,
             allowQuotaConsumption,
@@ -832,3 +765,4 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
     },
     mapFailure,
   })
+}

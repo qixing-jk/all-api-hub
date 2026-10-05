@@ -38,8 +38,8 @@ vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
 
-vi.mock("~/services/apiAdapters/newApi/tokenTransport", () => ({
-  resolveNewApiFamilyTokenTransport: () => doneHubTokenTransport,
+vi.mock("~/services/apiAdapters/newApi/keyVariant", () => ({
+  resolveNewApiKeyVariant: () => ({ transport: doneHubTokenTransport }),
 }))
 
 describe("DoneHub managed-site channel capability", () => {

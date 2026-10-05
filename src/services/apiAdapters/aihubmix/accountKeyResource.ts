@@ -1,9 +1,14 @@
+import { QUOTA_PER_USD } from "~/constants/money"
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
 } from "~/services/accounts/createdRuntimeSecret"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import {
+  keyExpiryDisplayFact,
+  keyLastUsedDisplayFacts,
+} from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
@@ -106,6 +111,23 @@ const toFacts = (
       createdAt: normalizeToMs(key.created_time) ?? undefined,
       notes: key.note,
     },
+    displayFacts: [
+      {
+        fieldId: "remain_quota",
+        kind: "money",
+        role: "remaining",
+        amountUsd: values.remain_quota / QUOTA_PER_USD,
+        unlimited: values.unlimited_quota,
+      },
+      {
+        fieldId: "used_quota",
+        kind: "money",
+        role: "used",
+        amountUsd: (Number(key.used_quota) || 0) / QUOTA_PER_USD,
+      },
+      keyExpiryDisplayFact("expired_time", values.expired_time),
+      ...keyLastUsedDisplayFacts(key.accessed_time),
+    ],
     fields: [
       {
         fieldId: "unlimited_quota",

@@ -7,7 +7,7 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import type { AccountKeyResourceEditor } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { AuthTypeEnum } from "~/types"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import {
@@ -42,11 +42,10 @@ function setup() {
     isDefault: true,
   }
   const submit = vi.fn().mockResolvedValue(creation)
-  const definition = createNewApiKeyEditor(
-    "new-api",
-    { baseUrl: account.baseUrl, auth: { authType: AuthTypeEnum.AccessToken } },
-    resolveNewApiFamilyTokenTransport("new-api"),
-  )
+  const definition = createNewApiKeyEditor(resolveNewApiKeyVariant("new-api"), {
+    baseUrl: account.baseUrl,
+    auth: { authType: AuthTypeEnum.AccessToken },
+  })
   const initialValues = { ...definition.initialValues, name: "Native default" }
   const openCreateEditor = vi.fn().mockResolvedValue({
     fields: definition.fields,

@@ -209,6 +209,88 @@ describe("newApiAccountCompletion", () => {
   })
 
   it.each([
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.MODELFLARE,
+    SITE_TYPES.APIYI,
+    SITE_TYPES.LAOZHANG,
+    SITE_TYPES.RIX_API,
+  ])(
+    "does not exchange New API dashboard auth for the %s variant",
+    async (siteType) => {
+      mockFetchUserInfo.mockResolvedValueOnce({
+        username: "owner",
+        access_token: "",
+      })
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+      const result = await createNewApiAccountCompletion(siteType).complete(
+        {
+          url: "https://panel.example.invalid",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "42",
+            siteType,
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "dashboard-jwt",
+              expiresAt: 4_102_444_800,
+              sessionId: "session-example",
+              origin: "https://panel.example.invalid",
+            },
+          },
+          context: {},
+        },
+        helpers,
+      )
+      expect(result.authType).toBe(AuthTypeEnum.Cookie)
+      expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+      expect(mockFetchUserInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+        }),
+      )
+    },
+  )
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUPER_API])(
+    "interprets scoped-token verification only for its %s issuer",
+    async (siteType) => {
+      mockGetOrCreateAccessToken.mockRejectedValueOnce(
+        new ApiError(
+          "reflected-secret",
+          403,
+          "/api/user/access_tokens",
+          API_ERROR_CODES.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        ),
+      )
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+      await expect(
+        createNewApiAccountCompletion(siteType).complete(
+          {
+            url: "https://scoped.example.invalid",
+            requestedAuthType: AuthTypeEnum.AccessToken,
+            detected: { userId: "42", siteType },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason:
+          siteType === SITE_TYPES.NEW_API
+            ? AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
+            : AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      })
+      const cause = createCompletionError.mock.calls.at(-1)?.[1] as Error
+      expect(cause.message).not.toContain("reflected-secret")
+      expect(captureRecoveryData).toHaveBeenCalledWith({
+        exchangeRate: DEFAULT_USD_TO_CNY_RATE,
+      })
+      expect(captureRecoveryData).not.toHaveBeenCalledWith(
+        expect.objectContaining({ accessToken: expect.anything() }),
+      )
+    },
+  )
+
+  it.each([
     [
       "expired",
       {
@@ -618,6 +700,106 @@ describe("newApiAccountCompletion", () => {
       expect.any(Error),
     )
   })
+
+  it.each([SITE_TYPES.APIYI, SITE_TYPES.LAOZHANG])(
+    "keeps %s token issuance verification separate from a missing generic token",
+    async (siteType) => {
+      mockGetOrCreateAccessToken.mockResolvedValueOnce({
+        username: "owner",
+        access_token: "",
+      })
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+      await expect(
+        createNewApiAccountCompletion(siteType).complete(
+          {
+            url: "https://read-only-token.example.invalid",
+            requestedAuthType: AuthTypeEnum.AccessToken,
+            detected: { userId: "9", siteType },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+      })
+    },
+  )
+
+  it.each([
+    {
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      endpoint: "/api/user/token",
+      upstreamCode: "SECURITY_PROOF_REQUIRED",
+      expected: AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      endpoint: "/api/user/self",
+      upstreamCode: "SECURITY_PROOF_REQUIRED",
+      expected: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    },
+    {
+      siteType: SITE_TYPES.SUPER_API,
+      authType: AuthTypeEnum.AccessToken,
+      endpoint: "/api/user/token",
+      upstreamCode: "SECURITY_PROOF_REQUIRED",
+      expected: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      endpoint: "/api/user/token",
+      upstreamCode: undefined,
+      expected: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    },
+    {
+      siteType: SITE_TYPES.RIX_API,
+      authType: AuthTypeEnum.Cookie,
+      endpoint: "/api/user/self",
+      upstreamCode: undefined,
+      expected: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    },
+  ])(
+    "scopes credential recovery to $siteType $authType $endpoint $upstreamCode",
+    async ({ siteType, authType, endpoint, upstreamCode, expected }) => {
+      const failure = new ApiError(
+        "reflected-private-credential",
+        403,
+        endpoint,
+        API_ERROR_CODES.HTTP_OTHER,
+        upstreamCode,
+      )
+      failure.originalCode = API_ERROR_CODES.HTTP_403
+      if (authType === AuthTypeEnum.Cookie)
+        mockFetchUserInfo.mockRejectedValueOnce(failure)
+      else mockGetOrCreateAccessToken.mockRejectedValueOnce(failure)
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Portal" })
+      await expect(
+        createNewApiAccountCompletion(siteType).complete(
+          {
+            url: "https://failure.example.invalid",
+            requestedAuthType: authType,
+            detected: { userId: "9", siteType },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason: expected,
+        cause: {
+          statusCode: 403,
+          endpoint,
+          code: API_ERROR_CODES.HTTP_OTHER,
+          upstreamCode,
+          originalCode: API_ERROR_CODES.HTTP_403,
+        },
+      })
+      const cause = createCompletionError.mock.calls.at(-1)?.[1] as Error
+      expect(cause.message).not.toContain("reflected-private-credential")
+    },
+  )
 
   it.each([
     [
