@@ -117,6 +117,16 @@ const accounts = await sw.evaluate(() => {
 })
 ```
 
+## Account onboarding validation
+
+For account integrations, use the authentication and guidance contract in [account sites](../add-site-integration/references/account-sites.md#complete-automatic-onboarding). Drive a fresh add-account form with its normal authentication default through automatic detection, any credential guidance, verification, save, and refresh. Manually preselecting another method or pre-seeding a saved account only validates that alternate path; it does not establish that ordinary onboarding works.
+
+When credentials require user interaction, assert that detection preserves the discovered account context, offers the official acquisition page and a clear return/paste action, and reaches an actionable state. Exercise the persistent UI handoff when starting from a popup. Record the authentication mode and starting state in the reusable runner's evidence. If the credential is unavailable, validate the guide independently and report save/refresh as unverified; do not count a successful Cookie fallback as proof of the preferred token path.
+
+## Native resource editor readiness
+
+For native resource editors, a visible modal may still contain only the opening/loading shell while fresh provider data is fetched. Wait for an always-present field from the accepted editor before reading values or asserting secret retention, with a bounded timeout suitable for live provider requests. Modal visibility alone and the default short DOM assertion timeout do not establish that the editor has loaded; avoid replacing this check with a fixed sleep. Once the editor is ready, a missing conditional control may indicate an incomplete detail projection or incorrect visibility state; compare the saved configuration and controlling value before increasing timeouts or forcing the control visible.
+
 ## Developer image previews
 
 For site adaptation or a requested visual handoff, follow [visual previews](../add-site-integration/references/visual-previews.md). Persist screenshots at meaningful asserted states in the site-specific runner, inspect them, and display representative images directly with brief captions. Local developer evidence is raw and unmasked by default, lives outside Git, and uses the shared [evidence storage rules](../add-site-integration/references/evidence-and-validation.md#retain-evidence-while-discovering-it). Keep automatic CI/real-site capture settings unchanged; report missing live access or image-rendering limitations explicitly.
