@@ -18,6 +18,17 @@ for (const mode of ["unavailable", "rejected", "native"] as const) {
     page,
   }) => {
     const worker = await getServiceWorker(context)
+    if (mode === "native") {
+      // chrome.sidePanel.open shipped in Chrome 116; the 114 support floor only
+      // exposes the namespace without open, so the native path cannot run there.
+      const hasNativeSidePanelOpen = await worker.evaluate(
+        () => typeof (globalThis as any).chrome?.sidePanel?.open === "function",
+      )
+      test.skip(
+        !hasNativeSidePanelOpen,
+        "chrome.sidePanel.open is unavailable on this runtime",
+      )
+    }
     await stubLlmMetadataIndex(context)
     await forceExtensionLanguage(page)
     await seedUserPreferences(worker, {
