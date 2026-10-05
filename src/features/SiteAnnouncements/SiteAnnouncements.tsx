@@ -431,31 +431,48 @@ export default function SiteAnnouncementsPage({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     try {
-      const response = await sendSiteAnnouncementsMessage(
-        SiteAnnouncementsMessageTypes.MarkAllRead,
-        {
-          siteKey: siteKey === "all" ? undefined : siteKey,
-        },
+      const keys = siteKey === "all" ? [undefined] : selectedSourceKeys
+      const results = await Promise.allSettled(
+        keys.map((key) =>
+          sendSiteAnnouncementsMessage(
+            SiteAnnouncementsMessageTypes.MarkAllRead,
+            { siteKey: key },
+          ),
+        ),
       )
-      if (response?.success) {
-        if (typeof response.data === "number") {
+      const failure = results.find(
+        (result) => result.status === "rejected" || !result.value?.success,
+      )
+      if (!failure) {
+        const counts = results.flatMap((result) =>
+          result.status === "fulfilled" &&
+          typeof result.value?.data === "number"
+            ? [result.value.data]
+            : [],
+        )
+        if (counts.length === results.length) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: { itemCount: response.data },
+            insights: {
+              itemCount: counts.reduce((total, count) => total + count, 0),
+            },
           })
         } else {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
-        await loadData()
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         showResultToast({
           success: false,
-          message: getRuntimeMessageToastMessage(response),
+          message:
+            failure.status === "rejected"
+              ? getErrorMessage(failure.reason)
+              : getRuntimeMessageToastMessage(failure.value),
           errorFallback: t("messages.markAllReadFailed"),
         })
       }
+      await loadData()
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

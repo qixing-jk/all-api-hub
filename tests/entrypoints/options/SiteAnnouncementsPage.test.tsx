@@ -1321,6 +1321,104 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
+  it.each(["success", "rejected", "throws"])(
+    "marks every grouped source and reloads after a %s result",
+    async (outcome) => {
+      const user = userEvent.setup()
+      const accountMessage = {
+        ...records[0]!,
+        id: "account-message",
+        siteKey: "account-source",
+        accountId: "another-account",
+        sourceScope: "account" as const,
+        fingerprint: "account-fingerprint",
+        content: "Account message",
+      }
+      let currentRecords = [
+        records[0]!,
+        accountMessage,
+        { ...records[1]!, read: false },
+      ]
+      sendSiteAnnouncementsMessageMock.mockImplementation(
+        async (type: string, data?: { siteKey?: string }) => {
+          if (type === SiteAnnouncementsMessageTypes.ListRecords)
+            return { success: true, data: currentRecords }
+          if (type === SiteAnnouncementsMessageTypes.GetStatus)
+            return { success: true, data: status }
+          if (type === SiteAnnouncementsMessageTypes.MarkAllRead) {
+            if (data?.siteKey === "site-1" && outcome !== "success") {
+              if (outcome === "throws") throw new Error("source rejected")
+              return { success: false, error: "source rejected" }
+            }
+            currentRecords = currentRecords.map((record) =>
+              record.siteKey === data?.siteKey
+                ? { ...record, read: true }
+                : record,
+            )
+            return { success: true, data: 1 }
+          }
+          return { success: true }
+        },
+      )
+      render(<SiteAnnouncementsPage />)
+      await screen.findByRole("heading", { name: "Account message" })
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "siteAnnouncements:filters.site",
+        }),
+      )
+      await user.click(screen.getByRole("option", { name: "Alpha API" }))
+      await user.click(
+        screen.getByRole("button", {
+          name: "siteAnnouncements:actions.markAllRead",
+        }),
+      )
+      await waitFor(() => {
+        expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledWith(
+          SiteAnnouncementsMessageTypes.MarkAllRead,
+          { siteKey: "account-source" },
+        )
+        expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+          outcome === "success"
+            ? PRODUCT_ANALYTICS_RESULTS.Success
+            : PRODUCT_ANALYTICS_RESULTS.Failure,
+          outcome === "success"
+            ? { insights: { itemCount: 2 } }
+            : { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        )
+      })
+      const requests = sendSiteAnnouncementsMessageMock.mock.calls.filter(
+        ([type]) => type === SiteAnnouncementsMessageTypes.MarkAllRead,
+      )
+      expect(requests.map(([, data]) => data)).toEqual([
+        { siteKey: "site-1" },
+        { siteKey: "account-source" },
+      ])
+      await waitFor(() => {
+        expect(
+          screen.queryAllByText("siteAnnouncements:badges.unread"),
+        ).toHaveLength(outcome === "success" ? 0 : 1)
+        expect(
+          sendSiteAnnouncementsMessageMock.mock.calls.filter(
+            ([type]) => type === SiteAnnouncementsMessageTypes.ListRecords,
+          ),
+        ).toHaveLength(2)
+      })
+      expect(
+        currentRecords.find((record) => record.id === "account-message")?.read,
+      ).toBe(true)
+      expect(
+        currentRecords.find((record) => record.id === "announcement-2")?.read,
+      ).toBe(false)
+      if (outcome !== "success")
+        expect(showResultToast).toHaveBeenCalledWith({
+          success: false,
+          message: "source rejected",
+          errorFallback: "siteAnnouncements:messages.markAllReadFailed",
+        })
+    },
+  )
+
   it("completes mark-all-read analytics as failure when the runtime reports failure", async () => {
     const user = userEvent.setup()
 
