@@ -30,6 +30,23 @@ const editor = () =>
   createNewApiKeyEditor(SITE_TYPES.LAOZHANG, request, transport)
 
 describe("LaoZhang native key settings", () => {
+  it("preserves common-field validation failures alongside native-field failures", () => {
+    const definition = editor()
+    expect(
+      definition.validate({
+        ...definition.initialValues,
+        name: " ",
+        [laoZhangFields.BillingType]: "invalid",
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "name", code: "required" },
+        { fieldId: laoZhangFields.BillingType, code: "unsupported_option" },
+      ]),
+    })
+  })
+
   it.each([true, false])("round-trips explicit retry billing %s", (enabled) => {
     const definition = createNewApiKeyEditor(
       SITE_TYPES.LAOZHANG,
