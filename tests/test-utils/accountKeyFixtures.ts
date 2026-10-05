@@ -14,13 +14,17 @@ import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/tok
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
+import { buildNewApiToken } from "./newApiToken"
+
 type Account = Parameters<typeof buildAccountKeyResourceRuntimeKey>[0]
 
 /** A New API wire fixture projected into the native account-resource identity. */
 export function buildNewApiKeyFacts<T extends NewApiToken>(
   account: Account,
-  token: T,
+  tokenInput: T,
 ): AccountKeyResourceFacts {
+  // Export and action tests can supply only the token fields they exercise.
+  const token = buildNewApiToken(tokenInput)
   return {
     ref: {
       accountId: account.id,
