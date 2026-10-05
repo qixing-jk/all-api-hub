@@ -402,6 +402,8 @@ describe("CopyKeyDialog inventory", () => {
       }),
     ).toBeVisible()
     expect(screen.getByText("keyManagement:keyDetails.usedQuota")).toBeVisible()
+    expect(screen.getByText("$4")).toBeVisible()
+    expect(screen.getByText("$0")).toBeVisible()
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
     ).toBeVisible()

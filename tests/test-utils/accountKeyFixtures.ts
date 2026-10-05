@@ -1,4 +1,4 @@
-import { QUOTA_PER_USD } from "~/constants"
+import { QUOTA_PER_USD } from "~/constants/money"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import {
   buildAccountKeyResourceRuntimeKey,
