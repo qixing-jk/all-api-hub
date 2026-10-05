@@ -2,6 +2,8 @@
 
 Use when adding a check-in method, including to an already-supported site. Confirm existing site identity/authentication and reuse it; check-in does not require a new site type or unrelated account/managed capability changes.
 
+Use the [completeness checklist and handoff table](capability-assessment.md) to assess candidate/source eligibility, read-only discovery, status readback, execution, duplicate/uncertain results, day boundaries, rewards and UI feedback separately. Give each part an adaptation reason or an evidence-backed exclusion; distinguish deployment disablement from upstream absence and a registered candidate from a ready method.
+
 ## Establish discovery, status and execution separately
 
 Read the check-in section of `docs/agents/site-integrations.md` and the closest provider under `src/services/checkin/autoCheckin/providers/`. Inspect `registry.ts`, discovery and feedback consumers before adding a method.

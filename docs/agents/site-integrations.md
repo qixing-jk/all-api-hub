@@ -8,6 +8,8 @@ This repo models site support on three independent axes: account scope, managed-
 
 Managed-site capabilities live under `src/services/apiAdapters/managedSites/`; provider-native resources live under `src/services/apiAdapters/managedResources/`. `src/constants/siteType.ts` is a compatibility facade over the definition registry, not a separately maintained site inventory.
 
+Use the skill's [adaptation completeness checklist](../../.agents/skills/add-site-integration/references/capability-assessment.md) during discovery, implementation and handoff. Investigate every applicable feature, explain how and why it is adapted, and record concrete reasons for omitted or partial actions. Do not infer deployment support from a family-default capability object or upstream absence from missing plugin code.
+
 When working on a site type:
 
 1. Confirm registration and scope in `src/services/accountSiteDefinitions/identifiers.ts`, `definitions.ts`, and `registry.ts`.

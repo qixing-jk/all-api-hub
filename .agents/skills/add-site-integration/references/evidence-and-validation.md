@@ -2,6 +2,8 @@
 
 Use this reference during deployment investigation and live-test planning. Keep generic workflow here; verified provider facts belong in `docs/agents/site-integrations.md` and the owning adapter's source comments.
 
+Link evidence and validation to the [completeness checklist and handoff table](capability-assessment.md). For each applicable validation layer, state why it was selected or skipped, the operations covered, actual result and remaining limits; retain exclusion evidence as well as successful samples. Refresh the final table after implementation and cleanup.
+
 ## Retain evidence while discovering it
 
 Reuse `.scratch/<feature>/spec.md` and existing artifacts first. Keep task-local observations in `.scratch/<feature>/evidence/`, with an index linking the evidence, conclusions, remaining questions, and runnable commands. These are raw developer-only artifacts and must stay out of Git: use a location outside the checkout or a task-specific local exclusion in the file resolved by `git rev-parse --git-path info/exclude`, and verify exclusion with `git check-ignore` before capturing. Preserve unrelated scratch material. Promote only deliberately prepared fixtures, maintained scripts, and decisive contract documentation that belong to the integration.
