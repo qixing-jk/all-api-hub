@@ -9,6 +9,7 @@ import { expect } from "@playwright/test"
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { LAOZHANG_HOSTNAMES } from "../src/services/accountSiteDefinitions/identifiers.ts"
+import { LAOZHANG_KEY_FIELD_IDS as laoZhangFields } from "../src/services/apiAdapters/newApi/laozhangKeyResourceFields.ts"
 import { connectDevExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
@@ -20,12 +21,16 @@ import { loadLocalEnv } from "./utils/local-env.mjs"
 // Use existing browser:sync tooling to seed the dev profile when necessary.
 // Default is read-only on the provider; --mutate exercises disposable key CRUD.
 // --guide-only verifies automatic System token guidance and explicit Cookie fallback.
+// --native-editor-only with --mutate skips invite/model UI checks for focused key diagnostics.
 // LAOZHANG_ACCESS_TOKEN_FILE completes the guided System token flow; keep that file
 // locally excluded. Requests then omit cookies to prove independent token access.
 await loadLocalEnv()
 applyIsolateFlag(process.argv)
 const mutate = process.argv.includes("--mutate")
 const guideOnly = process.argv.includes("--guide-only")
+const nativeEditorOnly = process.argv.includes("--native-editor-only")
+if (nativeEditorOnly && !mutate)
+  throw new Error("--native-editor-only requires --mutate")
 if (guideOnly && mutate)
   throw new Error("--guide-only cannot be combined with --mutate")
 const accessToken = process.env.LAOZHANG_ACCESS_TOKEN_FILE
@@ -98,9 +103,33 @@ const evidence = {
   mutate,
   authMode,
   guideOnly,
+  nativeEditorOnly,
   checks: [],
   cleanup: {},
+  networkTimings: [],
 }
+const pendingRequests = new Map()
+dev.context.on("request", (request) => {
+  const url = new URL(request.url())
+  if (url.origin === siteUrl && url.pathname.startsWith("/api/"))
+    pendingRequests.set(request, {
+      method: request.method(),
+      endpoint: url.pathname,
+      startedAt: Date.now(),
+    })
+})
+dev.context.on("response", (response) => {
+  const request = response.request()
+  const pending = pendingRequests.get(request)
+  if (!pending) return
+  pendingRequests.delete(request)
+  evidence.networkTimings.push({
+    method: pending.method,
+    endpoint: pending.endpoint,
+    status: response.status(),
+    elapsedMs: Date.now() - pending.startedAt,
+  })
+})
 let accountId
 const ownedKeyIds = new Set()
 const ownedNames = new Set([keyName, renamedKey])
@@ -352,25 +381,27 @@ try {
       `detected/saved/refreshed matching ${authMode} account and USD quota`,
     )
 
-    const code = await request("/api/user/aff/")
-    assert.equal(typeof code, "string")
-    await card.getByTestId(accounts.rowMoreActionsButton).click()
-    await ui.getByRole("menuitem", { name: "Share", exact: true }).hover()
-    await ui.getByTestId(accounts.rowCopyInviteLinkMenuItem).click()
-    await expect(
-      ui.getByText("Invite link copied", { exact: false }),
-    ).toBeVisible({ timeout: 15000 })
-    await ui.screenshot({ path: path.join(evidenceDir, "02-invite.png") })
-    evidence.checks.push("native invitation link copy feedback")
+    if (!nativeEditorOnly) {
+      const code = await request("/api/user/aff/")
+      assert.equal(typeof code, "string")
+      await card.getByTestId(accounts.rowMoreActionsButton).click()
+      await ui.getByRole("menuitem", { name: "Share", exact: true }).hover()
+      await ui.getByTestId(accounts.rowCopyInviteLinkMenuItem).click()
+      await expect(
+        ui.getByText("Invite link copied", { exact: false }),
+      ).toBeVisible({ timeout: 15000 })
+      await ui.screenshot({ path: path.join(evidenceDir, "02-invite.png") })
+      evidence.checks.push("native invitation link copy feedback")
 
-    await testModelCatalogFlow({
-      page: ui,
-      extensionId: dev.extensionId,
-      accountName,
-      accountId,
-    })
-    await ui.screenshot({ path: path.join(evidenceDir, "03-models.png") })
-    evidence.checks.push("live model rows and prices")
+      await testModelCatalogFlow({
+        page: ui,
+        extensionId: dev.extensionId,
+        accountName,
+        accountId,
+      })
+      await ui.screenshot({ path: path.join(evidenceDir, "03-models.png") })
+      evidence.checks.push("live model rows and prices")
+    }
 
     await ui.goto(
       `chrome-extension://${dev.extensionId}/options.html#keys?accountId=${accountId}`,
@@ -430,20 +461,20 @@ try {
         "unlimited_quota",
         "expired_time",
         "group",
-        "billing_type",
+        laoZhangFields.BillingType,
         "models",
-        "ip_whitelist",
-        "subnet",
-        "remark",
-        "fallback_groups",
-        "advertisement",
-        "ad_position",
-        "rate_limit_duration",
-        "rate_limit_num",
-        "rate_limit_exceeded_message",
-        "retry_keep_billing_type_enabled",
-        "activate_on_first_use",
-        "valid_duration",
+        laoZhangFields.IpWhitelist,
+        laoZhangFields.Subnet,
+        laoZhangFields.Remark,
+        laoZhangFields.FallbackGroups,
+        laoZhangFields.Advertisement,
+        laoZhangFields.AdPosition,
+        laoZhangFields.RateLimitDuration,
+        laoZhangFields.RateLimitNum,
+        laoZhangFields.RateLimitMessage,
+        laoZhangFields.RetryBilling,
+        laoZhangFields.ActivateOnFirstUse,
+        laoZhangFields.ValidDuration,
       ]
       const models = await request("/api/user/available_model/")
       const groups = await request("/api/groupPro/selectable?p=0&pageSize=1000")
@@ -484,6 +515,162 @@ try {
       await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
         timeout: 30000,
       })
+      await ui
+        .getByTestId(keys.nativeKeyRow)
+        .filter({ hasText: renamedKey })
+        .getByRole("button", { name: "Edit Key", exact: true })
+        .click()
+      await ui.locator(`#resource-editor-${laoZhangFields.BillingType}`).click()
+      await ui
+        .getByRole("option", { name: "Pay per request", exact: true })
+        .click()
+      const fallback = groups.find(
+        (group) =>
+          group.name !== marker.fallback_groups &&
+          group.name !== marker.group &&
+          group.name !== "auto",
+      )?.name
+      assert.ok(
+        fallback,
+        "A distinct fallback group is required for the native field edit",
+      )
+      const fallbackControl = ui.getByRole("combobox", {
+        name: "Fallback groups (in order)",
+        exact: true,
+      })
+      await fallbackControl.click()
+      if (marker.fallback_groups)
+        await ui
+          .getByRole("option", { name: marker.fallback_groups, exact: true })
+          .click()
+      await ui.getByRole("option", { name: fallback, exact: true }).click()
+      await ui.keyboard.press("Escape")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.Remark}`)
+        .fill("aah-native-edited-note")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.ActivateOnFirstUse}`)
+        .click()
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.ValidDuration}`)
+        .fill("7")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RateLimitEnabled}`)
+        .click()
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RateLimitDuration}`)
+        .fill("60")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RateLimitNum}`)
+        .fill("12")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RateLimitMessage}`)
+        .fill("aah-native-limit")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RetryBilling}`)
+        .click()
+      await ui
+        .getByRole("option", { name: "Off", exact: true })
+        .waitFor({ state: "visible" })
+      // Radix defers Home/End focus with setTimeout. Focus the intended option
+      // before Enter so a queued focus change cannot select the previous item.
+      await ui.getByRole("option", { name: "Off", exact: true }).focus()
+      await ui.keyboard.press("Enter")
+      await expect(
+        ui.locator(`#resource-editor-${laoZhangFields.RetryBilling}`),
+      ).toHaveText("Off")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.DiscordProxyUrl}`)
+        .fill("https://proxy.example.invalid")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.TranslationEnabled}`)
+        .click()
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.TranslationBaseUrl}`)
+        .fill("https://translate.example.invalid/v1")
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.TranslationModel}`)
+        .fill("aah-disposable-model")
+      // A disposable marker, never an actual third-party credential; no inference calls.
+      const translationMarker = "aah-disposable-translation-marker"
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.TranslationApiKey}`)
+        .fill(translationMarker)
+      await ui.screenshot({
+        path: path.join(evidenceDir, "05-native-editor.png"),
+        fullPage: true,
+      })
+      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
+        timeout: 30000,
+      })
+      const nativeUpdated = await request(`/api/token/${created.id}`)
+      const expectedNative = {
+        billing_type: 2,
+        fallback_groups: fallback,
+        remark: "aah-native-edited-note",
+        activate_on_first_use: true,
+        valid_duration: 7,
+        rate_limit_duration: 60,
+        rate_limit_num: 12,
+        rate_limit_exceeded_message: "aah-native-limit",
+        retry_keep_billing_type_enabled: false,
+        mj_discord_proxy_url: "https://proxy.example.invalid",
+        mj_translate_enabled: true,
+        mj_translate_base_url: "https://translate.example.invalid/v1",
+        mj_translate_model: "aah-disposable-model",
+        mj_translate_api_key: translationMarker,
+      }
+      for (const [field, value] of Object.entries(expectedNative))
+        assert.deepEqual(
+          nativeUpdated[field],
+          value,
+          `Native edit did not save ${field}`,
+        )
+      for (const field of [
+        "models",
+        "ip_whitelist",
+        "advertisement",
+        "ad_position",
+        "subnet",
+      ])
+        assert.deepEqual(
+          nativeUpdated[field],
+          updated[field],
+          `Native edit reset ${field}`,
+        )
+      // Reopen from fresh server state: retain the saved translation credential and
+      // verify the native switch's three-column reset semantics.
+      await ui
+        .getByTestId(keys.nativeKeyRow)
+        .filter({ hasText: renamedKey })
+        .getByRole("button", { name: "Edit Key", exact: true })
+        .click()
+      await expect(ui.locator("#resource-editor-name")).toHaveValue(
+        renamedKey,
+        { timeout: 30000 },
+      )
+      await expect(
+        ui.locator(`#resource-editor-${laoZhangFields.TranslationEnabled}`),
+      ).toHaveAttribute("aria-checked", "true")
+      await expect(
+        ui.locator(`#resource-editor-${laoZhangFields.TranslationApiKey}`),
+      ).toHaveValue("", { timeout: 30000 })
+      await ui
+        .locator(`#resource-editor-${laoZhangFields.RateLimitEnabled}`)
+        .click()
+      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
+        timeout: 60000,
+      })
+      const disabledLimits = await request(`/api/token/${created.id}`)
+      assert.equal(disabledLimits.rate_limit_duration, 0)
+      assert.equal(disabledLimits.rate_limit_num, 0)
+      assert.equal(disabledLimits.rate_limit_exceeded_message, "")
+      assert.equal(disabledLimits.mj_translate_api_key, translationMarker)
+      evidence.checks.push(
+        "native billing/fallback/remark/activation/limiter/retry/MJ fields edit and readback; translation secret preserved after reopening",
+      )
       await ui.screenshot({ path: path.join(evidenceDir, "05-edited-key.png") })
       const editedRow = ui
         .getByTestId(keys.nativeKeyRow)

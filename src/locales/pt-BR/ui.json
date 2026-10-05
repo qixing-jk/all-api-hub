@@ -657,6 +657,7 @@
   },
   "secretList": {
     "add": "Adicionar chave",
+    "clearedState": "A chave salva será removida",
     "collapse": "Recolher API Key {{number}}",
     "configured": "Configurado",
     "enableKey": "Ativar esta chave",

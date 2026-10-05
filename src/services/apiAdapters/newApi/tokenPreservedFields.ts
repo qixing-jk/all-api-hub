@@ -2,6 +2,29 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { readRixApiPreservedTokenFields } from "~/services/apiService/newApiFamily/variants/rixApiTokens"
 
+import { LAOZHANG_KEY_FIELD_IDS as field } from "./laozhangKeyResourceFields"
+
+const LAOZHANG_WRITABLE_FIELDS = new Set<string>([
+  field.BillingType,
+  field.Remark,
+  field.FallbackGroups,
+  field.Subnet,
+  field.IpWhitelist,
+  field.Advertisement,
+  field.AdPosition,
+  field.RateLimitDuration,
+  field.RateLimitNum,
+  field.RateLimitMessage,
+  field.RetryBilling,
+  field.ActivateOnFirstUse,
+  field.ValidDuration,
+  field.DiscordProxyUrl,
+  field.TranslationBaseUrl,
+  field.TranslationModel,
+  field.TranslationEnabled,
+  field.TranslationApiKey,
+])
+
 /** Preserve only the extra writable settings exposed by LaoZhang's inventory. */
 function readLaozhangPreservedTokenFields(
   token: NewApiToken,
@@ -9,27 +32,13 @@ function readLaozhangPreservedTokenFields(
   // https://api2.laozhang.ai/token v31.1.5 PUT replaces omitted settings.
   // Live name-only edit cleared remark/fallback_groups; never forward the
   // masked key, user identity, timestamps or consumption counters.
-  const writableFields = new Set([
-    "billing_type",
-    "remark",
-    "fallback_groups",
-    "subnet",
-    "ip_whitelist",
-    "advertisement",
-    "ad_position",
-    "rate_limit_duration",
-    "rate_limit_num",
-    "rate_limit_exceeded_message",
-    "retry_keep_billing_type_enabled",
-    "activate_on_first_use",
-    "valid_duration",
-    "mj_discord_proxy_url",
-    "mj_translate_base_url",
-    "mj_translate_model",
-    "mj_translate_enabled",
-  ])
   return Object.fromEntries(
-    Object.entries(token).filter(([field]) => writableFields.has(field)),
+    Object.entries(token).filter(
+      ([fieldId, value]) =>
+        LAOZHANG_WRITABLE_FIELDS.has(fieldId) &&
+        (fieldId !== field.TranslationApiKey ||
+          (typeof value === "string" && !value.includes("*"))),
+    ),
   )
 }
 

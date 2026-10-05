@@ -9,6 +9,7 @@ import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
+import { laozhangDeploymentFields } from "./laozhangKeyResourceFieldPolicy"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 import { rixApiDeploymentFields } from "./rixApiKeyResourceFieldPolicy"
 
@@ -312,6 +313,9 @@ const buildNewApiFamilyFields = (
     },
     ips("allow_ips"),
     ...(siteType === SITE_TYPES.RIX_API ? rixApiDeploymentFields(issues) : []),
+    ...(siteType === SITE_TYPES.LAOZHANG
+      ? laozhangDeploymentFields(issues)
+      : []),
   ]
 
   const fields = describedFieldIds

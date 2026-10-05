@@ -16,6 +16,7 @@ import {
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
+import { LAOZHANG_KEY_FIELD_IDS as laoZhangFields } from "~/services/apiAdapters/newApi/laozhangKeyResourceFields"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -42,6 +43,92 @@ const t = ((key: string, options?: { field?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("offers Reset for an unsaved replacement rather than claiming a saved key exists", async () => {
+    const changed = vi.fn()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "translation",
+            type: "secret",
+            secretState: "unavailable",
+            canReplace: true,
+            allowClear: true,
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "translation",
+              section: "basic",
+              order: 0,
+              renderer: "secret",
+              resolveLabel: () => "Translation key",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ translation: { kind: "replace", value: "not-yet-saved" } }}
+        onValueChange={changed}
+      />,
+    )
+    await userEvent.click(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    )
+    expect(changed).toHaveBeenLastCalledWith("translation", {
+      kind: "unchanged",
+    })
+  })
+  it("renders a password replacement without exposing the saved secret", async () => {
+    const changed = vi.fn()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: laoZhangFields.TranslationApiKey,
+            type: "secret",
+            secretState: "masked",
+            canReplace: true,
+            allowClear: true,
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: laoZhangFields.TranslationApiKey,
+              section: "basic",
+              order: 0,
+              renderer: "secret",
+              resolveLabel: () => "MJ translation API key",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ [laoZhangFields.TranslationApiKey]: { kind: "unchanged" } }}
+        onValueChange={changed}
+      />,
+    )
+    const input = screen.getByLabelText("MJ translation API key")
+    expect(input).toHaveAttribute("type", "password")
+    expect(input).toHaveValue("")
+    fireEvent.change(input, { target: { value: "replacement" } })
+    expect(changed).toHaveBeenLastCalledWith(laoZhangFields.TranslationApiKey, {
+      kind: "replace",
+      value: "replacement",
+    })
+    await userEvent.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    expect(changed).toHaveBeenLastCalledWith(laoZhangFields.TranslationApiKey, {
+      kind: "clear",
+    })
+  })
   it("renders controller-owned dynamic option state inline and disables unavailable selectors", () => {
     render(
       <NativeResourceEditorBody

@@ -635,6 +635,7 @@
   },
   "secretList": {
     "add": "新增金鑰",
+    "clearedState": "儲存的金鑰將被清除",
     "collapse": "收合 API 金鑰 {{number}}",
     "configured": "已設定",
     "enableKey": "啟用此金鑰",

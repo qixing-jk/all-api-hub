@@ -643,6 +643,7 @@
   },
   "secretList": {
     "add": "Schlüssel hinzufügen",
+    "clearedState": "Der gespeicherte Schlüssel wird gelöscht",
     "collapse": "API Key {{number}} zuklappen",
     "configured": "Konfiguriert",
     "enableKey": "Diesen Schlüssel aktivieren",
