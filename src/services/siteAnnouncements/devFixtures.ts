@@ -6,9 +6,9 @@ import {
   type RuntimeMessageResponse,
 } from "~/services/runtimeMessaging/result"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
-  type SiteAnnouncementProviderId,
+  type AnnouncementSourceScope,
   type SiteAnnouncementRecordInput,
   type SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
@@ -38,25 +38,25 @@ const FIXTURE_ANNOUNCEMENT_SITES = [
     slug: "alpha",
     siteName: "Dev Fixture Alpha",
     siteType: SITE_TYPES.NEW_API,
-    providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+    sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   },
   {
     slug: "beta",
     siteName: "Dev Fixture Beta",
     siteType: SITE_TYPES.NEW_API,
-    providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+    sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
   },
   {
     slug: "gamma",
     siteName: "Dev Fixture Gamma",
     siteType: SITE_TYPES.SUB2API,
-    providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+    sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
   },
 ] as const satisfies readonly {
   slug: string
   siteName: string
   siteType: AccountSiteType
-  providerId: SiteAnnouncementProviderId
+  sourceScope: AnnouncementSourceScope
 }[]
 
 const FIXTURE_ANNOUNCEMENT_SITE_COUNT = FIXTURE_ANNOUNCEMENT_SITES.length
@@ -86,7 +86,7 @@ function buildFixtureSite(
   slug: string,
   siteName: string,
   siteType: AccountSiteType,
-  providerId: SiteAnnouncementProviderId,
+  sourceScope: AnnouncementSourceScope,
 ): DevFixtureSite {
   const baseUrl = `https://dev-fixture-${slug}.example.invalid`
 
@@ -96,7 +96,7 @@ function buildFixtureSite(
     siteType,
     baseUrl,
     accountId: `dev-fixture-account-${slug}`,
-    providerId,
+    sourceScope,
   }
 }
 
@@ -138,7 +138,7 @@ function buildFixtureRecord(
     siteType: site.siteType,
     baseUrl: site.baseUrl,
     accountId: site.accountId,
-    providerId: site.providerId,
+    sourceScope: site.sourceScope,
     // Every seventh fixture carries no title, so the page has to infer one.
     title: index % 7 === 0 ? "" : `Fixture announcement ${index}`,
     content,
@@ -166,7 +166,7 @@ function buildIssueSites(
       `${kind}-${index + 1}`,
       `Dev Fixture ${failed ? "Failed" : "Unsupported"} ${index + 1}`,
       SITE_TYPES.NEW_API,
-      SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      ANNOUNCEMENT_SOURCE_SCOPES.Site,
     ),
     status,
     lastCheckedAt: now,
@@ -226,7 +226,7 @@ export async function seedDevSiteAnnouncementFixtures(
       site.slug,
       site.siteName,
       site.siteType,
-      site.providerId,
+      site.sourceScope,
     )
 
     for (
@@ -251,7 +251,7 @@ export async function seedDevSiteAnnouncementFixtures(
           site.slug,
           site.siteName,
           site.siteType,
-          site.providerId,
+          site.sourceScope,
         ),
         status: SITE_ANNOUNCEMENT_STATUS.Success,
         lastCheckedAt: now,

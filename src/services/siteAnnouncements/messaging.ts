@@ -5,7 +5,7 @@ import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type {
   SiteAnnouncementCheckResult,
   SiteAnnouncementPreferences,
-  SiteAnnouncementRecord,
+  SiteAnnouncementRecordView,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 
@@ -35,7 +35,7 @@ interface SiteAnnouncementsProtocolMap {
     SiteAnnouncementSiteState[]
   >
   [SiteAnnouncementsMessageTypes.ListRecords](): RuntimeMessageResponse<
-    SiteAnnouncementRecord[]
+    SiteAnnouncementRecordView[]
   >
   [SiteAnnouncementsMessageTypes.CheckNow](
     data?: SiteAnnouncementsCheckNowRequest,

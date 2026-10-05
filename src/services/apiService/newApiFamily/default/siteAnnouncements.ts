@@ -1,14 +1,28 @@
-import {
-  SITE_STRUCTURED_ANNOUNCEMENT_TYPES,
-  type SiteStructuredAnnouncement,
-  type SiteStructuredAnnouncementType,
-} from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("NewApiFamilySiteAnnouncements")
+
+const SITE_STRUCTURED_ANNOUNCEMENT_TYPES = [
+  "default",
+  "ongoing",
+  "success",
+  "warning",
+  "error",
+] as const
+type SiteStructuredAnnouncementType =
+  (typeof SITE_STRUCTURED_ANNOUNCEMENT_TYPES)[number]
+
+/** Native New API payload; projected into product data by the announcement adapter. */
+export type NewApiStructuredAnnouncement = {
+  id?: string | number
+  content: string
+  publishDate?: string
+  type?: SiteStructuredAnnouncementType
+  extra?: string
+}
 
 type NewApiStatusAnnouncementsResponse = {
   announcements_enabled?: boolean
@@ -31,7 +45,7 @@ function isSiteStructuredAnnouncementType(
  */
 function normalizeStructuredAnnouncement(
   value: unknown,
-): SiteStructuredAnnouncement | null {
+): NewApiStructuredAnnouncement | null {
   if (!value || typeof value !== "object") {
     return null
   }
@@ -73,7 +87,7 @@ function normalizeStructuredAnnouncement(
  */
 export async function fetchSiteAnnouncements(
   request: ApiServiceRequest,
-): Promise<SiteStructuredAnnouncement[]> {
+): Promise<NewApiStructuredAnnouncement[]> {
   try {
     const response =
       await newApiFamilyRequests.data<NewApiStatusAnnouncementsResponse>(
@@ -94,7 +108,7 @@ export async function fetchSiteAnnouncements(
 
     return response.announcements
       .map(normalizeStructuredAnnouncement)
-      .filter((item): item is SiteStructuredAnnouncement => Boolean(item))
+      .filter((item): item is NewApiStructuredAnnouncement => Boolean(item))
   } catch (error) {
     logger.warn("获取站点系统公告失败", error)
     return []

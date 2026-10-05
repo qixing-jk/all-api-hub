@@ -6,10 +6,8 @@ import {
   filterSiteAnnouncements,
   formatAnnouncementTimestamp,
   formatDateTime,
-  formatSub2ApiRelativeTimestamp,
   getAnnouncementSourceUrl,
   getMetricToneClasses,
-  isSub2ApiAnnouncement,
 } from "~/features/SiteAnnouncements/utils"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 
@@ -42,7 +40,7 @@ const record: SiteAnnouncementRecord = {
   siteType: "new-api",
   baseUrl: "https://example.com",
   accountId: "account-1",
-  providerId: "common",
+  sourceScope: "site",
   title: "Notice",
   content: "Body",
   fingerprint: "fp-1",
@@ -53,6 +51,43 @@ const record: SiteAnnouncementRecord = {
 }
 
 describe("SiteAnnouncements utils", () => {
+  it("uses publication time independently of site identity and discovery time otherwise", () => {
+    formatRelativeTimeMock.mockReturnValue("2 hours ago")
+    for (const siteType of ["new-api", "laozhang", "sub2api"] as const) {
+      expect(formatAnnouncementTimestamp({ ...record, siteType })).toBe(
+        "2 hours ago",
+      )
+    }
+    formatRelativeTimeMock.mockClear()
+    expect(
+      formatAnnouncementTimestamp({ ...record, createdAt: undefined }),
+    ).toBe(formatDateTime(record.firstSeenAt))
+    expect(formatRelativeTimeMock).not.toHaveBeenCalled()
+  })
+
+  it("groups independent sources into one site filter without hiding account messages", () => {
+    const accountRecord = {
+      ...record,
+      id: "message",
+      siteKey: "account:site",
+      sourceScope: "account" as const,
+    }
+    const options = buildSiteOptions([record, accountRecord], [])
+    expect(options).toHaveLength(1)
+    expect(options[0]).toMatchObject({
+      value: record.siteKey,
+      announcementCount: 2,
+      sourceKeys: [record.siteKey, "account:site"],
+    })
+    expect(
+      filterSiteAnnouncements([record, accountRecord], {
+        siteKey: record.siteKey,
+        siteKeys: options[0]!.sourceKeys,
+        siteType: "all",
+        unreadFilter: "all",
+      }),
+    ).toHaveLength(2)
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -62,7 +97,7 @@ describe("SiteAnnouncements utils", () => {
     expect(formatAnnouncementTimestamp(record)).not.toBe("-")
   })
 
-  it("prefers relative timestamps for Sub2API announcements and falls back to absolute time", () => {
+  it("falls back to absolute publication time when relative formatting is unavailable", () => {
     formatRelativeTimeMock
       .mockReturnValueOnce("2 hours ago")
       .mockReturnValueOnce("")
@@ -71,18 +106,10 @@ describe("SiteAnnouncements utils", () => {
       ...record,
       siteType: "sub2api",
     }
-    expect(formatSub2ApiRelativeTimestamp(sub2Record)).toBe("2 hours ago")
-    expect(formatSub2ApiRelativeTimestamp(sub2Record)).toBe(
-      formatAnnouncementTimestamp(sub2Record),
+    expect(formatAnnouncementTimestamp(sub2Record)).toBe("2 hours ago")
+    expect(formatAnnouncementTimestamp(sub2Record)).toBe(
+      formatDateTime(sub2Record.createdAt),
     )
-  })
-
-  it("detects Sub2API announcements from site type or provider id", () => {
-    expect(isSub2ApiAnnouncement({ ...record, siteType: "sub2api" })).toBe(true)
-    expect(isSub2ApiAnnouncement({ ...record, providerId: "sub2api" })).toBe(
-      true,
-    )
-    expect(isSub2ApiAnnouncement(record)).toBe(false)
   })
 
   it("builds source urls and stable site/type filter options", () => {
@@ -106,7 +133,7 @@ describe("SiteAnnouncements utils", () => {
             siteName: "Beta",
             baseUrl: "https://beta.example.com",
             siteType: "sub2api",
-            providerId: "sub2api",
+            sourceScope: "account",
             fingerprint: "fp-2",
           },
           {
@@ -116,7 +143,7 @@ describe("SiteAnnouncements utils", () => {
             siteName: "",
             baseUrl: "https://beta.example.com",
             siteType: "sub2api",
-            providerId: "sub2api",
+            sourceScope: "account",
             fingerprint: "fp-3",
           },
         ],
@@ -151,7 +178,7 @@ describe("SiteAnnouncements utils", () => {
       id: "record-2",
       siteKey: "site-2",
       siteType: "sub2api",
-      providerId: "sub2api",
+      sourceScope: "account",
       fingerprint: "fp-2",
       read: true,
     }

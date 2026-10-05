@@ -65,7 +65,7 @@ const record: SiteAnnouncementRecord = {
   siteType: "new-api",
   baseUrl: "https://example.com",
   accountId: "account-1",
-  providerId: "common",
+  sourceScope: "site",
   title: "Maintenance",
   content: "Full body",
   fingerprint: "fp-1",
@@ -218,7 +218,7 @@ describe("SiteAnnouncementCard", () => {
         record={{
           ...record,
           siteType: "sub2api",
-          providerId: "sub2api",
+          sourceScope: "account",
           notifiedAt: Date.UTC(2026, 4, 8, 1, 0, 0),
         }}
         expanded={true}

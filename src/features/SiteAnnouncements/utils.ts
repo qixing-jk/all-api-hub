@@ -1,10 +1,8 @@
-import { getAccountSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
-import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
-  type SiteAnnouncementRecord,
-} from "~/types/siteAnnouncements"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
+import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 import { formatRelativeTime } from "~/utils/core/formatters"
 import { joinUrl } from "~/utils/core/url"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import type { AnnouncementMetric, UnreadFilter } from "./types"
 
@@ -12,6 +10,7 @@ export interface SiteAnnouncementSiteOption {
   value: string
   label: string
   announcementCount: number
+  sourceKeys?: string[]
 }
 
 /**
@@ -32,27 +31,16 @@ export function formatDateTime(value?: number) {
  * Formats the primary timestamp shown for a cached announcement.
  */
 export function formatAnnouncementTimestamp(record: SiteAnnouncementRecord) {
-  return formatDateTime(record.createdAt ?? record.firstSeenAt)
-}
-
-/**
- * Formats Sub2API announcements with relative time when possible.
- */
-export function formatSub2ApiRelativeTimestamp(record: SiteAnnouncementRecord) {
-  return (
-    formatRelativeTime(new Date(record.createdAt ?? record.firstSeenAt)) ||
-    formatAnnouncementTimestamp(record)
-  )
-}
-
-/**
- * Checks whether a cached announcement came from the Sub2API provider.
- */
-export function isSub2ApiAnnouncement(record: SiteAnnouncementRecord) {
-  return (
-    record.siteType === SITE_TYPES.SUB2API ||
-    record.providerId === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
-  )
+  if (
+    typeof record.createdAt === "number" &&
+    Number.isFinite(record.createdAt)
+  ) {
+    return (
+      formatRelativeTime(new Date(record.createdAt)) ||
+      formatDateTime(record.createdAt)
+    )
+  }
+  return formatDateTime(record.firstSeenAt)
 }
 
 /**
@@ -87,25 +75,31 @@ export function buildSiteOptions(
     siteKey: string
     siteName?: string
     baseUrl: string
+    siteType?: SiteAnnouncementRecord["siteType"]
   }>,
 ) {
   const map = new Map<string, SiteAnnouncementSiteOption>()
-
-  for (const item of status) {
-    map.set(item.siteKey, {
-      value: item.siteKey,
-      label: item.siteName || item.baseUrl,
-      announcementCount: 0,
-    })
-  }
-
-  for (const item of records) {
-    const existing = map.get(item.siteKey)
-    map.set(item.siteKey, {
-      value: item.siteKey,
-      label: item.siteName || existing?.label || item.baseUrl,
-      announcementCount: (existing?.announcementCount ?? 0) + 1,
-    })
+  const recordTypes = new Map(
+    records.map((record) => [record.siteKey, record.siteType]),
+  )
+  for (const item of [...status, ...records]) {
+    const siteType = item.siteType ?? recordTypes.get(item.siteKey) ?? ""
+    const key = `${siteType}:${normalizeUrlForOriginKey(item.baseUrl)}`
+    const existing = map.get(key)
+    const isRecord = "fingerprint" in item
+    if (existing) {
+      const keys = existing.sourceKeys ?? [existing.value]
+      if (!keys.includes(item.siteKey))
+        existing.sourceKeys = [...keys, item.siteKey]
+      if (isRecord) existing.announcementCount += 1
+      if (isRecord && item.siteName) existing.label = item.siteName
+    } else {
+      map.set(key, {
+        value: item.siteKey,
+        label: item.siteName || item.baseUrl,
+        announcementCount: isRecord ? 1 : 0,
+      })
+    }
   }
 
   return [...map.values()].sort((a, b) => {
@@ -120,8 +114,13 @@ export function buildSiteOptions(
 /**
  * Collects distinct site types for the filter dropdown.
  */
-export function buildSiteTypeOptions(records: SiteAnnouncementRecord[]) {
-  return [...new Set(records.map((record) => record.siteType))].sort()
+export function buildSiteTypeOptions(
+  records: SiteAnnouncementRecord[],
+  status: Array<{ siteType: SiteAnnouncementRecord["siteType"] }> = [],
+) {
+  return [
+    ...new Set([...records, ...status].map((item) => item.siteType)),
+  ].sort()
 }
 
 /**
@@ -131,16 +130,21 @@ export function filterSiteAnnouncements(
   records: SiteAnnouncementRecord[],
   {
     siteKey,
+    siteKeys,
     siteType,
     unreadFilter,
   }: {
     siteKey: string
+    siteKeys?: string[]
     siteType: string
     unreadFilter: UnreadFilter
   },
 ) {
   return records.filter((record) => {
-    if (siteKey !== "all" && record.siteKey !== siteKey) {
+    if (
+      siteKey !== "all" &&
+      !(siteKeys ?? [siteKey]).includes(record.siteKey)
+    ) {
       return false
     }
     if (siteType !== "all" && record.siteType !== siteType) {

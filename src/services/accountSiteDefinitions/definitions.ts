@@ -374,7 +374,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         accessTokenPath: "/account/profile",
         loginPath: "/login",
         checkInPath: null,
-        siteAnnouncementsPath: "/",
+        siteAnnouncementsPath: "/account",
       },
     },
     productProfile: {

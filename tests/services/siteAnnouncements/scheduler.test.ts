@@ -5,7 +5,6 @@ import { Storage } from "@plasmohq/storage"
 import { SITE_TYPES } from "~/constants/siteType"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { getSiteAnnouncementProvider } from "~/services/siteAnnouncements/providers"
 import {
   resolveSiteAnnouncementsCheckNowMessage,
   resolveSiteAnnouncementsGetStatusMessage,
@@ -16,14 +15,15 @@ import {
   setupSiteAnnouncementsMessagingListeners,
   siteAnnouncementScheduler,
 } from "~/services/siteAnnouncements/scheduler"
+import { getAnnouncementSourceHandlers } from "~/services/siteAnnouncements/sourceHandlers"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
-  SiteAnnouncementProviderId,
+  AnnouncementSourceScope,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -39,8 +39,8 @@ const {
   notifySiteAnnouncementsMock,
   onSiteAnnouncementsMessageMock,
   onAlarmMock,
-  providerFetchMock,
-  providerMarkReadMock,
+  handlerFetchMock,
+  handlerMarkReadMock,
   savePreferencesMock,
   siteAnnouncementsMessageHandlers,
 } = vi.hoisted(() => ({
@@ -54,8 +54,8 @@ const {
   notifySiteAnnouncementsMock: vi.fn(),
   onSiteAnnouncementsMessageMock: vi.fn(),
   onAlarmMock: vi.fn(),
-  providerFetchMock: vi.fn(),
-  providerMarkReadMock: vi.fn(),
+  handlerFetchMock: vi.fn(),
+  handlerMarkReadMock: vi.fn(),
   savePreferencesMock: vi.fn(),
   siteAnnouncementsMessageHandlers: new Map<
     string,
@@ -99,20 +99,25 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
   ),
 }))
 
-vi.mock("~/services/siteAnnouncements/providers", () => ({
-  getSiteAnnouncementProvider: vi.fn((siteType: string) => ({
-    id:
+vi.mock("~/services/siteAnnouncements/sourceHandlers", () => {
+  const createHandler = (siteType: string) => ({
+    scope:
       siteType === "sub2api"
-        ? SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
-        : SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        ? ANNOUNCEMENT_SOURCE_SCOPES.Account
+        : ANNOUNCEMENT_SOURCE_SCOPES.Site,
     createSiteKey: ({ accountId, baseUrl }: any) =>
       siteType === "sub2api"
-        ? `sub2api:${accountId}:${baseUrl}`
-        : `notice:${siteType}:${baseUrl}`,
-    fetch: providerFetchMock,
-    markRead: siteType === "sub2api" ? providerMarkReadMock : undefined,
-  })),
-}))
+        ? `account:sub2api:${accountId}:${baseUrl}`
+        : `site:${siteType}:${baseUrl}`,
+    fetch: handlerFetchMock,
+    markRead: siteType === "sub2api" ? handlerMarkReadMock : undefined,
+  })
+  return {
+    getAnnouncementSourceHandlers: vi.fn((siteType: string) => [
+      createHandler(siteType),
+    ]),
+  }
+})
 
 function createAccount(overrides: Partial<any> = {}) {
   return {
@@ -154,7 +159,7 @@ async function seedCheckedSite(params: {
   siteKey: string
   accountId: string
   siteType: SiteAnnouncementSiteState["siteType"]
-  providerId: SiteAnnouncementProviderId
+  sourceScope: AnnouncementSourceScope
   baseUrl: string
   siteName?: string
 }) {
@@ -165,7 +170,7 @@ async function seedCheckedSite(params: {
       siteType: params.siteType,
       baseUrl: params.baseUrl,
       accountId: params.accountId,
-      providerId: params.providerId,
+      sourceScope: params.sourceScope,
       status: SITE_ANNOUNCEMENT_STATUS.Success,
       lastCheckedAt: 1,
       lastSuccessAt: 1,
@@ -276,12 +281,12 @@ describe("siteAnnouncementScheduler", () => {
       })
       .mockResolvedValueOnce(undefined)
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       siteName: "Example",
       siteType: "new-api",
       baseUrl: "https://example.com",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt,
     })
@@ -300,7 +305,7 @@ describe("siteAnnouncementScheduler", () => {
       success: true,
       data: [
         expect.objectContaining({
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
         }),
       ],
     })
@@ -320,12 +325,12 @@ describe("siteAnnouncementScheduler", () => {
       })
       .mockResolvedValueOnce(undefined)
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://removed.example.com",
+      siteKey: "site:new-api:https://removed.example.com",
       siteName: "Removed",
       siteType: "new-api",
       baseUrl: "https://removed.example.com",
       accountId: "removed-account",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt: now - 10 * 60 * 1000,
     })
@@ -366,12 +371,12 @@ describe("siteAnnouncementScheduler", () => {
         scheduledTime: now + intervalMinutes * 60 * 1000,
       })
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://checked.example.com",
+      siteKey: "site:new-api:https://checked.example.com",
       siteName: "Checked",
       siteType: "new-api",
       baseUrl: "https://checked.example.com",
       accountId: "checked-account",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt: now - 10 * 60 * 1000,
     })
@@ -417,22 +422,22 @@ describe("siteAnnouncementScheduler", () => {
         scheduledTime: now + intervalMinutes * 60 * 1000,
       })
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://active.example.com",
+      siteKey: "site:new-api:https://active.example.com",
       siteName: "Active",
       siteType: "new-api",
       baseUrl: "https://active.example.com",
       accountId: "active-account",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt: now,
     })
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://removed.example.com",
+      siteKey: "site:new-api:https://removed.example.com",
       siteName: "Removed",
       siteType: "new-api",
       baseUrl: "https://removed.example.com",
       accountId: "removed-account",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt: now - intervalMinutes * 60 * 1000,
     })
@@ -494,7 +499,7 @@ describe("siteAnnouncementScheduler", () => {
     await alarmHandler?.({ name: "other-alarm" })
 
     expect(getEnabledAccountsMock).not.toHaveBeenCalled()
-    expect(providerFetchMock).not.toHaveBeenCalled()
+    expect(handlerFetchMock).not.toHaveBeenCalled()
   })
 
   it("skips scheduling when the alarms api is unavailable", async () => {
@@ -541,7 +546,7 @@ describe("siteAnnouncementScheduler", () => {
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
     expect(getEnabledAccountsMock).not.toHaveBeenCalled()
-    expect(providerFetchMock).not.toHaveBeenCalled()
+    expect(handlerFetchMock).not.toHaveBeenCalled()
   })
 
   it("skips alarm-triggered checks for sites checked within the configured interval", async () => {
@@ -549,12 +554,12 @@ describe("siteAnnouncementScheduler", () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
 
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       siteName: "Example",
       siteType: "new-api",
       baseUrl: "https://example.com",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt: now - 10 * 60 * 1000,
     })
@@ -569,7 +574,7 @@ describe("siteAnnouncementScheduler", () => {
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
     expect(getEnabledAccountsMock).toHaveBeenCalledTimes(1)
-    expect(providerFetchMock).not.toHaveBeenCalled()
+    expect(handlerFetchMock).not.toHaveBeenCalled()
     nowSpy.mockRestore()
   })
 
@@ -588,12 +593,12 @@ describe("siteAnnouncementScheduler", () => {
       },
     })
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       siteName: "Example",
       siteType: "new-api",
       baseUrl: "https://example.com",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
       lastCheckedAt,
     })
@@ -608,7 +613,7 @@ describe("siteAnnouncementScheduler", () => {
 
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
-    expect(providerFetchMock).not.toHaveBeenCalled()
+    expect(handlerFetchMock).not.toHaveBeenCalled()
     expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: intervalMinutes,
@@ -618,9 +623,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("filters explicit account ids down to existing enabled accounts", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [],
     })
@@ -640,7 +645,7 @@ describe("siteAnnouncementScheduler", () => {
       accountIds: ["enabled", "missing", "disabled"],
     })
 
-    expect(providerFetchMock).toHaveBeenCalledTimes(1)
+    expect(handlerFetchMock).toHaveBeenCalledTimes(1)
     if (response.success) {
       expect(response.data).toMatchObject({
         checked: 1,
@@ -654,9 +659,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("preserves provider read state without notifying", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [
         {
@@ -686,9 +691,9 @@ describe("siteAnnouncementScheduler", () => {
   ])(
     "does not notify duplicate provider fingerprints in either read ordering (%s, %s)",
     async (firstReadAt, secondReadAt) => {
-      providerFetchMock.mockResolvedValue({
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-        siteKey: "notice:new-api:https://example.com",
+      handlerFetchMock.mockResolvedValue({
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        siteKey: "site:new-api:https://example.com",
         status: "success",
         announcements: [
           {
@@ -731,9 +736,9 @@ describe("siteAnnouncementScheduler", () => {
       content: `Body ${index}`,
       fingerprint: `scheduler-mark-all-${index}`,
     }))
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements,
     })
@@ -741,7 +746,7 @@ describe("siteAnnouncementScheduler", () => {
 
     await resolveSiteAnnouncementsCheckNowMessage({})
     await siteAnnouncementStorage.markAllRead(
-      "notice:new-api:https://example.com",
+      "site:new-api:https://example.com",
     )
     const secondResponse = await resolveSiteAnnouncementsCheckNowMessage({})
 
@@ -752,9 +757,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("uses the stored-account API context for provider requests", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       status: "success",
       announcements: [],
     })
@@ -788,7 +793,7 @@ describe("siteAnnouncementScheduler", () => {
     const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
     expect(response).toMatchObject({ success: true })
-    expect(providerFetchMock).toHaveBeenCalledWith(
+    expect(handlerFetchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         apiRequest: expect.objectContaining({
           baseUrl: "https://sub.example.com",
@@ -803,7 +808,7 @@ describe("siteAnnouncementScheduler", () => {
         }),
       }),
     )
-    const providerRequest = providerFetchMock.mock.calls[0]?.[0]
+    const providerRequest = handlerFetchMock.mock.calls[0]?.[0]
     await expect(
       providerRequest.apiRequest.sub2apiAuthSession.getLatestAuth("sub-1"),
     ).resolves.toEqual(
@@ -819,13 +824,13 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("dedupes common site checks but keeps Sub2API account-scoped checks", async () => {
-    providerFetchMock.mockImplementation((request) =>
+    handlerFetchMock.mockImplementation((request) =>
       Promise.resolve({
-        providerId: request.providerId,
+        sourceScope: request.sourceScope,
         siteKey:
-          request.providerId === "sub2api"
-            ? `sub2api:${request.accountId}:${request.baseUrl}`
-            : `notice:${request.siteType}:${request.baseUrl}`,
+          request.sourceScope === "account"
+            ? `account:sub2api:${request.accountId}:${request.baseUrl}`
+            : `site:${request.siteType}:${request.baseUrl}`,
         status: "success",
         announcements: [{ content: `Notice ${request.accountId}` }],
       }),
@@ -847,7 +852,7 @@ describe("siteAnnouncementScheduler", () => {
 
     const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(providerFetchMock).toHaveBeenCalledTimes(3)
+    expect(handlerFetchMock).toHaveBeenCalledTimes(3)
     if (response.success) {
       expect(response.data).toMatchObject({
         checked: 3,
@@ -863,16 +868,16 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("tracks unsupported and error provider results separately", async () => {
-    providerFetchMock
+    handlerFetchMock
       .mockResolvedValueOnce({
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-        siteKey: "notice:new-api:https://example.com",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        siteKey: "site:new-api:https://example.com",
         status: "unsupported",
         announcements: [],
       })
       .mockResolvedValueOnce({
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-        siteKey: "notice:new-api:https://second.example.com",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        siteKey: "site:new-api:https://second.example.com",
         status: "error",
         announcements: [],
         error: "provider failed",
@@ -900,11 +905,11 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("records provider fetch failures and keeps checking remaining accounts", async () => {
-    providerFetchMock
+    handlerFetchMock
       .mockRejectedValueOnce(new Error("timeout"))
       .mockResolvedValueOnce({
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-        siteKey: "notice:new-api:https://second.example.com",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        siteKey: "site:new-api:https://second.example.com",
         status: "success",
         announcements: [{ content: "Recovered" }],
       })
@@ -930,7 +935,7 @@ describe("siteAnnouncementScheduler", () => {
     await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           status: "error",
           lastError: "timeout",
         }),
@@ -961,9 +966,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("stores provider title and content without deriving a persisted summary", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [{ content: "Only body text" }],
     })
@@ -983,9 +988,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("syncs Sub2API upstream read state before marking the local record read", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       status: "success",
       announcements: [
         {
@@ -1004,10 +1009,10 @@ describe("siteAnnouncementScheduler", () => {
     getEnabledAccountsMock.mockResolvedValue([account])
     getAccountByIdMock.mockResolvedValue(account)
     await seedCheckedSite({
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       accountId: "sub-1",
       siteType: SITE_TYPES.SUB2API,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
       baseUrl: "https://sub.example.com",
     })
 
@@ -1021,7 +1026,7 @@ describe("siteAnnouncementScheduler", () => {
       recordId,
     })
 
-    expect(providerMarkReadMock).toHaveBeenCalledWith(
+    expect(handlerMarkReadMock).toHaveBeenCalledWith(
       expect.objectContaining({
         accountId: "sub-1",
         apiRequest: expect.objectContaining({
@@ -1040,15 +1045,15 @@ describe("siteAnnouncementScheduler", () => {
       getEnabledAccountsMock.mockResolvedValue([account])
       getAccountByIdMock.mockResolvedValue(account)
       await seedCheckedSite({
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         accountId: "account-1",
         siteType: SITE_TYPES.NEW_API,
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         baseUrl: "https://example.com",
       })
-      providerFetchMock.mockResolvedValue({
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-        siteKey: "notice:new-api:https://example.com",
+      handlerFetchMock.mockResolvedValue({
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+        siteKey: "site:new-api:https://example.com",
         status: "success",
         announcements: [
           {
@@ -1062,30 +1067,32 @@ describe("siteAnnouncementScheduler", () => {
       const response = await resolveSiteAnnouncementsCheckNowMessage({})
       if (!response.success) expect.fail(response.error)
       const recordId = response.data!.records[0]!.id
-      const provider = getSiteAnnouncementProvider(SITE_TYPES.NEW_API)
-      vi.mocked(getSiteAnnouncementProvider).mockReturnValueOnce({
-        ...provider,
-        markRead: registered ? providerMarkReadMock : undefined,
-      })
+      const handler = getAnnouncementSourceHandlers(SITE_TYPES.NEW_API)[0]!
+      vi.mocked(getAnnouncementSourceHandlers).mockReturnValueOnce([
+        {
+          ...handler,
+          markRead: registered ? handlerMarkReadMock : undefined,
+        },
+      ])
 
       expect(
         await resolveSiteAnnouncementsMarkReadMessage({ recordId }),
       ).toEqual({ success: true })
-      expect(providerMarkReadMock).toHaveBeenCalledTimes(registered ? 1 : 0)
+      expect(handlerMarkReadMock).toHaveBeenCalledTimes(registered ? 1 : 0)
     },
   )
 
   it("stores notification errors without acknowledging upstream announcements when delivery fails", async () => {
     await seedCheckedSite({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       accountId: "account-1",
       siteType: SITE_TYPES.NEW_API,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       baseUrl: "https://example.com",
     })
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [{ content: "Only body text" }],
     })
@@ -1108,13 +1115,13 @@ describe("siteAnnouncementScheduler", () => {
         }),
       ]),
     )
-    expect(providerMarkReadMock).not.toHaveBeenCalled()
+    expect(handlerMarkReadMock).not.toHaveBeenCalled()
   })
 
   it("treats the first scan of a site as baseline history without notifying", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [
         {
@@ -1139,15 +1146,15 @@ describe("siteAnnouncementScheduler", () => {
 
   it("does not acknowledge upstream announcements after notifying by default", async () => {
     await seedCheckedSite({
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       accountId: "sub-1",
       siteType: SITE_TYPES.SUB2API,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
       baseUrl: "https://sub.example.com",
     })
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       status: "success",
       announcements: [
         {
@@ -1172,7 +1179,7 @@ describe("siteAnnouncementScheduler", () => {
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
     expect(notifySiteAnnouncementsMock).toHaveBeenCalledTimes(1)
-    expect(providerMarkReadMock).not.toHaveBeenCalled()
+    expect(handlerMarkReadMock).not.toHaveBeenCalled()
     await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([
       expect.objectContaining({ title: "Sub2API notice", read: false }),
     ])
@@ -1188,15 +1195,15 @@ describe("siteAnnouncementScheduler", () => {
       },
     })
     await seedCheckedSite({
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       accountId: "sub-1",
       siteType: SITE_TYPES.SUB2API,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
       baseUrl: "https://sub.example.com",
     })
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
-      siteKey: "sub2api:sub-1:https://sub.example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      siteKey: "account:sub2api:sub-1:https://sub.example.com",
       status: "success",
       announcements: [
         {
@@ -1221,7 +1228,7 @@ describe("siteAnnouncementScheduler", () => {
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
     expect(notifySiteAnnouncementsMock).toHaveBeenCalledTimes(1)
-    expect(providerMarkReadMock).toHaveBeenCalledWith(
+    expect(handlerMarkReadMock).toHaveBeenCalledWith(
       expect.objectContaining({ accountId: "sub-1" }),
       [expect.objectContaining({ id: "42" })],
     )
@@ -1231,15 +1238,15 @@ describe("siteAnnouncementScheduler", () => {
     const now = 1_800_000_000_000
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
     await seedCheckedSite({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       accountId: "account-1",
       siteType: SITE_TYPES.NEW_API,
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       baseUrl: "https://example.com",
     })
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [
         {
@@ -1275,9 +1282,9 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("runs alarm polling in the background lane and manual checks in the foreground lane", async () => {
-    providerFetchMock.mockResolvedValue({
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [],
     })
@@ -1288,7 +1295,7 @@ describe("siteAnnouncementScheduler", () => {
     expect(alarmHandler).toBeTypeOf("function")
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
-    expect(providerFetchMock).toHaveBeenCalledWith(
+    expect(handlerFetchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         apiRequest: expect.objectContaining({
           requestScheduling: { priority: "background" },
@@ -1296,10 +1303,10 @@ describe("siteAnnouncementScheduler", () => {
       }),
     )
 
-    providerFetchMock.mockClear()
+    handlerFetchMock.mockClear()
     await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(providerFetchMock).toHaveBeenCalledWith(
+    expect(handlerFetchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         apiRequest: expect.objectContaining({
           requestScheduling: { priority: "foreground" },
@@ -1313,7 +1320,7 @@ describe("siteAnnouncementScheduler", () => {
       recordId: "missing-record",
     })
 
-    expect(providerMarkReadMock).not.toHaveBeenCalled()
+    expect(handlerMarkReadMock).not.toHaveBeenCalled()
     expect(response).toEqual({
       success: false,
       error: "Failed to mark announcement as read",
@@ -1323,22 +1330,22 @@ describe("siteAnnouncementScheduler", () => {
   it("marks local Sub2API records read even when the backing account can no longer be loaded", async () => {
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "sub2api:sub-1:https://sub.example.com",
+        siteKey: "account:sub2api:sub-1:https://sub.example.com",
         siteName: "Sub",
         siteType: "sub2api",
         baseUrl: "https://sub.example.com",
         accountId: "sub-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
         status: "success",
       },
       records: [
         {
-          siteKey: "sub2api:sub-1:https://sub.example.com",
+          siteKey: "account:sub2api:sub-1:https://sub.example.com",
           siteName: "Sub",
           siteType: "sub2api",
           baseUrl: "https://sub.example.com",
           accountId: "sub-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
           title: "Notice",
           content: "Body",
           fingerprint: "missing-account",
@@ -1353,29 +1360,29 @@ describe("siteAnnouncementScheduler", () => {
       recordId: record!.id,
     })
 
-    expect(providerMarkReadMock).not.toHaveBeenCalled()
+    expect(handlerMarkReadMock).not.toHaveBeenCalled()
     expect(response).toEqual({ success: true })
   })
 
   it("resolves current status, records, and mark-all typed messages", async () => {
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: "success",
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Notice",
           content: "Body",
           fingerprint: "status-record",
@@ -1388,7 +1395,7 @@ describe("siteAnnouncementScheduler", () => {
       success: true,
       data: [
         expect.objectContaining({
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
         }),
       ],
     })
@@ -1404,7 +1411,7 @@ describe("siteAnnouncementScheduler", () => {
     })
 
     const markAllResponse = await resolveSiteAnnouncementsMarkAllReadMessage({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
     })
     expect(markAllResponse).toEqual({
       success: true,
@@ -1415,22 +1422,22 @@ describe("siteAnnouncementScheduler", () => {
   it("wires typed site announcement messages through registered listeners", async () => {
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
         siteName: "Example",
         siteType: "new-api",
         baseUrl: "https://example.com",
         accountId: "account-1",
-        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
         status: "success",
       },
       records: [
         {
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
           siteName: "Example",
           siteType: "new-api",
           baseUrl: "https://example.com",
           accountId: "account-1",
-          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
           title: "Notice",
           content: "Body",
           fingerprint: "listener-record",
@@ -1438,8 +1445,8 @@ describe("siteAnnouncementScheduler", () => {
       ],
     })
     getEnabledAccountsMock.mockResolvedValue([createAccount()])
-    providerFetchMock.mockResolvedValue({
-      siteKey: "notice:new-api:https://example.com",
+    handlerFetchMock.mockResolvedValue({
+      siteKey: "site:new-api:https://example.com",
       status: "success",
       announcements: [{ title: "New", content: "Fresh body" }],
     })
@@ -1476,7 +1483,7 @@ describe("siteAnnouncementScheduler", () => {
     await expect(
       siteAnnouncementsMessageHandlers.get(
         SiteAnnouncementsMessageTypes.MarkAllRead,
-      )?.({ data: { siteKey: "notice:new-api:https://example.com" } }),
+      )?.({ data: { siteKey: "site:new-api:https://example.com" } }),
     ).resolves.toMatchObject({ success: true, data: expect.any(Number) })
     await expect(
       siteAnnouncementsMessageHandlers.get(
@@ -1518,12 +1525,12 @@ describe("siteAnnouncementScheduler", () => {
 
   it("returns current status when schedule reconciliation fails", async () => {
     await siteAnnouncementStorage.upsertSiteStatus({
-      siteKey: "notice:new-api:https://example.com",
+      siteKey: "site:new-api:https://example.com",
       siteName: "Example",
       siteType: "new-api",
       baseUrl: "https://example.com",
       accountId: "account-1",
-      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: "success",
     })
     getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
@@ -1534,7 +1541,7 @@ describe("siteAnnouncementScheduler", () => {
       success: true,
       data: [
         expect.objectContaining({
-          siteKey: "notice:new-api:https://example.com",
+          siteKey: "site:new-api:https://example.com",
         }),
       ],
     })
@@ -1567,7 +1574,7 @@ describe("siteAnnouncementScheduler", () => {
     )
     await expect(
       resolveSiteAnnouncementsMarkAllReadMessage({
-        siteKey: "notice:new-api:https://example.com",
+        siteKey: "site:new-api:https://example.com",
       }),
     ).resolves.toEqual({
       success: false,

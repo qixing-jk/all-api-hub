@@ -10,13 +10,14 @@ import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type { SiteAccount } from "~/types"
 import type {
+  AnnouncementSourceHandler,
+  AnnouncementSourceHandlerRequest,
   SiteAnnouncement,
   SiteAnnouncementCheckResult,
   SiteAnnouncementPreferences,
-  SiteAnnouncementProvider,
-  SiteAnnouncementProviderRequest,
   SiteAnnouncementRecord,
   SiteAnnouncementRecordInput,
+  SiteAnnouncementRecordView,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
@@ -50,7 +51,11 @@ import {
   type SiteAnnouncementsUpdatePreferencesRequest,
 } from "./messaging"
 import { notifySiteAnnouncements } from "./notificationService"
-import { getSiteAnnouncementProvider } from "./providers"
+import {
+  getAnnouncementRecordViews,
+  resolveAnnouncementSource,
+  resolveAnnouncementSources,
+} from "./sources"
 import { siteAnnouncementStorage } from "./storage"
 import { fingerprintAnnouncement, normalizeAnnouncementText } from "./text"
 
@@ -74,13 +79,13 @@ const TRIGGER_REQUEST_PRIORITIES: Record<
 }
 
 /**
- * Creates the provider request context for a specific account.
+ * Creates the handler request context for a specific account.
  */
-function createProviderRequest(
+function createHandlerRequest(
   account: SiteAccount,
-  provider: SiteAnnouncementProvider,
+  handler: AnnouncementSourceHandler,
   priority: RequestScheduling["priority"],
-): SiteAnnouncementProviderRequest {
+): AnnouncementSourceHandlerRequest {
   const { request } = createAccountApiRequestFromStoredAccount(account)
 
   return {
@@ -88,7 +93,7 @@ function createProviderRequest(
     siteName: account.site_name,
     siteType: account.site_type,
     baseUrl: account.site_url,
-    providerId: provider.id,
+    sourceScope: handler.scope,
     apiRequest: { ...request, requestScheduling: { priority } },
   }
 }
@@ -97,7 +102,7 @@ function createProviderRequest(
  * Normalizes a fetched announcement into a persisted record input.
  */
 function createRecordInput(params: {
-  request: SiteAnnouncementProviderRequest
+  request: AnnouncementSourceHandlerRequest
   siteKey: string
   announcement: SiteAnnouncement
 }): SiteAnnouncementRecordInput {
@@ -119,13 +124,14 @@ function createRecordInput(params: {
     siteType: params.request.siteType,
     baseUrl: params.request.baseUrl,
     accountId: params.request.accountId,
-    providerId: params.request.providerId,
+    sourceScope: params.request.sourceScope,
     upstreamId: params.announcement.id,
     title,
     content,
     createdAt: params.announcement.createdAt,
     updatedAt: params.announcement.updatedAt,
     readAt: params.announcement.readAt,
+    read: params.announcement.read,
     fingerprint,
   }
 }
@@ -137,7 +143,7 @@ function createRecordInput(params: {
  * returns predates the user's decision to track that site, so none of it is
  * news. On later scans, announcements published before the notification age
  * window are history too. Records without an upstream timestamp cannot be aged
- * and stay news, because their provider only ever reports the current notice.
+ * and stay news, because their handler only ever reports the current notice.
  */
 function partitionAnnouncementRecords(params: {
   records: SiteAnnouncementRecord[]
@@ -173,7 +179,7 @@ function partitionAnnouncementRecords(params: {
  * Creates the persisted status snapshot for a checked site.
  */
 function createSiteState(params: {
-  request: SiteAnnouncementProviderRequest
+  request: AnnouncementSourceHandlerRequest
   siteKey: string
   status: SiteAnnouncementSiteState["status"]
   error?: string
@@ -185,7 +191,7 @@ function createSiteState(params: {
     siteType: params.request.siteType,
     baseUrl: params.request.baseUrl,
     accountId: params.request.accountId,
-    providerId: params.request.providerId,
+    sourceScope: params.request.sourceScope,
     status: params.status,
     lastCheckedAt: params.now,
     lastSuccessAt:
@@ -241,19 +247,7 @@ async function rescheduleAnnouncementAlarm(params: {
 }
 
 /**
- * Returns the dedupe key identifying the announcement source an account polls.
- */
-function getAnnouncementSourceKey(account: SiteAccount): string {
-  const provider = getSiteAnnouncementProvider(account.site_type)
-  return provider.createSiteKey({
-    accountId: account.id,
-    siteType: account.site_type,
-    baseUrl: account.site_url,
-  })
-}
-
-/**
- * Chooses the next alarm delay from persisted site cooldowns.
+ * Chooses the next alarm delay from independent source cooldowns.
  */
 function getAnnouncementAlarmDelayMinutes(params: {
   intervalMinutes: number
@@ -262,16 +256,16 @@ function getAnnouncementAlarmDelayMinutes(params: {
 }): number {
   const now = Date.now()
   let nextDelayMinutes = Number.POSITIVE_INFINITY
-  const accounts = dedupeAnnouncementSources(params.accounts)
-  const enabledSiteKeys = new Set(accounts.map(getAnnouncementSourceKey))
+  const sources = resolveAnnouncementSources(params.accounts)
+  const enabledSiteKeys = new Set(sources.map((source) => source.siteKey))
   const siteKeysWithStatus = new Set(
     params.siteStates
       .filter((siteState) => enabledSiteKeys.has(siteState.siteKey))
       .map((siteState) => siteState.siteKey),
   )
 
-  for (const account of accounts) {
-    if (!siteKeysWithStatus.has(getAnnouncementSourceKey(account))) {
+  for (const source of sources) {
+    if (!siteKeysWithStatus.has(source.siteKey)) {
       return 1
     }
   }
@@ -296,26 +290,6 @@ function getAnnouncementAlarmDelayMinutes(params: {
   }
 
   return Number.isFinite(nextDelayMinutes) ? nextDelayMinutes : 1
-}
-
-/**
- * Removes duplicate checks using the source identity supplied by each provider.
- */
-function dedupeAnnouncementSources(accounts: SiteAccount[]): SiteAccount[] {
-  const seen = new Set<string>()
-  const result: SiteAccount[] = []
-
-  for (const account of accounts) {
-    const key = getAnnouncementSourceKey(account)
-    if (seen.has(key)) {
-      continue
-    }
-
-    seen.add(key)
-    result.push(account)
-  }
-
-  return result
 }
 
 class SiteAnnouncementScheduler {
@@ -471,18 +445,14 @@ class SiteAnnouncementScheduler {
         : await accountQueries.getEnabledAccounts()
       let nextCooldownExpiresAt: number | undefined
 
-      for (const account of dedupeAnnouncementSources(accounts)) {
-        const provider = getSiteAnnouncementProvider(account.site_type)
-        const request = createProviderRequest(
+      for (const { account, handler, siteKey } of resolveAnnouncementSources(
+        accounts,
+      )) {
+        const request = createHandlerRequest(
           account,
-          provider,
+          handler,
           TRIGGER_REQUEST_PRIORITIES[params.trigger],
         )
-        const siteKey = provider.createSiteKey({
-          accountId: account.id,
-          siteType: account.site_type,
-          baseUrl: account.site_url,
-        })
         const now = Date.now()
         const existingSiteState = siteStatesByKey.get(siteKey)
         // The first successful scan of a site only records what already exists
@@ -520,7 +490,7 @@ class SiteAnnouncementScheduler {
         result.checked += 1
 
         try {
-          const checkResult = await provider.fetch(request)
+          const checkResult = await handler.fetch(request)
           const siteState = createSiteState({
             request,
             siteKey,
@@ -588,9 +558,9 @@ class SiteAnnouncementScheduler {
                 // having read the announcement.
                 if (pollingPreferences.autoMarkUpstreamReadOnNotify) {
                   // Ack every item in checkResult.announcements, not just
-                  // createdRecords, so provider.markRead can stop returning
+                  // createdRecords, so handler.markRead can stop returning
                   // already-seen unread payloads.
-                  await provider.markRead?.(request, checkResult.announcements)
+                  await handler.markRead?.(request, checkResult.announcements)
                 }
               }
             }
@@ -603,7 +573,7 @@ class SiteAnnouncementScheduler {
             siteType: account.site_type,
             baseUrl: account.site_url,
             accountId: account.id,
-            providerId: provider.id,
+            sourceScope: handler.scope,
             status: SITE_ANNOUNCEMENT_STATUS.Error,
             error: getErrorMessage(error),
             now,
@@ -686,7 +656,7 @@ export function setupSiteAnnouncementsMessagingListeners() {
 }
 
 /**
- * Mirrors read actions through the matching provider when it supports upstream acknowledgement.
+ * Mirrors read actions through the matching handler when it supports upstream acknowledgement.
  */
 async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
   const record = (await siteAnnouncementStorage.listRecords()).find(
@@ -695,9 +665,6 @@ async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
   if (!record?.upstreamId) {
     return
   }
-
-  const service = getSiteAnnouncementProvider(record.siteType)
-  if (service.id !== record.providerId || !service.markRead) return
 
   const account = await accountQueries.getAccountById(record.accountId)
   if (!account) {
@@ -708,10 +675,12 @@ async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
     return
   }
 
-  await service.markRead(
-    createProviderRequest(
+  const source = resolveAnnouncementSource(record, account)
+  if (!source?.handler.markRead) return
+  await source.handler.markRead(
+    createHandlerRequest(
       account,
-      service,
+      source.handler,
       TRIGGER_REQUEST_PRIORITIES[SITE_ANNOUNCEMENT_CHECK_TRIGGERS.Manual],
     ),
     [{ id: record.upstreamId }],
@@ -744,12 +713,14 @@ export async function resolveSiteAnnouncementsGetStatusMessage(): Promise<
  * Resolve a typed request for locally cached announcement records.
  */
 export async function resolveSiteAnnouncementsListRecordsMessage(): Promise<
-  RuntimeMessageResponse<SiteAnnouncementRecord[]>
+  RuntimeMessageResponse<SiteAnnouncementRecordView[]>
 > {
   try {
     return {
       success: true,
-      data: await siteAnnouncementStorage.listRecords(),
+      data: getAnnouncementRecordViews(
+        await siteAnnouncementStorage.listRecords(),
+      ),
     }
   } catch (error) {
     logger.error("Message handling failed", error)

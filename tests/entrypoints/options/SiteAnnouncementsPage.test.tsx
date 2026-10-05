@@ -92,7 +92,7 @@ const records: SiteAnnouncementRecord[] = [
     siteType: "new-api",
     baseUrl: "https://alpha.example.com",
     accountId: "account-1",
-    providerId: "common",
+    sourceScope: "site",
     title: "",
     content: "## Full maintenance window\n\n- Second line",
     fingerprint: "fp-1",
@@ -108,7 +108,7 @@ const records: SiteAnnouncementRecord[] = [
     siteType: "sub2api",
     baseUrl: "https://beta.example.com",
     accountId: "account-2",
-    providerId: "sub2api",
+    sourceScope: "account",
     title: "Beta update",
     content: "**Beta full content**",
     fingerprint: "fp-2",
@@ -126,7 +126,7 @@ const status: SiteAnnouncementSiteState[] = [
     siteType: "new-api",
     baseUrl: "https://alpha.example.com",
     accountId: "account-1",
-    providerId: "common",
+    sourceScope: "site",
     status: "error",
     lastCheckedAt: 1735690000000,
     lastError: "timeout",
@@ -138,7 +138,7 @@ const status: SiteAnnouncementSiteState[] = [
     siteType: "sub2api",
     baseUrl: "https://beta.example.com",
     accountId: "account-2",
-    providerId: "sub2api",
+    sourceScope: "account",
     status: "success",
     lastCheckedAt: 1735776200000,
     records: [records[1]!],
@@ -433,53 +433,59 @@ describe("SiteAnnouncementsPage", () => {
     ).toBeInTheDocument()
   })
 
-  it("marks unread Sub2API announcements as read only when expanding details", async () => {
-    const user = userEvent.setup()
-    const unreadSub2ApiRecord = {
-      ...records[1]!,
-      id: "announcement-3",
-      read: false,
-    }
+  it.each(["sub2api", "laozhang"] as const)(
+    "marks unread %s account messages read only when expanding details",
+    async (siteType) => {
+      const user = userEvent.setup()
+      const unreadAccountMessage = {
+        ...records[1]!,
+        id: "announcement-3",
+        siteType,
+        sourceScope: "account" as const,
+        canSyncRead: true,
+        read: false,
+      }
 
-    sendSiteAnnouncementsMessageMock.mockImplementation(
-      async (type: string) => {
-        switch (type) {
-          case SiteAnnouncementsMessageTypes.ListRecords:
-            return { success: true, data: [unreadSub2ApiRecord] }
-          case SiteAnnouncementsMessageTypes.GetStatus:
-            return { success: true, data: [] }
-          default:
-            return { success: true }
-        }
-      },
-    )
-
-    render(<SiteAnnouncementsPage />)
-
-    await screen.findByText("Beta update")
-    await user.click(
-      screen.getByRole("button", {
-        name: /siteAnnouncements:actions\.expand/,
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: /siteAnnouncements:actions\.collapse/,
-      }),
-    )
-
-    await waitFor(() => {
-      expect(sendSiteAnnouncementsMessage).toHaveBeenCalledWith(
-        SiteAnnouncementsMessageTypes.MarkRead,
-        { recordId: "announcement-3" },
+      sendSiteAnnouncementsMessageMock.mockImplementation(
+        async (type: string) => {
+          switch (type) {
+            case SiteAnnouncementsMessageTypes.ListRecords:
+              return { success: true, data: [unreadAccountMessage] }
+            case SiteAnnouncementsMessageTypes.GetStatus:
+              return { success: true, data: [] }
+            default:
+              return { success: true }
+          }
+        },
       )
-      expect(
-        sendSiteAnnouncementsMessageMock.mock.calls.filter(
-          ([type]) => type === SiteAnnouncementsMessageTypes.MarkRead,
-        ),
-      ).toHaveLength(1)
-    })
-  })
+
+      render(<SiteAnnouncementsPage />)
+
+      await screen.findByText("Beta update")
+      await user.click(
+        screen.getByRole("button", {
+          name: /siteAnnouncements:actions\.expand/,
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: /siteAnnouncements:actions\.collapse/,
+        }),
+      )
+
+      await waitFor(() => {
+        expect(sendSiteAnnouncementsMessage).toHaveBeenCalledWith(
+          SiteAnnouncementsMessageTypes.MarkRead,
+          { recordId: "announcement-3" },
+        )
+        expect(
+          sendSiteAnnouncementsMessageMock.mock.calls.filter(
+            ([type]) => type === SiteAnnouncementsMessageTypes.MarkRead,
+          ),
+        ).toHaveLength(1)
+      })
+    },
+  )
 
   it("completes single-record mark-read analytics as success when the runtime succeeds", async () => {
     const user = userEvent.setup()
@@ -879,6 +885,94 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
+  it("checks only LaoZhang when the site type filter is selected", async () => {
+    const user = userEvent.setup()
+    const previous = sendSiteAnnouncementsMessageMock.getMockImplementation()!
+    sendSiteAnnouncementsMessageMock.mockImplementation(async (type: string) =>
+      type === SiteAnnouncementsMessageTypes.ListRecords
+        ? {
+            success: true,
+            data: [
+              ...records,
+              {
+                ...records[0],
+                id: "lz-notice",
+                siteType: "laozhang",
+                accountId: "lz-account",
+                siteKey: "lz-site",
+                content: "LaoZhang notice",
+              },
+            ],
+          }
+        : previous(type),
+    )
+    render(<SiteAnnouncementsPage />)
+    await screen.findByRole("heading", { name: "LaoZhang notice" })
+    await user.click(screen.getAllByRole("combobox")[1]!)
+    await user.click(screen.getByRole("option", { name: "laozhang" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+    expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledWith(
+      SiteAnnouncementsMessageTypes.CheckNow,
+      { accountIds: ["lz-account"] },
+    )
+  })
+
+  it.each(["site", "siteType"])(
+    "checks the selected LaoZhang %s even before any announcement is cached",
+    async (filter) => {
+      const user = userEvent.setup()
+      const previous = sendSiteAnnouncementsMessageMock.getMockImplementation()!
+      sendSiteAnnouncementsMessageMock.mockImplementation(
+        async (type: string) => {
+          if (type === SiteAnnouncementsMessageTypes.ListRecords)
+            return { success: true, data: [] }
+          if (type === SiteAnnouncementsMessageTypes.GetStatus)
+            return {
+              success: true,
+              data: [
+                ...status,
+                {
+                  ...status[0],
+                  siteKey: "lz-site",
+                  siteName: "LaoZhang API",
+                  siteType: "laozhang",
+                  accountId: "lz-account",
+                  records: [],
+                },
+              ],
+            }
+          return previous(type)
+        },
+      )
+      render(<SiteAnnouncementsPage />)
+      await screen.findByText("siteAnnouncements:empty.title")
+      if (filter === "site") {
+        await user.click(
+          screen.getByRole("combobox", {
+            name: "siteAnnouncements:filters.site",
+          }),
+        )
+        await user.click(screen.getByRole("option", { name: "LaoZhang API" }))
+      } else {
+        await user.click(screen.getAllByRole("combobox")[1]!)
+        await user.click(screen.getByRole("option", { name: "laozhang" }))
+      }
+      const buttons = screen.getAllByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      })
+      expect(buttons[0]).toBeEnabled()
+      await user.click(buttons[0]!)
+      expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledWith(
+        SiteAnnouncementsMessageTypes.CheckNow,
+        { accountIds: ["lz-account"] },
+      )
+    },
+  )
+
   it("checks the selected site scope when manually checking filtered announcements", async () => {
     const user = userEvent.setup()
 
@@ -930,7 +1024,7 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
-  it("disables manual checks when filters leave no visible announcements", async () => {
+  it("disables manual checks when read-state filters leave no visible announcements", async () => {
     const user = userEvent.setup()
 
     sendSiteAnnouncementsMessageMock.mockImplementation(
@@ -949,7 +1043,7 @@ describe("SiteAnnouncementsPage", () => {
                   siteType: "new-api",
                   baseUrl: "https://gamma.example.com",
                   accountId: "account-3",
-                  providerId: "common",
+                  sourceScope: "site",
                   status: "success",
                   records: [],
                 },
@@ -970,6 +1064,11 @@ describe("SiteAnnouncementsPage", () => {
       }),
     )
     await user.click(screen.getByRole("option", { name: "Gamma API" }))
+
+    await user.click(screen.getAllByRole("combobox")[2]!)
+    await user.click(
+      screen.getByRole("option", { name: "siteAnnouncements:filters.unread" }),
+    )
 
     await waitFor(() => {
       for (const button of screen.getAllByRole("button", {
@@ -1006,7 +1105,7 @@ describe("SiteAnnouncementsPage", () => {
                   siteType: "new-api",
                   baseUrl: "https://gamma.example.com",
                   accountId: "account-3",
-                  providerId: "common",
+                  sourceScope: "site",
                   status: "success",
                   records: [],
                 },

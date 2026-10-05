@@ -62,6 +62,16 @@ describe("site type import whitelist", () => {
     expect(await check(siteImport, file)).toEqual([])
   })
 
+  it.each([
+    "src/services/siteAnnouncements/sourceHandlers.ts",
+    "src/services/siteAnnouncements/identity.ts",
+    "src/services/siteAnnouncements/scheduler.ts",
+    "src/services/siteAnnouncements/sources.ts",
+    "src/features/SiteAnnouncements/utils.ts",
+  ])("keeps announcement behavior behind capabilities: %s", async (file) => {
+    expect(await check(siteImport, file)).toHaveLength(1)
+  })
+
   it("does not exempt a sibling presentation module", async () => {
     expect(
       await check(

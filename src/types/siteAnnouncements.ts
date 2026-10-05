@@ -1,13 +1,13 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
-export const SITE_ANNOUNCEMENT_PROVIDER_IDS = {
-  Common: "common",
-  Sub2Api: "sub2api",
+export const ANNOUNCEMENT_SOURCE_SCOPES = {
+  Site: "site",
+  Account: "account",
 } as const
 
-export type SiteAnnouncementProviderId =
-  (typeof SITE_ANNOUNCEMENT_PROVIDER_IDS)[keyof typeof SITE_ANNOUNCEMENT_PROVIDER_IDS]
+export type AnnouncementSourceScope =
+  (typeof ANNOUNCEMENT_SOURCE_SCOPES)[keyof typeof ANNOUNCEMENT_SOURCE_SCOPES]
 
 export const SITE_ANNOUNCEMENT_STATUS = {
   Never: "never",
@@ -147,39 +147,41 @@ export interface SiteAnnouncement {
   content?: string
   createdAt?: number
   updatedAt?: number
+  /** Upstream read state, independent of whether a read timestamp is available. */
+  read?: boolean
   readAt?: number
   fingerprint?: string
 }
 
-export interface SiteAnnouncementProviderRequest {
+export interface AnnouncementSourceHandlerRequest {
   accountId: string
   siteName: string
   siteType: AccountSiteType
   baseUrl: string
-  providerId: SiteAnnouncementProviderId
+  sourceScope: AnnouncementSourceScope
   apiRequest: ApiServiceRequest
 }
 
-export interface SiteAnnouncementProviderResult {
-  providerId: SiteAnnouncementProviderId
+export interface AnnouncementSourceHandlerResult {
+  sourceScope: AnnouncementSourceScope
   siteKey: string
   status: Exclude<SiteAnnouncementStatus, "never">
   announcements: SiteAnnouncement[]
   error?: string
 }
 
-export interface SiteAnnouncementProvider {
-  id: SiteAnnouncementProviderId
+export interface AnnouncementSourceHandler {
+  scope: AnnouncementSourceScope
   createSiteKey: (input: {
     accountId: string
     siteType: AccountSiteType
     baseUrl: string
   }) => string
   fetch: (
-    request: SiteAnnouncementProviderRequest,
-  ) => Promise<SiteAnnouncementProviderResult>
+    request: AnnouncementSourceHandlerRequest,
+  ) => Promise<AnnouncementSourceHandlerResult>
   markRead?: (
-    request: SiteAnnouncementProviderRequest,
+    request: AnnouncementSourceHandlerRequest,
     announcements: SiteAnnouncement[],
   ) => Promise<void>
 }
@@ -191,7 +193,7 @@ export interface SiteAnnouncementRecord {
   siteType: AccountSiteType
   baseUrl: string
   accountId: string
-  providerId: SiteAnnouncementProviderId
+  sourceScope: AnnouncementSourceScope
   upstreamId?: string
   title: string
   content: string
@@ -206,10 +208,15 @@ export interface SiteAnnouncementRecord {
   readAt?: number
 }
 
+/** Current actions projected for the UI, independent of persisted record identity. */
+export interface SiteAnnouncementRecordView extends SiteAnnouncementRecord {
+  canSyncRead: boolean
+}
+
 export type SiteAnnouncementRecordInput = Omit<
   SiteAnnouncementRecord,
   "id" | "firstSeenAt" | "lastSeenAt" | "read"
->
+> & { read?: boolean }
 
 export interface SiteAnnouncementSiteState {
   siteKey: string
@@ -217,7 +224,7 @@ export interface SiteAnnouncementSiteState {
   siteType: AccountSiteType
   baseUrl: string
   accountId: string
-  providerId: SiteAnnouncementProviderId
+  sourceScope: AnnouncementSourceScope
   status: SiteAnnouncementStatus
   lastCheckedAt?: number
   lastSuccessAt?: number
@@ -233,7 +240,7 @@ export interface SiteAnnouncementIdentityMarker {
 }
 
 export interface SiteAnnouncementStoreState {
-  schemaVersion: 2
+  schemaVersion: 3
   sites: Record<string, SiteAnnouncementSiteState>
   identityLedger: Record<string, Record<string, SiteAnnouncementIdentityMarker>>
 }

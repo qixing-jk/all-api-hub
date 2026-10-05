@@ -44,12 +44,12 @@ vi.mock("~/utils/i18n/core", () => ({
 
 const record: SiteAnnouncementRecord = {
   id: "record-1",
-  siteKey: "notice:new-api:https://example.com",
+  siteKey: "site:new-api:https://example.com",
   siteName: "Example",
   siteType: "new-api",
   baseUrl: "https://example.com",
   accountId: "account-1",
-  providerId: "common",
+  sourceScope: "site",
   title: "Notice",
   content: "Hello",
   fingerprint: "fp",

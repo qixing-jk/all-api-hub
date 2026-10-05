@@ -8,8 +8,8 @@ import {
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
+  AnnouncementSourceScope,
   SiteAnnouncementIdentityMarker,
-  SiteAnnouncementProviderId,
   SiteAnnouncementRecord,
   SiteAnnouncementRecordInput,
   SiteAnnouncementSiteState,
@@ -17,7 +17,7 @@ import type {
   SiteAnnouncementStoreState,
 } from "~/types/siteAnnouncements"
 import {
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  ANNOUNCEMENT_SOURCE_SCOPES,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
@@ -34,6 +34,7 @@ import {
   digestAnnouncementFingerprint,
   pruneIdentityLedger,
 } from "./identity"
+import { migrateLegacySourceFields, migrateLegacySources } from "./migration"
 
 const logger = createLogger("SiteAnnouncementStorage")
 const SHA256_HEX_DIGEST_PATTERN = /^[0-9a-f]{64}$/
@@ -45,7 +46,7 @@ function serializeRecordInputForComparison(
   return JSON.stringify(
     Object.entries(record)
       // Read state is merged independently so it cannot affect content choice.
-      .filter(([key]) => key !== "readAt")
+      .filter(([key]) => key !== "readAt" && key !== "read")
       .sort(([leftKey], [rightKey]) =>
         compareStringsOrdinal(leftKey, rightKey),
       ),
@@ -99,12 +100,12 @@ function serializeIdentityLedger(
 }
 
 /**
- * Coerces unknown persisted provider ids to the supported announcement providers.
+ * Coerces persisted source scopes to supported visibility scopes.
  */
-function normalizeProviderId(value: unknown): SiteAnnouncementProviderId {
-  return value === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
-    ? SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
-    : SITE_ANNOUNCEMENT_PROVIDER_IDS.Common
+function normalizeSourceScope(value: unknown): AnnouncementSourceScope {
+  return value === ANNOUNCEMENT_SOURCE_SCOPES.Account
+    ? ANNOUNCEMENT_SOURCE_SCOPES.Account
+    : ANNOUNCEMENT_SOURCE_SCOPES.Site
 }
 
 /**
@@ -166,7 +167,7 @@ function sanitizeRecord(value: unknown): SiteAnnouncementRecord | null {
     siteType: sanitizeSiteType(value.siteType),
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
-    providerId: normalizeProviderId(value.providerId),
+    sourceScope: normalizeSourceScope(value.sourceScope),
     upstreamId:
       typeof value.upstreamId === "string" ? value.upstreamId : undefined,
     title: typeof value.title === "string" ? value.title : "",
@@ -215,7 +216,7 @@ function sanitizeSiteState(
     siteType: sanitizeSiteType(value.siteType),
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
-    providerId: normalizeProviderId(value.providerId),
+    sourceScope: normalizeSourceScope(value.sourceScope),
     status: sanitizeStatus(value.status),
     lastCheckedAt: isFiniteNumber(value.lastCheckedAt)
       ? value.lastCheckedAt
@@ -234,11 +235,14 @@ function sanitizeSiteState(
 }
 
 /** Normalizes the persisted site map while retaining independently valid sites. */
-function sanitizeSites(value: unknown) {
+function sanitizeSites(value: unknown, legacy: boolean) {
   const sites: Record<string, SiteAnnouncementSiteState> = {}
   if (isPlainObject(value)) {
     for (const [siteKey, siteValue] of Object.entries(value)) {
-      const siteState = sanitizeSiteState(siteKey, siteValue)
+      const siteState = sanitizeSiteState(
+        siteKey,
+        legacy ? migrateLegacySourceFields(siteValue, siteKey) : siteValue,
+      )
       if (siteState) {
         sites[siteKey] = siteState
       }
@@ -297,18 +301,26 @@ async function sanitizeStore(
   if (!isPlainObject(value)) {
     throw new Error("Malformed site announcement store")
   }
-  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
+  if (
+    value.schemaVersion !== 1 &&
+    value.schemaVersion !== 2 &&
+    value.schemaVersion !== SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION
+  ) {
     throw new Error("Unsupported site announcement store schema")
   }
   if (!isPlainObject(value.sites)) {
     throw new Error("Malformed site announcement store")
   }
 
-  const sites = sanitizeSites(value.sites)
-  const identityLedger =
-    value.schemaVersion === 2
+  const legacy = value.schemaVersion !== SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION
+  const sanitizedSites = sanitizeSites(value.sites, legacy)
+  const sanitizedLedger =
+    value.schemaVersion !== 1
       ? sanitizeIdentityLedger(value.identityLedger)
       : {}
+  const { sites, identityLedger } = legacy
+    ? migrateLegacySources(sanitizedSites, sanitizedLedger)
+    : { sites: sanitizedSites, identityLedger: sanitizedLedger }
 
   for (const [siteKey, site] of Object.entries(sites)) {
     const markers = (identityLedger[siteKey] ??= {})
@@ -317,13 +329,18 @@ async function sanitizeStore(
       const digest = await digestAnnouncementFingerprint(record.fingerprint)
       const current = markers[digest]
       const nextMarker: SiteAnnouncementIdentityMarker = {
-        firstSeenAt: current?.firstSeenAt ?? record.firstSeenAt,
+        firstSeenAt: Math.min(
+          current?.firstSeenAt ?? record.firstSeenAt,
+          record.firstSeenAt,
+        ),
         lastSeenAt: Math.max(current?.lastSeenAt ?? 0, record.lastSeenAt),
         readAt:
           current?.readAt ??
           (record.read ? record.readAt ?? record.lastSeenAt : undefined),
       }
       markers[digest] = nextMarker
+      record.firstSeenAt = nextMarker.firstSeenAt
+      record.lastSeenAt = nextMarker.lastSeenAt
       if (nextMarker.readAt !== undefined) {
         record.read = true
         record.readAt = nextMarker.readAt
@@ -347,8 +364,17 @@ class SiteAnnouncementStorage {
   private storage = new Storage({ area: "local" })
 
   private async getStoreOrThrow(): Promise<SiteAnnouncementStoreState> {
+    return (await this.readStoreOrThrow()).store
+  }
+
+  private async readStoreOrThrow() {
     const stored = await this.storage.get(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE)
-    return await sanitizeStore(stored)
+    return {
+      store: await sanitizeStore(stored),
+      needsMigration:
+        isPlainObject(stored) &&
+        stored.schemaVersion !== SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION,
+    }
   }
 
   async getStore(): Promise<SiteAnnouncementStoreState> {
@@ -380,7 +406,7 @@ class SiteAnnouncementStorage {
     return withExtensionStorageWriteLock(
       STORAGE_LOCKS.SITE_ANNOUNCEMENTS,
       async () => {
-        const store = await this.getStoreOrThrow()
+        const { store, needsMigration } = await this.readStoreOrThrow()
         const { changed, result } = await mutation(store)
         const previousIdentityLedger = serializeIdentityLedger(
           store.identityLedger,
@@ -394,7 +420,7 @@ class SiteAnnouncementStorage {
         const pruningChanged =
           previousIdentityLedger !==
           serializeIdentityLedger(prunedIdentityLedger)
-        if (changed || pruningChanged) {
+        if (changed || pruningChanged || needsMigration) {
           store.identityLedger = prunedIdentityLedger
           if (!(await this.setStore(store))) {
             throw new Error("Failed to persist site announcement store")
@@ -471,7 +497,11 @@ class SiteAnnouncementStorage {
         readAtValues.length > 0 ? Math.max(...readAtValues) : undefined
       inputsByDigest.set(candidate.digest, {
         digest: candidate.digest,
-        record: { ...representative, readAt },
+        record: {
+          ...representative,
+          readAt,
+          read: existing.record.read || candidate.record.read,
+        },
       })
     }
     const inputs = [...inputsByDigest.values()].sort((left, right) =>
@@ -495,9 +525,11 @@ class SiteAnnouncementStorage {
           knownMarker.lastSeenAt = Math.max(knownMarker.lastSeenAt, now)
           if (
             knownMarker.readAt === undefined &&
-            isFiniteNumber(input.readAt)
+            (isFiniteNumber(input.readAt) || input.read === true)
           ) {
-            knownMarker.readAt = input.readAt
+            knownMarker.readAt = isFiniteNumber(input.readAt)
+              ? input.readAt
+              : now
           }
 
           if (existing) {
@@ -523,7 +555,13 @@ class SiteAnnouncementStorage {
           continue
         }
 
-        const readAt = isFiniteNumber(input.readAt) ? input.readAt : undefined
+        // When the source exposes only a boolean, record when read state was
+        // observed locally; the provider does not invent an upstream read time.
+        const readAt = isFiniteNumber(input.readAt)
+          ? input.readAt
+          : input.read === true
+            ? now
+            : undefined
         markers[digest] = { firstSeenAt: now, lastSeenAt: now, readAt }
 
         const record: SiteAnnouncementRecord = {
@@ -801,7 +839,7 @@ class SiteAnnouncementStorage {
     siteType: AccountSiteType
     baseUrl: string
     accountId: string
-    providerId: SiteAnnouncementProviderId
+    sourceScope: AnnouncementSourceScope
     status: SiteAnnouncementStatus
     error?: string
     now?: number
@@ -814,7 +852,7 @@ class SiteAnnouncementStorage {
         siteType: params.siteType,
         baseUrl: params.baseUrl,
         accountId: params.accountId,
-        providerId: params.providerId,
+        sourceScope: params.sourceScope,
         status: params.status,
         lastCheckedAt: now,
         lastError: params.error,

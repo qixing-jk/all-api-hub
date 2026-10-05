@@ -22,12 +22,7 @@ import { buildAnnouncementDisplayText } from "~/services/siteAnnouncements/text"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 
 import { AnnouncementMarkdown } from "../AnnouncementMarkdown"
-import {
-  formatAnnouncementTimestamp,
-  formatSub2ApiRelativeTimestamp,
-  getAnnouncementSourceUrl,
-  isSub2ApiAnnouncement,
-} from "../utils"
+import { formatAnnouncementTimestamp, getAnnouncementSourceUrl } from "../utils"
 
 interface SiteAnnouncementCardProps {
   record: SiteAnnouncementRecord
@@ -85,7 +80,6 @@ export function SiteAnnouncementCard({
   onMarkRead,
 }: SiteAnnouncementCardProps) {
   const { t } = useTranslation("siteAnnouncements")
-  const isSub2Api = isSub2ApiAnnouncement(record)
   const display = buildAnnouncementDisplayText(record, {
     previewLength: 120,
   })
@@ -224,9 +218,7 @@ export function SiteAnnouncementCard({
                 </span>
                 <span className="gap-y-density-1-5 inline-flex items-center gap-x-1.5">
                   <CalendarClock className="h-3.5 w-3.5" />
-                  {isSub2Api
-                    ? formatSub2ApiRelativeTimestamp(record)
-                    : formatAnnouncementTimestamp(record)}
+                  {formatAnnouncementTimestamp(record)}
                 </span>
               </div>
             </div>

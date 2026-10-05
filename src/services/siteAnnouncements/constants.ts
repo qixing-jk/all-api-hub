@@ -1,6 +1,6 @@
 export const SITE_ANNOUNCEMENTS_ALARM_NAME = "siteAnnouncementsCheck" as const
 
-export const SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION = 2 as const
+export const SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION = 3 as const
 
 export const SITE_ANNOUNCEMENTS_LIMITS = {
   recordsPerSite: 100,

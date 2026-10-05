@@ -14,7 +14,7 @@ function createRecords(count: number): SiteAnnouncementRecord[] {
     siteType: "new-api",
     baseUrl: "https://example.com",
     accountId: "account-1",
-    providerId: "common",
+    sourceScope: "site",
     title: `Announcement ${index}`,
     content: `Body ${index}`,
     fingerprint: `fingerprint-${index}`,

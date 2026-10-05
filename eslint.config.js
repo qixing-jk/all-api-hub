@@ -235,7 +235,6 @@ const siteTypeImportOwners = [
   "src/services/managedSites/legacyChannelConfigMigration.ts", // Historical numeric channel identities.
   "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
   "src/services/productAnalytics/settings.ts", // Fixed analytics event schema.
-  "src/services/siteAnnouncements/providers.ts", // Announcement provider dispatch.
   "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.
   "src/features/DevPanel/keyProvisioningPreview.ts", // Development-only native provider editor fixtures.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
@@ -246,7 +245,6 @@ const siteTypeImportOwners = [
   "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSite*.search.ts", // Search entries for provider-specific settings.
   "src/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
   "src/features/ModelList/aihubmixModelList.ts", // Provider catalog presentation.
-  "src/features/SiteAnnouncements/utils.ts", // Cached provider identity and source links.
   "src/constants/siteType.ts", // Public compatibility re-export.
   "src/contexts/UserPreferencesContext.tsx", // Default managed-site selection.
   "src/entrypoints/content/messageHandlers/handlers/storage.ts", // Unknown-site input fallback.

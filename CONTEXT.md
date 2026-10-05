@@ -36,6 +36,13 @@ _Avoid_: dedicated override, alias, fallback
 A normalized product-owned shape consumed by features after upstream backend payloads have been adapted.
 _Avoid_: upstream response, New API response
 
+**Announcement Source**:
+An origin of announcements with its own sharing scope and available operations.
+A site-wide source is shared by accounts of that site; an account-scoped source
+belongs to one saved account. Scope does not imply support for upstream read
+acknowledgement.
+_Avoid_: site type, announcement format
+
 **Provider Model Catalog**:
 A model catalog whose membership and facts apply to an upstream provider as a whole rather than to one saved account.
 _Avoid_: account-available models, account model catalog

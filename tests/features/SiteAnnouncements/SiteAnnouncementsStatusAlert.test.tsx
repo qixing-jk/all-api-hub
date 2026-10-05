@@ -11,7 +11,7 @@ const baseStatus = {
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com",
   accountId: "account-1",
-  providerId: "common" as const,
+  sourceScope: "site" as const,
   records: [],
 }
 

@@ -1,5 +1,5 @@
-import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { SiteAnnouncement } from "~/types/siteAnnouncements"
 
 export type SiteAnnouncementsFetchOptions = {
   unreadOnly?: boolean
@@ -14,6 +14,6 @@ export type SiteAnnouncementsCapability = {
   fetch(
     request: ApiServiceRequest,
     options?: SiteAnnouncementsFetchOptions,
-  ): Promise<Sub2ApiAnnouncementData[]>
-  markRead(request: MarkSiteAnnouncementReadRequest): Promise<boolean>
+  ): Promise<SiteAnnouncement[]>
+  markRead?(request: MarkSiteAnnouncementReadRequest): Promise<boolean>
 }
