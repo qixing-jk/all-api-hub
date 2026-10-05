@@ -112,6 +112,152 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  const recoveryScope = {
+    scopeKey: "workspace-example",
+    routeKey: "team",
+    displayName: "Team",
+    isDefault: true,
+  }
+  const renderRecoveryController = (session: any, onCreated?: () => void) => {
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+    return renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+        onCreated,
+      }),
+    )
+  }
+  const recoverySession = (overrides: Record<string, unknown> = {}) => ({
+    resolveDefaultScope: vi.fn().mockResolvedValue(recoveryScope),
+    listScopes: vi.fn().mockResolvedValue([recoveryScope]),
+    openCollection: vi.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
+        items: [createFacts(recoveryScope.scopeKey, "key-example")],
+      }),
+    }),
+    ...overrides,
+  })
+
+  it("closing a pending detail prevents a late response reopening the detail", async () => {
+    const pending = deferred<any>()
+    const get = vi.fn().mockReturnValue(pending.promise)
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [facts] }),
+          get,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => void result.current.openDetail(facts.ref))
+    await waitFor(() => expect(get).toHaveBeenCalledOnce())
+    act(() => result.current.closeDetail())
+    expect(result.current.isDetailLoading).toBe(false)
+    await act(async () => pending.resolve(facts))
+    expect(result.current.detail).toBeNull()
+    expect(result.current.detailFailure).toBeNull()
+  })
+
+  it("reports validation issues without submitting or closing the editor", async () => {
+    const issues = [{ fieldId: "name", code: "required" }]
+    const submit = vi.fn()
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue({
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: false, issues }),
+          resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+          submit,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(result.current.editor).toMatchObject({
+      editorId,
+      feedback: { code: "validation_failed", fieldIssues: issues },
+    })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it.each(["partial", "rejected"])(
+    "retains loaded keys when scope retry is %s",
+    async (outcome) => {
+      const failure = { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable }
+      const refreshScopeInventory =
+        outcome === "partial"
+          ? vi.fn().mockResolvedValue({ scopes: [], partialFailure: failure })
+          : vi.fn().mockRejectedValue(new AccountKeyResourceError(failure))
+      const { result } = renderRecoveryController(
+        recoverySession({ refreshScopeInventory }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      await act(async () =>
+        expect(result.current.retryScopeInventory()).resolves.toBe(false),
+      )
+      expect(result.current.rows).toHaveLength(1)
+      expect(result.current.selectedScope).toEqual(recoveryScope)
+      expect(result.current.scopeInventoryFailure).toEqual(failure)
+      expect(result.current.isScopeInventoryLoading).toBe(false)
+    },
+  )
+
+  it("retains the selected scope when recovered discovery omits it", async () => {
+    const other = {
+      scopeKey: "other",
+      routeKey: "other",
+      displayName: "Other",
+      isDefault: false,
+    }
+    const { result } = renderRecoveryController(
+      recoverySession({
+        refreshScopeInventory: vi.fn().mockResolvedValue({ scopes: [other] }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () =>
+      expect(result.current.retryScopeInventory()).resolves.toBe(true),
+    )
+    expect(result.current.selectedScope).toEqual(recoveryScope)
+    expect(result.current.scopes).toEqual([recoveryScope, other])
+    expect(result.current.scopeInventoryFailure).toBeNull()
+  })
+
+  it("cancels a deletion confirmation without sending a deletion", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const deleteKey = vi.fn()
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [facts] }),
+          delete: deleteKey,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => result.current.openDelete(facts.ref))
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: true,
+      ref: facts.ref,
+    })
+    act(() => result.current.cancelDelete())
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: false,
+      ref: null,
+    })
+    expect(deleteKey).not.toHaveBeenCalled()
+    await act(async () =>
+      expect(result.current.retryScopeInventory()).resolves.toBe(false),
+    )
+  })
+
   beforeEach(() => {
     createDisplayAccountApiContextMock.mockReset()
     startProductAnalyticsActionMock.mockReset()

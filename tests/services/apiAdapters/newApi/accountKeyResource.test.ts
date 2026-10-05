@@ -1970,6 +1970,25 @@ describe("New API account key resources", () => {
     })
   })
 
+  it("lists Veloera tokens with zero-based pagination and trusted page size", async () => {
+    mockFetchAccountTokens.mockResolvedValue([token({ id: 9 })])
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.VELOERA,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.VELOERA },
+      request,
+    })
+    const scope = await session.resolveDefaultScope()
+    const collection = await session.openCollection(scope.scopeKey)
+    await expect(collection.list()).resolves.toMatchObject({
+      items: [{ ref: { resourceId: "9" } }],
+    })
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "account-1" }),
+      { startPage: 0, trustsRequestedPageSize: true },
+    )
+  })
+
   it("confirms a One API singleton create by exact inventory diff", async () => {
     const before = [token({ id: 1, group: "" })]
     mockFetchAccountTokens

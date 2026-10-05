@@ -269,14 +269,13 @@ test("isolates same-site cookie and access-token accounts through account refres
     const authenticatedSelfRequests = localSite.selfRequests.filter(
       (request) => request.matchedSessionCookie || request.matchedAccessToken,
     )
-    const cookieAccountASequence = expectCookieDnrFallbackSequence(
+    expectCookieDnrFallbackSequence(
       localSite.selfRequests,
       ACCOUNT_A_SESSION_COOKIE,
     )
     expectCookieDnrFallbackSequence(
       localSite.selfRequests,
       ACCOUNT_B_SESSION_COOKIE,
-      cookieAccountASequence.successIndex + 1,
     )
     expect(authenticatedSelfRequests).toEqual(
       expect.arrayContaining([
@@ -457,13 +456,13 @@ async function waitForStoredAccountQuota(
 
 type CapturedSelfRequest = {
   cookieHeader: string
+  userIdHeader: string | null
   matchedSessionCookie: string | null
   matchedAccessToken: string | null
   responseStatus: number
 }
 
 type CapturedTokenRequest = CapturedSelfRequest & {
-  userIdHeader: string | null
   mismatch: boolean
 }
 
@@ -558,6 +557,7 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
           : null)
       const captured: CapturedSelfRequest = {
         cookieHeader,
+        userIdHeader: extractCompatUserIdHeader(request.headers),
         matchedSessionCookie,
         matchedAccessToken,
         responseStatus: account ? 200 : 401,
@@ -860,22 +860,22 @@ function matchAccountSessionCookie(cookieHeader: string) {
 function expectCookieDnrFallbackSequence(
   requests: CapturedSelfRequest[],
   targetSessionCookie: string,
-  startIndex = 0,
 ) {
+  const account = atIndex(ACCOUNT_BY_SESSION_COOKIE, targetSessionCookie)
   const successIndex = requests.findIndex(
-    (request, index) =>
-      index >= startIndex &&
+    (request) =>
+      request.userIdHeader === account.id &&
       request.responseStatus === 200 &&
       request.matchedSessionCookie === targetSessionCookie,
   )
   expect(
     successIndex,
     `${targetSessionCookie} DNR success request`,
-  ).toBeGreaterThanOrEqual(startIndex)
+  ).toBeGreaterThanOrEqual(0)
 
   const primaryFailureIndex = requests.findIndex(
     (request, index) =>
-      index >= startIndex &&
+      request.userIdHeader === account.id &&
       index < successIndex &&
       request.responseStatus === 401 &&
       request.cookieHeader.includes(BROWSER_CURRENT_SESSION_COOKIE) &&
@@ -885,7 +885,7 @@ function expectCookieDnrFallbackSequence(
   expect(
     primaryFailureIndex,
     `${targetSessionCookie} primary browser-cookie 401 request`,
-  ).toBeGreaterThanOrEqual(startIndex)
+  ).toBeGreaterThanOrEqual(0)
 
   expect(atIndex(requests, successIndex).cookieHeader).toContain(
     targetSessionCookie,
