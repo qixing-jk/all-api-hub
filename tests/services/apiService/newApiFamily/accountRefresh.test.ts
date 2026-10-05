@@ -123,6 +123,9 @@ describe("newApiFamily accountRefresh", () => {
     ).resolves.toEqual(refreshResult)
 
     expect(newApiFamilyFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
-    expect(newApiFamilyFetchAccountData).toHaveBeenCalledWith(refreshRequest)
+    expect(newApiFamilyFetchAccountData).toHaveBeenCalledWith(
+      refreshRequest,
+      undefined,
+    )
   })
 })

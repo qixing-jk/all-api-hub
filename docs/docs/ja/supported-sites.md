@@ -10,6 +10,7 @@
 |-------------------|----------|----------|
 | OpenRouter | 独立した AI モデル集約プラットフォーム。拡張機能ではアカウント残高、ネイティブキー管理、モデルカタログに対応します。 | [公式サイト](https://openrouter.ai/) / [ドキュメント](https://openrouter.ai/docs) / [設定ガイド](./service-guides/openrouter.md) |
 | New API | 統一された AI モデル集約および配布センター。 | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
+| LaoZhang API | 既定の認証方式は Access Token です。自動検出後、「プロフィール → System token」で確認を完了してトークンを入力するよう案内します。Cookie も手動で選択できます。米ドル残高と日次収支、API キー管理、モデル料金、招待リンクに対応します。Cookie セッション失効後は再ログインして Cookie を再取り込みしてください。4 つの入口でアカウントを共有し、拡張機能は選択した入口を保持して入口間の重複アカウントを識別します。 | [標準](https://api.laozhang.ai/) · [中国/代替](https://api2.laozhang.ai/) · [欧米直結](https://api-vip.laozhang.ai/) · [CF-CDN](https://api-cf.laozhang.ai/) |
 | one-api | LLM API 管理および配布システム。OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek などの主要モデルをサポートし、API を統一的にアダプトします。キー管理および二次配布に使用できます。 | [GitHub](https://github.com/songquanpeng/one-api) |
 | Sub2API | Sub2API-CRS2 ワンストップオープンソースプロキシサービス。Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続し、共同利用による効率的なコスト分担とネイティブツールのシームレスな利用に対応します。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
 | AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top/register?aff=tDKX) |

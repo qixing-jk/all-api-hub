@@ -13,6 +13,11 @@
     "destinationBusy": "Já existe um formulário de conta incompleto aqui. Salve ou feche esse formulário para continuar com o formulário do popup.",
     "fullPageHint": "Continue em uma página completa para manter este formulário aberto enquanto copia o token no site.",
     "generateStep": "Se já tiver um Access Token válido e completo, use-o diretamente. Caso contrário, abra Segurança → Access Token no site, conclua a verificação e gere um token. As versões mais recentes também pedem as permissões e a validade; conceda todas as permissões oferecidas.",
+    "laozhang": {
+      "generateStep": "Use um System token completo existente ou abra Perfil do LaoZhang → System token, conclua a verificação de segurança do site, gere e salve o token imediatamente. Ele é exibido apenas uma vez; gerá-lo novamente pode substituir o anterior.",
+      "openProfile": "Abrir perfil do LaoZhang",
+      "openProfileFailed": "Não foi possível abrir a página. Abra manualmente Perfil do LaoZhang → System token, conclua a verificação de segurança, copie o token e volte aqui para inseri-lo."
+    },
     "openSecurity": "Abrir segurança do site",
     "openSecurityFailed": "Não foi possível abrir a página. Abra Segurança → Access Token manualmente no site e volte aqui para colar o token.",
     "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",

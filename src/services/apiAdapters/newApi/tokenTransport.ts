@@ -1,6 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
 import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
+import * as laozhang from "~/services/apiService/newApiFamily/variants/laozhang"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 import * as rixApiTokens from "~/services/apiService/newApiFamily/variants/rixApiTokens"
 import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
@@ -65,6 +66,16 @@ const overrides: Partial<
     fetchUserGroups: apiyi.fetchUserGroups,
   },
   [SITE_TYPES.ANYROUTER]: compatibleTokenInventoryOverrides,
+  [SITE_TYPES.LAOZHANG]: {
+    // https://api2.laozhang.ai/token v31.1.5: p=0/pageSize, bare arrays;
+    // groupPro and available_model match the APIyi transport contract.
+    fetchAccountTokens: laozhang.fetchAccountTokens,
+    fetchTokenById: laozhang.fetchTokenById,
+    fetchAccountAvailableModels: apiyi.fetchAccountAvailableModels,
+    fetchUserGroups: apiyi.fetchUserGroups,
+    createApiToken: laozhang.createApiToken,
+    updateApiToken: laozhang.updateApiToken,
+  },
   [SITE_TYPES.ONE_API]: oneApiTokenInventoryOverrides,
   [SITE_TYPES.VELOERA]: veloeraTokenInventoryOverrides,
   [SITE_TYPES.ONE_HUB]: oneHubOverrides,

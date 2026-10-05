@@ -11,6 +11,7 @@
 |-------------|----------|----------|
 | OpenRouter | 独立 AI 模型聚合平台，插件支持账号余额、原生密钥管理和模型目录。 | [官网](https://openrouter.ai/) / [文档](https://openrouter.ai/docs) / [使用教程](./service-guides/openrouter.md) |
 | New API | 统一的 AI 模型聚合与分发中心。 | [官网](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
+| LaoZhang API | 默认使用 Access Token，自动识别后引导到「个人资料 → System token」完成验证并填写令牌，亦可主动选择 Cookie。支持美元余额与每日收支、API Key 管理、模型定价及邀请链接。Cookie 会话失效后需重新登录并导入。四个入口共用账号，插件保留所选入口并识别跨入口的重复账号。 | [默认入口](https://api.laozhang.ai/) · [国内/备用](https://api2.laozhang.ai/) · [欧美直连](https://api-vip.laozhang.ai/) · [CF-CDN](https://api-cf.laozhang.ai/) |
 | one-api | LLM API 管理与分发系统，支持 OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek 等主流模型，统一 API 适配，可用于 Key 管理与二次分发。 | [GitHub](https://github.com/songquanpeng/one-api) |
 | Sub2API | Sub2API-CRS2 一站式开源中转服务，让 Claude、OpenAI、Gemini、Antigravity 订阅统一接入，支持拼车共享，更高效分摊成本，原生工具无缝使用。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
 | AnyRouter | Claude Code 中转站 · 零门槛 · 免费 $50 | [文档](https://docs.anyrouter.top/) / [官网](https://anyrouter.top/register?aff=tDKX) |

@@ -9,6 +9,31 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("scanDuplicateAccounts", () => {
+  it("groups the same LaoZhang identity across aliases while keeping other users separate", () => {
+    const makeAccount = (id: string, hostname: string, userId: string) =>
+      buildSiteAccount({
+        id,
+        site_type: SITE_TYPES.LAOZHANG,
+        site_url: `https://${hostname}`,
+        account_info: { ...buildSiteAccount().account_info, id: userId },
+      })
+    const aliases = [
+      makeAccount("lz-main", "api.laozhang.ai", "42"),
+      makeAccount("lz-backup", "api2.laozhang.ai", "42"),
+      makeAccount("lz-vip", "api-vip.laozhang.ai", "42"),
+      makeAccount("lz-cf", "api-cf.laozhang.ai", "42"),
+    ]
+    const otherUser = makeAccount("lz-other", "api2.laozhang.ai", "43")
+    const result = scanDuplicateAccounts({
+      accounts: [...aliases, otherUser],
+      strategy: "keepMostRecentlyUpdated",
+    })
+    expect(result.groups).toHaveLength(1)
+    const group = atIndex(result.groups, 0)
+    expect(group.accounts).toHaveLength(4)
+    expect(group.accounts).toEqual(expect.arrayContaining(aliases))
+    expect(group.accounts).not.toContain(otherUser)
+  })
   it("groups exact OpenRouter credentials and returns the original records", () => {
     const accountA = buildSiteAccount({
       id: "or-a",

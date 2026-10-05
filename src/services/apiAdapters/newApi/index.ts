@@ -31,7 +31,7 @@ export const createNewApiCapabilities = (
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: createNewApiAccountCompletion(siteType),
-    inviteLink: createNewApiInviteLink(),
+    inviteLink: createNewApiInviteLink(siteType),
     keyResourceManagement: createNewApiAccountKeyResources(siteType),
     refresh: createNewApiAccountRefresh(siteType),
     modelPricing: createNewApiModelPricing(siteType),

@@ -13,6 +13,11 @@
     "destinationBusy": "Ở đây đã có biểu mẫu tài khoản chưa hoàn tất. Hãy lưu hoặc đóng biểu mẫu đó để tiếp tục với biểu mẫu từ cửa sổ bật lên.",
     "fullPageHint": "Tiếp tục trong trang đầy đủ để giữ biểu mẫu mở trong khi sao chép mã trên trang web.",
     "generateStep": "Nếu đã có Access Token đầy đủ và còn hiệu lực, bạn có thể dùng trực tiếp. Nếu chưa có, hãy mở Bảo mật → Access Token trên trang web, hoàn tất xác minh và tạo mã. Các bản mới cũng yêu cầu chọn quyền và thời hạn; hãy cấp toàn bộ quyền được đưa ra.",
+    "laozhang": {
+      "generateStep": "Dùng System token đầy đủ hiện có hoặc mở Hồ sơ LaoZhang → System token, hoàn tất xác minh bảo mật trên trang, tạo và lưu ngay. Token chỉ hiển thị một lần; tạo lại có thể thay thế token cũ.",
+      "openProfile": "Mở hồ sơ LaoZhang",
+      "openProfileFailed": "Không thể mở trang. Hãy mở Hồ sơ LaoZhang → System token theo cách thủ công, hoàn tất xác minh bảo mật, sao chép token rồi quay lại đây để nhập."
+    },
     "openSecurity": "Mở cài đặt bảo mật của trang",
     "openSecurityFailed": "Không mở được trang. Hãy tự mở Bảo mật → Access Token trên trang web rồi quay lại đây để dán mã.",
     "pasteStep": "Sao chép ngay toàn bộ Access Token, dán vào trường Access Token bên dưới, kiểm tra thông tin tài khoản rồi lưu.",

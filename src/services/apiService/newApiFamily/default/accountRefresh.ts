@@ -6,6 +6,7 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { fetchAccountData } from "~/services/apiService/newApiFamily/default/accountData"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
 import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -26,9 +27,10 @@ interface AccountRefreshImplementation {
  */
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
+  queryConfig?: TodayLogQueryConfig,
 ): Promise<RefreshAccountResult> {
   try {
-    const data = await fetchAccountData(request)
+    const data = await fetchAccountData(request, queryConfig)
     return {
       success: true,
       data,

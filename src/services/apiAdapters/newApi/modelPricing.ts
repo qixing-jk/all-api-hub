@@ -33,7 +33,9 @@ export function createNewApiModelPricing(
     }
   }
 
-  if (siteType === SITE_TYPES.APIYI) {
+  // LaoZhang v31.1.5 shares APIyi's pricing envelope and conditional-rate
+  // schema, including sibling group/vendor facts: https://api2.laozhang.ai/api/pricing
+  if (siteType === SITE_TYPES.APIYI || siteType === SITE_TYPES.LAOZHANG) {
     return {
       fetchPricing: async (request) => {
         const { pricing, status } = await apiyi.fetchModelPricing(request)

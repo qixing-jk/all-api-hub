@@ -82,6 +82,72 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
 describe("AccountDialog warnings", () => {
   it.each([
+    "https://api.laozhang.ai",
+    "https://api2.laozhang.ai",
+    "https://api-vip.laozhang.ai",
+    "https://api-cf.laozhang.ai",
+  ])(
+    "guides LaoZhang System token setup on the selected origin %s",
+    async (siteUrl) => {
+      const user = userEvent.setup()
+      const onPrepareAccessTokenInput = vi.fn()
+      render(
+        <AutoDetectErrorAlert
+          error={{
+            type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+            message: "Enter a System token",
+          }}
+          siteUrl={siteUrl}
+          siteType={SITE_TYPES.LAOZHANG}
+          onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+        />,
+      )
+      expect(
+        screen.getByText("accessTokenVerification.laozhang.generateStep"),
+      ).toBeVisible()
+      expect(
+        screen.queryByText("accessTokenVerification.generateStep"),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", {
+          name: "accessTokenVerification.laozhang.openProfile",
+        }),
+      )
+      expect(onPrepareAccessTokenInput).toHaveBeenCalledOnce()
+      expect(browser.tabs.create).toHaveBeenCalledWith({
+        url: `${siteUrl}/account/profile`,
+        active: true,
+      })
+    },
+  )
+
+  it("keeps LaoZhang manual profile instructions when opening its profile fails", async () => {
+    const user = userEvent.setup()
+    vi.mocked(browser.tabs.create).mockRejectedValueOnce(
+      new Error("Tab unavailable"),
+    )
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Enter a System token",
+        }}
+        siteUrl="https://api2.laozhang.ai"
+        siteType={SITE_TYPES.LAOZHANG}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.laozhang.openProfile",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        "accessTokenVerification.laozhang.openProfileFailed",
+      ),
+    ).toHaveAttribute("role", "alert")
+  })
+  it.each([
     [AutoDetectErrorType.NETWORK_ERROR, "bg-destructive-soft"],
     [AutoDetectErrorType.TIMEOUT, "bg-destructive-soft"],
     [AutoDetectErrorType.UNAUTHORIZED, "bg-warning-soft"],
