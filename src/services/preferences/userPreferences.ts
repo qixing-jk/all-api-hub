@@ -1458,7 +1458,7 @@ class UserPreferencesService {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
     const registration = getManagedSiteConfigRegistration(siteType)
-    const config = registration ? registration.select(prefs)! : prefs.newApi
+    const config = registration?.select(prefs) ?? prefs.newApi
     return { siteType, config }
   }
 

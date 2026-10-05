@@ -175,6 +175,24 @@ describe("userPreferences managed-site helpers", () => {
     })
   })
 
+  it("falls back to New API when the selected registration has no config", async () => {
+    const preferences = structuredClone(DEFAULT_PREFERENCES)
+    preferences.managedSiteType = SITE_TYPES.VELOERA
+    Reflect.deleteProperty(preferences, "veloera")
+    const getPreferences = vi
+      .spyOn(userPreferences, "getPreferences")
+      .mockResolvedValueOnce(preferences)
+
+    try {
+      await expect(userPreferences.getManagedSiteConfig()).resolves.toEqual({
+        siteType: SITE_TYPES.VELOERA,
+        config: preferences.newApi,
+      })
+    } finally {
+      getPreferences.mockRestore()
+    }
+  })
+
   it("falls back to default configs when optional managed-site settings are missing", async () => {
     const missingManagedSiteType: any = {
       ...structuredClone(DEFAULT_PREFERENCES),

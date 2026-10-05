@@ -44,9 +44,7 @@ export function resolveManagedSiteRuntimeConfigForType<
   siteType: Type,
 ): ManagedSiteRuntimeConfigForType<Type> | null {
   const registration = getManagedSiteConfigRegistration(siteType)
-  // Preserve the legacy exhaustive fallback for unregistered runtime input.
-  if (!registration)
-    return siteType as unknown as ManagedSiteRuntimeConfigForType<Type>
+  if (!registration) return null
   const config = registration.resolve(preferences)
   return config
     ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<Type>)
