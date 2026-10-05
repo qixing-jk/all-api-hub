@@ -1,466 +1,56 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
-  NATIVE_RESOURCE_EDITOR_LOADING_REVEALS,
-  type NativeResourceEditorOpeningState,
-} from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
-import toast from "~/lib/notify"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
-import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import {
-  createDisplayAccountApiContext,
-  type DisplayAccountApiSnapshot,
-} from "~/services/accounts/utils/apiServiceRequest"
-import {
-  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
-  AccountKeyResourceError,
-  type AccountKeyCreationIntent,
-  type AccountKeyResourceCollection,
-  type AccountKeyResourceEditor,
-  type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
-  type AccountKeyResourceSession,
-  type AccountKeyScope,
-  type AccountKeyScopeInventory,
-  type EditableResourceProjection,
   type ResourceFailure,
-  type ResourceFieldDescriptor,
-  type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
-import {
-  accountKeyResourceRefIdentity,
-  collectAccountKeyResourceInventory,
-} from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
-import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
-import {
-  createAutomaticProtectionBypassExecution,
-  createUserCommandProtectionBypassExecution,
-} from "~/services/protectionBypass/client"
-import {
-  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
-  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
-  PROTECTION_BYPASS_SURFACES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-  type ProtectionBypassExecution,
-} from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/core/logger"
-import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import {
-  ACCOUNT_KEY_STATUS_FILTERS,
-  KEY_MANAGEMENT_ROUTE_PARAMS,
+  ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS as requestSlots,
 } from "../constants"
+import type {
+  ActiveResourceBoundary,
+  ControllerMode,
+  DeleteState,
+  DetailState,
+  OpenAccountResources,
+  Options,
+  ResourceActionContext,
+} from "./accountKeyResourceControllerTypes"
+import {
+  AUTOMATIC_INVENTORY_EXECUTION,
+  awaitAbortable,
+  boundaryFromResourceRef,
+  keyManagementAnalyticsContext,
+  USER_KEY_MANAGEMENT_EXECUTION,
+} from "./accountKeyResourceWorkflowSupport"
+import { useAccountKeyResourceDeletionWorkflow } from "./useAccountKeyResourceDeletionWorkflow"
+import { useAccountKeyResourceDetailWorkflow } from "./useAccountKeyResourceDetailWorkflow"
+import { useAccountKeyResourceEditorState } from "./useAccountKeyResourceEditorState"
+import { useAccountKeyResourceEditorWorkflow } from "./useAccountKeyResourceEditorWorkflow"
+import { useAccountKeyResourceInventoryState } from "./useAccountKeyResourceInventoryState"
+import { useAccountKeyResourceInventoryWorkflow } from "./useAccountKeyResourceInventoryWorkflow"
+import { useAccountKeyResourceRequestLifecycle } from "./useAccountKeyResourceRequestLifecycle"
+import { useAccountKeyResourceRouteCoordinator } from "./useAccountKeyResourceRouteCoordinator"
+import { useAccountKeyResourceRouteState } from "./useAccountKeyResourceRouteState"
 
-const ALL_ACCOUNT_CONCURRENCY = 4
-const AUTOMATIC_INVENTORY_EXECUTION = createAutomaticProtectionBypassExecution(
-  PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement,
-  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-  PROTECTION_BYPASS_SURFACES.Options,
-)
-const USER_KEY_MANAGEMENT_EXECUTION =
-  createUserCommandProtectionBypassExecution(
-    PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-    PROTECTION_BYPASS_SURFACES.Options,
-  )
-let nextAccountKeyResourceControllerInstanceId = 0
-
-const keyManagementAnalyticsContext = (
-  actionId:
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
-  surfaceId:
-    | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader
-    | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-) => ({
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-  actionId,
-  surfaceId,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-})
-
-type StatusFilter =
-  (typeof ACCOUNT_KEY_STATUS_FILTERS)[keyof typeof ACCOUNT_KEY_STATUS_FILTERS]
-type ControllerMode = "idle" | "single" | "all"
-type ControllerNotice = { kind: "workspace-fallback" }
-type EditorMode = "create" | "edit"
-
-type EditorState = {
-  editorId: number
-  siteType: AccountKeyResourceRef["siteType"]
-  mode: EditorMode
-  fields: AccountKeyResourceEditor["fields"]
-  initialValues: EditableResourceProjection
-  values: EditableResourceProjection
-  optionsByField: Record<string, readonly ResourceFieldOption[]>
-  optionFailuresByField: Record<string, ResourceFailure | undefined>
-  loadingFieldIds: readonly string[]
-  feedback: ResourceFailure | null
-  terminalClose?: boolean
-  terminalRetainsFocusWorkflow?: boolean
-} | null
-
-type EditorOpeningState = NativeResourceEditorOpeningState<
-  EditorMode,
-  ResourceFailure
->
-
-type EditorOpenRequest = {
-  mode: EditorMode
-  ref?: AccountKeyResourceRef
-  boundary: ActiveResourceBoundary
-}
-
-type ResourceActionContext = {
-  session: AccountKeyResourceSession
-  collection: AccountKeyResourceCollection
-  boundary: ActiveResourceBoundary
-}
-
-type DetailState = AccountKeyResourceFacts | null
-
-type DeleteState = {
-  isOpen: boolean
-  isExecuting: boolean
-  ref: AccountKeyResourceRef | null
-  failure: ResourceFailure | null
-}
-
-type LoadProgress = {
-  total: number
-  loaded: number
-  loading: number
-  error: number
-}
-
-type OpenAccountResources = (
-  account: DisplaySiteData,
-  options: {
-    signal: AbortSignal
-    protectionBypassExecution: ProtectionBypassExecution
-  },
-) => Promise<AccountKeyResourceSession | null>
-
-type LoadOptionsEditor = Pick<
-  AccountKeyResourceEditor,
-  "loadOptions" | "fields"
->
-
-type Options = {
-  accounts: readonly DisplaySiteData[]
-  selectedAccount: string
-  /** Foreground creation can own the initial reads as part of its user command. */
-  inventoryExecution?: ProtectionBypassExecution
-  creationIntent?: AccountKeyCreationIntent
-  onCreated?: (
-    account: DisplaySiteData,
-    result: AccountKeyCreationResult,
-  ) => void | Promise<void>
-  routeParams?: Record<string, string>
-  /** Echoed by the route owner only after it applies this controller's replacement. */
-  routeTransition?: AccountKeyResourceRouteTransition
-  replaceRoute?: AccountKeyResourceRouteReplacer
-}
-
-/** Opaque acknowledgement for a controller-owned route replacement. */
-export type AccountKeyResourceRouteTransition = Readonly<{ id: string }>
-
-/** Route owners must echo the optional transition in the next controller input. */
-type AccountKeyResourceRouteReplacer = (
-  params: Record<string, string>,
-  transition?: AccountKeyResourceRouteTransition,
-) => void
-
-type ActiveResourceBoundary = Pick<
-  AccountKeyResourceRef,
-  "accountId" | "siteType" | "scopeKey"
-> & { routeKey: string }
-
-type ExpectedRouteTransition = {
-  id: string
-  generation: number
-  selectedAccount: string
-  accountId: string
-  siteType: string
-  scopeKey: string
-  routeKey: string
-}
-
-type AccountContextObservation = {
-  mode: ControllerMode
-  selectedAccount: string
-  routeAccountId: string | undefined
-  routeWorkspace: string | undefined
-  context: AccountContextSnapshot | null
-}
-
-export const isAccountKeyResourceRouteTransitionAcknowledged = ({
-  expected,
-  generation,
-  mode,
-  transitionId,
-  selectedAccount,
-  selectedRouteSiteType,
-  routeAccountId,
-  routeWorkspace,
-}: {
-  expected: ExpectedRouteTransition | null
-  generation: number
-  mode: "idle" | "single" | "all"
-  transitionId: string | undefined
-  selectedAccount: string
-  selectedRouteSiteType: string | undefined
-  routeAccountId: string | undefined
-  routeWorkspace: string | undefined
-}) =>
-  expected !== null &&
-  mode === "single" &&
-  expected.generation === generation &&
-  transitionId === expected.id &&
-  selectedAccount === expected.selectedAccount &&
-  selectedAccount === expected.accountId &&
-  selectedRouteSiteType === expected.siteType &&
-  routeAccountId === expected.accountId &&
-  routeWorkspace === expected.routeKey
-
-type InFlightBoundaryMutation = {
-  controller: AbortController
-  promise: Promise<unknown>
-}
-
-const abortFailure = (): ResourceFailure => ({
-  code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted,
-})
-
-const toFailure = (error: unknown): ResourceFailure =>
-  error instanceof AccountKeyResourceError
-    ? error.failure
-    : { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected }
-
-const refIdentity = accountKeyResourceRefIdentity
-
-const refMatchesBoundary = (
-  ref: AccountKeyResourceRef,
-  boundary: ActiveResourceBoundary,
-) =>
-  ref.accountId === boundary.accountId &&
-  ref.siteType === boundary.siteType &&
-  ref.scopeKey === boundary.scopeKey
-
-const boundariesMatch = (
-  left: ActiveResourceBoundary,
-  right: ActiveResourceBoundary,
-) =>
-  left.accountId === right.accountId &&
-  left.siteType === right.siteType &&
-  left.scopeKey === right.scopeKey
-
-const boundaryIdentity = (
-  boundary: Pick<ActiveResourceBoundary, "accountId" | "siteType" | "scopeKey">,
-) => JSON.stringify([boundary.accountId, boundary.siteType, boundary.scopeKey])
-
-const boundaryFromResourceRef = (
-  ref: AccountKeyResourceRef,
-): ActiveResourceBoundary => ({
-  accountId: ref.accountId,
-  siteType: ref.siteType,
-  scopeKey: ref.scopeKey,
-  // Combined inventory has no route identity; mutations are bound by the
-  // provider's canonical collection scope instead.
-  routeKey: ref.scopeKey,
-})
-
-type AccountContextSnapshot = DisplayAccountApiSnapshot
-
-const captureAccountContext = (
-  account: DisplaySiteData,
-): AccountContextSnapshot => ({
-  id: account.id,
-  name: account.name,
-  siteType: account.siteType,
-  baseUrl: account.baseUrl,
-  authType: account.authType,
-  userId: account.userId,
-  token: account.token,
-  cookieAuthSessionCookie: account.cookieAuthSessionCookie,
-  tagIds: account.tagIds ? [...account.tagIds] : undefined,
-})
-
-const accountContextsMatch = (
-  left: readonly AccountContextSnapshot[],
-  right: readonly AccountContextSnapshot[],
-) =>
-  left.length === right.length &&
-  left.every((account, index) => {
-    const candidate = right[index]
-    return (
-      candidate !== undefined &&
-      account.id === candidate.id &&
-      account.name === candidate.name &&
-      account.siteType === candidate.siteType &&
-      account.baseUrl === candidate.baseUrl &&
-      account.authType === candidate.authType &&
-      account.userId === candidate.userId &&
-      account.token === candidate.token &&
-      account.cookieAuthSessionCookie === candidate.cookieAuthSessionCookie &&
-      account.tagIds?.length === candidate.tagIds?.length &&
-      (account.tagIds ?? []).every(
-        (tagId, tagIndex) => tagId === candidate.tagIds?.[tagIndex],
-      )
-    )
-  })
-
-const resolveCreateDestinationBoundary = (
-  nativeEditor: AccountKeyResourceEditor,
-  values: EditableResourceProjection,
-  editorBoundary: ActiveResourceBoundary,
-  scopes: readonly AccountKeyScope[],
-): ActiveResourceBoundary => {
-  const destinationScopeKey = nativeEditor.resolveDestinationScopeKey(values)
-  const destinationScope = scopes.find(
-    (scope) => scope.scopeKey === destinationScopeKey,
-  )
-  if (!destinationScope) {
-    throw new AccountKeyResourceError({
-      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-    })
-  }
-  return {
-    accountId: editorBoundary.accountId,
-    siteType: editorBoundary.siteType,
-    scopeKey: destinationScope.scopeKey,
-    routeKey: destinationScope.routeKey,
-  }
-}
-
-const mergeEditorValuesForScopeChange = (
-  previousValues: EditableResourceProjection,
-  nativeEditor: AccountKeyResourceEditor,
-): EditableResourceProjection => {
-  const dependencyFieldIds = new Set(
-    nativeEditor.fields.flatMap((field) =>
-      "optionLoader" in field && field.optionLoader
-        ? field.optionLoader.dependsOn
-        : [],
-    ),
-  )
-  const merged: Record<string, EditableResourceProjection[string]> = {
-    ...nativeEditor.initialValues,
-  }
-  nativeEditor.fields.forEach((field) => {
-    if (
-      field.readOnly ||
-      dependencyFieldIds.has(field.fieldId) ||
-      ("optionLoader" in field && field.optionLoader) ||
-      !(field.fieldId in previousValues)
-    )
-      return
-    const previousValue = previousValues[field.fieldId]
-    if (previousValue === undefined) return
-    if ("options" in field) {
-      const allowed = new Set(field.options.map((option) => option.value))
-      const isValid = Array.isArray(previousValue)
-        ? previousValue.every((value) => allowed.has(value))
-        : previousValue === null ||
-          (typeof previousValue === "string" && allowed.has(previousValue))
-      if (!isValid) return
-    }
-    merged[field.fieldId] = previousValue
-  })
-  return merged
-}
-
-const resetInvalidOptionValue = (
-  values: EditableResourceProjection,
-  initialValues: EditableResourceProjection,
-  field: ResourceFieldDescriptor,
-  options: readonly ResourceFieldOption[],
-): EditableResourceProjection => {
-  if (field.nullable) return { ...values, [field.fieldId]: null }
-  const initialValue = initialValues[field.fieldId]
-  const allowed = new Set(options.map((option) => option.value))
-  if (
-    (typeof initialValue === "string" && allowed.has(initialValue)) ||
-    (Array.isArray(initialValue) &&
-      initialValue.every((value) => allowed.has(value)))
-  ) {
-    return { ...values, [field.fieldId]: initialValue }
-  }
-  if (field.type === RESOURCE_FIELD_TYPES.MultiSelect) {
-    return { ...values, [field.fieldId]: [] }
-  }
-  if (field.required && options[0]) {
-    return { ...values, [field.fieldId]: options[0].value }
-  }
-  const nextValues = { ...values }
-  delete nextValues[field.fieldId]
-  return nextValues
-}
-
-const isAborted = (failure: ResourceFailure) =>
-  failure.code === ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted
-
-const awaitAbortable = <T>(promise: Promise<T>, signal: AbortSignal) =>
-  new Promise<T>((resolve, reject) => {
-    if (signal.aborted)
-      return reject(new AccountKeyResourceError(abortFailure()))
-    const abort = () => reject(new AccountKeyResourceError(abortFailure()))
-    signal.addEventListener("abort", abort, { once: true })
-    promise.then(
-      (value) => {
-        signal.removeEventListener("abort", abort)
-        resolve(value)
-      },
-      (error) => {
-        signal.removeEventListener("abort", abort)
-        reject(error)
-      },
-    )
-  })
-
-const readScopeInventory = async (
-  session: AccountKeyResourceSession,
-  options: { signal: AbortSignal },
-): Promise<AccountKeyScopeInventory> =>
-  session.listScopeInventory
-    ? await session.listScopeInventory(options)
-    : { scopes: await session.listScopes(options) }
-
-type IndexedAccount = { account: DisplaySiteData; index: number }
-
-const groupAccountsByOrigin = (accounts: readonly DisplaySiteData[]) => {
-  const groups = new Map<string, IndexedAccount[]>()
-  accounts.forEach((account, index) => {
-    const origin = normalizeUrlForOriginKey(account.baseUrl, {
-      stripTrailingSlashes: false,
-    })
-    const group = groups.get(origin)
-    if (group) group.push({ account, index })
-    else groups.set(origin, [{ account, index }])
-  })
-  return [...groups.values()]
-}
+export type { AccountKeyResourceRouteTransition } from "./accountKeyResourceControllerTypes"
+export { isAccountKeyResourceRouteTransitionAcknowledged } from "./accountKeyResourceWorkflowSupport"
 
 /** Owns native account-key resource loading and mutation state without exposing sessions. */
 export function useAccountKeyResourceController({
@@ -473,293 +63,114 @@ export function useAccountKeyResourceController({
   routeTransition,
   replaceRoute,
 }: Options) {
-  const { t } = useTranslation()
-  const inventoryExecutionRef = useRef(inventoryExecution)
-  inventoryExecutionRef.current = inventoryExecution
-  const creationIntentRef = useRef(creationIntent)
-  creationIntentRef.current = creationIntent
-  const onCreatedRef = useRef(onCreated)
-  onCreatedRef.current = onCreated
-  const accountsRef = useRef(accounts)
-  accountsRef.current = accounts
-  const routeRef = useRef(routeParams)
-  routeRef.current = routeParams
-  const replaceRouteRef = useRef(replaceRoute)
-  replaceRouteRef.current = replaceRoute
-  const accountContextSnapshotsRef = useRef<readonly AccountContextSnapshot[]>(
-    [],
-  )
-  const accountContextRevisionRef = useRef(0)
-  const nextAccountContextSnapshots = accounts.map(captureAccountContext)
-  if (
-    !accountContextsMatch(
-      accountContextSnapshotsRef.current,
-      nextAccountContextSnapshots,
-    )
-  ) {
-    accountContextSnapshotsRef.current = nextAccountContextSnapshots
-    accountContextRevisionRef.current += 1
-  }
-  const accountKey = accounts
-    .map((account) => `${account.id}:${account.siteType}`)
-    .join("|")
-    .concat(
-      `:${accountContextRevisionRef.current}:${JSON.stringify(creationIntent)}:${JSON.stringify(inventoryExecution)}`,
-    )
-  const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
-  const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
-  const routeTransitionId = routeTransition?.id
+  const routing = useAccountKeyResourceRouteState({
+    accounts,
+    inventoryExecution,
+    creationIntent,
+    onCreated,
+    routeParams,
+    routeTransition,
+    replaceRoute,
+  })
+  const {
+    inventoryExecutionRef,
+    accountsRef,
+    createdSecret,
+    createdSecretRef,
+    transitionCreatedSecret,
+  } = routing
   const mode: ControllerMode = !selectedAccount
-    ? "idle"
+    ? controllerModes.Idle
     : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-      ? "all"
-      : "single"
+      ? controllerModes.All
+      : controllerModes.Single
   const mutationAnalyticsMode =
-    mode === "all"
+    mode === controllerModes.All
       ? PRODUCT_ANALYTICS_MODE_IDS.All
       : PRODUCT_ANALYTICS_MODE_IDS.Single
+  const editorState = useAccountKeyResourceEditorState(routing.createdSecretRef)
+  const {
+    focusWorkflowId,
+    loadEditorOptions,
+    clearNativeOwner: clearEditorNativeOwner,
+    resetView: resetEditorView,
+    dispose: disposeEditor,
+  } = editorState
 
-  const [scopes, setScopes] = useState<readonly AccountKeyScope[]>([])
-  const [selectedScope, setSelectedScope] = useState<AccountKeyScope | null>(
-    null,
-  )
-  const selectedScopeRef = useRef(selectedScope)
-  selectedScopeRef.current = selectedScope
-  const [loadingResourceBoundary, setLoadingResourceBoundary] =
-    useState<ActiveResourceBoundary | null>(null)
-  const [acceptedRows, setAcceptedRows] = useState<
-    readonly AccountKeyResourceFacts[]
-  >([])
-  const [resourceScopes, setResourceScopes] = useState<
-    ReadonlyMap<string, AccountKeyScope>
-  >(new Map())
-  const acceptedRowsRef = useRef(acceptedRows)
-  const [failures, setFailures] = useState<Record<string, ResourceFailure>>({})
-  const [scopeInventoryFailure, setScopeInventoryFailure] =
-    useState<ResourceFailure | null>(null)
-  const [isScopeInventoryLoading, setIsScopeInventoryLoading] = useState(false)
-  const [settledAccountIds, setSettledAccountIds] = useState<readonly string[]>(
-    [],
-  )
-  const [progress, setProgress] = useState<LoadProgress>({
-    total: 0,
-    loaded: 0,
-    loading: 0,
-    error: 0,
+  const { editor, terminalCloseEditor, editorOpening, abortEditorFieldLoads } =
+    editorState
+  const inventoryState = useAccountKeyResourceInventoryState({
+    mode,
+    selectedAccount,
+    routing,
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [notice, setNotice] = useState<ControllerNotice | null>(null)
-  const [search, setSearchState] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    ACCOUNT_KEY_STATUS_FILTERS.All,
-  )
+  const {
+    currentResourceBoundary,
+    isCurrentResourceRef,
+    isAcceptedResourceRef,
+    rows,
+    setSearch,
+    selectScope,
+    clearNativeOwner: clearInventoryNativeOwner,
+  } = inventoryState
+
+  const {
+    scopes,
+    selectedScope,
+    acceptedRows,
+    failures,
+    scopeInventoryFailure,
+    isScopeInventoryLoading,
+    settledAccountIds,
+    progress,
+    isLoading,
+    notice,
+    search,
+    statusFilter,
+    setStatusFilter,
+    activeResourceBoundaryRef,
+    getResourceScope,
+  } = inventoryState
+
+  const {
+    requests,
+    requireFreshRead,
+    acceptFreshRead,
+    isFreshReadRequiredForBoundary,
+  } = useAccountKeyResourceRequestLifecycle()
+  const { t } = useTranslation()
   const [detail, setDetail] = useState<DetailState>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [detailFailure, setDetailFailure] = useState<ResourceFailure | null>(
     null,
   )
-  const [editor, setEditor] = useState<EditorState>(null)
-  const editorStateRef = useRef<EditorState>(editor)
-  editorStateRef.current = editor
-  // This is a view-only closing shell. It is deliberately separate from the
-  // active editor contract so refresh cannot rehydrate or erase Modal's focus
-  // settlement between a successful submit and React's next commit.
-  const [terminalCloseEditor, setTerminalCloseEditor] =
-    useState<EditorState>(null)
-  const terminalCloseEditorRef = useRef<EditorState>(terminalCloseEditor)
-  terminalCloseEditorRef.current = terminalCloseEditor
-  const [editorOpening, setEditorOpening] = useState<EditorOpeningState>({
-    attemptId: 0,
-    status: "idle",
-  })
-  const [createdSecret, setCreatedSecret] =
-    useState<CreatedRuntimeSecret | null>(null)
-  const createdSecretRef = useRef<CreatedRuntimeSecret | null>(null)
-  const [routeTransitionInstanceId] = useState(
-    () => ++nextAccountKeyResourceControllerInstanceId,
-  )
-  const [focusWorkflowId, setFocusWorkflowId] = useState<string | null>(null)
   const [deleteState, setDeleteState] = useState<DeleteState>({
     isOpen: false,
     isExecuting: false,
     ref: null,
     failure: null,
   })
-  const [freshReadLocks, setFreshReadLocks] = useState<
-    Record<string, ActiveResourceBoundary>
-  >({})
-  const selectedAccountData = accounts.find(
-    (account) => account.id === selectedAccount,
-  )
-  useEffect(() => {
-    // The status control belongs to one selected native account. Do not carry
-    // its hidden value into another account or the combined all-account view.
-    setStatusFilter(ACCOUNT_KEY_STATUS_FILTERS.All)
-  }, [mode, selectedAccount])
-  const currentResourceBoundary =
-    selectedScope && selectedAccountData
-      ? {
-          accountId: selectedAccount,
-          siteType: selectedAccountData.siteType,
-          scopeKey: selectedScope.scopeKey,
-          routeKey: selectedScope.routeKey,
-        }
-      : loadingResourceBoundary
   const freshReadRequired =
     currentResourceBoundary !== null &&
-    Object.values(freshReadLocks).some((boundary) =>
-      boundariesMatch(boundary, currentResourceBoundary),
-    )
-  const isFreshReadRequiredForBoundary = useCallback(
-    (boundary: ActiveResourceBoundary) =>
-      Object.values(freshReadLocks).some((lockedBoundary) =>
-        boundariesMatch(lockedBoundary, boundary),
-      ),
-    [freshReadLocks],
-  )
-  const generation = useRef(0)
-  const loadAbort = useRef<AbortController | null>(null)
-  const scopeInventoryAbort = useRef<AbortController | null>(null)
-  const loadInProgress = useRef(false)
-  const actionAbort = useRef<AbortController | null>(null)
+    isFreshReadRequiredForBoundary(currentResourceBoundary)
   const detailRequestEpoch = useRef(0)
-  const collectionRef = useRef<AccountKeyResourceCollection | null>(null)
-  const sessionRef = useRef<AccountKeyResourceSession | null>(null)
-  const activeResourceBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
-  const editorRef = useRef<AccountKeyResourceEditor | null>(null)
-  const editorBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
-  const editorFieldGenerations = useRef<Record<string, number>>({})
-  const editorFieldDependencySignatures = useRef(new Map<string, string>())
-  const editorGeneration = useRef(0)
-  const editorInstanceId = useRef(0)
-  const editorOpeningAttemptId = useRef(0)
-  const editorWorkflowSequence = useRef(0)
-  const editorOpeningRef = useRef<EditorOpeningState>(editorOpening)
-  editorOpeningRef.current = editorOpening
-  const editorOpeningRequestRef = useRef<EditorOpenRequest | null>(null)
-  const editorFieldAbortControllers = useRef(new Map<string, AbortController>())
-  const mutationsByBoundary = useRef(
-    new Map<string, InFlightBoundaryMutation>(),
-  )
-  const routeTransitionSequence = useRef(0)
-  const expectedRouteTransition = useRef<ExpectedRouteTransition | null>(null)
-  const lastRouteObservation = useRef<string | null>(null)
-  const lastAccountContextObservation =
-    useRef<AccountContextObservation | null>(null)
-  const deferredSecretContextReload = useRef(false)
-
-  const transitionCreatedSecret = useCallback(
-    (next: CreatedRuntimeSecret | null) => {
-      createdSecretRef.current = next
-      setCreatedSecret(next)
-    },
-    [],
-  )
-
-  // Async editor work can settle before React commits this render. Keep the
-  // controller's authoritative projection in sync with every queued update.
-  const transitionEditor = useCallback(
-    (transition: (current: EditorState) => EditorState) => {
-      const next = transition(editorStateRef.current)
-      editorStateRef.current = next
-      setEditor(next)
-      return next
-    },
-    [],
-  )
-
-  const transitionTerminalCloseEditor = useCallback((next: EditorState) => {
-    terminalCloseEditorRef.current = next
-    setTerminalCloseEditor(next)
-  }, [])
-
-  const transitionEditorOpening = useCallback((next: EditorOpeningState) => {
-    editorOpeningRef.current = next
-    setEditorOpening(next)
-  }, [])
-
-  const getResourceScope = useCallback(
-    (ref: AccountKeyResourceRef) => resourceScopes.get(boundaryIdentity(ref)),
-    [resourceScopes],
-  )
-
-  const rememberResourceScopes = useCallback(
-    (
-      boundary: Pick<ActiveResourceBoundary, "accountId" | "siteType">,
-      availableScopes: readonly AccountKeyScope[],
-    ) => {
-      setResourceScopes((previous) => {
-        const next = new Map(previous)
-        for (const scope of availableScopes)
-          next.set(
-            boundaryIdentity({ ...boundary, scopeKey: scope.scopeKey }),
-            scope,
-          )
-        return next
-      })
-    },
-    [],
-  )
-
-  const replaceAcceptedRows = useCallback(
-    (next: readonly AccountKeyResourceFacts[]) => {
-      acceptedRowsRef.current = next
-      setAcceptedRows(next)
-    },
-    [],
-  )
-
-  const requireFreshRead = useCallback((boundary: ActiveResourceBoundary) => {
-    const identity = boundaryIdentity(boundary)
-    setFreshReadLocks((current) => ({ ...current, [identity]: boundary }))
-  }, [])
-
-  const acceptFreshRead = useCallback((boundary: ActiveResourceBoundary) => {
-    const identity = boundaryIdentity(boundary)
-    setFreshReadLocks((current) => {
-      if (!(identity in current)) return current
-      const next = { ...current }
-      delete next[identity]
-      return next
-    })
-  }, [])
-
-  const abortEditorFieldLoads = useCallback(() => {
-    editorGeneration.current += 1
-    editorFieldAbortControllers.current.forEach((controller) =>
-      controller.abort(),
-    )
-    editorFieldAbortControllers.current.clear()
-    editorFieldGenerations.current = {}
-    editorFieldDependencySignatures.current.clear()
-  }, [])
 
   const clearActiveResourceRefs = useCallback(() => {
-    sessionRef.current = null
-    collectionRef.current = null
-    activeResourceBoundaryRef.current = null
-    editorRef.current = null
-    editorBoundaryRef.current = null
-  }, [])
+    clearInventoryNativeOwner()
+    clearEditorNativeOwner()
+  }, [clearInventoryNativeOwner, clearEditorNativeOwner])
 
   const clearTerminalResourceState = useCallback(
     ({
       preserveCreatedSecret = false,
     }: { preserveCreatedSecret?: boolean } = {}) => {
       clearActiveResourceRefs()
-      editorOpeningRequestRef.current = null
-      transitionEditorOpening({
-        attemptId: editorOpeningAttemptId.current,
-        status: "idle",
-      })
+      resetEditorView({ preserveCreatedSecret })
       setDetail(null)
       setIsDetailLoading(false)
       setDetailFailure(null)
-      transitionEditor(() => null)
       if (!preserveCreatedSecret) {
-        transitionTerminalCloseEditor(null)
         transitionCreatedSecret(null)
-        setFocusWorkflowId(null)
       }
       setDeleteState({
         isOpen: false,
@@ -768,13 +179,7 @@ export function useAccountKeyResourceController({
         failure: null,
       })
     },
-    [
-      clearActiveResourceRefs,
-      transitionCreatedSecret,
-      transitionEditor,
-      transitionTerminalCloseEditor,
-      transitionEditorOpening,
-    ],
+    [clearActiveResourceRefs, resetEditorView, transitionCreatedSecret],
   )
 
   const defaultOpenResources = useCallback<OpenAccountResources>(
@@ -808,836 +213,53 @@ export function useAccountKeyResourceController({
         signal,
       )
     },
-    [defaultOpenResources],
+    [defaultOpenResources, inventoryExecutionRef],
   )
 
   const clearDialogs = useCallback(() => {
-    actionAbort.current?.abort()
-    actionAbort.current = null
+    requests.cancel(requestSlots.Action)
+    requests.release(requestSlots.Action)
     abortEditorFieldLoads()
     clearTerminalResourceState()
-  }, [abortEditorFieldLoads, clearTerminalResourceState])
+  }, [requests, abortEditorFieldLoads, clearTerminalResourceState])
 
-  const deferSecretContextReload = useCallback(() => {
-    // One-time plaintext remains available in this component only, but the
-    // request context that produced the existing resource session is no longer
-    // trustworthy. Drop every command owner before the secret can be closed.
-    generation.current += 1
-    loadAbort.current?.abort()
-    loadAbort.current = null
-    scopeInventoryAbort.current?.abort()
-    scopeInventoryAbort.current = null
-    setIsScopeInventoryLoading(false)
-    actionAbort.current?.abort()
-    actionAbort.current = null
-    abortEditorFieldLoads()
-    clearTerminalResourceState({ preserveCreatedSecret: true })
-    loadInProgress.current = true
-    deferredSecretContextReload.current = true
-  }, [abortEditorFieldLoads, clearTerminalResourceState])
-
-  const loadEditorOptions = useCallback(
-    async (
-      editorId: number,
-      fieldId: string,
-      values?: EditableResourceProjection,
-      editorOverride?: LoadOptionsEditor,
-    ) => {
-      const currentEditorState = editorStateRef.current
-      const nativeEditor = editorOverride ?? editorRef.current
-      if (
-        createdSecretRef.current !== null ||
-        !nativeEditor?.loadOptions ||
-        !currentEditorState ||
-        currentEditorState.editorId !== editorId
-      )
-        return
-      const editorVersion = editorGeneration.current
-      const nextGeneration = (editorFieldGenerations.current[fieldId] ?? 0) + 1
-      editorFieldGenerations.current[fieldId] = nextGeneration
-      editorFieldAbortControllers.current.get(fieldId)?.abort()
-      const controller = new AbortController()
-      editorFieldAbortControllers.current.set(fieldId, controller)
-      const requestedValues = values ?? currentEditorState?.values ?? {}
-      const requestedField = nativeEditor.fields.find(
-        (field) => field.fieldId === fieldId,
-      )
-      const dependencies =
-        requestedField && "optionLoader" in requestedField
-          ? requestedField.optionLoader?.dependsOn ?? []
-          : []
-      const dependencySignature = (projection: EditableResourceProjection) =>
-        JSON.stringify(dependencies.map((dependency) => projection[dependency]))
-      const signature = dependencySignature(requestedValues)
-      const dependenciesChanged =
-        signature !==
-        (editorFieldDependencySignatures.current.get(fieldId) ??
-          dependencySignature(currentEditorState.initialValues))
-      editorFieldDependencySignatures.current.set(fieldId, signature)
-      // Loading options does not invalidate an existing selection. Only a
-      // dependency change clears it before the returned choices are known.
-      const nextValues =
-        dependenciesChanged && requestedField
-          ? resetInvalidOptionValue(
-              requestedValues,
-              currentEditorState.initialValues,
-              requestedField,
-              [],
-            )
-          : requestedValues
-      transitionEditor((current) => {
-        if (!current || current.editorId !== editorId) return current
-        const field = current.fields.find(
-          (candidate) => candidate.fieldId === fieldId,
-        )
-        const optionFailuresByField = { ...current.optionFailuresByField }
-        delete optionFailuresByField[fieldId]
-        return {
-          ...current,
-          values:
-            dependenciesChanged && field
-              ? resetInvalidOptionValue(
-                  current.values,
-                  current.initialValues,
-                  field,
-                  [],
-                )
-              : current.values,
-          optionsByField: { ...current.optionsByField, [fieldId]: [] },
-          optionFailuresByField,
-          loadingFieldIds: [...new Set([...current.loadingFieldIds, fieldId])],
-        }
-      })
-      try {
-        const options = await nativeEditor.loadOptions(fieldId, nextValues, {
-          signal: controller.signal,
-        })
-        if (
-          editorGeneration.current !== editorVersion ||
-          editorFieldGenerations.current[fieldId] !== nextGeneration
-        )
-          return
-        transitionEditor((current) => {
-          if (!current || current.editorId !== editorId) return current
-          const value = current.values[fieldId]
-          const field = current.fields.find(
-            (candidate) => candidate.fieldId === fieldId,
-          )
-          const hasInvalidOption =
-            typeof value === "string"
-              ? value.length > 0 &&
-                !options.some((option) => option.value === value)
-              : Array.isArray(value)
-                ? value.some(
-                    (entry) =>
-                      !options.some((option) => option.value === entry),
-                  )
-                : false
-          const valuesWithInvalidOptionCleared =
-            field && hasInvalidOption
-              ? resetInvalidOptionValue(
-                  current.values,
-                  current.initialValues,
-                  field,
-                  options,
-                )
-              : current.values
-          return {
-            ...current,
-            values: valuesWithInvalidOptionCleared,
-            optionsByField: {
-              ...current.optionsByField,
-              [fieldId]: options,
-            },
-            optionFailuresByField: {
-              ...current.optionFailuresByField,
-              [fieldId]: undefined,
-            },
-            loadingFieldIds: current.loadingFieldIds.filter(
-              (id) => id !== fieldId,
-            ),
-          }
-        })
-      } catch (error) {
-        if (
-          editorGeneration.current !== editorVersion ||
-          editorFieldGenerations.current[fieldId] !== nextGeneration
-        )
-          return
-        const failure = toFailure(error)
-        transitionEditor((current) =>
-          current && current.editorId === editorId
-            ? {
-                ...current,
-                optionFailuresByField: {
-                  ...current.optionFailuresByField,
-                  ...(isAborted(failure) ? {} : { [fieldId]: failure }),
-                },
-                loadingFieldIds: current.loadingFieldIds.filter(
-                  (id) => id !== fieldId,
-                ),
-              }
-            : current,
-        )
-      } finally {
-        if (editorFieldAbortControllers.current.get(fieldId) === controller) {
-          editorFieldAbortControllers.current.delete(fieldId)
-        }
-      }
+  const { load, retryScopeInventory } = useAccountKeyResourceInventoryWorkflow({
+    state: {
+      selectedAccount,
+      mode,
+      setDetail,
+      setDeleteState,
     },
-    [transitionEditor],
-  )
-
-  const load = useCallback(
-    async (
-      options: {
-        protectionBypassExecution?: ProtectionBypassExecution
-        preserveCreatedSecret?: boolean
-        preserveEditor?: boolean
-        preserveRows?: boolean
-        retryAccountIds?: readonly string[]
-        targetScopeKey?: string
-        routeTransitionId?: string
-      } = {},
-    ) => {
-      loadAbort.current?.abort()
-      scopeInventoryAbort.current?.abort()
-      scopeInventoryAbort.current = null
-      setIsScopeInventoryLoading(false)
-      if (!options.preserveCreatedSecret)
-        deferredSecretContextReload.current = false
-      const preservedEditor = options.preserveEditor
-        ? editorStateRef.current
-        : null
-      const preservedEditorId = preservedEditor?.editorId
-      const preservedEditorBoundary = editorBoundaryRef.current
-      const preserveEditor =
-        preservedEditor?.mode === "create" &&
-        !preservedEditor.terminalClose &&
-        preservedEditorBoundary?.accountId === selectedAccount
-      const controller = new AbortController()
-      loadAbort.current = controller
-      const current = ++generation.current
-      loadInProgress.current = mode !== "idle"
-      if (options.preserveCreatedSecret) {
-        const terminalEditor =
-          editorStateRef.current ?? terminalCloseEditorRef.current
-        actionAbort.current?.abort()
-        actionAbort.current = null
-        abortEditorFieldLoads()
-        editorRef.current = null
-        setDetail(null)
-        transitionEditor(() => null)
-        if (!terminalEditor?.terminalRetainsFocusWorkflow) {
-          setFocusWorkflowId(null)
-        }
-        setDeleteState({
-          isOpen: false,
-          isExecuting: false,
-          ref: null,
-          failure: null,
-        })
-      } else if (preserveEditor) {
-        actionAbort.current?.abort()
-        actionAbort.current = null
-        abortEditorFieldLoads()
-        setDetail(null)
-        transitionCreatedSecret(null)
-        setDeleteState({
-          isOpen: false,
-          isExecuting: false,
-          ref: null,
-          failure: null,
-        })
-      } else {
-        clearDialogs()
-      }
-      setScopes([])
-      setSelectedScope(null)
-      setLoadingResourceBoundary(null)
-      if (!options.preserveRows || mode === "idle") {
-        setResourceScopes(new Map())
-        replaceAcceptedRows([])
-      }
-      setFailures({})
-      setScopeInventoryFailure(null)
-      setNotice(null)
-      setIsLoading(mode !== "idle")
-
-      if (mode === "idle") {
-        setSettledAccountIds([])
-        clearTerminalResourceState()
-        loadInProgress.current = false
-        setProgress({ total: 0, loaded: 0, loading: 0, error: 0 })
-        setIsLoading(false)
-        return false
-      }
-
-      const activeAccounts = accountsRef.current.filter(
-        (account) =>
-          (mode === "all" ? true : account.id === selectedAccount) &&
-          Boolean(
-            getSiteTypeCapabilities(account.siteType).account
-              ?.keyResourceManagement,
-          ),
-      )
-      const retryIds =
-        mode === "all" && options.retryAccountIds
-          ? new Set(options.retryAccountIds)
-          : null
-      const loadingAccounts = retryIds
-        ? activeAccounts.filter((account) => retryIds.has(account.id))
-        : activeAccounts
-      const retainedAccountIds = retryIds
-        ? activeAccounts
-            .filter((account) => !retryIds.has(account.id))
-            .map((account) => account.id)
-        : []
-      setSettledAccountIds(retainedAccountIds)
-      setProgress({
-        total: activeAccounts.length,
-        loaded: retainedAccountIds.length,
-        loading: loadingAccounts.length,
-        error: 0,
-      })
-
-      const acceptProgress = (loaded: boolean) => {
-        if (current !== generation.current || controller.signal.aborted) return
-        setProgress((previous) => ({
-          ...previous,
-          loaded: previous.loaded + (loaded ? 1 : 0),
-          error: previous.error + (loaded ? 0 : 1),
-          loading: Math.max(0, previous.loading - 1),
-        }))
-      }
-
-      try {
-        if (mode === "all") {
-          clearActiveResourceRefs()
-          const rowsByAccount = new Map<
-            string,
-            readonly AccountKeyResourceFacts[]
-          >()
-          if (options.preserveRows) {
-            for (const row of acceptedRowsRef.current) {
-              const rows = rowsByAccount.get(row.ref.accountId) ?? []
-              rowsByAccount.set(row.ref.accountId, [...rows, row])
-            }
-          }
-          const settledAccounts = new Set(retainedAccountIds)
-          const acceptAccountResult = (
-            account: DisplaySiteData,
-            result: PromiseSettledResult<AccountKeyResourceFacts[]>,
-          ) => {
-            if (current !== generation.current || controller.signal.aborted)
-              return
-            if (result.status === "fulfilled") {
-              rowsByAccount.set(account.id, result.value)
-              replaceAcceptedRows(
-                activeAccounts.flatMap(
-                  (candidate) => rowsByAccount.get(candidate.id) ?? [],
-                ),
-              )
-              acceptProgress(true)
-            } else {
-              const failure = toFailure(result.reason)
-              if (isAborted(failure)) return
-              setFailures((currentFailures) => ({
-                ...currentFailures,
-                [account.id]: failure,
-              }))
-              acceptProgress(false)
-            }
-            settledAccounts.add(account.id)
-            setSettledAccountIds(
-              activeAccounts
-                .filter((candidate) => settledAccounts.has(candidate.id))
-                .map((candidate) => candidate.id),
-            )
-          }
-          const loadAccount = async (account: DisplaySiteData) => {
-            const session = await openSession(
-              account,
-              controller.signal,
-              options.protectionBypassExecution,
-            )
-            if (!session) return [] as AccountKeyResourceFacts[]
-            const scope = await awaitAbortable(
-              session.resolveDefaultScope({ signal: controller.signal }),
-              controller.signal,
-            )
-            const collection = await awaitAbortable(
-              session.openCollection(scope.scopeKey, {
-                signal: controller.signal,
-              }),
-              controller.signal,
-            )
-            const rows = await collectAccountKeyResourceInventory(collection, {
-              search: search.trim(),
-              signal: controller.signal,
-            })
-            if (current === generation.current && !controller.signal.aborted) {
-              rememberResourceScopes(
-                { accountId: account.id, siteType: account.siteType },
-                [scope],
-              )
-              acceptFreshRead({
-                accountId: account.id,
-                siteType: account.siteType,
-                scopeKey: scope.scopeKey,
-                routeKey: scope.routeKey,
-              })
-            }
-            return rows
-          }
-          const originGroups = groupAccountsByOrigin(loadingAccounts)
-          const settledGroups = await mapSettledWithConcurrency(
-            originGroups,
-            ALL_ACCOUNT_CONCURRENCY,
-            async (group) => {
-              const results: Array<{
-                account: DisplaySiteData
-                index: number
-                result: PromiseSettledResult<AccountKeyResourceFacts[]>
-              }> = []
-              for (const entry of group) {
-                const [result] = await Promise.allSettled([
-                  loadAccount(entry.account),
-                ])
-                acceptAccountResult(entry.account, result)
-                results.push({ ...entry, result })
-              }
-              return results
-            },
-          )
-          if (current !== generation.current) return false
-          settledGroups.forEach((groupResult, groupIndex) => {
-            if (groupResult.status === "fulfilled") return
-            const group = originGroups[groupIndex]
-            if (!group) return
-            group.forEach(({ account }) =>
-              acceptAccountResult(account, {
-                status: "rejected",
-                reason: groupResult.reason,
-              }),
-            )
-          })
-          return true
-        }
-
-        const account = activeAccounts[0]
-        if (!account) {
-          clearTerminalResourceState({
-            preserveCreatedSecret: options.preserveCreatedSecret,
-          })
-          return false
-        }
-        const session = await openSession(
-          account,
-          controller.signal,
-          options.protectionBypassExecution,
-        )
-        if (!session) {
-          clearTerminalResourceState({
-            preserveCreatedSecret: options.preserveCreatedSecret,
-          })
-          acceptProgress(true)
-          setSettledAccountIds([account.id])
-          return true
-        }
-        const scopeInventory = await awaitAbortable(
-          readScopeInventory(session, { signal: controller.signal }),
-          controller.signal,
-        )
-        const defaultScope = await awaitAbortable(
-          session.resolveDefaultScope({ signal: controller.signal }),
-          controller.signal,
-        )
-        const listedScopes = scopeInventory.scopes
-        if (current !== generation.current) return false
-        const availableScopes = listedScopes.some(
-          (scope) => scope.scopeKey === defaultScope.scopeKey,
-        )
-          ? listedScopes
-          : [defaultScope, ...listedScopes]
-        const requestedRouteKey =
-          routeRef.current?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]?.trim()
-        const routeMatchesAccount =
-          routeRef.current?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId] ===
-          account.id
-        const requestedScope =
-          routeMatchesAccount && requestedRouteKey
-            ? availableScopes.find(
-                (scope) => scope.routeKey === requestedRouteKey,
-              )
-            : undefined
-        const targetScope = options.targetScopeKey
-          ? availableScopes.find(
-              (candidate) => candidate.scopeKey === options.targetScopeKey,
-            )
-          : undefined
-        if (options.targetScopeKey && !targetScope) {
-          throw new AccountKeyResourceError({
-            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-          })
-        }
-        const canonicalDefaultScope =
-          availableScopes.find(
-            (scope) => scope.scopeKey === defaultScope.scopeKey,
-          ) ?? defaultScope
-        const scope = targetScope ?? requestedScope ?? canonicalDefaultScope
-        const needsCanonicalRoute =
-          !routeMatchesAccount ||
-          requestedScope === undefined ||
-          (!!targetScope && targetScope.scopeKey !== requestedScope.scopeKey)
-        if (needsCanonicalRoute) {
-          if (
-            !targetScope &&
-            requestedRouteKey &&
-            (!routeMatchesAccount || requestedScope === undefined)
-          ) {
-            setNotice({ kind: "workspace-fallback" })
-          }
-          const nextRoute = {
-            [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: account.id,
-            [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: scope.routeKey,
-          }
-          if (options.routeTransitionId !== undefined) {
-            expectedRouteTransition.current = {
-              id: options.routeTransitionId,
-              // The route effect cleans up this generation before it receives
-              // the replacement. Acknowledgement is valid only for that next
-              // generation, never for a later same-value route update.
-              generation: current + 1,
-              selectedAccount,
-              accountId: account.id,
-              siteType: account.siteType,
-              scopeKey: scope.scopeKey,
-              routeKey: scope.routeKey,
-            }
-          }
-          if (options.routeTransitionId) {
-            replaceRouteRef.current?.(nextRoute, {
-              id: options.routeTransitionId,
-            })
-          } else {
-            replaceRouteRef.current?.(nextRoute)
-          }
-        }
-        const activeBoundary: ActiveResourceBoundary = {
-          accountId: account.id,
-          siteType: account.siteType,
-          scopeKey: scope.scopeKey,
-          routeKey: scope.routeKey,
-        }
-        setLoadingResourceBoundary(activeBoundary)
-        const collection = await awaitAbortable(
-          session.openCollection(scope.scopeKey, { signal: controller.signal }),
-          controller.signal,
-        )
-        const rows = await collectAccountKeyResourceInventory(collection, {
-          search: search.trim(),
-          signal: controller.signal,
-        })
-        if (current !== generation.current) return false
-        let rehydratedEditor: {
-          nativeEditor: AccountKeyResourceEditor
-          state: Exclude<EditorState, null>
-        } | null = null
-        if (preserveEditor && preservedEditorId !== undefined) {
-          const nativeEditor = await awaitAbortable(
-            session.openCreateEditor(
-              scope.scopeKey,
-              {
-                signal: controller.signal,
-              },
-              creationIntentRef.current,
-            ),
-            controller.signal,
-          )
-          if (current !== generation.current) return false
-          const currentEditor = editorStateRef.current
-          if (
-            currentEditor?.mode === "create" &&
-            currentEditor.editorId === preservedEditorId
-          ) {
-            const rehydratedValues = mergeEditorValuesForScopeChange(
-              currentEditor.values,
-              nativeEditor,
-            )
-            rehydratedEditor = {
-              nativeEditor,
-              state: {
-                // Rehydration replaces the native contract, so it must also
-                // replace the dialog session that owns dynamic option caches.
-                editorId: ++editorInstanceId.current,
-                siteType: activeBoundary.siteType,
-                mode: "create",
-                fields: nativeEditor.fields,
-                initialValues: nativeEditor.initialValues,
-                values: rehydratedValues,
-                optionsByField: {},
-                optionFailuresByField: {},
-                loadingFieldIds: [],
-                feedback: null,
-              },
-            }
-          }
-        }
-        if (current !== generation.current) return false
-        sessionRef.current = session
-        collectionRef.current = collection
-        activeResourceBoundaryRef.current = activeBoundary
-        editorRef.current = rehydratedEditor?.nativeEditor ?? null
-        editorBoundaryRef.current = rehydratedEditor ? activeBoundary : null
-        if (rehydratedEditor) transitionEditor(() => rehydratedEditor.state)
-        acceptFreshRead(activeBoundary)
-        setLoadingResourceBoundary(null)
-        setScopes(availableScopes)
-        setSelectedScope(scope)
-        setScopeInventoryFailure(scopeInventory.partialFailure ?? null)
-        rememberResourceScopes(activeBoundary, availableScopes)
-        replaceAcceptedRows(rows)
-        acceptProgress(true)
-        setSettledAccountIds([account.id])
-        return true
-      } catch (error) {
-        const failure = toFailure(error)
-        if (current === generation.current && !isAborted(failure)) {
-          clearTerminalResourceState({
-            preserveCreatedSecret: options.preserveCreatedSecret,
-          })
-          const account = activeAccounts[0]
-          if (account) setFailures({ [account.id]: failure })
-          acceptProgress(false)
-          if (account) setSettledAccountIds([account.id])
-        }
-        return false
-      } finally {
-        if (current === generation.current) {
-          loadInProgress.current = false
-          setLoadingResourceBoundary(null)
-          setIsLoading(false)
-          if (loadAbort.current === controller) loadAbort.current = null
-        }
-      }
-    },
-    [
-      abortEditorFieldLoads,
-      acceptFreshRead,
-      clearActiveResourceRefs,
-      clearTerminalResourceState,
+    actions: {
       clearDialogs,
-      mode,
+      clearTerminalResourceState,
+      clearActiveResourceRefs,
       openSession,
-      replaceAcceptedRows,
-      rememberResourceScopes,
-      search,
-      selectedAccount,
-      transitionCreatedSecret,
-      transitionEditor,
-    ],
-  )
-
-  const retryScopeInventory = useCallback(async () => {
-    const session = sessionRef.current
-    const boundary = activeResourceBoundaryRef.current
-    const refreshInventory =
-      session?.refreshScopeInventory ?? session?.listScopeInventory
-    if (mode !== "single" || !session || !boundary || !refreshInventory) {
-      return false
-    }
-
-    scopeInventoryAbort.current?.abort()
-    const controller = new AbortController()
-    scopeInventoryAbort.current = controller
-    const currentGeneration = generation.current
-    setIsScopeInventoryLoading(true)
-    const isCurrentRequest = () =>
-      !controller.signal.aborted &&
-      generation.current === currentGeneration &&
-      sessionRef.current === session &&
-      activeResourceBoundaryRef.current !== null &&
-      boundariesMatch(activeResourceBoundaryRef.current, boundary)
-
-    try {
-      const inventory = await awaitAbortable(
-        refreshInventory.call(session, { signal: controller.signal }),
-        controller.signal,
-      )
-      if (!isCurrentRequest()) return false
-      if (inventory.partialFailure) {
-        setScopeInventoryFailure(inventory.partialFailure)
-        return false
-      }
-
-      const currentScope = selectedScopeRef.current
-      const nextSelectedScope = currentScope
-        ? inventory.scopes.find(
-            (scope) => scope.scopeKey === currentScope.scopeKey,
-          ) ?? currentScope
-        : inventory.scopes.find((scope) => scope.isDefault) ??
-          inventory.scopes[0] ??
-          null
-      const nextScopes =
-        nextSelectedScope &&
-        !inventory.scopes.some(
-          (scope) => scope.scopeKey === nextSelectedScope.scopeKey,
-        )
-          ? [nextSelectedScope, ...inventory.scopes]
-          : inventory.scopes
-      rememberResourceScopes(boundary, nextScopes)
-      setScopes(nextScopes)
-      setSelectedScope(nextSelectedScope)
-      setScopeInventoryFailure(null)
-      return true
-    } catch (error) {
-      const failure = toFailure(error)
-      if (isCurrentRequest() && !isAborted(failure)) {
-        setScopeInventoryFailure(failure)
-      }
-      return false
-    } finally {
-      if (scopeInventoryAbort.current === controller) {
-        scopeInventoryAbort.current = null
-        setIsScopeInventoryLoading(false)
-      }
-    }
-  }, [mode, rememberResourceScopes])
-
-  useEffect(() => {
-    const routeObservation = JSON.stringify([
-      selectedAccount,
-      routeAccountId,
-      routeWorkspace,
-      routeTransitionId,
-    ])
-    const routeChanged =
-      lastRouteObservation.current !== null &&
-      lastRouteObservation.current !== routeObservation
-    lastRouteObservation.current = routeObservation
-    const expectedTransition = expectedRouteTransition.current
-    const selectedRouteAccount = accountsRef.current.find(
-      (account) => account.id === selectedAccount,
-    )
-    const selectedAccountContext = selectedRouteAccount
-      ? captureAccountContext(selectedRouteAccount)
-      : null
-    const previousContextObservation = lastAccountContextObservation.current
-    const sameSelectedRoute =
-      previousContextObservation?.mode === "single" &&
-      previousContextObservation.selectedAccount === selectedAccount &&
-      previousContextObservation.routeAccountId === routeAccountId &&
-      previousContextObservation.routeWorkspace === routeWorkspace
-    const accountContextChanged =
-      sameSelectedRoute &&
-      !accountContextsMatch(
-        previousContextObservation.context
-          ? [previousContextObservation.context]
-          : [],
-        selectedAccountContext ? [selectedAccountContext] : [],
-      )
-    lastAccountContextObservation.current = {
-      mode,
-      selectedAccount,
-      routeAccountId,
-      routeWorkspace,
-      context: selectedAccountContext,
-    }
-    const matchesExpectedTransition =
-      isAccountKeyResourceRouteTransitionAcknowledged({
-        expected: expectedTransition,
-        generation: generation.current,
-        mode,
-        transitionId: routeTransitionId,
-        selectedAccount,
-        selectedRouteSiteType: selectedRouteAccount?.siteType,
-        routeAccountId,
-        routeWorkspace,
-      })
-    // Any next route observation consumes the transition. A duplicate ID or a
-    // coincidental value match cannot keep one-time plaintext alive.
-    if (expectedTransition) expectedRouteTransition.current = null
-    if (
-      createdSecretRef.current !== null &&
-      accountContextChanged &&
-      !matchesExpectedTransition &&
-      !routeChanged
-    ) {
-      deferSecretContextReload()
-      return
-    }
-    if (
-      createdSecretRef.current !== null &&
-      !matchesExpectedTransition &&
-      !routeChanged
-    )
-      return
-    void load({
-      preserveCreatedSecret: matchesExpectedTransition,
-      ...(matchesExpectedTransition && expectedTransition
-        ? { targetScopeKey: expectedTransition.scopeKey }
-        : {}),
-      preserveEditor:
-        !matchesExpectedTransition &&
-        mode === "single" &&
-        routeAccountId === selectedAccount &&
-        !editorStateRef.current?.terminalClose,
-    })
-    return () => {
-      generation.current += 1
-      loadAbort.current?.abort()
-      scopeInventoryAbort.current?.abort()
-      scopeInventoryAbort.current = null
-    }
-  }, [
-    accountKey,
-    deferSecretContextReload,
-    load,
+      acceptFreshRead,
+    },
+    requests,
+    editorState,
+    inventoryState,
+    routing,
+  })
+  const { closeCreatedSecret } = useAccountKeyResourceRouteCoordinator({
+    routing,
+    editorState,
+    inventoryState,
+    requests,
     mode,
-    routeAccountId,
-    routeTransitionId,
-    routeWorkspace,
     selectedAccount,
-  ])
+    load,
+    clearTerminalResourceState,
+  })
 
   useEffect(
     () => () => {
-      generation.current += 1
-      loadAbort.current?.abort()
-      scopeInventoryAbort.current?.abort()
-      scopeInventoryAbort.current = null
-      actionAbort.current?.abort()
-      mutationsByBoundary.current.forEach(({ controller }) =>
-        controller.abort(),
-      )
-      mutationsByBoundary.current.clear()
-      editorFieldAbortControllers.current.forEach((controller) =>
-        controller.abort(),
-      )
-      editorFieldAbortControllers.current.clear()
-      sessionRef.current = null
-      collectionRef.current = null
-      activeResourceBoundaryRef.current = null
-      editorRef.current = null
-      editorBoundaryRef.current = null
+      requests.dispose()
+      disposeEditor()
+      clearInventoryNativeOwner()
     },
-    [],
-  )
-
-  const isCurrentResourceRef = useCallback(
-    (ref: AccountKeyResourceRef) => {
-      if (mode !== "single") return false
-      const boundary = activeResourceBoundaryRef.current
-      return !!boundary && refMatchesBoundary(ref, boundary)
-    },
-    [mode],
-  )
-
-  const isAcceptedResourceRef = useCallback(
-    (ref: AccountKeyResourceRef) =>
-      acceptedRows.some((row) => refIdentity(row.ref) === refIdentity(ref)),
-    [acceptedRows],
+    [requests, disposeEditor, clearInventoryNativeOwner],
   )
 
   const resolveResourceActionContext = useCallback(
@@ -1646,8 +268,8 @@ export function useAccountKeyResourceController({
       controller: AbortController,
     ): Promise<ResourceActionContext | null> => {
       if (
-        mode === "idle" ||
-        (mode === "single"
+        mode === controllerModes.Idle ||
+        (mode === controllerModes.Single
           ? !isCurrentResourceRef(ref)
           : !isAcceptedResourceRef(ref))
       )
@@ -1658,7 +280,7 @@ export function useAccountKeyResourceController({
       )
       if (!account) return null
       const boundary =
-        mode === "single"
+        mode === controllerModes.Single
           ? activeResourceBoundaryRef.current!
           : boundaryFromResourceRef(ref)
       const session = await openSession(
@@ -1673,24 +295,15 @@ export function useAccountKeyResourceController({
       )
       return { session, collection, boundary }
     },
-    [isAcceptedResourceRef, isCurrentResourceRef, mode, openSession],
+    [
+      isAcceptedResourceRef,
+      isCurrentResourceRef,
+      mode,
+      openSession,
+      accountsRef,
+      activeResourceBoundaryRef,
+    ],
   )
-
-  const rows = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
-    return acceptedRows.filter((row) => {
-      const matchesStatus =
-        statusFilter === ACCOUNT_KEY_STATUS_FILTERS.All ||
-        row.status === statusFilter
-      if (!matchesStatus) return false
-      if (!normalizedSearch) return true
-      return [
-        row.displayName,
-        row.maskedLabel,
-        ...(row.searchValues ?? []),
-      ].some((value) => value.toLowerCase().includes(normalizedSearch))
-    })
-  }, [acceptedRows, search, statusFilter])
 
   const refreshAfterMutation = useCallback(
     async (
@@ -1725,818 +338,91 @@ export function useAccountKeyResourceController({
             : { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }),
           insights: {
             mode:
-              mode === "all"
+              mode === controllerModes.All
                 ? PRODUCT_ANALYTICS_MODE_IDS.All
                 : PRODUCT_ANALYTICS_MODE_IDS.Single,
             ...(account
               ? { siteType: account.siteType as ProductAnalyticsSiteType }
               : {}),
             selectedCount:
-              mode === "all" ? accountsRef.current.length : account ? 1 : 0,
+              mode === controllerModes.All
+                ? accountsRef.current.length
+                : account
+                  ? 1
+                  : 0,
           },
         },
       )
       return accepted
     },
-    [load, mode, selectedAccount],
+    [load, mode, selectedAccount, accountsRef],
   )
 
   const refresh = useCallback(async () => {
     if (createdSecretRef.current !== null) return false
     return await refreshAfterMutation()
-  }, [refreshAfterMutation])
+  }, [refreshAfterMutation, createdSecretRef])
 
   /** Retries a settled failure set without rereading successful inventories. */
   const retryFailed = useCallback(async () => {
     const retryAccountIds = Object.keys(failures)
     if (
-      mode !== "all" ||
-      loadInProgress.current ||
+      mode !== controllerModes.All ||
+      requests.isInventoryLoading() ||
       createdSecretRef.current !== null ||
       retryAccountIds.length === 0
     )
       return false
     return await refreshAfterMutation(undefined, undefined, retryAccountIds)
-  }, [failures, mode, refreshAfterMutation])
-
-  const setSearch = useCallback((nextSearch: string) => {
-    if (createdSecretRef.current !== null) return
-    setSearchState(nextSearch)
-  }, [])
-
-  const openDetail = useCallback(
-    async (ref: AccountKeyResourceRef) => {
-      const collection = collectionRef.current
-      if (
-        mode !== "single" ||
-        createdSecretRef.current !== null ||
-        loadInProgress.current ||
-        !collection ||
-        !isCurrentResourceRef(ref)
-      )
-        return
-      actionAbort.current?.abort()
-      const controller = new AbortController()
-      actionAbort.current = controller
-      const current = generation.current
-      const requestEpoch = ++detailRequestEpoch.current
-      const isCurrentDetailRequest = () =>
-        current === generation.current &&
-        requestEpoch === detailRequestEpoch.current &&
-        actionAbort.current === controller
-      setDetail(null)
-      setDetailFailure(null)
-      setIsDetailLoading(true)
-      try {
-        const actionContext = await resolveResourceActionContext(
-          ref,
-          controller,
-        )
-        if (!actionContext) return
-        const facts = await awaitAbortable(
-          actionContext.collection.get(ref, { signal: controller.signal }),
-          controller.signal,
-        )
-        if (isCurrentDetailRequest()) {
-          setDetail(facts)
-          setDetailFailure(null)
-        }
-      } catch (error) {
-        if (isCurrentDetailRequest()) setDetailFailure(toFailure(error))
-      } finally {
-        if (isCurrentDetailRequest()) setIsDetailLoading(false)
-      }
-    },
-    [isCurrentResourceRef, mode, resolveResourceActionContext],
-  )
-
-  const closeDetail = useCallback(() => {
-    detailRequestEpoch.current += 1
-    actionAbort.current?.abort()
-    setDetail(null)
-    setDetailFailure(null)
-    setIsDetailLoading(false)
-  }, [])
-
-  const selectScope = useCallback(
-    (scopeKey: string) => {
-      if (mode !== "single" || createdSecretRef.current !== null) return false
-      const scope = scopes.find((candidate) => candidate.scopeKey === scopeKey)
-      if (!scope) return false
-      replaceRouteRef.current?.({
-        [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: selectedAccount,
-        [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: scope.routeKey,
-      })
-      return true
-    },
-    [mode, scopes, selectedAccount],
-  )
-
-  const openEditor = useCallback(
-    async (
-      editorMode: EditorMode,
-      ref?: AccountKeyResourceRef,
-      retryAttemptId?: number,
-    ) => {
-      const boundary =
-        editorMode === "edit" && mode === "all" && ref
-          ? boundaryFromResourceRef(ref)
-          : activeResourceBoundaryRef.current
-      if (
-        mode === "idle" ||
-        (editorMode === "create" && mode !== "single") ||
-        createdSecretRef.current !== null ||
-        loadInProgress.current ||
-        !boundary ||
-        isFreshReadRequiredForBoundary(boundary) ||
-        (editorMode === "edit" &&
-          (!ref ||
-            (mode === "all"
-              ? !isAcceptedResourceRef(ref)
-              : !isCurrentResourceRef(ref))))
-      )
-        return
-      const session = sessionRef.current
-      const collection = collectionRef.current
-      if (
-        (editorMode === "create" && !session) ||
-        (editorMode === "edit" && mode === "single" && !collection)
-      )
-        return
-      const previousOpening = editorOpeningRef.current
-      if (
-        retryAttemptId !== undefined
-          ? previousOpening.status !== "failure" ||
-            previousOpening.attemptId !== retryAttemptId
-          : previousOpening.status === "loading"
-      )
-        return
-      // A replacement editor is a new session even while its provider open is
-      // pending, so no callback from the prior session may update it.
-      abortEditorFieldLoads()
-      actionAbort.current?.abort()
-      editorRef.current = null
-      editorBoundaryRef.current = null
-      transitionEditor(() => null)
-      if (retryAttemptId === undefined) {
-        setFocusWorkflowId(
-          `account-key-resource-editor-${++editorWorkflowSequence.current}`,
-        )
-      }
-      const attemptId = ++editorOpeningAttemptId.current
-      editorOpeningRequestRef.current = { mode: editorMode, ref, boundary }
-      transitionEditorOpening({
-        attemptId,
-        status: "loading",
-        mode: editorMode,
-        reveal:
-          retryAttemptId === undefined
-            ? NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed
-            : NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
-      })
-      const controller = new AbortController()
-      actionAbort.current = controller
-      const current = generation.current
-      try {
-        const actionContext =
-          editorMode === "edit"
-            ? await resolveResourceActionContext(ref!, controller)
-            : null
-        let nativeEditor: AccountKeyResourceEditor
-        if (editorMode === "edit") {
-          if (!actionContext) {
-            throw new AccountKeyResourceError({
-              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-            })
-          }
-          sessionRef.current = actionContext.session
-          collectionRef.current = actionContext.collection
-          activeResourceBoundaryRef.current = actionContext.boundary
-          nativeEditor = await awaitAbortable(
-            actionContext.collection.openEditEditor(ref!, {
-              signal: controller.signal,
-            }),
-            controller.signal,
-          )
-        } else {
-          const account = accountsRef.current.find(
-            (candidate) => candidate.id === boundary.accountId,
-          )
-          const creationSession = account
-            ? await openSession(
-                account,
-                controller.signal,
-                USER_KEY_MANAGEMENT_EXECUTION,
-              )
-            : null
-          if (!creationSession) {
-            throw new AccountKeyResourceError({
-              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-            })
-          }
-          sessionRef.current = creationSession
-          nativeEditor = await awaitAbortable(
-            creationSession.openCreateEditor(
-              boundary.scopeKey,
-              {
-                signal: controller.signal,
-              },
-              creationIntentRef.current,
-            ),
-            controller.signal,
-          )
-        }
-        if (
-          current !== generation.current ||
-          editorOpeningRef.current.status !== "loading" ||
-          editorOpeningRef.current.attemptId !== attemptId ||
-          !boundariesMatch(
-            activeResourceBoundaryRef.current ?? boundary,
-            boundary,
-          )
-        )
-          return
-        editorRef.current = nativeEditor
-        editorBoundaryRef.current = boundary
-        transitionEditor(() => ({
-          editorId: ++editorInstanceId.current,
-          siteType: boundary.siteType,
-          mode: editorMode,
-          fields: nativeEditor.fields,
-          initialValues: nativeEditor.initialValues,
-          values: nativeEditor.initialValues,
-          optionsByField: {},
-          optionFailuresByField: {},
-          loadingFieldIds: [],
-          feedback: null,
-        }))
-        editorOpeningRequestRef.current = null
-        transitionEditorOpening({ attemptId, status: "idle" })
-      } catch (error) {
-        const failure = toFailure(error)
-        if (
-          current !== generation.current ||
-          isAborted(failure) ||
-          editorOpeningRef.current.status !== "loading" ||
-          editorOpeningRef.current.attemptId !== attemptId
-        )
-          return
-        transitionEditorOpening({
-          attemptId,
-          status: "failure",
-          mode: editorMode,
-          failure,
-        })
-      }
-    },
-    [
-      abortEditorFieldLoads,
+  }, [failures, mode, refreshAfterMutation, requests, createdSecretRef])
+  const { openDetail, closeDetail } = useAccountKeyResourceDetailWorkflow({
+    runtime: { detailRequestEpoch },
+    state: { mode, setDetail, setDetailFailure, setIsDetailLoading },
+    actions: { isCurrentResourceRef, resolveResourceActionContext },
+    inventoryState,
+    requests,
+    routing,
+  })
+  const {
+    openEditor,
+    retryEditorOpening,
+    cancelEditorOpening,
+    closeEditor,
+    settleTerminalClose,
+    setEditorValues,
+    submitEditor,
+  } = useAccountKeyResourceEditorWorkflow({
+    state: { mode, mutationAnalyticsMode, t },
+    actions: {
+      isFreshReadRequiredForBoundary,
       isAcceptedResourceRef,
       isCurrentResourceRef,
-      isFreshReadRequiredForBoundary,
-      mode,
+      resolveResourceActionContext,
       openSession,
-      resolveResourceActionContext,
-      transitionEditor,
-      transitionEditorOpening,
-    ],
-  )
-
-  const retryEditorOpening = useCallback(
-    (attemptId: number) => {
-      const opening = editorOpeningRef.current
-      const request = editorOpeningRequestRef.current
-      if (
-        opening.status !== "failure" ||
-        opening.attemptId !== attemptId ||
-        !request
-      )
-        return
-      void openEditor(request.mode, request.ref, attemptId)
-    },
-    [openEditor],
-  )
-
-  const cancelEditorOpening = useCallback(
-    (attemptId: number) => {
-      const opening = editorOpeningRef.current
-      if (
-        opening.attemptId !== attemptId ||
-        (opening.status !== "loading" && opening.status !== "failure")
-      )
-        return
-      // Advance the generation before aborting so a provider that ignores its
-      // signal cannot publish a late editor after the launch was dismissed.
-      const nextAttemptId = ++editorOpeningAttemptId.current
-      actionAbort.current?.abort()
-      actionAbort.current = null
-      editorOpeningRequestRef.current = null
-      transitionEditorOpening({ attemptId: nextAttemptId, status: "idle" })
-      setFocusWorkflowId(null)
-    },
-    [transitionEditorOpening],
-  )
-
-  const closeEditor = useCallback(
-    (editorId: number) => {
-      const currentEditor = editorStateRef.current
-      if (currentEditor?.editorId !== editorId) return
-      actionAbort.current?.abort()
-      abortEditorFieldLoads()
-      editorRef.current = null
-      editorBoundaryRef.current = null
-      editorOpeningRequestRef.current = null
-      transitionEditorOpening({
-        attemptId: editorOpeningAttemptId.current,
-        status: "idle",
-      })
-      transitionEditor(() => null)
-      if (!currentEditor.terminalRetainsFocusWorkflow) setFocusWorkflowId(null)
-    },
-    [abortEditorFieldLoads, transitionEditor, transitionEditorOpening],
-  )
-
-  const settleTerminalClose = useCallback(
-    (editorId: number) => {
-      if (terminalCloseEditorRef.current?.editorId !== editorId) return
-      transitionTerminalCloseEditor(null)
-    },
-    [transitionTerminalCloseEditor],
-  )
-
-  const setEditorValues = useCallback(
-    (editorId: number, values: EditableResourceProjection) => {
-      transitionEditor((current) =>
-        current?.editorId === editorId ? { ...current, values } : current,
-      )
-    },
-    [transitionEditor],
-  )
-
-  const submitEditor = useCallback(
-    async (editorId: number, values: EditableResourceProjection) => {
-      const nativeEditor = editorRef.current
-      const currentEditorState = editorStateRef.current
-      const activeBoundary = activeResourceBoundaryRef.current
-      const editorBoundary = editorBoundaryRef.current
-      const editorVersion = editorGeneration.current
-      if (
-        mode === "idle" ||
-        (currentEditorState?.mode === "create" && mode !== "single") ||
-        createdSecretRef.current !== null ||
-        loadInProgress.current ||
-        !nativeEditor ||
-        !currentEditorState ||
-        currentEditorState.editorId !== editorId ||
-        !activeBoundary ||
-        !editorBoundary ||
-        !boundariesMatch(activeBoundary, editorBoundary) ||
-        isFreshReadRequiredForBoundary(editorBoundary)
-      )
-        return
-      const validation = nativeEditor.validate(values)
-      if (!validation.valid) {
-        transitionEditor((current) =>
-          current && current.editorId === editorId
-            ? {
-                ...current,
-                feedback: {
-                  code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-                  fieldIssues: validation.issues,
-                },
-              }
-            : current,
-        )
-        return
-      }
-      const current = generation.current
-      const submitMode = currentEditorState.mode
-      let intendedBoundary: ActiveResourceBoundary
-      try {
-        intendedBoundary =
-          submitMode === "create"
-            ? resolveCreateDestinationBoundary(
-                nativeEditor,
-                values,
-                editorBoundary,
-                scopes,
-              )
-            : editorBoundary
-      } catch (error) {
-        const failure = toFailure(error)
-        transitionEditor((previous) =>
-          previous && previous.editorId === editorId
-            ? { ...previous, feedback: failure }
-            : previous,
-        )
-        return
-      }
-      const mutationIdentity = boundaryIdentity(intendedBoundary)
-      const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
-      if (existingMutation) return existingMutation.promise
-      const account = accountsRef.current.find(
-        (candidate) => candidate.id === editorBoundary.accountId,
-      )
-      const tracker = startProductAnalyticsAction(
-        keyManagementAnalyticsContext(
-          submitMode === "create"
-            ? PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
-            : PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-        ),
-      )
-      const controller = new AbortController()
-      actionAbort.current = controller
-      const run = nativeEditor
-        .submit(values, { signal: controller.signal })
-        .then(async (result) => {
-          if (
-            current !== generation.current ||
-            editorGeneration.current !== editorVersion ||
-            editorStateRef.current?.editorId !== editorId
-          ) {
-            requireFreshRead(intendedBoundary)
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-              insights: {
-                mode: mutationAnalyticsMode,
-                ...(account
-                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                  : {}),
-                selectedCount: 1,
-              },
-            })
-            return
-          }
-          const returnedFacts = result.facts
-          const returnedScope = scopes.find(
-            (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
-          )
-          const returnedBoundary =
-            returnedScope &&
-            returnedFacts &&
-            returnedFacts.ref.accountId === editorBoundary.accountId &&
-            returnedFacts.ref.siteType === editorBoundary.siteType
-              ? {
-                  accountId: returnedFacts.ref.accountId,
-                  siteType: returnedFacts.ref.siteType,
-                  scopeKey: returnedScope.scopeKey,
-                  routeKey: returnedScope.routeKey,
-                }
-              : intendedBoundary
-          if (submitMode === "edit" && returnedFacts) {
-            replaceAcceptedRows(
-              acceptedRowsRef.current.map((facts) =>
-                refIdentity(facts.ref) === refIdentity(returnedFacts.ref)
-                  ? returnedFacts
-                  : facts,
-              ),
-            )
-          }
-          if (result.createdSecret) {
-            transitionCreatedSecret(result.createdSecret)
-          } else if (submitMode === "edit") {
-            const updatedName = returnedFacts?.displayName
-            toast.success(
-              updatedName
-                ? t("keyManagement:messages.keyUpdated", {
-                    name: updatedName,
-                  })
-                : t("keyManagement:messages.keyUpdatedSimple"),
-            )
-          }
-          const activeEditor = editorStateRef.current
-          if (activeEditor?.editorId === editorId) {
-            transitionTerminalCloseEditor({
-              ...activeEditor,
-              terminalClose: true,
-              terminalRetainsFocusWorkflow: Boolean(result.createdSecret),
-            })
-          }
-          editorRef.current = null
-          editorBoundaryRef.current = null
-          transitionEditor(() => null)
-          if (submitMode === "create" && account && onCreatedRef.current) {
-            try {
-              await onCreatedRef.current(account, {
-                ...result,
-                ref: result.facts?.ref ?? null,
-              })
-            } catch (error) {
-              createLogger("AccountKeyResourceController").error(
-                "Created key handoff failed",
-                error,
-              )
-            }
-          }
-          const accepted = await refreshAfterMutation(
-            returnedBoundary,
-            result.createdSecret
-              ? `account-key-resource-transition-${routeTransitionInstanceId}-${++routeTransitionSequence.current}`
-              : undefined,
-          )
-          if (!accepted) requireFreshRead(returnedBoundary)
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: {
-              mode: mutationAnalyticsMode,
-              ...(account
-                ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                : {}),
-              selectedCount: 1,
-            },
-          })
-        })
-        .catch(async (error: unknown) => {
-          const failure = toFailure(error)
-          if (
-            current !== generation.current ||
-            editorGeneration.current !== editorVersion ||
-            editorStateRef.current?.editorId !== editorId
-          ) {
-            if (
-              failure.code ===
-              ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            )
-              requireFreshRead(intendedBoundary)
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              insights: {
-                mode: mutationAnalyticsMode,
-                ...(account
-                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                  : {}),
-                selectedCount: 1,
-              },
-            })
-            return
-          }
-          transitionEditor((previous) =>
-            previous && previous.editorId === editorId
-              ? { ...previous, feedback: failure }
-              : previous,
-          )
-          if (
-            failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          ) {
-            requireFreshRead(intendedBoundary)
-            await refreshAfterMutation(intendedBoundary)
-          }
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            insights: {
-              mode: mutationAnalyticsMode,
-              ...(account
-                ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                : {}),
-              selectedCount: 1,
-            },
-          })
-        })
-        .finally(() => {
-          if (
-            mutationsByBoundary.current.get(mutationIdentity)?.promise === run
-          )
-            mutationsByBoundary.current.delete(mutationIdentity)
-          if (actionAbort.current === controller) actionAbort.current = null
-        })
-      mutationsByBoundary.current.set(mutationIdentity, {
-        controller,
-        promise: run,
-      })
-      return run
-    },
-    [
-      isFreshReadRequiredForBoundary,
-      mode,
-      mutationAnalyticsMode,
-      replaceAcceptedRows,
-      refreshAfterMutation,
       requireFreshRead,
-      routeTransitionInstanceId,
-      scopes,
-      t,
-      transitionCreatedSecret,
-      transitionEditor,
-      transitionTerminalCloseEditor,
-    ],
-  )
-
-  const openDelete = useCallback(
-    (ref: AccountKeyResourceRef) => {
-      const boundary = boundaryFromResourceRef(ref)
-      if (
-        mode === "idle" ||
-        createdSecretRef.current !== null ||
-        loadInProgress.current ||
-        isFreshReadRequiredForBoundary(boundary) ||
-        (mode === "all"
-          ? !isAcceptedResourceRef(ref)
-          : !collectionRef.current || !isCurrentResourceRef(ref))
-      )
-        return false
-      setDeleteState({ isOpen: true, isExecuting: false, ref, failure: null })
-      return true
-    },
-    [
-      isAcceptedResourceRef,
-      isCurrentResourceRef,
-      isFreshReadRequiredForBoundary,
-      mode,
-    ],
-  )
-
-  const cancelDelete = useCallback(() => {
-    if (!deleteState.isExecuting) {
-      setDeleteState({
-        isOpen: false,
-        isExecuting: false,
-        ref: null,
-        failure: null,
-      })
-    }
-  }, [deleteState.isExecuting])
-
-  const confirmDelete = useCallback(
-    async (cleanup = false): Promise<boolean> => {
-      if (
-        mode === "idle" ||
-        createdSecretRef.current !== null ||
-        loadInProgress.current ||
-        !deleteState.ref ||
-        (mode === "all"
-          ? !isAcceptedResourceRef(deleteState.ref)
-          : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
-      )
-        return false
-      const current = generation.current
-      const ref = deleteState.ref
-      const boundary: ActiveResourceBoundary =
-        mode === "all"
-          ? boundaryFromResourceRef(ref)
-          : activeResourceBoundaryRef.current!
-      if (isFreshReadRequiredForBoundary(boundary)) return false
-      const mutationIdentity = boundaryIdentity(boundary)
-      const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
-      if (existingMutation) return Boolean(await existingMutation.promise)
-      const account = accountsRef.current.find(
-        (candidate) => candidate.id === boundary.accountId,
-      )
-      const tracker = startProductAnalyticsAction(
-        keyManagementAnalyticsContext(
-          PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-        ),
-      )
-      const controller = new AbortController()
-      actionAbort.current = controller
-      setDeleteState((state) => ({
-        ...state,
-        isExecuting: true,
-        failure: null,
-      }))
-      const run = resolveResourceActionContext(ref, controller)
-        .then(async (actionContext) => {
-          if (!actionContext) {
-            throw new AccountKeyResourceError({
-              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-            })
-          }
-          sessionRef.current = actionContext.session
-          collectionRef.current = actionContext.collection
-          activeResourceBoundaryRef.current = actionContext.boundary
-          let cleanupInput: Parameters<
-            typeof deleteWithLinkedChannelCleanup
-          >[0] = null
-          if (cleanup) {
-            const keyBaseUrl = acceptedRowsRef.current.find(
-              (row) => refIdentity(row.ref) === refIdentity(ref),
-            )?.runtimeKey?.baseUrl
-            if (!account)
-              throw new AccountKeyResourceError({
-                code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
-              })
-            cleanupInput = await buildAccountKeyResourceLinkedCleanupInput({
-              account,
-              ref,
-              runtimeKeyBaseUrl: keyBaseUrl,
-              resolveProvider: () =>
-                actionContext.session.runtimeKey?.resolve(ref, {
-                  signal: controller.signal,
-                }) ?? Promise.resolve(undefined),
-            })
-          }
-          await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
-            await actionContext.collection.delete(ref, {
-              signal: controller.signal,
-            })
-          })
-        })
-        .then(async () => {
-          if (current !== generation.current) {
-            requireFreshRead(boundary)
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-              insights: {
-                mode: mutationAnalyticsMode,
-                ...(account
-                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                  : {}),
-                selectedCount: 1,
-              },
-            })
-            return true
-          }
-          replaceAcceptedRows(
-            acceptedRowsRef.current.filter(
-              (row) => refIdentity(row.ref) !== refIdentity(ref),
-            ),
-          )
-          setDeleteState({
-            isOpen: false,
-            isExecuting: false,
-            ref: null,
-            failure: null,
-          })
-          void refreshAfterMutation()
-            .then((accepted) => {
-              if (!accepted) requireFreshRead(boundary)
-            })
-            .catch(() => requireFreshRead(boundary))
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: {
-              mode: mutationAnalyticsMode,
-              ...(account
-                ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                : {}),
-              selectedCount: 1,
-            },
-          })
-          return true
-        })
-        .catch(async (error: unknown) => {
-          const failure = toFailure(error)
-          if (current !== generation.current) {
-            if (
-              failure.code ===
-              ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            )
-              requireFreshRead(boundary)
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              insights: {
-                mode: mutationAnalyticsMode,
-                ...(account
-                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                  : {}),
-                selectedCount: 1,
-              },
-            })
-            return false
-          }
-          setDeleteState((state) => ({ ...state, isExecuting: false, failure }))
-          if (
-            failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          ) {
-            requireFreshRead(boundary)
-          }
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            insights: {
-              mode: mutationAnalyticsMode,
-              ...(account
-                ? { siteType: account.siteType as ProductAnalyticsSiteType }
-                : {}),
-              selectedCount: 1,
-            },
-          })
-          return false
-        })
-        .finally(() => {
-          if (
-            mutationsByBoundary.current.get(mutationIdentity)?.promise === run
-          )
-            mutationsByBoundary.current.delete(mutationIdentity)
-          if (actionAbort.current === controller) actionAbort.current = null
-        })
-      mutationsByBoundary.current.set(mutationIdentity, {
-        controller,
-        promise: run,
-      })
-      return run
-    },
-    [
-      deleteState.ref,
-      isAcceptedResourceRef,
-      isCurrentResourceRef,
-      isFreshReadRequiredForBoundary,
-      mode,
-      mutationAnalyticsMode,
       refreshAfterMutation,
-      replaceAcceptedRows,
-      requireFreshRead,
-      resolveResourceActionContext,
-    ],
-  )
+    },
+    inventoryState,
+    requests,
+    editorState,
+    routing,
+  })
+
+  const { openDelete, cancelDelete, confirmDelete } =
+    useAccountKeyResourceDeletionWorkflow({
+      state: { mode, setDeleteState, deleteState, mutationAnalyticsMode },
+      actions: {
+        isFreshReadRequiredForBoundary,
+        isAcceptedResourceRef,
+        isCurrentResourceRef,
+        resolveResourceActionContext,
+        requireFreshRead,
+        refreshAfterMutation,
+      },
+      requests,
+      inventoryState,
+      routing,
+    })
 
   const recordCreatedSecretActionResult = useCallback(
     (
@@ -2610,8 +496,8 @@ export function useAccountKeyResourceController({
     openDetail,
     closeDetail,
     selectScope,
-    openCreate: () => openEditor("create"),
-    openEdit: (ref: AccountKeyResourceRef) => openEditor("edit", ref),
+    openCreate: () => openEditor(editorModes.Create),
+    openEdit: (ref: AccountKeyResourceRef) => openEditor(editorModes.Edit, ref),
     closeEditor,
     settleTerminalClose,
     retryEditorOpening,
@@ -2619,13 +505,7 @@ export function useAccountKeyResourceController({
     setEditorValues,
     loadEditorOptions,
     submitEditor,
-    closeCreatedSecret: () => {
-      const replayDeferredContext = deferredSecretContextReload.current
-      deferredSecretContextReload.current = false
-      transitionCreatedSecret(null)
-      setFocusWorkflowId(null)
-      if (replayDeferredContext) void load()
-    },
+    closeCreatedSecret,
     recordCreatedSecretCopyResult: (result: "success" | "failure") =>
       recordCreatedSecretActionResult(
         PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey,

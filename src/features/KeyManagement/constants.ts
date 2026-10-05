@@ -3,6 +3,29 @@
  */
 export const KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE = "all" as const
 
+/** Inventory modes owned by the account-key controller. */
+export const ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES = {
+  Idle: "idle",
+  Single: "single",
+  All: "all",
+} as const
+
+/** Commands shared by the controller and its editor workflow. */
+export const ACCOUNT_KEY_RESOURCE_EDITOR_MODES = {
+  Create: "create",
+  Edit: "edit",
+} as const
+
+export type AccountKeyResourceEditorMode =
+  (typeof ACCOUNT_KEY_RESOURCE_EDITOR_MODES)[keyof typeof ACCOUNT_KEY_RESOURCE_EDITOR_MODES]
+
+/** Independently owned cancellable requests within one controller. */
+export const ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS = {
+  Inventory: "inventory",
+  Scopes: "scopes",
+  Action: "action",
+} as const
+
 /**
  * Route parameters consumed by Key Management deep links.
  */

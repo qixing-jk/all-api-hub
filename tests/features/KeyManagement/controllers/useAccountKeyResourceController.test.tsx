@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+} from "~/features/KeyManagement/constants"
 import {
   isAccountKeyResourceRouteTransitionAcknowledged,
   useAccountKeyResourceController,
@@ -118,7 +122,7 @@ describe("useAccountKeyResourceController", () => {
     })
   })
 
-  it.each(["single", "all"] as const)(
+  it.each([controllerModes.Single, controllerModes.All] as const)(
     "recovers %s inventory through an explicit refresh when automatic fallback is denied",
     async (mode) => {
       const account = createAccount("account-example")
@@ -148,7 +152,9 @@ describe("useAccountKeyResourceController", () => {
         useAccountKeyResourceController({
           accounts: [account],
           selectedAccount:
-            mode === "single" ? account.id : KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+            mode === controllerModes.Single
+              ? account.id
+              : KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
         }),
       )
 
@@ -1016,7 +1022,7 @@ describe("useAccountKeyResourceController", () => {
       { signal: expect.any(AbortSignal) },
     )
     expect(firstSignal?.aborted).toBe(true)
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     nextOptions.resolve([{ value: "member-second" }])
     await waitFor(() =>
       expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
@@ -1365,7 +1371,9 @@ describe("useAccountKeyResourceController", () => {
         list: vi.fn().mockResolvedValue({ items: [] }),
       }),
     )
-    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    await waitFor(() =>
+      expect(result.current.editor?.mode).toBe(editorModes.Create),
+    )
     expect(result.current.editor?.values).toEqual({
       name: "Edited during load",
     })
@@ -1641,7 +1649,9 @@ describe("useAccountKeyResourceController", () => {
 
     rerender({ workspace: "second" })
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[1]))
-    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    await waitFor(() =>
+      expect(result.current.editor?.mode).toBe(editorModes.Create),
+    )
     await act(async () => obsoleteSubmit({}))
 
     expect(firstEditor.submit).not.toHaveBeenCalled()
@@ -2481,7 +2491,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(openedAccountIds).toEqual(["account-native", "account-failed"])
-    expect(result.current.mode).toBe("all")
+    expect(result.current.mode).toBe(controllerModes.All)
     expect(result.current.scopes).toEqual([])
     expect(result.current.selectedScope).toBeNull()
     expect(result.current.rows).toEqual([nativeRow])
@@ -2545,7 +2555,7 @@ describe("useAccountKeyResourceController", () => {
     expect(openNativeResources).toHaveBeenCalledTimes(1)
 
     await act(async () => result.current.openEdit(facts.ref))
-    expect(result.current.editor?.mode).toBe("edit")
+    expect(result.current.editor?.mode).toBe(editorModes.Edit)
 
     let submitPromise: Promise<unknown> | undefined
     act(() => {
@@ -2571,7 +2581,7 @@ describe("useAccountKeyResourceController", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(collection.list).toHaveBeenCalledTimes(2)
-    expect(result.current.mode).toBe("all")
+    expect(result.current.mode).toBe(controllerModes.All)
     expect(trackCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       expect.objectContaining({
@@ -2682,7 +2692,7 @@ describe("useAccountKeyResourceController", () => {
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       )
       expect(collection.list).toHaveBeenCalledTimes(2)
-      expect(result.current.mode).toBe("all")
+      expect(result.current.mode).toBe(controllerModes.All)
       expect(trackCompleteMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
         expect.objectContaining({
@@ -2880,7 +2890,7 @@ describe("useAccountKeyResourceController", () => {
             routeKey: "second",
           },
           generation,
-          mode: "single",
+          mode: controllerModes.Single,
           transitionId: transition?.id,
           selectedAccount,
           selectedRouteSiteType: siteType,
@@ -2904,7 +2914,7 @@ describe("useAccountKeyResourceController", () => {
           routeKey: "second",
         },
         generation: 2,
-        mode: "single",
+        mode: controllerModes.Single,
         transitionId: "transition",
         selectedAccount: "account-example",
         selectedRouteSiteType: "openrouter",
@@ -4082,7 +4092,7 @@ describe("useAccountKeyResourceController", () => {
       expect(result.current.selectedScope?.scopeKey).toBe(workspaceC.scopeKey),
     )
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     act(() => {
       void result.current.submitEditor(result.current.editor!.editorId, {})
     })
@@ -4099,7 +4109,7 @@ describe("useAccountKeyResourceController", () => {
       ),
     )
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
 
     rerender({ workspace: workspaceC.routeKey })
     await waitFor(() => expect(workspaceCList).toHaveBeenCalledTimes(3))
@@ -4459,7 +4469,7 @@ describe("useAccountKeyResourceController", () => {
       { fieldId: "hash", label: "Hash", value: "hash-example" },
     ])
     await act(async () => result.current.openEdit(facts.ref))
-    expect(result.current.editor?.mode).toBe("edit")
+    expect(result.current.editor?.mode).toBe(editorModes.Edit)
     act(() => result.current.closeEditor(result.current.editor!.editorId))
     let opened = false
     act(() => {
@@ -5347,7 +5357,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await waitFor(() => expect(result.current.rows).toHaveLength(1))
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     void result.current.submitEditor(result.current.editor!.editorId, {})
     void result.current.submitEditor(result.current.editor!.editorId, {})
     expect(editor.submit).toHaveBeenCalledTimes(1)
@@ -5482,7 +5492,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: expect.any(Number),
       status: "failure",
-      mode: "create",
+      mode: editorModes.Create,
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
         message: "private provider message",
@@ -5495,7 +5505,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: expect.any(Number),
       status: "loading",
-      mode: "create",
+      mode: editorModes.Create,
       reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
     })
     await act(async () => retryOpening.resolve(editor))
@@ -5557,7 +5567,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: secondAttemptId,
       status: "loading",
-      mode: "create",
+      mode: editorModes.Create,
       reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
     })
 
