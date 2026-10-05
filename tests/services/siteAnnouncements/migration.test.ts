@@ -205,6 +205,64 @@ describe("announcement source storage migration", () => {
     ).toBe(180)
   })
 
+  it("retains the newest legacy status and content when colliding current data is older", async () => {
+    const legacy = await legacyStore()
+    const original = legacy.sites[oldKey]!
+    const newer = {
+      ...original,
+      lastCheckedAt: 400,
+      records: [
+        {
+          ...original.records[0]!,
+          lastSeenAt: 400,
+          content: "Newer legacy content",
+        },
+      ],
+    }
+    await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, {
+      ...legacy,
+      sites: {
+        "notice:new-api:https://other.example.com": {
+          ...original,
+          siteKey: "notice:new-api:https://other.example.com",
+          baseUrl: "https://other.example.com",
+          siteType: "new-api",
+          providerId: "common",
+          records: [],
+        },
+        [key]: {
+          ...original,
+          siteKey: key,
+          sourceScope: "account",
+          lastCheckedAt: 250,
+          records: [
+            {
+              ...original.records[0]!,
+              id: "current-id",
+              siteKey: key,
+              lastSeenAt: 250,
+            },
+          ],
+        },
+        [oldKey]: newer,
+      },
+    })
+    const result = await siteAnnouncementStorage.getStore()
+    expect(result.sites[key]).toMatchObject({
+      lastCheckedAt: 400,
+      records: [
+        expect.objectContaining({
+          id: "keep-record-id",
+          content: "Newer legacy content",
+          lastSeenAt: 400,
+        }),
+      ],
+    })
+    expect(
+      result.sites["site:new-api:https://other.example.com"],
+    ).toMatchObject({ sourceScope: "site" })
+  })
+
   it("keeps reads side-effect free and commits an otherwise no-op migration once", async () => {
     const legacy = await legacyStore()
     await storage.set(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE, legacy)

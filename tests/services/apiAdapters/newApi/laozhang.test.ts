@@ -18,6 +18,36 @@ const request = {
 }
 
 describe("LaoZhang protocol dispatch", () => {
+  it.each([
+    { models: null, ip_whitelist: "" },
+    { models: "", ip_whitelist: null },
+  ])("rejects malformed native restrictions %j", async (restrictions) => {
+    server.use(
+      http.get(`${baseUrl}/api/token/1`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { id: 1, key: "sk-****", ...restrictions },
+        }),
+      ),
+    )
+    await expect(
+      resolveNewApiFamilyTokenTransport(siteType).fetchTokenById(request, 1),
+    ).rejects.toThrow("Invalid LaoZhang token restrictions")
+  })
+
+  it.each([" ", null])("reports missing invitation data %j", async (code) => {
+    server.use(
+      http.get(`${baseUrl}/api/user/aff/`, () =>
+        HttpResponse.json({ success: true, data: code }),
+      ),
+    )
+    await expect(
+      getSiteTypeCapabilities(siteType).account!.inviteLink!.fetchInviteLink({
+        request,
+      }),
+    ).rejects.toMatchObject({ reason: "invite_data_missing" })
+  })
+
   it("uses native restrictions when compatibility aliases are empty", async () => {
     server.use(
       http.get(`${baseUrl}/api/token/1`, () =>

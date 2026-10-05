@@ -29,6 +29,157 @@ const editor = () =>
   createNewApiKeyEditor(SITE_TYPES.LAOZHANG, request, transport)
 
 describe("LaoZhang native key settings", () => {
+  it.each([true, false])("round-trips explicit retry billing %s", (enabled) => {
+    const definition = createNewApiKeyEditor(
+      SITE_TYPES.LAOZHANG,
+      request,
+      transport,
+      {
+        name: "key",
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        group: "",
+        model_limits: "",
+        model_limits_enabled: false,
+        allow_ips: "",
+        retry_keep_billing_type_enabled: enabled,
+      } as unknown as NewApiToken,
+    )
+    expect(definition.initialValues[laoZhangFields.RetryBilling]).toBe(
+      enabled ? retryBilling.On : retryBilling.Off,
+    )
+    expect(
+      definition.buildCommand(definition.initialValues).values[
+        laoZhangFields.RetryBilling
+      ],
+    ).toBe(enabled)
+  })
+
+  it("delegates primary-group option loading and validates field types", async () => {
+    const definition = editor()
+    await expect(
+      definition.loadOptions?.("group", definition.initialValues),
+    ).resolves.toEqual([
+      { value: "primary", displayLabel: "primary", secondaryLabel: undefined },
+      { value: "backup", displayLabel: "backup", secondaryLabel: undefined },
+    ])
+    expect(
+      definition.validate({
+        ...definition.initialValues,
+        [laoZhangFields.ActivateOnFirstUse]: "true",
+        [laoZhangFields.Remark]: 12,
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: laoZhangFields.ActivateOnFirstUse, code: "invalid_value" },
+        { fieldId: laoZhangFields.Remark, code: "invalid_value" },
+      ]),
+    })
+  })
+
+  it.each([undefined, { kind: "invalid" }, { kind: "replace", value: " " }])(
+    "rejects invalid secret intent %j",
+    (secret) => {
+      const definition = editor()
+      expect(
+        definition.validate({
+          ...definition.initialValues,
+          [laoZhangFields.TranslationApiKey]: secret,
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          { fieldId: laoZhangFields.TranslationApiKey, code: "invalid_value" },
+        ]),
+      })
+    },
+  )
+
+  it("replaces translation credentials explicitly and requires one while translation is enabled", () => {
+    const definition = editor()
+    const values = {
+      ...definition.initialValues,
+      [laoZhangFields.TranslationEnabled]: true,
+      [laoZhangFields.TranslationBaseUrl]: "https://translation.example",
+      [laoZhangFields.TranslationModel]: "model",
+      [laoZhangFields.TranslationApiKey]: {
+        kind: "replace",
+        value: " replacement ",
+      },
+    }
+    expect(definition.validate(values)).toEqual({ valid: true })
+    expect(
+      definition.buildCommand(values).values[laoZhangFields.TranslationApiKey],
+    ).toBe("replacement")
+    expect(
+      definition.validate({
+        ...values,
+        [laoZhangFields.TranslationApiKey]: { kind: "clear" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: [{ fieldId: laoZhangFields.TranslationApiKey, code: "required" }],
+    })
+  })
+
+  it("shows conditional controls only when their governing options are enabled", () => {
+    const definition = editor()
+    const { policy } = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.LAOZHANG,
+      "edit",
+      {
+        describedFieldIds: definition.fields.map((field) => field.fieldId),
+      },
+    )
+    const byId = new Map(policy.fields.map((field) => [field.fieldId, field]))
+    expect(
+      byId
+        .get(laoZhangFields.FallbackGroups)!
+        .visibleWhen?.({ group: LAOZHANG_AUTO_GROUP }),
+    ).toBe(false)
+    expect(
+      byId
+        .get(laoZhangFields.FallbackGroups)!
+        .visibleWhen?.({ group: "primary" }),
+    ).toBe(true)
+    for (const [switchId, fieldIds] of [
+      [
+        laoZhangFields.RateLimitEnabled,
+        [
+          laoZhangFields.RateLimitDuration,
+          laoZhangFields.RateLimitNum,
+          laoZhangFields.RateLimitMessage,
+        ],
+      ],
+      [
+        laoZhangFields.TranslationEnabled,
+        [
+          laoZhangFields.TranslationBaseUrl,
+          laoZhangFields.TranslationApiKey,
+          laoZhangFields.TranslationModel,
+        ],
+      ],
+    ] as const) {
+      for (const fieldId of fieldIds) {
+        expect(byId.get(fieldId)!.visibleWhen?.({ [switchId]: false })).toBe(
+          false,
+        )
+        expect(byId.get(fieldId)!.visibleWhen?.({ [switchId]: true })).toBe(
+          true,
+        )
+      }
+    }
+    const t = ((key: string) => key) as TFunction
+    expect(byId.get(laoZhangFields.FallbackGroups)!.resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.laozhang.fallbackHelp",
+    )
+    expect(byId.get(laoZhangFields.ValidDuration)!.resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.laozhang.activationHelp",
+    )
+  })
+
   it("retains native settings and translation credentials when only the name changes", () => {
     const token = {
       name: "old",

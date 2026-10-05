@@ -47,6 +47,53 @@ function countIdentityMarkers(
 }
 
 describe("siteAnnouncementStorage", () => {
+  it.each([undefined, 1500])(
+    "updates a known unread message from upstream read evidence %s",
+    async (readAt) => {
+      const site = {
+        siteKey: "account:laozhang:a:https://api2.laozhang.ai",
+        siteName: "LaoZhang",
+        siteType: "laozhang" as const,
+        baseUrl: "https://api2.laozhang.ai",
+        accountId: "a",
+        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+        status: SITE_ANNOUNCEMENT_STATUS.Success,
+      }
+      const record = {
+        ...site,
+        title: "Message",
+        content: "Body",
+        fingerprint: "known-message",
+        read: false,
+      }
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [record],
+        now: 1000,
+      })
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [{ ...record, read: true, readAt }],
+        now: 2000,
+      })
+      expect(await siteAnnouncementStorage.listRecords()).toEqual([
+        expect.objectContaining({
+          read: true,
+          readAt: readAt ?? 2000,
+          firstSeenAt: 1000,
+        }),
+      ])
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [record],
+        now: 3000,
+      })
+      expect(await siteAnnouncementStorage.listRecords()).toEqual([
+        expect.objectContaining({ read: true, readAt: readAt ?? 2000 }),
+      ])
+    },
+  )
+
   it("persists account read booleans without requiring an upstream read timestamp", async () => {
     const site = {
       siteKey: "account:laozhang:a:https://api2.laozhang.ai",

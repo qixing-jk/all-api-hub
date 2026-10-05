@@ -11,6 +11,7 @@ import {
   type NativeResourceEditorBodyProps,
 } from "~/features/ResourceEditor/NativeResourceEditorBody"
 import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import { ResourceSecretField } from "~/features/ResourceEditor/ResourceSecretField"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
@@ -43,6 +44,52 @@ const t = ((key: string, options?: { field?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("restores saved secret intent, resets an emptied replacement, and announces clearing", async () => {
+    const onChange = vi.fn()
+    const props = {
+      t,
+      id: "saved-key",
+      label: "Saved key",
+      descriptor: {
+        fieldId: "saved-key",
+        type: "secret" as const,
+        secretState: "masked" as const,
+        canReplace: true,
+        allowClear: true,
+      },
+      disabled: false,
+      hasErrors: false,
+      help: null,
+      error: null,
+      onChange,
+    }
+    const { rerender } = render(
+      <ResourceSecretField
+        {...props}
+        intent={{ kind: "replace", value: "draft" }}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText("Saved key"), {
+      target: { value: "" },
+    })
+    expect(onChange).toHaveBeenLastCalledWith({ kind: "unchanged" })
+    await userEvent.click(
+      screen.getByRole("button", { name: "ui:secretList.restore" }),
+    )
+    expect(onChange).toHaveBeenLastCalledWith({ kind: "unchanged" })
+    rerender(<ResourceSecretField {...props} intent={{ kind: "clear" }} />)
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "ui:secretList.clearedState",
+    )
+    expect(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    ).toBeDisabled()
+    await userEvent.click(
+      screen.getByRole("button", { name: "ui:secretList.restore" }),
+    )
+    expect(onChange).toHaveBeenLastCalledWith({ kind: "unchanged" })
+  })
+
   it("offers Reset for an unsaved replacement rather than claiming a saved key exists", async () => {
     const changed = vi.fn()
     render(

@@ -112,6 +112,23 @@ const ref = {
 }
 
 describe("LaoZhang editable detail hydration", () => {
+  it("keeps update confirmation uncertain when the written key disappears from inventory", async () => {
+    const { rows, writes } = fixture()
+    server.use(
+      http.put(`${baseUrl}/api/token/`, async ({ request }) => {
+        writes.push((await request.json()) as Record<string, unknown>)
+        rows.splice(0)
+        return HttpResponse.json({ success: true })
+      }),
+    )
+    const collection = await (await open()).openCollection("account")
+    const editor = await collection.openEditEditor(ref)
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "renamed" }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    expect(writes).toHaveLength(1)
+  })
+
   it("preserves settings refreshed between opening and submitting the editor", async () => {
     const { rows, writes } = fixture()
     const collection = await (await open()).openCollection("account")

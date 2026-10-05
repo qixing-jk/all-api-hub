@@ -25,6 +25,30 @@ const request = {
 }
 
 describe("LaoZhang Message center", () => {
+  it("finishes an empty inventory and rejects malformed pages", async () => {
+    data.mockResolvedValueOnce({ messages: [] })
+    await expect(fetchLaoZhangMessages(request)).resolves.toEqual([])
+    data.mockResolvedValueOnce({ messages: "invalid" })
+    await expect(fetchLaoZhangMessages(request)).rejects.toThrow(
+      "Invalid LaoZhang",
+    )
+  })
+
+  it("filters malformed and empty messages and finishes a short page without total metadata", async () => {
+    data.mockResolvedValueOnce({
+      messages: [
+        null,
+        { id: "3", content: "Invalid id" },
+        { id: -1, content: "Invalid id" },
+        { id: 1, title: " ", content: " " },
+        { id: 2, content: "Body" },
+      ],
+    })
+    await expect(fetchLaoZhangMessages(request)).resolves.toEqual([
+      { id: "2", title: "", content: "Body", read: false },
+    ])
+  })
+
   it("fetches every page with account authentication, including already-read messages", async () => {
     data
       .mockResolvedValueOnce({
