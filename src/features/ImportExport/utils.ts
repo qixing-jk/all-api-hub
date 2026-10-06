@@ -4,6 +4,7 @@ import { accountDataTransfer } from "~/services/accounts/accountStorage/accountD
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
+  IMPORT_EXPORT_ERROR_CODES,
   ImportExportError,
   type BackupAccountsPartialV2,
   type BackupFullV2,
@@ -33,13 +34,13 @@ const logger = createLogger("ImportExportUtils")
 export function getImportExportErrorMessage(error: unknown): string | null {
   if (error instanceof ImportExportError) {
     switch (error.code) {
-      case "FORMAT_NOT_CORRECT":
+      case IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect:
         return t("importExport:import.formatNotCorrect")
-      case "IMPORT_FAILED":
+      case IMPORT_EXPORT_ERROR_CODES.ImportFailed:
         return t("importExport:import.importOperationFailed")
-      case "NO_IMPORTABLE_DATA":
+      case IMPORT_EXPORT_ERROR_CODES.NoImportableData:
         return t("importExport:import.noImportableData")
-      case "VERSION_NOT_SUPPORTED":
+      case IMPORT_EXPORT_ERROR_CODES.VersionNotSupported:
         return t("importExport:import.versionNotSupported")
     }
   }

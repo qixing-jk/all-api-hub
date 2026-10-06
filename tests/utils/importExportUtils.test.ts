@@ -14,6 +14,7 @@ import {
   parseBackupSummary,
 } from "~/services/importExport/backupCodec"
 import {
+  IMPORT_EXPORT_ERROR_CODES,
   type BackupFullV2,
   type BackupPreferencesPartialV2,
   type BackupV2,
@@ -1669,7 +1670,7 @@ describe("normalizeBackupForMerge", () => {
         },
         null,
       ),
-    ).toThrow("FORMAT_NOT_CORRECT")
+    ).toThrow(IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect)
   })
 
   beforeEach(() => {

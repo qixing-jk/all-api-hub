@@ -9,6 +9,7 @@ import {
   type FeatureGuidanceState,
 } from "~/services/featureGuidance/featureGuidanceState"
 import {
+  IMPORT_EXPORT_ERROR_CODES,
   ImportExportError,
   type BackupFullV2,
   type ParsedBackupSummary,
@@ -44,7 +45,7 @@ export function getSupportedBackupVersion(
     version !== LEGACY_BACKUP_V3_VERSION &&
     version !== BACKUP_VERSION
   ) {
-    throw new ImportExportError("VERSION_NOT_SUPPORTED")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.VersionNotSupported)
   }
   return version
 }
@@ -127,7 +128,7 @@ export function readChannelConfigSnapshot(
     typeof raw === "object" &&
     ("schemaVersion" in (raw as object) || "configs" in (raw as object))
   if (data.version === BACKUP_VERSION || looksLikeScopedSnapshot) {
-    throw new ImportExportError("FORMAT_NOT_CORRECT")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect)
   }
 
   // V1/V2 numeric maps have no reliable scope identity and are intentionally ignored.

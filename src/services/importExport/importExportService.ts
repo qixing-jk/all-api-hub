@@ -14,6 +14,7 @@ import {
   readChannelConfigSnapshot,
 } from "~/services/importExport/backupCodec"
 import {
+  IMPORT_EXPORT_ERROR_CODES,
   IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,
   ImportExportError,
@@ -139,7 +140,7 @@ async function importV1Backup(
         preferencesImported = true
       } else {
         logger.error("Failed to import user preferences from legacy backup")
-        throw new ImportExportError("IMPORT_FAILED")
+        throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.ImportFailed)
       }
     }
   }
@@ -157,7 +158,7 @@ async function importV1Backup(
     accountsImported || preferencesImported || channelConfigsImported
 
   if (!anyImported) {
-    throw new ImportExportError("NO_IMPORTABLE_DATA")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.NoImportableData)
   }
 
   const allImported =
@@ -280,7 +281,7 @@ async function importV2Backup(
     apiCredentialProfilesImported
 
   if (!anyImported) {
-    throw new ImportExportError("NO_IMPORTABLE_DATA")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.NoImportableData)
   }
 
   const allImported =
@@ -357,7 +358,7 @@ async function importV2PreferencesWithReplace(
 
   if (!writeResult.ok) {
     logger.error("Failed to import user preferences from V2 backup")
-    throw new ImportExportError("IMPORT_FAILED")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.ImportFailed)
   }
 
   await importBackupFeatureGuidance(data)
@@ -627,7 +628,7 @@ async function importV2BackupWithPlan(
     apiCredentialProfilesImported
 
   if (!anyImported) {
-    throw new ImportExportError("NO_IMPORTABLE_DATA")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.NoImportableData)
   }
 
   const allImported =
@@ -665,7 +666,7 @@ export async function importFromBackupObject(
 ): Promise<ImportResult> {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
-    throw new ImportExportError("FORMAT_NOT_CORRECT")
+    throw new ImportExportError(IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect)
   }
 
   const version = getSupportedBackupVersion(data)

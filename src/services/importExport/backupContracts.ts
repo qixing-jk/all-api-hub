@@ -4,11 +4,15 @@ import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigSnapshot } from "~/types/channelConfig"
 
+export const IMPORT_EXPORT_ERROR_CODES = {
+  FormatNotCorrect: "FORMAT_NOT_CORRECT",
+  ImportFailed: "IMPORT_FAILED",
+  NoImportableData: "NO_IMPORTABLE_DATA",
+  VersionNotSupported: "VERSION_NOT_SUPPORTED",
+} as const
+
 export type ImportExportErrorCode =
-  | "FORMAT_NOT_CORRECT"
-  | "IMPORT_FAILED"
-  | "NO_IMPORTABLE_DATA"
-  | "VERSION_NOT_SUPPORTED"
+  (typeof IMPORT_EXPORT_ERROR_CODES)[keyof typeof IMPORT_EXPORT_ERROR_CODES]
 
 export class ImportExportError extends Error {
   readonly code: ImportExportErrorCode
