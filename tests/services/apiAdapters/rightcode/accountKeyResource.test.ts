@@ -103,6 +103,32 @@ describe("rightCodeAccountKeyResources", () => {
     vi.resetAllMocks()
   })
 
+  it("projects RightCode USD quota and ISO expiry without guessing units", async () => {
+    mockFetchRightCodeKeys.mockResolvedValue([
+      key({
+        quota_limit: 12.5,
+        used_quota: 2.5,
+        expired_at: "2030-01-01T00:00:00Z",
+      }),
+    ])
+    const session = await openSession()
+    const facts = atIndex(
+      (await (await session.openCollection("account")).list()).items,
+      0,
+    )
+    expect(facts.displayFacts).toEqual([
+      {
+        fieldId: "quotaUsd",
+        kind: "money",
+        role: "total",
+        amountUsd: 12.5,
+        unlimited: false,
+      },
+      { fieldId: "used_quota", kind: "money", role: "used", amountUsd: 2.5 },
+      { fieldId: "expires_at", kind: "expiry", timestampMs: 1893456000000 },
+    ])
+  })
+
   it("declares the inventory secret as recoverable", () => {
     expect(rightCodeAccountKeyResources.inventorySecretAvailability).toBe(
       "recoverable",

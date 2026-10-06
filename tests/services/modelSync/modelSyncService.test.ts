@@ -377,6 +377,18 @@ describe("ModelSyncService - allowed model filtering", () => {
 })
 
 describe("ModelSyncService - siteType routing", () => {
+  it("includes GPT-Load management credentials in the service diagnostic snapshot", () => {
+    const service = new ModelSyncService({
+      siteType: SITE_TYPES.GPT_LOAD,
+      config: {
+        baseUrl: "https://gpt-load.example.invalid",
+        managementKey: "gpt-load-management-secret",
+      },
+    })
+    expect(service.knownSecrets).toContain("gpt-load-management-secret")
+    expect(service.knownSecretsComplete).toBe(true)
+  })
+
   it("exposes an immutable complete secret snapshot for the runtime config", () => {
     const service = new ModelSyncService(
       makeNewApiRuntimeConfig({ adminToken: "snapshot-secret-placeholder" }),
@@ -1488,6 +1500,9 @@ describe("ModelSyncService - probe-backed filters", () => {
     ).rejects.toMatchObject({
       reason: "key-unavailable",
     })
+    const diagnostics = JSON.stringify(loggerMocks.warn.mock.calls)
+    expect(diagnostics).not.toContain("runtime-token")
+    expect(diagnostics).not.toContain("sk-hidden-channel-key")
   })
 
   it("redacts Octopus and AxonHub secrets from key-resolution failures", async () => {

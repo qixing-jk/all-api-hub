@@ -9,6 +9,7 @@ import {
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
+import { getManagedSiteConfigRegistration } from "~/services/managedSites/configRegistration"
 import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
@@ -1456,38 +1457,8 @@ class UserPreferencesService {
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
-    let config:
-      | NewApiConfig
-      | DoneHubConfig
-      | VeloeraConfig
-      | OctopusConfig
-      | AxonHubConfig
-      | ClaudeCodeHubConfig
-      | CliProxyApiConfig
-      | Sub2ApiManagedSiteConfig
-      | OmniRouteConfig
-      | GptLoadConfig
-    if (siteType === SITE_TYPES.CLI_PROXY_API) {
-      config = prefs.cliProxyApi ?? DEFAULT_CLI_PROXY_API_CONFIG
-    } else if (siteType === SITE_TYPES.AXON_HUB) {
-      config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
-    } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
-    } else if (siteType === SITE_TYPES.GPT_LOAD) {
-      config = prefs.gptLoad || DEFAULT_GPT_LOAD_CONFIG
-    } else if (siteType === SITE_TYPES.OMNIROUTE) {
-      config = prefs.omniroute || DEFAULT_OMNIROUTE_CONFIG
-    } else if (siteType === SITE_TYPES.SUB2API) {
-      config = prefs.sub2apiManagedSite ?? DEFAULT_SUB2API_MANAGED_SITE_CONFIG
-    } else if (siteType === SITE_TYPES.OCTOPUS) {
-      config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
-    } else if (siteType === SITE_TYPES.VELOERA) {
-      config = prefs.veloera
-    } else if (siteType === SITE_TYPES.DONE_HUB) {
-      config = prefs.doneHub ?? DEFAULT_DONE_HUB_CONFIG
-    } else {
-      config = prefs.newApi
-    }
+    const registration = getManagedSiteConfigRegistration(siteType)
+    const config = registration?.select(prefs) ?? prefs.newApi
     return { siteType, config }
   }
 

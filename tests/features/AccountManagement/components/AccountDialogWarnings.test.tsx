@@ -3,11 +3,13 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { AccessTokenVerificationGuide } from "~/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide"
 import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectErrorAlert"
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/DuplicateAccountWarningDialog"
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/ManagedSiteConfigPromptDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
+import * as accountSiteDefinitions from "~/services/accountSiteDefinitions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -81,6 +83,66 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 })
 
 describe("AccountDialog warnings", () => {
+  it("renders the registered verification guide instead of inferring it from the site type", () => {
+    const definition = accountSiteDefinitions.getAccountSiteDefinition(
+      SITE_TYPES.MODELFLARE,
+    )!
+    definition.onboarding!.accessTokenVerificationGuide = {
+      copy: "laozhang",
+      showRotationWarning: true,
+    }
+    const lookup = vi
+      .spyOn(accountSiteDefinitions, "getAccountSiteDefinition")
+      .mockReturnValue(definition)
+    try {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a credential"
+          siteType={SITE_TYPES.MODELFLARE}
+          siteUrl="https://site.example.com"
+        />,
+      )
+
+      expect(
+        screen.getByText("accessTokenVerification.laozhang.generateStep"),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: "accessTokenVerification.laozhang.openProfile",
+        }),
+      ).toBeVisible()
+      expect(
+        screen.getByText("accessTokenVerification.rotationWarning"),
+      ).toBeVisible()
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it.each([SITE_TYPES.RIX_API, SITE_TYPES.MODELFLARE])(
+    "preserves generic security guidance without a rotation warning for %s",
+    (siteType) => {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a credential"
+          siteType={siteType}
+          siteUrl="https://site.example.com"
+        />,
+      )
+      expect(
+        screen.getByText("accessTokenVerification.generateStep"),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: "accessTokenVerification.openSecurity",
+        }),
+      ).toBeVisible()
+      expect(
+        screen.queryByText("accessTokenVerification.rotationWarning"),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it.each([
     "https://api.laozhang.ai",
     "https://api2.laozhang.ai",

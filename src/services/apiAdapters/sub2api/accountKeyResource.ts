@@ -4,6 +4,7 @@ import {
   isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -410,6 +411,30 @@ const toFacts = (
     legacyTokenId: token.id,
     createdAt: normalizeToMs(token.created_at) ?? undefined,
   },
+  displayFacts: [
+    {
+      fieldId: "quota",
+      kind: "money",
+      role: "total",
+      amountUsd: Number(token.quota) || 0,
+      unlimited: Number(token.quota) <= 0,
+    },
+    {
+      fieldId: "quota_used",
+      kind: "money",
+      role: "used",
+      amountUsd: Number(token.quota_used) || 0,
+    },
+    {
+      fieldId: "remainingQuotaUsd",
+      kind: "money",
+      role: "remaining",
+      amountUsd:
+        Math.max(0, Number(token.quota) - Number(token.quota_used ?? 0)) || 0,
+      unlimited: Number(token.quota) <= 0,
+    },
+    keyExpiryDisplayFact("expires_at", toSub2ApiKeyEditable(token).expires_at),
+  ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group_name?.trim() || "" },
     {

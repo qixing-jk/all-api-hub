@@ -33,8 +33,10 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
 export { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+export { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
 /**
  * Build a dummy API key used by Web AI API Check tests.
@@ -123,33 +125,6 @@ export function buildDisplaySiteData(
       ...overrides.checkIn,
     },
   }
-}
-
-/**
- * Build an `NewApiToken` fixture with stable defaults and shallow overrides.
- */
-export function buildNewApiToken(
-  overrides: Partial<NewApiToken> = {},
-): NewApiToken {
-  const base: NewApiToken = {
-    id: 1,
-    user_id: 1,
-    key: "test-key",
-    status: 1,
-    name: "Test Token",
-    created_time: 0,
-    accessed_time: 0,
-    expired_time: -1,
-    remain_quota: 0,
-    unlimited_quota: true,
-    model_limits_enabled: false,
-    model_limits: "",
-    allow_ips: "",
-    used_quota: 0,
-    group: "default",
-  }
-
-  return { ...base, ...overrides }
 }
 
 /**

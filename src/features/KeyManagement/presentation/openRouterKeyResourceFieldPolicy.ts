@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next"
 
 import {
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  type AccountKeyResourceEditorMode,
+} from "~/features/KeyManagement/constants"
+import {
   defineResourceEditorFieldPolicy,
   type ResourceEditorFieldPolicy,
 } from "~/features/ResourceEditor/resourceFieldPolicy"
@@ -19,7 +23,7 @@ type OpenRouterKeyEditorSection =
   | "lifecycle"
   | "advanced"
 
-type OpenRouterKeyEditorMode = "create" | "edit"
+type OpenRouterKeyEditorMode = AccountKeyResourceEditorMode
 
 const field = OPENROUTER_KEY_FIELD_IDS
 
@@ -212,11 +216,11 @@ const policies: Readonly<
     ResourceEditorFieldPolicy<OpenRouterKeyEditorSection>
   >
 > = {
-  create: defineResourceEditorFieldPolicy({
+  [editorModes.Create]: defineResourceEditorFieldPolicy({
     fields: commonFields,
     hiddenFields: [],
   }),
-  edit: defineResourceEditorFieldPolicy({
+  [editorModes.Edit]: defineResourceEditorFieldPolicy({
     fields: editFields,
     hiddenFields: [],
   }),
@@ -278,7 +282,7 @@ const semanticSummary = (
 
 /** OpenRouter workspace membership and BYOK rules stay behind its presentation contract. */
 export function getOpenRouterKeyResourceEditorPresentation(
-  mode: "create" | "edit",
+  mode: AccountKeyResourceEditorMode,
 ): AccountKeyResourceEditorPresentation {
   return {
     policy: getOpenRouterKeyResourceFieldPolicy(mode),

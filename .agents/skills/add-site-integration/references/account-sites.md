@@ -2,6 +2,8 @@
 
 Use for user account onboarding and capabilities. Reuse the shared workflow in `SKILL.md`; load the managed or check-in reference only when those outcomes are also requested.
 
+Use the [completeness checklist and handoff table](capability-assessment.md) for authentication alternatives, onboarding/recovery, balance/usage/plans, each key action and native field, runtime-key export, catalogs/pricing, invitation, notices and redemption. Each part needs its mapping and selection reason, or a precise exclusion/deferral reason with evidence; a generic “account supported” result is insufficient.
+
 ## Establish the account contract
 
 - Confirm registered type/family and account scope in `src/services/accountSiteDefinitions/`, then inspect the closest account adapters and detection path. Serving inference APIs does not establish an account console contract.

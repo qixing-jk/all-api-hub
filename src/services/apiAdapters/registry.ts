@@ -3,6 +3,7 @@ import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrou
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
+  type AccountSiteBackendFamily,
   type AccountSiteType,
 } from "~/services/accountSiteDefinitions"
 import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
@@ -73,44 +74,34 @@ const isManagedSiteCapabilityType = (
 ): siteType is ManagedSiteType =>
   Object.hasOwn(managedSitesBySiteType, siteType)
 
-/**
- * Returns the capability groups supported by the selected site type.
- */
+/** Every backend family declares its capability factory, including unsupported sites. */
+const accountCapabilityFactories = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: (siteType) =>
+    createNewApiCapabilities(siteType as AccountSiteType),
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api]: () => sub2ApiCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2]: () => voApiV2Capabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix]: () => aihubmixCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat]: () => sharedChatCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: () => freeModelCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform]: (siteType) =>
+    createKimiOpenPlatformCapabilities(siteType as AccountSiteType),
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai]: () => grsaiCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported]: (siteType) => ({ siteType }),
+} satisfies Record<
+  AccountSiteBackendFamily,
+  (siteType: SiteType) => SiteTypeCapabilities
+>
+
+/** Returns account capabilities through the family registration, then attaches managed support. */
 export function getSiteTypeCapabilities(
   siteType: SiteType,
 ): SiteTypeCapabilities {
   const adapterFamily =
-    getAccountSiteDefinition(siteType as AccountSiteType)?.adapterFamily ??
+    getAccountSiteDefinition(siteType)?.adapterFamily ??
     ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
-
-  if (siteType === SITE_TYPES.SUB2API) {
-    return withManagedSites(sub2ApiCapabilities)
-  }
-  if (siteType === SITE_TYPES.VO_API_V2) return voApiV2Capabilities
-  if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
-  if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
-  if (siteType === SITE_TYPES.FREEMODEL) return freeModelCapabilities
-  if (siteType === SITE_TYPES.RIGHT_CODE) return rightCodeCapabilities
-  if (siteType === SITE_TYPES.OPENROUTER) return openRouterCapabilities
-  if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
-    return createKimiOpenPlatformCapabilities(siteType)
-  }
-  if (siteType === SITE_TYPES.GRSAI) return grsaiCapabilities
-
-  if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {
-    return withManagedSites(
-      createNewApiCapabilities(siteType as AccountSiteType),
-    )
-  }
-
-  if (isManagedSiteCapabilityType(siteType)) {
-    return {
-      siteType,
-      managedSites: managedSitesBySiteType[siteType],
-    }
-  }
-
-  return { siteType }
+  return withManagedSites(accountCapabilityFactories[adapterFamily](siteType))
 }
 
 /** Resolves a deployment override before the optional site-type login capability. */

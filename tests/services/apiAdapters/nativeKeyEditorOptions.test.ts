@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import * as aihubmix from "~/services/apiAdapters/aihubmix/catalog"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import * as sub2api from "~/services/apiService/sub2api"
@@ -126,7 +126,7 @@ it("loads AIHubMix models with cancellation and converts expiry/quota only at su
 
 it("loads only allowed New API groups and keeps the model catalogue separate", async () => {
   const transport = {
-    ...resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
+    ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API).transport,
     fetchUserGroups: vi.fn().mockResolvedValue({
       VIP: { desc: "Priority" },
       Other: { desc: "Other" },
@@ -134,9 +134,8 @@ it("loads only allowed New API groups and keeps the model catalogue separate", a
     fetchAccountAvailableModels: vi.fn().mockResolvedValue(["model-a"]),
   }
   const editor = createNewApiKeyEditor(
-    SITE_TYPES.NEW_API,
+    { ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API), transport: transport },
     request,
-    transport,
     undefined,
     { allowedGroups: ["VIP"] },
   )

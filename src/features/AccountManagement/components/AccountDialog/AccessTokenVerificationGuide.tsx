@@ -10,7 +10,11 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
+import {
+  getAccountSiteDefinition,
+  type AccountSiteAccessTokenVerificationGuide,
+  type AccountSiteManualAddGuideAnchor,
+} from "~/services/accountSiteDefinitions"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { isHttpUrl } from "~/utils/core/urlParsing"
@@ -44,8 +48,29 @@ export function AccessTokenVerificationGuide({
   const { t } = useTranslation("accountDialog")
   const [navigationFailed, setNavigationFailed] = useState(false)
   const { accessTokenPath } = getAccountSiteApiRouter(siteType)
-  const isApiYi = siteType === SITE_TYPES.APIYI
-  const isLaozhang = siteType === SITE_TYPES.LAOZHANG
+  const guide =
+    getAccountSiteDefinition(siteType)?.onboarding?.accessTokenVerificationGuide
+  const guideCopy = {
+    security: {
+      generateStep: t("accessTokenVerification.generateStep"),
+      openPage: t("accessTokenVerification.openSecurity"),
+      openPageFailed: t("accessTokenVerification.openSecurityFailed"),
+    },
+    apiyi: {
+      generateStep: t("accessTokenVerification.apiyi.generateStep"),
+      openPage: t("accessTokenVerification.apiyi.openProfile"),
+      openPageFailed: t("accessTokenVerification.apiyi.openProfileFailed"),
+    },
+    laozhang: {
+      generateStep: t("accessTokenVerification.laozhang.generateStep"),
+      openPage: t("accessTokenVerification.laozhang.openProfile"),
+      openPageFailed: t("accessTokenVerification.laozhang.openProfileFailed"),
+    },
+  } satisfies Record<
+    AccountSiteAccessTokenVerificationGuide["copy"],
+    { generateStep: string; openPage: string; openPageFailed: string }
+  >
+  const copy = guideCopy[guide?.copy ?? "security"]
 
   const openAccessTokenPage = async () => {
     if (!siteUrl || !isHttpUrl(siteUrl) || !accessTokenPath) return
@@ -91,16 +116,10 @@ export function AccessTokenVerificationGuide({
         ) : (
           <>
             <ol className="space-y-density-1 list-decimal pl-5">
-              <li>
-                {isLaozhang
-                  ? t("accessTokenVerification.laozhang.generateStep")
-                  : isApiYi
-                    ? t("accessTokenVerification.apiyi.generateStep")
-                    : t("accessTokenVerification.generateStep")}
-              </li>
+              <li>{copy.generateStep}</li>
               <li>{t("accessTokenVerification.pasteStep")}</li>
             </ol>
-            {siteType === SITE_TYPES.NEW_API && (
+            {guide?.showRotationWarning && (
               <p>{t("accessTokenVerification.rotationWarning")}</p>
             )}
             <ActionGroup className="items-stretch justify-start">
@@ -111,26 +130,14 @@ export function AccessTokenVerificationGuide({
                   onClick={openAccessTokenPage}
                   leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
                 >
-                  {isLaozhang
-                    ? t("accessTokenVerification.laozhang.openProfile")
-                    : isApiYi
-                      ? t("accessTokenVerification.apiyi.openProfile")
-                      : t("accessTokenVerification.openSecurity")}
+                  {copy.openPage}
                 </Button>
               )}
               {manualAddGuideAnchor && (
                 <ManualAddGuideButton anchor={manualAddGuideAnchor} />
               )}
             </ActionGroup>
-            {navigationFailed && (
-              <p role="alert">
-                {isLaozhang
-                  ? t("accessTokenVerification.laozhang.openProfileFailed")
-                  : isApiYi
-                    ? t("accessTokenVerification.apiyi.openProfileFailed")
-                    : t("accessTokenVerification.openSecurityFailed")}
-              </p>
-            )}
+            {navigationFailed && <p role="alert">{copy.openPageFailed}</p>}
           </>
         )}
       </div>

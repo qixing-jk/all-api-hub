@@ -1,45 +1,7 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountRefreshCapability } from "~/services/apiAdapters/contracts/accountRefresh"
-import * as accountRefresh from "~/services/apiService/newApiFamily/default/accountRefresh"
-import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
-import * as doneHub from "~/services/apiService/newApiFamily/variants/doneHub"
-import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
-import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
-import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
-import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
-type AccountRefreshImplementation =
-  typeof accountRefresh.defaultAccountRefreshImplementation
-
-const accountRefreshOverrides: Partial<
-  Record<AccountSiteType, Partial<AccountRefreshImplementation>>
-> = {
-  [SITE_TYPES.ANYROUTER]: {
-    fetchSupportCheckIn: anyrouter.fetchSupportCheckIn,
-    refreshAccountData: anyrouter.refreshAccountData,
-  },
-  [SITE_TYPES.DONE_HUB]: {
-    refreshAccountData: doneHub.refreshAccountData,
-  },
-  [SITE_TYPES.LAOZHANG]: {
-    refreshAccountData: (request) =>
-      accountRefresh.refreshAccountData(
-        request,
-        LAOZHANG_TODAY_LOG_QUERY_CONFIG,
-      ),
-  },
-  [SITE_TYPES.RIX_API]: {
-    refreshAccountData: rixApi.refreshAccountData,
-  },
-  [SITE_TYPES.VELOERA]: {
-    fetchSupportCheckIn: veloera.fetchSupportCheckIn,
-    refreshAccountData: veloera.refreshAccountData,
-  },
-  [SITE_TYPES.WONG_GONGYI]: {
-    fetchSupportCheckIn: wong.fetchSupportCheckIn,
-    refreshAccountData: wong.refreshAccountData,
-  },
-}
+import { resolveNewApiAccountDataVariant } from "./accountDataVariant"
 
 /**
  * Create account-refresh operations bound to the New API-family site type.
@@ -47,10 +9,7 @@ const accountRefreshOverrides: Partial<
 export function createNewApiAccountRefresh(
   siteType: AccountSiteType,
 ): AccountRefreshCapability {
-  const implementation = {
-    ...accountRefresh.defaultAccountRefreshImplementation,
-    ...accountRefreshOverrides[siteType],
-  }
+  const implementation = resolveNewApiAccountDataVariant(siteType)
 
   return {
     fetchCheckInSupport: (request) =>

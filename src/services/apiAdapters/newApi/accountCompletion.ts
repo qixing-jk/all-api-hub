@@ -1,116 +1,29 @@
-import { isAccountLoginProvider } from "~/constants/accountLogin"
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
-import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
+import {
+  createSafeCredentialError,
+  resolveNewApiAccountCredentialVariant,
+} from "./accountCredentialVariant"
 
 const MODERN_AUTH_FRESHNESS_MARGIN_SECONDS = 30
 const MODERN_AUTH_INVALID_MESSAGE =
   "New API dashboard authentication is invalid"
-const MODERN_AUTH_EXCHANGE_FAILED_MESSAGE =
-  "New API dashboard authentication could not be exchanged"
-/**
- * Message shown when the deployment issues account credentials only to a
- * browser session that passed its own step-up verification.
- *
- * New API rc.41 replaced the dashboard personal access token with scoped access
- * tokens, and creating one requires an `X-Security-Proof` that only a verified
- * browser session can produce. The user completes the same creation on the
- * deployment's own security page.
- * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.41/service/security_verification.go
- */
-const SCOPED_ACCESS_TOKEN_VERIFICATION_REQUIRED_MESSAGE =
-  "This deployment issues an access token only after a security check"
 const EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE =
   "Existing account access token could not be verified"
-const ACCESS_TOKEN_FETCH_FAILED_MESSAGE =
-  "Account access token could not be obtained"
-
-/**
- * Message shown when a deployment refuses to issue the account credential.
- *
- * Rix API issues an access token only to accounts that can pass its sensitive
- * action check, which the site names as two-factor authentication, a passkey or a
- * bound phone number.
- * Source: https://github.com/RixAPI/Rix-API. Observed 2026-09-26 on
- * https://platform.ephone.ai: `GET /api/user/token` answers 404 on newer builds
- * while its replacement `POST /api/user/admin-keys` answers 403 with
- * "Set up two-factor authentication, a passkey, or bind a phone number before
- * performing sensitive actions".
- */
-const ACCESS_TOKEN_CREDENTIAL_UNAVAILABLE_MESSAGE =
-  "This deployment issues an access token only to accounts with two-factor authentication, a passkey, or a bound phone number"
-
-/**
- * Detects the token outcomes that mean this deployment issues no credential to
- * this account, so the site's own security requirement has to be resolved first.
- */
-function isAccessTokenCredentialUnavailable(error: unknown): boolean {
-  return (
-    error instanceof ApiError &&
-    (error.statusCode === 404 || error.statusCode === 403)
-  )
-}
-
-/** Rebuilds a token-free completion error while retaining safe API categories. */
-function createSafeCredentialError(error: unknown, message: string): Error {
-  if (!(error instanceof ApiError)) {
-    return new Error(message)
-  }
-
-  const safeError = new ApiError(
-    message,
-    error.statusCode,
-    error.endpoint,
-    error.code,
-    error.upstreamCode,
-  )
-  safeError.originalCode = error.originalCode
-  return safeError
-}
-
-/** Normalizes the provider token payload once for recovery and final validation. */
-function normalizeTokenInfo(
-  tokenInfo: unknown,
-  siteType: AccountSiteType,
-  trimString: (value: unknown) => string,
-) {
-  const tokenData =
-    tokenInfo && typeof tokenInfo === "object"
-      ? (tokenInfo as {
-          username?: unknown
-          access_token?: unknown
-          loginProviders?: unknown
-          user?: { display_name?: unknown }
-        })
-      : {}
-
-  return {
-    username:
-      trimString(tokenData.username) ||
-      // ModelFlare exposes the account label as display_name in /api/user/self.
-      // https://modelflare.dev/
-      (siteType === SITE_TYPES.MODELFLARE
-        ? trimString(tokenData.user?.display_name)
-        : ""),
-    accessToken: trimString(tokenData.access_token),
-    loginProviders: Array.isArray(tokenData.loginProviders)
-      ? tokenData.loginProviders.filter(isAccountLoginProvider)
-      : [],
-  }
-}
 
 export const createNewApiAccountCompletion = (
   siteType: AccountSiteType,
 ): AccountCompletionCapability => ({
   async complete(request, helpers) {
+    const credentials = resolveNewApiAccountCredentialVariant(siteType)
     const {
       url,
       requestedAuthType,
@@ -119,11 +32,9 @@ export const createNewApiAccountCompletion = (
       detected,
       context,
     } = request
-    const modernDashboardAuth =
-      siteType === SITE_TYPES.NEW_API &&
-      detected.transientAuth?.kind === NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND
-        ? detected.transientAuth
-        : undefined
+    const modernDashboardAuth = credentials.selectDashboardAuth(
+      detected.transientAuth,
+    )
     const knownAccessTokens = [existingAccessToken, detected.accessToken]
       .map(helpers.trimString)
       .filter((token) => token && token !== modernDashboardAuth?.token)
@@ -263,23 +174,9 @@ export const createNewApiAccountCompletion = (
             }),
           )
         } catch (error) {
-          if (
-            siteType !== SITE_TYPES.RIX_API ||
-            !isAccessTokenCredentialUnavailable(error)
-          ) {
-            throw error
-          }
-          // Guide the user to the deployment's own requirement instead of
-          // silently downgrading the account to a browser session: the site does
-          // issue the credential once that check passes, and picking Cookie in
-          // the dialog stays available as the explicit alternative.
-          throw helpers.createCompletionError(
-            AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
-            createSafeCredentialError(
-              error,
-              ACCESS_TOKEN_CREDENTIAL_UNAVAILABLE_MESSAGE,
-            ),
-          )
+          const failure = credentials.interpretAcquisitionFailure(error)
+          if (!failure) throw error
+          throw helpers.createCompletionError(failure.reason, failure.error)
         }
       }
 
@@ -287,9 +184,8 @@ export const createNewApiAccountCompletion = (
     }
 
     const tokenPromise = fetchTokenInfo().then((tokenInfo) => {
-      const normalizedTokenInfo = normalizeTokenInfo(
+      const normalizedTokenInfo = credentials.normalizeTokenInfo(
         tokenInfo,
-        siteType,
         helpers.trimString,
       )
       helpers.captureRecoveryData({
@@ -352,52 +248,15 @@ export const createNewApiAccountCompletion = (
               error,
             )
           }
-          // New API requires a dashboard security proof before generating a PAT.
-          // Match the token endpoint's structured code, not a generic 403/login error.
-          // https://github.com/QuantumNous/new-api/commit/a8729b5c3709cc01d88fc3f2db5b91347fc9129e
-          if (
-            siteType === SITE_TYPES.NEW_API &&
-            error instanceof ApiError &&
-            error.endpoint === "/api/user/token" &&
-            error.upstreamCode?.startsWith("SECURITY_PROOF_")
-          ) {
-            helpers.captureRecoveryData({ authType: AuthTypeEnum.AccessToken })
-            throw helpers.createCompletionError(
-              AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
-              createSafeCredentialError(
-                error,
-                MODERN_AUTH_EXCHANGE_FAILED_MESSAGE,
-              ),
-            )
-          }
-          // rc.41 issues access tokens only to a browser session that passed a
-          // step-up verification, which this request cannot produce. The
-          // completion layer decides that from the deployment's contract, so the
-          // user is sent to create the token on the site instead.
-          // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.41/service/security_verification.go
-          if (
-            siteType === SITE_TYPES.NEW_API &&
-            error instanceof ApiError &&
-            error.code === API_ERROR_CODES.ACCESS_TOKEN_VERIFICATION_REQUIRED
-          ) {
-            helpers.captureRecoveryData({ authType: AuthTypeEnum.AccessToken })
-            throw helpers.createCompletionError(
-              AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
-              createSafeCredentialError(
-                error,
-                SCOPED_ACCESS_TOKEN_VERIFICATION_REQUIRED_MESSAGE,
-              ),
-            )
-          }
-          throw helpers.createCompletionError(
-            AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-            createSafeCredentialError(
-              error,
-              modernDashboardAuth
-                ? MODERN_AUTH_EXCHANGE_FAILED_MESSAGE
-                : ACCESS_TOKEN_FETCH_FAILED_MESSAGE,
-            ),
+          const failure = credentials.interpretCompletionFailure(
+            error,
+            Boolean(modernDashboardAuth),
           )
+          if (failure.recoveryAuthType)
+            helpers.captureRecoveryData({
+              authType: failure.recoveryAuthType,
+            })
+          throw helpers.createCompletionError(failure.reason, failure.error)
         }),
         checkSupportPromise,
         siteMetadataPromise,
@@ -421,11 +280,7 @@ export const createNewApiAccountCompletion = (
 
     if (effectiveAuthType === AuthTypeEnum.AccessToken && !accessToken) {
       throw helpers.createCompletionError(
-        // APIyi/LaoZhang bootstrap only reads existing tokens; issuance requires
-        // the site's own security verification in /account/profile.
-        siteType === SITE_TYPES.APIYI || siteType === SITE_TYPES.LAOZHANG
-          ? AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
-          : AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+        credentials.missingTokenReason,
         new Error("Access token is missing"),
       )
     }

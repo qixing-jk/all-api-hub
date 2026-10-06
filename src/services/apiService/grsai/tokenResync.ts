@@ -1,59 +1,16 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_BROWSER_SESSION_SOURCES,
-  resolveAccountBrowserSession,
-  type AccountBrowserSession,
-} from "~/services/accountBrowserSession"
+  createBrowserTokenResync,
+  type BrowserResyncedToken,
+} from "~/services/accountBrowserSession/resyncToken"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-const normalizeString = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : ""
-
-type GrsaiResyncedToken = {
-  accessToken: string
-  userId: string
-  username?: string
-  source:
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
-    | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
-}
-
-const GRSAI_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
-  [ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-  [ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW]:
-    ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-} as const satisfies Record<
-  AccountBrowserSession["source"],
-  GrsaiResyncedToken["source"]
->
-
-const isGrsaiSession = (session: AccountBrowserSession): boolean =>
-  session.siteType === SITE_TYPES.GRSAI ||
-  session.siteTypeHint === SITE_TYPES.GRSAI
-
-/**
- * A resolvable session already proves itself: the content-session extractor
- * only reports one after the console API answered `/client/grsai/getUserInfo`
- * with `code: 0`, so an unauthenticated page state never reaches this point.
- */
-const hasUsableToken = (
-  session: AccountBrowserSession,
-  expectedUserId?: string | number,
-): boolean =>
-  isGrsaiSession(session) &&
-  normalizeString(session.accessToken).length > 0 &&
-  (!expectedUserId ||
-    normalizeString(session.userId) === normalizeString(expectedUserId))
-
-const resolveUsername = (session: AccountBrowserSession): string | undefined =>
-  normalizeString(session.user?.username) ||
-  normalizeString(session.user?.display_name) ||
-  normalizeString(session.user?.mail) ||
-  undefined
+const resyncToken = createBrowserTokenResync({
+  siteType: SITE_TYPES.GRSAI,
+  requestIdPrefix: "grsai-token-resync",
+  usernameFields: ["username", "display_name", "mail"],
+})
 
 /**
  * Re-sync the account token from logged-in browser-session state.
@@ -70,34 +27,11 @@ export async function resyncGrsaiAuthToken(
   expectedUserId?: string | number,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<GrsaiResyncedToken | null> {
-  const session = await resolveAccountBrowserSession({
+): Promise<BrowserResyncedToken | null> {
+  return resyncToken({
     baseUrl,
-    siteType: SITE_TYPES.GRSAI,
-    useExistingTabs: true,
-    useTempWindow: true,
-    requestIdPrefix: "grsai-token-resync",
-    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-    isUsableSession: (candidate) => hasUsableToken(candidate, expectedUserId),
+    expectedUserId,
+    tempWindowRequestSource,
+    protectionBypassExecution,
   })
-
-  const accessToken = normalizeString(session?.accessToken)
-  if (!session || !accessToken) return null
-
-  if (
-    expectedUserId &&
-    normalizeString(session.userId) !== normalizeString(expectedUserId)
-  ) {
-    return null
-  }
-
-  const username = resolveUsername(session)
-
-  return {
-    accessToken,
-    userId: session.userId,
-    ...(username ? { username } : {}),
-    source: GRSAI_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE[session.source],
-  }
 }

@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
+import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
@@ -100,6 +101,15 @@ const toFacts = (
       modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
       ...(Number.isFinite(createdAt) ? { createdAt } : {}),
     },
+    displayFacts: [
+      {
+        fieldId: field.Credits,
+        kind: "credits",
+        value: snapshot.credits,
+        unlimited: snapshot.unlimited,
+      },
+      keyExpiryDisplayFact(field.ExpiresAt, snapshot.expiresAt ?? ""),
+    ],
     fields: [
       { fieldId: field.Unlimited, kind: "boolean", value: snapshot.unlimited },
       { fieldId: field.Credits, kind: "number", value: snapshot.credits },

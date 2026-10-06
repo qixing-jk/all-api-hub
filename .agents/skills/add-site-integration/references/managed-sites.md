@@ -2,6 +2,8 @@
 
 Use for management connections, channels, providers and native resources. A managed-only gateway need not own a user account, balance or check-in capability; do not create account onboarding solely because it serves inference APIs.
 
+Use the [management completeness checklist](managed-site-checklist.md) for connection/authentication, each native resource operation/field, secret handling, queries, matching/import, model operations and migration. Explain the chosen mapping and reason per operation; state concrete non-adaptation reasons for missing actions or fields. Inspect native resource action predicates as well as top-level managed capability objects.
+
 ## Establish management capabilities
 
 - Inspect site definitions, `src/services/apiAdapters/managedSites/`, `src/services/apiAdapters/managedResources/`, and the closest native transport. Compare actual resource/auth contracts before reusing a related backend family.

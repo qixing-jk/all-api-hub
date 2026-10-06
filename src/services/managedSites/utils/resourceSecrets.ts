@@ -16,6 +16,12 @@ export const collectManagedConfigSecrets = (
   ) {
     secrets.push(managedConfig.password)
   }
+  if (
+    "managementKey" in managedConfig &&
+    typeof managedConfig.managementKey === "string"
+  ) {
+    secrets.push(managedConfig.managementKey)
+  }
   return secrets
 }
 

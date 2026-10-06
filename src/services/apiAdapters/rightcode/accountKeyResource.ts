@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
@@ -143,6 +144,22 @@ const toFacts = (
       ...(entry.baseUrl ? { baseUrl: entry.baseUrl } : {}),
       ...(Number.isFinite(createdAt) ? { createdAt } : {}),
     },
+    displayFacts: [
+      {
+        fieldId: field.QuotaUsd,
+        kind: "money",
+        role: "total",
+        amountUsd: snapshot.quotaLimit ?? 0,
+        unlimited: snapshot.quotaLimit === null,
+      },
+      {
+        fieldId: "used_quota",
+        kind: "money",
+        role: "used",
+        amountUsd: toOptionalFiniteNumber(entry.key.used_quota) ?? 0,
+      },
+      keyExpiryDisplayFact(field.ExpiresAt, snapshot.expiresAt ?? ""),
+    ],
     fields: [
       ...(entry.channel
         ? [

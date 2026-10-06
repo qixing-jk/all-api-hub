@@ -16,6 +16,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/contracts"
+import { buildNewApiToken } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
 import {
@@ -37,7 +38,9 @@ describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
 
   it("copies a single token directly when smart copy finds exactly one key", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-single" }])
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      buildNewApiToken({ key: "sk-single" }),
+    ])
 
     const user = userEvent.setup()
     const onCopyKey = vi.fn()
@@ -153,8 +156,8 @@ describe("AccountActionButtons", () => {
 
   it("opens the copy dialog when smart copy finds multiple tokens", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([
-      { key: "sk-one" },
-      { key: "sk-two" },
+      buildNewApiToken({ id: 1, key: "sk-one" }),
+      buildNewApiToken({ id: 2, key: "sk-two" }),
     ])
 
     const user = userEvent.setup()

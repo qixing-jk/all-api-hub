@@ -56,19 +56,20 @@ describe("site type import whitelist", () => {
     "src/services/apiAdapters/registry.ts",
     "src/services/siteDetection/detectSiteType.ts",
     "src/services/accounts/accountDefaults.ts",
-    "src/features/KeyManagement/presentation/accountKeyResourcePresentation.ts",
+    "src/services/managedSites/configRegistration.ts",
     "tests/features/example.test.ts",
   ])("allows explicit owners and test fixtures: %s", async (file) => {
     expect(await check(siteImport, file)).toEqual([])
   })
 
   it.each([
+    "src/features/KeyManagement/presentation/accountKeyResourcePresentation.ts",
     "src/services/siteAnnouncements/sourceHandlers.ts",
     "src/services/siteAnnouncements/identity.ts",
     "src/services/siteAnnouncements/scheduler.ts",
     "src/services/siteAnnouncements/sources.ts",
     "src/features/SiteAnnouncements/utils.ts",
-  ])("keeps announcement behavior behind capabilities: %s", async (file) => {
+  ])("keeps consumer behavior behind capabilities: %s", async (file) => {
     expect(await check(siteImport, file)).toHaveLength(1)
   })
 

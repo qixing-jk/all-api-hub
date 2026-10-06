@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+} from "~/features/KeyManagement/constants"
 import {
   isAccountKeyResourceRouteTransitionAcknowledged,
   useAccountKeyResourceController,
@@ -108,6 +112,371 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  const recoveryScope = {
+    scopeKey: "workspace-example",
+    routeKey: "team",
+    displayName: "Team",
+    isDefault: true,
+  }
+  const renderRecoveryController = (session: any, onCreated?: () => void) => {
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+    return renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+        onCreated,
+      }),
+    )
+  }
+  const recoverySession = (overrides: Record<string, unknown> = {}) => ({
+    resolveDefaultScope: vi.fn().mockResolvedValue(recoveryScope),
+    listScopes: vi.fn().mockResolvedValue([recoveryScope]),
+    openCollection: vi.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
+        items: [createFacts(recoveryScope.scopeKey, "key-example")],
+      }),
+    }),
+    ...overrides,
+  })
+
+  it("closing a pending detail prevents a late response reopening the detail", async () => {
+    const pending = deferred<any>()
+    const get = vi.fn().mockReturnValue(pending.promise)
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [facts] }),
+          get,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => void result.current.openDetail(facts.ref))
+    await waitFor(() => expect(get).toHaveBeenCalledOnce())
+    act(() => result.current.closeDetail())
+    expect(result.current.isDetailLoading).toBe(false)
+    await act(async () => pending.resolve(facts))
+    expect(result.current.detail).toBeNull()
+    expect(result.current.detailFailure).toBeNull()
+  })
+
+  it("reports validation issues without submitting or closing the editor", async () => {
+    const issues = [{ fieldId: "name", code: "required" }]
+    const submit = vi.fn()
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue({
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: false, issues }),
+          resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+          submit,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(result.current.editor).toMatchObject({
+      editorId,
+      feedback: { code: "validation_failed", fieldIssues: issues },
+    })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it.each(["partial", "rejected"])(
+    "retains loaded keys when scope retry is %s",
+    async (outcome) => {
+      const failure = { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable }
+      const refreshScopeInventory =
+        outcome === "partial"
+          ? vi.fn().mockResolvedValue({ scopes: [], partialFailure: failure })
+          : vi.fn().mockRejectedValue(new AccountKeyResourceError(failure))
+      const { result } = renderRecoveryController(
+        recoverySession({ refreshScopeInventory }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      await act(async () =>
+        expect(result.current.retryScopeInventory()).resolves.toBe(false),
+      )
+      expect(result.current.rows).toHaveLength(1)
+      expect(result.current.selectedScope).toEqual(recoveryScope)
+      expect(result.current.scopeInventoryFailure).toEqual(failure)
+      expect(result.current.isScopeInventoryLoading).toBe(false)
+    },
+  )
+
+  it("retains the selected scope when recovered discovery omits it", async () => {
+    const other = {
+      scopeKey: "other",
+      routeKey: "other",
+      displayName: "Other",
+      isDefault: false,
+    }
+    const { result } = renderRecoveryController(
+      recoverySession({
+        refreshScopeInventory: vi.fn().mockResolvedValue({ scopes: [other] }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () =>
+      expect(result.current.retryScopeInventory()).resolves.toBe(true),
+    )
+    expect(result.current.selectedScope).toEqual(recoveryScope)
+    expect(result.current.scopes).toEqual([recoveryScope, other])
+    expect(result.current.scopeInventoryFailure).toBeNull()
+  })
+
+  it("cancels a deletion confirmation without sending a deletion", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const deleteKey = vi.fn()
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [facts] }),
+          delete: deleteKey,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => result.current.openDelete(facts.ref))
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: true,
+      ref: facts.ref,
+    })
+    act(() => result.current.cancelDelete())
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: false,
+      ref: null,
+    })
+    expect(deleteKey).not.toHaveBeenCalled()
+    await act(async () =>
+      expect(result.current.retryScopeInventory()).resolves.toBe(false),
+    )
+  })
+
+  it("does not replay a successful creation when the consumer handoff rejects", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-created")
+    const submit = vi.fn().mockResolvedValue({ facts })
+    const onCreated = vi.fn().mockRejectedValue(new Error("handoff failed"))
+    const session = recoverySession({
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+        submit,
+      }),
+    })
+    const { result } = renderRecoveryController(session, onCreated)
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(onCreated).toHaveBeenCalledOnce()
+    expect(submit).toHaveBeenCalledOnce()
+    expect(result.current.editor).toBeNull()
+    expect(session.openCollection).toHaveBeenCalledTimes(2)
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("does not load options for an editor that was already closed", async () => {
+    const loadOptions = vi.fn().mockResolvedValue([])
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue({
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: true }),
+          resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+          submit: vi.fn(),
+          loadOptions,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    act(() => result.current.closeEditor(editorId))
+    await act(async () => result.current.loadEditorOptions(editorId, "group"))
+    expect(loadOptions).not.toHaveBeenCalled()
+    expect(result.current.editor).toBeNull()
+    act(() =>
+      result.current.retryEditorOpening(result.current.editorOpening.attemptId),
+    )
+    expect(result.current.editorOpening.status).toBe("idle")
+  })
+
+  it("loads a selected account when it arrives after the route and reports an empty refresh accurately", async () => {
+    const session = recoverySession()
+    const open = vi.fn().mockResolvedValue(session)
+    mockNativeResourceSession(open)
+    const { result, rerender } = renderHook(
+      ({ accounts }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      { initialProps: { accounts: [] as ReturnType<typeof createAccount>[] } },
+    )
+    await act(async () => expect(result.current.refresh()).resolves.toBe(false))
+    expect(open).not.toHaveBeenCalled()
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      "failure",
+      expect.objectContaining({
+        insights: expect.objectContaining({ selectedCount: 0 }),
+      }),
+    )
+    rerender({ accounts: [createAccount("account-example")] })
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    expect(result.current.selectedScope).toEqual(recoveryScope)
+  })
+
+  it("keeps sibling keys unchanged while the edited key awaits a refresh", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-example")
+    const sibling = createFacts(recoveryScope.scopeKey, "key-sibling")
+    const updated = { ...facts, displayName: "Updated" }
+    const refresh = deferred<any>()
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [facts, sibling] })
+      .mockReturnValueOnce(refresh.promise)
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCollection: vi.fn().mockResolvedValue({
+          list,
+          openEditEditor: vi.fn().mockResolvedValue({
+            fields: [],
+            initialValues: {},
+            validate: () => ({ valid: true }),
+            submit: vi.fn().mockResolvedValue({ facts: updated }),
+          }),
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(2))
+    await act(async () => result.current.openEdit(facts.ref))
+    act(
+      () =>
+        void result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    expect(result.current.rows).toEqual([updated, sibling])
+    await act(async () => refresh.resolve({ items: [updated, sibling] }))
+    expect(result.current.rows).toEqual([updated, sibling])
+  })
+
+  it("ignores combined inventory results after its account selection is replaced", async () => {
+    const pending = deferred<any>()
+    const resolveDefaultScope = vi.fn().mockReturnValue(pending.promise)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue(recoverySession({ resolveDefaultScope })),
+    )
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount,
+        }),
+      {
+        initialProps: {
+          selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE as string,
+        },
+      },
+    )
+    await waitFor(() => expect(resolveDefaultScope).toHaveBeenCalledOnce())
+    rerender({ selectedAccount: "missing-account" })
+    await act(async () => pending.resolve(recoveryScope))
+    expect(result.current.rows).toEqual([])
+    expect(result.current.failures).toEqual({})
+    expect(result.current.mode).toBe(controllerModes.Single)
+  })
+
+  it("rejects a post-create refresh into a workspace removed from discovery", async () => {
+    const destination = {
+      ...recoveryScope,
+      scopeKey: "other",
+      routeKey: "other",
+      isDefault: false,
+    }
+    const listScopes = vi
+      .fn()
+      .mockResolvedValueOnce([recoveryScope, destination])
+      .mockResolvedValue([recoveryScope])
+    const submit = vi
+      .fn()
+      .mockResolvedValue({
+        facts: createFacts(destination.scopeKey, "key-created"),
+      })
+    const session = recoverySession({
+      listScopes,
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => destination.scopeKey,
+        submit,
+      }),
+    })
+    const { result } = renderRecoveryController(session)
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(result.current.failures["account-example"]).toMatchObject({
+      code: "validation_failed",
+    })
+    expect(session.openCollection).toHaveBeenCalledOnce()
+    await act(async () => result.current.submitEditor(editorId, {}))
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("keeps a one-time secret when another account is added without changing its route", async () => {
+    const facts = createFacts(recoveryScope.scopeKey, "key-created")
+    const createdSecret = {
+      correlation: { kind: "account-key-resource", ref: facts.ref },
+      displayName: "Created",
+      secret: "one-time-key",
+      secretAvailability: "create-response-only",
+      credential: {},
+    }
+    const session = recoverySession({
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: () => ({ valid: true }),
+        resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+        submit: vi.fn().mockResolvedValue({ facts, createdSecret }),
+      }),
+    })
+    const open = vi.fn().mockResolvedValue(session)
+    mockNativeResourceSession(open)
+    const account = createAccount("account-example")
+    const { result, rerender } = renderHook(
+      ({ accounts }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount: account.id,
+          routeParams: { accountId: account.id, workspace: "team" },
+        }),
+      { initialProps: { accounts: [account] } },
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
+    const previousCalls = open.mock.calls.length
+    rerender({ accounts: [account, createAccount("unrelated")] })
+    expect(result.current.createdSecret).toEqual(createdSecret)
+    expect(open).toHaveBeenCalledTimes(previousCalls)
+  })
+
   beforeEach(() => {
     createDisplayAccountApiContextMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
@@ -118,7 +487,7 @@ describe("useAccountKeyResourceController", () => {
     })
   })
 
-  it.each(["single", "all"] as const)(
+  it.each([controllerModes.Single, controllerModes.All] as const)(
     "recovers %s inventory through an explicit refresh when automatic fallback is denied",
     async (mode) => {
       const account = createAccount("account-example")
@@ -148,7 +517,9 @@ describe("useAccountKeyResourceController", () => {
         useAccountKeyResourceController({
           accounts: [account],
           selectedAccount:
-            mode === "single" ? account.id : KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+            mode === controllerModes.Single
+              ? account.id
+              : KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
         }),
       )
 
@@ -1016,7 +1387,7 @@ describe("useAccountKeyResourceController", () => {
       { signal: expect.any(AbortSignal) },
     )
     expect(firstSignal?.aborted).toBe(true)
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     nextOptions.resolve([{ value: "member-second" }])
     await waitFor(() =>
       expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
@@ -1365,7 +1736,9 @@ describe("useAccountKeyResourceController", () => {
         list: vi.fn().mockResolvedValue({ items: [] }),
       }),
     )
-    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    await waitFor(() =>
+      expect(result.current.editor?.mode).toBe(editorModes.Create),
+    )
     expect(result.current.editor?.values).toEqual({
       name: "Edited during load",
     })
@@ -1641,7 +2014,9 @@ describe("useAccountKeyResourceController", () => {
 
     rerender({ workspace: "second" })
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[1]))
-    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    await waitFor(() =>
+      expect(result.current.editor?.mode).toBe(editorModes.Create),
+    )
     await act(async () => obsoleteSubmit({}))
 
     expect(firstEditor.submit).not.toHaveBeenCalled()
@@ -2481,7 +2856,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(openedAccountIds).toEqual(["account-native", "account-failed"])
-    expect(result.current.mode).toBe("all")
+    expect(result.current.mode).toBe(controllerModes.All)
     expect(result.current.scopes).toEqual([])
     expect(result.current.selectedScope).toBeNull()
     expect(result.current.rows).toEqual([nativeRow])
@@ -2545,7 +2920,7 @@ describe("useAccountKeyResourceController", () => {
     expect(openNativeResources).toHaveBeenCalledTimes(1)
 
     await act(async () => result.current.openEdit(facts.ref))
-    expect(result.current.editor?.mode).toBe("edit")
+    expect(result.current.editor?.mode).toBe(editorModes.Edit)
 
     let submitPromise: Promise<unknown> | undefined
     act(() => {
@@ -2571,7 +2946,7 @@ describe("useAccountKeyResourceController", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(collection.list).toHaveBeenCalledTimes(2)
-    expect(result.current.mode).toBe("all")
+    expect(result.current.mode).toBe(controllerModes.All)
     expect(trackCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       expect.objectContaining({
@@ -2583,7 +2958,7 @@ describe("useAccountKeyResourceController", () => {
     )
   })
 
-  it.each([false, true, "unavailable"] as const)(
+  it.each([false, true, "unavailable", "missing-runtime"] as const)(
     "deletes a native key from all-account mode (linked cleanup: %s)",
     async (cleanupLinkedChannels) => {
       cleanupMocks.prepare.mockReset().mockResolvedValue({ id: "pending" })
@@ -2606,15 +2981,18 @@ describe("useAccountKeyResourceController", () => {
       }
       const openCollection = vi.fn().mockResolvedValue(collection)
       const openNativeResources = vi.fn().mockResolvedValue({
-        runtimeKey: {
-          resolve: vi
-            .fn()
-            .mockResolvedValue(
-              cleanupLinkedChannels === "unavailable"
-                ? { kind: "unavailable" }
-                : { kind: "resolved", secret: "source-key" },
-            ),
-        },
+        runtimeKey:
+          cleanupLinkedChannels === "missing-runtime"
+            ? undefined
+            : {
+                resolve: vi
+                  .fn()
+                  .mockResolvedValue(
+                    cleanupLinkedChannels === "unavailable"
+                      ? { kind: "unavailable" }
+                      : { kind: "resolved", secret: "source-key" },
+                  ),
+              },
         resolveDefaultScope: vi.fn().mockResolvedValue({
           scopeKey: "scope-native",
           routeKey: "default",
@@ -2647,7 +3025,10 @@ describe("useAccountKeyResourceController", () => {
         result.current.confirmDelete(Boolean(cleanupLinkedChannels)),
       )
 
-      if (cleanupLinkedChannels === "unavailable") {
+      if (
+        cleanupLinkedChannels === "unavailable" ||
+        cleanupLinkedChannels === "missing-runtime"
+      ) {
         expect(collection.delete).not.toHaveBeenCalled()
         expect(cleanupMocks.prepare).not.toHaveBeenCalled()
         expect(result.current.deleteState.failure?.code).toBe("unavailable")
@@ -2682,7 +3063,7 @@ describe("useAccountKeyResourceController", () => {
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       )
       expect(collection.list).toHaveBeenCalledTimes(2)
-      expect(result.current.mode).toBe("all")
+      expect(result.current.mode).toBe(controllerModes.All)
       expect(trackCompleteMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
         expect.objectContaining({
@@ -2880,7 +3261,7 @@ describe("useAccountKeyResourceController", () => {
             routeKey: "second",
           },
           generation,
-          mode: "single",
+          mode: controllerModes.Single,
           transitionId: transition?.id,
           selectedAccount,
           selectedRouteSiteType: siteType,
@@ -2904,7 +3285,7 @@ describe("useAccountKeyResourceController", () => {
           routeKey: "second",
         },
         generation: 2,
-        mode: "single",
+        mode: controllerModes.Single,
         transitionId: "transition",
         selectedAccount: "account-example",
         selectedRouteSiteType: "openrouter",
@@ -4082,7 +4463,7 @@ describe("useAccountKeyResourceController", () => {
       expect(result.current.selectedScope?.scopeKey).toBe(workspaceC.scopeKey),
     )
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     act(() => {
       void result.current.submitEditor(result.current.editor!.editorId, {})
     })
@@ -4099,7 +4480,7 @@ describe("useAccountKeyResourceController", () => {
       ),
     )
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
 
     rerender({ workspace: workspaceC.routeKey })
     await waitFor(() => expect(workspaceCList).toHaveBeenCalledTimes(3))
@@ -4459,7 +4840,7 @@ describe("useAccountKeyResourceController", () => {
       { fieldId: "hash", label: "Hash", value: "hash-example" },
     ])
     await act(async () => result.current.openEdit(facts.ref))
-    expect(result.current.editor?.mode).toBe("edit")
+    expect(result.current.editor?.mode).toBe(editorModes.Edit)
     act(() => result.current.closeEditor(result.current.editor!.editorId))
     let opened = false
     act(() => {
@@ -5347,7 +5728,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await waitFor(() => expect(result.current.rows).toHaveLength(1))
     await act(async () => result.current.openCreate())
-    expect(result.current.editor?.mode).toBe("create")
+    expect(result.current.editor?.mode).toBe(editorModes.Create)
     void result.current.submitEditor(result.current.editor!.editorId, {})
     void result.current.submitEditor(result.current.editor!.editorId, {})
     expect(editor.submit).toHaveBeenCalledTimes(1)
@@ -5482,7 +5863,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: expect.any(Number),
       status: "failure",
-      mode: "create",
+      mode: editorModes.Create,
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
         message: "private provider message",
@@ -5495,7 +5876,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: expect.any(Number),
       status: "loading",
-      mode: "create",
+      mode: editorModes.Create,
       reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
     })
     await act(async () => retryOpening.resolve(editor))
@@ -5557,7 +5938,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: secondAttemptId,
       status: "loading",
-      mode: "create",
+      mode: editorModes.Create,
       reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
     })
 

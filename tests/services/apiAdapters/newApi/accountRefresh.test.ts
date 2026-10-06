@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/accountRefresh"
+import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import { createCheckInConfig } from "../checkInFixtures"
@@ -16,6 +17,7 @@ const {
   veloeraRefreshAccountData,
   wongFetchSupportCheckIn,
   wongRefreshAccountData,
+  rixRefreshAccountData,
 } = vi.hoisted(() => ({
   anyrouterFetchSupportCheckIn: vi.fn(),
   anyrouterRefreshAccountData: vi.fn(),
@@ -26,9 +28,11 @@ const {
   veloeraRefreshAccountData: vi.fn(),
   wongFetchSupportCheckIn: vi.fn(),
   wongRefreshAccountData: vi.fn(),
+  rixRefreshAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountRefresh", () => ({
+  refreshAccountData: mockRefreshAccountData,
   defaultAccountRefreshImplementation: {
     fetchSupportCheckIn: mockFetchSupportCheckIn,
     refreshAccountData: mockRefreshAccountData,
@@ -38,20 +42,29 @@ vi.mock("~/services/apiService/newApiFamily/default/accountRefresh", () => ({
 vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
   fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
   refreshAccountData: anyrouterRefreshAccountData,
+  fetchAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
   refreshAccountData: doneHubRefreshAccountData,
+  fetchAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
   fetchSupportCheckIn: veloeraFetchSupportCheckIn,
   refreshAccountData: veloeraRefreshAccountData,
+  fetchAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
   fetchSupportCheckIn: wongFetchSupportCheckIn,
   refreshAccountData: wongRefreshAccountData,
+  fetchAccountData: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/rixApi", () => ({
+  refreshAccountData: rixRefreshAccountData,
+  fetchAccountData: vi.fn(),
 }))
 
 const supportRequest = {
@@ -141,7 +154,10 @@ describe("createNewApiAccountRefresh", () => {
     },
   )
 
-  it.each([[SITE_TYPES.DONE_HUB, doneHubRefreshAccountData]])(
+  it.each([
+    [SITE_TYPES.DONE_HUB, doneHubRefreshAccountData],
+    [SITE_TYPES.RIX_API, rixRefreshAccountData],
+  ])(
     "keeps default support probing while using adapter-level refresh override for %s",
     async (siteType, refreshLoader) => {
       mockFetchSupportCheckIn.mockResolvedValueOnce(true)
@@ -161,4 +177,22 @@ describe("createNewApiAccountRefresh", () => {
       expect(mockRefreshAccountData).not.toHaveBeenCalled()
     },
   )
+
+  it("uses LaoZhang's log dialect without changing the default support probe", async () => {
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockRefreshAccountData.mockResolvedValueOnce(refreshResult)
+    const capability = createNewApiAccountRefresh(SITE_TYPES.LAOZHANG)
+
+    await expect(
+      capability.fetchCheckInSupport?.(supportRequest),
+    ).resolves.toBe(false)
+    await expect(capability.refreshAccount(refreshRequest)).resolves.toBe(
+      refreshResult,
+    )
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      refreshRequest,
+      LAOZHANG_TODAY_LOG_QUERY_CONFIG,
+    )
+  })
 })

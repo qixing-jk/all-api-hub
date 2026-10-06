@@ -191,6 +191,32 @@ export interface AccountKeyRuntimeKeySession {
   ): Promise<AccountRuntimeKeyResolution>
 }
 
+/** Adapter-owned display semantics. Monetary amounts are USD; timestamps are milliseconds. */
+export type AccountKeyDisplayFact =
+  | {
+      readonly fieldId: string
+      readonly kind: "money"
+      readonly role: "remaining" | "used" | "total"
+      readonly amountUsd: number
+      readonly unlimited?: boolean
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "credits"
+      readonly value: number
+      readonly unlimited?: boolean
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "expiry"
+      readonly timestampMs: number | "never" | null
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "last-used"
+      readonly timestampMs: number
+    }
+
 export type AccountKeyResourceFacts = {
   readonly ref: AccountKeyResourceRef
   readonly displayName: string
@@ -199,6 +225,7 @@ export type AccountKeyResourceFacts = {
   /** Safe machine policy projected by the provider, never parsed from display fields. */
   readonly runtimeKey?: {
     readonly modelAccess: AccountRuntimeKeyModelAccess
+    /** Canonical Unix epoch milliseconds. */
     readonly createdAt?: number
     readonly notes?: string
     /**
@@ -210,6 +237,8 @@ export type AccountKeyResourceFacts = {
     readonly legacyTokenId?: number
   }
   readonly fields: readonly ResourceDisplayFact[]
+  /** Absent means no provider-specific money or time interpretation is available. */
+  readonly displayFacts?: readonly AccountKeyDisplayFact[]
   readonly searchValues?: readonly string[]
   readonly actions: Readonly<{ canUpdate: boolean; canDelete: boolean }>
 }

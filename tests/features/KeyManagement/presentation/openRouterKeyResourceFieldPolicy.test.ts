@@ -3,6 +3,7 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { SUPPORTED_UI_LANGUAGES } from "~/constants/i18n"
+import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import {
   getOpenRouterKeyResourceFieldPolicy,
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
@@ -18,7 +19,7 @@ const fields = OPENROUTER_KEY_FIELD_IDS
 
 describe("OpenRouter key resource field policy", () => {
   it("classifies create fields in the product-owned section order", () => {
-    const createPolicy = getOpenRouterKeyResourceFieldPolicy("create")
+    const createPolicy = getOpenRouterKeyResourceFieldPolicy(editorModes.Create)
 
     expect(createPolicy.fields.map(({ fieldId }) => fieldId)).toEqual([
       fields.Name,
@@ -39,7 +40,7 @@ describe("OpenRouter key resource field policy", () => {
   })
 
   it("classifies edit fields in the product-owned order with the editable disabled state", () => {
-    const editPolicy = getOpenRouterKeyResourceFieldPolicy("edit")
+    const editPolicy = getOpenRouterKeyResourceFieldPolicy(editorModes.Edit)
 
     expect(editPolicy.fields.map(({ fieldId }) => fieldId)).toEqual([
       fields.Name,
@@ -70,9 +71,9 @@ describe("OpenRouter key resource field policy", () => {
 
   it("provides localized fallbacks for unknown options and validation issues", () => {
     const translate = ((key: string) => key) as never
-    const workspace = getOpenRouterKeyResourceFieldPolicy("create").fields.find(
-      ({ fieldId }) => fieldId === fields.Workspace,
-    )
+    const workspace = getOpenRouterKeyResourceFieldPolicy(
+      editorModes.Create,
+    ).fields.find(({ fieldId }) => fieldId === fields.Workspace)
 
     expect(workspace?.resolveOptionFallback?.(translate)).toBe(
       "keyManagement:openRouter.editor.options.workspace.unknown",
@@ -95,7 +96,7 @@ describe("OpenRouter key resource field policy", () => {
   })
 
   it("uses edit-specific immutable-field help and keeps USD visible in every supported locale", async () => {
-    const editPolicy = getOpenRouterKeyResourceFieldPolicy("edit")
+    const editPolicy = getOpenRouterKeyResourceFieldPolicy(editorModes.Edit)
     const translate = ((key: string) => key) as never
 
     expect(
@@ -181,14 +182,14 @@ describe("OpenRouter key resource field policy", () => {
     expect(() =>
       resolveResourceFieldPolicy(
         [...descriptors, { fieldId: "unclassified", type: "text" }],
-        getOpenRouterKeyResourceFieldPolicy("create"),
+        getOpenRouterKeyResourceFieldPolicy(editorModes.Create),
         OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")
     expect(() =>
       resolveResourceFieldPolicy(
         [...descriptors, descriptors[0]!],
-        getOpenRouterKeyResourceFieldPolicy("create"),
+        getOpenRouterKeyResourceFieldPolicy(editorModes.Create),
         OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")
@@ -199,7 +200,7 @@ describe("OpenRouter key resource field policy", () => {
             ? { fieldId: descriptor.fieldId, type: "number" as const }
             : descriptor,
         ),
-        getOpenRouterKeyResourceFieldPolicy("create"),
+        getOpenRouterKeyResourceFieldPolicy(editorModes.Create),
         OPENROUTER_KEY_EDITOR_SECTION_ORDER,
       ),
     ).toThrow("resource field policy mismatch")

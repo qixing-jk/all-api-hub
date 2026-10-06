@@ -6,6 +6,7 @@ import {
   AccountKeyResourceEditorDialog,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import { useNativeResourceEditorLoadingVisibility } from "~/features/ResourceEditor/NativeResourceEditorLoading"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import toast from "~/lib/notify"
@@ -129,7 +130,7 @@ function ProvisioningSession({
     const native = entry.editor!
     setCurrentEditor({
       editorId: index + 1,
-      mode: "create",
+      mode: editorModes.Create,
       siteType: account.siteType,
       fields: native.fields,
       initialValues: native.initialValues,

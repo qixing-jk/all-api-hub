@@ -2,10 +2,12 @@ import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import keyManagement from "~/locales/en/keyManagement.json"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import {
   LAOZHANG_BILLING_TYPES as billing,
   LAOZHANG_AUTO_GROUP,
@@ -27,7 +29,10 @@ const transport = {
   fetchAccountAvailableModels: vi.fn(),
 }
 const editor = () =>
-  createNewApiKeyEditor(SITE_TYPES.LAOZHANG, request, transport)
+  createNewApiKeyEditor(
+    { ...resolveNewApiKeyVariant(SITE_TYPES.LAOZHANG), transport: transport },
+    request,
+  )
 
 describe("LaoZhang native key settings", () => {
   it("preserves common-field validation failures alongside native-field failures", () => {
@@ -49,9 +54,8 @@ describe("LaoZhang native key settings", () => {
 
   it.each([true, false])("round-trips explicit retry billing %s", (enabled) => {
     const definition = createNewApiKeyEditor(
-      SITE_TYPES.LAOZHANG,
+      { ...resolveNewApiKeyVariant(SITE_TYPES.LAOZHANG), transport: transport },
       request,
-      transport,
       {
         name: "key",
         expired_time: -1,
@@ -146,9 +150,9 @@ describe("LaoZhang native key settings", () => {
     const definition = editor()
     const { policy } = getNativeKeyResourceEditorPresentation(
       SITE_TYPES.LAOZHANG,
-      "edit",
+      editorModes.Edit,
       {
-        describedFieldIds: definition.fields.map((field) => field.fieldId),
+        fields: definition.fields,
       },
     )
     const byId = new Map(policy.fields.map((field) => [field.fieldId, field]))
@@ -227,9 +231,8 @@ describe("LaoZhang native key settings", () => {
       [laoZhangFields.AdPosition]: 2,
     } as unknown as NewApiToken
     const definition = createNewApiKeyEditor(
-      SITE_TYPES.LAOZHANG,
+      { ...resolveNewApiKeyVariant(SITE_TYPES.LAOZHANG), transport: transport },
       request,
-      transport,
       token,
     )
     expect(definition.initialValues[laoZhangFields.TranslationApiKey]).toEqual({
@@ -345,9 +348,9 @@ describe("LaoZhang native key settings", () => {
     )
     const presentation = getNativeKeyResourceEditorPresentation(
       SITE_TYPES.LAOZHANG,
-      "edit",
+      editorModes.Edit,
       {
-        describedFieldIds: definition.fields.map((field) => field.fieldId),
+        fields: definition.fields,
       },
     )
     expect(presentation.policy.fields.map((field) => field.fieldId)).toEqual(

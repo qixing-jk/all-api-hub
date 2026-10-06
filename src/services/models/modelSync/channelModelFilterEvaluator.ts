@@ -12,6 +12,7 @@ import {
 } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_TYPES,
@@ -220,29 +221,6 @@ function hashSecret(value: string): string {
 }
 
 /**
- * Extracts managed-site secrets that must be redacted from probe diagnostics.
- */
-function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
-  if (config.siteType === SITE_TYPES.OCTOPUS) {
-    return [config.config.password]
-  }
-
-  if (config.siteType === SITE_TYPES.AXON_HUB) {
-    return [config.config.password]
-  }
-
-  if (config.siteType === SITE_TYPES.OMNIROUTE) {
-    return [config.config.token]
-  }
-
-  if (config.siteType === SITE_TYPES.GPT_LOAD) {
-    return [config.config.managementKey]
-  }
-
-  return [config.config.adminToken]
-}
-
-/**
  * Resolve the usable channel key from the channel row or provider capability.
  */
 async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
@@ -283,7 +261,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     return context.resolvedKey
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, [
-      ...getRuntimeConfigSecrets(context.managedConfig),
+      ...collectManagedConfigSecrets(context.managedConfig.config),
       directKey,
     ])
     logger.warn("Probe filter channel key resolution failed", {

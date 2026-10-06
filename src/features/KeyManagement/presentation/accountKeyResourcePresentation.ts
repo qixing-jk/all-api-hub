@@ -1,15 +1,13 @@
 import type { TFunction } from "i18next"
 
-import { QUOTA_PER_USD } from "~/constants/money"
-import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { formatKeyTime, formatLocaleDateTime } from "~/utils/core/formatters"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
 import type { KeyResourceFact } from "./keyResourceCard"
+import { getKeyResourcePresentationPolicy } from "./keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "./openRouterKeyResourceCard"
 
 /** Common facts remain usable without interpreting an unregistered provider's fields. */
@@ -73,87 +71,56 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     t("keyManagement:native.detailsLoadFailed"),
 }
 
-const cardAdapters = new Map<string, AccountKeyResourceCardAdapter>([
-  [SITE_TYPES.OPENROUTER, openRouterKeyResourceCardAdapter],
-])
-
 /** Format only fields declared by the explicitly supported native providers. */
 const nativeDetailFacts = (
   facts: AccountKeyResourceFacts,
   t: TFunction,
 ): KeyResourceFact[] => {
-  const siteType = facts.ref.siteType
-  const byId = new Map(facts.fields.map((field) => [field.fieldId, field]))
-  const unlimited = [
-    "unlimitedQuota",
-    "unlimited_quota",
-    "boundlessAmount",
-  ].some((id) => {
-    const fact = byId.get(id)
-    return fact?.kind === "boolean" && fact.value
-  })
-  const rawQuotaUnits =
-    getSiteTypeCapabilities(siteType).family ===
-      ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily ||
-    siteType === SITE_TYPES.AIHUBMIX
-  const money = (value: number) =>
-    `$${(value / (rawQuotaUnits ? QUOTA_PER_USD : 1)).toLocaleString(undefined, { maximumFractionDigits: 6 })}`
   const details: KeyResourceFact[] = []
-  for (const field of facts.fields) {
-    const remaining = [
-      "remainingQuota",
-      "remain_quota",
-      "remainingQuotaUsd",
-      "amount",
-    ].includes(field.fieldId)
-    const used = ["usedQuota", "used_quota", "quota_used", "used"].includes(
-      field.fieldId,
-    )
-    if (
-      field.kind === "number" &&
-      (remaining || used || field.fieldId === "quota")
-    ) {
+  for (const fact of facts.displayFacts ?? []) {
+    if (fact.kind === "money" || fact.kind === "credits") {
       details.push({
-        id: field.fieldId,
-        label: remaining
-          ? t("keyManagement:keyDetails.remainingQuota")
-          : used
-            ? t("keyManagement:keyDetails.usedQuota")
-            : t("keyManagement:native.editor.totalQuotaUsd"),
-        value:
-          unlimited && !used
-            ? t("keyManagement:dialog.unlimitedQuota")
-            : money(field.value),
+        id: fact.fieldId,
+        label:
+          fact.kind === "credits"
+            ? t("keyManagement:native.editor.quotaCredits")
+            : fact.role === "remaining"
+              ? t("keyManagement:keyDetails.remainingQuota")
+              : fact.role === "used"
+                ? t("keyManagement:keyDetails.usedQuota")
+                : t("keyManagement:native.editor.totalQuotaUsd"),
+        value: fact.unlimited
+          ? t("keyManagement:dialog.unlimitedQuota")
+          : fact.kind === "money"
+            ? `$${fact.amountUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+            : fact.value.toLocaleString(),
       })
-    } else if (
-      ["expired_time", "expires_at", "expireTime"].includes(field.fieldId) &&
-      (field.kind === "number" || field.kind === "text")
-    ) {
-      const value =
-        typeof field.value === "number"
-          ? field.value
-          : field.value
-            ? Date.parse(field.value)
-            : -1
+    } else if (fact.kind === "expiry") {
+      const date =
+        typeof fact.timestampMs === "number" ? new Date(fact.timestampMs) : null
       details.push({
-        id: field.fieldId,
+        id: fact.fieldId,
         label: t("keyManagement:keyDetails.expireTime"),
-        value: formatKeyTime(value),
+        value:
+          fact.timestampMs === "never"
+            ? t("keyManagement:keyDetails.neverExpires")
+            : date && Number.isFinite(date.getTime())
+              ? date.toLocaleDateString()
+              : t("common:labels.notAvailable"),
       })
-    } else if (
-      field.fieldId === "accessed_time" &&
-      field.kind === "number" &&
-      field.value > 0
-    ) {
+    } else {
       details.push({
-        id: field.fieldId,
+        id: fact.fieldId,
         label: t("keyManagement:keyDetails.lastUsedTime"),
         value: formatLocaleDateTime(
-          field.value,
+          new Date(fact.timestampMs),
           t("common:labels.notAvailable"),
         ),
       })
-    } else if (
+    }
+  }
+  for (const field of facts.fields) {
+    if (
       ["models", "allow_ips", "ip_whitelist", "subnet"].includes(
         field.fieldId,
       ) &&
@@ -179,7 +146,7 @@ const nativeDetailFacts = (
       id: "createdAt",
       label: t("keyManagement:keyDetails.createTime"),
       value: formatLocaleDateTime(
-        facts.runtimeKey.createdAt,
+        new Date(facts.runtimeKey.createdAt),
         t("common:labels.notAvailable"),
       ),
     })
@@ -217,8 +184,8 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
           label: t("keyManagement:keyDetails.group"),
           value:
             groupValue ||
-            (getSiteTypeCapabilities(row.facts.ref.siteType).family ===
-            ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+            (getKeyResourcePresentationPolicy(row.facts.ref.siteType)
+              .emptyGroup === "account-group"
               ? t("keyManagement:keyDetails.followsAccountGroup")
               : t("keyManagement:keyDetails.ungrouped")),
         }
@@ -247,23 +214,14 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     t("keyManagement:native.detailsLoadFailed"),
 }
 
-const nativeCardFamilies = new Set<string>([
-  ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-  ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
-  ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
-  ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
-  ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode,
-  ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai,
-])
-
-/** Resolves presentation independently of whether a provider implements native CRUD. */
+/** Resolves all card choices from the same policy as the editor and scope UI. */
 export function getAccountKeyResourceCardAdapter(siteType: string) {
-  const registered = cardAdapters.get(siteType)
-  if (registered) return registered
-  const family = getAccountSiteDefinition(siteType)?.adapterFamily
-  return family && nativeCardFamilies.has(family)
-    ? nativeKeyResourceCardAdapter
-    : genericKeyResourceCardAdapter
+  const adapters = {
+    native: nativeKeyResourceCardAdapter,
+    openrouter: openRouterKeyResourceCardAdapter,
+    generic: genericKeyResourceCardAdapter,
+  }
+  return adapters[getKeyResourcePresentationPolicy(siteType).card]
 }
 
 /**
@@ -274,7 +232,10 @@ export function shouldShowAccountKeyScopeSelector(
   siteType: string | undefined,
   scopeCount: number,
 ) {
-  return siteType === SITE_TYPES.OPENROUTER || scopeCount > 1
+  return (
+    getKeyResourcePresentationPolicy(siteType).scope === "workspace" ||
+    scopeCount > 1
+  )
 }
 
 /** Workspace terminology belongs to OpenRouter; other scopes use neutral copy. */
@@ -282,7 +243,7 @@ export function getAccountKeyScopeMessages(
   siteType: string | undefined,
   t: TFunction,
 ) {
-  if (siteType === SITE_TYPES.OPENROUTER) {
+  if (getKeyResourcePresentationPolicy(siteType).scope === "workspace") {
     return {
       heading: t("keyManagement:openRouter.workspace.heading"),
       fallback: t("keyManagement:openRouter.workspace.fallback"),

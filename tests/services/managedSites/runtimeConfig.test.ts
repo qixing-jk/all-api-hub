@@ -358,7 +358,7 @@ describe("managed-site runtime config resolver", () => {
     }
   })
 
-  it("returns unknown managed-site values from the exhaustive fallback", () => {
+  it("returns null for an unregistered managed-site type", () => {
     const prefs = buildUserPreferences()
 
     expect(
@@ -366,7 +366,7 @@ describe("managed-site runtime config resolver", () => {
         prefs,
         "future-managed-site" as any,
       ),
-    ).toBe("future-managed-site")
+    ).toBeNull()
   })
 
   it("treats unknown managed-site types as having no configured input", () => {

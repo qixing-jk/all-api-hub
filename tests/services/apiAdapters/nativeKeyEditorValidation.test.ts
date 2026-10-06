@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { defaultKeyManagementImplementation } from "~/services/apiService/newApiFamily/default/keyManagement"
@@ -42,7 +43,14 @@ const editors: Array<{
   },
   {
     name: "New API",
-    editor: () => createNewApiKeyEditor(SITE_TYPES.NEW_API, request, transport),
+    editor: () =>
+      createNewApiKeyEditor(
+        {
+          ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+          transport: transport,
+        },
+        request,
+      ),
     valid: {},
     fields: {
       name: "required",
@@ -68,7 +76,14 @@ const editors: Array<{
   },
   {
     name: "Rix API",
-    editor: () => createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport),
+    editor: () =>
+      createNewApiKeyEditor(
+        {
+          ...resolveNewApiKeyVariant(SITE_TYPES.RIX_API),
+          transport: transport,
+        },
+        request,
+      ),
     valid: {},
     fields: {
       name: "required",
@@ -128,7 +143,10 @@ describe.each(editors)(
 it.each([NaN, Infinity, -1, 1.5, "1"])(
   "rejects a Rix call limit without a usable count %s",
   (remain_count) => {
-    const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+    const editor = createNewApiKeyEditor(
+      { ...resolveNewApiKeyVariant(SITE_TYPES.RIX_API), transport: transport },
+      request,
+    )
     expect(
       editor.validate({
         ...editor.initialValues,
@@ -145,7 +163,10 @@ it.each([NaN, Infinity, -1, 1.5, "1"])(
 )
 
 it("requires a group when a Rix key is pinned to it", () => {
-  const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+  const editor = createNewApiKeyEditor(
+    { ...resolveNewApiKeyVariant(SITE_TYPES.RIX_API), transport: transport },
+    request,
+  )
   expect(
     editor.validate({ ...editor.initialValues, group: null, group_only: true }),
   ).toMatchObject({
@@ -164,7 +185,10 @@ it("requires a group when a Rix key is pinned to it", () => {
 it.each(["global", "none", null])(
   "accepts the Rix storage choice %s",
   (storage_location) => {
-    const editor = createNewApiKeyEditor(SITE_TYPES.RIX_API, request, transport)
+    const editor = createNewApiKeyEditor(
+      { ...resolveNewApiKeyVariant(SITE_TYPES.RIX_API), transport: transport },
+      request,
+    )
     expect(
       editor.validate({ ...editor.initialValues, storage_location }),
     ).toEqual({ valid: true })
@@ -176,7 +200,13 @@ it.each([NaN, Infinity, -1, "1", Number.MAX_VALUE])(
   (quotaUsd) => {
     for (const editor of [
       createAIHubMixKeyEditor(request),
-      createNewApiKeyEditor(SITE_TYPES.NEW_API, request, transport),
+      createNewApiKeyEditor(
+        {
+          ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+          transport: transport,
+        },
+        request,
+      ),
     ]) {
       expect(
         editor.validate({
@@ -247,7 +277,13 @@ it("rejects malformed dates and model arrays", () => {
   for (const [editor, models] of [
     [createAIHubMixKeyEditor(request), "models"],
     [
-      createNewApiKeyEditor(SITE_TYPES.NEW_API, request, transport),
+      createNewApiKeyEditor(
+        {
+          ...resolveNewApiKeyVariant(SITE_TYPES.NEW_API),
+          transport: transport,
+        },
+        request,
+      ),
       "model_limits",
     ],
   ] as const) {

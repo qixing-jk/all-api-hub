@@ -737,6 +737,35 @@ describe("New API account key resources", () => {
     expect(mockFetchCurrentUserGroup).toHaveBeenCalledOnce()
   })
 
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.MODELFLARE])(
+    "uses the same defaults for manual and automatic %s creation",
+    async (siteType) => {
+      let inventory: NewApiToken[] = []
+      mockFetchAccountTokens.mockImplementation(async () => inventory)
+      mockFetchUserGroups.mockResolvedValue({ vip: { desc: "VIP", ratio: 2 } })
+      mockCreateApiToken.mockImplementation(async (_request, body) => {
+        inventory = [token({ ...body, id: 9 })]
+        return true
+      })
+      const session = await createNewApiAccountKeyResources(siteType).open({
+        account: { id: "account-1", siteType },
+        request,
+      })
+      const snapshot = await session.provisioning!.inspect()
+      const requirementKey = atIndex(snapshot.requirements, 0).requirementKey
+      const editor = await session.openCreateEditor("account", undefined, {
+        preferredGroup: siteType === SITE_TYPES.ONE_API ? "" : "vip",
+      })
+      await editor.submit(editor.initialValues)
+      const manualBody = mockCreateApiToken.mock.calls[0]?.[1]
+      inventory = []
+      await expect(
+        session.provisioning!.provision(requirementKey),
+      ).resolves.toMatchObject({ certainty: "applied" })
+      expect(mockCreateApiToken.mock.calls[1]?.[1]).toEqual(manualBody)
+    },
+  )
+
   it("treats One API inventory as one opaque singleton requirement", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       token({ id: 1, group: undefined }),
@@ -1941,6 +1970,25 @@ describe("New API account key resources", () => {
     })
   })
 
+  it("lists Veloera tokens with zero-based pagination and trusted page size", async () => {
+    mockFetchAccountTokens.mockResolvedValue([token({ id: 9 })])
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.VELOERA,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.VELOERA },
+      request,
+    })
+    const scope = await session.resolveDefaultScope()
+    const collection = await session.openCollection(scope.scopeKey)
+    await expect(collection.list()).resolves.toMatchObject({
+      items: [{ ref: { resourceId: "9" } }],
+    })
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: "account-1" }),
+      { startPage: 0, trustsRequestedPageSize: true },
+    )
+  })
+
   it("confirms a One API singleton create by exact inventory diff", async () => {
     const before = [token({ id: 1, group: "" })]
     mockFetchAccountTokens
@@ -2336,4 +2384,36 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
     kind: "number",
     value: 1750000000,
   })
+})
+
+it("projects native quota units and timestamps to explicit display facts", async () => {
+  mockFetchAccountTokens.mockReset()
+  mockFetchAccountTokens.mockResolvedValue([
+    token({
+      remain_quota: 1000000,
+      used_quota: 500000,
+      unlimited_quota: false,
+      expired_time: 1893456000,
+      accessed_time: 1750000000,
+    }),
+  ])
+  const session = await createNewApiAccountKeyResources(
+    SITE_TYPES.NEW_API,
+  ).open({
+    account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+    request,
+  })
+  const page = await (await session.openCollection("account")).list()
+  expect(atIndex(page.items, 0).displayFacts).toEqual([
+    {
+      fieldId: "remainingQuota",
+      kind: "money",
+      role: "remaining",
+      amountUsd: 2,
+      unlimited: false,
+    },
+    { fieldId: "usedQuota", kind: "money", role: "used", amountUsd: 1 },
+    { fieldId: "expired_time", kind: "expiry", timestampMs: 1893456000000 },
+    { fieldId: "accessed_time", kind: "last-used", timestampMs: 1750000000000 },
+  ])
 })

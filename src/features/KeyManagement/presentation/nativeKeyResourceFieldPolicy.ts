@@ -1,14 +1,18 @@
 import type { TFunction } from "i18next"
 
-import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  type AccountKeyResourceEditorMode,
+} from "~/features/KeyManagement/constants"
 import {
   defineResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
 } from "~/features/ResourceEditor/resourceFieldPolicy"
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
+import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
+import { getKeyResourcePresentationPolicy } from "./keyResourcePresentationPolicy"
 import { laozhangDeploymentFields } from "./laozhangKeyResourceFieldPolicy"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 import { rixApiDeploymentFields } from "./rixApiKeyResourceFieldPolicy"
@@ -162,7 +166,7 @@ const groupAutomaticName =
   }
 
 const buildSub2ApiFields = (
-  mode: "create" | "edit",
+  mode: AccountKeyResourceEditorMode,
 ): {
   fields: ResourceFieldPresentation[]
   getAutomaticName: EditorPresentation["getAutomaticName"]
@@ -172,7 +176,7 @@ const buildSub2ApiFields = (
     name,
     group("group_id"),
     ...quota("quota", "unlimited", true),
-    mode === "edit"
+    mode === editorModes.Edit
       ? expiry
       : {
           fieldId: "expires_in_days",
@@ -183,7 +187,7 @@ const buildSub2ApiFields = (
           resolveHelp: (t) => t("keyManagement:dialog.expirationPlaceholder"),
           issueLabelResolvers: issues,
         },
-    ...(mode === "edit" ? [enabled("enabled")] : []),
+    ...(mode === editorModes.Edit ? [enabled("enabled")] : []),
     ips("ip_whitelist"),
   ],
 })
@@ -211,7 +215,7 @@ const buildVoApiV2Fields = (): {
 })
 
 const buildRightCodeFields = (
-  mode: "create" | "edit",
+  mode: AccountKeyResourceEditorMode,
 ): {
   fields: ResourceFieldPresentation[]
   getAutomaticName: EditorPresentation["getAutomaticName"]
@@ -229,7 +233,7 @@ const buildRightCodeFields = (
     },
     ...quota("quotaUsd", "unlimited_quota"),
     expiry,
-    ...(mode === "edit" ? [enabled("is_active")] : []),
+    ...(mode === editorModes.Edit ? [enabled("is_active")] : []),
     models("models"),
     {
       fieldId: "allow_wallet",
@@ -285,18 +289,18 @@ const buildAiHubMixFields = (): {
 })
 
 const buildNewApiFamilyFields = (
-  siteType: string | undefined,
-  describedFieldIds?: readonly string[],
+  descriptors: readonly ResourceFieldDescriptor[],
 ): {
   fields: ResourceFieldPresentation[]
   getAutomaticName: EditorPresentation["getAutomaticName"]
 } => {
-  const isOneApi = siteType === SITE_TYPES.ONE_API
-  const isModelFlare = siteType === SITE_TYPES.MODELFLARE
+  const descriptorsById = new Map(
+    descriptors.map((descriptor) => [descriptor.fieldId, descriptor]),
+  )
 
   const candidateFields: ResourceFieldPresentation[] = [
     name,
-    ...(isOneApi ? [] : [group("group", false, true, !isModelFlare)]),
+    group("group", false, true),
     ...quota("quotaUsd", "unlimited_quota"),
     expiry,
     {
@@ -312,15 +316,23 @@ const buildNewApiFamilyFields = (
       visibleWhen: (values) => values.model_limits_enabled === true,
     },
     ips("allow_ips"),
-    ...(siteType === SITE_TYPES.RIX_API ? rixApiDeploymentFields(issues) : []),
-    ...(siteType === SITE_TYPES.LAOZHANG
-      ? laozhangDeploymentFields(issues)
-      : []),
+    ...rixApiDeploymentFields(issues),
+    ...laozhangDeploymentFields(issues),
   ]
 
-  const fields = describedFieldIds
-    ? candidateFields.filter((f) => describedFieldIds.includes(f.fieldId))
-    : candidateFields
+  const fields = candidateFields
+    .filter((field) => descriptorsById.has(field.fieldId))
+    .map((field) =>
+      field.renderer === "select"
+        ? {
+            ...field,
+            resolveNullableOptionLabel: descriptorsById.get(field.fieldId)
+              ?.nullable
+              ? field.resolveNullableOptionLabel
+              : undefined,
+          }
+        : field,
+    )
 
   return {
     getAutomaticName: groupAutomaticName("group"),
@@ -330,47 +342,41 @@ const buildNewApiFamilyFields = (
 
 const resolveSiteFields = (
   siteType: string | undefined,
-  mode: "create" | "edit",
-  describedFieldIds?: readonly string[],
+  mode: AccountKeyResourceEditorMode,
+  descriptors?: readonly ResourceFieldDescriptor[],
 ): {
   fields: ResourceFieldPresentation[]
   getAutomaticName?: EditorPresentation["getAutomaticName"]
 } => {
-  if (siteType === SITE_TYPES.SUB2API) return buildSub2ApiFields(mode)
-  if (siteType === SITE_TYPES.VO_API_V2) return buildVoApiV2Fields()
-  if (siteType === SITE_TYPES.RIGHT_CODE) return buildRightCodeFields(mode)
-  if (siteType === SITE_TYPES.FREEMODEL)
-    return {
-      fields: [name],
-    }
-  if (siteType === SITE_TYPES.KIMI || siteType === SITE_TYPES.KIMI_GLOBAL) {
-    return { fields: [name] }
+  const builders = {
+    sub2api: () => buildSub2ApiFields(mode),
+    "voapi-v2": buildVoApiV2Fields,
+    rightcode: () => buildRightCodeFields(mode),
+    "name-only": () => ({ fields: [name] }),
+    grsai: buildGrsaiFields,
+    aihubmix: buildAiHubMixFields,
+    "new-api": () => buildNewApiFamilyFields(descriptors ?? []),
+    empty: () => ({ fields: [] }),
+    // The full workspace editor is handled before selecting native fields.
+    openrouter: () => ({ fields: [] }),
   }
-  if (siteType === SITE_TYPES.GRSAI) return buildGrsaiFields()
-  if (siteType === SITE_TYPES.AIHUBMIX) return buildAiHubMixFields()
-  if (
-    getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===
-    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
-  ) {
-    return buildNewApiFamilyFields(siteType, describedFieldIds)
-  }
-  return { fields: [] }
+  return builders[getKeyResourcePresentationPolicy(siteType).editor]()
 }
 
 /** Frontend-owned field policies are selected by provider, never by upstream labels. */
 export function getNativeKeyResourceEditorPresentation(
   siteType: string | undefined,
-  mode: "create" | "edit",
-  options?: { readonly describedFieldIds?: readonly string[] },
+  mode: AccountKeyResourceEditorMode,
+  options?: { readonly fields?: readonly ResourceFieldDescriptor[] },
 ): EditorPresentation {
-  if (siteType === SITE_TYPES.OPENROUTER) {
+  if (getKeyResourcePresentationPolicy(siteType).editor === "openrouter") {
     return getOpenRouterKeyResourceEditorPresentation(mode)
   }
 
   const { fields, getAutomaticName } = resolveSiteFields(
     siteType,
     mode,
-    options?.describedFieldIds,
+    options?.fields,
   )
 
   return {

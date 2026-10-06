@@ -1116,3 +1116,32 @@ describe("VoAPI v2 account key resources", () => {
     )
   })
 })
+
+it.each([1893456000, 1893456000000])(
+  "normalizes VoAPI v2 expiry %s at its boundary and keeps dollar amounts unscaled",
+  async (expireTime) => {
+    mockFetchAllVoApiV2RawKeys
+      .mockReset()
+      .mockResolvedValue([rawKey({ expireTime, amount: "10", used: "3" })])
+    mockFetchVoApiV2KeyGroupDescriptors.mockReset().mockResolvedValue([])
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const facts = atIndex(
+      (await (await session.openCollection("account")).list()).items,
+      0,
+    )
+    expect(facts.displayFacts).toEqual([
+      {
+        fieldId: "amount",
+        kind: "money",
+        role: "remaining",
+        amountUsd: 10,
+        unlimited: false,
+      },
+      { fieldId: "used", kind: "money", role: "used", amountUsd: 3 },
+      { fieldId: "expireTime", kind: "expiry", timestampMs: 1893456000000 },
+    ])
+  },
+)

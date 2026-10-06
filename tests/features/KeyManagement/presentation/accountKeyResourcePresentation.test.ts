@@ -2,7 +2,11 @@ import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import {
+  getAccountKeyResourceCardAdapter,
+  getAccountKeyScopeMessages,
+  shouldShowAccountKeyScopeSelector,
+} from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -182,7 +186,14 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.AIHUBMIX])(
       },
     }
     const adapter = getAccountKeyResourceCardAdapter(siteType)
-    expect(adapter.buildDetailFacts(facts, t)).toEqual(
+    const displayFacts = [
+      {
+        fieldId: "accessed_time",
+        kind: "last-used" as const,
+        timestampMs: accessedAt,
+      },
+    ]
+    expect(adapter.buildDetailFacts({ ...facts, displayFacts }, t)).toEqual(
       expect.arrayContaining([
         {
           id: "createdAt",
@@ -198,7 +209,11 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.AIHUBMIX])(
     )
     expect(
       adapter.buildDetailFacts(
-        { ...facts, fields: [{ ...atIndex(facts.fields, 0), value: 0 }] },
+        {
+          ...facts,
+          displayFacts: [],
+          fields: [{ ...atIndex(facts.fields, 0), value: 0 }],
+        },
         t,
       ),
     ).not.toContainEqual(expect.objectContaining({ id: "accessed_time" }))
@@ -222,6 +237,20 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
           suggestedModelIds: [],
         },
       },
+      displayFacts: [
+        {
+          fieldId: "quota",
+          kind: "money",
+          role: "total",
+          amountUsd: 2,
+          unlimited: true,
+        },
+        {
+          fieldId: "expires_at",
+          kind: "expiry",
+          timestampMs: Date.parse("2030-01-01T00:00:00Z"),
+        },
+      ],
       fields: [
         { fieldId: "group", kind: "text", value: "" },
         { fieldId: "quota", kind: "number", value: 2 },
@@ -285,6 +314,9 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
         {
           ...facts,
           fields: [{ fieldId: "expires_at", kind: "text", value: "" }],
+          displayFacts: [
+            { fieldId: "expires_at", kind: "expiry", timestampMs: "never" },
+          ],
         },
         t,
       ),
@@ -296,3 +328,124 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
     )
   },
 )
+
+it.each([
+  SITE_TYPES.OPENROUTER,
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.KIMI_GLOBAL,
+  "unknown",
+  undefined,
+])("keeps scope visibility and terminology consistent for %s", (siteType) => {
+  const workspace = siteType === SITE_TYPES.OPENROUTER
+  expect(shouldShowAccountKeyScopeSelector(siteType, 0)).toBe(workspace)
+  expect(shouldShowAccountKeyScopeSelector(siteType, 1)).toBe(workspace)
+  expect(shouldShowAccountKeyScopeSelector(siteType, 2)).toBe(true)
+  const messages = getAccountKeyScopeMessages(siteType, t)
+  const prefix = workspace
+    ? "keyManagement:openRouter.workspace"
+    : "keyManagement:native.scope"
+  for (const [name, value] of Object.entries(messages))
+    expect(value).toBe(`${prefix}.${name}`)
+})
+
+it("formats explicit display facts without guessing monetary or time units from native field names", () => {
+  const facts = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    },
+    displayName: "Example",
+    maskedLabel: "masked",
+    status: "enabled" as const,
+    fields: [
+      { fieldId: "remainingQuota", kind: "number" as const, value: 9000000 },
+    ],
+    actions: { canUpdate: true, canDelete: true },
+    displayFacts: [
+      {
+        fieldId: "balance",
+        kind: "money" as const,
+        role: "remaining" as const,
+        amountUsd: 2.5,
+      },
+      { fieldId: "old-expiry", kind: "expiry" as const, timestampMs: 86400000 },
+      {
+        fieldId: "no-expiry",
+        kind: "expiry" as const,
+        timestampMs: "never" as const,
+      },
+      { fieldId: "invalid-expiry", kind: "expiry" as const, timestampMs: null },
+    ],
+  }
+  expect(
+    getAccountKeyResourceCardAdapter(SITE_TYPES.NEW_API).buildDetailFacts(
+      facts,
+      t,
+    ),
+  ).toEqual([
+    {
+      id: "balance",
+      label: "keyManagement:keyDetails.remainingQuota",
+      value: "$2.5",
+    },
+    {
+      id: "old-expiry",
+      label: "keyManagement:keyDetails.expireTime",
+      value: new Date(86400000).toLocaleDateString(),
+    },
+    {
+      id: "no-expiry",
+      label: "keyManagement:keyDetails.expireTime",
+      value: "keyManagement:keyDetails.neverExpires",
+    },
+    {
+      id: "invalid-expiry",
+      label: "keyManagement:keyDetails.expireTime",
+      value: "common:labels.notAvailable",
+    },
+  ])
+})
+
+it("keeps credit allowances distinct from dollars and preserves unlimited allowances", () => {
+  const facts = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.GRSAI,
+      scopeKey: "account",
+      resourceId: "1",
+    },
+    displayName: "Example",
+    maskedLabel: "masked",
+    status: "enabled" as const,
+    fields: [],
+    actions: { canUpdate: true, canDelete: true },
+    displayFacts: [
+      { fieldId: "credits", kind: "credits" as const, value: 250 },
+      {
+        fieldId: "unlimited",
+        kind: "credits" as const,
+        value: 250,
+        unlimited: true,
+      },
+    ],
+  }
+  expect(
+    getAccountKeyResourceCardAdapter(SITE_TYPES.GRSAI).buildDetailFacts(
+      facts,
+      t,
+    ),
+  ).toEqual([
+    {
+      id: "credits",
+      label: "keyManagement:native.editor.quotaCredits",
+      value: "250",
+    },
+    {
+      id: "unlimited",
+      label: "keyManagement:native.editor.quotaCredits",
+      value: "keyManagement:dialog.unlimitedQuota",
+    },
+  ])
+})

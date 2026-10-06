@@ -1,5 +1,4 @@
 import { QUOTA_PER_USD } from "~/constants/money"
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -13,12 +12,10 @@ import type {
   NewApiToken,
   NewApiTokenWrite,
 } from "~/services/apiService/newApiFamily/tokenTypes"
-import { reportsRixApiV6TokenColumns } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
-import { withLaozhangKeySettings } from "./laozhangKeyResourceEditor"
-import { readPreservedTokenFields } from "./tokenPreservedFields"
-import type { NewApiFamilyTokenTransport } from "./tokenTransport"
+import { resolveNewApiKeyVariant } from "./keyVariant"
+import type { NewApiKeyVariant } from "./keyVariant"
 
 const NEW_API_KEY_FIELD_IDS = {
   Name: "name",
@@ -83,15 +80,14 @@ export type NewApiTokenWriteBody = NewApiTokenWrite & Record<string, unknown>
 /**
  * Preserve optional upstream settings that the ordinary editor does not own.
  * @param token Row as the deployment returned it.
- * @param siteType Site type the write targets, which decides how much of the row
- *   travels back (see `readPreservedTokenFields`).
+ * @param variant Bound key behavior that selects safe writable fields.
  * @returns Write body shared by the create, update and comparison paths.
  */
 export const toNewApiTokenWrite = (
   token: NewApiToken,
-  siteType?: AccountSiteType,
+  variant: NewApiKeyVariant = resolveNewApiKeyVariant(),
 ): NewApiTokenWriteBody => ({
-  ...readPreservedTokenFields(siteType, token),
+  ...variant.readPreservedFields(token),
   name: token.name,
   remain_quota: token.remain_quota,
   expired_time: token.expired_time,
@@ -110,21 +106,21 @@ export const toNewApiTokenWrite = (
 
 /** Native New API projection: dollar quota and UTC expiry convert only here. */
 export function createNewApiKeyEditor(
-  siteType: AccountSiteType,
+  variant: NewApiKeyVariant,
   request: ApiServiceRequest,
-  transport: NewApiFamilyTokenTransport,
   token?: NewApiToken,
   intent?: AccountKeyCreationIntent,
 ): AccountKeyResourceEditorDefinition<NewApiKeyEditCommand> {
+  const { transport } = variant
   const initialGroup =
     intent?.preferredGroup ??
     (intent?.allowedGroups?.length === 1 ? intent.allowedGroups[0] ?? "" : "")
   const baseline: NewApiTokenWriteBody = token
-    ? toNewApiTokenWrite(token, siteType)
+    ? toNewApiTokenWrite(token, variant)
     : {
         name:
           intent?.nameHint?.trim() || getDefaultAccountKeyName(initialGroup),
-        remain_quota: siteType === SITE_TYPES.MODELFLARE ? -1 : 0,
+        remain_quota: variant.initialQuota,
         expired_time: -1,
         unlimited_quota: true,
         model_limits_enabled: Boolean(intent?.modelContext),
@@ -135,9 +131,7 @@ export function createNewApiKeyEditor(
   const allowedGroups = token ? undefined : intent?.allowedGroups
   // Rix API 6.x owns columns this editor presents; a probed older generation
   // keeps the New API projection only.
-  const exposesDeploymentFields =
-    siteType === SITE_TYPES.RIX_API &&
-    reportsRixApiV6TokenColumns(request.baseUrl)
+  const exposesDeploymentFields = variant.exposesDeploymentFields(request)
   // A generation that never reported a column does not get it written back: a
   // new key takes this editor's defaults, an existing row only carries the
   // columns its own deployment returned.
@@ -201,13 +195,13 @@ export function createNewApiKeyEditor(
         type: RESOURCE_FIELD_TYPES.DateTime,
         nullable: true,
       },
-      ...(siteType === SITE_TYPES.ONE_API
+      ...(!variant.group.editable
         ? []
         : [
             {
               fieldId: field.Group,
               type: RESOURCE_FIELD_TYPES.Select,
-              nullable: siteType !== SITE_TYPES.MODELFLARE,
+              nullable: variant.group.nullable,
               options: baseline.group
                 ? [{ value: baseline.group, displayLabel: baseline.group }]
                 : [],
@@ -241,6 +235,7 @@ export function createNewApiKeyEditor(
             {
               fieldId: field.StorageLocation,
               type: RESOURCE_FIELD_TYPES.Select,
+              nullable: true,
               options: RIX_API_STORAGE_LOCATIONS.map((value) => ({
                 value,
                 displayLabel: value,
@@ -286,7 +281,7 @@ export function createNewApiKeyEditor(
       }
       if (
         (group != null && typeof group !== "string") ||
-        (siteType === SITE_TYPES.MODELFLARE && !group)
+        (variant.group.editable && !variant.group.nullable && !group)
       ) {
         issues.push({ fieldId: field.Group, code: "required" })
       }
@@ -397,7 +392,5 @@ export function createNewApiKeyEditor(
       }
     },
   }
-  return siteType === SITE_TYPES.LAOZHANG
-    ? withLaozhangKeySettings(definition)
-    : definition
+  return variant.extendEditor(definition)
 }

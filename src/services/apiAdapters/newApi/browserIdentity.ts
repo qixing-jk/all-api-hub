@@ -1,13 +1,13 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { readIdentityCookieState } from "~/services/accountBrowserSession/localIdentityState"
+import {
+  compatibleStoredUserHint,
+  resolveNewApiStoredUserHint,
+} from "~/services/accountBrowserSession/newApiStoredUserHint"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
 } from "~/services/accountSiteDefinitions"
-import { readApiyiStoredUser } from "~/services/accountSiteOnboarding/contentSession/apiyi"
-import { readCompatibleStoredUser } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
-import { readVApiStoredUser } from "~/services/accountSiteOnboarding/contentSession/vApi"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { isRecord } from "~/utils/core/object"
 
@@ -18,12 +18,12 @@ export const newApiBrowserIdentity: AccountBrowserIdentityCapability = {
     getAccountSiteDefinition(siteType)?.adapterFamily ===
     ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   observe({ origin, siteType, candidateUserIds }) {
+    const primaryHint = resolveNewApiStoredUserHint(siteType)
     const user =
-      (siteType === SITE_TYPES.APIYI || siteType === SITE_TYPES.LAOZHANG
-        ? readApiyiStoredUser()
-        : siteType === SITE_TYPES.V_API
-          ? readVApiStoredUser()
-          : null) ?? readCompatibleStoredUser()
+      primaryHint.read() ??
+      (primaryHint === compatibleStoredUserHint
+        ? null
+        : compatibleStoredUserHint.read())
     // Legacy New API checks the user header against its Cookie session:
     // https://github.com/QuantumNous/new-api/blob/v0.9.0/middleware/auth.go#L72-L99
     // A unique saved candidate can supply a missing hint, but passive detection

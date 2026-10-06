@@ -223,12 +223,11 @@ const siteTypeImportOwners = [
   "src/services/kimiOpenPlatform/deployments.ts", // Provider-owned deployment identities.
   "src/services/siteDetection/detectSiteType.ts", // Detection identifies providers.
   "src/services/siteDetection/siteTypeMismatch.ts", // Detection explains a stored type that no longer matches.
-  "src/features/KeyManagement/presentation/accountKeyResourcePresentation.ts", // Provider terminology.
-  "src/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy.ts", // Provider editor presentation.
   "src/services/accountSiteOnboarding/contentSession/**", // Provider session validation.
   "src/services/checkin/autoCheckin/providers/**", // Provider check-in implementations.
   "src/services/managedSites/providers/**", // Provider-specific managed-site workflows.
   "src/services/managedSites/runtimeConfig.ts", // Decode provider configuration unions.
+  "src/services/managedSites/configRegistration.ts", // Own provider configuration selection and validation.
   "src/services/preferences/userPreferences.ts", // Stored provider configuration selection.
   "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
   "src/services/accounts/migrations/sub2apiAuthMigration.ts", // Historical authentication format.

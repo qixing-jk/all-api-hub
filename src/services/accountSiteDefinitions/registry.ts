@@ -65,6 +65,9 @@ function cloneOnboarding(
     accountForm: onboarding.accountForm
       ? { ...onboarding.accountForm }
       : undefined,
+    accessTokenVerificationGuide: onboarding.accessTokenVerificationGuide
+      ? { ...onboarding.accessTokenVerificationGuide }
+      : undefined,
   }
 }
 

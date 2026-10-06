@@ -1112,6 +1112,8 @@ test("enables all-group key provisioning, adds an account, saves a created key a
     }
   })
   await seedUserPreferences(serviceWorker, {
+    // This scenario fills the URL manually; avoid a competing current-tab autofill.
+    autoFillCurrentSiteUrlOnAccountAdd: false,
     tempWindowFallback: {
       enabled: false,
     },
