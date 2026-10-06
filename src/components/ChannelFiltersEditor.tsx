@@ -34,7 +34,11 @@ interface ChannelFiltersEditorProps {
   onAddFilter: (kind?: ChannelModelFilterRuleKind) => void
   onMoveFilter: (id: string, direction: "up" | "down") => void
   onRemoveFilter: (id: string) => void
-  onFieldChange: (id: string, field: EditableFilterField, value: any) => void
+  onFieldChange: (
+    id: string,
+    field: EditableFilterField,
+    value: unknown,
+  ) => void
   onClickViewVisual: () => void
   onClickViewJson: () => void
   onChangeJsonText: (value: string) => void

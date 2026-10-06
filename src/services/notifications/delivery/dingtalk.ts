@@ -23,7 +23,7 @@ interface DingtalkTextMessageBody {
 
 const DINGTALK_CUSTOM_BOT_WEBHOOK_PREFIX =
   "https://oapi.dingtalk.com/robot/send?access_token="
-/** Delivers DingTalk text messages with optional timestamp signing. */
+/** Extracts the numeric error code from a DingTalk response body. */
 function getDingtalkErrcode(body: DingtalkWebhookResponseBody | null) {
   if (typeof body?.errcode === "number") {
     return body.errcode
@@ -37,9 +37,7 @@ function getDingtalkErrcode(body: DingtalkWebhookResponseBody | null) {
   return null
 }
 
-/**
- * Sends a plain-text DingTalk custom bot message.
- */
+/** Delivers DingTalk text messages with optional timestamp signing. */
 export async function sendDingtalkNotification(
   content: TaskNotificationContent,
   config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Dingtalk],

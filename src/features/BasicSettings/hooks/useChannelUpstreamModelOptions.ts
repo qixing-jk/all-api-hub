@@ -5,40 +5,41 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ManagedSiteModelSyncSettings")
 
 /**
+ * Creates sorted compact multi-select options from unique model identifier strings.
+ */
+function createSortedModelOptions(
+  modelIds: string[],
+): CompactMultiSelectOption[] {
+  return modelIds
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => ({
+      label: id,
+      value: id,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+/**
  * Builds sorted multi-select options from an array of model metadata.
- * @param metadata Array of model metadata objects to convert into select options.
- * @returns Options consumable by compact multi-select inputs.
  */
 function buildModelOptions(
   metadata: ModelMetadata[],
 ): CompactMultiSelectOption[] {
-  const options = metadata.map((model) => ({
-    label: model.id,
-    value: model.id,
-  }))
-  return options.sort((a, b) => a.label.localeCompare(b.label))
+  return createSortedModelOptions(metadata.map((model) => model.id))
 }
 
 /**
  * Converts plain model ID strings into sorted compact multi-select options.
- * @param modelIds Array of model identifiers returned from remote APIs.
- * @returns Options list sorted alphabetically by label.
  */
 function buildOptionsFromIds(modelIds: string[]): CompactMultiSelectOption[] {
-  const options = modelIds
-    .map((model) => model.trim())
-    .filter(Boolean)
-    .map((model) => ({
-      label: model,
-      value: model,
-    }))
-
-  return options.sort((a, b) => a.label.localeCompare(b.label))
+  return createSortedModelOptions(modelIds)
 }
 
 /** Owns runtime model options and the metadata fallback lifetime. */
@@ -71,10 +72,10 @@ export function useChannelUpstreamModelOptions() {
         if (isMounted) {
           setChannelUpstreamModelOptions(buildModelOptions(models))
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.error("Failed to load allowed model options", error)
         if (isMounted) {
-          setOptionsError(error?.message || "Unknown error")
+          setOptionsError(getErrorMessage(error))
           setChannelUpstreamModelOptions([])
         }
       } finally {

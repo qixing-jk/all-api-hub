@@ -310,6 +310,7 @@ export default defineConfig([
       "test-results/**",
       "tailwind.config.js",
       "src/public/react-devtools-backend.js",
+      ".scratch/**",
     ],
   },
   { languageOptions: { globals: globalsConfig } },

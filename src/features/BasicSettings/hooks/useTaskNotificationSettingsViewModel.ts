@@ -206,82 +206,40 @@ export function useTaskNotificationSettingsViewModel() {
     showUpdateToast(writeResult, t("taskNotifications.enable"))
   }
 
-  const handleBrowserChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Browser]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.browser.title"),
-    )
-  }
+  const createChannelToggle =
+    (channel: TaskNotificationChannel, titleKey: string) =>
+    async (enabled: boolean) => {
+      await handleChannelUpdate({ [channel]: { enabled } }, t(titleKey))
+    }
 
-  const handleTelegramChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Telegram]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.telegram.title"),
-    )
-  }
-
-  const handleFeishuChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Feishu]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.feishu.title"),
-    )
-  }
-
-  const handleDingtalkChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.dingtalk.title"),
-    )
-  }
-
-  const handleWecomChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Wecom]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.wecom.title"),
-    )
-  }
-
-  const handleNtfyChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.ntfy.title"),
-    )
-  }
-
-  const handleWebhookChannelToggle = async (enabled: boolean) => {
-    await handleChannelUpdate(
-      {
-        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
-          enabled,
-        },
-      },
-      t("taskNotifications.channels.webhook.title"),
-    )
-  }
+  const handleBrowserChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Browser,
+    "taskNotifications.channels.browser.title",
+  )
+  const handleTelegramChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Telegram,
+    "taskNotifications.channels.telegram.title",
+  )
+  const handleFeishuChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Feishu,
+    "taskNotifications.channels.feishu.title",
+  )
+  const handleDingtalkChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    "taskNotifications.channels.dingtalk.title",
+  )
+  const handleWecomChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Wecom,
+    "taskNotifications.channels.wecom.title",
+  )
+  const handleNtfyChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Ntfy,
+    "taskNotifications.channels.ntfy.title",
+  )
+  const handleWebhookChannelToggle = createChannelToggle(
+    TASK_NOTIFICATION_CHANNELS.Webhook,
+    "taskNotifications.channels.webhook.title",
+  )
 
   const handleTaskToggle = async (
     task: TaskNotificationTask,

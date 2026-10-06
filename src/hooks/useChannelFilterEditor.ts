@@ -52,26 +52,37 @@ export function useChannelFilterEditor(idPrefix: string) {
   const [filters, setFilters] = useState<EditableFilter[]>([])
   const [jsonText, setJsonText] = useState("")
   const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
-  const handleFieldChange = (
-    filterId: string,
-    field: EditableFilterField,
-    value: any,
-  ) => {
-    setFilters((prev) =>
-      prev.map((filter) => {
-        if (filter.id !== filterId) {
-          return filter
-        }
+  const handleFieldChange = useCallback(
+    (filterId: string, field: EditableFilterField, value: unknown) => {
+      setFilters((prev) =>
+        prev.map((filter) => {
+          if (filter.id !== filterId) {
+            return filter
+          }
 
-        if (field === "kind") {
-          if (value === "probe") {
+          if (field === "kind") {
+            if (value === "probe") {
+              return {
+                id: filter.id,
+                name: filter.name,
+                description: filter.description,
+                kind: "probe",
+                probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
+                match: "all",
+                action: filter.action,
+                enabled: filter.enabled,
+                createdAt: filter.createdAt,
+                updatedAt: Date.now(),
+              }
+            }
+
             return {
               id: filter.id,
               name: filter.name,
               description: filter.description,
-              kind: "probe",
-              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-              match: "all",
+              kind: "pattern",
+              pattern: "",
+              isRegex: false,
               action: filter.action,
               enabled: filter.enabled,
               createdAt: filter.createdAt,
@@ -80,121 +91,121 @@ export function useChannelFilterEditor(idPrefix: string) {
           }
 
           return {
-            id: filter.id,
-            name: filter.name,
-            description: filter.description,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-            action: filter.action,
-            enabled: filter.enabled,
-            createdAt: filter.createdAt,
+            ...filter,
+            [field]: value,
             updatedAt: Date.now(),
           }
-        }
+        }),
+      )
+    },
+    [],
+  )
 
-        return {
-          ...filter,
-          [field]: value,
-          updatedAt: Date.now(),
-        }
-      }),
-    )
-  }
+  const handleAddFilter = useCallback(
+    (kind: "pattern" | "probe" = "pattern") => {
+      const timestamp = Date.now()
+      const base = {
+        id: safeRandomUUID(idPrefix),
+        name: "",
+        description: "",
+        action: "include" as const,
+        enabled: true,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }
 
-  const handleAddFilter = (kind: "pattern" | "probe" = "pattern") => {
-    const timestamp = Date.now()
-    const base = {
-      id: safeRandomUUID(idPrefix),
-      name: "",
-      description: "",
-      action: "include" as const,
-      enabled: true,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }
+      setFilters((prev) => [
+        ...prev,
+        kind === "probe"
+          ? {
+              ...base,
+              kind: "probe",
+              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
+              match: "all",
+            }
+          : {
+              ...base,
+              kind: "pattern",
+              pattern: "",
+              isRegex: false,
+            },
+      ])
+    },
+    [idPrefix],
+  )
 
-    setFilters((prev) => [
-      ...prev,
-      kind === "probe"
-        ? {
-            ...base,
-            kind: "probe",
-            probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-            match: "all",
-          }
-        : {
-            ...base,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-          },
-    ])
-  }
-
-  const handleRemoveFilter = (filterId: string) => {
+  const handleRemoveFilter = useCallback((filterId: string) => {
     setFilters((prev) => prev.filter((filter) => filter.id !== filterId))
-  }
+  }, [])
 
-  const handleMoveFilter = (filterId: string, direction: "up" | "down") => {
-    setFilters((prev) => moveFilterById(prev, filterId, direction))
-  }
+  const handleMoveFilter = useCallback(
+    (filterId: string, direction: "up" | "down") => {
+      setFilters((prev) => moveFilterById(prev, filterId, direction))
+    },
+    [],
+  )
 
-  const validateFilters = (rules: EditableFilter[]) => {
-    for (const filter of rules) {
-      if (!filter.name.trim()) {
-        return t("filters.messages.validationName")
-      }
-      if (isProbeChannelModelFilterRule(filter)) {
-        if (filter.probeIds.length === 0) {
-          return t("filters.messages.validationProbeIds")
+  const validateFilters = useCallback(
+    (rules: EditableFilter[]) => {
+      for (const filter of rules) {
+        if (!filter.name.trim()) {
+          return t("filters.messages.validationName")
         }
-        continue
-      }
+        if (isProbeChannelModelFilterRule(filter)) {
+          if (filter.probeIds.length === 0) {
+            return t("filters.messages.validationProbeIds")
+          }
+          continue
+        }
 
-      if (!filter.pattern.trim()) {
-        return t("filters.messages.validationPattern")
-      }
-      if (filter.isRegex) {
-        try {
-          new RegExp(filter.pattern.trim())
-        } catch (error) {
-          return t("filters.messages.validationRegex", {
-            error: (error as Error).message,
-          })
+        if (!filter.pattern.trim()) {
+          return t("filters.messages.validationPattern")
+        }
+        if (filter.isRegex) {
+          try {
+            new RegExp(filter.pattern.trim())
+          } catch (error) {
+            return t("filters.messages.validationRegex", {
+              error: (error as Error).message,
+            })
+          }
         }
       }
-    }
-    return null
-  }
+      return null
+    },
+    [t],
+  )
 
-  const parseJsonFilters = (rawJson: string): EditableFilter[] => {
-    const trimmed = rawJson.trim()
-    if (!trimmed) {
-      return []
-    }
-
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(trimmed)
-    } catch (error) {
-      throw new Error(getErrorMessage(error))
-    }
-
-    if (!Array.isArray(parsed)) {
-      throw new Error(t("filters.messages.jsonArrayRequired"))
-    }
-
-    parsed.forEach((item, index) => {
-      if (!item || typeof item !== "object") {
-        throw new Error(t("filters.messages.jsonItemNotObject", { index }))
+  const parseJsonFilters = useCallback(
+    (rawJson: string): EditableFilter[] => {
+      const trimmed = rawJson.trim()
+      if (!trimmed) {
+        return []
       }
-    })
 
-    return normalizeChannelFilters(parsed as IncomingChannelFilter[], {
-      idPrefix,
-    })
-  }
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(trimmed)
+      } catch (error) {
+        throw new Error(getErrorMessage(error))
+      }
+
+      if (!Array.isArray(parsed)) {
+        throw new Error(t("filters.messages.jsonArrayRequired"))
+      }
+
+      parsed.forEach((item, index) => {
+        if (!item || typeof item !== "object") {
+          throw new Error(t("filters.messages.jsonItemNotObject", { index }))
+        }
+      })
+
+      return normalizeChannelFilters(parsed as IncomingChannelFilter[], {
+        idPrefix,
+      })
+    },
+    [idPrefix, t],
+  )
 
   const resetEditor = useCallback(
     (nextFilters: EditableFilter[], initialJsonText?: string) => {
@@ -208,7 +219,8 @@ export function useChannelFilterEditor(idPrefix: string) {
     },
     [],
   )
-  const showVisual = () => {
+
+  const showVisual = useCallback(() => {
     if (viewMode === "visual") return
     try {
       setFilters(jsonText.trim() ? parseJsonFilters(jsonText) : [])
@@ -218,8 +230,9 @@ export function useChannelFilterEditor(idPrefix: string) {
         t("filters.messages.jsonInvalid", { error: getErrorMessage(error) }),
       )
     }
-  }
-  const showJson = () => {
+  }, [jsonText, parseJsonFilters, t, viewMode])
+
+  const showJson = useCallback(() => {
     if (viewMode === "json") return
     try {
       setJsonText(JSON.stringify(filters, null, 2))
@@ -227,7 +240,7 @@ export function useChannelFilterEditor(idPrefix: string) {
       setJsonText("")
     }
     setViewMode("json")
-  }
+  }, [filters, viewMode])
   return {
     filters,
     setFilters,

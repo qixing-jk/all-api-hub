@@ -26,9 +26,8 @@ export async function sendFeishuNotification(
   }
 
   const labelKey = "settings:taskNotifications.channels.feishu.title"
-  const webhookUrl = webhookInput.startsWith("http://")
-    ? webhookInput
-    : webhookInput.startsWith("https://")
+  const webhookUrl =
+    webhookInput.startsWith("http://") || webhookInput.startsWith("https://")
       ? webhookInput
       : `${FEISHU_CUSTOM_BOT_WEBHOOK_PREFIX}${encodeURIComponent(webhookInput)}`
 
