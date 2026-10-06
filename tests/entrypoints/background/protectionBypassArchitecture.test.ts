@@ -1170,7 +1170,7 @@ describe("protection bypass architecture", () => {
     )
     expect(poolSource).toMatch(/async\s+function\s+executeOpenTempContext\b/)
     expect(await fs.readFile(tempWindowPoolPath, "utf8")).not.toMatch(
-      /export[\s\S]*?from["'][^"']*sessionTasks/,
+      /export\s*(?:type\s*)?(?:\*|\{[^}]*\})\s*from\s*["'][^"']*sessionTasks["']/,
     )
     expect(contractsSource).toMatch(
       /export\s+interface\s+OpenTempContextParams\b/,
