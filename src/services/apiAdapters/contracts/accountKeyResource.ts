@@ -146,6 +146,8 @@ export type AccountKeyProvisioningSnapshot = {
   readonly requirements: readonly AccountKeyProvisioningRequirement[]
   readonly items: readonly AccountKeyProvisioningInventoryItem[]
   readonly partialFailure?: ResourceFailure
+  /** Only a complete empty inventory may enter the adapter's default creation workflow. */
+  readonly emptyRequirementsAction?: "default-creation"
 }
 
 export type AccountKeyProvisionedResource = {

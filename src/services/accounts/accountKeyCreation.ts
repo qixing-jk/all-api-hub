@@ -12,9 +12,11 @@ import {
 import {
   AccountKeyResourceError,
   type AccountKeyCreationIntent,
+  type AccountKeyDefaultCreationPolicy,
   type AccountKeyProvisioningRequirement,
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
+  type AccountKeyResourceSession,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
@@ -69,6 +71,17 @@ export async function prepareDefaultAccountKeyCreation(
     },
     options,
   )
+  return prepareDefaultAccountKeyCreationInSession(session, policy, options)
+}
+
+/** Shares default selection and one-shot creation between real and local resource sessions. */
+export async function prepareDefaultAccountKeyCreationInSession(
+  session: AccountKeyResourceSession,
+  policy: AccountKeyDefaultCreationPolicy,
+  options: Options = {},
+): Promise<AccountKeyCreationPlan> {
+  options.signal?.throwIfAborted()
+  if (policy === "requires-input") return { kind: "input-required" }
   if (policy === "editor-defaults" || options.intent) {
     const scope = await session.resolveDefaultScope(options)
     const editor = await session.openCreateEditor(

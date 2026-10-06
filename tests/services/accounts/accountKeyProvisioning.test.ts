@@ -78,6 +78,33 @@ describe("interactive account key provisioning plans", () => {
     prepareDefault.mockResolvedValue({ kind: "input-required" })
   })
 
+  it("uses the adapter's empty-requirement fallback rather than its family", async () => {
+    const { session, nativeEditor } = setup()
+    session.provisioning.inspect.mockResolvedValue({
+      requirements: [],
+      items: [],
+      emptyRequirementsAction: "default-creation",
+    } as never)
+    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+    expect(plan.entries[0]?.editor).toBe(nativeEditor)
+  })
+
+  it("does not infer default creation from New API ancestry when the adapter declares no fallback", async () => {
+    account = buildDisplaySiteData({
+      id: crypto.randomUUID(),
+      siteType: "new-api",
+    })
+    const { session } = setup()
+    session.provisioning.inspect.mockResolvedValue({
+      requirements: [],
+      items: [],
+    })
+    await expect(
+      prepareAccountKeyProvisioning(account, "all-groups"),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+    expect(prepareDefault).not.toHaveBeenCalled()
+  })
+
   it("offers a native editor for default creation that needs user input", async () => {
     const { nativeEditor } = setup()
     const plan = await prepareAccountKeyProvisioning(account, "default")
@@ -165,6 +192,7 @@ describe("interactive account key provisioning plans", () => {
     session.provisioning.inspect.mockResolvedValue({
       requirements: [],
       items: [],
+      emptyRequirementsAction: "default-creation",
     })
     const plan = await prepareAccountKeyProvisioning(account, "all-groups")
     expect(plan.entries).toHaveLength(1)
@@ -209,6 +237,7 @@ describe("interactive account key provisioning plans", () => {
               },
             ],
         ...(partial ? { partialFailure: { code: "unavailable" } } : {}),
+        emptyRequirementsAction: "default-creation",
       } as never)
       await expect(
         prepareAccountKeyProvisioning(account, "all-groups"),
@@ -271,6 +300,19 @@ describe("interactive account key provisioning plans", () => {
       { quota: 10 },
       expect.any(Object),
     )
+  })
+
+  it("accepts corrected input in the same plan after validation proves no write occurred", async () => {
+    const { nativeEditor } = setup()
+    const plan = await prepareAccountKeyProvisioning(account, "default")
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    nativeEditor.validate.mockReturnValue({ valid: true })
+    await expect(plan.entries[0]!.create({ quota: 10 })).resolves.toMatchObject(
+      { ref },
+    )
+    expect(nativeEditor.submit).toHaveBeenCalledOnce()
   })
 
   it("returns confirmed creation even when the detail read fails", async () => {

@@ -744,6 +744,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
       accountForm: {
         fixedSiteUrl: OPENROUTER_WEB_ORIGIN,
         defaultSiteName: OPENROUTER_DISPLAY_NAME,
+        accessTokenLabelKey: "form.openrouterManagementKey",
+        accessTokenGuidanceTitleKey:
+          "form.openrouterManagementKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.openrouterManagementKeyGuidance",
       },
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.OpenRouter,
       detection: { hostnames: OPENROUTER_HOSTNAMES },

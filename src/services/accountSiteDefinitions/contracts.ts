@@ -119,7 +119,13 @@ export interface AccountSiteAccessTokenVerificationGuide {
 
 export interface AccountSiteDefinitionOnboardingMetadata {
   displayName?: string
-  accountForm?: { fixedSiteUrl?: string; defaultSiteName?: string }
+  accountForm?: {
+    fixedSiteUrl?: string
+    defaultSiteName?: string
+    accessTokenLabelKey?: "form.openrouterManagementKey"
+    accessTokenGuidanceTitleKey?: "form.openrouterManagementKeyGuidanceTitle"
+    accessTokenGuidanceKey?: "form.openrouterManagementKeyGuidance"
+  }
   detection?: AccountSiteDetectionMetadata
   routes: AccountSiteRouteConfig
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor

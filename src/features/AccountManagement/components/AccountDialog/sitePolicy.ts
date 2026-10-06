@@ -5,6 +5,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
+import type { AccountSiteDefinitionOnboardingMetadata } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { isKimiOpenPlatformSiteType } from "~/services/kimiOpenPlatform/deployments"
@@ -16,6 +17,12 @@ import { type AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisio
  */
 export interface AccountDialogSitePolicy {
   siteTypeLabel: string
+  accessTokenPresentation: Pick<
+    NonNullable<AccountSiteDefinitionOnboardingMetadata["accountForm"]>,
+    | "accessTokenLabelKey"
+    | "accessTokenGuidanceTitleKey"
+    | "accessTokenGuidanceKey"
+  >
   canonicalSiteUrl?: string
   defaultSiteName?: string
   lockSiteUrl: boolean
@@ -47,6 +54,12 @@ export function getAccountDialogSitePolicy(
 
   return {
     siteTypeLabel: onboarding?.displayName ?? siteType,
+    accessTokenPresentation: {
+      accessTokenLabelKey: onboarding?.accountForm?.accessTokenLabelKey,
+      accessTokenGuidanceTitleKey:
+        onboarding?.accountForm?.accessTokenGuidanceTitleKey,
+      accessTokenGuidanceKey: onboarding?.accountForm?.accessTokenGuidanceKey,
+    },
     canonicalSiteUrl: onboarding?.accountForm?.fixedSiteUrl,
     defaultSiteName: onboarding?.accountForm?.defaultSiteName,
     lockSiteUrl: Boolean(onboarding?.accountForm?.fixedSiteUrl),

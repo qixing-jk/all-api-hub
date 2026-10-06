@@ -1,14 +1,91 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_SITE_TYPES } from "~/constants/siteType"
+import { createKeyProvisioningFixtureSession } from "~/features/DevPanel/keyProvisioningFixtures"
 import {
   createKeyProvisioningPreviewAccount,
   getKeyProvisioningPreviewProfile,
   prepareKeyProvisioningPreview,
 } from "~/features/DevPanel/keyProvisioningPreview"
+import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 describe("key provisioning preview plans", () => {
+  it("accepts the OpenRouter creator option offered by its local native fixture", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    try {
+      const account = createKeyProvisioningPreviewAccount("openrouter")
+      const resources = getSiteTypeCapabilities(account.siteType).account!
+        .keyResourceManagement!
+      const session = await createKeyProvisioningFixtureSession(
+        account,
+        resources,
+        "default",
+        {},
+      )
+      const scope = await session.resolveDefaultScope()
+      const editor = await session.openCreateEditor(scope.scopeKey)
+      const choices = await editor.loadOptions!(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      )
+      expect(choices).toHaveLength(1)
+      const values = {
+        ...editor.initialValues,
+        [OPENROUTER_KEY_FIELD_IDS.Creator]: choices[0]!.value,
+      }
+      expect(editor.validate(values)).toEqual({ valid: true })
+      await expect(editor.submit(values)).resolves.toMatchObject({
+        ref: { accountId: account.id, scopeKey: scope.scopeKey },
+      })
+      expect(fetchSpy).not.toHaveBeenCalled()
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it("deduplicates creation within a preview plan", async () => {
+    const created = vi.fn()
+    const plan = await prepareKeyProvisioningPreview(
+      createKeyProvisioningPreviewAccount("new-api"),
+      "all-groups",
+      { onCreated: created },
+    )
+    const entry = plan.entries[0]!
+    await Promise.all([entry.create(), entry.create()])
+    expect(created).toHaveBeenCalledOnce()
+  })
+
+  it("does not replay an uncertain preview write", async () => {
+    const plan = await prepareKeyProvisioningPreview(
+      createKeyProvisioningPreviewAccount("new-api"),
+      "all-groups",
+      { scenario: "uncertain" },
+    )
+    const entry = plan.entries.at(-1)!
+    await expect(entry.create()).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+    await expect(entry.create()).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+  })
+
+  it("honors cancellation after a plan was prepared", async () => {
+    const controller = new AbortController()
+    const created = vi.fn()
+    const plan = await prepareKeyProvisioningPreview(
+      createKeyProvisioningPreviewAccount("new-api"),
+      "all-groups",
+      { signal: controller.signal, onCreated: created },
+    )
+    controller.abort()
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      name: "AbortError",
+    })
+    expect(created).not.toHaveBeenCalled()
+  })
+
   it.each(["default", "all-groups"] as const)(
     "previews FreeModel one-time secrets in %s mode",
     async (mode) => {

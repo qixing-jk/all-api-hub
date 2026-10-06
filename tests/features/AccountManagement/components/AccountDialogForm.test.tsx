@@ -319,6 +319,20 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
   })
 
+  it("uses credential presentation from the supplied policy regardless of the draft site type", async () => {
+    const props = createProps()
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.OPENROUTER)
+
+    render(<AccountForm {...props} sitePolicy={policy} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.openrouterManagementKey"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.openrouterManagementKeyGuidance"),
+    ).toBeInTheDocument()
+  })
+
   it("hides manual OpenRouter guidance after detection fills the management key", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.OPENROUTER

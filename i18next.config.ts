@@ -28,6 +28,8 @@ export default defineConfig({
       "settings:managedSite.deploymentDocs",
       "settings:refresh.shieldAutomaticFeature*",
       "modelList:displayFacts.*",
+      // Account credential presentation comes from the site definition registry.
+      "accountDialog:form.openrouterManagementKey*",
       "productTour:search.keywords.*",
     ],
     primaryLanguage: DEFAULT_LANG,
