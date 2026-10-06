@@ -1,10 +1,15 @@
 import { getAccountSiteApiRouter } from "~/constants/siteType"
+import { normalizeSearchText } from "~/services/search/accountSearch"
+import {
+  buildAnnouncementDisplayText,
+  getAnnouncementPlainText,
+} from "~/services/siteAnnouncements/text"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 import { formatRelativeTime } from "~/utils/core/formatters"
 import { joinUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
-import type { AnnouncementMetric, UnreadFilter } from "./types"
+import type { UnreadFilter } from "./types"
 
 export interface SiteAnnouncementSiteOption {
   value: string
@@ -49,21 +54,6 @@ export function formatAnnouncementTimestamp(record: SiteAnnouncementRecord) {
 export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
   const path = getAccountSiteApiRouter(record.siteType).siteAnnouncementsPath
   return path === null ? null : joinUrl(record.baseUrl, path)
-}
-
-/**
- * Returns the Tailwind classes for a summary metric tone.
- */
-export function getMetricToneClasses(tone: AnnouncementMetric["tone"]) {
-  switch (tone) {
-    case "info":
-      return "bg-info-soft text-info-soft-foreground ring-info-border"
-    case "neutral":
-      return "bg-muted text-secondary-foreground ring-border"
-    case "accent":
-    default:
-      return "bg-primary-soft text-primary-soft-foreground ring-primary-soft-border"
-  }
 }
 
 /**
@@ -112,15 +102,13 @@ export function buildSiteOptions(
 }
 
 /**
- * Collects distinct site types for the filter dropdown.
+ * Checks whether an announcement is visible under the active read-state scope.
  */
-export function buildSiteTypeOptions(
-  records: SiteAnnouncementRecord[],
-  status: Array<{ siteType: SiteAnnouncementRecord["siteType"] }> = [],
+export function matchesUnreadFilter(
+  record: SiteAnnouncementRecord,
+  unreadFilter: UnreadFilter,
 ) {
-  return [
-    ...new Set([...records, ...status].map((item) => item.siteType)),
-  ].sort()
+  return unreadFilter === "all" || !record.read
 }
 
 /**
@@ -131,12 +119,10 @@ export function filterSiteAnnouncements(
   {
     siteKey,
     siteKeys,
-    siteType,
     unreadFilter,
   }: {
     siteKey: string
     siteKeys?: string[]
-    siteType: string
     unreadFilter: UnreadFilter
   },
 ) {
@@ -147,16 +133,33 @@ export function filterSiteAnnouncements(
     ) {
       return false
     }
-    if (siteType !== "all" && record.siteType !== siteType) {
-      return false
-    }
-    if (unreadFilter === "unread" && record.read) {
-      return false
-    }
-    if (unreadFilter === "read" && !record.read) {
-      return false
-    }
 
-    return true
+    return matchesUnreadFilter(record, unreadFilter)
   })
+}
+
+/**
+ * Matches one announcement against the free-text search box.
+ *
+ * Matching runs on the rendered title and the full formatted body so search
+ * terms line up with what the card shows, and Markdown or HTML markers in the
+ * raw upstream content never become searchable. The body is not truncated: a
+ * summary-length preview would hide everything past its first line.
+ */
+export function matchSiteAnnouncementQuery(
+  record: SiteAnnouncementRecord,
+  query: string,
+) {
+  const normalizedQuery = normalizeSearchText(query)
+  if (!normalizedQuery) {
+    return true
+  }
+
+  const display = buildAnnouncementDisplayText(record)
+  const haystack = [
+    normalizeSearchText(display.title),
+    normalizeSearchText(getAnnouncementPlainText(display.body)),
+  ].join("\n")
+
+  return haystack.includes(normalizedQuery)
 }

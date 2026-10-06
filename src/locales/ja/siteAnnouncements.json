@@ -29,15 +29,9 @@
     "title": "公告記録はありません"
   },
   "filters": {
-    "allReadStates": "すべての状態",
     "allSites": "すべてのサイト",
-    "allSiteTypes": "すべての種別",
-    "read": "既読",
-    "readState": "既読状態",
     "searchSite": "サイトを検索",
-    "site": "サイト",
-    "siteType": "サイト種別",
-    "unread": "未読"
+    "site": "サイト"
   },
   "loading": "公告を読み込み中...",
   "messages": {
@@ -52,6 +46,15 @@
     "multipleUnread_other": "{{title}}、ほかに {{count}} 件の未読公告があります",
     "title": "{{site}} に新しい公告があります"
   },
+  "overview": {
+    "description": "公告の統計を確認し、関心のある内容に絞り込めます。",
+    "title": "公告の概要"
+  },
+  "search": {
+    "clear": "クリア",
+    "placeholder": "公告のタイトルまたは本文を検索...",
+    "resultCount_other": "{{count}} 件"
+  },
   "status": {
     "aggregateIssues": "{{failed}} 件のサイトで失敗し、{{unsupported}} 件は公告確認に対応していません。サイトを選択して詳細を確認し、再試行してください。",
     "aggregateIssuesTitle": "確認が必要なサイトがあります",
@@ -62,9 +65,6 @@
     "unsupportedTitle": "公告 API は未対応です"
   },
   "summary": {
-    "filtered_other": "{{total}} 件中 {{count}} 件の公告を表示中",
-    "notified_other": "{{count}} 件はシステム通知済み",
-    "sites": "対象サイト",
     "total": "公告総数",
     "unread": "未読公告"
   },

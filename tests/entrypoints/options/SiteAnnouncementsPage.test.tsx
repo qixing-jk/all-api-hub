@@ -165,6 +165,17 @@ function DevSectionProbe() {
   )
 }
 
+/** Finds one overview counter button by its label key. */
+function getOverviewCounter(
+  labelKey: "summary.total" | "summary.unread",
+): HTMLElement {
+  const counter = screen.getByRole("button", {
+    name: new RegExp(`siteAnnouncements:${labelKey.replace(".", "\\.")}`),
+  })
+
+  return counter
+}
+
 describe("SiteAnnouncementsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -311,19 +322,16 @@ describe("SiteAnnouncementsPage", () => {
       await screen.findByText("siteAnnouncements:title"),
     ).toBeInTheDocument()
     expect(
+      screen.getByText("siteAnnouncements:overview.title"),
+    ).toBeInTheDocument()
+    expect(
       screen.getByText("siteAnnouncements:summary.total"),
     ).toBeInTheDocument()
     expect(
       screen.getByText("siteAnnouncements:summary.unread"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("siteAnnouncements:summary.sites"),
-    ).toBeInTheDocument()
-    expect(
-      await screen.findByText("siteAnnouncements:summary.filtered"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("siteAnnouncements:summary.notified"),
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
@@ -336,6 +344,201 @@ describe("SiteAnnouncementsPage", () => {
         name: "Full maintenance window",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("shows the selected site counts and list while the site filter is active", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Alpha API" }))
+
+    // Alpha API holds one unread announcement of the two cached records.
+    expect(getOverviewCounter("summary.total")).toHaveTextContent("1")
+    expect(getOverviewCounter("summary.unread")).toHaveTextContent("1")
+    expect(
+      screen.getByRole("heading", { name: "Full maintenance window" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Beta update")).not.toBeInTheDocument()
+  })
+
+  it("counts unread announcements inside the selected site scope", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+
+    // Beta API holds only a read announcement, so its unread count is zero.
+    await user.click(screen.getByRole("option", { name: "Beta API" }))
+
+    expect(getOverviewCounter("summary.total")).toHaveTextContent("1")
+    expect(getOverviewCounter("summary.unread")).toHaveTextContent("0")
+  })
+
+  it("narrows the list and reports the result count while searching", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
+      "beta",
+    )
+
+    expect(
+      screen.queryByText("Full maintenance window"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Beta update" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:search.resultCount"),
+    ).toBeVisible()
+  })
+
+  it("keeps the manual check scope on site and read state while searching", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
+      "beta",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      // Search only hides records; it must not rescope which accounts a check
+      // touches, so both cached sites are still checked.
+      const checkNowMessages = sendSiteAnnouncementsMessageMock.mock.calls
+        .filter(([type]) => type === SiteAnnouncementsMessageTypes.CheckNow)
+        .map(([, data]) => data)
+
+      expect(checkNowMessages.at(-1)).toEqual({
+        accountIds: ["account-1", "account-2"],
+      })
+    })
+  })
+
+  it("combines the site, read-state and search filters", async () => {
+    const user = userEvent.setup()
+    const accountMessage = {
+      ...records[1]!,
+      id: "account-message",
+      title: "Shared maintenance notice",
+      content: "Shared maintenance notice body",
+      read: false,
+    }
+
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: [...records, accountMessage] }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: status }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
+      "maintenance",
+    )
+    await user.click(
+      screen.getByRole("button", { name: /siteAnnouncements:summary\.unread/ }),
+    )
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Beta API" }))
+
+    expect(
+      screen.getByRole("heading", { name: "Shared maintenance notice" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Beta update")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Full maintenance window"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the overview counters on the site scope instead of the search scope", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
+      "beta",
+    )
+
+    // The list narrows to one record, but the overview still describes the
+    // selected site scope, so its counters stay at the site totals.
+    expect(
+      screen.getByRole("heading", { name: "Beta update" }),
+    ).toBeInTheDocument()
+    expect(getOverviewCounter("summary.total")).toHaveTextContent("2")
+    expect(getOverviewCounter("summary.unread")).toHaveTextContent("1")
+  })
+
+  it("keeps the unread counter clickable when it is already the active filter", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    const unreadCounter = getOverviewCounter("summary.unread")
+
+    await user.click(unreadCounter)
+    expect(unreadCounter).toHaveAttribute("aria-pressed", "true")
+
+    // Re-selecting the active counter is a no-op rather than an error.
+    await user.click(unreadCounter)
+    expect(unreadCounter).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("heading", { name: "Full maintenance window" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Beta update")).not.toBeInTheDocument()
+  })
+
+  it("moves the active counter highlight between the two statistics", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.click(getOverviewCounter("summary.unread"))
+
+    expect(getOverviewCounter("summary.unread")).toHaveClass("bg-primary-soft")
+    expect(getOverviewCounter("summary.total")).not.toHaveClass(
+      "bg-primary-soft",
+    )
   })
 
   it("routes the empty announcement setup state to account management when no account exists", async () => {
@@ -885,7 +1088,7 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
-  it("checks only LaoZhang when the site type filter is selected", async () => {
+  it("checks only the selected site account", async () => {
     const user = userEvent.setup()
     const previous = sendSiteAnnouncementsMessageMock.getMockImplementation()!
     sendSiteAnnouncementsMessageMock.mockImplementation(async (type: string) =>
@@ -897,6 +1100,7 @@ describe("SiteAnnouncementsPage", () => {
               {
                 ...records[0],
                 id: "lz-notice",
+                siteName: "LaoZhang API",
                 siteType: "laozhang",
                 accountId: "lz-account",
                 siteKey: "lz-site",
@@ -908,8 +1112,12 @@ describe("SiteAnnouncementsPage", () => {
     )
     render(<SiteAnnouncementsPage />)
     await screen.findByRole("heading", { name: "LaoZhang notice" })
-    await user.click(screen.getAllByRole("combobox")[1]!)
-    await user.click(screen.getByRole("option", { name: "laozhang" }))
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "LaoZhang API" }))
     await user.click(
       screen.getByRole("button", {
         name: "siteAnnouncements:actions.checkNow",
@@ -921,57 +1129,50 @@ describe("SiteAnnouncementsPage", () => {
     )
   })
 
-  it.each(["site", "siteType"])(
-    "checks the selected LaoZhang %s even before any announcement is cached",
-    async (filter) => {
-      const user = userEvent.setup()
-      const previous = sendSiteAnnouncementsMessageMock.getMockImplementation()!
-      sendSiteAnnouncementsMessageMock.mockImplementation(
-        async (type: string) => {
-          if (type === SiteAnnouncementsMessageTypes.ListRecords)
-            return { success: true, data: [] }
-          if (type === SiteAnnouncementsMessageTypes.GetStatus)
-            return {
-              success: true,
-              data: [
-                ...status,
-                {
-                  ...status[0],
-                  siteKey: "lz-site",
-                  siteName: "LaoZhang API",
-                  siteType: "laozhang",
-                  accountId: "lz-account",
-                  records: [],
-                },
-              ],
-            }
-          return previous(type)
-        },
-      )
-      render(<SiteAnnouncementsPage />)
-      await screen.findByText("siteAnnouncements:empty.title")
-      if (filter === "site") {
-        await user.click(
-          screen.getByRole("combobox", {
-            name: "siteAnnouncements:filters.site",
-          }),
-        )
-        await user.click(screen.getByRole("option", { name: "LaoZhang API" }))
-      } else {
-        await user.click(screen.getAllByRole("combobox")[1]!)
-        await user.click(screen.getByRole("option", { name: "laozhang" }))
-      }
-      const buttons = screen.getAllByRole("button", {
-        name: "siteAnnouncements:actions.checkNow",
-      })
-      expect(buttons[0]).toBeEnabled()
-      await user.click(buttons[0]!)
-      expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledWith(
-        SiteAnnouncementsMessageTypes.CheckNow,
-        { accountIds: ["lz-account"] },
-      )
-    },
-  )
+  it("checks the selected LaoZhang site even before any announcement is cached", async () => {
+    const user = userEvent.setup()
+    const previous = sendSiteAnnouncementsMessageMock.getMockImplementation()!
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        if (type === SiteAnnouncementsMessageTypes.ListRecords)
+          return { success: true, data: [] }
+        if (type === SiteAnnouncementsMessageTypes.GetStatus)
+          return {
+            success: true,
+            data: [
+              ...status,
+              {
+                ...status[0],
+                siteKey: "lz-site",
+                siteName: "LaoZhang API",
+                siteType: "laozhang",
+                accountId: "lz-account",
+                records: [],
+              },
+            ],
+          }
+        return previous(type)
+      },
+    )
+    render(<SiteAnnouncementsPage />)
+    await screen.findByText("siteAnnouncements:empty.title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "LaoZhang API" }))
+
+    const buttons = screen.getAllByRole("button", {
+      name: "siteAnnouncements:actions.checkNow",
+    })
+    expect(buttons[0]).toBeEnabled()
+    await user.click(buttons[0]!)
+    expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledWith(
+      SiteAnnouncementsMessageTypes.CheckNow,
+      { accountIds: ["lz-account"] },
+    )
+  })
 
   it("checks the selected site scope when manually checking filtered announcements", async () => {
     const user = userEvent.setup()
@@ -999,14 +1200,13 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
-  it("checks the visible site scope when display filters are selected", async () => {
+  it("checks the visible site scope when the unread filter is selected", async () => {
     const user = userEvent.setup()
 
     render(<SiteAnnouncementsPage />)
 
-    await screen.findByText("siteAnnouncements:title")
-    await user.click(screen.getAllByRole("combobox")[1]!)
-    await user.click(screen.getByRole("option", { name: "sub2api" }))
+    await screen.findByText("siteAnnouncements:overview.title")
+    await user.click(getOverviewCounter("summary.unread"))
     await user.click(
       screen.getByRole("button", {
         name: "siteAnnouncements:actions.checkNow",
@@ -1018,8 +1218,9 @@ describe("SiteAnnouncementsPage", () => {
         .filter(([type]) => type === SiteAnnouncementsMessageTypes.CheckNow)
         .map(([, data]) => data)
 
+      // Only Alpha API still has an unread announcement.
       expect(checkNowMessages.at(-1)).toEqual({
-        accountIds: ["account-2"],
+        accountIds: ["account-1"],
       })
     })
   })
@@ -1057,7 +1258,7 @@ describe("SiteAnnouncementsPage", () => {
 
     render(<SiteAnnouncementsPage />)
 
-    await screen.findByText("siteAnnouncements:title")
+    await screen.findByText("siteAnnouncements:overview.title")
     await user.click(
       screen.getByRole("combobox", {
         name: "siteAnnouncements:filters.site",
@@ -1065,10 +1266,7 @@ describe("SiteAnnouncementsPage", () => {
     )
     await user.click(screen.getByRole("option", { name: "Gamma API" }))
 
-    await user.click(screen.getAllByRole("combobox")[2]!)
-    await user.click(
-      screen.getByRole("option", { name: "siteAnnouncements:filters.unread" }),
-    )
+    await user.click(getOverviewCounter("summary.unread"))
 
     await waitFor(() => {
       for (const button of screen.getAllByRole("button", {

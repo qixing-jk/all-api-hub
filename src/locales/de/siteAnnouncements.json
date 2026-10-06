@@ -29,15 +29,9 @@
     "title": "Keine Ankündigungsaufzeichnungen"
   },
   "filters": {
-    "allReadStates": "Alle Status",
     "allSites": "Alle Websites",
-    "allSiteTypes": "Alle Typen",
-    "read": "Gelesen",
-    "readState": "Lesestatus",
     "searchSite": "Websites durchsuchen",
-    "site": "Website",
-    "siteType": "Website-Typ",
-    "unread": "Ungelesen"
+    "site": "Website"
   },
   "loading": "Ankündigungen werden geladen...",
   "messages": {
@@ -53,6 +47,16 @@
     "multipleUnread_other": "{{title}} und {{count}} weitere ungelesene Ankündigungen",
     "title": "{{site}} hat neue Ankündigungen"
   },
+  "overview": {
+    "description": "Ankündigungszahlen ansehen und auf die relevanten Inhalte filtern.",
+    "title": "Übersicht"
+  },
+  "search": {
+    "clear": "Löschen",
+    "placeholder": "Ankündigungstitel oder -text durchsuchen...",
+    "resultCount_one": "{{count}} Ergebnis",
+    "resultCount_other": "{{count}} Ergebnisse"
+  },
   "status": {
     "aggregateIssues": "{{failed}} Website(s) sind fehlgeschlagen und {{unsupported}} unterstützen keine Ankündigungsprüfung. Wählen Sie eine Website für Details und Wiederholung.",
     "aggregateIssuesTitle": "Einige Websites benötigen Aufmerksamkeit",
@@ -63,11 +67,6 @@
     "unsupportedTitle": "Ankündigungsendpunkt nicht unterstützt"
   },
   "summary": {
-    "filtered_one": "Ankündigungen: {{count}} von {{total}}",
-    "filtered_other": "Ankündigungen: {{count}} von {{total}}",
-    "notified_one": "{{count}} Systembenachrichtigung gesendet",
-    "notified_other": "{{count}} Systembenachrichtigungen gesendet",
-    "sites": "Websites",
     "total": "Gesamt",
     "unread": "Ungelesen"
   },

@@ -29,15 +29,9 @@
     "title": "暂无公告记录"
   },
   "filters": {
-    "allReadStates": "全部状态",
     "allSites": "全部站点",
-    "allSiteTypes": "全部类型",
-    "read": "已读",
-    "readState": "阅读状态",
     "searchSite": "搜索站点",
-    "site": "站点",
-    "siteType": "站点类型",
-    "unread": "未读"
+    "site": "站点"
   },
   "loading": "正在加载公告...",
   "messages": {
@@ -52,6 +46,15 @@
     "multipleUnread": "{{title}}，还有 {{count}} 条未读公告",
     "title": "{{site}} 有新公告"
   },
+  "overview": {
+    "description": "快速查看公告统计并筛选你关心的内容。",
+    "title": "公告概览"
+  },
+  "search": {
+    "clear": "清除",
+    "placeholder": "搜索公告标题或正文...",
+    "resultCount": "{{count}} 条"
+  },
   "status": {
     "aggregateIssues": "{{failed}} 个站点检查失败，{{unsupported}} 个站点不支持公告检查。请选择站点查看详情并重试失败项。",
     "aggregateIssuesTitle": "部分站点需要处理",
@@ -62,9 +65,6 @@
     "unsupportedTitle": "暂不支持公告接口"
   },
   "summary": {
-    "filtered": "当前显示 {{count}} / {{total}} 条公告",
-    "notified": "{{count}} 条已发送系统通知",
-    "sites": "涉及站点",
     "total": "公告总数",
     "unread": "未读公告"
   },
