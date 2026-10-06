@@ -151,8 +151,8 @@ const {
       isCreating: false,
     },
     postSaveOneTimeSecret: null,
-    postSaveSub2ApiAccount: null,
-    postSaveSub2ApiDialogSessionId: null,
+    postSaveKeyInputAccount: null,
+    postSaveKeyInputSessionId: null,
   } as any,
   mockSetters: {
     setSiteName: vi.fn(),
@@ -193,9 +193,9 @@ const {
     shouldDeferAccountSaveSuccess: vi.fn(),
     handlePostSaveOneTimeSecretClose: vi.fn(),
     handlePostSaveKeyProvisioningClose: vi.fn(),
-    handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
-    handlePostSaveSub2ApiTokenCreated: vi.fn(),
-    getPostSaveSub2ApiDialogHandlers: vi.fn(),
+    handlePostSaveKeyInputTokenDialogClose: vi.fn(),
+    handlePostSaveKeyInputTokenCreated: vi.fn(),
+    getPostSaveKeyInputDialogHandlers: vi.fn(),
   },
   mockCreateTag: vi.fn(),
   mockRenameTag: vi.fn(),
@@ -262,8 +262,8 @@ function resetMockState() {
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     postSaveOneTimeSecret: null,
-    postSaveSub2ApiAccount: null,
-    postSaveSub2ApiDialogSessionId: null,
+    postSaveKeyInputAccount: null,
+    postSaveKeyInputSessionId: null,
   })
   mockState.postSaveKeyProvisioning = null
 }
@@ -1203,46 +1203,50 @@ describe("AccountDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("delegates post-save Sub2API creation defaults to the native editor", async () => {
-    mockState.postSaveSub2ApiAccount = {
-      id: "sub2-account-id",
-      name: "Sub2API",
-    }
-    mockState.postSaveSub2ApiDialogSessionId = 42
-    mockHandlers.getPostSaveSub2ApiDialogHandlers.mockReturnValue({
-      onClose: vi.fn(),
-      onSuccess: vi.fn(),
-    })
+  it.each([SITE_TYPES.SUB2API, SITE_TYPES.NEW_API])(
+    "delegates post-save %s input requirements to the native editor",
+    async (siteType) => {
+      mockState.postSaveKeyInputAccount = {
+        id: "sub2-account-id",
+        name: "Sub2API",
+        siteType,
+      }
+      mockState.postSaveKeyInputSessionId = 42
+      mockHandlers.getPostSaveKeyInputDialogHandlers.mockReturnValue({
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      })
 
-    render(
-      <AccountDialog
-        isOpen={true}
-        onClose={vi.fn()}
-        mode={DIALOG_MODES.ADD}
-        onSuccess={vi.fn()}
-        onError={vi.fn()}
-      />,
-    )
+      render(
+        <AccountDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
 
-    expect(
-      await screen.findByTestId("post-save-add-token-dialog"),
-    ).toBeInTheDocument()
-    expect(screen.getByTestId("post-save-add-token-account")).toHaveTextContent(
-      "sub2-account-id",
-    )
-    expect(
-      screen.getByTestId("post-save-add-token-prefill"),
-    ).toBeEmptyDOMElement()
-    expect(screen.getByTestId("post-save-add-token-notice")).toHaveTextContent(
-      "messages:tokenProvisioning.createRequiresGroupSelection",
-    )
-    expect(
-      screen.getByTestId("post-save-add-token-one-time"),
-    ).toHaveTextContent("false")
-    expect(mockHandlers.getPostSaveSub2ApiDialogHandlers).toHaveBeenCalledWith(
-      42,
-    )
-  })
+      expect(
+        await screen.findByTestId("post-save-add-token-dialog"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId("post-save-add-token-account"),
+      ).toHaveTextContent("sub2-account-id")
+      expect(
+        screen.getByTestId("post-save-add-token-prefill"),
+      ).toBeEmptyDOMElement()
+      expect(
+        screen.getByTestId("post-save-add-token-notice"),
+      ).toBeEmptyDOMElement()
+      expect(
+        screen.getByTestId("post-save-add-token-one-time"),
+      ).toHaveTextContent("false")
+      expect(
+        mockHandlers.getPostSaveKeyInputDialogHandlers,
+      ).toHaveBeenCalledWith(42)
+    },
+  )
 
   it("renders the post-save one-time key dialog only when a created secret is pending", async () => {
     mockState.postSaveOneTimeSecret = {

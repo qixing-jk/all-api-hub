@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { OPTIONS_MENU_ITEM_ICONS } from "~/components/icons/optionsPageIcons"
 import { Button, Notice } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
@@ -22,19 +21,10 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
-import AxonHubSettings from "./AxonHubSettings"
-import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
-import CliProxyApiSettings from "./CliProxyApiSettings"
-import DoneHubSettings from "./DoneHubSettings"
-import GptLoadSettings from "./GptLoadSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
+import { ManagedSiteSettingsPanel } from "./ManagedSiteSettingsPanel"
 import ModelRedirectSettings from "./ModelRedirectSettings"
-import NewApiSettings from "./NewApiSettings"
-import OctopusSettings from "./OctopusSettings"
-import OmniRouteSettings from "./OmniRouteSettings"
-import Sub2ApiSettings from "./Sub2ApiSettings"
-import VeloeraSettings from "./VeloeraSettings"
 
 const gatewayActionClassName = "max-w-full"
 const AccountKeysIcon = OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.KEYS]
@@ -91,37 +81,11 @@ export default function ManagedSiteTab() {
     ? t("managedSite.gatewayGuidance.configComplete.description")
     : t("managedSite.gatewayGuidance.unconfigured.description")
 
-  const renderSiteSettings = () => {
-    switch (managedSiteType) {
-      case SITE_TYPES.CLI_PROXY_API:
-        return <CliProxyApiSettings />
-      case SITE_TYPES.OCTOPUS:
-        return <OctopusSettings />
-      case SITE_TYPES.DONE_HUB:
-        return <DoneHubSettings />
-      case SITE_TYPES.VELOERA:
-        return <VeloeraSettings />
-      case SITE_TYPES.AXON_HUB:
-        return <AxonHubSettings />
-      case SITE_TYPES.CLAUDE_CODE_HUB:
-        return <ClaudeCodeHubSettings />
-      case SITE_TYPES.SUB2API:
-        return <Sub2ApiSettings />
-      case SITE_TYPES.OMNIROUTE:
-        return <OmniRouteSettings />
-      case SITE_TYPES.GPT_LOAD:
-        return <GptLoadSettings />
-      case SITE_TYPES.NEW_API:
-      default:
-        return <NewApiSettings />
-    }
-  }
-
   return (
     <div className="space-y-density-6">
       <ManagedSiteSelector />
 
-      {renderSiteSettings()}
+      <ManagedSiteSettingsPanel siteType={managedSiteType} />
 
       <Notice
         actions={

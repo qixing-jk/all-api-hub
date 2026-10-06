@@ -13,10 +13,8 @@ import {
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { validateOmniRouteCredential } from "~/services/managedSites/providers/omniroute"
@@ -24,7 +22,9 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Configures one self-hosted OmniRoute deployment.
@@ -49,10 +49,27 @@ export default function OmniRouteSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.omniroute,
+    defaults: DEFAULT_PREFERENCES.omniroute,
+    reset: resetOmniRouteConfig,
+    fields: {
+      baseUrl: {
+        setting: t("omniroute.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateOmniRouteBaseUrl(value, options),
+      },
+      token: {
+        setting: t("omniroute.fields.credentialLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateOmniRouteConfig({ token: value }, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
 
@@ -72,27 +89,6 @@ export default function OmniRouteSettings() {
     } catch {
       window.open(tokensUrl, "_blank", "noopener,noreferrer")
     }
-  }
-
-  const handleBaseUrlChange = async (value: string) => {
-    const baseUrl = value.trim()
-    if (baseUrl === omniRouteBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("omniroute.fields.baseUrlLabel"),
-      update: (options) => updateOmniRouteBaseUrl(baseUrl, options),
-    })
-  }
-
-  const handleCredentialChange = async (value: string) => {
-    const credential = value.trim()
-    if (credential === omniRouteToken) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("omniroute.fields.credentialLabel"),
-      update: (options) =>
-        updateOmniRouteConfig({ token: credential }, options),
-    })
   }
 
   const handleValidateConfig = async () => {
@@ -146,14 +142,7 @@ export default function OmniRouteSettings() {
       id={SETTINGS_ANCHORS.OMNIROUTE}
       title={t("omniroute.title")}
       description={t("omniroute.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.omniroute,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.omniroute,
-        reset: resetOmniRouteConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -173,7 +162,7 @@ export default function OmniRouteSettings() {
                     baseUrl: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={(event) => commitField("baseUrl", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("omniroute.fields.baseUrlPlaceholder")}
               />
@@ -199,7 +188,7 @@ export default function OmniRouteSettings() {
                     token: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleCredentialChange(event.target.value)}
+                onBlur={(event) => commitField("token", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("omniroute.fields.credentialPlaceholder")}
               />

@@ -224,7 +224,9 @@ describe("useAccountDialog current tab detection", () => {
     await act(async () => result.current.handlers.handleAutoDetect())
     await act(async () => result.current.handlers.handleSaveAccount())
     expect(mockValidateAndSaveAccount).toHaveBeenCalledOnce()
-    expect(mockValidateAndSaveAccount.mock.calls[0]?.[16]).toMatchObject({
+    expect(
+      mockValidateAndSaveAccount.mock.calls[0]?.[0]?.options,
+    ).toMatchObject({
       kimiOpenPlatformAuth: auth,
     })
   })

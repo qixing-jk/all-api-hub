@@ -133,20 +133,20 @@ describe("accountPersistence auto-provision key on add", () => {
   })
 
   it("runs auto-provision after saving when enabled and eligible", async () => {
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     expect(result.accountId).toBeTruthy()
@@ -215,20 +215,20 @@ describe("accountPersistence auto-provision key on add", () => {
       autoProvisionKeyOnAccountAddMode: "all-groups",
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     await vi.waitFor(() => expect(remoteGroups.has("group:missing")).toBe(true))
@@ -245,20 +245,20 @@ describe("accountPersistence auto-provision key on add", () => {
       kind: "ready",
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -278,20 +278,20 @@ describe("accountPersistence auto-provision key on add", () => {
       autoProvisionKeyOnAccountAdd: false,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -304,20 +304,20 @@ describe("accountPersistence auto-provision key on add", () => {
   })
 
   it("preserves the saved account name and identity for native auto-provision", async () => {
-    const firstResult = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester-1",
-      "test-token-1",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const firstResult = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester-1",
+      accessToken: "test-token-1",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(firstResult.success).toBe(true)
 
@@ -327,20 +327,20 @@ describe("accountPersistence auto-provision key on add", () => {
     toastSuccessMock.mockReset()
     ensureAccountKeyMock.mockClear()
 
-    const secondResult = await validateAndSaveAccount(
-      "https://api-2.example.com",
-      "Test Site",
-      "tester-2",
-      "test-token-2",
-      "2",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const secondResult = await validateAndSaveAccount({
+      url: "https://api-2.example.com",
+      siteName: "Test Site",
+      username: "tester-2",
+      accessToken: "test-token-2",
+      userId: "2",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(secondResult.success).toBe(true)
 
@@ -363,20 +363,20 @@ describe("accountPersistence auto-provision key on add", () => {
       new Error("prefs-fail"),
     )
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -392,20 +392,20 @@ describe("accountPersistence auto-provision key on add", () => {
       reason: "editor",
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.SUB2API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -424,20 +424,20 @@ describe("accountPersistence auto-provision key on add", () => {
       reason: "one-time-secret",
     })
 
-    const result = await validateAndSaveAccount(
-      "https://aihubmix.example.invalid",
-      "AIHubMix",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://aihubmix.example.invalid",
+      siteName: "AIHubMix",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -459,20 +459,20 @@ describe("accountPersistence auto-provision key on add", () => {
       },
     })
 
-    const result = await validateAndSaveAccount(
-      OPENROUTER_WEB_ORIGIN,
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      "",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: OPENROUTER_WEB_ORIGIN,
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: "",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -484,20 +484,20 @@ describe("accountPersistence auto-provision key on add", () => {
   })
 
   it("skips auto-provision for none-auth accounts", async () => {
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.None,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.None,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -523,20 +523,20 @@ describe("accountPersistence auto-provision key on add", () => {
       },
     })
 
-    const result = await validateAndSaveAccount(
-      "https://sharedchat.example.invalid",
-      "SharedChat",
-      "tester",
-      "",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.SHAREDCHAT,
-      AuthTypeEnum.Cookie,
-      "session=abc",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://sharedchat.example.invalid",
+      siteName: "SharedChat",
+      username: "tester",
+      accessToken: "",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.SHAREDCHAT,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=abc",
+    })
 
     expect(result.success).toBe(true)
 
@@ -552,20 +552,20 @@ describe("accountPersistence auto-provision key on add", () => {
   it("does not fail account add when provisioning throws", async () => {
     ensureAccountKeyMock.mockRejectedValueOnce(new Error("boom"))
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -592,20 +592,20 @@ describe("accountPersistence auto-provision key on add", () => {
       invalidDisplaySiteData as DisplaySiteData,
     )
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 

@@ -11,15 +11,15 @@ import {
 } from "~/components/ui"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Settings panel for configuring Done Hub connection credentials (base URL, admin token, user ID).
@@ -49,46 +49,34 @@ export default function DoneHubSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.doneHub,
+    defaults: DEFAULT_PREFERENCES.doneHub,
+    reset: resetDoneHubConfig,
+    fields: {
+      baseUrl: {
+        setting: t("doneHub.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateDoneHubBaseUrl(value, options),
+      },
+      adminToken: {
+        setting: t("doneHub.fields.adminTokenLabel"),
+        update: (value, options) => updateDoneHubAdminToken(value, options),
+      },
+      userId: {
+        setting: t("doneHub.fields.userIdLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.UserId,
+        update: (value, options) => updateDoneHubUserId(value, options),
+      },
+    },
   })
   const localBaseUrl = localConfig.baseUrl
   const localAdminToken = localConfig.adminToken
   const localUserId = localConfig.userId
-
-  const handleBaseUrlChange = async (url: string) => {
-    const clean = url.trim()
-    if (clean === doneHubBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("doneHub.fields.baseUrlLabel"),
-      update: (options) => updateDoneHubBaseUrl(clean, options),
-    })
-  }
-
-  const handleAdminTokenChange = async (token: string) => {
-    if (token === doneHubAdminToken) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("doneHub.fields.adminTokenLabel"),
-      update: (options) => updateDoneHubAdminToken(token, options),
-    })
-  }
-
-  const handleUserIdChange = async (id: string) => {
-    const trimmedId = id.trim()
-    if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
-
-    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
-    if (trimmedId === doneHubUserId) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("doneHub.fields.userIdLabel"),
-      update: (options) => updateDoneHubUserId(trimmedId, options),
-    })
-  }
 
   const trimmedBaseUrl = localBaseUrl.trim()
   const userIdError =
@@ -122,14 +110,7 @@ export default function DoneHubSettings() {
       id="done-hub"
       title={t("doneHub.title")}
       description={t("doneHub.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.doneHub,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.doneHub,
-        reset: resetDoneHubConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -149,7 +130,7 @@ export default function DoneHubSettings() {
                     baseUrl: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onBlur={(e) => commitField("baseUrl", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("doneHub.fields.baseUrlPlaceholder")}
               />
@@ -193,7 +174,7 @@ export default function DoneHubSettings() {
                       adminToken: e.target.value,
                     }))
                   }
-                  onBlur={(e) => handleAdminTokenChange(e.target.value)}
+                  onBlur={(e) => commitField("adminToken", e.target.value)}
                   onKeyDown={blurInputOnEnter}
                 />
               </div>
@@ -216,7 +197,7 @@ export default function DoneHubSettings() {
                     userId: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleUserIdChange(e.target.value)}
+                onBlur={(e) => commitField("userId", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}

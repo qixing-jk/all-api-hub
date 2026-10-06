@@ -372,7 +372,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
     })
-    expect(mockValidateAndUpdateAccount.mock.calls[0]?.[17]).toMatchObject({
+    expect(
+      mockValidateAndUpdateAccount.mock.calls[0]?.[0]?.options,
+    ).toMatchObject({
       loadedKimiAuth: {
         accessToken: savedAccount.account_info.access_token,
         refreshToken: "loaded-refresh",
@@ -815,31 +817,31 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      "Sub2API",
-      "sub-user",
-      "jwt-token",
-      "42",
-      "7",
-      "",
-      [],
-      expect.any(Object),
-      SITE_TYPES.SUB2API,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://sub2.example.com",
+      siteName: "Sub2API",
+      username: "sub-user",
+      accessToken: "jwt-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: {
         refreshToken: "refresh-token",
         tokenExpiresAt: 123456789,
       },
-      {
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: false,
       },
-    )
+    })
     expect(
       mockOpenDefaultTokenQuickCreateDialogForAccount,
     ).toHaveBeenCalledWith(savedDisplayData)
@@ -950,7 +952,7 @@ describe("useAccountDialog save and auto-config flows", () => {
           mode: provisioningMode,
         })
         expect(
-          mockValidateAndSaveAccount.mock.calls.at(-1)?.at(-1),
+          mockValidateAndSaveAccount.mock.calls.at(-1)?.[0]?.options,
         ).toMatchObject({ skipAutoProvisionKeyOnAccountAdd: true })
       }
     },
@@ -1052,28 +1054,28 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      "https://api.example.com/private",
-      "Sensitive Site",
-      "private-user",
-      "sk-private-token",
-      "12345",
-      "7",
-      "private notes",
-      ["secret-tag-id"],
-      expect.any(Object),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://api.example.com/private",
+      siteName: "Sensitive Site",
+      username: "private-user",
+      accessToken: "sk-private-token",
+      userId: "12345",
+      exchangeRate: "7",
+      notes: "private notes",
+      tagIds: ["secret-tag-id"],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: false,
       },
-    )
+    })
     await waitFor(() => {
       expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true, {
         discoverCheckInAfterSave: true,
@@ -1274,28 +1276,28 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      "Sub2API",
-      "sub-user",
-      "jwt-token",
-      "42",
-      "7",
-      "",
-      [],
-      expect.any(Object),
-      SITE_TYPES.SUB2API,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://sub2.example.com",
+      siteName: "Sub2API",
+      username: "sub-user",
+      accessToken: "jwt-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: false,
       },
-    )
+    })
   })
 
   it("updates an existing account with trimmed values and uses the default update success toast", async () => {
@@ -1331,26 +1333,26 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndUpdateAccount).toHaveBeenCalledWith(
-      "existing-account-id",
-      "https://edit.example.com/path",
-      "Example Account",
-      "updated-user",
-      "updated-token",
-      "42",
-      "7",
-      "updated notes",
-      ["tag-a"],
-      expect.any(Object),
-      "one-api",
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      true,
-      false,
-      undefined,
-      { deferDataRefresh: true, selectionChanged: false },
-    )
+    expect(mockValidateAndUpdateAccount).toHaveBeenCalledWith({
+      accountId: "existing-account-id",
+      url: "https://edit.example.com/path",
+      siteName: "Example Account",
+      username: "updated-user",
+      accessToken: "updated-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "updated notes",
+      tagIds: ["tag-a"],
+      checkInConfig: expect.any(Object),
+      siteType: "one-api",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: true,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true, selectionChanged: false },
+    })
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.updateSuccess",
     )
@@ -1751,28 +1753,28 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      "https://aihubmix.com",
-      "AIHubMix",
-      "aihubmix-user",
-      "aihubmix-access-token",
-      "13",
-      "7",
-      "",
-      [],
-      expect.any(Object),
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://aihubmix.com",
+      siteName: "AIHubMix",
+      username: "aihubmix-user",
+      accessToken: "aihubmix-access-token",
+      userId: "13",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: true,
       },
-    )
+    })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(true)
     expect(mockEnsureAccountKey).not.toHaveBeenCalled()
   })
@@ -1965,28 +1967,28 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.any(String),
-      expect.any(Array),
-      expect.any(Object),
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      expect.any(String),
-      expect.any(String),
-      expect.any(Boolean),
-      expect.any(Boolean),
-      undefined,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: expect.any(String),
+      siteName: expect.any(String),
+      username: expect.any(String),
+      accessToken: expect.any(String),
+      userId: expect.any(String),
+      exchangeRate: expect.any(String),
+      notes: expect.any(String),
+      tagIds: expect.any(Array),
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: expect.any(String),
+      manualBalanceUsd: expect.any(String),
+      excludeFromTotalBalance: expect.any(Boolean),
+      excludeFromTodayIncome: expect.any(Boolean),
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: false,
       },
-    )
+    })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(
       result.current.handlers.shouldDeferAccountSaveSuccess({
@@ -2598,28 +2600,28 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
-      "https://api.example.com",
-      "Example",
-      "saved-user",
-      "saved-token",
-      "12",
-      "7",
-      "",
-      [],
-      expect.any(Object),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "saved-user",
+      accessToken: "saved-token",
+      userId: "12",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
         skipAutoProvisionKeyOnAccountAdd: true,
       },
-    )
+    })
     expect(mockEnsureAccountKey).toHaveBeenCalledWith(
       accountStorage.convertToDisplayData(savedSiteAccount),
       { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
@@ -3004,15 +3006,22 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   })
 
-  it.each(["inventory", "one-time", "unattributed"])(
-    "waits for Sub2API %s creation and acknowledgement before quick-config",
-    async (kind) => {
+  it.each(
+    [SITE_TYPES.SUB2API, SITE_TYPES.NEW_API].flatMap((siteType) =>
+      ["inventory", "one-time", "unattributed"].map((kind) => ({
+        siteType,
+        kind,
+      })),
+    ),
+  )(
+    "waits for $siteType $kind creation and acknowledgement before quick-config",
+    async ({ siteType, kind }) => {
       const savedSiteAccount = buildSiteAccount({
         id: "saved-account-id",
         site_name: "Sub2API",
         site_url: "https://sub2.example.com",
         health: { status: SiteHealthStatus.Healthy },
-        site_type: SITE_TYPES.SUB2API,
+        site_type: siteType,
         exchange_rate: 7,
         authType: AuthTypeEnum.AccessToken,
         account_info: {
@@ -3024,7 +3033,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       }) as SiteAccount
       const savedDisplayData = buildDisplayAccount({
         name: "Sub2API",
-        siteType: SITE_TYPES.SUB2API,
+        siteType: siteType,
         baseUrl: "https://sub2.example.com",
         token: "sub-token",
         userId: "14",
@@ -3059,23 +3068,23 @@ describe("useAccountDialog save and auto-config flows", () => {
         result.current.setters.setAccessToken("sub-token")
         result.current.setters.setUserId("14")
         result.current.setters.setExchangeRate("7")
-        result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        result.current.setters.setSiteType(siteType)
       })
 
       await act(async () => {
         await result.current.handlers.handleAutoConfig()
       })
 
-      expect(result.current.state.postSaveSub2ApiAccount).toEqual(
+      expect(result.current.state.postSaveKeyInputAccount).toEqual(
         savedDisplayData,
       )
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
       )
       expect(mockOpenWithAccount).not.toHaveBeenCalled()
 
       await act(async () => {
-        await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
+        await result.current.handlers.handlePostSaveKeyInputTokenCreated(
           kind === "inventory"
             ? buildNewApiKeyCreationResult(savedDisplayData, createdToken)
             : {
@@ -3118,7 +3127,7 @@ describe("useAccountDialog save and auto-config flows", () => {
           result.current.handlers.handlePostSaveOneTimeSecretClose(),
         )
       }
-      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
       if (kind === "unattributed") {
         expect(mockOpenWithCredentials).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -3220,11 +3229,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
     )
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+      await result.current.handlers.handlePostSaveKeyInputTokenCreated({
         ref: buildNewApiKeyCreationResult(
           savedDisplayData,
           buildToken({ id: 104 }),
@@ -3322,7 +3331,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+      await result.current.handlers.handlePostSaveKeyInputTokenCreated({
         ref: buildNewApiKeyCreationResult(
           savedDisplayData,
           buildToken({ id: 104 }),
@@ -3427,13 +3436,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
     )
 
     let recoverPromise: Promise<void> | undefined
     await act(async () => {
       recoverPromise =
-        result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+        result.current.handlers.handlePostSaveKeyInputTokenCreated({
           ref: buildNewApiKeyCreationResult(
             savedDisplayData,
             buildToken({ id: 104 }),
@@ -3459,8 +3468,8 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
-      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
     })
 
     await act(async () => {
@@ -3544,19 +3553,19 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
     )
 
     await expect(
       act(async () => {
-        await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
+        await result.current.handlers.handlePostSaveKeyInputTokenCreated(
           buildNewApiKeyCreationResult(savedDisplayData, createdToken),
         )
       }),
     ).resolves.toBeUndefined()
 
     await waitFor(() => {
-      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
       )
@@ -3621,18 +3630,18 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveSub2ApiAccount).toEqual(
+    expect(result.current.state.postSaveKeyInputAccount).toEqual(
       savedDisplayData,
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
     )
 
     await act(async () => {
       result.current.handlers.handleClose()
     })
 
-    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+    expect(result.current.state.postSaveKeyInputAccount).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -3694,15 +3703,15 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
     )
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenDialogClose()
+      await result.current.handlers.handlePostSaveKeyInputTokenDialogClose()
     })
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
-    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+    expect(result.current.state.postSaveKeyInputAccount).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -3837,10 +3846,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    const firstSessionId = result.current.state.postSaveSub2ApiDialogSessionId
+    const firstSessionId = result.current.state.postSaveKeyInputSessionId
     expect(firstSessionId).not.toBeNull()
     const firstDialogHandlers =
-      result.current.handlers.getPostSaveSub2ApiDialogHandlers(firstSessionId)
+      result.current.handlers.getPostSaveKeyInputDialogHandlers(firstSessionId)
 
     await act(async () => {
       result.current.handlers.handleClose()
@@ -3867,11 +3876,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    const secondSessionId = result.current.state.postSaveSub2ApiDialogSessionId
+    const secondSessionId = result.current.state.postSaveKeyInputSessionId
     expect(secondSessionId).not.toBeNull()
     expect(secondSessionId).not.toBe(firstSessionId)
     const secondDialogHandlers =
-      result.current.handlers.getPostSaveSub2ApiDialogHandlers(secondSessionId)
+      result.current.handlers.getPostSaveKeyInputDialogHandlers(secondSessionId)
 
     const staleToken = buildToken({
       id: 201,
@@ -4119,11 +4128,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setSiteType("one-api")
     })
 
-    await expect(
-      act(async () => {
-        await result.current.handlers.handleSaveAccount()
-      }),
-    ).rejects.toThrow("accountDialog:messages.saveFailed")
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "accountDialog:messages.saveFailed",
+      )
+    })
 
     expect(toast.success).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)
@@ -4207,11 +4216,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setSiteType("one-api")
     })
 
-    await expect(
-      act(async () => {
-        await result.current.handlers.handleSaveAccount()
-      }),
-    ).rejects.toThrow("accountDialog:messages.saveFailed")
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "accountDialog:messages.saveFailed",
+      )
+    })
 
     expect(toast.success).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)

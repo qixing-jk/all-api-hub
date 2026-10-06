@@ -1,4 +1,3 @@
-import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import {
   createLoginProviderClaimGuard,
   LoginProviderClaimConflictError,
@@ -10,6 +9,10 @@ import {
   ACCOUNT_SAVE_FEEDBACK_LEVELS,
 } from "~/services/accounts/accountPersistence/constants"
 import {
+  normalizeAccountSaveInput,
+  type AccountUpdateRequest,
+} from "~/services/accounts/accountPersistence/request"
+import {
   buildAccountPersistenceContext,
   getAccountHealthFailureReason,
   getAccountOperationLogDetails,
@@ -17,24 +20,14 @@ import {
   accountPersistenceLogger as logger,
   prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
-  type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type CheckInConfig,
-  type KimiOpenPlatformAuthConfig,
-  type SiteAccount,
-  type Sub2ApiAuthConfig,
-} from "~/types"
-import type { CheckInMethodSelection } from "~/types/checkIn"
+import { SiteHealthStatus, type SiteAccount } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import type { DeepPartial } from "~/types/utils"
-import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { t } from "~/utils/i18n/core"
 
 /**
@@ -68,66 +61,31 @@ async function saveCheckInDraft(
   }
 }
 
-interface ValidateAndUpdateAccountOptions {
-  deferDataRefresh?: boolean
-  selectionChanged?: boolean
-  discoveryBaseSelection?: CheckInMethodSelection
-  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
-  loadedKimiAuth?: {
-    accessToken: string
-    refreshToken?: string
-    organizationId?: string
-  }
-}
-
-/**
- * 验证并更新账号信息（用于编辑）
- *
- * Re-validates edited account data, refreshes remote metrics, and applies a
- * partial update to the existing account record. Falls back to a config-only
- * update when live data fetching fails.
- * @param accountId - Identifier of the stored account to update.
- * @param url - Updated site URL.
- * @param siteName - Updated display name.
- * @param username - Updated username.
- * @param accessToken - Updated auth token.
- * @param userId - Updated site-scoped account identity.
- * @param exchangeRate - Updated recharge rate string.
- * @param notes - Updated notes.
- * @param tagIds - Updated tag id collection.
- * @param checkInConfig - Updated check-in configuration.
- * @param siteType - Updated site type classification.
- * @param authType - Authentication mode in use.
- * @param cookieAuthSessionCookie - Session cookie for cookie auth.
- * @returns Response describing success/failure and account id.
- */
+/** Validates form data and persists an account update. */
 export async function validateAndUpdateAccount(
-  accountId: string,
-  url: string,
-  siteName: string,
-  username: string,
-  accessToken: string,
-  userId: string,
-  exchangeRate: string,
-  notes: string,
-  tagIds: TagIdsInput,
-  checkInConfig: CheckInConfig,
-  siteType: string,
-  authType: AuthTypeEnum,
-  cookieAuthSessionCookie: string,
-  manualBalanceUsd?: string,
-  excludeFromTotalBalance = false,
-  excludeFromTodayIncome = false,
-  sub2apiAuth?: Sub2ApiAuthConfig,
-  options: ValidateAndUpdateAccountOptions = {},
+  request: AccountUpdateRequest,
 ): Promise<AccountSaveResponse> {
-  const sessionCookieHeader =
-    authType === AuthTypeEnum.Cookie
-      ? extractSessionCookieHeader(cookieAuthSessionCookie)
-      : ""
-  const normalizedSiteType = isAccountSiteType(siteType)
-    ? siteType
-    : SITE_TYPES.UNKNOWN
+  const {
+    url,
+    siteName,
+    username,
+    accessToken,
+    userId,
+    exchangeRate,
+    notes,
+    tagIds,
+    checkInConfig,
+    siteType,
+    authType,
+    cookieAuthSessionCookie,
+    manualBalanceUsd,
+    excludeFromTotalBalance,
+    excludeFromTodayIncome,
+    sub2apiAuth,
+    normalizedSiteType,
+    sessionCookieHeader,
+  } = normalizeAccountSaveInput(request)
+  const { accountId, options = {} } = request
 
   // 表单验证
   if (

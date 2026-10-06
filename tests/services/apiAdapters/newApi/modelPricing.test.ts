@@ -21,15 +21,27 @@ const { fetchModelPricingMock, oneHubPricingMock } = vi.hoisted(() => ({
   oneHubPricingMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
-  defaultModelPricingImplementation: {
-    fetchModelPricing: fetchModelPricingMock,
-  },
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/default/modelPricing",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/modelPricing")
+    >()),
+    defaultModelPricingImplementation: {
+      fetchModelPricing: fetchModelPricingMock,
+    },
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
-  fetchModelPricing: oneHubPricingMock,
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/oneHub",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/oneHub")
+    >()),
+    fetchModelPricing: oneHubPricingMock,
+  }),
+)
 
 const request = {
   baseUrl: "https://pricing.example.invalid",

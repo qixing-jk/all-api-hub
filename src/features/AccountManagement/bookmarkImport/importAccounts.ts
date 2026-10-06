@@ -119,32 +119,33 @@ export async function runBookmarkAccountImport({
       const data = detection.data
       const siteType = resolveSiteType(data.siteType)
       const authType = resolveAuthType(data.authType)
-      const saveResult: AccountSaveResponse = await validateAndSaveAccount(
-        candidate.url,
-        data.siteName.trim(),
-        data.username.trim(),
-        data.accessToken.trim(),
-        data.userId.trim(),
-        data.exchangeRate === null || data.exchangeRate === undefined
-          ? ""
-          : String(data.exchangeRate),
-        "",
-        [],
-        resolveCheckIn(data.checkIn),
-        siteType,
-        authType,
-        "",
-        "",
-        false,
-        false,
-        data.sub2apiAuth,
-        {
+      const saveResult: AccountSaveResponse = await validateAndSaveAccount({
+        url: candidate.url,
+        siteName: data.siteName.trim(),
+        username: data.username.trim(),
+        accessToken: data.accessToken.trim(),
+        userId: data.userId.trim(),
+        exchangeRate:
+          data.exchangeRate === null || data.exchangeRate === undefined
+            ? ""
+            : String(data.exchangeRate),
+        notes: "",
+        tagIds: [],
+        checkInConfig: resolveCheckIn(data.checkIn),
+        siteType: siteType,
+        authType: authType,
+        cookieAuthSessionCookie: "",
+        manualBalanceUsd: "",
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        sub2apiAuth: data.sub2apiAuth,
+        options: {
           deferDataRefresh: true,
           ...(data.kimiOpenPlatformAuth
             ? { kimiOpenPlatformAuth: data.kimiOpenPlatformAuth }
             : {}),
         },
-      )
+      })
 
       if (!saveResult.success) {
         rows.push(createFailureRow(candidate, "save", data))

@@ -6,7 +6,6 @@ import {
 import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/accountLogin"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import { laoZhangAccountAnnouncements } from "./accountAnnouncements"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
 import { createNewApiAccountCompletion } from "./accountCompletion"
 import { createNewApiAccountData } from "./accountData"
@@ -17,6 +16,7 @@ import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
 import { createNewApiSiteNotice } from "./siteNotice"
 import { newApiSiteStructuredAnnouncements } from "./siteStructuredAnnouncements"
+import { getNewApiVariantRegistration } from "./variantRegistration"
 
 export const createNewApiCapabilities = (
   siteType: AccountSiteType = SITE_TYPES.NEW_API,
@@ -28,8 +28,8 @@ export const createNewApiCapabilities = (
     notice: createNewApiSiteNotice(siteType),
   },
   account: {
-    ...(siteType === SITE_TYPES.LAOZHANG
-      ? { announcements: laoZhangAccountAnnouncements }
+    ...(getNewApiVariantRegistration(siteType).announcements
+      ? { announcements: getNewApiVariantRegistration(siteType).announcements }
       : {}),
     login: createNewApiAccountLogin(siteType),
     data: createNewApiAccountData(siteType),

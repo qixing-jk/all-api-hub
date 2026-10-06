@@ -409,11 +409,14 @@ export class ModelSyncService {
         const allowListedModels = this.filterAllowedModels(fetchedModels)
         const probeFilterCache = new Map<string, boolean>()
         const probeFilterAbort = this.createProbeFilterAbortSignal()
+        const capabilities = getSiteTypeCapabilities(
+          this.managedSiteConfig.siteType,
+        ).managedSites
         const probeContext: ProbeFilterContext = {
           channel,
           managedConfig: this.managedSiteConfig,
-          matching: getSiteTypeCapabilities(this.managedSiteConfig.siteType)
-            .managedSites?.matching,
+          matching: capabilities?.matching,
+          models: capabilities?.models,
           cache: probeFilterCache,
           abortSignal: probeFilterAbort.signal,
           protectionBypassExecution: this.protectionBypassExecution,

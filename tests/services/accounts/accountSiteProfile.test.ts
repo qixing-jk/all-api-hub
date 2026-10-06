@@ -295,6 +295,18 @@ describe("accountSiteProfile", () => {
     ).toBe(ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit)
   })
 
+  it.each([SITE_TYPES.KIMI, SITE_TYPES.KIMI_GLOBAL])(
+    "declares %s organization sessions in its product profile",
+    (siteType) => {
+      expect(getAccountSiteProductProfile(siteType).authSession.kind).toBe(
+        "kimi_refresh_token",
+      )
+      expect(shouldDecorateAccountApiRequestWithAuthSession(siteType)).toBe(
+        false,
+      )
+    },
+  )
+
   it("normalizes supplemental auth only when the product profile permits it", () => {
     expect(
       normalizeAccountSiteSupplementalAuth({
@@ -331,6 +343,18 @@ describe("accountSiteProfile", () => {
       }),
     ).toEqual({})
   })
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "omits invalid persisted session expiry %s while retaining its refresh token",
+    (tokenExpiresAt) => {
+      expect(
+        normalizeAccountSiteSupplementalAuth({
+          siteType: SITE_TYPES.SUB2API,
+          sub2apiAuth: { refreshToken: " refresh-token ", tokenExpiresAt },
+        }),
+      ).toEqual({ sub2apiAuth: { refreshToken: "refresh-token" } })
+    },
+  )
 
   it("allows account API request auth-session decoration only when profile permits it", () => {
     expect(

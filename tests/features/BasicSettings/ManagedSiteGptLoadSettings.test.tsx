@@ -6,7 +6,7 @@ import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import GptLoadSettings from "~/features/BasicSettings/components/tabs/ManagedSite/GptLoadSettings"
-import { managedSiteGptLoadSearchControls } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteGptLoad.search"
+import { gptLoadSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteGptLoad.search"
 import toast from "~/lib/notify"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { server } from "~~/tests/msw/server"
@@ -119,7 +119,7 @@ describe("gpt-load managed-site settings", () => {
     // panel adds a row without onboarding value. The channel workspace toolbar
     // owns that jump (openChannelConsole).
     expect(
-      managedSiteGptLoadSearchControls.map((definition) => definition.targetId),
+      gptLoadSettingsSearch.controls.map((definition) => definition.targetId),
     ).toEqual([
       SETTINGS_ANCHORS.GPT_LOAD_BASE_URL,
       SETTINGS_ANCHORS.GPT_LOAD_MANAGEMENT_KEY,
@@ -135,7 +135,7 @@ describe("gpt-load managed-site settings", () => {
   })
 
   it("shows the entries only for the gpt-load managed-site selection", () => {
-    const visibility = atIndex(managedSiteGptLoadSearchControls, 0).isVisible!
+    const visibility = atIndex(gptLoadSettingsSearch.controls, 0).isVisible!
     expect(visibility({ managedSiteType: SITE_TYPES.GPT_LOAD } as any)).toBe(
       true,
     )

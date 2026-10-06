@@ -1,6 +1,7 @@
 import type { BrowserContext, Route, Worker } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
@@ -23,6 +24,7 @@ import {
   getServiceWorker,
   requestAndExpectOptionalPermissions,
 } from "~~/e2e/utils/extensionState"
+import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
 
 const MOCKED_MULTI_ACCOUNT_SITE_URL = "https://multi-account.example.com"
 const MOCKED_ACCOUNT_BY_ACCESS_TOKEN = {
@@ -280,6 +282,80 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
       }),
     ]),
   )
+})
+
+test("imports browser session cookies into the manual form and saves a cookie account", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [])
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: { enabled: true },
+    warnOnDuplicateAccountAdd: true,
+    autoProvisionKeyOnAccountAdd: false,
+  })
+  await openAccountManagementPage({ page, extensionId })
+  const optionalPermissions = await getManifestOptionalPermissions(page)
+  await requestAndExpectOptionalPermissions(
+    page,
+    getCookieAuthOptionalPermissions(optionalPermissions),
+  )
+  await installMockedTempWindowCookieAuthBridge(serviceWorker)
+  await context.addCookies([
+    {
+      name: "session",
+      value: "user-a",
+      url: MOCKED_MULTI_ACCOUNT_SITE_URL,
+      httpOnly: true,
+    },
+    { name: "uid", value: "201", url: MOCKED_MULTI_ACCOUNT_SITE_URL },
+  ])
+
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(MOCKED_MULTI_ACCOUNT_SITE_URL)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger).click()
+  await page
+    .getByRole("option", { name: "Cookie Authentication", exact: true })
+    .click()
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton).click()
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger).click()
+  await page
+    .getByRole("option", { name: SITE_TYPES.NEW_API, exact: true })
+    .click()
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+    .fill("Imported Cookie Account")
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput)
+    .fill("cookie-user-a")
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput).fill("201")
+  await dialog.getByPlaceholder("Please enter exchange rate").fill("7")
+  const cookieInput = dialog.getByPlaceholder("Paste Cookie header value")
+  await expect(cookieInput).toBeEmpty()
+  await dialog
+    .getByRole("button", { name: "Import from current login", exact: true })
+    .click()
+  await expect(cookieInput).toHaveValue("session=user-a")
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
+  await expect(dialog).toBeHidden()
+  await expect
+    .poll(async () => readStoredAccounts(serviceWorker))
+    .toEqual([
+      expect.objectContaining({
+        site_url: MOCKED_MULTI_ACCOUNT_SITE_URL,
+        authType: AuthTypeEnum.Cookie,
+        cookieAuth: { sessionCookie: "session=user-a" },
+        account_info: expect.objectContaining({
+          id: "201",
+          username: "cookie-user-a",
+        }),
+      }),
+    ])
 })
 
 test("cookie bridge stops authenticating removed rules and isolates tab replacements", async ({

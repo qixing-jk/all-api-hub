@@ -11,7 +11,6 @@ import {
   normalizeAccountDialogDraftForSitePolicy,
   shouldAutoImportCookieAuthForAccountDialogSite,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
-  shouldOpenSub2ApiTokenDialogForAccountDialogSite,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
@@ -354,39 +353,7 @@ describe("Account Dialog site policy", () => {
     ).toBe(true)
   })
 
-  it("keeps post-save decisions policy-driven", () => {
-    expect(
-      shouldOpenSub2ApiTokenDialogForAccountDialogSite({
-        policy: getAccountDialogSitePolicy(SITE_TYPES.SUB2API),
-        skipSub2ApiKeyPrompt: false,
-        hasDisplayData: true,
-      }),
-    ).toBe(true)
-
-    expect(
-      shouldOpenSub2ApiTokenDialogForAccountDialogSite({
-        policy: getAccountDialogSitePolicy(SITE_TYPES.SUB2API),
-        skipSub2ApiKeyPrompt: true,
-        hasDisplayData: true,
-      }),
-    ).toBe(false)
-
-    expect(
-      shouldOpenSub2ApiTokenDialogForAccountDialogSite({
-        policy: getAccountDialogSitePolicy(SITE_TYPES.UNKNOWN),
-        skipSub2ApiKeyPrompt: false,
-        hasDisplayData: true,
-      }),
-    ).toBe(false)
-
-    expect(
-      shouldOpenSub2ApiTokenDialogForAccountDialogSite({
-        policy: getAccountDialogSitePolicy(SITE_TYPES.SUB2API),
-        skipSub2ApiKeyPrompt: false,
-        hasDisplayData: false,
-      }),
-    ).toBe(false)
-
+  it("keeps deferred save decisions policy-driven", () => {
     expect(
       shouldDeferAccountSaveSuccessForAccountDialogSite({
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),

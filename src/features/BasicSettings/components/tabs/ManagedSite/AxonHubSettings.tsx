@@ -6,15 +6,15 @@ import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 const isLikelyCorsSetupError = (message: string) =>
   /cors|failed to fetch|network|http 403|forbidden/i.test(message)
@@ -46,41 +46,32 @@ export default function AxonHubSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.axonHub,
+    defaults: DEFAULT_PREFERENCES.axonHub,
+    reset: resetAxonHubConfig,
+    fields: {
+      baseUrl: {
+        setting: t("axonHub.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateAxonHubBaseUrl(value, options),
+      },
+      email: {
+        setting: t("axonHub.fields.emailLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateAxonHubEmail(value, options),
+      },
+      password: {
+        setting: t("axonHub.fields.passwordLabel"),
+        update: (value, options) => updateAxonHubPassword(value, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
-
-  const handleBaseUrlChange = async (url: string) => {
-    const trimmedUrl = url.trim()
-    if (trimmedUrl === axonHubBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("axonHub.fields.baseUrlLabel"),
-      update: (options) => updateAxonHubBaseUrl(trimmedUrl, options),
-    })
-  }
-
-  const handleEmailChange = async (email: string) => {
-    const trimmedEmail = email.trim()
-    if (trimmedEmail === axonHubEmail) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("axonHub.fields.emailLabel"),
-      update: (options) => updateAxonHubEmail(trimmedEmail, options),
-    })
-  }
-
-  const handlePasswordChange = async (password: string) => {
-    if (password === axonHubPassword) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("axonHub.fields.passwordLabel"),
-      update: (options) => updateAxonHubPassword(password, options),
-    })
-  }
 
   const handleValidateConfig = async () => {
     const trimmedUrl = localConfig.baseUrl.trim()
@@ -126,14 +117,7 @@ export default function AxonHubSettings() {
       id={SETTINGS_ANCHORS.AXON_HUB}
       title={t("axonHub.title")}
       description={t("axonHub.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.axonHub,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.axonHub,
-        reset: resetAxonHubConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -155,7 +139,7 @@ export default function AxonHubSettings() {
                     baseUrl: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={(event) => commitField("baseUrl", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("axonHub.fields.baseUrlPlaceholder")}
               />
@@ -178,7 +162,7 @@ export default function AxonHubSettings() {
                     email: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleEmailChange(event.target.value)}
+                onBlur={(event) => commitField("email", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("axonHub.fields.emailPlaceholder")}
               />
@@ -206,7 +190,7 @@ export default function AxonHubSettings() {
                     password: event.target.value,
                   }))
                 }
-                onBlur={(event) => handlePasswordChange(event.target.value)}
+                onBlur={(event) => commitField("password", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("axonHub.fields.passwordPlaceholder")}
               />

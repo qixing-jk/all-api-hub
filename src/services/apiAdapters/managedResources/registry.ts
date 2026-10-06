@@ -13,18 +13,20 @@ import { omniRouteManagedResourceRegistration } from "./omniroute"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
 import { veloeraManagedResourceRegistration } from "./veloera"
 
-const MANAGED_RESOURCE_REGISTRATIONS = [
-  cliProxyApiManagedResourceRegistration,
-  newApiManagedResourceRegistration,
-  octopusManagedResourceRegistration,
-  axonHubManagedResourceRegistration,
-  claudeCodeHubManagedResourceRegistration,
-  doneHubManagedResourceRegistration,
-  sub2ApiManagedResourceRegistration,
-  veloeraManagedResourceRegistration,
-  omniRouteManagedResourceRegistration,
-  gptLoadManagedResourceRegistration,
-] satisfies readonly ManagedResourceRegistration[]
+/** Native registrations, also used to verify completeness against product declarations. */
+export const managedResourceRegistrations: readonly ManagedResourceRegistration[] =
+  [
+    cliProxyApiManagedResourceRegistration,
+    newApiManagedResourceRegistration,
+    octopusManagedResourceRegistration,
+    axonHubManagedResourceRegistration,
+    claudeCodeHubManagedResourceRegistration,
+    doneHubManagedResourceRegistration,
+    sub2ApiManagedResourceRegistration,
+    veloeraManagedResourceRegistration,
+    omniRouteManagedResourceRegistration,
+    gptLoadManagedResourceRegistration,
+  ]
 
 const managedResourceKey = (
   siteType: ManagedSiteType,
@@ -38,7 +40,7 @@ export function getManagedResourceRegistration(
 ): ManagedResourceRegistration | null {
   const key = managedResourceKey(siteType, kind)
   return (
-    MANAGED_RESOURCE_REGISTRATIONS.find(
+    managedResourceRegistrations.find(
       (registration) =>
         managedResourceKey(registration.siteType, registration.kind) === key,
     ) ?? null

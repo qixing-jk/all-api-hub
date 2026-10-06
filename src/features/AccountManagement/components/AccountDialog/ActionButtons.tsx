@@ -94,8 +94,8 @@ export default function ActionButtons({
     [ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement]: t(
       "accountDialog:actions.workflow.waitingForOneTimeKey",
     ),
-    [ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection]: t(
-      "accountDialog:actions.workflow.waitingForSub2ApiGroup",
+    [ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput]: t(
+      "accountDialog:actions.workflow.waitingForKeyInput",
     ),
     [ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog]: t(
       "accountDialog:actions.workflow.openingManagedSiteDialog",

@@ -94,7 +94,7 @@ describe("runBookmarkAccountImport", () => {
       }),
       validateAndSaveAccount,
     })
-    expect(validateAndSaveAccount.mock.calls[0]?.[16]).toEqual({
+    expect(validateAndSaveAccount.mock.calls[0]?.[0]?.options).toEqual({
       deferDataRefresh: true,
       kimiOpenPlatformAuth,
     })
@@ -291,27 +291,27 @@ describe("runBookmarkAccountImport", () => {
       "https://alpha.example.invalid",
       "https://beta.example.invalid",
     ])
-    expect(validateAndSaveAccount).toHaveBeenCalledWith(
-      "https://alpha.example.invalid",
-      "Alpha",
-      "alpha-user",
-      "alpha-token",
-      "alpha-id",
-      "7",
-      "",
-      [],
-      draft.checkIn,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(validateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://alpha.example.invalid",
+      siteName: "Alpha",
+      username: "alpha-user",
+      accessToken: "alpha-token",
+      userId: "alpha-id",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: draft.checkIn,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
       },
-    )
+    })
     expect(onProgress).toHaveBeenCalledTimes(2)
     expect(onProgress.mock.calls.map(([progress]) => progress)).toEqual([
       {
@@ -461,27 +461,27 @@ describe("runBookmarkAccountImport", () => {
       validateAndSaveAccount,
     })
 
-    expect(validateAndSaveAccount).toHaveBeenCalledWith(
-      "https://fallback.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "id",
-      "",
-      "",
-      [],
-      draft.checkIn,
-      SITE_TYPES.UNKNOWN,
-      AuthTypeEnum.AccessToken,
-      "",
-      "",
-      false,
-      false,
-      undefined,
-      {
+    expect(validateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://fallback.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "id",
+      exchangeRate: "",
+      notes: "",
+      tagIds: [],
+      checkInConfig: draft.checkIn,
+      siteType: SITE_TYPES.UNKNOWN,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
         deferDataRefresh: true,
       },
-    )
+    })
     expect(result).toMatchObject({
       successCount: 1,
       failureCount: 1,

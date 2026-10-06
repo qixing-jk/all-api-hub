@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
@@ -135,6 +136,315 @@ describe("useAccountDialog duplicate account warning", () => {
       expect(result.current.state.showManualForm).toBe(true)
     })
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+  })
+
+  it("rejects even an immediate admission when the draft changes before the caller resumes", async () => {
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      const admission = result.current.handlers.handleShowManualForm()
+      result.current.setters.setUrl("https://other.example.com")
+      await admission
+    })
+    expect(result.current.state.showManualForm).toBe(false)
+  })
+
+  it.each([
+    "url",
+    "userId",
+    "accessToken",
+    "siteType",
+    "cookie",
+    "draft-userId",
+    "draft-siteType",
+  ] as const)(
+    "cancels the pending confirmation when %s changes",
+    async (field) => {
+      await accountStorage.addAccount(
+        buildSiteAccount({ site_url: "https://api.example.com" }),
+      )
+      const { result } = await renderDuplicateWarningHook()
+      await act(async () => {
+        result.current.setters.setUrl("https://api.example.com")
+        result.current.setters.setUserId(defaultAccountInfo.id)
+      })
+      let attempt!: Promise<void>
+      act(() => {
+        attempt = result.current.handlers.handleShowManualForm()
+      })
+      await waitFor(() =>
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+      )
+      act(() => {
+        if (field === "url")
+          result.current.setters.setUrl("https://other.example.com")
+        else if (field === "userId")
+          result.current.setters.setUserId("other-user")
+        else if (field === "accessToken")
+          result.current.setters.setAccessToken("other-token")
+        else if (field === "siteType")
+          result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        else if (field === "draft-userId")
+          result.current.setters.setDraftPartial({ userId: "other-user" })
+        else if (field === "draft-siteType")
+          result.current.setters.setDraftPartial({
+            siteType: SITE_TYPES.SUB2API,
+          })
+        else result.current.setters.setCookieAuthSessionCookie("session=other")
+      })
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningContinue()
+        await attempt
+      })
+      expect(result.current.state.showManualForm).toBe(false)
+    },
+  )
+
+  it("keeps current manual admission available when duplicate storage lookup fails", async () => {
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setUserId(defaultAccountInfo.id)
+    })
+    const lookup = vi
+      .spyOn(accountQueries, "getAllAccountsOrThrow")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    try {
+      await act(async () => {
+        await result.current.handlers.handleShowManualForm()
+      })
+      expect(result.current.state.showManualForm).toBe(true)
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it("ignores a duplicate lookup that finishes after closing", async () => {
+    const existing = buildSiteAccount({ site_url: "https://api.example.com" })
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl(existing.site_url)
+      result.current.setters.setUserId(existing.account_info.id)
+    })
+    let resolveLookup!: (value: (typeof existing)[]) => void
+    const lookup = vi
+      .spyOn(accountQueries, "getAllAccountsOrThrow")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveLookup = resolve
+          }),
+      )
+    try {
+      let attempt!: Promise<void>
+      act(() => {
+        attempt = result.current.handlers.handleShowManualForm()
+      })
+      await act(async () => {
+        await result.current.handlers.handleClose()
+      })
+      await act(async () => {
+        resolveLookup([existing])
+        await Promise.resolve()
+      })
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+      await act(async () => {
+        await attempt
+      })
+      expect(result.current.state.showManualForm).toBe(false)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it("rejects an old lookup after URL changes away and back in one batch", async () => {
+    const existing = buildSiteAccount({ site_url: "https://api.example.com" })
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl(existing.site_url)
+      result.current.setters.setUserId(existing.account_info.id)
+    })
+    let resolveLookup!: (value: (typeof existing)[]) => void
+    const lookup = vi
+      .spyOn(accountQueries, "getAllAccountsOrThrow")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveLookup = resolve
+          }),
+      )
+    try {
+      let attempt!: Promise<void>
+      act(() => {
+        attempt = result.current.handlers.handleShowManualForm()
+      })
+      act(() => {
+        result.current.setters.setUrl("https://other.example.com")
+        result.current.setters.setUrl(existing.site_url)
+      })
+      await act(async () => {
+        resolveLookup([existing])
+        await attempt
+      })
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+      expect(result.current.state.showManualForm).toBe(false)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it("settles a pending confirmation when the dialog unmounts", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({ site_url: "https://api.example.com" }),
+    )
+    const { result, unmount } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setUserId(defaultAccountInfo.id)
+    })
+    let attempt!: Promise<void>
+    act(() => {
+      attempt = result.current.handlers.handleShowManualForm()
+    })
+    await waitFor(() =>
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+    )
+    await act(async () => {
+      unmount()
+      await attempt
+    })
+  })
+
+  it("keeps a newer confirmation when an earlier lookup finishes last", async () => {
+    const existing = buildSiteAccount({ site_url: "https://api.example.com" })
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl(existing.site_url)
+      result.current.setters.setUserId(existing.account_info.id)
+    })
+    let resolveLookup!: (value: (typeof existing)[]) => void
+    const lookup = vi
+      .spyOn(accountQueries, "getAllAccountsOrThrow")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveLookup = resolve
+          }),
+      )
+      .mockResolvedValueOnce([existing])
+    try {
+      let earlier!: Promise<void>
+      let newer!: Promise<void>
+      act(() => {
+        earlier = result.current.handlers.handleShowManualForm()
+        newer = result.current.handlers.handleShowManualForm()
+      })
+      await waitFor(() =>
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+      )
+      await act(async () => {
+        resolveLookup([existing])
+        await earlier
+      })
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningContinue()
+        await newer
+      })
+      expect(result.current.state.showManualForm).toBe(true)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it("does not confirm a replacement prompt when an earlier preference write finishes", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({ site_url: "https://api.example.com" }),
+    )
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setUserId(defaultAccountInfo.id)
+    })
+    let first!: Promise<void>
+    act(() => {
+      first = result.current.handlers.handleShowManualForm()
+    })
+    await waitFor(() =>
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+    )
+    const preferences = await userPreferences.getPreferences()
+    let resolveWrite!: (
+      value: Awaited<
+        ReturnType<typeof userPreferences.updateWarnOnDuplicateAccountAdd>
+      >,
+    ) => void
+    const write = vi
+      .spyOn(userPreferences, "updateWarnOnDuplicateAccountAdd")
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveWrite = resolve
+          }),
+      )
+    try {
+      let disabling!: Promise<void>
+      let replacement!: Promise<void>
+      act(() => {
+        disabling =
+          result.current.handlers.handleDuplicateAccountWarningDisableAndContinue()
+      })
+      act(() => {
+        replacement = result.current.handlers.handleShowManualForm()
+      })
+      await act(async () => {
+        await first
+      })
+      await waitFor(() =>
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+      )
+      await act(async () => {
+        resolveWrite({
+          ok: true,
+          preferences: { ...preferences, warnOnDuplicateAccountAdd: false },
+        })
+        await disabling
+      })
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      expect(result.current.state.showManualForm).toBe(false)
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningCancel()
+        await replacement
+      })
+    } finally {
+      write.mockRestore()
+    }
+  })
+
+  it("cancels saving when the credential changes while confirmation is pending", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({ site_url: "https://api.example.com" }),
+    )
+    const { result, onSuccess } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setUserId(defaultAccountInfo.id)
+      result.current.setters.setAccessToken("original-token")
+    })
+    let saving!: ReturnType<typeof result.current.handlers.handleSaveAccount>
+    act(() => {
+      saving = result.current.handlers.handleSaveAccount()
+    })
+    await waitFor(() =>
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true),
+    )
+    await act(async () => {
+      result.current.setters.setAccessToken("replacement-token")
+      expect(await saving).toBeNull()
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(await accountStorage.getAllAccounts()).toHaveLength(1)
   })
 
   it("checks the completed account identity before saving a manual addition", async () => {

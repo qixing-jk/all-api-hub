@@ -13,12 +13,10 @@ import {
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -26,7 +24,9 @@ import {
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
@@ -72,10 +72,43 @@ export default function NewApiSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.newApi,
+    defaults: DEFAULT_PREFERENCES.newApi,
+    reset: resetNewApiConfig,
+    fields: {
+      baseUrl: {
+        setting: t("newApi.fields.baseUrlLabel"),
+        update: (value, options) => updateNewApiBaseUrl(value, options),
+      },
+      adminToken: {
+        setting: t("newApi.fields.adminTokenLabel"),
+        update: (value, options) => updateNewApiAdminToken(value, options),
+      },
+      userId: {
+        setting: t("newApi.fields.userIdLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.UserId,
+        update: (value, options) => updateNewApiUserId(value, options),
+      },
+      username: {
+        setting: t("newApi.fields.usernameLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedDraft,
+        update: (value, options) => updateNewApiUsername(value, options),
+      },
+      password: {
+        setting: t("newApi.fields.passwordLabel"),
+        update: (value, options) => updateNewApiPassword(value, options),
+      },
+      totpSecret: {
+        setting: t("newApi.fields.totpSecretLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedDraft,
+        update: (value, options) => updateNewApiTotpSecret(value, options),
+      },
+    },
   })
   const verification = useNewApiManagedVerification()
   const localBaseUrl = localConfig.baseUrl
@@ -84,68 +117,6 @@ export default function NewApiSettings() {
   const localUsername = localConfig.username
   const localPassword = localConfig.password
   const localTotpSecret = localConfig.totpSecret
-
-  const handleNewApiBaseUrlChange = async (url: string) => {
-    if (url === newApiBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.baseUrlLabel"),
-      update: (options) => updateNewApiBaseUrl(url, options),
-    })
-  }
-
-  const handleNewApiAdminTokenChange = async (token: string) => {
-    if (token === newApiAdminToken) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.adminTokenLabel"),
-      update: (options) => updateNewApiAdminToken(token, options),
-    })
-  }
-
-  const handleNewApiUserIdChange = async (id: string) => {
-    const trimmedId = id.trim()
-    if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
-
-    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
-    if (trimmedId === newApiUserId) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.userIdLabel"),
-      update: (options) => updateNewApiUserId(trimmedId, options),
-    })
-  }
-
-  const handleNewApiUsernameChange = async (username: string) => {
-    const trimmedUsername = username.trim()
-    setLocalConfig((prev) => ({ ...prev, username: trimmedUsername }))
-    if (trimmedUsername === newApiUsername) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.usernameLabel"),
-      update: (options) => updateNewApiUsername(trimmedUsername, options),
-    })
-  }
-
-  const handleNewApiPasswordChange = async (password: string) => {
-    if (password === newApiPassword) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.passwordLabel"),
-      update: (options) => updateNewApiPassword(password, options),
-    })
-  }
-
-  const handleNewApiTotpSecretChange = async (totpSecret: string) => {
-    const trimmedTotpSecret = totpSecret.trim()
-    setLocalConfig((prev) => ({ ...prev, totpSecret: trimmedTotpSecret }))
-    if (trimmedTotpSecret === newApiTotpSecret) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("newApi.fields.totpSecretLabel"),
-      update: (options) => updateNewApiTotpSecret(trimmedTotpSecret, options),
-    })
-  }
 
   const trimmedBaseUrl = localBaseUrl.trim()
   const userIdError =
@@ -192,14 +163,7 @@ export default function NewApiSettings() {
       id="new-api"
       title={t("newApi.title")}
       description={t("newApi.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.newApi,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.newApi,
-        reset: resetNewApiConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -219,7 +183,7 @@ export default function NewApiSettings() {
                     baseUrl: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleNewApiBaseUrlChange(e.target.value)}
+                onBlur={(e) => commitField("baseUrl", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("newApi.fields.baseUrlPlaceholder")}
               />
@@ -263,7 +227,7 @@ export default function NewApiSettings() {
                       adminToken: e.target.value,
                     }))
                   }
-                  onBlur={(e) => handleNewApiAdminTokenChange(e.target.value)}
+                  onBlur={(e) => commitField("adminToken", e.target.value)}
                   onKeyDown={blurInputOnEnter}
                 />
               </div>
@@ -286,7 +250,7 @@ export default function NewApiSettings() {
                     userId: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleNewApiUserIdChange(e.target.value)}
+                onBlur={(e) => commitField("userId", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
@@ -308,7 +272,7 @@ export default function NewApiSettings() {
                     username: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleNewApiUsernameChange(e.target.value)}
+                onBlur={(e) => commitField("username", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("newApi.fields.usernamePlaceholder")}
               />
@@ -335,7 +299,7 @@ export default function NewApiSettings() {
                       password: e.target.value,
                     }))
                   }
-                  onBlur={(e) => handleNewApiPasswordChange(e.target.value)}
+                  onBlur={(e) => commitField("password", e.target.value)}
                   onKeyDown={blurInputOnEnter}
                   placeholder={t("newApi.fields.passwordPlaceholder")}
                 />
@@ -363,7 +327,7 @@ export default function NewApiSettings() {
                       totpSecret: e.target.value,
                     }))
                   }
-                  onBlur={(e) => handleNewApiTotpSecretChange(e.target.value)}
+                  onBlur={(e) => commitField("totpSecret", e.target.value)}
                   onKeyDown={blurInputOnEnter}
                   placeholder={t("newApi.fields.totpSecretPlaceholder")}
                 />

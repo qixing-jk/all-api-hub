@@ -6,7 +6,7 @@ export const ACCOUNT_POST_SAVE_WORKFLOW_STEPS = {
   CreatingToken: "creating_token",
   WaitingForOneTimeKeyAcknowledgement:
     "waiting_for_one_time_key_acknowledgement",
-  WaitingForSub2ApiGroupSelection: "waiting_for_sub2api_group_selection",
+  WaitingForKeyInput: "waiting_for_key_input",
   OpeningManagedSiteDialog: "opening_managed_site_dialog",
   Completed: "completed",
   Failed: "failed",

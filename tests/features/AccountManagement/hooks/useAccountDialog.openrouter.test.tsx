@@ -144,34 +144,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
   const getLatestValidateAndSaveAccountCall = () => {
     const args = mockValidateAndSaveAccount.mock.calls.at(-1)
     if (!args) throw new Error("Expected validateAndSaveAccount to be called")
-    const [
-      url,
-      siteName,
-      username,
-      accessToken,
-      userId,
-      exchangeRate,
-      notes,
-      tagIds,
-      checkInConfig,
-      siteType,
-      authType,
-      cookieAuthSessionCookie,
-    ] = args
-    return {
-      url,
-      siteName,
-      username,
-      accessToken,
-      userId,
-      exchangeRate,
-      notes,
-      tagIds,
-      checkInConfig,
-      siteType,
-      authType,
-      cookieAuthSessionCookie,
-    }
+    return args[0]
   }
 
   beforeEach(async () => {
@@ -728,13 +701,13 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(popupStartsBeforeOwnerExit).toBe(1)
     expect(providerCallsBeforeOwnerExit).toBe(0)
     expect(isDetectingBeforeOwnerExit).toBe(true)
-    expect(mockGenericAutoDetectAccount).toHaveBeenCalledOnce()
+    expect(mockGenericAutoDetectAccount).not.toHaveBeenCalled()
     expect(mockCompletePopupCriticalFlow).toHaveBeenCalledOnce()
 
     await act(async () => {
       await result.current.handlers.handleAutoDetect()
     })
-    expect(mockGenericAutoDetectAccount).toHaveBeenCalledTimes(2)
+    expect(mockGenericAutoDetectAccount).toHaveBeenCalledOnce()
     expect(mockStartPopupCriticalFlow).toHaveBeenCalledTimes(2)
     expect(mockCompletePopupCriticalFlow).toHaveBeenCalledTimes(2)
     expect(result.current.state.accessToken).toBe(

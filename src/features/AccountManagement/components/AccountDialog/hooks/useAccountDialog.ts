@@ -8,9 +8,7 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
-import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
@@ -29,12 +27,10 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/autoDetectDraft"
 import { useAccountCheckInRedetection } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountCheckInRedetection"
 import {
-  buildSub2ApiAuthFromAccountDialogDraft,
   getAccountDialogSitePolicy,
   normalizeAccountDialogDraftForSitePolicy,
   shouldAutoImportCookieAuthForAccountDialogSite,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
-  shouldOpenSub2ApiTokenDialogForAccountDialogSite,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
@@ -43,54 +39,21 @@ import {
   resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
 import toast from "~/lib/notify"
-import {
-  ACCOUNT_BROWSER_SESSION_SOURCES,
-  resolveAccountBrowserSession,
-  type AccountBrowserSession,
-  type ResolveAccountBrowserSessionOptions,
-} from "~/services/accountBrowserSession"
-import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
+import { type autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
-import {
-  findExactCredentialDuplicateAccountId,
-  usesAccountCredentialIdentity,
-} from "~/services/accounts/accountDedupe"
+import { usesAccountCredentialIdentity } from "~/services/accounts/accountDedupe"
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import {
-  ensureAccountKey,
-  getCreatedAccountRuntimeKey,
-  resolveCreatedAccountRuntimeKey,
-  type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
-import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
 import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
-import {
-  ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
-  type AccountPostSaveWorkflowStep,
-} from "~/services/accounts/accountPostSaveWorkflow"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
-import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { getSiteName } from "~/services/accounts/siteName"
-import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
-import {
-  analyzeAutoDetectError,
-  AutoDetectErrorType,
-  isIdentityKnownAutoDetectFailureReason,
-  type AutoDetectError,
-} from "~/services/accounts/utils/autoDetectUtils"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
-import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createCompatibilityCheckInConfig,
@@ -106,62 +69,27 @@ import {
   getManagedSiteSettingsTarget,
 } from "~/services/managedSites/utils/managedSite"
 import {
-  ensurePermissionsDetailed,
-  hasPermissions,
-  onOptionalPermissionsChanged,
-  OPTIONAL_PERMISSION_IDS,
-  OPTIONAL_PERMISSIONS,
-  type ManifestOptionalPermissions,
-} from "~/services/permissions/permissionManager"
-import {
-  completePopupCriticalFlow,
-  POPUP_CRITICAL_FLOWS,
-  startPopupCriticalFlow,
-} from "~/services/popupInterruptionHint"
-import {
-  resolveProductAnalyticsErrorCategoryFromError,
-  type ProductAnalyticsActionInsights,
-} from "~/services/productAnalytics/actions"
-import {
   PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
-  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SITE_TYPES,
-  type ProductAnalyticsErrorCategory,
-  type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
-import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
-import {
-  AuthTypeEnum,
-  type CheckInConfig,
-  type DisplaySiteData,
-  type SiteAccount,
-} from "~/types"
+import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
-import { isExtensionPopup } from "~/utils/browser"
 import {
-  getActiveTabs,
   isMessageReceiverUnavailableError,
-  onTabActivated,
-  onTabUpdated,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { tryParseOrigin } from "~/utils/core/urlParsing"
-import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openSettingsTab, openSettingsTabInNewTab } from "~/utils/navigation"
 
 import {
@@ -174,60 +102,13 @@ import {
   type AccountDialogRecoveryState,
   type AddAccountPrefill,
 } from "../models"
-import {
-  useOpenRouterAccountOnboarding,
-  type OpenRouterOnboardingStart,
-} from "./useOpenRouterAccountOnboarding"
-
-const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
-
-interface CurrentTabCookieImportContext {
-  origin: string
-  tabId?: number
-  incognito?: boolean
-  cookieStoreId?: string
-}
-
-/**
- * Captures the current tab context needed to import cookies from the same browser profile.
- */
-function createCurrentTabCookieImportContext(
-  tab: browser.tabs.Tab,
-  origin: string,
-): CurrentTabCookieImportContext {
-  return {
-    origin,
-    ...(typeof tab.id === "number" ? { tabId: tab.id } : {}),
-    ...(tab.incognito === true ? { incognito: true } : {}),
-    ...(typeof tab.cookieStoreId === "string" && tab.cookieStoreId.trim()
-      ? { cookieStoreId: tab.cookieStoreId.trim() }
-      : {}),
-  }
-}
-
-/**
- * Reuses the active tab only when it belongs to the target origin and browser profile.
- */
-function createCurrentTabBrowserSessionContext(
-  context: CurrentTabCookieImportContext | null,
-  targetUrl: string,
-): ResolveAccountBrowserSessionOptions["currentTab"] | undefined {
-  const targetOrigin = tryParseOrigin(targetUrl)
-  if (
-    !context ||
-    !targetOrigin ||
-    targetOrigin !== context.origin ||
-    typeof context.tabId !== "number"
-  ) {
-    return undefined
-  }
-
-  return {
-    tabId: context.tabId,
-    incognito: context.incognito === true,
-    ...(context.cookieStoreId ? { cookieStoreId: context.cookieStoreId } : {}),
-  }
-}
+import { useAccountAutoDetection } from "./useAccountAutoDetection"
+import { useAccountCookieSession } from "./useAccountCookieSession"
+import { useAccountCurrentTab } from "./useAccountCurrentTab"
+import { useAccountDuplicateConfirmation } from "./useAccountDuplicateConfirmation"
+import { useAccountPostSaveWorkflow } from "./useAccountPostSaveWorkflow"
+import { useOpenRouterAccountOnboarding } from "./useOpenRouterAccountOnboarding"
+import { useSub2ApiAccountSession } from "./useSub2ApiAccountSession"
 
 /**
  * Logger scoped to the account dialog lifecycle. Ensure we never include raw tokens/cookies in log details.
@@ -288,62 +169,6 @@ async function refreshPostSaveAccount(
   }
 }
 
-interface CookieAuthPermissionState {
-  granted: boolean | null
-  pending: boolean
-}
-
-const createInitialCookieAuthPermissionState =
-  (): CookieAuthPermissionState => ({
-    granted: null,
-    pending: false,
-  })
-
-const getCookieAuthAdvancedPermissions = (): ManifestOptionalPermissions[] => {
-  const advancedCandidates: ManifestOptionalPermissions[] = []
-
-  if (
-    OPTIONAL_PERMISSIONS.includes(
-      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
-    )
-  ) {
-    advancedCandidates.push(
-      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
-    )
-  }
-
-  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequest)) {
-    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequest)
-  }
-
-  if (
-    OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
-  ) {
-    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
-  }
-
-  return advancedCandidates
-}
-
-const getCookieAuthPermissions = (): ManifestOptionalPermissions[] => {
-  const permissions: ManifestOptionalPermissions[] = []
-
-  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.Cookies)) {
-    permissions.push(OPTIONAL_PERMISSION_IDS.Cookies)
-  }
-
-  permissions.push(...getCookieAuthAdvancedPermissions())
-
-  return permissions
-}
-
-interface CookieImportResponse {
-  success?: boolean
-  data?: string
-  error?: string
-  errorCode?: string
-}
-
 interface UseAccountDialogProps {
   mode: DialogMode
   account?: DisplaySiteData | null
@@ -359,13 +184,6 @@ interface ManagedSiteConfigPromptState {
   isOpen: boolean
   siteType: ManagedSiteType
   messagesKey: ManagedSiteMessagesKey
-}
-
-interface AihubmixPostSaveKeyPromptState {
-  isOpen: boolean
-  accountId: string | null
-  accountName: string
-  isCreating: boolean
 }
 
 /**
@@ -393,17 +211,25 @@ export function useAccountDialog({
 }: UseAccountDialogProps) {
   const { t, i18n } = useTranslation(["accountDialog", "settings", "messages"])
   const {
-    warnOnDuplicateAccountAdd,
     managedSiteType,
     autoFillCurrentSiteUrlOnAccountAdd,
     autoProvisionKeyOnAccountAdd,
     autoProvisionKeyOnAccountAddMode,
-    updateWarnOnDuplicateAccountAdd,
   } = useUserPreferencesContext()
 
   const [url, setUrl] = useState("")
-  const [isDetecting, setIsDetecting] = useState(false)
-  const [isDetectingSlow, setIsDetectingSlow] = useState(false)
+  const autoDetection = useAccountAutoDetection({
+    isOpen,
+    mode,
+    accountId: account?.id,
+  })
+  const { isDetecting, isDetectingSlow, detectionError } = autoDetection.state
+  const {
+    invalidate: invalidateAutoDetection,
+    reset: resetAutoDetection,
+    clearVerificationError,
+    requireAccessTokenVerification,
+  } = autoDetection
   const [draft, setDraft] = useState<AccountDialogDraft>(
     createEmptyAccountDialogDraft,
   )
@@ -417,11 +243,6 @@ export function useAccountDialog({
   )
   const [isSaving, setIsSaving] = useState(false)
   const [showAccessToken, setShowAccessToken] = useState(false)
-  const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
-    null,
-  )
-  const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
-  const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const {
     recovery: openRouterOnboardingRecovery,
     resetSession: resetOpenRouterOnboardingSession,
@@ -433,35 +254,7 @@ export function useAccountDialog({
     beforeClose: beforeOpenRouterOnboardingClose,
     confirmSavedCredential: confirmSavedOpenRouterCredential,
   } = useOpenRouterAccountOnboarding()
-  const [isImportingCookies, setIsImportingCookies] = useState(false)
-  const [showCookiePermissionWarning, setShowCookiePermissionWarning] =
-    useState(false)
-  const [cookieAuthPermissionState, setCookieAuthPermissionState] =
-    useState<CookieAuthPermissionState>(createInitialCookieAuthPermissionState)
-  const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
-    useState(false)
-  const [accountPostSaveWorkflowStep, setAccountPostSaveWorkflowStep] =
-    useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-  const [postSaveOneTimeSecret, setPostSaveOneTimeSecret] =
-    useState<CreatedRuntimeSecret | null>(null)
-  const [postSaveSub2ApiAccount, setPostSaveSub2ApiAccount] =
-    useState<DisplaySiteData | null>(null)
-  const [postSaveSub2ApiDialogSessionId, setPostSaveSub2ApiDialogSessionId] =
-    useState<number | null>(null)
 
-  const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
-    isOpen: boolean
-    siteUrl: string
-    existingAccountsCount: number
-    existingUsername: string | null
-    existingUserId: string | number | null
-  }>({
-    isOpen: false,
-    siteUrl: "",
-    existingAccountsCount: 0,
-    existingUsername: null,
-    existingUserId: null,
-  })
   const [managedSiteConfigPromptState, setManagedSiteConfigPrompt] =
     useState<ManagedSiteConfigPromptState | null>(null)
   const managedSiteConfigPrompt = {
@@ -477,20 +270,6 @@ export function useAccountDialog({
         )
       : "",
   }
-  const [aihubmixPostSaveKeyPrompt, setAihubmixPostSaveKeyPrompt] =
-    useState<AihubmixPostSaveKeyPromptState>({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
-  const duplicateAccountWarningResolverRef = useRef<
-    ((shouldContinue: boolean) => void) | null
-  >(null)
-  const duplicateAccountWarningAcknowledgedIdentityRef = useRef<{
-    siteUrl: string
-    userId: string
-  } | null>(null)
   const selectedSiteUrlRef = useRef("")
   const loadedKimiAuthRef = useRef<
     | { accessToken: string; refreshToken?: string; organizationId?: string }
@@ -503,16 +282,8 @@ export function useAccountDialog({
   const hasAccountAccessTokenRef = useRef(false)
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
-  const currentTabSiteNameRef = useRef("")
-  const hasConsumedAutoFillCurrentSiteUrlRef = useRef(false)
   const hasExplicitAuthTypeRef = useRef(false)
-  // Serializes ownership of analytics, detection UI, and popup lifecycle
-  // across provider changes until the admitted workflow fully unwinds.
-  const autoDetectInvocationLeaseRef = useRef<symbol | null>(null)
-  // Also invalidates stale results when a reset reuses the same URL.
-  const autoDetectRunGenerationRef = useRef(0)
   const automaticExecutionPreferenceChangedRef = useRef(false)
-  const sub2apiRefreshTokenPreferenceChangedRef = useRef(false)
 
   const siteName = draft.siteName
   const username = draft.username
@@ -531,7 +302,23 @@ export function useAccountDialog({
   const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
   const sub2apiRefreshToken = draft.sub2apiRefreshToken
   const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
-  const currentSitePolicy = getAccountDialogSitePolicy(siteType)
+  const duplicateConfirmation = useAccountDuplicateConfirmation({
+    isOpen,
+    mode,
+    account,
+    url,
+    draft,
+  })
+  const {
+    warning: duplicateAccountWarning,
+    confirm: confirmDuplicateAccount,
+    invalidate: invalidateDuplicateConfirmation,
+    continueConfirmation: handleDuplicateAccountWarningContinue,
+    disableAndContinue: handleDuplicateAccountWarningDisableAndContinue,
+  } = duplicateConfirmation
+  const handleDuplicateAccountWarningCancel = useCallback(() => {
+    invalidateDuplicateConfirmation(true)
+  }, [invalidateDuplicateConfirmation])
   selectedSiteUrlRef.current = url
   selectedSiteTypeRef.current = siteType
   const isDetected =
@@ -593,30 +380,6 @@ export function useAccountDialog({
     discoveryBaseSelectionRef: checkInDiscoveryBaseSelectionRef,
     updateDraft,
   })
-  const setDialogUrl = useCallback(
-    (value: string) => {
-      autoDetectRunGenerationRef.current += 1
-      if (value !== selectedSiteUrlRef.current) {
-        setDetectionError((current) =>
-          current?.type ===
-          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-            ? null
-            : current,
-        )
-      }
-      resetCheckInRedetection()
-      notifyOpenRouterUrlChange(value)
-      if (selectedSiteUrlRef.current.trim() !== value.trim()) {
-        setDraft((prev) => ({
-          ...prev,
-          checkIn: invalidateCheckInDiscovery(prev.checkIn),
-        }))
-      }
-      selectedSiteUrlRef.current = value
-      setUrl(value)
-    },
-    [notifyOpenRouterUrlChange, resetCheckInRedetection],
-  )
   const setSiteName = useCallback(
     (value: string) => {
       updateDraft((prev) => ({ ...prev, siteName: value }))
@@ -637,25 +400,126 @@ export function useAccountDialog({
         siteType: selectedSiteTypeRef.current,
       },
     ) => {
+      invalidateDuplicateConfirmation(true)
       const hasAccessToken = Boolean(value.trim())
       hasAccountAccessTokenRef.current = hasAccessToken
       accountCredentialScopeRef.current = hasAccessToken ? scope : null
       updateDraft((prev) => ({ ...prev, accessToken: value }))
     },
+    [invalidateDuplicateConfirmation, updateDraft],
+  )
+  const currentTab = useAccountCurrentTab({
+    mode,
+    accountId: account?.id,
+    url,
+    setSiteName,
+  })
+  const { currentTabUrl, checkCurrentTab, getCookieImportContextForUrl } =
+    currentTab
+  const {
+    reset: resetCurrentTab,
+    notifyUrlChanged: notifyCurrentTabUrlChanged,
+    rememberCookieStore,
+    getBrowserSessionContext,
+    consumeAutoFill,
+    claimCurrentTab,
+  } = currentTab
+  const applyImportedCookie = useCallback(
+    (value: string) =>
+      updateDraft((prev) => ({ ...prev, cookieAuthSessionCookie: value })),
     [updateDraft],
+  )
+  const cookieSession = useAccountCookieSession({
+    isOpen,
+    mode,
+    accountId: account?.id,
+    url,
+    authType,
+    getContext: getCookieImportContextForUrl,
+    applyCookie: applyImportedCookie,
+  })
+  const {
+    isImportingCookies,
+    showCookiePermissionWarning,
+    cookieAuthPermissionState,
+  } = cookieSession.state
+  const {
+    invalidate: invalidateCookieSession,
+    reset: resetCookieSession,
+    importManually: handleImportCookieAuthSessionCookie,
+    importAutomatically: importCookieAutomatically,
+    requestPermissions: handleRequestCookieAuthPermissions,
+  } = cookieSession
+  const sub2ApiSession = useSub2ApiAccountSession({
+    isOpen,
+    mode,
+    accountId: account?.id,
+    url,
+    draft,
+    updateDraft,
+    updateAccessToken,
+    getCurrentTab: getBrowserSessionContext,
+  })
+  const {
+    isImportingSub2apiSession,
+    handleImportSub2apiSession,
+    handleSub2apiUseRefreshTokenChange,
+    setSub2apiUseRefreshToken,
+    setSub2apiRefreshToken,
+    setSub2apiTokenExpiresAt,
+    invalidate: invalidateSub2ApiSession,
+    reset: resetSub2ApiSession,
+  } = sub2ApiSession
+  const setDialogUrl = useCallback(
+    (value: string) => {
+      invalidateDuplicateConfirmation()
+      invalidateCookieSession()
+      invalidateSub2ApiSession()
+      notifyCurrentTabUrlChanged(value)
+      invalidateAutoDetection()
+      if (value !== selectedSiteUrlRef.current) {
+        clearVerificationError()
+      }
+      resetCheckInRedetection()
+      notifyOpenRouterUrlChange(value)
+      if (selectedSiteUrlRef.current.trim() !== value.trim()) {
+        setDraft((prev) => ({
+          ...prev,
+          checkIn: invalidateCheckInDiscovery(prev.checkIn),
+        }))
+      }
+      selectedSiteUrlRef.current = value
+      setUrl(value)
+    },
+    [
+      invalidateDuplicateConfirmation,
+      invalidateCookieSession,
+      clearVerificationError,
+      invalidateAutoDetection,
+      notifyCurrentTabUrlChanged,
+      invalidateSub2ApiSession,
+      notifyOpenRouterUrlChange,
+      resetCheckInRedetection,
+    ],
   )
   const setAccessToken = useCallback(
     (value: string) => {
+      invalidateSub2ApiSession()
       updateAccessToken(value)
       notifyOpenRouterCredentialChange(value)
     },
-    [notifyOpenRouterCredentialChange, updateAccessToken],
+    [
+      invalidateSub2ApiSession,
+      notifyOpenRouterCredentialChange,
+      updateAccessToken,
+    ],
   )
   const setUserId = useCallback(
     (value: string) => {
+      invalidateDuplicateConfirmation(value.trim() === userId.trim())
       updateDraft((prev) => ({ ...prev, userId: value }))
     },
-    [updateDraft],
+    [invalidateDuplicateConfirmation, userId, updateDraft],
   )
   const setExchangeRate = useCallback(
     (value: string) => {
@@ -732,15 +596,15 @@ export function useAccountDialog({
   )
   const setSiteType = useCallback(
     (value: string) => {
-      resetCheckInRedetection()
       const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
+      invalidateDuplicateConfirmation(
+        nextSiteType === selectedSiteTypeRef.current,
+      )
+      invalidateCookieSession()
+      invalidateSub2ApiSession()
+      resetCheckInRedetection()
       if (nextSiteType !== selectedSiteTypeRef.current) {
-        setDetectionError((current) =>
-          current?.type ===
-          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-            ? null
-            : current,
-        )
+        clearVerificationError()
       }
       const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
       selectedSiteTypeRef.current = nextSiteType
@@ -791,7 +655,11 @@ export function useAccountDialog({
       }
     },
     [
+      invalidateDuplicateConfirmation,
+      invalidateCookieSession,
+      clearVerificationError,
       mode,
+      invalidateSub2ApiSession,
       setDialogUrl,
       notifyOpenRouterSiteChange,
       resetCheckInRedetection,
@@ -803,19 +671,23 @@ export function useAccountDialog({
   const setAuthType = useCallback(
     (value: AuthTypeEnum) => {
       if (!isAccountAuthType(value)) return
+      invalidateDuplicateConfirmation(true)
+      invalidateCookieSession()
+      invalidateSub2ApiSession()
 
       if (value !== AuthTypeEnum.AccessToken) {
-        setDetectionError((current) =>
-          current?.type ===
-          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-            ? null
-            : current,
-        )
+        clearVerificationError()
       }
       hasExplicitAuthTypeRef.current = true
       updateDraft((prev) => ({ ...prev, authType: value }))
     },
-    [updateDraft],
+    [
+      invalidateDuplicateConfirmation,
+      invalidateCookieSession,
+      clearVerificationError,
+      invalidateSub2ApiSession,
+      updateDraft,
+    ],
   )
   const applyAuthDefaultForUrl = useCallback(
     (siteUrl: string) => {
@@ -830,294 +702,28 @@ export function useAccountDialog({
   )
   const setCookieAuthSessionCookie = useCallback(
     (value: string) => {
+      invalidateDuplicateConfirmation(true)
+      invalidateCookieSession()
       updateDraft((prev) => ({ ...prev, cookieAuthSessionCookie: value }))
     },
-    [updateDraft],
-  )
-  const refreshCookieAuthPermissionState = useCallback(async () => {
-    try {
-      const cookieAuthPermissions = getCookieAuthPermissions()
-      const granted = await hasPermissions(cookieAuthPermissions)
-
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted,
-      }))
-    } catch (error) {
-      logger.warn("Failed to refresh cookie auth permission state", { error })
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted: false,
-      }))
-    }
-  }, [])
-  const setSub2apiUseRefreshToken = useCallback(
-    (value: boolean) => {
-      updateDraft((prev) => ({ ...prev, sub2apiUseRefreshToken: value }))
-    },
-    [updateDraft],
-  )
-  const setSub2apiRefreshToken = useCallback(
-    (value: string) => {
-      updateDraft((prev) => ({ ...prev, sub2apiRefreshToken: value }))
-    },
-    [updateDraft],
-  )
-  const setSub2apiTokenExpiresAt = useCallback(
-    (value: number | null) => {
-      updateDraft((prev) => ({ ...prev, sub2apiTokenExpiresAt: value }))
-    },
-    [updateDraft],
+    [invalidateDuplicateConfirmation, invalidateCookieSession, updateDraft],
   )
   const setDraftPartial = useCallback(
     (value: Partial<AccountDialogDraft>) => {
+      const changesIdentity =
+        (value.userId !== undefined &&
+          normalizeAccountIdentity(value.userId) !==
+            normalizeAccountIdentity(userId)) ||
+        (value.siteType !== undefined && value.siteType !== siteType)
+      invalidateDuplicateConfirmation(!changesIdentity)
       updateDraft((prev) => ({ ...prev, ...value }))
     },
-    [updateDraft],
+    [invalidateDuplicateConfirmation, siteType, userId, updateDraft],
   )
   const enterForm = useCallback((source: AccountDialogFormSource) => {
     setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
     setFormSource(source)
   }, [])
-
-  const cancelPendingDuplicateAccountWarning = useCallback(() => {
-    duplicateAccountWarningResolverRef.current?.(false)
-    duplicateAccountWarningResolverRef.current = null
-    duplicateAccountWarningAcknowledgedIdentityRef.current = null
-  }, [])
-
-  useEffect(() => {
-    if (!isOpen) {
-      setDuplicateAccountWarning((prev) =>
-        prev.isOpen ? { ...prev, isOpen: false } : prev,
-      )
-    }
-
-    return () => {
-      cancelPendingDuplicateAccountWarning()
-    }
-  }, [cancelPendingDuplicateAccountWarning, isOpen])
-
-  useEffect(() => {
-    if (!isOpen || authType !== AuthTypeEnum.Cookie) {
-      return
-    }
-
-    void refreshCookieAuthPermissionState()
-    const unsubscribe = onOptionalPermissionsChanged(() => {
-      void refreshCookieAuthPermissionState()
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [authType, isOpen, refreshCookieAuthPermissionState])
-
-  const requestDuplicateAccountAddConfirmation = useCallback(
-    (params: {
-      siteUrl: string
-      existingAccountsCount: number
-      existingUsername?: string | null
-      existingUserId?: string | number | null
-    }) => {
-      // If the user triggers the same flow multiple times quickly, cancel the
-      // previous pending promise to avoid leaving it unresolved.
-      if (duplicateAccountWarningResolverRef.current) {
-        duplicateAccountWarningResolverRef.current(false)
-      }
-
-      setDuplicateAccountWarning({
-        isOpen: true,
-        siteUrl: params.siteUrl,
-        existingAccountsCount: params.existingAccountsCount,
-        existingUsername: params.existingUsername ?? null,
-        existingUserId: params.existingUserId ?? null,
-      })
-
-      return new Promise<boolean>((resolve) => {
-        duplicateAccountWarningResolverRef.current = resolve
-      })
-    },
-    [],
-  )
-
-  const ensureExactCredentialDuplicateConfirmation = useCallback(async () => {
-    if (
-      !warnOnDuplicateAccountAdd ||
-      !usesAccountCredentialIdentity(siteType) ||
-      !accessToken.trim()
-    ) {
-      return true
-    }
-    if (
-      mode === DIALOG_MODES.EDIT &&
-      account?.token?.trim() === accessToken.trim()
-    ) {
-      return true
-    }
-
-    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
-    try {
-      accounts = await accountQueries.getAllAccountsOrThrow()
-    } catch {
-      logger.warn(
-        "Exact-credential duplicate lookup failed; continuing without warning",
-        {
-          siteType,
-          status: "storage_lookup_failed",
-          category: "duplicate_check",
-        },
-      )
-      return true
-    }
-    const duplicateId = findExactCredentialDuplicateAccountId({
-      accounts,
-      siteType,
-      accessToken,
-      excludeAccountId: mode === DIALOG_MODES.EDIT ? account?.id : undefined,
-    })
-    if (!duplicateId) return true
-
-    return requestDuplicateAccountAddConfirmation({
-      siteUrl: url.trim(),
-      existingAccountsCount: 1,
-    })
-  }, [
-    accessToken,
-    account?.id,
-    account?.token,
-    mode,
-    requestDuplicateAccountAddConfirmation,
-    siteType,
-    url,
-    warnOnDuplicateAccountAdd,
-  ])
-
-  const ensureDuplicateAccountAddConfirmation = useCallback(async () => {
-    if (mode !== DIALOG_MODES.ADD || !warnOnDuplicateAccountAdd) {
-      return true
-    }
-
-    if (usesAccountCredentialIdentity(siteType)) {
-      return true
-    }
-
-    const baseUrl = url.trim()
-    const normalizedBaseUrl = normalizeSiteUrlForDuplicateCheck({
-      value: baseUrl,
-      siteType,
-    })
-    const currentUserId = normalizeAccountIdentity(userId)
-
-    if (!baseUrl || !currentUserId) {
-      return true
-    }
-
-    if (
-      duplicateAccountWarningAcknowledgedIdentityRef.current?.siteUrl ===
-        normalizedBaseUrl &&
-      duplicateAccountWarningAcknowledgedIdentityRef.current?.userId ===
-        currentUserId
-    ) {
-      return true
-    }
-
-    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
-    try {
-      accounts = await accountQueries.getAllAccountsOrThrow()
-    } catch (error) {
-      logger.warn(
-        "Duplicate-account lookup failed; continuing without warning",
-        {
-          error,
-          siteUrl: normalizedBaseUrl,
-        },
-      )
-      return true
-    }
-    const matchingAccounts = findAccountsBySiteIdentity({
-      accounts,
-      siteUrl: baseUrl,
-      userId: currentUserId,
-    })
-    const exactMatch = matchingAccounts[0]
-    if (!exactMatch) {
-      return true
-    }
-
-    const warningSiteUrl = normalizeSiteUrlForDuplicateCheck({
-      value: exactMatch.site_url,
-      siteType: exactMatch.site_type,
-    })
-
-    const shouldContinue = await requestDuplicateAccountAddConfirmation({
-      siteUrl: warningSiteUrl,
-      existingAccountsCount: matchingAccounts.length,
-      existingUserId: exactMatch.account_info.id,
-      existingUsername: exactMatch.account_info.username,
-    })
-
-    if (!shouldContinue) {
-      return false
-    }
-
-    duplicateAccountWarningAcknowledgedIdentityRef.current = {
-      siteUrl: normalizedBaseUrl,
-      userId: currentUserId,
-    }
-    return true
-  }, [
-    mode,
-    requestDuplicateAccountAddConfirmation,
-    siteType,
-    url,
-    userId,
-    warnOnDuplicateAccountAdd,
-  ])
-
-  const handleDuplicateAccountWarningCancel = useCallback(() => {
-    setDuplicateAccountWarning((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
-    )
-    duplicateAccountWarningResolverRef.current?.(false)
-    duplicateAccountWarningResolverRef.current = null
-  }, [])
-
-  const handleDuplicateAccountWarningContinue = useCallback(() => {
-    setDuplicateAccountWarning((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
-    )
-    duplicateAccountWarningResolverRef.current?.(true)
-    duplicateAccountWarningResolverRef.current = null
-  }, [])
-
-  const handleDuplicateAccountWarningDisableAndContinue =
-    useCallback(async () => {
-      let result: Awaited<
-        ReturnType<typeof updateWarnOnDuplicateAccountAdd>
-      > | null = null
-      try {
-        result = await updateWarnOnDuplicateAccountAdd(false)
-      } catch (error) {
-        logger.warn("Failed to disable duplicate-account warning preference", {
-          error,
-        })
-      }
-
-      if (!result?.ok) {
-        showUpdateToast(
-          result ?? false,
-          t("settings:duplicateAccountWarningOnAdd.toggleLabel"),
-        )
-        return
-      }
-
-      setDuplicateAccountWarning((prev) =>
-        prev.isOpen ? { ...prev, isOpen: false } : prev,
-      )
-      duplicateAccountWarningResolverRef.current?.(true)
-      duplicateAccountWarningResolverRef.current = null
-    }, [t, updateWarnOnDuplicateAccountAdd])
 
   useEffect(() => {
     const policy = getAccountDialogSitePolicy(siteType)
@@ -1130,158 +736,38 @@ export function useAccountDialog({
     )
   }, [siteType, updateDraft])
 
-  // useRef 保存跨渲染引用
-  const newAccountRef = useRef<any>(null)
-  const targetAccountRef = useRef<any>(null)
-  const pendingPostSaveChannelRef = useRef<{
-    displaySiteData: DisplaySiteData
-    runtimeKey?: AccountRuntimeKey | null
-    createdSecret?: CreatedRuntimeSecret
-  } | null>(null)
-  const pendingAccountKeyProvisioningSuccessRef = useRef<string | null>(null)
-  const [postSaveKeyProvisioning, setPostSaveKeyProvisioning] = useState<{
-    account: DisplaySiteData
-    mode: typeof autoProvisionKeyOnAccountAddMode
-  } | null>(null)
-  const postSaveAutoConfigRunRef = useRef(0)
-  const postSaveCreationAbort = useRef<AbortController | null>(null)
-  const postSaveKeyProvisioningRunRef = useRef(0)
-  const nextPostSaveSub2ApiDialogSessionIdRef = useRef(0)
-  const activePostSaveSub2ApiDialogSessionIdRef = useRef<number | null>(null)
-  const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  )
-  const currentTabDetectionRunRef = useRef(0)
-  const detectedCookieStoreIdRef = useRef<string | null>(null)
-  const currentTabCookieImportContextRef =
-    useRef<CurrentTabCookieImportContext | null>(null)
-
+  const postSaveWorkflow = useAccountPostSaveWorkflow({
+    onSuccess,
+    managedSiteType,
+  })
   const {
-    openWithAccount: openChannelDialog,
-    openWithCredentials: openChannelDialogWithCredentials,
-    openDefaultTokenQuickCreateDialogForAccount,
-  } = useChannelDialog()
-
-  const invalidatePostSaveAutoConfigRun = useCallback(() => {
-    postSaveAutoConfigRunRef.current += 1
-  }, [])
-
-  const openPostSaveSub2ApiDialogSession = useCallback(() => {
-    const nextSessionId = nextPostSaveSub2ApiDialogSessionIdRef.current + 1
-    nextPostSaveSub2ApiDialogSessionIdRef.current = nextSessionId
-    activePostSaveSub2ApiDialogSessionIdRef.current = nextSessionId
-    setPostSaveSub2ApiDialogSessionId(nextSessionId)
-    return nextSessionId
-  }, [])
-
-  const invalidatePostSaveSub2ApiDialogSession = useCallback(() => {
-    activePostSaveSub2ApiDialogSessionIdRef.current = null
-    setPostSaveSub2ApiDialogSessionId(null)
-  }, [])
-
-  const clearPostSaveWorkflowState = useCallback(() => {
-    postSaveCreationAbort.current?.abort()
-    postSaveCreationAbort.current = null
-    invalidatePostSaveAutoConfigRun()
-    invalidatePostSaveSub2ApiDialogSession()
-    postSaveKeyProvisioningRunRef.current += 1
-    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-    setPostSaveOneTimeSecret(null)
-    setPostSaveSub2ApiAccount(null)
-    setPostSaveKeyProvisioning(null)
-    setAihubmixPostSaveKeyPrompt({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
-    pendingAccountKeyProvisioningSuccessRef.current = null
-    pendingPostSaveChannelRef.current = null
-  }, [invalidatePostSaveAutoConfigRun, invalidatePostSaveSub2ApiDialogSession])
-
-  const completePendingAccountKeyProvisioningSuccess = useCallback(() => {
-    const savedAccountId = pendingAccountKeyProvisioningSuccessRef.current
-    pendingAccountKeyProvisioningSuccessRef.current = null
-    if (savedAccountId) {
-      onSuccess?.(savedAccountId)
-    }
-  }, [onSuccess])
-
-  const handlePostSaveKeyProvisioningClose = useCallback(() => {
-    setPostSaveKeyProvisioning(null)
-    completePendingAccountKeyProvisioningSuccess()
-  }, [completePendingAccountKeyProvisioningSuccess])
-
-  const openAihubmixPostSaveKeyPrompt = useCallback(
-    (params: { accountId: string; accountName: string }) => {
-      postSaveKeyProvisioningRunRef.current += 1
-      pendingAccountKeyProvisioningSuccessRef.current = params.accountId
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: true,
-        accountId: params.accountId,
-        accountName: params.accountName,
-        isCreating: false,
-      })
-    },
-    [],
-  )
-
-  const handleAihubmixNormalSaveForegroundKeyFlow = useCallback(
-    async (params: { accountId: string; accountName: string }) => {
-      const runId = postSaveKeyProvisioningRunRef.current
-      const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
-      const savedAccountId = params.accountId.trim()
-      if (!savedAccountId) return
-
-      const openPrompt = () => {
-        if (!isCurrentRun()) return
-
-        openAihubmixPostSaveKeyPrompt({
-          accountId: savedAccountId,
-          accountName: params.accountName,
-        })
-      }
-
-      try {
-        const savedAccount = await accountQueries.getAccountById(savedAccountId)
-        if (!isCurrentRun()) return
-
-        if (!savedAccount) {
-          openPrompt()
-          return
-        }
-
-        const displaySiteData =
-          (await accountReadModels.getDisplayDataById(savedAccountId)) ??
-          accountPresentation.convertToDisplayData(savedAccount)
-        if (!isCurrentRun()) return
-
-        const inventory = await fetchDisplayAccountRuntimeKeys(displaySiteData)
-        if (!isCurrentRun()) return
-
-        if (inventory.length) {
-          onSuccess?.(savedAccountId)
-          return
-        }
-
-        openPrompt()
-      } catch {
-        openPrompt()
-      }
-    },
-    [onSuccess, openAihubmixPostSaveKeyPrompt],
-  )
+    isAutoConfiguring,
+    accountPostSaveWorkflowStep,
+    postSaveOneTimeSecret,
+    postSaveKeyProvisioning,
+    postSaveKeyInputAccount,
+    postSaveKeyInputSessionId,
+    aihubmixPostSaveKeyPrompt,
+  } = postSaveWorkflow.state
+  const {
+    handleAihubmixPostSaveKeyPromptCancel,
+    handleAihubmixPostSaveKeyPromptConfirm,
+    handlePostSaveOneTimeSecretClose,
+    handlePostSaveKeyProvisioningClose,
+    handlePostSaveKeyInputTokenDialogClose,
+    handlePostSaveKeyInputTokenCreated,
+    getPostSaveKeyInputDialogHandlers,
+  } = postSaveWorkflow.handlers
+  const clearPostSaveWorkflowState = postSaveWorkflow.clear
+  const completePendingAccountKeyProvisioningSuccess =
+    postSaveWorkflow.completePendingSuccess
 
   const resetForm = useCallback(
     (nextPrefill?: AddAccountPrefill | null) => {
-      autoDetectRunGenerationRef.current += 1
-      newAccountRef.current = null
+      invalidateAutoDetection()
       isCloseTransitionStartedRef.current = false
-      detectedCookieStoreIdRef.current = null
-      currentTabCookieImportContextRef.current = null
-      currentTabSiteNameRef.current = ""
-      duplicateAccountWarningAcknowledgedIdentityRef.current = null
-      hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
+      resetCurrentTab(Boolean(nextPrefill))
+      invalidateDuplicateConfirmation()
       const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
       selectedSiteTypeRef.current = nextSiteType
       const policy = getAccountDialogSitePolicy(nextSiteType)
@@ -1297,7 +783,7 @@ export function useAccountDialog({
       })
       setUrl(nextUrl)
       automaticExecutionPreferenceChangedRef.current = false
-      sub2apiRefreshTokenPreferenceChangedRef.current = false
+      resetSub2ApiSession()
       const emptyDraft = createEmptyAccountDialogDraft(nextSiteType)
       const nextDraft = {
         ...emptyDraft,
@@ -1315,18 +801,20 @@ export function useAccountDialog({
         resolvePrefillFormSource(nextPrefill, nextFlowState.formSource),
       )
       setShowAccessToken(false)
-      setDetectionError(null)
+      resetAutoDetection()
       resetCheckInRedetection()
-      setCurrentTabUrl(null)
-      setIsAutoConfiguring(false)
-      setIsImportingCookies(false)
-      setShowCookiePermissionWarning(false)
-      setIsImportingSub2apiSession(false)
+      resetCookieSession()
       clearPostSaveWorkflowState()
-      targetAccountRef.current = null
     },
     [
+      invalidateDuplicateConfirmation,
+      resetCookieSession,
+      invalidateAutoDetection,
+      resetAutoDetection,
+      resetCurrentTab,
+
       clearPostSaveWorkflowState,
+      resetSub2ApiSession,
       mode,
       resetCheckInRedetection,
       resetOpenRouterOnboardingSession,
@@ -1424,64 +912,6 @@ export function useAccountDialog({
     [enterForm, i18n],
   )
 
-  const checkCurrentTab = useCallback(async () => {
-    if (mode === DIALOG_MODES.EDIT && account) {
-      return
-    }
-    const runId = currentTabDetectionRunRef.current + 1
-    currentTabDetectionRunRef.current = runId
-    const isCurrentDetectionRun = () =>
-      currentTabDetectionRunRef.current === runId
-    const clearCurrentTabDetection = () => {
-      if (!isCurrentDetectionRun()) return
-
-      currentTabCookieImportContextRef.current = null
-      currentTabSiteNameRef.current = ""
-      setCurrentTabUrl(null)
-      // Preserve a user-selected or typed site name when the URL field is already owned by the user.
-      if (!selectedSiteUrlRef.current.trim()) {
-        setSiteName("")
-      }
-    }
-    const canApplyCurrentTabTitle = () => !selectedSiteUrlRef.current.trim()
-
-    try {
-      const tabs = await getActiveTabs()
-      const tab = tabs[0]
-      if (tab?.url) {
-        try {
-          const urlObj = new URL(tab.url)
-          const baseUrl = `${urlObj.protocol}//${urlObj.host}`
-          if (!baseUrl.startsWith("http")) {
-            clearCurrentTabDetection()
-            return
-          }
-          currentTabCookieImportContextRef.current =
-            createCurrentTabCookieImportContext(tab, baseUrl)
-          setCurrentTabUrl(baseUrl)
-          const resolvedSiteName = await getSiteName(tab)
-          if (!isCurrentDetectionRun()) return
-
-          currentTabSiteNameRef.current = resolvedSiteName
-          if (canApplyCurrentTabTitle()) {
-            setSiteName(resolvedSiteName)
-          }
-        } catch (error) {
-          logger.warn("Failed to parse current tab URL", {
-            error,
-            tabUrl: tab.url,
-          })
-          clearCurrentTabDetection()
-        }
-      } else {
-        clearCurrentTabDetection()
-      }
-    } catch (error) {
-      logger.warn("Failed to query current tab", { error })
-      clearCurrentTabDetection()
-    }
-  }, [account, mode, setSiteName])
-
   useEffect(() => {
     if (isOpen) {
       const nextPrefill =
@@ -1491,7 +921,7 @@ export function useAccountDialog({
         const recoveredDraft = recoveryState.draft
         selectedSiteUrlRef.current = recoveryState.url
         selectedSiteTypeRef.current = recoveredDraft.siteType
-        hasConsumedAutoFillCurrentSiteUrlRef.current = true
+        notifyCurrentTabUrlChanged(recoveryState.url)
         hasExplicitAuthTypeRef.current = true
         automaticExecutionPreferenceChangedRef.current = true
         checkInSelectionChangedRef.current =
@@ -1515,10 +945,7 @@ export function useAccountDialog({
             ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
             : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
         )
-        setDetectionError({
-          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-          message: i18n.t("accountDialog:accessTokenVerification.description"),
-        })
+        requireAccessTokenVerification()
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
@@ -1527,6 +954,9 @@ export function useAccountDialog({
       }
     }
   }, [
+    notifyCurrentTabUrlChanged,
+    requireAccessTokenVerification,
+
     isOpen,
     mode,
     account,
@@ -1539,17 +969,6 @@ export function useAccountDialog({
   ])
 
   useEffect(() => {
-    const message = t("accessTokenVerification.description")
-    setDetectionError((current) =>
-      current?.type ===
-        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
-      current.message !== message
-        ? { ...current, message }
-        : current,
-    )
-  }, [t])
-
-  useEffect(() => {
     if (!isOpen || mode !== DIALOG_MODES.ADD) {
       return
     }
@@ -1559,14 +978,12 @@ export function useAccountDialog({
     if (!currentTabUrl || url.trim()) {
       return
     }
-    if (hasConsumedAutoFillCurrentSiteUrlRef.current) {
-      return
-    }
-
-    hasConsumedAutoFillCurrentSiteUrlRef.current = true
+    if (!consumeAutoFill()) return
     setDialogUrl(currentTabUrl)
     applyAuthDefaultForUrl(currentTabUrl)
   }, [
+    consumeAutoFill,
+
     applyAuthDefaultForUrl,
     autoFillCurrentSiteUrlOnAccountAdd,
     currentTabUrl,
@@ -1576,61 +993,11 @@ export function useAccountDialog({
     url,
   ])
 
-  useEffect(() => {
-    // 打开 popup 时立即检测一次
-    checkCurrentTab()
-
-    // Tab 激活变化时检测
-    const cleanupActivated = onTabActivated(() => {
-      checkCurrentTab()
-    })
-
-    // Tab URL 或状态更新时检测（只对当前 tab）
-    const cleanupUpdated = onTabUpdated(async (tabId) => {
-      const tabs = await getActiveTabs()
-      if (tabs[0]?.id === tabId) {
-        checkCurrentTab()
-      }
-    })
-
-    // 清理监听器
-    return () => {
-      cleanupActivated()
-      cleanupUpdated()
-    }
-  }, [checkCurrentTab])
-
-  useEffect(() => {
-    if (!isDetecting) {
-      setIsDetectingSlow(false)
-      if (detectSlowHintTimeoutRef.current) {
-        clearTimeout(detectSlowHintTimeoutRef.current)
-        detectSlowHintTimeoutRef.current = null
-      }
-      return
-    }
-
-    setIsDetectingSlow(false)
-    detectSlowHintTimeoutRef.current = setTimeout(() => {
-      setIsDetectingSlow(true)
-    }, AUTO_DETECT_SLOW_HINT_DELAY_MS)
-
-    return () => {
-      if (detectSlowHintTimeoutRef.current) {
-        clearTimeout(detectSlowHintTimeoutRef.current)
-        detectSlowHintTimeoutRef.current = null
-      }
-    }
-  }, [isDetecting])
-
   const handleUrlChange = (
     newUrl: string,
     options: { applyAuthDefault?: boolean } = {},
   ) => {
     const shouldApplyAuthDefault = options.applyAuthDefault !== false
-    duplicateAccountWarningAcknowledgedIdentityRef.current = null
-    detectedCookieStoreIdRef.current = null
-    hasConsumedAutoFillCurrentSiteUrlRef.current = true
     if (newUrl.trim()) {
       try {
         const urlObj = new URL(newUrl)
@@ -1654,14 +1021,12 @@ export function useAccountDialog({
   const handleUseCurrentTabUrl = () => {
     if (currentTabUrl) {
       handleUrlChange(currentTabUrl)
-      if (currentTabSiteNameRef.current.trim()) {
-        setSiteName(currentTabSiteNameRef.current)
-      }
+      const candidate = claimCurrentTab()
+      if (candidate.siteName.trim()) setSiteName(candidate.siteName)
     }
   }
 
   const handleClearUrl = () => {
-    hasConsumedAutoFillCurrentSiteUrlRef.current = true
     setDialogUrl("")
     if (mode === DIALOG_MODES.ADD) {
       setSiteName("")
@@ -1670,8 +1035,11 @@ export function useAccountDialog({
 
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
+    invalidateDuplicateConfirmation()
+    invalidateCookieSession()
+    invalidateSub2ApiSession()
     isCloseTransitionStartedRef.current = true
-    autoDetectRunGenerationRef.current += 1
+    invalidateAutoDetection()
     try {
       await beforeOpenRouterOnboardingClose()
     } catch {
@@ -1681,111 +1049,27 @@ export function useAccountDialog({
         category: "onboarding_close",
       })
     }
-    handleDuplicateAccountWarningCancel()
-    cancelPendingDuplicateAccountWarning()
     completePendingAccountKeyProvisioningSuccess()
     clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
       prev?.isOpen ? { ...prev, isOpen: false } : prev,
     )
-    targetAccountRef.current = null
     onClose()
   }, [
-    cancelPendingDuplicateAccountWarning,
+    invalidateCookieSession,
+    invalidateAutoDetection,
+
+    invalidateDuplicateConfirmation,
+    invalidateSub2ApiSession,
     beforeOpenRouterOnboardingClose,
     clearPostSaveWorkflowState,
     completePendingAccountKeyProvisioningSuccess,
-    handleDuplicateAccountWarningCancel,
     onClose,
   ])
 
   const handleOpenCookiePermissionSettings = useCallback(() => {
     void openSettingsTab("permissions")
   }, [])
-
-  const getCookieImportContextForUrl = useCallback((targetUrl: string) => {
-    if (detectedCookieStoreIdRef.current) {
-      return { cookieStoreId: detectedCookieStoreIdRef.current }
-    }
-
-    const currentTabContext = currentTabCookieImportContextRef.current
-    if (!currentTabContext) {
-      return {}
-    }
-
-    const targetOrigin = tryParseOrigin(targetUrl)
-    if (!targetOrigin || targetOrigin !== currentTabContext.origin) {
-      return {}
-    }
-
-    return {
-      ...(currentTabContext.cookieStoreId
-        ? { cookieStoreId: currentTabContext.cookieStoreId }
-        : {}),
-      ...(typeof currentTabContext.tabId === "number"
-        ? { sourceTabId: currentTabContext.tabId }
-        : {}),
-      ...(currentTabContext.incognito === true
-        ? { sourceTabIncognito: true }
-        : {}),
-    }
-  }, [])
-
-  const handleRequestCookieAuthPermissions = useCallback(async () => {
-    const cookieAuthPermissions = getCookieAuthPermissions()
-
-    if (cookieAuthPermissions.length === 0) {
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        granted: true,
-      }))
-      return
-    }
-
-    setCookieAuthPermissionState((prev) => ({ ...prev, pending: true }))
-
-    try {
-      const result = await ensurePermissionsDetailed(cookieAuthPermissions)
-      const granted = result.success
-      for (const permissionResult of result.requestedResults) {
-        trackOptionalPermissionRequestResult(permissionResult.id, {
-          success: permissionResult.success,
-          failureReason: permissionResult.failureReason
-            ? permissionResult.failureReason
-            : undefined,
-          wasGrantedBefore: permissionResult.wasGrantedBefore,
-          wasGrantedAfter: permissionResult.wasGrantedAfter,
-        })
-      }
-      await refreshCookieAuthPermissionState()
-
-      if (granted) {
-        toast.success(t("messages.cookiePermissionGranted"))
-      } else {
-        toast.error(t("messages.cookiePermissionGrantFailed"))
-      }
-    } catch (error) {
-      const wasGrantedBefore = cookieAuthPermissionState.granted === true
-      for (const permissionId of cookieAuthPermissions) {
-        trackOptionalPermissionRequestResult(permissionId, {
-          success: false,
-          failureReason: error,
-          wasGrantedBefore,
-          wasGrantedAfter: wasGrantedBefore,
-        })
-      }
-      logger.warn("Failed to request cookie auth permissions", {
-        error,
-        permissions: cookieAuthPermissions,
-      })
-      toast.error(t("messages.cookiePermissionGrantFailed"))
-    } finally {
-      setCookieAuthPermissionState((prev) => ({
-        ...prev,
-        pending: false,
-      }))
-    }
-  }, [cookieAuthPermissionState.granted, refreshCookieAuthPermissionState, t])
 
   const shouldDeferAccountSaveSuccess = useCallback(
     (result: AccountSaveResponse) => {
@@ -1811,103 +1095,6 @@ export function useAccountDialog({
       siteType,
     ],
   )
-
-  const handleImportCookieAuthSessionCookie = async () => {
-    const analyticsAction = startAccountDialogAnalyticsAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies,
-    )
-
-    if (!url.trim()) {
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-      })
-      toast.error(t("messages.urlRequired"))
-      return
-    }
-    setIsImportingCookies(true)
-    try {
-      const response = await sendRuntimeMessage<CookieImportResponse>({
-        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
-        url: url.trim(),
-        ...getCookieImportContextForUrl(url.trim()),
-      })
-      if (response?.success && response.data) {
-        setCookieAuthSessionCookie(response.data)
-        setShowCookiePermissionWarning(false)
-        toast.success(t("messages.importCookiesSuccess"))
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      } else {
-        setShowCookiePermissionWarning(false)
-
-        if (!response?.errorCode) {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            diagnostics: {
-              failure: buildActionFailureDiagnostics({
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-                stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Response,
-                reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
-              }),
-            },
-          })
-          toast.error(
-            response?.error
-              ? t("messages.importCookiesFailed", { error: response.error })
-              : t("messages.importCookiesEmpty"),
-          )
-          return
-        }
-
-        switch (response.errorCode) {
-          case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
-            setShowCookiePermissionWarning(true)
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              diagnostics: {
-                failure: buildActionFailureDiagnostics({
-                  errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Permission,
-                  reason: PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionDenied,
-                }),
-              },
-            })
-            toast.error(t("messages.importCookiesPermissionDenied"))
-            break
-          case COOKIE_IMPORT_FAILURE_REASONS.ReadFailed:
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-              diagnostics: {
-                failure: buildActionFailureDiagnostics({
-                  errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
-                  reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-                }),
-              },
-            })
-            toast.error(
-              response.error
-                ? t("messages.importCookiesFailed", { error: response.error })
-                : t("messages.importCookiesFailedUnknown"),
-            )
-            break
-          case COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound:
-          default:
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-            toast.error(t("messages.importCookiesEmpty"))
-            break
-        }
-      }
-    } catch (error) {
-      logger.warn("Failed to import cookies", { error, url: url.trim() })
-      toast.error(
-        t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
-      )
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        diagnostics: {
-          failure: buildActionFailureDiagnostics({ error }),
-        },
-      })
-    } finally {
-      setIsImportingCookies(false)
-    }
-  }
 
   const handleManagedSiteConfigPromptClose = useCallback(() => {
     setManagedSiteConfigPrompt((prev) =>
@@ -1974,127 +1161,14 @@ export function useAccountDialog({
     return false
   }, [managedSiteType])
 
-  /**
-   * Import Sub2API dashboard session credentials (including refresh_token) into the form.
-   *
-   * Strategy is centralized in accountBrowserSession so tab lookup, messaging,
-   * temp-window fallback, and normalization stay consistent across import flows.
-   */
-  const handleImportSub2apiSession = async () => {
-    const analyticsAction = startAccountDialogAnalyticsAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.ImportSub2apiSession,
-    )
-
-    if (!url.trim()) {
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-      })
-      toast.error(t("messages.urlRequired"))
-      return
-    }
-
-    const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-    setIsImportingSub2apiSession(true)
-    try {
-      const baseUrl = url.trim()
-
-      const hasUsableSub2apiRefreshToken = (
-        value: AccountBrowserSession | null,
-      ): value is AccountBrowserSession =>
-        typeof value?.sub2apiAuth?.refreshToken === "string" &&
-        value.sub2apiAuth.refreshToken.trim().length > 0
-      const currentTab = createCurrentTabBrowserSessionContext(
-        currentTabCookieImportContextRef.current,
-        baseUrl,
-      )
-      let importError: unknown
-
-      const imported = await withProtectionBypassUserCommand(
-        mode === DIALOG_MODES.ADD
-          ? PROTECTION_BYPASS_USER_COMMANDS.AddAccount
-          : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
-        tempWindowRequestSource,
-        (protectionBypassExecution) =>
-          resolveAccountBrowserSession({
-            baseUrl,
-            siteType: SITE_TYPES.SUB2API,
-            ...(currentTab ? { currentTab } : {}),
-            useExistingTabs: true,
-            useTempWindow: true,
-            tempWindowRequestSource,
-            protectionBypassExecution,
-            requestIdPrefix: "account-dialog-sub2api-import",
-            isUsableSession: hasUsableSub2apiRefreshToken,
-            onError: (error, context) => {
-              if (
-                context.source === ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
-              ) {
-                importError ??= error
-              }
-            },
-          }),
-      )
-
-      const refreshToken = imported?.sub2apiAuth?.refreshToken?.trim() ?? ""
-      if (!refreshToken) {
-        if (importError) throw importError
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-        toast.error(t("messages.importSub2apiSessionMissing"))
-        return
-      }
-
-      const tokenExpiresAtRaw = imported?.sub2apiAuth?.tokenExpiresAt
-      const importedAccessToken = imported?.accessToken?.trim() ?? ""
-      const importedUserId = normalizeAccountIdentity(imported?.userId) ?? ""
-      const importedUsername =
-        typeof imported?.user?.username === "string"
-          ? imported.user.username.trim()
-          : ""
-      if (importedAccessToken) {
-        updateAccessToken(importedAccessToken, {
-          url: baseUrl,
-          siteType: SITE_TYPES.SUB2API,
-        })
-      }
-      updateDraft((prev) => ({
-        ...prev,
-        sub2apiRefreshToken: refreshToken,
-        sub2apiTokenExpiresAt:
-          typeof tokenExpiresAtRaw === "number" &&
-          Number.isFinite(tokenExpiresAtRaw)
-            ? tokenExpiresAtRaw
-            : null,
-        ...(importedUserId ? { userId: importedUserId } : {}),
-        ...(importedUsername ? { username: importedUsername } : {}),
-      }))
-
-      toast.success(t("messages.importSub2apiSessionSuccess"))
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      toast.error(
-        t("messages.operationFailed", { error: getErrorMessage(error) }),
-      )
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        diagnostics: {
-          failure: buildActionFailureDiagnostics({ error }),
-        },
-      })
-    } finally {
-      setIsImportingSub2apiSession(false)
-    }
-  }
-
   const applyAutoDetectedData = async (
     resultData: NonNullable<
       Awaited<ReturnType<typeof autoDetectAccount>>["data"]
     >,
+    isCurrent: () => boolean,
   ) => {
-    detectedCookieStoreIdRef.current =
-      resultData.fetchContext &&
-      typeof resultData.fetchContext.cookieStoreId === "string" &&
-      resultData.fetchContext.cookieStoreId.trim()
-        ? resultData.fetchContext.cookieStoreId.trim()
-        : null
+    if (!isCurrent()) return false
+    rememberCookieStore(resultData.fetchContext?.cookieStoreId)
 
     const detectedCheckIn = normalizeDetectedCheckIn(resultData.checkIn)
     const preserveExistingCheckIn =
@@ -2139,42 +1213,15 @@ export function useAccountDialog({
         url,
       })
     ) {
-      try {
-        const cookieResponse = await sendRuntimeMessage({
-          action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
-          url: url.trim(),
-          ...getCookieImportContextForUrl(url.trim()),
-        })
-        const header =
-          typeof cookieResponse?.data === "string"
-            ? cookieResponse.data.trim()
-            : ""
-        if (header) {
-          setCookieAuthSessionCookie(header)
-          setShowCookiePermissionWarning(false)
-        } else if (
-          cookieResponse?.errorCode ===
-          COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied
-        ) {
-          setShowCookiePermissionWarning(true)
-          toast.error(t("messages.importCookiesPermissionDenied"))
-          logger.info(
-            "Cookie auto-import skipped because cookie permissions were denied",
-            { url: url.trim() },
-          )
-        }
-      } catch (error) {
-        logger.warn("Auto-import cookie failed", {
-          error,
-          url: url.trim(),
-        })
-      }
+      if (!(await importCookieAutomatically(isCurrent))) return false
     }
+    if (!isCurrent()) return false
 
     enterForm(ACCOUNT_DIALOG_FORM_SOURCES.DETECTED)
     if (mode === DIALOG_MODES.EDIT) {
       toast.success(t("messages.autoDetectSuccess"))
     }
+    return true
   }
 
   const applyAutoDetectRecoveryData = (
@@ -2204,8 +1251,7 @@ export function useAccountDialog({
       recoveryData.fetchContext?.cookieStoreId &&
       recoveryData.fetchContext.cookieStoreId.trim()
     ) {
-      detectedCookieStoreIdRef.current =
-        recoveryData.fetchContext.cookieStoreId.trim()
+      rememberCookieStore(recoveryData.fetchContext.cookieStoreId)
     }
 
     updateDraft((prev) => {
@@ -2215,380 +1261,43 @@ export function useAccountDialog({
         nextSiteType: recovery.nextSiteType,
         hasExplicitAuthType: hasExplicitAuthTypeRef.current,
         sub2apiRefreshTokenPreferenceChanged:
-          sub2apiRefreshTokenPreferenceChangedRef.current,
+          sub2ApiSession.hasUserChangedRefreshMode(),
       })
     })
   }
 
-  const runAdmittedAutoDetectInvocation = async (
-    runGeneration: number,
-    startOpenRouterOnboarding?: OpenRouterOnboardingStart,
-  ) => {
-    const requestedUrl = url.trim()
-    const isCurrentAutoDetectRun = () =>
-      autoDetectRunGenerationRef.current === runGeneration &&
-      selectedSiteUrlRef.current.trim() === requestedUrl
-    const analyticsAction = startAccountDialogAnalyticsAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
-    )
-    const checkInDiscoveryTrigger =
-      mode === DIALOG_MODES.EDIT || isDetected
-        ? "redetect"
-        : "initial_detection"
-    const createAutoDetectAnalyticsInsights = (
-      result?:
-        | Awaited<ReturnType<typeof autoDetectAccount>>
-        | Awaited<ReturnType<OpenRouterOnboardingStart>>,
-      fallbackUsed = false,
-    ): ProductAnalyticsActionInsights => {
-      const resultData = result && "data" in result ? result.data : undefined
-      const autoDetectContext =
-        result && "autoDetectContext" in result
-          ? result.autoDetectContext ?? resultData?.autoDetectContext
-          : resultData?.autoDetectContext
-      const candidateSiteType =
-        result && "siteType" in result
-          ? result.siteType
-          : resultData?.siteType ?? autoDetectContext?.siteType
-      const analyticsSiteType = isProductAnalyticsSiteType(candidateSiteType)
-        ? candidateSiteType
-        : undefined
-      const attemptOutcome =
-        result && "attemptOutcome" in result ? result.attemptOutcome : undefined
-      const checkInSiteType =
-        resultData && isAccountSiteType(candidateSiteType)
-          ? candidateSiteType
-          : undefined
-      const candidateMethodIds = checkInSiteType
-        ? getAutoCheckinCandidateMethodIds(checkInSiteType, url)
-        : []
-      const checkInInspection =
-        resultData && checkInSiteType
-          ? inspectAccountCheckIn({
-              config: resultData.checkIn,
-              siteType: checkInSiteType,
-              siteUrl: url,
-            })
-          : undefined
-
-      return {
-        requestedAuthMode: authType,
-        fallbackUsed,
-        ...(result &&
-        "autoDetectFailureReason" in result &&
-        result.success === false
-          ? {
-              accountAutoDetectIdentityDetected:
-                isIdentityKnownAutoDetectFailureReason(
-                  result.autoDetectFailureReason,
-                ),
-            }
-          : {}),
-        ...(checkInInspection
-          ? {
-              checkInDiscoveryTrigger,
-              checkInDiscoveryDecision: checkInInspection.decision.outcome,
-              checkInCandidateCount: candidateMethodIds.length,
-              checkInSelectionSource: resultData?.checkIn.selection.methodId
-                ? resultData.checkIn.selection.mode
-                : ("none" as const),
-            }
-          : {}),
-        ...(attemptOutcome
-          ? { accountAutoDetectAttemptOutcome: attemptOutcome }
-          : {}),
-        ...(autoDetectContext?.strategy
-          ? { autoDetectStrategy: autoDetectContext.strategy }
-          : {}),
-        ...(autoDetectContext?.fetchContextKind
-          ? { fetchContextKind: autoDetectContext.fetchContextKind }
-          : {}),
-        ...(typeof autoDetectContext?.incognitoContextUsed === "boolean"
-          ? {
-              incognitoContextUsed: autoDetectContext.incognitoContextUsed,
-            }
-          : {}),
-        ...(typeof autoDetectContext?.currentTabMatched === "boolean"
-          ? {
-              currentTabMatched: autoDetectContext.currentTabMatched,
-            }
-          : {}),
-        ...(analyticsSiteType ? { siteType: analyticsSiteType } : {}),
-      }
-    }
-
-    if (!requestedUrl) {
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        insights: createAutoDetectAnalyticsInsights(),
-      })
-      return
-    }
-
-    if (!startOpenRouterOnboarding) {
-      const { clearCreatedCredential } =
-        abandonOpenRouterOnboardingForOtherAutoDetect()
-      if (clearCreatedCredential) setAccessToken("")
-    }
-    setIsDetecting(true)
-    setDetectionError(null)
-    detectedCookieStoreIdRef.current = null
-    const shouldTrackPopupInterruption = isExtensionPopup()
-    if (shouldTrackPopupInterruption) {
-      try {
-        await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
-      } catch (error) {
-        logger.error("Failed to prepare popup auto-detect flow", { error })
-        const detectionError = analyzeAutoDetectError(error)
-        setDetectionError(detectionError)
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          diagnostics: {
-            failure: buildActionFailureDiagnostics({
-              error,
-              errorCategory: getAutoDetectAnalyticsErrorCategory(
-                detectionError.type,
-                error,
-              ),
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-            }),
-          },
-          insights: createAutoDetectAnalyticsInsights(undefined, true),
-        })
-        setIsDetecting(false)
-        if (startOpenRouterOnboarding) return
-        throw error
-      }
-    }
-
-    try {
-      if (startOpenRouterOnboarding) {
-        let onboardingError: unknown
-        let shouldShowDetectionError = false
-        const outcome = await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-          getCurrentTempWindowRequestSource(),
-          (protectionBypassExecution) =>
-            startOpenRouterOnboarding({
-              protectionBypassExecution,
-              onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
-              onCredentialCreated: (credential) => {
-                updateAccessToken(credential, {
-                  url: requestedUrl,
-                  siteType: SITE_TYPES.OPENROUTER,
-                })
-              },
-              onManualFallback: (failure) => {
-                onboardingError = failure.error
-                shouldShowDetectionError = failure.showDetectionError
-                if (failure.showDetectionError) {
-                  setDetectionError(
-                    failure.error
-                      ? analyzeAutoDetectError(failure.error)
-                      : {
-                          type: AutoDetectErrorType.UNKNOWN,
-                          message: failure.message ?? "",
-                        },
-                  )
-                }
-                enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-              },
-              onDetected: async (resultData) => {
-                await applyAutoDetectedData(resultData)
-              },
-            }),
-        )
-
-        if (outcome.status === "cancelled_before_dispatch") {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-            insights: createAutoDetectAnalyticsInsights(outcome, false),
-          })
-          return
-        }
-        if (outcome.status === "ignored") {
-          analyticsAction.complete(
-            outcome.success
-              ? PRODUCT_ANALYTICS_RESULTS.Success
-              : PRODUCT_ANALYTICS_RESULTS.Failure,
-            { insights: createAutoDetectAnalyticsInsights(outcome, false) },
-          )
-          return
-        }
-        if (outcome.status === "completed") {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: createAutoDetectAnalyticsInsights(outcome, false),
-          })
-          return
-        }
-
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          ...(shouldShowDetectionError && onboardingError
-            ? {
-                diagnostics: {
-                  failure: buildActionFailureDiagnostics({
-                    error: onboardingError,
-                    errorCategory: getAutoDetectAnalyticsErrorCategory(
-                      analyzeAutoDetectError(onboardingError).type,
-                      onboardingError,
-                    ),
-                    stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-                  }),
-                },
-              }
-            : {}),
-          insights: createAutoDetectAnalyticsInsights(outcome, true),
-        })
-        return
-      }
-
-      const result = await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-        getCurrentTempWindowRequestSource(),
-        (protectionBypassExecution) =>
-          autoDetectAccount(
-            requestedUrl,
-            authType,
-            protectionBypassExecution,
-            cookieAuthSessionCookie.trim() || undefined,
-            ...(userId.trim() &&
-            (mode === DIALOG_MODES.EDIT ||
-              accessToken.trim() ||
-              cookieAuthSessionCookie.trim() ||
-              sub2apiRefreshToken.trim())
-              ? [
-                  {
-                    existingAccount: {
-                      url:
-                        accountCredentialScopeRef.current?.url || requestedUrl,
-                      siteType:
-                        accountCredentialScopeRef.current?.siteType ?? siteType,
-                      userId: userId.trim(),
-                      accessToken,
-                    },
-                  },
-                ]
-              : []),
-          ),
-      )
-      if (!isCurrentAutoDetectRun()) {
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: createAutoDetectAnalyticsInsights(result, false),
-        })
-        return
-      }
-      if (!result.success) {
-        applyAutoDetectRecoveryData(
-          result.recoveryData,
-          result.autoDetectContext?.siteType,
-        )
-        if (
-          result.detailedError?.type ===
-          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-        ) {
-          setAuthType(AuthTypeEnum.AccessToken)
-        }
-        enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-        setDetectionError(result.detailedError || null)
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          diagnostics: {
-            failure: {
-              ...buildActionFailureDiagnostics({
-                errorCategory: getAutoDetectAnalyticsErrorCategory(
-                  result.detailedError?.type,
-                ),
-                stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-                reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-              }),
-              ...(result.autoDetectFailureReason
-                ? {
-                    accountAutoDetectFailureReason:
-                      result.autoDetectFailureReason,
-                  }
-                : {}),
-            },
-          },
-          insights: {
-            ...createAutoDetectAnalyticsInsights(result, true),
-            ...(result.autoDetectFailureReason
-              ? {
-                  accountAutoDetectFailureReason:
-                    result.autoDetectFailureReason,
-                }
-              : {}),
-          },
-        })
-        return
-      }
-
-      const resultData = result.data
-      if (resultData) {
-        await applyAutoDetectedData(resultData)
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: createAutoDetectAnalyticsInsights(result, false),
-        })
-      }
-    } catch (error) {
-      if (!isCurrentAutoDetectRun()) {
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: createAutoDetectAnalyticsInsights(undefined, false),
-        })
-        return
-      }
-      logger.error("Auto-detect failed", { error, url: url.trim(), authType })
-      const detectionError = analyzeAutoDetectError(error)
-      setDetectionError(detectionError)
-      enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        diagnostics: {
-          failure: buildActionFailureDiagnostics({
-            error,
-            errorCategory: getAutoDetectAnalyticsErrorCategory(
-              detectionError.type,
-              error,
-            ),
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+  const handleAutoDetect = () =>
+    autoDetection.run({
+      url,
+      mode,
+      isDetected,
+      draft,
+      credentialScope: accountCredentialScopeRef.current,
+      form: {
+        applyDetected: applyAutoDetectedData,
+        applyRecovery: applyAutoDetectRecoveryData,
+        enterManual: () => enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL),
+        setAccessToken,
+        setAuthType,
+        beforeDetect: () => rememberCookieStore(undefined),
+        onOpenRouterStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
+        onOpenRouterCredentialCreated: (credential, requestedUrl) =>
+          updateAccessToken(credential, {
+            url: requestedUrl,
+            siteType: SITE_TYPES.OPENROUTER,
           }),
-        },
-        insights: createAutoDetectAnalyticsInsights(undefined, true),
-      })
-    } finally {
-      if (shouldTrackPopupInterruption) {
-        await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
-      }
-      setIsDetecting(false)
-    }
-  }
-
-  const runAutoDetectInvocation = async (runGeneration: number) => {
-    if (!isCanonicalOpenRouterUrl(url.trim())) {
-      return runAdmittedAutoDetectInvocation(runGeneration)
-    }
-    const admission = tryPrepareOpenRouterOnboardingStart()
-    if (!admission) return
-    return admission.preparation.run(async (start) => {
-      if (admission.clearCreatedCredential) setAccessToken("")
-      await runAdmittedAutoDetectInvocation(runGeneration, start)
+      },
+      onboarding: {
+        tryPrepareForStart: tryPrepareOpenRouterOnboardingStart,
+        abandonForOtherAutoDetect:
+          abandonOpenRouterOnboardingForOtherAutoDetect,
+      },
     })
-  }
-
-  const handleAutoDetect = async () => {
-    if (autoDetectInvocationLeaseRef.current) return
-
-    const lease = Symbol("account-auto-detect-invocation")
-    const runGeneration = autoDetectRunGenerationRef.current + 1
-    autoDetectRunGenerationRef.current = runGeneration
-    autoDetectInvocationLeaseRef.current = lease
-    try {
-      await runAutoDetectInvocation(runGeneration)
-    } finally {
-      if (autoDetectInvocationLeaseRef.current === lease) {
-        autoDetectInvocationLeaseRef.current = null
-      }
-    }
-  }
 
   const handleShowManualForm = async () => {
     try {
-      const shouldContinue = await ensureDuplicateAccountAddConfirmation()
-      if (!shouldContinue) {
+      const shouldContinue = await confirmDuplicateAccount("manual")
+      if (!shouldContinue?.isCurrent()) {
         return
       }
       enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
@@ -2625,10 +1334,8 @@ export function useAccountDialog({
       setIsSaving(true)
       const policy = getAccountDialogSitePolicy(siteType)
       const saveAnalyticsAction = startSaveAnalyticsAction()
-      const duplicateConfirmed =
-        (await ensureDuplicateAccountAddConfirmation()) &&
-        (await ensureExactCredentialDuplicateConfirmation())
-      if (!duplicateConfirmed) {
+      const duplicateConfirmed = await confirmDuplicateAccount()
+      if (!duplicateConfirmed?.isCurrent()) {
         saveAnalyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         isAnalyticsActionCompleted = true
         // Let callers distinguish cancellation from a failed save.
@@ -2643,33 +1350,33 @@ export function useAccountDialog({
           skipAutoProvisionKeyOnAccountAdd:
             options?.skipAutoProvisionKeyOnAccountAdd === true,
         })
-      const sub2apiAuth = buildSub2ApiAuthFromAccountDialogDraft({
-        draft,
-        policy,
-      })
+      const sub2apiAuth = sub2ApiSession.auth
       const normalizedUserId = userId.trim()
       const normalizedAccessToken = accessToken.trim()
 
+      const saveInput = {
+        url: url.trim(),
+        siteName: siteName.trim(),
+        username: username.trim(),
+        accessToken: normalizedAccessToken,
+        userId: normalizedUserId,
+        exchangeRate: exchangeRate,
+        notes: notes.trim(),
+        tagIds: tagIds,
+        checkInConfig: checkIn,
+        siteType: siteType,
+        authType: authType,
+        cookieAuthSessionCookie: cookieAuthSessionCookie.trim(),
+        manualBalanceUsd: manualBalanceUsd,
+        excludeFromTotalBalance: excludeFromTotalBalance,
+        excludeFromTodayIncome: excludeFromTodayIncome,
+        sub2apiAuth: sub2apiAuth,
+      }
       const saveAccount = () =>
         mode === DIALOG_MODES.ADD
-          ? validateAndSaveAccount(
-              url.trim(),
-              siteName.trim(),
-              username.trim(),
-              normalizedAccessToken,
-              normalizedUserId,
-              exchangeRate,
-              notes.trim(),
-              tagIds,
-              checkIn,
-              siteType,
-              authType,
-              cookieAuthSessionCookie.trim(),
-              manualBalanceUsd,
-              excludeFromTotalBalance,
-              excludeFromTodayIncome,
-              sub2apiAuth,
-              {
+          ? validateAndSaveAccount({
+              ...saveInput,
+              options: {
                 deferDataRefresh: true,
                 skipAutoProvisionKeyOnAccountAdd:
                   options?.skipAutoProvisionKeyOnAccountAdd === true ||
@@ -2678,26 +1385,11 @@ export function useAccountDialog({
                   ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
                   : {}),
               },
-            )
-          : validateAndUpdateAccount(
-              account!.id,
-              url.trim(),
-              siteName.trim(),
-              username.trim(),
-              normalizedAccessToken,
-              normalizedUserId,
-              exchangeRate,
-              notes.trim(),
-              tagIds,
-              checkIn,
-              siteType,
-              authType,
-              cookieAuthSessionCookie.trim(),
-              manualBalanceUsd,
-              excludeFromTotalBalance,
-              excludeFromTodayIncome,
-              sub2apiAuth,
-              {
+            })
+          : validateAndUpdateAccount({
+              accountId: account!.id,
+              ...saveInput,
+              options: {
                 deferDataRefresh: true,
                 ...(draft.kimiOpenPlatformAuth
                   ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
@@ -2711,7 +1403,7 @@ export function useAccountDialog({
                     }
                   : {}),
               },
-            )
+            })
       const result = await withProtectionBypassUserCommand(
         mode === DIALOG_MODES.ADD
           ? PROTECTION_BYPASS_USER_COMMANDS.AddAccount
@@ -2846,39 +1538,12 @@ export function useAccountDialog({
       }
 
       if (shouldDeferSuccessForSitePolicy && savedAccountId) {
-        if (
-          policy.deferSuccessForOneTimeKeyPostSaveFlow &&
-          autoProvisionKeyOnAccountAddMode ===
-            ACCOUNT_KEY_AUTO_PROVISION_MODES.Default
-        ) {
-          await handleAihubmixNormalSaveForegroundKeyFlow({
-            accountId: savedAccountId,
-            accountName: siteName.trim() || policy.defaultSiteName || siteType,
-          })
-        } else {
-          pendingAccountKeyProvisioningSuccessRef.current = savedAccountId
-          const runId = postSaveKeyProvisioningRunRef.current
-          try {
-            const display =
-              await accountReadModels.getDisplayDataById(savedAccountId)
-            const stored = display
-              ? null
-              : await accountQueries.getAccountById(savedAccountId)
-            if (runId !== postSaveKeyProvisioningRunRef.current) return result
-            const owner =
-              display ??
-              (stored ? accountPresentation.convertToDisplayData(stored) : null)
-            if (owner)
-              setPostSaveKeyProvisioning({
-                account: owner,
-                mode: autoProvisionKeyOnAccountAddMode,
-              })
-            else completePendingAccountKeyProvisioningSuccess()
-          } catch {
-            if (runId === postSaveKeyProvisioningRunRef.current)
-              completePendingAccountKeyProvisioningSuccess()
-          }
-        }
+        await postSaveWorkflow.beginProvisioning({
+          accountId: savedAccountId,
+          accountName: siteName.trim() || policy.defaultSiteName || siteType,
+          mode: autoProvisionKeyOnAccountAddMode,
+          confirmOneTimeKey: policy.deferSuccessForOneTimeKeyPostSaveFlow,
+        })
       }
 
       // A single provisioning owner must finish before any legacy default-key prompt opens.
@@ -2898,21 +1563,7 @@ export function useAccountDialog({
         !skipSub2ApiKeyPrompt
       ) {
         try {
-          const savedDisplaySiteData =
-            (await accountReadModels.getDisplayDataById(savedAccountId)) ?? null
-
-          if (
-            shouldOpenSub2ApiTokenDialogForAccountDialogSite({
-              policy,
-              skipSub2ApiKeyPrompt,
-              hasDisplayData: Boolean(savedDisplaySiteData),
-            }) &&
-            savedDisplaySiteData
-          ) {
-            await openDefaultTokenQuickCreateDialogForAccount(
-              savedDisplaySiteData,
-            )
-          }
+          await postSaveWorkflow.openDefaultKeyPrompt(savedAccountId)
         } catch (error) {
           logger.error("Post-save Sub2API token dialog failed", {
             accountId: savedAccountId,
@@ -2941,535 +1592,20 @@ export function useAccountDialog({
     }
   }
 
-  const handleAihubmixPostSaveKeyPromptCancel = useCallback(() => {
-    postSaveKeyProvisioningRunRef.current += 1
-    setAihubmixPostSaveKeyPrompt({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
-    completePendingAccountKeyProvisioningSuccess()
-    toast.info(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
-  }, [completePendingAccountKeyProvisioningSuccess, t])
-
-  const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {
-    const accountId = aihubmixPostSaveKeyPrompt.accountId
-    if (!accountId) return
-
-    const runId = postSaveKeyProvisioningRunRef.current + 1
-    postSaveKeyProvisioningRunRef.current = runId
-    const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
-
-    setAihubmixPostSaveKeyPrompt((prev) => ({
-      ...prev,
-      isCreating: true,
-    }))
-
-    try {
-      const savedAccount = await accountQueries.getAccountById(accountId)
-      if (!isCurrentRun()) return
-      if (!savedAccount) {
-        toast.error(t("messages:toast.error.findAccountDetailsFailed"))
-        setAihubmixPostSaveKeyPrompt({
-          isOpen: false,
-          accountId: null,
-          accountName: "",
-          isCreating: false,
-        })
-        completePendingAccountKeyProvisioningSuccess()
-        return
-      }
-
-      if (!isCurrentRun()) return
-
-      postSaveCreationAbort.current?.abort()
-      const controller = new AbortController()
-      postSaveCreationAbort.current = controller
-      const ensureResult = await ensureAccountKey(
-        accountPresentation.convertToDisplayData(savedAccount),
-        { allowOneTimeSecret: true, signal: controller.signal },
-      )
-      if (!isCurrentRun()) return
-
-      if (
-        ensureResult.kind === "created" &&
-        ensureResult.creation.createdSecret
-      ) {
-        setAihubmixPostSaveKeyPrompt({
-          isOpen: false,
-          accountId: null,
-          accountName: "",
-          isCreating: false,
-        })
-        setPostSaveOneTimeSecret(ensureResult.creation.createdSecret)
-        return
-      }
-
-      toast.error(t("messages:aihubmix.oneTimeKeyUnavailableAfterCreate"))
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: false,
-        accountId: null,
-        accountName: "",
-        isCreating: false,
-      })
-      completePendingAccountKeyProvisioningSuccess()
-    } catch (error) {
-      if (!isCurrentRun()) return
-
-      toast.error(t("messages:aihubmix.oneTimeKeyUnavailableAfterCreate"))
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: false,
-        accountId: null,
-        accountName: "",
-        isCreating: false,
-      })
-      completePendingAccountKeyProvisioningSuccess()
-      logger.error("AIHubMix post-save one-time key creation failed", {
-        accountId,
-        error: getErrorMessage(error),
-      })
-    }
-  }, [
-    aihubmixPostSaveKeyPrompt.accountId,
-    completePendingAccountKeyProvisioningSuccess,
-    t,
-  ])
-
-  const openPostSaveManagedSiteDialog = useCallback(
-    async (
-      displaySiteData: DisplaySiteData,
-      runtimeKey: AccountRuntimeKey | null,
-      runId = postSaveAutoConfigRunRef.current,
-      targetAccount = targetAccountRef.current,
-      createdSecret?: CreatedRuntimeSecret,
-    ) => {
-      if (postSaveAutoConfigRunRef.current !== runId) {
-        return
-      }
-      const isCurrentRun = () => postSaveAutoConfigRunRef.current === runId
-
-      setAccountPostSaveWorkflowStep(
-        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
-      )
-      try {
-        const completed = () => {
-          if (onSuccess && targetAccount && isCurrentRun())
-            onSuccess(targetAccount)
-        }
-        const openResult = runtimeKey
-          ? await openChannelDialog(displaySiteData, runtimeKey, completed, {
-              shouldContinue: isCurrentRun,
-            })
-          : createdSecret
-            ? await openChannelDialogWithCredentials(
-                {
-                  name: createdSecret.displayName,
-                  baseUrl: createdSecret.credential.baseUrl,
-                  apiKey: createdSecret.secret,
-                  apiType: createdSecret.credential.apiType,
-                },
-                completed,
-              )
-            : { opened: false }
-        if (!isCurrentRun()) {
-          return
-        }
-        if (!openResult.opened) {
-          if (openResult.deferred) {
-            return
-          }
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          return
-        }
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
-        )
-      } catch (error) {
-        if (!isCurrentRun()) {
-          return
-        }
-        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
-        toast.error(
-          t("messages.newApiConfigFailed", {
-            error: getErrorMessage(error),
-          }),
-        )
-        logger.error("Failed to open post-save managed-site dialog", {
-          error: getErrorMessage(error),
-          accountId: targetAccount,
-          siteType: displaySiteData.siteType,
-        })
-      }
-    },
-    [onSuccess, openChannelDialog, openChannelDialogWithCredentials, t],
-  )
-
-  const handlePostSaveOneTimeSecretClose = useCallback(async () => {
-    const runId = postSaveAutoConfigRunRef.current
-    setPostSaveOneTimeSecret(null)
-    const pending = pendingPostSaveChannelRef.current
-    pendingPostSaveChannelRef.current = null
-    if (!pending || (!pending.runtimeKey && !pending.createdSecret)) {
-      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-      completePendingAccountKeyProvisioningSuccess()
-      return
-    }
-
-    await openPostSaveManagedSiteDialog(
-      pending.displaySiteData,
-      pending.runtimeKey ?? null,
-      runId,
-      undefined,
-      pending.createdSecret,
-    )
-  }, [
-    completePendingAccountKeyProvisioningSuccess,
-    openPostSaveManagedSiteDialog,
-  ])
-
-  const handlePostSaveSub2ApiTokenDialogCloseForSession = useCallback(
-    (sessionId: number | null) => {
-      if (
-        sessionId === null ||
-        activePostSaveSub2ApiDialogSessionIdRef.current !== sessionId
-      ) {
-        return
-      }
-
-      invalidatePostSaveSub2ApiDialogSession()
-      pendingPostSaveChannelRef.current = null
-      setPostSaveSub2ApiAccount(null)
-      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-    },
-    [invalidatePostSaveSub2ApiDialogSession],
-  )
-
-  const handlePostSaveSub2ApiTokenDialogClose = useCallback(() => {
-    handlePostSaveSub2ApiTokenDialogCloseForSession(
-      activePostSaveSub2ApiDialogSessionIdRef.current,
-    )
-  }, [handlePostSaveSub2ApiTokenDialogCloseForSession])
-
-  const handlePostSaveSub2ApiTokenCreatedForSession = useCallback(
-    async (
-      sessionId: number | null,
-      createdToken: AccountKeyCreationResult,
-    ) => {
-      if (
-        sessionId === null ||
-        activePostSaveSub2ApiDialogSessionIdRef.current !== sessionId
-      ) {
-        return
-      }
-
-      invalidatePostSaveSub2ApiDialogSession()
-      const runId = postSaveAutoConfigRunRef.current
-      const pending = pendingPostSaveChannelRef.current
-      setPostSaveSub2ApiAccount(null)
-
-      if (!pending) {
-        pendingPostSaveChannelRef.current = null
-        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-        return
-      }
-
-      pendingPostSaveChannelRef.current = null
-      if (createdToken.createdSecret) {
-        pendingPostSaveChannelRef.current = {
-          ...pending,
-          runtimeKey: getCreatedAccountRuntimeKey(
-            pending.displaySiteData,
-            createdToken,
-          ),
-          createdSecret: createdToken.createdSecret,
-        }
-        setPostSaveOneTimeSecret(createdToken.createdSecret)
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
-        )
-        return
-      }
-      try {
-        const runtimeKey = await resolveCreatedAccountRuntimeKey(
-          pending.displaySiteData,
-          createdToken,
-        )
-        if (postSaveAutoConfigRunRef.current !== runId) return
-        if (!runtimeKey) {
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          toast.error(t("messages:accountOperations.tokenNotFound"))
-          return
-        }
-        await openPostSaveManagedSiteDialog(
-          pending.displaySiteData,
-          runtimeKey,
-          runId,
-        )
-      } catch (error) {
-        if (postSaveAutoConfigRunRef.current !== runId) {
-          return
-        }
-        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
-        toast.error(
-          t("messages.newApiConfigFailed", {
-            error: getErrorMessage(error),
-          }),
-        )
-        logger.error("Failed to resolve latest Sub2API token after create", {
-          accountId: pending.displaySiteData.id,
-          error: getErrorMessage(error),
-        })
-      }
-    },
-    [invalidatePostSaveSub2ApiDialogSession, openPostSaveManagedSiteDialog, t],
-  )
-
-  const handlePostSaveSub2ApiTokenCreated = useCallback(
-    async (createdToken: AccountKeyCreationResult) => {
-      await handlePostSaveSub2ApiTokenCreatedForSession(
-        activePostSaveSub2ApiDialogSessionIdRef.current,
-        createdToken,
-      )
-    },
-    [handlePostSaveSub2ApiTokenCreatedForSession],
-  )
-
-  const getPostSaveSub2ApiDialogHandlers = useCallback(
-    (sessionId: number | null) => ({
-      onClose: () => {
-        handlePostSaveSub2ApiTokenDialogCloseForSession(sessionId)
-      },
-      onSuccess: async (createdToken: AccountKeyCreationResult) => {
-        await handlePostSaveSub2ApiTokenCreatedForSession(
-          sessionId,
-          createdToken,
-        )
-      },
-    }),
-    [
-      handlePostSaveSub2ApiTokenCreatedForSession,
-      handlePostSaveSub2ApiTokenDialogCloseForSession,
-    ],
-  )
-
-  const handleAutoConfig = async () => {
-    const runId = postSaveAutoConfigRunRef.current + 1
-    postSaveAutoConfigRunRef.current = runId
-    const isCurrentRun = () => postSaveAutoConfigRunRef.current === runId
-
-    try {
-      const isManagedSiteReady = await ensureManagedSiteAutoConfigReady()
-      if (!isCurrentRun()) {
-        return
-      }
-      if (!isManagedSiteReady) {
-        return
-      }
-    } catch (error) {
-      if (!isCurrentRun()) {
-        return
-      }
-      toast.error(
-        t("messages.operationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-      logger.error(
-        "Failed to validate managed-site auto-config prerequisites",
-        {
-          managedSiteType,
-          error: getErrorMessage(error),
-        },
-      )
-      return
-    }
-
-    setIsAutoConfiguring(true)
-    try {
-      let targetAccount: DisplaySiteData | null | string | undefined =
-        account || newAccountRef.current
-      let savedSiteAccount: SiteAccount | null = null
-      // 如果是新增（account 不存在），就先保存
-      if (!targetAccount) {
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.SavingAccount,
-        )
-        const saveResult = await handleSaveAccount({
+  const handleAutoConfig = () =>
+    postSaveWorkflow.executeAutoConfig({
+      account,
+      ensureManagedSiteAutoConfigReady,
+      saveAccount: () =>
+        handleSaveAccount({
           skipSub2ApiKeyPrompt: true,
           skipAutoProvisionKeyOnAccountAdd: true,
-        })
-        if (!isCurrentRun()) {
-          return
-        }
-        if (saveResult === null) {
-          setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-          return
-        }
-        targetAccount = saveResult?.accountId
-        if (!targetAccount) {
-          toast.error(t("messages.saveAccountFailed"))
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          return
-        }
-        // 缓存到 ref，避免重复保存
-        newAccountRef.current = targetAccount
-      }
-
-      // 缓存目标账户
-      if (!isCurrentRun()) {
-        return
-      }
-      targetAccountRef.current = targetAccount
-      const intendedTargetAccount = targetAccount
-      let displaySiteData
-
-      if (typeof targetAccount === "string") {
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.LoadingSavedAccount,
-        )
-        // 获取账户详细信息
-        const siteAccount = await accountQueries.getAccountById(targetAccount)
-        if (!isCurrentRun()) {
-          return
-        }
-        if (!siteAccount) {
-          toast.error(t("messages:toast.error.findAccountDetailsFailed"))
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          return
-        }
-        savedSiteAccount = siteAccount
-        displaySiteData =
-          (await accountReadModels.getDisplayDataById(siteAccount.id)) ??
-          accountPresentation.convertToDisplayData(siteAccount)
-        if (!isCurrentRun()) {
-          return
-        }
-      } else {
-        displaySiteData = targetAccount
-      }
-
-      // The current runtime path opens the channel dialog with prefilled data
-      // so users can review it before creation. The direct auto-import helpers
-      // are kept only as deprecated compatibility shims.
-      if (!savedSiteAccount) {
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
-        )
-        const openResult = await openChannelDialog(
-          displaySiteData,
-          null,
-          () => {
-            if (onSuccess && intendedTargetAccount && isCurrentRun()) {
-              onSuccess(intendedTargetAccount)
-            }
-          },
-          { shouldContinue: isCurrentRun },
-        )
-        if (!isCurrentRun()) {
-          return
-        }
-        if (!openResult.opened) {
-          if (openResult.deferred) {
-            return
-          }
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          return
-        }
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
-        )
-        return
-      }
-
-      setAccountPostSaveWorkflowStep(
-        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
-      )
-      postSaveCreationAbort.current?.abort()
-      const controller = new AbortController()
-      postSaveCreationAbort.current = controller
-      const ensureResult = await ensureAccountKey(
-        accountPresentation.convertToDisplayData(savedSiteAccount),
-        { allowOneTimeSecret: true, signal: controller.signal },
-      )
-      if (!isCurrentRun()) {
-        return
-      }
-
-      if (ensureResult.kind === "input-required") {
-        openPostSaveSub2ApiDialogSession()
-        pendingPostSaveChannelRef.current = { displaySiteData }
-        setPostSaveSub2ApiAccount(displaySiteData)
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
-        )
-        return
-      }
-      const secret =
-        ensureResult.kind === "created"
-          ? ensureResult.creation.createdSecret
-          : undefined
-      if (secret) {
-        pendingPostSaveChannelRef.current = {
-          displaySiteData,
-          runtimeKey: ensureResult.runtimeKey,
-          createdSecret: secret,
-        }
-        setPostSaveOneTimeSecret(secret)
-        setAccountPostSaveWorkflowStep(
-          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
-        )
-        return
-      }
-      await openPostSaveManagedSiteDialog(
-        displaySiteData,
-        ensureResult.runtimeKey,
-        runId,
-        intendedTargetAccount,
-      )
-    } catch (error) {
-      if (!isCurrentRun()) {
-        return
-      }
-      toast.error(
-        t("messages.newApiConfigFailed", {
-          error: getErrorMessage(error),
         }),
-      )
-      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
-      logger.error("Auto configuration failed", { error })
-    } finally {
-      if (isCurrentRun()) {
-        setIsAutoConfiguring(false)
-      }
-    }
-  }
+    })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     handleSaveAccount()
-  }
-
-  const handleSub2apiUseRefreshTokenChange = (enabled: boolean) => {
-    sub2apiRefreshTokenPreferenceChangedRef.current = true
-    setSub2apiUseRefreshToken(enabled)
-
-    // If the user explicitly disables refresh-token mode, clear any captured
-    // credentials to avoid accidental persistence.
-    if (!enabled) {
-      setSub2apiRefreshToken("")
-      setSub2apiTokenExpiresAt(null)
-    }
   }
 
   const normalizedFormSiteType = isAccountSiteType(siteType)
@@ -3485,15 +1621,11 @@ export function useAccountDialog({
     cookieAuthSessionCookie,
     exchangeRate,
   })
-  const isSub2ApiRefreshTokenValid =
-    !currentSitePolicy.allowSub2ApiRefreshTokenState ||
-    !sub2apiUseRefreshToken ||
-    !!sub2apiRefreshToken.trim()
   const isManualBalanceUsdInvalid =
     manualBalanceUsd.trim() !== "" &&
     parseManualQuotaFromUsd(manualBalanceUsd) === undefined
   const isAccountFormValid =
-    isFormValid && isSub2ApiRefreshTokenValid && !isManualBalanceUsdInvalid
+    isFormValid && sub2ApiSession.isValid && !isManualBalanceUsdInvalid
 
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
@@ -3558,8 +1690,8 @@ export function useAccountDialog({
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
       postSaveKeyProvisioning,
-      postSaveSub2ApiAccount,
-      postSaveSub2ApiDialogSessionId,
+      postSaveKeyInputAccount,
+      postSaveKeyInputSessionId,
       duplicateAccountWarning,
       managedSiteConfigPrompt,
       aihubmixPostSaveKeyPrompt,
@@ -3624,73 +1756,15 @@ export function useAccountDialog({
       shouldDeferAccountSaveSuccess,
       handlePostSaveOneTimeSecretClose,
       handlePostSaveKeyProvisioningClose,
-      handlePostSaveSub2ApiTokenDialogClose,
-      handlePostSaveSub2ApiTokenCreated,
-      getPostSaveSub2ApiDialogHandlers,
+      handlePostSaveKeyInputTokenDialogClose,
+      handlePostSaveKeyInputTokenCreated,
+      getPostSaveKeyInputDialogHandlers,
     },
   }
 }
 
 /**
- * Normalizes user-supplied site URLs for duplicate-account checks.
- */
-function normalizeSiteUrlForDuplicateCheck(params: {
-  value: string
-  siteType?: AccountSiteType | string
-}): string {
-  return (
-    normalizeAccountSiteProfileUrlForDuplicateCheck({
-      url: params.value,
-      siteType: params.siteType,
-    }) ?? params.value.trim().toLowerCase()
-  )
-}
-
-/**
  * Maps detailed auto-detect failure kinds to the coarse analytics taxonomy.
- */
-function getAutoDetectAnalyticsErrorCategory(
-  errorType?: AutoDetectErrorType,
-  structuredError?: unknown,
-): ProductAnalyticsErrorCategory {
-  switch (errorType) {
-    case AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED:
-    case AutoDetectErrorType.UNAUTHORIZED:
-    case AutoDetectErrorType.FORBIDDEN:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
-    case AutoDetectErrorType.TIMEOUT:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout
-    case AutoDetectErrorType.NETWORK_ERROR:
-    case AutoDetectErrorType.SERVER_ERROR:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
-    case AutoDetectErrorType.INVALID_RESPONSE:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-    case AutoDetectErrorType.NOT_FOUND:
-    case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
-    case AutoDetectErrorType.UNKNOWN:
-    default:
-      if (structuredError !== undefined) {
-        return resolveProductAnalyticsErrorCategoryFromError(structuredError)
-      }
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-  }
-}
-
-/**
- * Checks whether a detected site type is accepted by the analytics whitelist.
- */
-function isProductAnalyticsSiteType(
-  value: unknown,
-): value is ProductAnalyticsSiteType {
-  return (
-    typeof value === "string" &&
-    (PRODUCT_ANALYTICS_SITE_TYPES as readonly string[]).includes(value)
-  )
-}
-
-/**
- * Resolves the initial flow state for add and edit dialog modes.
  */
 function getInitialFlowState(mode: DialogMode): {
   phase: AccountDialogPhase

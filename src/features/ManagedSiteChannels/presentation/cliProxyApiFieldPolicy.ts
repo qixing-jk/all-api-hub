@@ -1,7 +1,7 @@
 import type {
   ManagedResourceEditorFieldPolicy,
   ManagedResourceFieldPresentation,
-} from "./managedResourceFieldPolicy"
+} from "./managedResourceFieldPresentation"
 
 /** Optional section summaries use only non-secret projection facts. */
 export const cliProxyApiSections = {

@@ -48,8 +48,8 @@
       "loadingSavedAccount": "Đang tải tài khoản đã lưu...",
       "openingManagedSiteDialog": "Đang mở cấu hình kênh...",
       "savingAccount": "Đang lưu tài khoản...",
-      "waitingForOneTimeKey": "Vui lòng lưu khóa một lần trước...",
-      "waitingForSub2ApiGroup": "Vui lòng chọn nhóm Sub2API..."
+      "waitingForKeyInput": "Hoàn tất thông tin để tạo khóa…",
+      "waitingForOneTimeKey": "Vui lòng lưu khóa một lần trước..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

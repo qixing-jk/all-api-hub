@@ -7,11 +7,11 @@ import { ActionGroup, Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import toast from "~/lib/notify"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   normalizeChannelFilters,
   type IncomingChannelFilter,
 } from "~/services/managedSites/channelModelFilterRules"
-import { resolveApiVerificationTypeForChannelType } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -153,10 +153,9 @@ export default function ChannelFilterDialog({
   }
   const probeRulesSupported = Boolean(
     channel.resourceRef &&
-      resolveApiVerificationTypeForChannelType(
+      getSiteTypeCapabilities(
         channel.resourceRef.managedSiteType,
-        channel.type,
-      ),
+      ).managedSites?.models?.resolveVerificationProtocol?.(channel.type),
   )
 
   const handleFieldChange = (

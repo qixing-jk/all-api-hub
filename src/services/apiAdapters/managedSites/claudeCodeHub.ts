@@ -10,6 +10,7 @@ import {
   toManagedResourceMatchCandidate,
   toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/matchingInputs"
+import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/modelInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import { searchProviders } from "~/services/apiService/claudeCodeHub"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
@@ -20,6 +21,7 @@ import {
   prepareChannelFormData,
   toClaudeCodeHubDisclosureError,
 } from "~/services/managedSites/providers/claudeCodeHub"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import { normalizeList } from "~/utils/core/string"
 
@@ -95,6 +97,15 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
 export const claudeCodeHubManagedSiteCapabilities = {
   siteType: SITE_TYPES.CLAUDE_CODE_HUB,
   matching,
+  models: {
+    resolveVerificationProtocol: createChannelVerificationProtocolResolver({
+      [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]:
+        API_TYPES.OPENAI_COMPATIBLE,
+      [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: API_TYPES.OPENAI,
+      [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: API_TYPES.ANTHROPIC,
+      [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: API_TYPES.GOOGLE,
+    }),
+  },
   config: claudeCodeHubManagedSiteConfig,
   channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
 } satisfies ManagedSiteCapabilities<

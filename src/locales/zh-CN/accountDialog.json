@@ -48,8 +48,8 @@
       "loadingSavedAccount": "正在读取已保存账号...",
       "openingManagedSiteDialog": "正在打开渠道配置...",
       "savingAccount": "正在保存账号...",
-      "waitingForOneTimeKey": "请先保存一次性密钥...",
-      "waitingForSub2ApiGroup": "请选择 Sub2API 分组..."
+      "waitingForKeyInput": "请完成密钥创建所需输入...",
+      "waitingForOneTimeKey": "请先保存一次性密钥..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

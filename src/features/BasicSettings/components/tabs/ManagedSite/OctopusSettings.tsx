@@ -5,15 +5,15 @@ import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLin
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).
@@ -43,45 +43,36 @@ export default function OctopusSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.octopus,
+    defaults: DEFAULT_PREFERENCES.octopus,
+    reset: resetOctopusConfig,
+    fields: {
+      baseUrl: {
+        setting: t("octopus.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateOctopusBaseUrl(value, options),
+      },
+      username: {
+        setting: t("octopus.fields.usernameLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateOctopusUsername(value, options),
+      },
+      password: {
+        setting: t("octopus.fields.passwordLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateOctopusPassword(value, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localUsername = localConfig.username
   const localPassword = localConfig.password
-
-  const handleBaseUrlChange = async (url: string) => {
-    const trimmedUrl = url.trim()
-    if (trimmedUrl === octopusBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("octopus.fields.baseUrlLabel"),
-      update: (options) => updateOctopusBaseUrl(trimmedUrl, options),
-    })
-  }
-
-  const handleUsernameChange = async (username: string) => {
-    const trimmedUsername = username.trim()
-    if (trimmedUsername === octopusUsername) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("octopus.fields.usernameLabel"),
-      update: (options) => updateOctopusUsername(trimmedUsername, options),
-    })
-  }
-
-  const handlePasswordChange = async (password: string) => {
-    const trimmedPassword = password.trim()
-    if (trimmedPassword === octopusPassword) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("octopus.fields.passwordLabel"),
-      update: (options) => updateOctopusPassword(trimmedPassword, options),
-    })
-  }
 
   const handleValidateConfig = async () => {
     const trimmedUrl = localBaseUrl.trim()
@@ -129,14 +120,7 @@ export default function OctopusSettings() {
       id="octopus"
       title={t("octopus.title")}
       description={t("octopus.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.octopus,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.octopus,
-        reset: resetOctopusConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -156,7 +140,7 @@ export default function OctopusSettings() {
                     baseUrl: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onBlur={(e) => commitField("baseUrl", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("octopus.fields.baseUrlPlaceholder")}
               />
@@ -177,7 +161,7 @@ export default function OctopusSettings() {
                     username: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleUsernameChange(e.target.value)}
+                onBlur={(e) => commitField("username", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("octopus.fields.usernamePlaceholder")}
               />
@@ -204,7 +188,7 @@ export default function OctopusSettings() {
                       password: e.target.value,
                     }))
                   }
-                  onBlur={(e) => handlePasswordChange(e.target.value)}
+                  onBlur={(e) => commitField("password", e.target.value)}
                   onKeyDown={blurInputOnEnter}
                   placeholder={t("octopus.fields.passwordPlaceholder")}
                 />

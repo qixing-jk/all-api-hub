@@ -1,3 +1,4 @@
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
@@ -6,6 +7,7 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
@@ -20,6 +22,7 @@ import {
   prepareChannelFormData,
 } from "~/services/managedSites/providers/axonHub"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { normalizeList } from "~/utils/core/string"
@@ -113,6 +116,26 @@ async function fetchSecretKey(
 export const axonHubManagedSiteCapabilities = {
   siteType: SITE_TYPES.AXON_HUB,
   matching,
+  models: {
+    resolveVerificationProtocol: createChannelVerificationProtocolResolver({
+      [AXON_HUB_CHANNEL_TYPE.OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: API_TYPES.OPENAI,
+      [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.XAI]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.NANOGPT]: API_TYPES.OPENAI_COMPATIBLE,
+      [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: API_TYPES.ANTHROPIC,
+      [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: API_TYPES.ANTHROPIC,
+      [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: API_TYPES.ANTHROPIC,
+      [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: API_TYPES.ANTHROPIC,
+      [AXON_HUB_CHANNEL_TYPE.GEMINI]: API_TYPES.GOOGLE,
+      [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: API_TYPES.GOOGLE,
+    }),
+  },
   config: axonHubManagedSiteConfig,
   channelDrafts: axonHubManagedSiteChannelDrafts,
 } satisfies ManagedSiteCapabilities<AxonHubConfig, typeof SITE_TYPES.AXON_HUB>

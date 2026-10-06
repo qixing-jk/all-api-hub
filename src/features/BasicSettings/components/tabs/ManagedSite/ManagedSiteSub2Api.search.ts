@@ -7,15 +7,15 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-const isSub2Api = (context: { managedSiteType: string }) =>
-  context.managedSiteType === SITE_TYPES.SUB2API
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
 const breadcrumbs = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.managedSite",
   "settings:sub2apiManagedSite.title",
 ]
 
-export const managedSiteSub2ApiSearchSections: OptionsSearchItemDefinition[] = [
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:sub2api-managed-site",
     "managedSite",
@@ -25,12 +25,11 @@ export const managedSiteSub2ApiSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["sub2api", "admin api key"],
-      isVisible: isSub2Api,
     },
   ),
 ]
 
-export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:sub2api-managed-site-base-url",
     "managedSite",
@@ -41,7 +40,6 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:sub2apiManagedSite.fields.baseUrlDesc",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["sub2api", "base url"],
-      isVisible: isSub2Api,
     },
   ),
   buildControlDefinition(
@@ -62,7 +60,6 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
         "管理key",
         "获取密钥",
       ],
-      isVisible: isSub2Api,
     },
   ),
   buildControlDefinition(
@@ -75,7 +72,6 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:sub2apiManagedSite.fields.adminApiKeyDesc",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["sub2api", "admin api key", "x-api-key"],
-      isVisible: isSub2Api,
     },
   ),
   buildControlDefinition(
@@ -88,7 +84,6 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:sub2apiManagedSite.validation.description",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["sub2api", "validate", "connection"],
-      isVisible: isSub2Api,
     },
   ),
   buildControlDefinition(
@@ -101,7 +96,12 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:sub2apiManagedSite.defaultScope.description",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["sub2api", "step up", "totp"],
-      isVisible: isSub2Api,
     },
   ),
 ]
+
+export const sub2ApiSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.SUB2API,
+  sections,
+  controls,
+)

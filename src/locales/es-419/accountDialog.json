@@ -48,8 +48,8 @@
       "loadingSavedAccount": "Cargando cuenta guardada...",
       "openingManagedSiteDialog": "Abriendo configuración de canal...",
       "savingAccount": "Guardando cuenta...",
-      "waitingForOneTimeKey": "Guarda primero la clave de un solo uso...",
-      "waitingForSub2ApiGroup": "Elige un grupo de Sub2API..."
+      "waitingForKeyInput": "Completa los datos para crear la clave...",
+      "waitingForOneTimeKey": "Guarda primero la clave de un solo uso..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

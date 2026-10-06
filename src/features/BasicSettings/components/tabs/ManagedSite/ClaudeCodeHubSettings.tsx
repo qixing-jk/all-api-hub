@@ -5,15 +5,15 @@ import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLin
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Renders Claude Code Hub settings fields and a config validation action.
@@ -39,32 +39,29 @@ export default function ClaudeCodeHubSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.claudeCodeHub,
+    defaults: DEFAULT_PREFERENCES.claudeCodeHub,
+    reset: resetClaudeCodeHubConfig,
+    fields: {
+      baseUrl: {
+        setting: t("claudeCodeHub.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) => updateClaudeCodeHubBaseUrl(value, options),
+      },
+      adminToken: {
+        setting: t("claudeCodeHub.fields.adminTokenLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateClaudeCodeHubAdminToken(value, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
-
-  const handleBaseUrlChange = async (url: string) => {
-    const trimmedUrl = url.trim()
-    if (trimmedUrl === claudeCodeHubBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("claudeCodeHub.fields.baseUrlLabel"),
-      update: (options) => updateClaudeCodeHubBaseUrl(trimmedUrl, options),
-    })
-  }
-
-  const handleTokenChange = async (token: string) => {
-    const trimmedToken = token.trim()
-    if (trimmedToken === claudeCodeHubAdminToken) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("claudeCodeHub.fields.adminTokenLabel"),
-      update: (options) => updateClaudeCodeHubAdminToken(trimmedToken, options),
-    })
-  }
 
   const handleValidateConfig = async () => {
     const trimmedUrl = localConfig.baseUrl.trim()
@@ -111,14 +108,7 @@ export default function ClaudeCodeHubSettings() {
       id="claude-code-hub"
       title={t("claudeCodeHub.title")}
       description={t("claudeCodeHub.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.claudeCodeHub,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.claudeCodeHub,
-        reset: resetClaudeCodeHubConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -138,7 +128,7 @@ export default function ClaudeCodeHubSettings() {
                     baseUrl: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={(event) => commitField("baseUrl", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("claudeCodeHub.fields.baseUrlPlaceholder")}
               />
@@ -164,7 +154,9 @@ export default function ClaudeCodeHubSettings() {
                     adminToken: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleTokenChange(event.target.value)}
+                onBlur={(event) =>
+                  commitField("adminToken", event.target.value)
+                }
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("claudeCodeHub.fields.adminTokenPlaceholder")}
               />

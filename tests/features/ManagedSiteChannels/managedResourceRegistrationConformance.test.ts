@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   isManagedSiteType,
+  MANAGED_SITE_TYPES,
   SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
@@ -14,31 +15,67 @@ import {
   createManagedResourceColumns,
   getManagedResourcePresentationSemantics,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
+import { managedSitePresentationDefinitions } from "~/features/ManagedSiteChannels/presentation/managedSitePresentationRegistry"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
-import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
+import {
+  getManagedResourceRegistration,
+  managedResourceRegistrations,
+} from "~/services/apiAdapters/managedResources/registry"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 
 describe("native managed-resource registration conformance", () => {
   const nativeDefinitions = getAccountSiteDefinitions().flatMap(
     (definition) => {
-      if (
-        !definition.managedResource ||
-        !isManagedSiteType(definition.siteType)
-      ) {
+      if (!isManagedSiteType(definition.siteType)) {
         return []
       }
-      return getManagedResourceRegistration(
-        definition.siteType,
-        definition.managedResource.primaryKind,
-      )
-        ? [{ definition, siteType: definition.siteType }]
-        : []
+      return [{ definition, siteType: definition.siteType }]
     },
   )
+
+  it("registers each declared managed site and resource exactly once without orphans", () => {
+    const declaredSiteTypes = nativeDefinitions.map(({ siteType }) => siteType)
+    expect([...declaredSiteTypes].sort()).toEqual(
+      [...MANAGED_SITE_TYPES].sort(),
+    )
+    const declaredResources = nativeDefinitions.map(
+      ({ definition, siteType }) => {
+        expect(
+          definition.managedResource,
+          `${siteType}:product policy`,
+        ).toBeDefined()
+        return `${siteType}:${definition.managedResource!.primaryKind}`
+      },
+    )
+    // Comparing arrays, rather than sets, rejects duplicate entries as well as omissions.
+    expect(
+      managedResourceRegistrations
+        .map(({ siteType, kind }) => `${siteType}:${kind}`)
+        .sort(),
+    ).toEqual([...declaredResources].sort())
+    expect(
+      managedSitePresentationDefinitions.map(({ siteType }) => siteType).sort(),
+    ).toEqual([...declaredSiteTypes].sort())
+    const editorResources = managedSitePresentationDefinitions.flatMap(
+      (presentation) =>
+        presentation.fieldPolicies.map((policy) => {
+          expect(policy.siteType, `${presentation.siteType}:editor owner`).toBe(
+            presentation.siteType,
+          )
+          return `${policy.siteType}:${policy.kind}`
+        }),
+    )
+    expect(editorResources.sort()).toEqual([...declaredResources].sort())
+  })
 
   it("keeps product policy, native registration, and editor policy in sync", () => {
     expect(nativeDefinitions.length).toBeGreaterThan(0)
 
     for (const { definition, siteType } of nativeDefinitions) {
+      expect(
+        definition.managedResource,
+        `${siteType}:product policy`,
+      ).toBeDefined()
       const policy = definition.managedResource!
       const registration = getManagedResourceRegistration(
         siteType,
@@ -47,6 +84,16 @@ describe("native managed-resource registration conformance", () => {
       const semantics = getManagedResourcePresentationSemantics(siteType)
 
       expect(registration, siteType).not.toBeNull()
+      expect(registration?.open, `${siteType}:native workspace`).toBeTypeOf(
+        "function",
+      )
+      expect(getManagedSiteCapabilities(siteType).siteType).toBe(siteType)
+      expect(
+        managedSitePresentationDefinitions.find(
+          (entry) => entry.siteType === siteType,
+        )?.table,
+        `${siteType}:table policy`,
+      ).toBeDefined()
       // A value presentation or a status/base-URL role can target any field the
       // workspace displays — a table column or a declared detail row.
       const displayFieldIds = [
@@ -69,7 +116,7 @@ describe("native managed-resource registration conformance", () => {
           MANAGED_RESOURCE_EDITOR_MODES.Create,
         ),
         `${siteType}:create`,
-      ).not.toBeNull()
+      ).toBeDefined()
       expect(
         getManagedResourceFieldPolicy(
           siteType,
@@ -77,7 +124,7 @@ describe("native managed-resource registration conformance", () => {
           MANAGED_RESOURCE_EDITOR_MODES.Edit,
         ),
         `${siteType}:edit`,
-      ).not.toBeNull()
+      ).toBeDefined()
     }
   })
 

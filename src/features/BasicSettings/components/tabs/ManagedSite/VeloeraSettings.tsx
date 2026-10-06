@@ -11,15 +11,15 @@ import {
 } from "~/components/ui"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).
@@ -49,51 +49,35 @@ export default function VeloeraSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.veloera,
+    defaults: DEFAULT_PREFERENCES.veloera,
+    reset: resetVeloeraConfig,
+    fields: {
+      baseUrl: {
+        setting: t("veloera.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedComparison,
+        update: (value, options) => updateVeloeraBaseUrl(value, options),
+      },
+      adminToken: {
+        setting: t("veloera.fields.adminTokenLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedComparison,
+        update: (value, options) => updateVeloeraAdminToken(value, options),
+      },
+      userId: {
+        setting: t("veloera.fields.userIdLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.UserIdComparison,
+        update: (value, options) => updateVeloeraUserId(value, options),
+      },
+    },
   })
   const localBaseUrl = localConfig.baseUrl
   const localAdminToken = localConfig.adminToken
   const localUserId = localConfig.userId
-
-  const handleVeloeraBaseUrlChange = async (url: string) => {
-    const trimmedUrl = url.trim()
-    setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
-
-    if (trimmedUrl === veloeraBaseUrl.trim()) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("veloera.fields.baseUrlLabel"),
-      update: (options) => updateVeloeraBaseUrl(trimmedUrl, options),
-    })
-  }
-
-  const handleVeloeraAdminTokenChange = async (token: string) => {
-    const trimmedToken = token.trim()
-    setLocalConfig((prev) => ({ ...prev, adminToken: trimmedToken }))
-
-    if (trimmedToken === veloeraAdminToken.trim()) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("veloera.fields.adminTokenLabel"),
-      update: (options) => updateVeloeraAdminToken(trimmedToken, options),
-    })
-  }
-
-  const handleVeloeraUserIdChange = async (id: string) => {
-    const trimmedId = id.trim()
-    if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
-
-    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
-    if (trimmedId === veloeraUserId.trim()) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("veloera.fields.userIdLabel"),
-      update: (options) => updateVeloeraUserId(trimmedId, options),
-    })
-  }
 
   const trimmedBaseUrl = localBaseUrl.trim()
   const userIdError =
@@ -125,14 +109,7 @@ export default function VeloeraSettings() {
       id="veloera"
       title={t("veloera.title")}
       description={t("veloera.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.veloera,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.veloera,
-        reset: resetVeloeraConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -152,7 +129,7 @@ export default function VeloeraSettings() {
                     baseUrl: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleVeloeraBaseUrlChange(e.target.value)}
+                onBlur={(e) => commitField("baseUrl", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("veloera.fields.baseUrlPlaceholder")}
               />
@@ -195,7 +172,7 @@ export default function VeloeraSettings() {
                     adminToken: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleVeloeraAdminTokenChange(e.target.value)}
+                onBlur={(e) => commitField("adminToken", e.target.value)}
                 onKeyDown={blurInputOnEnter}
               />
             }
@@ -217,7 +194,7 @@ export default function VeloeraSettings() {
                     userId: e.target.value,
                   }))
                 }
-                onBlur={(e) => handleVeloeraUserIdChange(e.target.value)}
+                onBlur={(e) => commitField("userId", e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}

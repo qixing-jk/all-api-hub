@@ -6,7 +6,9 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-export const managedSiteDoneHubSearchSections: OptionsSearchItemDefinition[] = [
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:done-hub",
     "managedSite",
@@ -16,12 +18,11 @@ export const managedSiteDoneHubSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["done-hub", "donehub"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
 ]
 
-export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:done-hub-base-url",
     "managedSite",
@@ -36,7 +37,6 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "base url"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -53,7 +53,6 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "admin credentials", "base url"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -70,7 +69,6 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "token"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -87,7 +85,12 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "user id"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
 ]
+
+export const doneHubSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.DONE_HUB,
+  sections,
+  controls,
+)

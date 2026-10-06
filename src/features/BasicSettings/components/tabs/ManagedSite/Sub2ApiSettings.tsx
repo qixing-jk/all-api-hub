@@ -13,10 +13,8 @@ import {
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
@@ -24,7 +22,9 @@ import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /** Configures Sub2API management and guides administrators to key setup. */
 export default function Sub2ApiSettings() {
@@ -47,10 +47,28 @@ export default function Sub2ApiSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.sub2apiManagedSite,
+    defaults: DEFAULT_PREFERENCES.sub2apiManagedSite,
+    reset: resetSub2ApiManagedSiteConfig,
+    fields: {
+      baseUrl: {
+        setting: t("sub2apiManagedSite.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateSub2ApiManagedSiteBaseUrl(value, options),
+      },
+      adminToken: {
+        setting: t("sub2apiManagedSite.fields.adminApiKeyLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateSub2ApiManagedSiteAdminToken(value, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
   const parsedBaseUrl = tryParseHttpUrl(localConfig.baseUrl)
@@ -72,27 +90,6 @@ export default function Sub2ApiSettings() {
     } catch {
       window.open(adminCredentialsUrl, "_blank", "noopener,noreferrer")
     }
-  }
-
-  const handleBaseUrlChange = async (value: string) => {
-    const baseUrl = value.trim()
-    if (baseUrl === sub2ApiManagedSiteBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("sub2apiManagedSite.fields.baseUrlLabel"),
-      update: (options) => updateSub2ApiManagedSiteBaseUrl(baseUrl, options),
-    })
-  }
-
-  const handleAdminApiKeyChange = async (value: string) => {
-    const adminToken = value.trim()
-    if (adminToken === sub2ApiManagedSiteAdminToken) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("sub2apiManagedSite.fields.adminApiKeyLabel"),
-      update: (options) =>
-        updateSub2ApiManagedSiteAdminToken(adminToken, options),
-    })
   }
 
   const handleValidateConfig = async () => {
@@ -125,14 +122,7 @@ export default function Sub2ApiSettings() {
       id={SETTINGS_ANCHORS.SUB2API}
       title={t("sub2apiManagedSite.title")}
       description={t("sub2apiManagedSite.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.sub2apiManagedSite,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.sub2apiManagedSite,
-        reset: resetSub2ApiManagedSiteConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -152,7 +142,7 @@ export default function Sub2ApiSettings() {
                     baseUrl: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={(event) => commitField("baseUrl", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("sub2apiManagedSite.fields.baseUrlPlaceholder")}
               />
@@ -196,7 +186,9 @@ export default function Sub2ApiSettings() {
                     adminToken: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleAdminApiKeyChange(event.target.value)}
+                onBlur={(event) =>
+                  commitField("adminToken", event.target.value)
+                }
                 onKeyDown={blurInputOnEnter}
                 placeholder={t(
                   "sub2apiManagedSite.fields.adminApiKeyPlaceholder",

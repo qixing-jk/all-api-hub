@@ -49,21 +49,21 @@ describe("accountPersistence manual quota", () => {
       Number.parseFloat(manualBalanceUsd) * QUOTA_PER_USD,
     )
 
-    const createResult = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-      manualBalanceUsd,
-    )
+    const createResult = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: manualBalanceUsd,
+    })
 
     expect(createResult.success).toBe(true)
     expect(createResult.accountId).toBeTruthy()
@@ -82,22 +82,22 @@ describe("accountPersistence manual quota", () => {
     expect(display.balance.USD).toBeCloseTo(1.23, 6)
     expect(display.balance.CNY).toBeCloseTo(1.23 * 7.0, 6)
 
-    const updatedResult = await validateAndUpdateAccount(
-      accountId,
-      "https://api.example.com",
-      "Test Site Updated",
-      "tester",
-      "test-token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-      "2",
-    )
+    const updatedResult = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://api.example.com",
+      siteName: "Test Site Updated",
+      username: "tester",
+      accessToken: "test-token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "2",
+    })
 
     expect(updatedResult.success).toBe(true)
     const updated = await accountStorage.getAccountById(accountId)

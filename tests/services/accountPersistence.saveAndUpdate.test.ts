@@ -132,21 +132,21 @@ const addAccountWithOldTodayAvailability = () =>
   })
 
 const updateAccountFromRemote = (accountId: string) =>
-  validateAndUpdateAccount(
-    accountId,
-    "https://api.example.invalid",
-    "Example",
-    "user",
-    "token",
-    "1",
-    "7.0",
-    "",
-    [],
-    CHECK_IN_DISABLED,
-    SITE_TYPES.NEW_API,
-    AuthTypeEnum.AccessToken,
-    "",
-  )
+  validateAndUpdateAccount({
+    accountId: accountId,
+    url: "https://api.example.invalid",
+    siteName: "Example",
+    username: "user",
+    accessToken: "token",
+    userId: "1",
+    exchangeRate: "7.0",
+    notes: "",
+    tagIds: [],
+    checkInConfig: CHECK_IN_DISABLED,
+    siteType: SITE_TYPES.NEW_API,
+    authType: AuthTypeEnum.AccessToken,
+    cookieAuthSessionCookie: "",
+  })
 
 const LOG_TEST_ACCOUNT_DATA = {
   quota: 100,
@@ -162,31 +162,38 @@ const saveAccountForLogTest = (
   siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
   deferDataRefresh: boolean,
 ) =>
-  validateAndSaveAccount(
-    siteType === SITE_TYPES.OPENROUTER
-      ? "https://openrouter.ai/private-path"
-      : "https://api.example.invalid/private-path",
-    siteType === SITE_TYPES.OPENROUTER
-      ? " Private OpenRouter Label "
-      : " Ordinary Example ",
-    siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
-    siteType === SITE_TYPES.OPENROUTER
-      ? "private-management-key"
-      : "ordinary-token",
-    siteType === SITE_TYPES.OPENROUTER ? "private-editable-id" : "ordinary-id",
-    "7",
-    "",
-    [],
-    CHECK_IN_DISABLED,
-    siteType,
-    AuthTypeEnum.AccessToken,
-    "",
-    undefined,
-    false,
-    false,
-    undefined,
-    { deferDataRefresh },
-  )
+  validateAndSaveAccount({
+    url:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "https://openrouter.ai/private-path"
+        : "https://api.example.invalid/private-path",
+    siteName:
+      siteType === SITE_TYPES.OPENROUTER
+        ? " Private OpenRouter Label "
+        : " Ordinary Example ",
+    username:
+      siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
+    accessToken:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "private-management-key"
+        : "ordinary-token",
+    userId:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "private-editable-id"
+        : "ordinary-id",
+    exchangeRate: "7",
+    notes: "",
+    tagIds: [],
+    checkInConfig: CHECK_IN_DISABLED,
+    siteType: siteType,
+    authType: AuthTypeEnum.AccessToken,
+    cookieAuthSessionCookie: "",
+    manualBalanceUsd: undefined,
+    excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
+    sub2apiAuth: undefined,
+    options: { deferDataRefresh },
+  })
 
 const addStoredAccountForLogTest = (
   siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
@@ -234,32 +241,39 @@ const updateAccountForLogTest = (
   siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
   deferDataRefresh: boolean,
 ) =>
-  validateAndUpdateAccount(
-    accountId,
-    siteType === SITE_TYPES.OPENROUTER
-      ? "https://openrouter.ai/private-path"
-      : "https://api.example.invalid/private-path",
-    siteType === SITE_TYPES.OPENROUTER
-      ? " Private OpenRouter Label "
-      : " Ordinary Updated Example ",
-    siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
-    siteType === SITE_TYPES.OPENROUTER
-      ? "private-management-key"
-      : "ordinary-token",
-    siteType === SITE_TYPES.OPENROUTER ? "private-editable-id" : "ordinary-id",
-    "7",
-    "",
-    [],
-    CHECK_IN_DISABLED,
-    siteType,
-    AuthTypeEnum.AccessToken,
-    "",
-    undefined,
-    false,
-    false,
-    undefined,
-    { deferDataRefresh },
-  )
+  validateAndUpdateAccount({
+    accountId: accountId,
+    url:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "https://openrouter.ai/private-path"
+        : "https://api.example.invalid/private-path",
+    siteName:
+      siteType === SITE_TYPES.OPENROUTER
+        ? " Private OpenRouter Label "
+        : " Ordinary Updated Example ",
+    username:
+      siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
+    accessToken:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "private-management-key"
+        : "ordinary-token",
+    userId:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "private-editable-id"
+        : "ordinary-id",
+    exchangeRate: "7",
+    notes: "",
+    tagIds: [],
+    checkInConfig: CHECK_IN_DISABLED,
+    siteType: siteType,
+    authType: AuthTypeEnum.AccessToken,
+    cookieAuthSessionCookie: "",
+    manualBalanceUsd: undefined,
+    excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
+    sub2apiAuth: undefined,
+    options: { deferDataRefresh },
+  })
 
 describe("accountPersistence save and update", () => {
   afterEach(() => {
@@ -314,25 +328,25 @@ describe("accountPersistence save and update", () => {
       if (mode === "fallback")
         fetchAccountDataMock.mockRejectedValueOnce(new Error("offline"))
       else fetchAccountDataMock.mockResolvedValueOnce(LOG_TEST_ACCOUNT_DATA)
-      const result = await validateAndUpdateAccount(
-        accountId,
-        "https://platform.kimi.ai",
-        "Renamed",
-        "user",
-        "loaded-access",
-        "user",
-        "7",
-        "edited note",
-        [],
-        CHECK_IN_DISABLED,
-        SITE_TYPES.KIMI_GLOBAL,
-        AuthTypeEnum.AccessToken,
-        "",
-        undefined,
-        false,
-        false,
-        undefined,
-        {
+      const result = await validateAndUpdateAccount({
+        accountId: accountId,
+        url: "https://platform.kimi.ai",
+        siteName: "Renamed",
+        username: "user",
+        accessToken: "loaded-access",
+        userId: "user",
+        exchangeRate: "7",
+        notes: "edited note",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.KIMI_GLOBAL,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+        manualBalanceUsd: undefined,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        sub2apiAuth: undefined,
+        options: {
           deferDataRefresh: mode === "deferred",
           kimiOpenPlatformAuth: {
             refreshToken: "loaded-refresh",
@@ -344,7 +358,7 @@ describe("accountPersistence save and update", () => {
             organizationId: "org",
           },
         },
-      )
+      })
       expect(result.success).toBe(true)
       const saved = await accountStorage.getAccountById(accountId)
       expect(saved?.notes).toBe("edited note")
@@ -447,25 +461,25 @@ describe("accountPersistence save and update", () => {
         return "openrouter:test"
       })
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "  sk-or-v1-test  ",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "  sk-or-v1-test  ",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(validateManagementKeyMock).toHaveBeenCalledWith(
@@ -481,25 +495,25 @@ describe("accountPersistence save and update", () => {
       preferenceError,
     )
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(loggerMock.warn).toHaveBeenCalledWith(
@@ -512,25 +526,25 @@ describe("accountPersistence save and update", () => {
     const storageError = new Error("account storage unavailable")
     vi.spyOn(accountStorage, "addAccount").mockRejectedValue(storageError)
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(false)
     expect(loggerMock.error).toHaveBeenCalledWith(
@@ -543,20 +557,20 @@ describe("accountPersistence save and update", () => {
     const fetchError = new Error("upstream unavailable")
     fetchAccountDataMock.mockRejectedValue(fetchError)
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     expect(loggerMock.warn).toHaveBeenCalledWith(
@@ -569,20 +583,20 @@ describe("accountPersistence save and update", () => {
     const fetchError = new Error("credential-sensitive upstream response")
     fetchAccountDataMock.mockRejectedValue(fetchError)
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     expect(loggerMock.warn).toHaveBeenCalledWith(
@@ -1094,25 +1108,25 @@ describe("accountPersistence save and update", () => {
   it("uses validated creator identity when editable OpenRouter identity is blank", async () => {
     validateManagementKeyMock.mockResolvedValue({ userId: "user-placeholder" })
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -1127,25 +1141,25 @@ describe("accountPersistence save and update", () => {
   })
 
   it("normalizes ordinary account identity when adding an account", async () => {
-    const result = await validateAndSaveAccount(
-      "https://api.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "  ordinary-id  ",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "  ordinary-id  ",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     await expect(
@@ -1158,25 +1172,25 @@ describe("accountPersistence save and update", () => {
   it("prefers entered OpenRouter identity over the validated creator on add", async () => {
     validateManagementKeyMock.mockResolvedValue({ userId: "validated-creator" })
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      " edited-placeholder ",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: " edited-placeholder ",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -1191,25 +1205,25 @@ describe("accountPersistence save and update", () => {
     const digestSpy = vi.spyOn(globalThis.crypto.subtle, "digest")
     const managementKey = "management-key-placeholder"
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      managementKey,
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: managementKey,
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     const savedIdentity = (await accountStorage.getAccountById(
@@ -1226,25 +1240,25 @@ describe("accountPersistence save and update", () => {
   it("preserves an auto-bootstrap local fallback through save-time revalidation", async () => {
     const localIdentity = "openrouter:00000000-0000-4000-8000-000000000006"
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      localIdentity,
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: localIdentity,
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -1257,25 +1271,25 @@ describe("accountPersistence save and update", () => {
       userId: "openrouter:upstream-user",
     })
 
-    const result = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "management-key-placeholder",
-      "openrouter:upstream-user",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "management-key-placeholder",
+      userId: "openrouter:upstream-user",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -1315,45 +1329,45 @@ describe("accountPersistence save and update", () => {
 
       const result =
         operation === "add"
-          ? await validateAndSaveAccount(
-              "https://openrouter.ai",
-              "OpenRouter",
-              "",
-              "management-key",
-              "",
-              "7",
-              "",
-              [],
-              CHECK_IN_DISABLED,
-              SITE_TYPES.OPENROUTER,
-              AuthTypeEnum.Cookie,
-              "session=valid",
-              undefined,
-              false,
-              false,
-              undefined,
-              { deferDataRefresh: true },
-            )
-          : await validateAndUpdateAccount(
-              existingAccountId,
-              "https://openrouter.ai",
-              "OpenRouter",
-              "",
-              "management-key",
-              "",
-              "7",
-              "",
-              [],
-              CHECK_IN_DISABLED,
-              SITE_TYPES.OPENROUTER,
-              AuthTypeEnum.Cookie,
-              "session=valid",
-              undefined,
-              false,
-              false,
-              undefined,
-              { deferDataRefresh: true },
-            )
+          ? await validateAndSaveAccount({
+              url: "https://openrouter.ai",
+              siteName: "OpenRouter",
+              username: "",
+              accessToken: "management-key",
+              userId: "",
+              exchangeRate: "7",
+              notes: "",
+              tagIds: [],
+              checkInConfig: CHECK_IN_DISABLED,
+              siteType: SITE_TYPES.OPENROUTER,
+              authType: AuthTypeEnum.Cookie,
+              cookieAuthSessionCookie: "session=valid",
+              manualBalanceUsd: undefined,
+              excludeFromTotalBalance: false,
+              excludeFromTodayIncome: false,
+              sub2apiAuth: undefined,
+              options: { deferDataRefresh: true },
+            })
+          : await validateAndUpdateAccount({
+              accountId: existingAccountId,
+              url: "https://openrouter.ai",
+              siteName: "OpenRouter",
+              username: "",
+              accessToken: "management-key",
+              userId: "",
+              exchangeRate: "7",
+              notes: "",
+              tagIds: [],
+              checkInConfig: CHECK_IN_DISABLED,
+              siteType: SITE_TYPES.OPENROUTER,
+              authType: AuthTypeEnum.Cookie,
+              cookieAuthSessionCookie: "session=valid",
+              manualBalanceUsd: undefined,
+              excludeFromTotalBalance: false,
+              excludeFromTodayIncome: false,
+              sub2apiAuth: undefined,
+              options: { deferDataRefresh: true },
+            })
 
       expect(result).toMatchObject({
         success: false,
@@ -1383,26 +1397,26 @@ describe("accountPersistence save and update", () => {
       ),
     )
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      " ordinary-token ",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: " ordinary-token ",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: false,
@@ -1424,26 +1438,26 @@ describe("accountPersistence save and update", () => {
 
   it("returns a controlled failure when an OpenRouter edit account is missing", async () => {
     await expect(
-      validateAndUpdateAccount(
-        "missing-account",
-        "https://openrouter.ai",
-        "OpenRouter",
-        "",
-        "management-key-placeholder",
-        "editable-id",
-        "7",
-        "",
-        [],
-        CHECK_IN_DISABLED,
-        SITE_TYPES.OPENROUTER,
-        AuthTypeEnum.AccessToken,
-        "",
-        undefined,
-        false,
-        false,
-        undefined,
-        { deferDataRefresh: true },
-      ),
+      validateAndUpdateAccount({
+        accountId: "missing-account",
+        url: "https://openrouter.ai",
+        siteName: "OpenRouter",
+        username: "",
+        accessToken: "management-key-placeholder",
+        userId: "editable-id",
+        exchangeRate: "7",
+        notes: "",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.OPENROUTER,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+        manualBalanceUsd: undefined,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        sub2apiAuth: undefined,
+        options: { deferDataRefresh: true },
+      }),
     ).resolves.toEqual({
       success: false,
       message: "messages:errors.validation.updateAccountFailed",
@@ -1458,26 +1472,26 @@ describe("accountPersistence save and update", () => {
     )
 
     await expect(
-      validateAndUpdateAccount(
-        "stored-account",
-        "https://openrouter.ai",
-        "OpenRouter",
-        "",
-        "management-key-placeholder",
-        "editable-id",
-        "7",
-        "",
-        [],
-        CHECK_IN_DISABLED,
-        SITE_TYPES.OPENROUTER,
-        AuthTypeEnum.AccessToken,
-        "",
-        undefined,
-        false,
-        false,
-        undefined,
-        { deferDataRefresh: true },
-      ),
+      validateAndUpdateAccount({
+        accountId: "stored-account",
+        url: "https://openrouter.ai",
+        siteName: "OpenRouter",
+        username: "",
+        accessToken: "management-key-placeholder",
+        userId: "editable-id",
+        exchangeRate: "7",
+        notes: "",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.OPENROUTER,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+        manualBalanceUsd: undefined,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        sub2apiAuth: undefined,
+        options: { deferDataRefresh: true },
+      }),
     ).resolves.toEqual({
       success: false,
       message: "messages:errors.validation.updateAccountFailed",
@@ -1495,26 +1509,26 @@ describe("accountPersistence save and update", () => {
   it("normalizes ordinary account identity when updating an account", async () => {
     const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://api.example.invalid",
-      "Example",
-      "user",
-      "token",
-      "  updated-ordinary-id  ",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://api.example.invalid",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "  updated-ordinary-id  ",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     await expect(
@@ -1530,26 +1544,26 @@ describe("accountPersistence save and update", () => {
     })
     const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "ordinary-token",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "ordinary-token",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(validateManagementKeyMock).toHaveBeenCalledWith({
@@ -1595,26 +1609,26 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "OpenRouter",
-      "",
-      "old-token",
-      " edited-placeholder ",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "",
+      accessToken: "old-token",
+      userId: " edited-placeholder ",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(validateManagementKeyMock).toHaveBeenCalledWith({
@@ -1627,25 +1641,25 @@ describe("accountPersistence save and update", () => {
   })
 
   it("persists trimmed entered username when adding OpenRouter", async () => {
-    const addResult = await validateAndSaveAccount(
-      "https://openrouter.ai",
-      "OpenRouter",
-      " entered-username ",
-      "management-key",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const addResult = await validateAndSaveAccount({
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: " entered-username ",
+      accessToken: "management-key",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(addResult.success).toBe(true)
     await expect(
@@ -1684,26 +1698,26 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const updateResult = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "OpenRouter",
-      "entered-username",
-      "new-key",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const updateResult = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "entered-username",
+      accessToken: "new-key",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(updateResult.success).toBe(true)
     const saved = await accountStorage.getAccountById(accountId)
@@ -1743,26 +1757,26 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const updateResult = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "OpenRouter",
-      "   ",
-      "new-key",
-      "",
-      "7",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const updateResult = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "OpenRouter",
+      username: "   ",
+      accessToken: "new-key",
+      userId: "",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(updateResult.success).toBe(true)
     await expect(
@@ -1806,26 +1820,26 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://openrouter.ai",
-      "Renamed",
-      "",
-      " same-key ",
-      "openrouter:existing",
-      "7",
-      "new notes",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.OPENROUTER,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://openrouter.ai",
+      siteName: "Renamed",
+      username: "",
+      accessToken: " same-key ",
+      userId: "openrouter:existing",
+      exchangeRate: "7",
+      notes: "new notes",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(validateManagementKeyMock).not.toHaveBeenCalled()
@@ -1894,20 +1908,20 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      " https://cookie.example.com/console ",
-      " Cookie Portal ",
-      " cookie-user ",
-      "",
-      " 42 ",
-      "7.0",
-      "notes",
-      [" alpha ", "", "beta", "alpha", " beta "],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.Cookie,
-      "Cookie: foo=1; session=abc123; theme=dark",
-    )
+    const result = await validateAndSaveAccount({
+      url: " https://cookie.example.com/console ",
+      siteName: " Cookie Portal ",
+      username: " cookie-user ",
+      accessToken: "",
+      userId: " 42 ",
+      exchangeRate: "7.0",
+      notes: "notes",
+      tagIds: [" alpha ", "", "beta", "alpha", " beta "],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "Cookie: foo=1; session=abc123; theme=dark",
+    })
 
     expect(result.success).toBe(true)
     expect(result.accountId).toBeTruthy()
@@ -1962,20 +1976,20 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://aihubmix.com/statistics?tab=detail",
-      "AIHubMix",
-      "aihubmix-user",
-      "access-token",
-      "11",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://aihubmix.com/statistics?tab=detail",
+      siteName: "AIHubMix",
+      username: "aihubmix-user",
+      accessToken: "access-token",
+      userId: "11",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
 
@@ -2027,21 +2041,21 @@ describe("accountPersistence save and update", () => {
     })
     getSiteTypeCapabilitiesMock.mockClear()
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://aihubmix.com/statistics?tab=detail",
-      "AIHubMix",
-      "aihubmix-user",
-      "access-token",
-      "11",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://aihubmix.com/statistics?tab=detail",
+      siteName: "AIHubMix",
+      username: "aihubmix-user",
+      accessToken: "access-token",
+      userId: "11",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(
@@ -2060,27 +2074,27 @@ describe("accountPersistence save and update", () => {
   it("saves a warning-only Sub2API account when remote data refresh fails", async () => {
     fetchAccountDataMock.mockRejectedValueOnce(new Error("quota fetch failed"))
 
-    const result = await validateAndSaveAccount(
-      "https://sub2.example.com",
-      " Sub2 Portal ",
-      "",
-      " access-123 ",
-      " 7 ",
-      "7.0",
-      "",
-      [" group-a ", "", "group-b", "group-a"],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.SUB2API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      true,
-      false,
-      {
+    const result = await validateAndSaveAccount({
+      url: "https://sub2.example.com",
+      siteName: " Sub2 Portal ",
+      username: "",
+      accessToken: " access-123 ",
+      userId: " 7 ",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [" group-a ", "", "group-b", "group-a"],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: true,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: {
         refreshToken: " refresh-token ",
         tokenExpiresAt: 0,
       },
-    )
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2118,20 +2132,20 @@ describe("accountPersistence save and update", () => {
   it("saves warning-only account data when accountData capability is missing", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({})
 
-    const result = await validateAndSaveAccount(
-      "https://unsupported.example.invalid",
-      "Unsupported Portal",
-      "tester",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://unsupported.example.invalid",
+      siteName: "Unsupported Portal",
+      username: "tester",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2191,21 +2205,21 @@ describe("accountPersistence save and update", () => {
     })
     getSiteTypeCapabilitiesMock.mockReturnValue({})
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://unsupported.example.invalid",
-      "Unsupported Portal",
-      "tester",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://unsupported.example.invalid",
+      siteName: "Unsupported Portal",
+      username: "tester",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2237,25 +2251,25 @@ describe("accountPersistence save and update", () => {
   })
 
   it("can save cookie account configuration without blocking on remote data refresh", async () => {
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.Cookie,
-      "Cookie: session=abc123; theme=dark",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "Cookie: session=abc123; theme=dark",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2288,25 +2302,25 @@ describe("accountPersistence save and update", () => {
   it("ignores Sub2API supplemental auth for non-Sub2API account sites", async () => {
     const addAccountSpy = vi.spyOn(accountStorage, "addAccount")
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      { refreshToken: " refresh-token " },
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: { refreshToken: " refresh-token " },
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2325,25 +2339,25 @@ describe("accountPersistence save and update", () => {
       new Error("disk full"),
     )
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toEqual({
       success: false,
@@ -2380,26 +2394,26 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 123,
     })
 
-    const result = await validateAndUpdateAccount(
-      accountId,
-      "https://api.example.com",
-      "Example",
-      "user",
-      "",
-      "1",
-      "7.0",
-      "notes",
-      [" alpha ", "alpha", "beta"],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.Cookie,
-      "Cookie: session=abc123; theme=dark",
-      "2.5",
-      true,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: accountId,
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "notes",
+      tagIds: [" alpha ", "alpha", "beta"],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "Cookie: session=abc123; theme=dark",
+      manualBalanceUsd: "2.5",
+      excludeFromTotalBalance: true,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2430,26 +2444,26 @@ describe("accountPersistence save and update", () => {
       .spyOn(accountStorage, "updateAccountWithCheckInDraft")
       .mockResolvedValueOnce(false)
 
-    const result = await validateAndUpdateAccount(
-      "existing-account-id",
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true, selectionChanged: true },
-    )
+    const result = await validateAndUpdateAccount({
+      accountId: "existing-account-id",
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true, selectionChanged: true },
+    })
 
     expect(result).toEqual({
       success: false,
@@ -2478,20 +2492,20 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://legacy.example.com",
-      "Legacy Site",
-      "legacy-user",
-      "token",
-      "5",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "legacy-invalid-site",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://legacy.example.com",
+      siteName: "Legacy Site",
+      username: "legacy-user",
+      accessToken: "token",
+      userId: "5",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "legacy-invalid-site",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
@@ -2507,20 +2521,20 @@ describe("accountPersistence save and update", () => {
     )
 
     try {
-      const resultPromise = validateAndSaveAccount(
-        "https://api.example.com",
-        "Test Site",
-        "tester",
-        "token",
-        "1",
-        "7.0",
-        "",
-        [],
-        CHECK_IN_DISABLED,
-        "unknown",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const resultPromise = validateAndSaveAccount({
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "tester",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: "unknown",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       await vi.advanceTimersByTimeAsync(
         MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS + 1,
@@ -2559,20 +2573,20 @@ describe("accountPersistence save and update", () => {
       .spyOn(accountStorage, "addAccount")
       .mockRejectedValueOnce(new Error("disk full"))
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result).toEqual({
       success: false,
@@ -2600,20 +2614,20 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Test Site",
-      "tester",
-      "token",
-      "user-abc-123",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      "unknown",
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Test Site",
+      username: "tester",
+      accessToken: "token",
+      userId: "user-abc-123",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: "unknown",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -2639,20 +2653,20 @@ describe("accountPersistence save and update", () => {
         checkIn: CHECK_IN_DISABLED,
       })
 
-      const result = await validateAndSaveAccount(
-        "https://api.example.com",
-        "Test Site",
-        "tester",
-        "token",
-        userId,
-        "7.0",
-        "",
-        [],
-        CHECK_IN_DISABLED,
-        SITE_TYPES.NEW_API,
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndSaveAccount({
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "tester",
+        accessToken: "token",
+        userId: userId,
+        exchangeRate: "7.0",
+        notes: "",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result.success).toBe(true)
       const saved = await accountStorage.getAccountById(result.accountId!)
@@ -2703,21 +2717,21 @@ describe("accountPersistence save and update", () => {
         checkIn: CHECK_IN_DISABLED,
       })
 
-      const result = await validateAndUpdateAccount(
-        accountId,
-        "https://api.example.com",
-        "Test Site",
-        "tester",
-        "token",
-        userId,
-        "7.0",
-        "",
-        [],
-        CHECK_IN_DISABLED,
-        SITE_TYPES.NEW_API,
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: accountId,
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "tester",
+        accessToken: "token",
+        userId: userId,
+        exchangeRate: "7.0",
+        notes: "",
+        tagIds: [],
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result.success).toBe(true)
       const saved = await accountStorage.getAccountById(accountId)
@@ -2746,20 +2760,20 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://aihubmix.com",
-      "AIHubMix",
-      "aihubmix-user",
-      "access-token",
-      "aihubmix-user",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.AIHUBMIX,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://aihubmix.com",
+      siteName: "AIHubMix",
+      username: "aihubmix-user",
+      accessToken: "access-token",
+      userId: "aihubmix-user",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -2789,25 +2803,25 @@ describe("accountPersistence save and update", () => {
       checkIn: CHECK_IN_DISABLED,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { skipAutoProvisionKeyOnAccountAdd: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { skipAutoProvisionKeyOnAccountAdd: true },
+    })
 
     expect(result.success).toBe(true)
     await flushMicrotasks()
@@ -2822,25 +2836,25 @@ describe("accountPersistence save and update", () => {
     })
     fetchAccountDataMock.mockRejectedValueOnce(new Error("quota fetch failed"))
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { skipAutoProvisionKeyOnAccountAdd: true },
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { skipAutoProvisionKeyOnAccountAdd: true },
+    })
 
     expect(result).toMatchObject({
       success: true,
@@ -2872,20 +2886,20 @@ describe("accountPersistence save and update", () => {
       runtimeKey: null,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://api.example.com",
-      "Example",
-      "user",
-      "token",
-      "1",
-      "7.0",
-      "",
-      [],
-      CHECK_IN_DISABLED,
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+    const result = await validateAndSaveAccount({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "user",
+      accessToken: "token",
+      userId: "1",
+      exchangeRate: "7.0",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result.success).toBe(true)
     await flushMicrotasks()
@@ -2926,28 +2940,28 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://agentrouter.org",
-      "AgentRouter duplicate",
-      "user",
-      "token",
-      "18",
-      "7",
-      "",
-      [],
-      buildCheckInConfig({
+    const result = await validateAndSaveAccount({
+      url: "https://agentrouter.org",
+      siteName: "AgentRouter duplicate",
+      username: "user",
+      accessToken: "token",
+      userId: "18",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
         loginCheckIn: { provider: "github" },
       }),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: false,
@@ -2962,28 +2976,28 @@ describe("accountPersistence save and update", () => {
     // runs inside the account storage transaction, so the second one sees the
     // first account and is refused instead of persisting a duplicate claim.
     const save = () =>
-      validateAndSaveAccount(
-        "https://agentrouter.org",
-        "AgentRouter concurrent",
-        "user",
-        "token",
-        "18",
-        "7",
-        "",
-        [],
-        buildCheckInConfig({
+      validateAndSaveAccount({
+        url: "https://agentrouter.org",
+        siteName: "AgentRouter concurrent",
+        username: "user",
+        accessToken: "token",
+        userId: "18",
+        exchangeRate: "7",
+        notes: "",
+        tagIds: [],
+        checkInConfig: buildCheckInConfig({
           automaticExecutionEnabled: true,
           loginCheckIn: { provider: "github" },
         }),
-        SITE_TYPES.NEW_API,
-        AuthTypeEnum.AccessToken,
-        "",
-        undefined,
-        false,
-        false,
-        undefined,
-        { deferDataRefresh: true },
-      )
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+        manualBalanceUsd: undefined,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        sub2apiAuth: undefined,
+        options: { deferDataRefresh: true },
+      })
 
     const [first, second] = await Promise.all([save(), save()])
     const outcomes = [first, second]
@@ -3023,28 +3037,28 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const result = await validateAndSaveAccount(
-      "https://agentrouter.org",
-      "AgentRouter linuxdo",
-      "user",
-      "token",
-      "18",
-      "7",
-      "",
-      [],
-      buildCheckInConfig({
+    const result = await validateAndSaveAccount({
+      url: "https://agentrouter.org",
+      siteName: "AgentRouter linuxdo",
+      username: "user",
+      accessToken: "token",
+      userId: "18",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
         loginCheckIn: { provider: "linuxdo" },
       }),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result.success).toBe(true)
     expect(await accountStorage.getAllAccounts()).toHaveLength(2)
@@ -3100,29 +3114,29 @@ describe("accountPersistence save and update", () => {
       last_sync_time: 0,
     })
 
-    const result = await validateAndUpdateAccount(
-      targetId,
-      "https://agentrouter.org",
-      "AgentRouter target",
-      "user",
-      "token",
-      "18",
-      "7",
-      "",
-      [],
-      buildCheckInConfig({
+    const result = await validateAndUpdateAccount({
+      accountId: targetId,
+      url: "https://agentrouter.org",
+      siteName: "AgentRouter target",
+      username: "user",
+      accessToken: "token",
+      userId: "18",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
         loginCheckIn: { provider: "github" },
       }),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-      undefined,
-      false,
-      false,
-      undefined,
-      { deferDataRefresh: true },
-    )
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: undefined,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true },
+    })
 
     expect(result).toMatchObject({
       success: false,
@@ -3176,23 +3190,23 @@ describe("accountPersistence save and update", () => {
       }),
     })
 
-    const result = await validateAndSaveAccount(
-      "https://agentrouter.org",
-      "AgentRouter duplicate",
-      "user",
-      "token",
-      "18",
-      "7",
-      "",
-      [],
-      buildCheckInConfig({
+    const result = await validateAndSaveAccount({
+      url: "https://agentrouter.org",
+      siteName: "AgentRouter duplicate",
+      username: "user",
+      accessToken: "token",
+      userId: "18",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
         loginCheckIn: { provider: "github" },
       }),
-      SITE_TYPES.NEW_API,
-      AuthTypeEnum.AccessToken,
-      "",
-    )
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+    })
 
     expect(result).toMatchObject({
       success: false,
