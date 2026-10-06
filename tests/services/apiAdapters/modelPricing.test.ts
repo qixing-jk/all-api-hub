@@ -29,9 +29,15 @@ vi.mock("~/services/apiAdapters/aihubmix/catalog", () => ({
   invalidateAIHubMixPublicCatalogs: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
-  fetchModelPricing: mockOneHubFetchModelPricing,
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/oneHub",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/oneHub")
+    >()),
+    fetchModelPricing: mockOneHubFetchModelPricing,
+  }),
+)
 
 const request = {
   baseUrl: "https://api.example.invalid",

@@ -42,13 +42,25 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
-  fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/anyrouter",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/anyrouter")
+    >()),
+    fetchSupportCheckIn: anyrouterFetchSupportCheckIn,
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
-  fetchSupportCheckIn: wongFetchSupportCheckIn,
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/wong",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/wong")
+    >()),
+    fetchSupportCheckIn: wongFetchSupportCheckIn,
+  }),
+)
 
 const request = {
   baseUrl: "https://bootstrap.example.invalid",

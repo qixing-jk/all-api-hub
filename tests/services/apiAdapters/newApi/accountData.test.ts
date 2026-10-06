@@ -23,40 +23,76 @@ const {
   rixFetchAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountData: mockFetchAccountData,
-  defaultAccountDataImplementation: {
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountData",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/accountData")
+    >()),
     fetchAccountData: mockFetchAccountData,
-  },
-}))
+    defaultAccountDataImplementation: {
+      fetchAccountData: mockFetchAccountData,
+    },
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/anyrouter", () => ({
-  fetchAccountData: anyrouterFetchAccountData,
-  refreshAccountData: vi.fn(),
-  fetchSupportCheckIn: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/anyrouter",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/anyrouter")
+    >()),
+    fetchAccountData: anyrouterFetchAccountData,
+    refreshAccountData: vi.fn(),
+    fetchSupportCheckIn: vi.fn(),
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
-  fetchAccountData: doneHubFetchAccountData,
-  refreshAccountData: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/doneHub",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/doneHub")
+    >()),
+    fetchAccountData: doneHubFetchAccountData,
+    refreshAccountData: vi.fn(),
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
-  fetchAccountData: veloeraFetchAccountData,
-  refreshAccountData: vi.fn(),
-  fetchSupportCheckIn: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/veloera",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/veloera")
+    >()),
+    fetchAccountData: veloeraFetchAccountData,
+    refreshAccountData: vi.fn(),
+    fetchSupportCheckIn: vi.fn(),
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
-  fetchAccountData: wongFetchAccountData,
-  refreshAccountData: vi.fn(),
-  fetchSupportCheckIn: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/wong",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/wong")
+    >()),
+    fetchAccountData: wongFetchAccountData,
+    refreshAccountData: vi.fn(),
+    fetchSupportCheckIn: vi.fn(),
+  }),
+)
 
-vi.mock("~/services/apiService/newApiFamily/variants/rixApi", () => ({
-  fetchAccountData: rixFetchAccountData,
-  refreshAccountData: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/rixApi",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/variants/rixApi")
+    >()),
+    fetchAccountData: rixFetchAccountData,
+    refreshAccountData: vi.fn(),
+  }),
+)
 
 const request = {
   baseUrl: "https://data.example.invalid",

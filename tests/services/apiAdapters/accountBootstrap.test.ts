@@ -222,6 +222,39 @@ describe("account bootstrap adapters", () => {
     })
   })
 
+  it("uses an already observed Rix generation without another route probe", async () => {
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.RIX_API)
+    const baseUrl = "https://observed-rix.example.invalid"
+    mockFetchSiteStatus.mockResolvedValue({ rix_version_message: "6.5.17" })
+    await bootstrap.loadBootstrapFacts({ ...request, baseUrl })
+    mockFetchSiteStatus.mockClear()
+
+    await expect(
+      bootstrap.resolveRoutePath(
+        { baseUrl, siteType: SITE_TYPES.RIX_API },
+        ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage,
+      ),
+    ).resolves.toBe("/logs")
+    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+  })
+
+  it("keeps Rix's static route when a generation probe fails", async () => {
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.RIX_API)
+    mockFetchSiteStatus.mockRejectedValue(new Error("offline"))
+    const target = {
+      baseUrl: "https://offline-rix.example.invalid",
+      siteType: SITE_TYPES.RIX_API,
+    }
+
+    await expect(
+      bootstrap.resolveRoutePath(target, ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage),
+    ).resolves.toBe("/log")
+    await expect(
+      bootstrap.resolveRoutePath(target, ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem),
+    ).resolves.toBe("/topup")
+    expect(mockFetchSiteStatus).toHaveBeenCalledOnce()
+  })
+
   it("resolves static account route paths from shared route kinds", () => {
     const target = {
       baseUrl: "https://sub2.example.invalid",
