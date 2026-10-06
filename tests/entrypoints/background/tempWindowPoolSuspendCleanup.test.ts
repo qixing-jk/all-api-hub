@@ -161,4 +161,69 @@ describe("cleanupTempContextsOnSuspend", () => {
     await expect(cleanupTempContextsOnSuspend()).resolves.toBeUndefined()
     expect(removeTabMock).not.toHaveBeenCalled()
   })
+
+  it("automatically destroys idle tab context when idle timeout expires", async () => {
+    const { handleTempWindowGetRenderedTitle } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const response = vi.fn()
+    const request = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.com/protected/idle",
+        requestId: "req-idle-1",
+      },
+      response,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(response).toHaveBeenCalledWith({
+      success: true,
+      title: "Example title",
+    })
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(removeTabMock).not.toHaveBeenCalled()
+
+    // Advance beyond TEMP_CONTEXT_IDLE_TIMEOUT (10 seconds)
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    expect(removeTabMock).toHaveBeenCalledWith(101)
+  })
+
+  it("handles suspend cleanup failure when destroyOriginPool encounters an error", async () => {
+    const { cleanupTempContextsOnSuspend, handleTempWindowGetRenderedTitle } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+
+    const response = vi.fn()
+    const request = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.com/protected/error",
+        requestId: "req-err-1",
+      },
+      response,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    removeTabMock.mockRejectedValue(new Error("Tab cannot be removed"))
+
+    await expect(cleanupTempContextsOnSuspend()).resolves.toBeUndefined()
+  })
+
+  it("handles error in handleCloseTempWindow gracefully", async () => {
+    const { handleCloseTempWindow } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    // Null request triggers catch block in handleCloseTempWindow
+    await handleCloseTempWindow(null as any, sendResponse)
+
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false }),
+    )
+  })
 })
