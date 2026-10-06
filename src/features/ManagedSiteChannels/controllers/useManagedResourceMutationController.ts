@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
-import {
-  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
-  type ManagedChannelsDeleteResultStatus,
-} from "~/features/ManagedSiteChannels/presentation/contracts"
+import { type ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedResourceRef,
-  type ManagedResourceWorkspace,
   type ResourceDisplayFacts,
   type ResourceEditor,
   type ResourceFailure,
@@ -33,70 +28,26 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "../presentation/managedResourceFieldPolicy"
-import type { ManagedResourceRowData } from "../presentation/managedResourcePresentation"
+import { type ManagedResourceRowData } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
   toSafeManagedResourceFailure,
 } from "../utils/managedResource"
-import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
 import {
   startManagedResourceControllerAction,
   type ManagedResourceAnalyticsCompletion,
-  type ManagedResourceControllerAnalytics,
 } from "./managedResourceControllerAnalytics"
 import {
-  canAcceptDeleteEffectsLocally,
   canAcceptMutationEffectsLocally,
   projectManagedResourceMutationFailure,
 } from "./managedResourceMutationPolicy"
-
-type DeleteResult = {
-  rowKey: string
-  status: ManagedChannelsDeleteResultStatus
-  resultKey: string
-}
-
-type DeleteExecutionResult = {
-  status: DeleteResult["status"]
-  locallyConfirmed: boolean
-}
-
-type DeleteState = {
-  isOpen: boolean
-  isExecuting: boolean
-  rowKeys: string[]
-  results: DeleteResult[]
-  requiresRefresh: boolean
-  requiresFreshRead: boolean
-  failure: ResourceFailure | null
-}
-
-type ActiveMutationSession = "submit" | "delete"
-type ManagedResourceEditorFeedback =
-  | { kind: "open-failed"; failure: ResourceFailure }
-  | { kind: "save-failed"; failure: ResourceFailure }
-  | { kind: "save-uncertain"; failure: ResourceFailure }
-  | { kind: "saved-refresh-failed" }
-
-type ManagedResourceSessionPhase =
-  | "idle"
-  | "detail-loading"
-  | "detail-open"
-  | "editor-loading"
-  | "editor-open"
-  | "delete-confirmation"
-  | "submit"
-  | "delete-execution"
-
-const createDeleteState = (): DeleteState => ({
-  isOpen: false,
-  isExecuting: false,
-  rowKeys: [],
-  results: [],
-  requiresRefresh: false,
-  requiresFreshRead: false,
-  failure: null,
-})
+import {
+  type ActiveMutationSession,
+  type ManagedResourceEditorFeedback,
+  type ManagedResourceMutationOptions,
+  type ManagedResourceSessionPhase,
+} from "./managedResourceMutationTypes"
+import { useManagedResourceDeletionSession } from "./useManagedResourceDeletionSession"
 
 /** Owns native detail/editor/delete lifecycles and mutation certainty boundaries. */
 export function useManagedResourceMutationController({
@@ -111,24 +62,7 @@ export function useManagedResourceMutationController({
   onMutationConfirmed,
   analytics,
   readEditor,
-}: {
-  readEditor?: <T>(read: () => Promise<T>, signal?: AbortSignal) => Promise<T>
-  workspace: ManagedResourceWorkspace | null
-  refresh?: () => Promise<boolean>
-  resolveRef?: (rowKey: string) => ManagedResourceRef | undefined
-  mapFacts?: (facts: ResourceDisplayFacts) => ManagedResourceRowData
-  acceptMutationResult?: (
-    mode: ManagedResourceEditorMode,
-    facts: ResourceDisplayFacts,
-  ) => boolean
-  acceptDeletionResults?: (
-    targets: readonly { rowKey: string; ref: ManagedResourceRef }[],
-  ) => boolean
-  onMutationStart?: () => void
-  onMutationSuccess?: (mode: ManagedResourceEditorMode) => void
-  onMutationConfirmed?: (mode: ManagedResourceEditorMode) => void
-  analytics?: ManagedResourceControllerAnalytics
-}) {
+}: ManagedResourceMutationOptions) {
   const [opening, setOpening] = useState<ChannelDialogOpeningState>({
     attemptId: 0,
     status: "idle",
@@ -144,7 +78,7 @@ export function useManagedResourceMutationController({
   const [editorFeedback, setEditorFeedback] =
     useState<ManagedResourceEditorFeedback | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [deleteState, setDeleteState] = useState<DeleteState>(createDeleteState)
+
   const activeMutationSession = useRef<ActiveMutationSession | null>(null)
   const sessionPhase = useRef<ManagedResourceSessionPhase>("idle")
   const generation = useRef(0)
@@ -156,25 +90,6 @@ export function useManagedResourceMutationController({
     ManagedResourceAnalyticsCompletion | undefined
   >(undefined)
   const activeEditorAnalytics = useRef<
-    ManagedResourceAnalyticsCompletion | undefined
-  >(undefined)
-  const deleteGeneration = useRef(0)
-  const deleteAbortControllers = useRef<Set<AbortController>>(new Set())
-  const deleteSession = useRef<{
-    targets: Array<{
-      rowKey: string
-      ref: ManagedResourceRef
-    }>
-    actionId:
-      | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel
-      | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels
-    surfaceId:
-      | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
-      | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
-  } | null>(null)
-  const deletePromise = useRef<Promise<DeleteResult[]> | undefined>(undefined)
-  const freshReadPromise = useRef<Promise<boolean> | undefined>(undefined)
-  const activeDeleteAnalytics = useRef<
     ManagedResourceAnalyticsCompletion | undefined
   >(undefined)
 
@@ -190,6 +105,34 @@ export function useManagedResourceMutationController({
     }
   }, [])
 
+  const clearEditorFeedback = useCallback(() => setEditorFeedback(null), [])
+  const {
+    deleteState,
+    openBulkDelete,
+    openDelete,
+    confirmDelete,
+    cancelDelete,
+    recoverFreshRead,
+    requestFreshRead,
+    requireFreshRead,
+    invalidateDeletion,
+    resetDeletion,
+  } = useManagedResourceDeletionSession({
+    workspace,
+    refresh,
+    resolveRef,
+    acceptDeletionResults,
+    onMutationStart,
+    analytics,
+    session: {
+      phase: sessionPhase,
+      active: activeMutationSession,
+      begin: beginMutationSession,
+      end: endMutationSession,
+    },
+    onFreshReadRecovered: clearEditorFeedback,
+  })
+
   const invalidate = useCallback(() => {
     sessionPhase.current = "idle"
     activeMutationSession.current = null
@@ -201,15 +144,8 @@ export function useManagedResourceMutationController({
     activeEditorAnalytics.current = undefined
     activeSubmitAnalytics.current?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
     activeSubmitAnalytics.current = undefined
-    deleteGeneration.current += 1
-    for (const controller of deleteAbortControllers.current) controller.abort()
-    deleteAbortControllers.current.clear()
-    deleteSession.current = null
-    deletePromise.current = undefined
-    freshReadPromise.current = undefined
-    activeDeleteAnalytics.current?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-    activeDeleteAnalytics.current = undefined
-  }, [])
+    invalidateDeletion()
+  }, [invalidateDeletion])
   useEffect(() => {
     invalidate()
     setOpening({ attemptId: generation.current, status: "idle" })
@@ -219,9 +155,9 @@ export function useManagedResourceMutationController({
     setEditorMode(null)
     setEditorFeedback(null)
     setIsSaving(false)
-    setDeleteState(createDeleteState())
+    resetDeletion()
     return invalidate
-  }, [invalidate, workspace])
+  }, [invalidate, resetDeletion, workspace])
 
   const runSession = useCallback(
     async <T>(
@@ -304,22 +240,6 @@ export function useManagedResourceMutationController({
     },
     [resolveRef],
   )
-
-  const requestFreshRead = useCallback(async () => {
-    try {
-      return (await refresh?.()) ?? false
-    } catch {
-      return false
-    }
-  }, [refresh])
-
-  const requireFreshRead = useCallback(() => {
-    setDeleteState((currentState) => ({
-      ...currentState,
-      requiresRefresh: true,
-      requiresFreshRead: true,
-    }))
-  }, [])
 
   const openDetail = useCallback(
     (rowKey: string) => {
@@ -663,401 +583,6 @@ export function useManagedResourceMutationController({
   const capabilities =
     workspace?.capabilities ?? EMPTY_MANAGED_RESOURCE_CAPABILITIES
 
-  const executeDeleteTargets = useCallback(
-    (
-      resolvedTargets: readonly {
-        rowKey: string
-        ref: ManagedResourceRef
-      }[],
-      actionId:
-        | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel
-        | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
-      surfaceId:
-        | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
-        | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-    ) => {
-      if (
-        !workspace ||
-        activeMutationSession.current !== "delete" ||
-        sessionPhase.current !== "delete-execution" ||
-        deletePromise.current
-      ) {
-        return deletePromise.current ?? Promise.resolve([])
-      }
-      const rowKeys = resolvedTargets.map(({ rowKey }) => rowKey)
-      const currentGeneration = ++deleteGeneration.current
-      const analyticsCompletion = startManagedResourceControllerAction(
-        analytics,
-        actionId,
-        surfaceId,
-      )
-      activeDeleteAnalytics.current = analyticsCompletion
-      onMutationStart?.()
-      setDeleteState((current) => ({
-        ...current,
-        isOpen: true,
-        isExecuting: true,
-        rowKeys,
-        results: [],
-        failure: null,
-      }))
-
-      const execution = mapSettledWithConcurrency(
-        resolvedTargets,
-        4,
-        async ({ ref }) => {
-          const controller = new AbortController()
-          deleteAbortControllers.current.add(controller)
-          try {
-            const mutationResult: unknown = await workspace.delete(ref, {
-              signal: controller.signal,
-            })
-            assertManagedSiteMutationResult<
-              void,
-              ManagedSiteMutationConfirmedEffect
-            >(mutationResult, { idempotent: true })
-            switch (mutationResult.outcome) {
-              case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
-                return {
-                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
-                  locallyConfirmed: canAcceptDeleteEffectsLocally(
-                    ref,
-                    mutationResult.confirmedEffects,
-                  ),
-                } satisfies DeleteExecutionResult
-              case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
-                return {
-                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed,
-                  locallyConfirmed: true,
-                } satisfies DeleteExecutionResult
-              case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
-              case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-                return {
-                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
-                  locallyConfirmed: false,
-                } satisfies DeleteExecutionResult
-            }
-          } finally {
-            deleteAbortControllers.current.delete(controller)
-          }
-        },
-      )
-        .then(async (settled) => {
-          const results: DeleteResult[] = []
-          const locallyConfirmedSuccessIndexes = new Set<number>()
-          let unexpectedFailure:
-            | { readonly found: false }
-            | { readonly found: true; readonly reason: unknown } = {
-            found: false,
-          }
-          for (const [index, outcome] of settled.entries()) {
-            if (outcome.status === "rejected") {
-              unexpectedFailure = { found: true, reason: outcome.reason }
-              break
-            }
-
-            const target = resolvedTargets[index]
-            if (!target) continue
-            const { locallyConfirmed, status } = outcome.value
-            if (
-              status === MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success &&
-              locallyConfirmed
-            ) {
-              locallyConfirmedSuccessIndexes.add(index)
-            }
-            results.push({
-              rowKey: target.rowKey,
-              status,
-              resultKey: `delete_${status}`,
-            })
-          }
-
-          if (unexpectedFailure.found) {
-            if (currentGeneration !== deleteGeneration.current) {
-              throw unexpectedFailure.reason
-            }
-            const refreshAccepted = await requestFreshRead()
-            if (currentGeneration === deleteGeneration.current) {
-              setDeleteState({
-                isOpen: false,
-                isExecuting: false,
-                rowKeys: [],
-                results: [],
-                requiresRefresh: !refreshAccepted,
-                requiresFreshRead: !refreshAccepted,
-                failure: refreshAccepted
-                  ? null
-                  : {
-                      code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-                    },
-              })
-            }
-            throw unexpectedFailure.reason
-          }
-
-          if (currentGeneration !== deleteGeneration.current) return []
-          const canAcceptDeletionResults =
-            results.every(
-              ({ status }) =>
-                status !== MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
-            ) &&
-            results.every(
-              ({ status }, index) =>
-                status !== MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success ||
-                locallyConfirmedSuccessIndexes.has(index),
-            )
-          let deletionAccepted = false
-          if (canAcceptDeletionResults) {
-            const successfulTargets = resolvedTargets.filter(
-              (_, index) =>
-                results[index]?.status ===
-                MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
-            )
-            try {
-              deletionAccepted =
-                acceptDeletionResults?.(successfulTargets) ?? false
-            } catch {
-              deletionAccepted = false
-            }
-          }
-          const refreshAccepted = deletionAccepted || (await requestFreshRead())
-          if (currentGeneration !== deleteGeneration.current) return []
-          const requiresFreshRead = !refreshAccepted
-          setDeleteState({
-            isOpen: false,
-            isExecuting: false,
-            rowKeys,
-            results,
-            requiresRefresh: requiresFreshRead,
-            requiresFreshRead,
-            failure: null,
-          })
-          deleteSession.current = null
-          const successCount = results.filter(
-            ({ status }) =>
-              status === MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
-          ).length
-          const failureCount = results.length - successCount
-          analyticsCompletion?.complete(
-            failureCount > 0
-              ? PRODUCT_ANALYTICS_RESULTS.Failure
-              : PRODUCT_ANALYTICS_RESULTS.Success,
-            {
-              insights: {
-                itemCount: results.length,
-                selectedCount: rowKeys.length,
-                successCount,
-                failureCount,
-              },
-            },
-          )
-          return results
-        })
-        .finally(() => {
-          if (deletePromise.current === execution)
-            deletePromise.current = undefined
-          if (activeDeleteAnalytics.current === analyticsCompletion)
-            activeDeleteAnalytics.current = undefined
-          if (currentGeneration === deleteGeneration.current) {
-            deleteSession.current = null
-            setDeleteState((current) =>
-              current.isExecuting
-                ? {
-                    ...current,
-                    isOpen: false,
-                    isExecuting: false,
-                    rowKeys: [],
-                    results: [],
-                    requiresRefresh: false,
-                    requiresFreshRead: false,
-                    failure: null,
-                  }
-                : current,
-            )
-            endMutationSession("delete")
-            if (sessionPhase.current === "delete-execution")
-              sessionPhase.current = "idle"
-          }
-        })
-      deletePromise.current = execution
-      return execution
-    },
-    [
-      analytics,
-      acceptDeletionResults,
-      endMutationSession,
-      onMutationStart,
-      requestFreshRead,
-      workspace,
-    ],
-  )
-
-  const openBulkDelete = useCallback(
-    (rowKeys: readonly string[]) => {
-      if (
-        !workspace ||
-        !capabilities.canDelete ||
-        deleteState.requiresFreshRead ||
-        sessionPhase.current !== "idle" ||
-        rowKeys.length === 0 ||
-        new Set(rowKeys).size !== rowKeys.length
-      ) {
-        setDeleteState((current) => ({
-          ...current,
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-        }))
-        return Promise.resolve([])
-      }
-      const resolvedTargets = rowKeys.map((rowKey) => {
-        const ref = resolveRef?.(rowKey)
-        return { rowKey, ref: ref ? { ...ref } : undefined }
-      })
-      const resolvedIdentities = resolvedTargets.flatMap(({ ref }) =>
-        ref ? [getManagedResourceRefKey(ref)] : [],
-      )
-      if (
-        resolvedIdentities.length !== resolvedTargets.length ||
-        new Set(resolvedIdentities).size !== resolvedIdentities.length
-      ) {
-        setDeleteState((current) => ({
-          ...current,
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-        }))
-        return Promise.resolve([])
-      }
-      if (!beginMutationSession("delete")) return Promise.resolve([])
-      sessionPhase.current = "delete-confirmation"
-      deleteSession.current = {
-        targets: resolvedTargets as {
-          rowKey: string
-          ref: ManagedResourceRef
-        }[],
-        actionId:
-          PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
-        surfaceId:
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-      }
-      setDeleteState((current) => ({
-        ...current,
-        isOpen: true,
-        isExecuting: false,
-        rowKeys: [...rowKeys],
-        results: [],
-        failure: null,
-      }))
-      return Promise.resolve([])
-    },
-    [
-      capabilities.canDelete,
-      beginMutationSession,
-      deleteState.requiresFreshRead,
-      resolveRef,
-      workspace,
-    ],
-  )
-
-  const openDelete = useCallback(
-    (rowKey: string) => {
-      if (
-        !workspace ||
-        !capabilities.canDelete ||
-        deleteState.requiresFreshRead ||
-        sessionPhase.current !== "idle"
-      ) {
-        setDeleteState((current) => ({
-          ...current,
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-        }))
-        return false
-      }
-      const ref = resolveRef?.(rowKey)
-      if (!ref) {
-        setDeleteState((current) => ({
-          ...current,
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-        }))
-        return false
-      }
-      if (!beginMutationSession("delete")) return false
-      sessionPhase.current = "delete-confirmation"
-      deleteSession.current = {
-        targets: [{ rowKey, ref: { ...ref } }],
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
-        surfaceId:
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-      }
-      setDeleteState((current) => ({
-        ...current,
-        isOpen: true,
-        rowKeys: [rowKey],
-        results: [],
-        failure: null,
-      }))
-      return true
-    },
-    [
-      capabilities.canDelete,
-      beginMutationSession,
-      deleteState.requiresFreshRead,
-      resolveRef,
-      workspace,
-    ],
-  )
-
-  const confirmDelete = useCallback(() => {
-    if (deletePromise.current) return deletePromise.current
-    const session = deleteSession.current
-    if (!session || !workspace || !capabilities.canDelete) {
-      return Promise.resolve([])
-    }
-    if (sessionPhase.current !== "delete-confirmation")
-      return Promise.resolve([])
-    const isSessionCurrent = session.targets.every(({ rowKey, ref }) => {
-      const currentRef = resolveRef?.(rowKey)
-      return (
-        currentRef &&
-        getManagedResourceRefKey(currentRef) === getManagedResourceRefKey(ref)
-      )
-    })
-    if (!isSessionCurrent) {
-      deleteSession.current = null
-      endMutationSession("delete")
-      sessionPhase.current = "idle"
-      setDeleteState((current) => ({
-        ...current,
-        isOpen: false,
-        rowKeys: [],
-        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-      }))
-      return Promise.resolve([])
-    }
-    sessionPhase.current = "delete-execution"
-    return executeDeleteTargets(
-      session.targets,
-      session.actionId,
-      session.surfaceId,
-    )
-  }, [
-    capabilities.canDelete,
-    endMutationSession,
-    executeDeleteTargets,
-    resolveRef,
-    workspace,
-  ])
-
-  const cancelDelete = useCallback(() => {
-    if (deletePromise.current) return
-    deleteSession.current = null
-    endMutationSession("delete")
-    sessionPhase.current = "idle"
-    setDeleteState((current) => ({
-      ...current,
-      isOpen: false,
-      rowKeys: [],
-      failure: null,
-    }))
-  }, [endMutationSession])
-
   const closeDetail = useCallback(() => {
     if (
       sessionPhase.current !== "detail-loading" &&
@@ -1090,33 +615,6 @@ export function useManagedResourceMutationController({
     setEditorMode(null)
     setEditorFeedback(null)
   }, [])
-
-  const recoverFreshRead = useCallback(() => {
-    if (!deleteState.requiresFreshRead) return Promise.resolve(true)
-    if (freshReadPromise.current) return freshReadPromise.current
-    const currentGeneration = deleteGeneration.current
-    const recovery = Promise.resolve(refresh?.())
-      .then((accepted) => accepted ?? false)
-      .catch(() => false)
-      .then((accepted) => {
-        if (accepted && currentGeneration === deleteGeneration.current) {
-          setEditorFeedback(null)
-          setDeleteState((current) => ({
-            ...current,
-            requiresRefresh: false,
-            requiresFreshRead: false,
-            failure: null,
-          }))
-        }
-        return accepted
-      })
-      .finally(() => {
-        if (freshReadPromise.current === recovery)
-          freshReadPromise.current = undefined
-      })
-    freshReadPromise.current = recovery
-    return recovery
-  }, [deleteState.requiresFreshRead, refresh])
 
   const retryOpening = useCallback(() => {
     if (opening.status !== "failure") return
