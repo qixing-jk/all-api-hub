@@ -1,4 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions/contracts"
+import type { AccountSiteTypeForAdapterFamily } from "~/services/accountSiteDefinitions/definitions"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 
 import type { InviteLinkCapability } from "../contracts/inviteLink"
 import type { ModelPricingCapability } from "../contracts/modelPricing"
@@ -35,9 +38,7 @@ export type NewApiVariantRegistration = {
   notice?: SiteNoticeCapability
   announcements?: NonNullable<SiteTypeCapabilities["account"]>["announcements"]
 }
-const registrations: Partial<
-  Record<AccountSiteType, NewApiVariantRegistration>
-> = {
+export const newApiVariantRegistrations = {
   [SITE_TYPES.APIYI]: apiyiVariant,
   [SITE_TYPES.ANYROUTER]: anyrouterVariant,
   [SITE_TYPES.MODELFLARE]: modelflareVariant,
@@ -54,13 +55,26 @@ const registrations: Partial<
   [SITE_TYPES.WONG_GONGYI]: wongGongyiVariant,
   [SITE_TYPES.UNKNOWN]: compatibleVariant,
   [SITE_TYPES.NEW_API]: newApiVariant,
-}
+} satisfies Record<
+  AccountSiteTypeForAdapterFamily<
+    typeof ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+  >,
+  NewApiVariantRegistration
+>
 const defaultRegistration: NewApiVariantRegistration = {}
 /** Resolves only registered differences; family defaults stay owned by capability modules. */
 export function getNewApiVariantRegistration(
   siteType?: AccountSiteType,
 ): NewApiVariantRegistration {
-  return siteType
-    ? registrations[siteType] ?? defaultRegistration
-    : defaultRegistration
+  if (!siteType) return defaultRegistration
+  if (Object.hasOwn(newApiVariantRegistrations, siteType))
+    return newApiVariantRegistrations[
+      siteType as keyof typeof newApiVariantRegistrations
+    ]
+  if (
+    getAccountSiteDefinition(siteType)?.adapterFamily ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+  )
+    throw new Error(`New API family variant is not registered for ${siteType}`)
+  return defaultRegistration
 }

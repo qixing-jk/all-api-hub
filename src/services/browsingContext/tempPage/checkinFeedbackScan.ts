@@ -16,10 +16,8 @@ import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 
-import {
-  tempWindowBackgroundRuntime,
-  type AuthorizeTempContextAtAcquire,
-} from "./tempWindowPool"
+import type { AuthorizeTempContextAtAcquire } from "./contracts"
+import { tempWindowBackgroundRuntime } from "./runtime"
 
 type ScanParams = Extract<
   TempContextTask,

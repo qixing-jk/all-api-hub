@@ -1,6 +1,5 @@
-import type { DragEndEvent } from "@dnd-kit/core"
 import { ChevronDown, Inbox, Info, Plus, SlidersHorizontal } from "lucide-react"
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -21,42 +20,20 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
 import {
-  getInviteLinkFailureAnalyticsCategory,
-  getInviteLinkFailureSummary,
-  getPrimaryInviteLinkFailureReason,
-} from "~/features/AccountManagement/inviteLinkCopyFeedback"
-import {
-  BULK_INVITE_LINK_COPY_POLICY,
-  INVITE_LINK_COPY_RESULTS,
-  runInviteLinkCopyWorkflow,
-} from "~/features/AccountManagement/inviteLinkCopyWorkflow"
-import {
-  runSiteUrlCopyWorkflow,
-  SITE_URL_COPY_RESULTS,
-} from "~/features/AccountManagement/siteUrlCopyWorkflow"
-import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
-import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import { getAccountSortGroup } from "~/services/preferences/utils/sortingPriority"
-import {
-  startProductAnalyticsAction,
-  trackProductAnalyticsActionStarted,
-} from "~/services/productAnalytics/actions"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData, SortField } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumption,
@@ -83,10 +60,6 @@ import { AccountListHeader } from "./AccountListHeader"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import {
   groupAccountListResults,
-  moveAccountId,
-  orderAccountsByDisplayOrder,
-  projectAccountsByIdOrder,
-  replaceVisibleAccountOrder,
   type AccountListDisplayItem,
   type AccountListResultItem,
 } from "./accountListOrdering"
@@ -96,7 +69,8 @@ import {
   type AccountCheckInFilterValue,
 } from "./checkInFilter"
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
-import * as accountListDndRuntimeLoader from "./loadAccountListDndRuntime"
+import { useAccountListBulkActions } from "./useAccountListBulkActions"
+import { useAccountListReordering } from "./useAccountListReordering"
 import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
 interface AccountListProps {
@@ -106,15 +80,6 @@ interface AccountListProps {
   showAddAccountAction?: boolean
   virtualScrollParent?: HTMLElement | null
 }
-
-type DndLoadState = "inactive" | "loading" | "ready"
-
-type AccountListDndRuntime = Awaited<
-  ReturnType<typeof accountListDndRuntimeLoader.loadAccountListDndRuntime>
->
-
-const ACCOUNT_REORDER_TOAST_ID = "account-reorder"
-const ACCOUNT_REORDER_BOUNDARY_TOAST_ID = "account-reorder-boundary"
 
 /**
  * Master list view for user accounts, including search, tagging, sorting, filtering, and manual reordering controls.
@@ -129,47 +94,23 @@ export default function AccountList({
   const { t } = useTranslation(["account", "common"])
   const { showTodayCashflow } = useUserPreferencesContext()
   const {
-    sortedData,
     displayData,
     isInitialLoad,
-    handleSort,
     clearSortConfig,
     sortField,
     sortOrder,
-    handleReorder,
-    pinnedAccountIds,
     tags,
     tagCountsById,
-    isManualSortFeatureEnabled,
     detectedAccount,
     getAccountContextBoost,
   } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
-  const {
-    handleDeleteAccount,
-    handleDeleteAccounts,
-    handleSetAccountsDisabled,
-  } = useAccountActionsContext()
+  const { handleDeleteAccount } = useAccountActionsContext()
   const [deleteDialogAccount, setDeleteDialogAccount] =
     useState<DisplaySiteData | null>(null)
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
     useState<DisplaySiteData | null>(null)
   const [isBulkMode, setIsBulkMode] = useState(false)
-  const [isReorderMode, setIsReorderMode] = useState(false)
-  const [isReorderSaving, setIsReorderSaving] = useState(false)
-  const [reorderAccountIds, setReorderAccountIds] = useState<string[] | null>(
-    null,
-  )
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-  const [isBulkDisabling, setIsBulkDisabling] = useState(false)
-  const [isBulkCopyingInviteLinks, setIsBulkCopyingInviteLinks] =
-    useState(false)
-  const [isBulkCopyingSiteUrls, setIsBulkCopyingSiteUrls] = useState(false)
-  const [manualInviteLinkPayload, setManualInviteLinkPayload] = useState<
-    string | null
-  >(null)
-  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filterPanelId = useId()
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
@@ -180,24 +121,30 @@ export default function AccountList({
     useState<AccountCheckInFilterValue | null>(null)
   const [disabledFilter, setDisabledFilter] =
     useState<AccountDisabledFilterValue | null>(null)
-  const [dndLoadState, setDndLoadState] = useState<DndLoadState>("inactive")
-  const dndLoadPromiseRef = useRef<Promise<AccountListDndRuntime> | null>(null)
-  const dndRuntimeRef = useRef<AccountListDndRuntime | null>(null)
-  const isReorderSavingRef = useRef(false)
-  const isMountedRef = useRef(true)
-  const inviteLinkCopyAbortControllerRef = useRef<AbortController | null>(null)
-  const isBulkCopyingSiteUrlsRef = useRef(false)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
 
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-      inviteLinkCopyAbortControllerRef.current?.abort()
-    }
-  }, [])
+  const {
+    accountsInDisplayOrder,
+    pinnedAccountIdSet,
+    isReorderMode,
+    isReorderSaving,
+    dndLoadState,
+    dndRuntime,
+    dragDisabled,
+    shouldRenderSortableList,
+    resolvedReorderDisabledReason,
+    onDragEnd,
+    handleReorderModeEnter,
+    handleReorderModeExit,
+    handleListSort,
+    resetReorderMode,
+  } = useAccountListReordering({
+    inSearchMode,
+    isBulkMode,
+    reorderUnavailableReason,
+  })
 
   const handleDeleteWithDialog = (site: DisplaySiteData) => {
     setDeleteDialogAccount(site)
@@ -206,18 +153,6 @@ export default function AccountList({
   const handleCopyKeyWithDialog = (site: DisplaySiteData) => {
     setCopyKeyDialogAccount(site)
   }
-
-  const accountsInDisplayOrder = useMemo(
-    () =>
-      reorderAccountIds === null
-        ? sortedData
-        : projectAccountsByIdOrder(displayData, reorderAccountIds),
-    [displayData, reorderAccountIds, sortedData],
-  )
-  const pinnedAccountIdSet = useMemo(
-    () => new Set(pinnedAccountIds),
-    [pinnedAccountIds],
-  )
 
   const baseResults = useMemo<AccountListResultItem[]>(() => {
     if (inSearchMode) {
@@ -270,33 +205,6 @@ export default function AccountList({
       isReorderMode,
     ],
   )
-
-  const allAccountIdSet = useMemo(
-    () => new Set(displayData.map((account) => account.id)),
-    [displayData],
-  )
-
-  useEffect(() => {
-    setSelectedAccountIds((previous) =>
-      previous.filter((accountId) => allAccountIdSet.has(accountId)),
-    )
-  }, [allAccountIdSet])
-
-  useEffect(() => {
-    if (displayData.length === 0) {
-      setIsBulkMode(false)
-      setIsReorderMode(false)
-      setReorderAccountIds(null)
-      setSelectedAccountIds([])
-    }
-  }, [displayData.length])
-
-  useEffect(() => {
-    if (inSearchMode || !isManualSortFeatureEnabled) {
-      setIsReorderMode(false)
-      setReorderAccountIds(null)
-    }
-  }, [inSearchMode, isManualSortFeatureEnabled])
 
   const tagFilterOptions = useMemo(() => {
     if (tags.length === 0) {
@@ -419,43 +327,38 @@ export default function AccountList({
     () => displayedResults.map((item) => item.account),
     [displayedResults],
   )
-  const selectedIdSet = useMemo(
-    () => new Set(selectedAccountIds),
-    [selectedAccountIds],
-  )
-  const visibleAccountIds = useMemo(
-    () => filteredSites.map((account) => account.id),
-    [filteredSites],
-  )
-  const visibleAccountIdSet = useMemo(
-    () => new Set(visibleAccountIds),
-    [visibleAccountIds],
-  )
-  const selectedAccounts = useMemo(
-    () => displayData.filter((account) => selectedIdSet.has(account.id)),
-    [displayData, selectedIdSet],
-  )
-  // Copies follow the rendered rows, so pasted output matches what the user
-  // sees; selections hidden by search or filters stay at the end.
-  const selectedAccountsInDisplayOrder = useMemo(
-    () => orderAccountsByDisplayOrder(selectedAccounts, groupedDisplayItems),
-    [groupedDisplayItems, selectedAccounts],
-  )
-  const selectedVisibleCount = useMemo(
-    () =>
-      selectedAccounts.filter((account) => visibleAccountIdSet.has(account.id))
-        .length,
-    [selectedAccounts, visibleAccountIdSet],
-  )
-  const hiddenSelectedCount = selectedAccountIds.length - selectedVisibleCount
-  const selectedEnabledAccounts = useMemo(
-    () => selectedAccounts.filter((account) => account.disabled !== true),
-    [selectedAccounts],
-  )
-  const bulkDeletePreviewAccounts = useMemo(
-    () => selectedAccounts.slice(0, 6),
-    [selectedAccounts],
-  )
+  const {
+    selectedAccountIds,
+    selectedIdSet,
+    selectedAccounts,
+    visibleAccountIdSet,
+    hiddenSelectedCount,
+    bulkDeletePreviewAccounts,
+    isBulkBusy,
+    isBulkDeleting,
+    isBulkDisabling,
+    isBulkCopyingInviteLinks,
+    manualInviteLinkPayload,
+    isBulkDeleteConfirmOpen,
+    setManualInviteLinkPayload,
+    setIsBulkDeleteConfirmOpen,
+    handleBulkModeEnter,
+    handleBulkModeExit,
+    handleToggleAccountSelection,
+    handleSelectVisibleAccounts,
+    handleClearVisibleSelection,
+    handleClearAllSelection,
+    handleBulkDisable,
+    handleBulkCopyInviteLinks,
+    handleBulkCopySiteUrls,
+    handleBulkDelete,
+  } = useAccountListBulkActions({
+    displayData,
+    filteredSites,
+    groupedDisplayItems,
+    setIsBulkMode,
+    onEnterBulkMode: resetReorderMode,
+  })
 
   const filteredBalance = useMemo(
     () => calculateTotalBalanceForSites(filteredSites),
@@ -486,35 +389,7 @@ export default function AccountList({
         getAccountSortGroup(account, pinnedAccountIdSet),
       ),
     ).size > 1
-  const dragDisabled =
-    !isReorderMode ||
-    inSearchMode ||
-    !isManualSortFeatureEnabled ||
-    isBulkMode ||
-    isReorderSaving
   const handleLabel = t("account:list.dragHandle")
-  const isBulkBusy =
-    isBulkDeleting ||
-    isBulkDisabling ||
-    isBulkCopyingInviteLinks ||
-    isBulkCopyingSiteUrls
-  const shouldRenderSortableList =
-    isReorderMode &&
-    isManualSortFeatureEnabled &&
-    dndLoadState === "ready" &&
-    dndRuntimeRef.current !== null
-
-  const resolvedReorderDisabledReason = isReorderMode
-    ? null
-    : reorderUnavailableReason ??
-      (isBulkMode
-        ? t("account:list.reorderUnavailableWhileBulk")
-        : inSearchMode
-          ? t("account:list.reorderUnavailableWhileSearch")
-          : !isManualSortFeatureEnabled
-            ? t("account:list.reorderUnavailableInSettings")
-            : null)
-
   const sortedIds = useMemo(
     () => groupedDisplayItems.map((item) => item.result.account.id),
     [groupedDisplayItems],
@@ -526,12 +401,6 @@ export default function AccountList({
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   }
 
-  const updateSelectedAccountIds = (
-    updater: (previous: string[]) => string[],
-  ) => {
-    setSelectedAccountIds((previous) => Array.from(new Set(updater(previous))))
-  }
-
   const handleEmptyStateAddAccountClick = () => {
     void trackProductAnalyticsActionStarted({
       ...accountListAnalyticsBaseContext,
@@ -540,546 +409,6 @@ export default function AccountList({
     const addAccount = onAddAccount ?? handleAddAccountClick
     addAccount()
   }
-
-  const handleBulkModeEnter = () => {
-    void trackProductAnalyticsActionStarted({
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnterAccountBulkMode,
-    })
-    setIsReorderMode(false)
-    setReorderAccountIds(null)
-    setIsBulkMode(true)
-  }
-
-  const handleBulkModeExit = () => {
-    if (isBulkBusy) return
-
-    void trackProductAnalyticsActionStarted({
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExitAccountBulkMode,
-    })
-    setIsBulkMode(false)
-    setSelectedAccountIds([])
-    setIsBulkDeleteConfirmOpen(false)
-  }
-
-  const handleToggleAccountSelection = (
-    accountId: string,
-    checked: boolean,
-  ) => {
-    updateSelectedAccountIds((previous) =>
-      checked
-        ? [...previous, accountId]
-        : previous.filter((selectedId) => selectedId !== accountId),
-    )
-  }
-
-  const handleSelectVisibleAccounts = () => {
-    updateSelectedAccountIds((previous) => [...previous, ...visibleAccountIds])
-  }
-
-  const handleClearVisibleSelection = () => {
-    if (visibleAccountIds.length === 0) return
-
-    const visibleIds = new Set(visibleAccountIds)
-    updateSelectedAccountIds((previous) =>
-      previous.filter((selectedId) => !visibleIds.has(selectedId)),
-    )
-  }
-
-  const handleClearAllSelection = () => {
-    if (isBulkBusy) return
-    setSelectedAccountIds([])
-  }
-
-  const handleBulkDisable = async () => {
-    if (selectedEnabledAccounts.length === 0 || isBulkBusy) {
-      return
-    }
-
-    const itemCount = selectedEnabledAccounts.length
-    const selectedCount = selectedAccountIds.length
-    const analyticsContext = {
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableSelectedAccounts,
-    }
-    const tracker = startProductAnalyticsAction(analyticsContext)
-
-    setIsBulkDisabling(true)
-    try {
-      const { updatedCount, updatedIds } = await handleSetAccountsDisabled(
-        selectedEnabledAccounts,
-        true,
-      )
-      const failureCount = Math.max(0, itemCount - updatedCount)
-      tracker.complete(
-        failureCount > 0
-          ? PRODUCT_ANALYTICS_RESULTS.Failure
-          : PRODUCT_ANALYTICS_RESULTS.Success,
-        {
-          ...(failureCount > 0
-            ? {
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              }
-            : {}),
-          insights: {
-            itemCount,
-            selectedCount,
-            successCount: updatedCount,
-            failureCount,
-          },
-        },
-      )
-      if (updatedIds.length > 0) {
-        const updatedIdSet = new Set(updatedIds)
-        setSelectedAccountIds((previous) =>
-          previous.filter((accountId) => !updatedIdSet.has(accountId)),
-        )
-      }
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          itemCount,
-          selectedCount,
-          successCount: 0,
-          failureCount: itemCount,
-        },
-      })
-      throw error
-    } finally {
-      setIsBulkDisabling(false)
-    }
-  }
-
-  const handleBulkCopyInviteLinks = async () => {
-    if (isBulkCopyingInviteLinks || inviteLinkCopyAbortControllerRef.current) {
-      return
-    }
-
-    const analyticsContext = {
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
-    }
-    const tracker = startProductAnalyticsAction(analyticsContext)
-    const controller = new AbortController()
-    inviteLinkCopyAbortControllerRef.current = controller
-
-    setIsBulkCopyingInviteLinks(true)
-    try {
-      const result = await runInviteLinkCopyWorkflow({
-        accounts: selectedAccountsInDisplayOrder,
-        format: "labeled",
-        signal: controller.signal,
-        ...BULK_INVITE_LINK_COPY_POLICY,
-      })
-      const insights = {
-        itemCount: result.itemCount,
-        selectedCount: result.selectedCount,
-        successCount: result.successCount,
-        failureCount: result.failureCount,
-        skippedCount: result.skippedCount + result.unsupportedCount,
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Cancelled) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.ClipboardFailure) {
-        setManualInviteLinkPayload(result.payload ?? null)
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-          insights,
-        })
-        const hasOtherOutcomes =
-          result.failureCount > 0 ||
-          result.unsupportedCount > 0 ||
-          result.skippedCount > 0
-        toast.error(
-          hasOtherOutcomes
-            ? t("account:bulk.copyInviteLinksClipboardFailedWithReasons", {
-                reasonSummary: getInviteLinkFailureSummary(t, result),
-              })
-            : t("account:bulk.copyInviteLinksClipboardFailed"),
-        )
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Unsupported) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
-          insights,
-        })
-        toast.error(t("account:bulk.copyInviteLinksUnsupported"))
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Failure) {
-        const primaryFailureReason = getPrimaryInviteLinkFailureReason(
-          result.failureReasonCounts,
-        )
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory:
-            getInviteLinkFailureAnalyticsCategory(primaryFailureReason),
-          insights,
-        })
-        toast.error(
-          t("account:bulk.copyInviteLinksFailedWithReasons", {
-            reasonSummary: getInviteLinkFailureSummary(t, result),
-          }),
-        )
-        return
-      }
-
-      const isPartial =
-        result.result === INVITE_LINK_COPY_RESULTS.PartialSuccess
-      const primaryFailureReason = getPrimaryInviteLinkFailureReason(
-        result.failureReasonCounts,
-      )
-      tracker.complete(
-        isPartial
-          ? PRODUCT_ANALYTICS_RESULTS.Failure
-          : PRODUCT_ANALYTICS_RESULTS.Success,
-        {
-          ...(isPartial
-            ? {
-                errorCategory:
-                  result.failureCount > 0
-                    ? getInviteLinkFailureAnalyticsCategory(
-                        primaryFailureReason,
-                      )
-                    : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
-              }
-            : {}),
-          insights: {
-            ...insights,
-            ...(isPartial
-              ? {
-                  failureReason:
-                    PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
-                }
-              : {}),
-          },
-        },
-      )
-
-      toast.success(
-        !isPartial
-          ? t("account:bulk.copyInviteLinksSuccess", {
-              count: result.successCount,
-            })
-          : t("account:bulk.copyInviteLinksPartialSuccess", {
-              successCount: result.successCount,
-              reasonSummary: getInviteLinkFailureSummary(t, result),
-            }),
-      )
-    } catch {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          itemCount: selectedEnabledAccounts.length,
-          selectedCount: selectedAccountIds.length,
-          successCount: 0,
-          failureCount: selectedEnabledAccounts.length,
-          skippedCount:
-            selectedAccounts.length - selectedEnabledAccounts.length,
-        },
-      })
-      toast.error(t("account:bulk.copyInviteLinksFailed"))
-    } finally {
-      if (inviteLinkCopyAbortControllerRef.current === controller) {
-        inviteLinkCopyAbortControllerRef.current = null
-        if (isMountedRef.current) setIsBulkCopyingInviteLinks(false)
-      }
-    }
-  }
-
-  const handleBulkCopySiteUrls = async () => {
-    if (
-      selectedAccounts.length === 0 ||
-      isBulkBusy ||
-      isBulkCopyingSiteUrlsRef.current
-    ) {
-      return
-    }
-
-    const tracker = startProductAnalyticsAction({
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountSiteUrls,
-    })
-    isBulkCopyingSiteUrlsRef.current = true
-    setIsBulkCopyingSiteUrls(true)
-    try {
-      const result = await runSiteUrlCopyWorkflow({
-        accounts: selectedAccountsInDisplayOrder,
-      })
-      const insights = {
-        itemCount: result.itemCount,
-        selectedCount: result.selectedCount,
-        successCount: result.successCount,
-        failureCount: result.failureCount,
-        skippedCount: result.skippedCount,
-      }
-
-      if (result.result === SITE_URL_COPY_RESULTS.NoCopyableUrls) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
-          insights,
-        })
-        toast.error(t("account:bulk.copySiteUrlsNone"))
-        return
-      }
-
-      if (result.result === SITE_URL_COPY_RESULTS.ClipboardFailure) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-          insights,
-        })
-        toast.error(t("account:bulk.copySiteUrlsClipboardFailed"))
-        return
-      }
-
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
-      toast.success(
-        t("account:bulk.copySiteUrlsSuccess", { count: result.itemCount }),
-      )
-    } finally {
-      isBulkCopyingSiteUrlsRef.current = false
-      if (isMountedRef.current) {
-        setIsBulkCopyingSiteUrls(false)
-      }
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedAccounts.length === 0 || isBulkBusy) {
-      return
-    }
-
-    const itemCount = selectedAccounts.length
-    const selectedCount = selectedAccountIds.length
-    const analyticsContext = {
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
-    }
-    const tracker = startProductAnalyticsAction(analyticsContext)
-
-    setIsBulkDeleting(true)
-    try {
-      const { deletedCount, deletedIds } =
-        await handleDeleteAccounts(selectedAccounts)
-      const failureCount = Math.max(0, itemCount - deletedCount)
-      tracker.complete(
-        failureCount > 0
-          ? PRODUCT_ANALYTICS_RESULTS.Failure
-          : PRODUCT_ANALYTICS_RESULTS.Success,
-        {
-          ...(failureCount > 0
-            ? {
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              }
-            : {}),
-          insights: {
-            itemCount,
-            selectedCount,
-            successCount: deletedCount,
-            failureCount,
-          },
-        },
-      )
-      if (deletedIds.length > 0) {
-        const deletedIdSet = new Set(deletedIds)
-        setSelectedAccountIds((previous) =>
-          previous.filter((accountId) => !deletedIdSet.has(accountId)),
-        )
-      }
-      setIsBulkDeleteConfirmOpen(false)
-
-      if (deletedCount > 0 && displayData.length - deletedCount <= 0) {
-        setIsBulkMode(false)
-      }
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          itemCount,
-          selectedCount,
-          successCount: 0,
-          failureCount: itemCount,
-        },
-      })
-      throw error
-    } finally {
-      setIsBulkDeleting(false)
-    }
-  }
-
-  const onDragEnd = (event: DragEndEvent) => {
-    if (
-      dragDisabled ||
-      reorderAccountIds === null ||
-      isReorderSavingRef.current
-    ) {
-      return
-    }
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = sortedIds.indexOf(active.id as string)
-    const newIndex = sortedIds.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const activeAccount = groupedDisplayItems[oldIndex]?.result.account
-    const overAccount = groupedDisplayItems[newIndex]?.result.account
-    const crossedGroupBoundary =
-      activeAccount !== undefined &&
-      overAccount !== undefined &&
-      getAccountSortGroup(activeAccount, pinnedAccountIdSet) !==
-        getAccountSortGroup(overAccount, pinnedAccountIdSet)
-
-    if (crossedGroupBoundary) {
-      toast.warning(t("account:list.reorderGroupBoundary"), {
-        id: ACCOUNT_REORDER_BOUNDARY_TOAST_ID,
-      })
-      return
-    }
-
-    const itemCount = sortedIds.length
-    const analyticsContext = {
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ReorderAccounts,
-    }
-    const tracker = startProductAnalyticsAction(analyticsContext)
-    const previousAccountIds = accountsInDisplayOrder.map(
-      (account) => account.id,
-    )
-    const nextVisibleIds = moveAccountId(sortedIds, oldIndex, newIndex)
-    const nextAccountIds = replaceVisibleAccountOrder(
-      previousAccountIds,
-      nextVisibleIds,
-    )
-    const clearsFieldSort = sortField !== null
-
-    isReorderSavingRef.current = true
-    setIsReorderSaving(true)
-    setReorderAccountIds(nextAccountIds)
-
-    void Promise.resolve(handleReorder(nextVisibleIds))
-      .then(() => {
-        if (clearsFieldSort) {
-          clearSortConfig()
-        }
-        toast.success(
-          t(
-            clearsFieldSort
-              ? "account:list.reorderSuccessFieldSortCleared"
-              : "account:list.reorderSuccess",
-          ),
-          {
-            id: ACCOUNT_REORDER_TOAST_ID,
-          },
-        )
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-            itemCount,
-          },
-        })
-      })
-      .catch(() => {
-        setReorderAccountIds(previousAccountIds)
-        toast.error(t("account:list.reorderFailed"), {
-          id: ACCOUNT_REORDER_TOAST_ID,
-        })
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-            itemCount,
-          },
-        })
-      })
-      .finally(() => {
-        isReorderSavingRef.current = false
-        if (isMountedRef.current) {
-          setIsReorderSaving(false)
-        }
-      })
-  }
-
-  const ensureDndReady = useCallback(() => {
-    if (!isManualSortFeatureEnabled) {
-      return Promise.resolve(null)
-    }
-
-    if (dndRuntimeRef.current !== null) {
-      if (dndLoadState !== "ready") {
-        setDndLoadState("ready")
-      }
-      return Promise.resolve(dndRuntimeRef.current)
-    }
-
-    if (dndLoadPromiseRef.current !== null) {
-      if (dndLoadState === "inactive") {
-        setDndLoadState("loading")
-      }
-      return dndLoadPromiseRef.current
-    }
-
-    setDndLoadState("loading")
-
-    const loadPromise = accountListDndRuntimeLoader
-      .loadAccountListDndRuntime()
-      .then((runtime) => {
-        dndRuntimeRef.current = runtime
-        dndLoadPromiseRef.current = Promise.resolve(runtime)
-        if (isMountedRef.current) {
-          setDndLoadState("ready")
-        }
-        return runtime
-      })
-      .catch((error) => {
-        dndLoadPromiseRef.current = null
-        if (isMountedRef.current) {
-          setDndLoadState("inactive")
-        }
-        throw error
-      })
-
-    dndLoadPromiseRef.current = loadPromise
-    return loadPromise
-  }, [dndLoadState, isManualSortFeatureEnabled])
-
-  const handleReorderModeEnter = useCallback(() => {
-    if (resolvedReorderDisabledReason !== null) return
-
-    setReorderAccountIds(sortedData.map((account) => account.id))
-    setIsReorderMode(true)
-    void ensureDndReady().catch(() => {
-      if (isMountedRef.current) {
-        setIsReorderMode(false)
-        setReorderAccountIds(null)
-        toast.error(t("account:list.reorderLoadFailed"))
-      }
-    })
-  }, [ensureDndReady, resolvedReorderDisabledReason, sortedData, t])
-
-  const handleReorderModeExit = useCallback(() => {
-    if (isReorderSavingRef.current) return
-    setIsReorderMode(false)
-    setReorderAccountIds(null)
-  }, [])
-
-  const handleListSort = useCallback(
-    (field: SortField) => {
-      if (isReorderSavingRef.current) return
-      setIsReorderMode(false)
-      setReorderAccountIds(null)
-      handleSort(field)
-    },
-    [handleSort],
-  )
 
   const activeStatusFilterCount = [
     disabledFilter,
@@ -1176,8 +505,8 @@ export default function AccountList({
       handleLabel,
       selectionControl,
     }
-    if (shouldRenderSortableList && dndRuntimeRef.current !== null) {
-      const { SortableAccountListItem } = dndRuntimeRef.current
+    if (shouldRenderSortableList && dndRuntime !== null) {
+      const { SortableAccountListItem } = dndRuntime
 
       return (
         <SortableAccountListItem
@@ -1204,7 +533,7 @@ export default function AccountList({
       {groupedDisplayItems.map(renderAccountListItem)}
     </CardList>
   )
-  const DndWrapper = dndRuntimeRef.current?.AccountListDndWrapper
+  const DndWrapper = dndRuntime?.AccountListDndWrapper
 
   return (
     <Card
@@ -1393,7 +722,10 @@ export default function AccountList({
             title={t("account:search.noResults")}
           />
         ) : shouldRenderSortableList && DndWrapper ? (
-          <DndWrapper sortedIds={sortedIds} onDragEnd={onDragEnd}>
+          <DndWrapper
+            sortedIds={sortedIds}
+            onDragEnd={(event) => onDragEnd(event, groupedDisplayItems)}
+          >
             {renderUnvirtualizedList()}
           </DndWrapper>
         ) : isReorderMode ? (

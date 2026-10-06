@@ -358,6 +358,7 @@ const toFacts = (
   ]
 
   return {
+    keyCleanupBaseUrls: [sanitized.baseUrl],
     ref,
     displayName: sanitized.name,
     status,

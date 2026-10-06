@@ -442,6 +442,9 @@ describe("OmniRoute native managed resource", () => {
 
     const workspace = await omniRouteManagedResourceRegistration.open()
     const page = await workspace.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([
+      "https://relay.example.invalid/v1",
+    ])
 
     expect(page.items).toHaveLength(1)
     expect(page.items[0]).toEqual(

@@ -1,4 +1,4 @@
-import type { PreferenceSaveOptions } from "~/contexts/UserPreferencesContext"
+import type { PreferenceSaveOptions } from "~/contexts/userPreferences/preferenceContextTypes"
 import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"

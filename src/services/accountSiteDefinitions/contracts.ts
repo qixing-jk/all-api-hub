@@ -93,6 +93,8 @@ export type ManagedSiteMessagesKey =
   | "gptLoad"
 
 export interface ManagedResourceProductPolicy {
+  /** Whether native ids can identify released numeric channel-config records. */
+  legacyNumericChannelConfig: boolean
   /** Official upstream installation or quick-start guide. */
   getStartedUrl: `https://${string}`
   labelKey: ManagedSiteLabelKey
@@ -145,6 +147,8 @@ export interface AccountSiteLoginConfig {
 
 export interface AccountSiteDefinition {
   siteType: SiteType
+  /** Released account-token locators map to this native scope, independently of the current adapter family. */
+  legacyAccountTokenScope?: "account"
   scopes: readonly AccountSiteDefinitionScope[]
   adapterFamily: AccountSiteBackendFamily
   /** Token identity/auth formatting; absent means opaque keys with no prefix rewriting. */

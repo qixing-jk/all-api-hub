@@ -403,6 +403,44 @@ describe("linked channel cleanup", () => {
     expect(channels.get("multi")?.keys).toEqual(["retained"])
     expect(await getLinkedChannelCleanupTasks()).toEqual([])
   })
+  it("reads detail when cleanup URLs are absent, regardless of misleading display fields", async () => {
+    mocks.list.mockResolvedValue({
+      items: [
+        {
+          ref: ref("multi"),
+          displayName: "multi",
+          fields: [
+            {
+              fieldId: "baseURL",
+              kind: "text",
+              value: "https://display.example",
+            },
+          ],
+        },
+      ],
+      total: 1,
+    })
+    const task = await prepare()
+    expect(mocks.openKeys).toHaveBeenCalledWith(ref("multi"), expect.anything())
+    expect(task?.targets.map(({ ref }) => ref.resourceId)).toEqual(["multi"])
+  })
+
+  it("skips an explicitly unrelated cleanup URL without reading credentials", async () => {
+    mocks.list.mockResolvedValue({
+      items: [
+        {
+          ref: ref("multi"),
+          displayName: "multi",
+          keyCleanupBaseUrls: ["https://other.example"],
+          fields: [{ fieldId: "baseURL", kind: "text", value: sourceUrl }],
+        },
+      ],
+      total: 1,
+    })
+    expect(await prepare()).toBeNull()
+    expect(mocks.openKeys).not.toHaveBeenCalled()
+  })
+
   it("collects all matching channels and persists no plaintext credentials", async () => {
     const task = await prepare()
     expect(task?.targets.map((target) => target.ref.resourceId)).toEqual([

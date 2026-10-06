@@ -127,6 +127,13 @@ const toFacts = (
       },
       keyExpiryDisplayFact("expired_time", values.expired_time),
       ...keyLastUsedDisplayFacts(key.accessed_time),
+      { fieldId: "models", kind: "restriction", role: "models", value: models },
+      {
+        fieldId: "subnet",
+        kind: "restriction",
+        role: "subnet",
+        value: values.subnet,
+      },
     ],
     fields: [
       {

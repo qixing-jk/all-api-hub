@@ -6,6 +6,7 @@ import {
   persistInternalTabMarker,
   readInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
+import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
 import { createTab, createWindow, queryTabs } from "~/utils/browser/browserApi"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
@@ -16,7 +17,6 @@ import {
   readTempPageReclamationHistory,
   reclaimOrphanedTempPages,
 } from "./tempContextReclamation"
-import { tempWindowBackgroundRuntime } from "./tempWindowPool"
 
 /**
  * Unified logger scoped to the temp-context debug fixtures.

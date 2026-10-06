@@ -1,15 +1,13 @@
-import {
-  ACCOUNT_SITE_ADAPTER_FAMILIES,
-  type AccountSiteType,
-} from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
 } from "~/services/accountTokens/apiTokenKey"
-import type {
-  AccountKeyResourceFacts,
-  AccountKeyResourceRef,
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+  type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
@@ -61,15 +59,18 @@ export const getAccountRuntimeKeyLocatorIdentity = (
   locator: AccountRuntimeKeyLocator,
 ): string => {
   switch (locator.source) {
-    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken:
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken: {
       // Released account-token associations refer to these providers' single
       // account scope. Preserve their identity when inventory becomes native.
-      if (isLegacyAccountKeyResourceSite(locator.siteType)) {
+      const legacyScope = getAccountSiteDefinition(
+        locator.siteType,
+      )?.legacyAccountTokenScope
+      if (legacyScope) {
         return JSON.stringify([
           ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
           locator.accountId,
           locator.siteType,
-          "account",
+          legacyScope,
           String(locator.tokenId),
         ])
       }
@@ -79,6 +80,7 @@ export const getAccountRuntimeKeyLocatorIdentity = (
         locator.siteType,
         locator.tokenId,
       ])
+    }
     case ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource:
       return JSON.stringify([
         locator.source,
@@ -418,11 +420,11 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
     label: facts.displayName,
     secret,
     status:
-      facts.status === "enabled"
-        ? "active"
-        : facts.status === "unknown"
+      facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
+        ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+        : facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
           ? "unknown"
-          : "inactive",
+          : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
   })
 
 /** Stable external selection identity, retaining IDs emitted before native migration. */
@@ -432,17 +434,6 @@ export const getAccountRuntimeKeyExportId = (
   if (isAccountKeyResourceRuntimeKey(key) && key.legacyTokenId !== undefined)
     return String(key.legacyTokenId)
   return key.id
-}
-
-/** Only providers that historically exposed numeric account token identities. */
-function isLegacyAccountKeyResourceSite(siteType: AccountSiteType) {
-  const family = getAccountSiteDefinition(siteType)?.adapterFamily
-  return (
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2 ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix
-  )
 }
 
 /** Formats the runtime secret without changing the provider's original credential. */

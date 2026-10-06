@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getBestEffortLoginUrl,
+  getStaticAccountSiteRouteUrl,
   resolveAccountSiteLoginUrl,
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -69,6 +70,52 @@ describe("siteRouteResolver", () => {
       expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     },
   )
+
+  it("provides static navigation destinations without probing the site", () => {
+    const target = {
+      baseUrl: " https://new-api.example/// ",
+      siteType: SITE_TYPES.NEW_API,
+    }
+    expect(getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn)).toBe(
+      "https://new-api.example/console/personal",
+    )
+    expect(
+      getStaticAccountSiteRouteUrl(
+        { ...target, siteType: SITE_TYPES.SHAREDCHAT },
+        SITE_ROUTE_KINDS.Redeem,
+      ),
+    ).toBeNull()
+    expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalled()
+  })
+
+  it.each([SITE_ROUTE_KINDS.CheckIn, SITE_ROUTE_KINDS.Redeem])(
+    "honors the same custom destination for static and resolved %s navigation",
+    async (route) => {
+      const target = {
+        baseUrl: "https://sharedchat.example",
+        siteType: SITE_TYPES.SHAREDCHAT,
+      }
+      const customUrl = "https://custom.example/action"
+      expect(getStaticAccountSiteRouteUrl(target, route, customUrl)).toBe(
+        customUrl,
+      )
+      await expect(
+        resolveAccountSiteRouteUrl(target, route, customUrl),
+      ).resolves.toBe(customUrl)
+      expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalled()
+    },
+  )
+
+  it("keeps dynamic route resolution when the custom destination is empty", async () => {
+    mockResolveRoutePath.mockResolvedValueOnce("/wallet")
+    await expect(
+      resolveAccountSiteRouteUrl(
+        { baseUrl: "https://new-api.example", siteType: SITE_TYPES.NEW_API },
+        SITE_ROUTE_KINDS.Redeem,
+        "",
+      ),
+    ).resolves.toBe("https://new-api.example/wallet")
+  })
 
   it("keeps best-effort canonical-host routing independent of the supplied protocol", () => {
     expect(getBestEffortLoginUrl("ftp://aihubmix.com/path")).toBe(

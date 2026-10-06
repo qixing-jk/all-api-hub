@@ -198,6 +198,12 @@ const toFacts = (
       amountUsd: Number(key.used) || 0,
     },
     keyExpiryDisplayFact("expireTime", key.expireTime ?? -1),
+    {
+      fieldId: "groups",
+      kind: "group",
+      value: key.runtimeGroupNames ?? (key.groups ?? []).map(String),
+      emptyValue: "ungrouped",
+    },
   ],
   fields: [
     {

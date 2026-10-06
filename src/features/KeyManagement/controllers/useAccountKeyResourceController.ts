@@ -50,7 +50,6 @@ import { useAccountKeyResourceRouteCoordinator } from "./useAccountKeyResourceRo
 import { useAccountKeyResourceRouteState } from "./useAccountKeyResourceRouteState"
 
 export type { AccountKeyResourceRouteTransition } from "./accountKeyResourceControllerTypes"
-export { isAccountKeyResourceRouteTransitionAcknowledged } from "./accountKeyResourceWorkflowSupport"
 
 /** Owns native account-key resource loading and mutation state without exposing sessions. */
 export function useAccountKeyResourceController({

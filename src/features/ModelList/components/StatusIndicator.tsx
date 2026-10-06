@@ -14,7 +14,10 @@ import {
   Spinner,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
+import {
+  MODEL_LIST_FALLBACK_STATUS_SCOPES,
+  type AccountFallbackControls,
+} from "~/features/ModelList/hooks/modelDataTypes"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
@@ -119,7 +122,8 @@ export function StatusIndicator({
 
   const isKeyScopedStatus =
     selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    accountFallback?.statusScope === "runtime-key" &&
+    accountFallback?.statusScope ===
+      MODEL_LIST_FALLBACK_STATUS_SCOPES.RuntimeKey &&
     accountFallback?.isAvailable === true &&
     !accountFallback.isActive
 

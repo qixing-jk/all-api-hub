@@ -12,6 +12,15 @@ import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
+  calculateDeterministicCatchUpTrigger,
+  calculateDeterministicTriggerForDay,
+  calculateRandomTrigger,
+  calculateRandomTriggerForDay,
+  computeNextRetryTriggerTime,
+  isMinutesWithinWindow,
+  parseTimeToMinutes,
+} from "~/services/checkin/autoCheckin/dailyPlanning"
+import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
 } from "~/services/checkin/autoCheckin/inspection"
@@ -29,7 +38,17 @@ import {
   isRetryableCheckinResult,
 } from "~/services/checkin/autoCheckin/resultPolicy"
 import {
-  autoCheckinScheduler,
+  mapRunSummaryToProductAnalyticsResult,
+  notifyScheduledRunResult,
+  notifyUiRunCompleted,
+} from "~/services/checkin/autoCheckin/runPresentation"
+import {
+  buildAccountSnapshot,
+  recalculateSummaryFromResults,
+  updateSnapshotWithResult,
+} from "~/services/checkin/autoCheckin/runResults"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/schedulerCore"
+import {
   getAutoCheckinAccountInfo,
   getAutoCheckinStatus,
   pretriggerAutoCheckinDailyOnUiOpen,
@@ -40,7 +59,7 @@ import {
   triggerAutoCheckinDailyAlarmNow,
   triggerAutoCheckinRetryAlarmNow,
   updateAutoCheckinSettings,
-} from "~/services/checkin/autoCheckin/scheduler"
+} from "~/services/checkin/autoCheckin/schedulerMessaging"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
@@ -2056,7 +2075,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     resolveProviderForTest.mockReturnValue(provider)
 
     const runAccountCheckinSpy = vi
-      .spyOn(autoCheckinScheduler as any, "runAccountCheckin")
+      .spyOn((autoCheckinScheduler as any).runEngine, "runAccountCheckin")
       .mockImplementation(async (...args: unknown[]) => {
         const account = args[0] as any
         const accountName = args[1] as string
@@ -2683,7 +2702,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.markAccountAsSiteCheckedIn.mockResolvedValueOnce(false)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "remote-success",
           site_name: "Remote Success",
@@ -3249,7 +3268,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     resolveProviderForTest.mockReturnValue(provider)
 
     const refreshSpy = vi.spyOn(
-      autoCheckinScheduler as any,
+      (autoCheckinScheduler as any).runEngine,
       "refreshAccountsAfterSuccessfulCheckins",
     )
 
@@ -3597,9 +3616,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
     const now = new Date(2024, 0, 1, 9, 30, 0)
     vi.setSystemTime(now)
 
-    const nextRetryTime = (
-      autoCheckinScheduler as any
-    ).computeNextRetryTriggerTime(
+    const nextRetryTime = computeNextRetryTriggerTime(
       {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
         retryStrategy: {
@@ -5382,7 +5399,14 @@ describe("auto check-in operation helpers", () => {
     },
   )
 
-  it("queues a verified not-checked result that was not already pending", async () => {
+  it("queues a verified not-checked result that was not already pending", async ({
+    onTestFinished,
+  }) => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 9, 6, 12, 0, 0))
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
     let storedStatus: any = {
       perAccount: {
         [verificationAccount.id]: {
@@ -7705,7 +7729,7 @@ describe("autoCheckinScheduler debug helpers", () => {
 
 describe("autoCheckinScheduler private helpers", () => {
   it("sends already-checked results as a distinct notification count", async () => {
-    await (autoCheckinScheduler as any).notifyScheduledRunResult({
+    await notifyScheduledRunResult({
       successCount: 2,
       alreadyCheckedCount: 1,
       failedCount: 1,
@@ -7747,7 +7771,7 @@ describe("autoCheckinScheduler private helpers", () => {
 
     const refreshPromise = (
       autoCheckinScheduler as any
-    ).refreshAccountsAfterSuccessfulCheckins({
+    ).runEngine.refreshAccountsAfterSuccessfulCheckins({
       accountIds: ["a", "a", " ", "b", "c", "d"],
       force: false,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -7804,7 +7828,9 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (autoCheckinScheduler as any).refreshAccountsAfterSuccessfulCheckins({
+      (
+        autoCheckinScheduler as any
+      ).runEngine.refreshAccountsAfterSuccessfulCheckins({
         accountIds: ["account-1"],
       }),
     ).resolves.toBeUndefined()
@@ -7817,7 +7843,9 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("returns early when there are no valid accounts to refresh", async () => {
     await expect(
-      (autoCheckinScheduler as any).refreshAccountsAfterSuccessfulCheckins({
+      (
+        autoCheckinScheduler as any
+      ).runEngine.refreshAccountsAfterSuccessfulCheckins({
         accountIds: ["", "   "],
       }),
     ).resolves.toBeUndefined()
@@ -7826,29 +7854,29 @@ describe("autoCheckinScheduler private helpers", () => {
   })
 
   it("parses time strings and rejects invalid hour or minute values", () => {
-    expect((autoCheckinScheduler as any).parseTimeToMinutes("09:30")).toBe(570)
-    expect((autoCheckinScheduler as any).parseTimeToMinutes("24:00")).toBeNull()
-    expect((autoCheckinScheduler as any).parseTimeToMinutes("09:60")).toBeNull()
-    expect((autoCheckinScheduler as any).parseTimeToMinutes("nope")).toBeNull()
+    expect(parseTimeToMinutes("09:30")).toBe(570)
+    expect(parseTimeToMinutes("24:00")).toBeNull()
+    expect(parseTimeToMinutes("09:60")).toBeNull()
+    expect(parseTimeToMinutes("nope")).toBeNull()
   })
 
   it("maps no-op run summaries to skipped analytics results", () => {
     expect(
-      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+      mapRunSummaryToProductAnalyticsResult({
         executed: 0,
         failedCount: 0,
         skippedCount: 0,
       }),
     ).toBe(PRODUCT_ANALYTICS_RESULTS.Skipped)
     expect(
-      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+      mapRunSummaryToProductAnalyticsResult({
         executed: 0,
         failedCount: 1,
         skippedCount: 0,
       }),
     ).toBe(PRODUCT_ANALYTICS_RESULTS.Failure)
     expect(
-      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+      mapRunSummaryToProductAnalyticsResult({
         executed: 1,
         failedCount: 0,
         skippedCount: 0,
@@ -7857,25 +7885,17 @@ describe("autoCheckinScheduler private helpers", () => {
   })
 
   it("handles same-day and overnight windows correctly", () => {
-    expect(
-      (autoCheckinScheduler as any).isMinutesWithinWindow(600, 600, 600),
-    ).toBe(false)
-    expect(
-      (autoCheckinScheduler as any).isMinutesWithinWindow(570, 480, 600),
-    ).toBe(true)
-    expect(
-      (autoCheckinScheduler as any).isMinutesWithinWindow(60, 1320, 120),
-    ).toBe(true)
-    expect(
-      (autoCheckinScheduler as any).isMinutesWithinWindow(600, 1320, 120),
-    ).toBe(false)
+    expect(isMinutesWithinWindow(600, 600, 600)).toBe(false)
+    expect(isMinutesWithinWindow(570, 480, 600)).toBe(true)
+    expect(isMinutesWithinWindow(60, 1320, 120)).toBe(true)
+    expect(isMinutesWithinWindow(600, 1320, 120)).toBe(false)
   })
 
   it("rejects deterministic or random trigger plans when configuration is invalid", () => {
     const day = new Date("2026-01-23T00:00:00")
 
     expect(
-      (autoCheckinScheduler as any).calculateDeterministicTriggerForDay(
+      (calculateDeterministicTriggerForDay as any)(
         {
           windowStart: "08:00",
           windowEnd: "09:00",
@@ -7885,13 +7905,7 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toBeNull()
 
-    expect(
-      (autoCheckinScheduler as any).calculateRandomTriggerForDay(
-        "08:xx",
-        "09:00",
-        day,
-      ),
-    ).toBeNull()
+    expect(calculateRandomTriggerForDay("08:xx", "09:00", day)).toBeNull()
   })
 
   it("returns no deterministic catch-up trigger when the local day is already over", () => {
@@ -7899,9 +7913,7 @@ describe("autoCheckinScheduler private helpers", () => {
     const now = new Date(2026, 0, 23, 23, 59, 59, 999)
     vi.setSystemTime(now)
 
-    expect(
-      (autoCheckinScheduler as any).calculateDeterministicCatchUpTrigger(now),
-    ).toBeNull()
+    expect(calculateDeterministicCatchUpTrigger(now)).toBeNull()
 
     vi.useRealTimers()
   })
@@ -7910,11 +7922,7 @@ describe("autoCheckinScheduler private helpers", () => {
     const now = new Date(2026, 0, 24, 1, 0, 0, 0)
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
 
-    const trigger = (autoCheckinScheduler as any).calculateRandomTrigger(
-      "23:00",
-      "02:00",
-      now,
-    )
+    const trigger = calculateRandomTrigger("23:00", "02:00", now)
 
     expect(trigger.toISOString()).toBe(now.toISOString())
 
@@ -7971,27 +7979,18 @@ describe("autoCheckinScheduler private helpers", () => {
       status: "success",
     } as any
 
-    expect(
-      (autoCheckinScheduler as any).updateSnapshotWithResult(undefined, result),
-    ).toBeUndefined()
+    expect(updateSnapshotWithResult(undefined, result)).toBeUndefined()
+
+    expect(updateSnapshotWithResult([], result)).toEqual([])
 
     expect(
-      (autoCheckinScheduler as any).updateSnapshotWithResult([], result),
-    ).toEqual([])
-
-    expect(
-      (autoCheckinScheduler as any).updateSnapshotWithResult(
-        originalSnapshots,
-        { accountId: "missing", status: "failed" } as any,
-      ),
+      updateSnapshotWithResult(originalSnapshots, {
+        accountId: "missing",
+        status: "failed",
+      } as any),
     ).toBe(originalSnapshots)
 
-    expect(
-      (autoCheckinScheduler as any).updateSnapshotWithResult(
-        originalSnapshots,
-        result,
-      ),
-    ).toEqual([
+    expect(updateSnapshotWithResult(originalSnapshots, result)).toEqual([
       originalSnapshots[0],
       {
         ...originalSnapshots[1],
@@ -8006,7 +8005,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "base",
           disabled: false,
@@ -8026,7 +8025,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(null)
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "no-provider",
           disabled: false,
@@ -8044,7 +8043,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "manual",
           disabled: false,
@@ -8061,7 +8060,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "unsupported-site-type",
           disabled: false,
@@ -8085,7 +8084,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "provider-not-ready",
           disabled: false,
@@ -8103,7 +8102,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     expect(
-      (autoCheckinScheduler as any).buildAccountSnapshot(
+      (buildAccountSnapshot as any)(
         {
           id: "auto-disabled",
           disabled: false,
@@ -8148,7 +8147,7 @@ describe("autoCheckinScheduler private helpers", () => {
       })
 
       expect(
-        (autoCheckinScheduler as any).buildAccountSnapshot(
+        (buildAccountSnapshot as any)(
           {
             id: domainReason,
             disabled: false,
@@ -8173,7 +8172,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "method-disabled-result",
           site_name: "Method Disabled",
@@ -8232,7 +8231,7 @@ describe("autoCheckinScheduler private helpers", () => {
       mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(error)
 
       await expect(
-        (autoCheckinScheduler as any).runAccountCheckin(
+        (autoCheckinScheduler as any).runEngine.runAccountCheckin(
           {
             id: "crashed-execution",
             site_name: "Crashed Execution",
@@ -8271,7 +8270,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         account,
         account.site_name,
         TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -8347,7 +8346,7 @@ describe("autoCheckinScheduler private helpers", () => {
       })
 
       await expect(
-        (autoCheckinScheduler as any).runAccountCheckin(
+        (autoCheckinScheduler as any).runEngine.runAccountCheckin(
           {
             id: domainReason,
             site_name: domainReason,
@@ -8373,7 +8372,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(null)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "missing-provider",
           site_name: "Missing Provider",
@@ -8402,7 +8401,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(failedProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "provider-failed",
           site_name: "Provider Failed",
@@ -8428,7 +8427,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(throwingProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "provider-threw",
           site_name: "Provider Threw",
@@ -8461,7 +8460,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "network-failure",
           site_name: "Network Failure",
@@ -8487,7 +8486,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "uncaught-network-failure",
           site_name: "Uncaught Network Failure",
@@ -8514,7 +8513,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "uncaught-already-checked",
           site_name: "Uncaught Already Checked",
@@ -8558,7 +8557,7 @@ describe("autoCheckinScheduler private helpers", () => {
     }
     resolveProviderForTest.mockReturnValue(provider as any)
 
-    await (autoCheckinScheduler as any).runAccountCheckins({
+    await (autoCheckinScheduler as any).runEngine.runAccountCheckins({
       accounts,
       accountDisplayNameById: new Map([
         ["source-a", "Source A"],
@@ -8586,12 +8585,14 @@ describe("autoCheckinScheduler private helpers", () => {
       checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
     } as any
     const runAccountCheckin = vi.spyOn(
-      autoCheckinScheduler as any,
+      (autoCheckinScheduler as any).runEngine,
       "runAccountCheckin",
     )
     runAccountCheckin.mockRejectedValueOnce(new TypeError("Failed to fetch"))
     try {
-      const [outcome] = await (autoCheckinScheduler as any).runAccountCheckins({
+      const [outcome] = await (
+        autoCheckinScheduler as any
+      ).runEngine.runAccountCheckins({
         accounts: [account],
         accountDisplayNameById: new Map([[account.id, account.site_name]]),
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -8621,7 +8622,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(successProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "success-account",
           site_name: "Success Account",
@@ -8649,7 +8650,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(alreadyCheckedProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runAccountCheckin(
+      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
         {
           id: "already-checked-account",
           site_name: "Already Checked",
@@ -8682,7 +8683,7 @@ describe("autoCheckinScheduler private helpers", () => {
     mockedBrowserApi.isMessageReceiverUnavailableError.mockReturnValueOnce(true)
 
     await expect(
-      (autoCheckinScheduler as any).notifyUiRunCompleted({
+      notifyUiRunCompleted({
         runKind: AUTO_CHECKIN_RUN_TYPE.MANUAL,
         updatedAccountIds: ["a"],
         summary: {
@@ -8704,7 +8705,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).notifyUiRunCompleted({
+      notifyUiRunCompleted({
         runKind: AUTO_CHECKIN_RUN_TYPE.DAILY,
         updatedAccountIds: [],
       }),
@@ -8715,7 +8716,7 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("recalculates summaries while preserving the previous eligible total when provided", () => {
     expect(
-      (autoCheckinScheduler as any).recalculateSummaryFromResults(
+      (recalculateSummaryFromResults as any)(
         {
           a: { status: "success" },
           b: { status: "already_checked" },

@@ -95,7 +95,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     }))
 
     // runtimeMessages imports these modules; provide minimal stubs to avoid heavy side effects.
-    vi.doMock("~/services/checkin/autoCheckin/scheduler", () => ({
+    vi.doMock("~/services/checkin/autoCheckin/schedulerMessaging", () => ({
       setupAutoCheckinMessagingListeners: vi.fn(),
     }))
     vi.doMock("~/services/accounts/autoRefreshService", () => ({
@@ -119,7 +119,7 @@ describe("setupRuntimeMessageListeners routing", () => {
       },
     }))
     vi.doMock(
-      "~/entrypoints/background/openrouter/managementKeyAction",
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
       () => ({
         handleTempWindowOpenRouterManagementKeyAction:
           handleOpenRouterManagementKeyAction,
@@ -180,14 +180,16 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/preferences/runtimePreferencesService")
     vi.doUnmock("~/services/productAnnouncements/service")
-    vi.doUnmock("~/services/checkin/autoCheckin/scheduler")
+    vi.doUnmock("~/services/checkin/autoCheckin/schedulerMessaging")
     vi.doUnmock("~/services/accounts/autoRefreshService")
     vi.doUnmock("~/services/managedSites/channelConfigStorage")
     vi.doUnmock("~/services/checkin/externalCheckInService")
     vi.doUnmock("~/services/redemption/redemptionAssist")
     vi.doUnmock("~/services/productAnalytics/runtime")
     vi.doUnmock("~/entrypoints/background/protectionBypassCoordinator")
-    vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
+    vi.doUnmock(
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
+    )
     vi.doUnmock("~/entrypoints/background/tempContextDebug")
     vi.doUnmock("~/services/logging/logHistory")
     vi.doUnmock("~/services/history/usageHistory/scheduler")

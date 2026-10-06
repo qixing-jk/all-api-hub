@@ -385,6 +385,24 @@ const toFacts = (
     },
     keyExpiryDisplayFact("expired_time", token.expired_time),
     ...keyLastUsedDisplayFacts(token.accessed_time),
+    {
+      fieldId: "group",
+      kind: "group",
+      value: token.group?.trim() || "",
+      emptyValue: "account-group",
+    },
+    {
+      fieldId: "models",
+      kind: "restriction",
+      role: "models",
+      value: projectNewApiTokenModelAccess(token).allowedModelIds ?? [],
+    },
+    {
+      fieldId: "allow_ips",
+      kind: "restriction",
+      role: "ip",
+      value: token.allow_ips ?? "",
+    },
   ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group?.trim() || "" },

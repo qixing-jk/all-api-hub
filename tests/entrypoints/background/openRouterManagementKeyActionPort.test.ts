@@ -19,7 +19,7 @@ vi.mock(
   () => mocks.pageContract,
 )
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   tempWindowBackgroundRuntime: {
     run: async (_url: string, _options: unknown, task: () => Promise<void>) =>
       task(),
@@ -103,7 +103,7 @@ describe("OpenRouter Management Key temp-context port", () => {
 
   it("fails closed when Coordinator authorization is omitted", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
     )
     const sendResponse = vi.fn()
 

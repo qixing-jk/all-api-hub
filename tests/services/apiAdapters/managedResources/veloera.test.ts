@@ -100,6 +100,12 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("Veloera native managed resource", () => {
+  it("projects native cleanup URLs independently of display fields", async () => {
+    const api = await veloeraManagedResourceRegistration.open()
+    const page = await api.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([channel.base_url])
+  })
+
   it.each([
     {
       message: "record not found",

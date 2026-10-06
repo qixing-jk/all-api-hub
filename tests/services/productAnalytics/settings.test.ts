@@ -55,6 +55,24 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it.each(["constructor", "toString", "__proto__", "custom-site"])(
+    "keeps the default managed-site snapshot for unregistered type %s",
+    (value) => {
+      const managedSiteType = value as UserPreferences["managedSiteType"]
+      const events = buildSettingsSnapshotEvents(
+        createPreferences({ managedSiteType }),
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        { managedSiteType },
+      )
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+          managed_site_type: SITE_TYPES.NEW_API,
+        }),
+      )
+    },
+  )
+
   it("identifies CLIProxyAPI without including its connection secrets", () => {
     const events = buildSettingsSnapshotEvents(
       createPreferences({

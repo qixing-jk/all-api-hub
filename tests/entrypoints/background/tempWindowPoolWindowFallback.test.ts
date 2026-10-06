@@ -6,9 +6,9 @@ import {
 } from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import { executeTempCheckinFeedbackScan } from "~/entrypoints/background/checkinFeedbackScan"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { executeTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
@@ -22,7 +22,7 @@ import {
 } from "~/utils/browser/cookieHelper"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
-vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
+vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
   executeTempCheckinFeedbackScan: vi.fn(),
 }))
 
@@ -312,7 +312,7 @@ describe("tempWindowPool window fallback", () => {
       },
     )
     vi.doMock(
-      "~/entrypoints/background/openrouter/managementKeyAction",
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
       () => ({
         handleTempWindowOpenRouterManagementKeyAction:
           handleTempWindowOpenRouterManagementKeyActionMock,
@@ -336,7 +336,9 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/utils/browser/browserFocus")
     vi.doUnmock("~/services/siteDetection/detectSiteType")
     vi.doUnmock("~/services/preferences/userPreferences")
-    vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
+    vi.doUnmock(
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
+    )
     vi.doUnmock("~/utils/i18n/core")
     vi.resetModules()
     vi.restoreAllMocks()
@@ -1898,7 +1900,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 605 })
 
     const { handleCloseTempWindow, tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     const contextPending = tempWindowBackgroundRuntime.acquire(
       "https://example.invalid/settings/management-keys",
@@ -3707,7 +3709,7 @@ describe("tempWindowPool window fallback", () => {
 
   it("dispatches an authorized feedback task with its acquisition policy and reply", async () => {
     const { executeAuthorizedTempContextTask } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/taskDispatch"
     )
     const params = {
       originUrl: "https://example.com",
@@ -3740,7 +3742,7 @@ describe("tempWindowPool window fallback", () => {
       return { id: 509 }
     })
     const { tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     await expect(
       tempWindowBackgroundRuntime.acquire(
@@ -3758,7 +3760,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 508 })
     tabsGetMock.mockResolvedValue({ status: "loading" })
     const { tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     const controller = new AbortController()
     const pending = tempWindowBackgroundRuntime.acquire(

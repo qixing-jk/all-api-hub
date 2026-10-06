@@ -32,7 +32,11 @@ const MANAGED_SITE_TYPE_TO_PRODUCT_ANALYTICS_TYPE = {
 export function resolveProductAnalyticsManagedSiteType(
   siteType: unknown,
 ): ProductAnalyticsManagedSiteType | undefined {
-  if (typeof siteType !== "string") return undefined
+  if (
+    typeof siteType !== "string" ||
+    !Object.hasOwn(MANAGED_SITE_TYPE_TO_PRODUCT_ANALYTICS_TYPE, siteType)
+  )
+    return undefined
 
   return MANAGED_SITE_TYPE_TO_PRODUCT_ANALYTICS_TYPE[
     siteType as ManagedSiteType

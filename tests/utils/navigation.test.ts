@@ -93,13 +93,19 @@ vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
     Redeem: "redeem",
   },
   resolveAccountSiteRouteUrl: vi.fn(
-    (account: { baseUrl: string }, route: "usage" | "checkIn" | "redeem") => {
+    (
+      account: { baseUrl: string },
+      route: "usage" | "checkIn" | "redeem",
+      customUrl?: string,
+    ) => {
       const routePaths = {
         usage: "/usage",
         checkIn: "/checkin",
         redeem: "/redeem",
       } as const
-      return Promise.resolve(`${account.baseUrl}${routePaths[route]}`)
+      return Promise.resolve(
+        customUrl || `${account.baseUrl}${routePaths[route]}`,
+      )
     },
   ),
 }))

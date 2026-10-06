@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next"
 
-import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/accountRuntimeKeys"
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -29,17 +33,17 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       title: row.facts.displayName,
       accountLabel: row.accountName,
       status:
-        status === "enabled"
-          ? "active"
-          : status === "unknown"
+        status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
+          ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+          : status === ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
             ? "unknown"
-            : "inactive",
+            : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
       statusLabel:
-        status === "enabled"
+        status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
           ? t("keyManagement:native.status.enabled")
-          : status === "disabled"
+          : status === ACCOUNT_KEY_RESOURCE_STATUSES.Disabled
             ? t("keyManagement:native.status.disabled")
-            : status === "expired"
+            : status === ACCOUNT_KEY_RESOURCE_STATUSES.Expired
               ? t("keyManagement:native.status.expired")
               : t("keyManagement:native.status.unknown"),
       secretAvailability: availability,
@@ -71,7 +75,10 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     t("keyManagement:native.detailsLoadFailed"),
 }
 
-/** Format only fields declared by the explicitly supported native providers. */
+const displayText = (value: string | readonly string[]) =>
+  typeof value === "string" ? value : value.join(", ")
+
+/** Format only semantics declared by the explicitly supported native providers. */
 const nativeDetailFacts = (
   facts: AccountKeyResourceFacts,
   t: TFunction,
@@ -108,7 +115,7 @@ const nativeDetailFacts = (
               ? date.toLocaleDateString()
               : t("common:labels.notAvailable"),
       })
-    } else {
+    } else if (fact.kind === "last-used") {
       details.push({
         id: fact.fieldId,
         label: t("keyManagement:keyDetails.lastUsedTime"),
@@ -119,22 +126,16 @@ const nativeDetailFacts = (
       })
     }
   }
-  for (const field of facts.fields) {
-    if (
-      ["models", "allow_ips", "ip_whitelist", "subnet"].includes(
-        field.fieldId,
-      ) &&
-      (field.kind === "text" || field.kind === "list")
-    ) {
-      const value =
-        typeof field.value === "string" ? field.value : field.value.join(", ")
+  for (const fact of facts.displayFacts ?? []) {
+    if (fact.kind === "restriction") {
+      const value = displayText(fact.value)
       if (value)
         details.push({
-          id: field.fieldId,
+          id: fact.fieldId,
           label:
-            field.fieldId === "models"
+            fact.role === "models"
               ? t("keyManagement:keyDetails.models")
-              : field.fieldId === "subnet"
+              : fact.role === "subnet"
                 ? t("keyManagement:dialog.subnetLimits")
                 : t("keyManagement:keyDetails.ipLimits"),
           value,
@@ -169,23 +170,14 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     const usableSecret =
       options.hasAssociatedSecret ||
       base.secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable
-    const group = row.facts.fields.find(
-      (field) => field.fieldId === "group" || field.fieldId === "groups",
-    )
-    const groupValue =
-      group?.kind === "text"
-        ? group.value
-        : group?.kind === "list"
-          ? group.value.join(", ")
-          : ""
+    const group = row.facts.displayFacts?.find((fact) => fact.kind === "group")
     const contextFact = group
       ? {
           id: "group",
           label: t("keyManagement:keyDetails.group"),
           value:
-            groupValue ||
-            (getKeyResourcePresentationPolicy(row.facts.ref.siteType)
-              .emptyGroup === "account-group"
+            displayText(group.value) ||
+            (group.emptyValue === "account-group"
               ? t("keyManagement:keyDetails.followsAccountGroup")
               : t("keyManagement:keyDetails.ungrouped")),
         }

@@ -434,6 +434,18 @@ const toFacts = (
       unlimited: Number(token.quota) <= 0,
     },
     keyExpiryDisplayFact("expires_at", toSub2ApiKeyEditable(token).expires_at),
+    {
+      fieldId: "group",
+      kind: "group",
+      value: token.group_name?.trim() || "",
+      emptyValue: "ungrouped",
+    },
+    {
+      fieldId: "ip_whitelist",
+      kind: "restriction",
+      role: "ip",
+      value: toSub2ApiKeyEditable(token).ip_whitelist,
+    },
   ],
   fields: [
     { fieldId: "group", kind: "text", value: token.group_name?.trim() || "" },

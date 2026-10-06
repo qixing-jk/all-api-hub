@@ -133,6 +133,7 @@ describe("Claude Code Hub native managed resource", () => {
   it("projects safe list facts, local search, and normalized scope identity", async () => {
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
     const page = await workspace.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([provider.url])
     const searchPage = await workspace.list({ search: "primary" })
 
     expect(page.items[0]).toEqual(

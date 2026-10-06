@@ -10,7 +10,7 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { server } from "~~/tests/msw/server"
 import { buildTempWindowPrefs } from "~~/tests/test-utils/factories"
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/taskDispatch", () => ({
   executeAuthorizedTempContextTask: vi.fn(),
   handleTempWindowFetch: vi.fn(),
   handleTempWindowGetRenderedTitle: vi.fn(),

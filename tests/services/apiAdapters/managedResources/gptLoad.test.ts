@@ -128,6 +128,9 @@ describe("gpt-load native workspace", () => {
     for (const search of ["primary", "gpt-example"]) {
       const result = await workspace.list({ search })
       expect(result.items).toHaveLength(1)
+      expect(result.items[0]?.keyCleanupBaseUrls).toEqual([
+        "https://relay.example.invalid/v1",
+      ])
       expect(result.items[0]).toMatchObject({
         displayName: "Primary",
         status: "disabled",

@@ -1,4 +1,4 @@
-import type { PreferenceSaveOptions } from "~/contexts/UserPreferencesContext"
+import type { PreferenceSaveOptions } from "~/contexts/userPreferences/preferenceContextTypes"
 import toast from "~/lib/notify"
 import type {
   PreferenceWriteFailure,

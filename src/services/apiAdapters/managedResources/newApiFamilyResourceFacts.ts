@@ -186,6 +186,7 @@ export function createNewApiFamilyResourceFacts(policy: {
         : []),
     ]
     return {
+      keyCleanupBaseUrls: [channel.base_url ?? ""],
       ref,
       displayName: channel.name || `Channel ${channel.id}`,
       status,

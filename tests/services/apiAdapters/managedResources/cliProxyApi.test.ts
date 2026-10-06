@@ -83,6 +83,14 @@ beforeEach(() => {
 const workspace = () => cliProxyApiManagedResourceRegistration.open()
 
 describe("CLIProxyAPI native managed resources", () => {
+  it("projects native cleanup URLs independently of display fields", async () => {
+    const api = await workspace()
+    const page = await api.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([
+      "https://upstream.example/v1",
+    ])
+  })
+
   it("reports an unconfirmed delete without removing the provider locally", async () => {
     const api = await workspace()
     const ref = atIndex((await api.list()).items, 0).ref

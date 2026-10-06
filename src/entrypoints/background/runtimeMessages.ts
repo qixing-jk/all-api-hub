@@ -8,7 +8,13 @@ import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefr
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getInternalTabIds } from "~/services/browsingContext/internalTabsBackground"
 import { PAGE_CONTEXT } from "~/services/browsingContext/pageContext"
-import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
+import { cancelTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
+import {
+  cancelTempWindowOpenRouterManagementKeyAction,
+  markTempWindowOpenRouterManagementKeyDispatched,
+} from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
+import { handleCloseTempWindow } from "~/services/browsingContext/tempPage/runtime"
+import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/schedulerMessaging"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
   handleDailyBalanceHistoryMessage,
@@ -65,18 +71,12 @@ import {
   openProtectionBypassHistory,
 } from "~/utils/navigation"
 
-import { cancelTempCheckinFeedbackScan } from "./checkinFeedbackScan"
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
-import {
-  cancelTempWindowOpenRouterManagementKeyAction,
-  markTempWindowOpenRouterManagementKeyDispatched,
-} from "./openrouter/managementKeyAction"
 import { protectionBypassCoordinator } from "./protectionBypassCoordinator"
 import {
   handleTempContextDebugMessage,
   isTempContextDebugAction,
 } from "./tempContextDebug"
-import { handleCloseTempWindow } from "./tempWindowPool"
 
 /**
  * Unified logger scoped to background runtime message routing.

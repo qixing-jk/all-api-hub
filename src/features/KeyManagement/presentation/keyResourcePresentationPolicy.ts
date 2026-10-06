@@ -17,19 +17,16 @@ type PresentationPolicy = {
     | "empty"
   readonly card: "native" | "openrouter" | "generic"
   readonly scope: "account" | "workspace"
-  readonly emptyGroup: "account-group" | "ungrouped"
 }
 
 const generic: PresentationPolicy = {
   editor: "empty",
   card: "generic",
   scope: "account",
-  emptyGroup: "ungrouped",
 }
 const native = {
   card: "native",
   scope: "account",
-  emptyGroup: "ungrouped",
 } as const
 
 /** Frontend policies share one complete family registration; services own native facts. */
@@ -37,7 +34,6 @@ const policies = {
   [families.NewApiFamily]: {
     ...native,
     editor: "new-api",
-    emptyGroup: "account-group",
   },
   [families.Sub2Api]: { ...native, editor: "sub2api" },
   [families.VoApiV2]: { ...native, editor: "voapi-v2" },
