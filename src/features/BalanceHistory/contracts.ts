@@ -8,7 +8,18 @@ export const QUICK_RANGES = [
   { id: "365d", days: 365 },
 ] as const
 
-export type BalanceHistoryBreakdownChartType = "pie" | "bar"
-export type BalanceHistoryTrendSeriesScope = "accounts" | "total"
+export const BALANCE_HISTORY_BREAKDOWN_CHART_TYPES = {
+  Pie: "pie",
+  Bar: "bar",
+} as const
+export type BalanceHistoryBreakdownChartType =
+  (typeof BALANCE_HISTORY_BREAKDOWN_CHART_TYPES)[keyof typeof BALANCE_HISTORY_BREAKDOWN_CHART_TYPES]
+
+export const BALANCE_HISTORY_TREND_SERIES_SCOPES = {
+  Accounts: "accounts",
+  Total: "total",
+} as const
+export type BalanceHistoryTrendSeriesScope =
+  (typeof BALANCE_HISTORY_TREND_SERIES_SCOPES)[keyof typeof BALANCE_HISTORY_TREND_SERIES_SCOPES]
 export type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
 export type BalanceHistoryVisibleMetric = DailyBalanceHistoryMetric

@@ -12,21 +12,24 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { Switch } from "~/components/ui/Switch"
-import type {
-  ChannelModelFilterRule,
-  ChannelModelFilterRuleKind,
-  EditableFilterField,
-} from "~/types/channelModelFilters"
 import {
+  CHANNEL_FILTER_ACTIONS,
+  CHANNEL_FILTER_EDITOR_VIEW_MODES,
   CHANNEL_MODEL_FILTER_PROBE_IDS,
+  CHANNEL_MODEL_FILTER_RULE_KINDS,
   isProbeChannelModelFilterRule,
+  type ChannelFilterAction,
+  type ChannelFilterEditorViewMode,
+  type ChannelModelFilterRule,
+  type ChannelModelFilterRuleKind,
+  type EditableFilterField,
 } from "~/types/channelModelFilters"
 
 type EditableFilter = ChannelModelFilterRule
 
 interface ChannelFiltersEditorProps {
   filters: EditableFilter[]
-  viewMode: "visual" | "json"
+  viewMode: ChannelFilterEditorViewMode
   jsonText: string
   isLoading?: boolean
   probeRulesSupported?: boolean
@@ -123,7 +126,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
         </div>
       </div>
 
-      {viewMode === "visual" ? (
+      {viewMode === CHANNEL_FILTER_EDITOR_VIEW_MODES.Visual ? (
         !filters.length ? (
           <div className="text-center">
             <div className="bg-muted mb-density-3 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
@@ -142,7 +145,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                 size="sm"
                 className="w-full"
                 leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => onAddFilter("pattern")}
+                onClick={() =>
+                  onAddFilter(CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern)
+                }
               >
                 {t("filters.addPatternRule")}
               </Button>
@@ -152,7 +157,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                 size="sm"
                 className="w-full"
                 leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => onAddFilter("probe")}
+                onClick={() =>
+                  onAddFilter(CHANNEL_MODEL_FILTER_RULE_KINDS.Probe)
+                }
                 disabled={!probeRulesSupported}
               >
                 {t("filters.addProbeRule")}
@@ -241,7 +248,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                   <div className="space-y-density-2">
                     <Label>{t("filters.labels.ruleType")}</Label>
                     <Select
-                      value={filter.kind ?? "pattern"}
+                      value={
+                        filter.kind ?? CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern
+                      }
                       onValueChange={(value: ChannelModelFilterRuleKind) =>
                         onFieldChange(filter.id, "kind", value)
                       }
@@ -250,11 +259,13 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pattern">
+                        <SelectItem
+                          value={CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern}
+                        >
                           {t("filters.ruleTypeOptions.pattern")}
                         </SelectItem>
                         <SelectItem
-                          value="probe"
+                          value={CHANNEL_MODEL_FILTER_RULE_KINDS.Probe}
                           disabled={!probeRulesSupported}
                         >
                           {t("filters.ruleTypeOptions.probe")}
@@ -333,7 +344,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                     <Label>{t("filters.labels.action")}</Label>
                     <Select
                       value={filter.action}
-                      onValueChange={(value: "include" | "exclude") =>
+                      onValueChange={(value: ChannelFilterAction) =>
                         onFieldChange(filter.id, "action", value)
                       }
                     >
@@ -341,10 +352,10 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="include">
+                        <SelectItem value={CHANNEL_FILTER_ACTIONS.Include}>
                           {t("filters.actionOptions.include")}
                         </SelectItem>
-                        <SelectItem value="exclude">
+                        <SelectItem value={CHANNEL_FILTER_ACTIONS.Exclude}>
                           {t("filters.actionOptions.exclude")}
                         </SelectItem>
                       </SelectContent>
@@ -379,7 +390,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                 size="sm"
                 className="w-full"
                 leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => onAddFilter("pattern")}
+                onClick={() =>
+                  onAddFilter(CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern)
+                }
               >
                 {t("filters.addPatternRule")}
               </Button>
@@ -389,7 +402,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                 size="sm"
                 className="w-full"
                 leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => onAddFilter("probe")}
+                onClick={() =>
+                  onAddFilter(CHANNEL_MODEL_FILTER_RULE_KINDS.Probe)
+                }
                 disabled={!probeRulesSupported}
               >
                 {t("filters.addProbeRule")}

@@ -6,13 +6,17 @@ import {
   normalizeChannelFilters,
   type IncomingChannelFilter,
 } from "~/services/managedSites/channelModelFilterRules"
-import type {
-  ChannelModelFilterRule,
-  EditableFilterField,
-} from "~/types/channelModelFilters"
 import {
+  CHANNEL_FILTER_ACTIONS,
+  CHANNEL_FILTER_EDITOR_VIEW_MODES,
+  CHANNEL_MODEL_FILTER_RULE_KINDS,
+  CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES,
   DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
   isProbeChannelModelFilterRule,
+  type ChannelFilterEditorViewMode,
+  type ChannelModelFilterRule,
+  type ChannelModelFilterRuleKind,
+  type EditableFilterField,
 } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -51,7 +55,9 @@ export function useChannelFilterEditor(idPrefix: string) {
   const { t } = useTranslation("managedSiteChannels")
   const [filters, setFilters] = useState<EditableFilter[]>([])
   const [jsonText, setJsonText] = useState("")
-  const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
+  const [viewMode, setViewMode] = useState<ChannelFilterEditorViewMode>(
+    CHANNEL_FILTER_EDITOR_VIEW_MODES.Visual,
+  )
   const handleFieldChange = useCallback(
     (filterId: string, field: EditableFilterField, value: unknown) => {
       setFilters((prev) =>
@@ -61,14 +67,14 @@ export function useChannelFilterEditor(idPrefix: string) {
           }
 
           if (field === "kind") {
-            if (value === "probe") {
+            if (value === CHANNEL_MODEL_FILTER_RULE_KINDS.Probe) {
               return {
                 id: filter.id,
                 name: filter.name,
                 description: filter.description,
-                kind: "probe",
+                kind: CHANNEL_MODEL_FILTER_RULE_KINDS.Probe,
                 probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-                match: "all",
+                match: CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES.All,
                 action: filter.action,
                 enabled: filter.enabled,
                 createdAt: filter.createdAt,
@@ -80,7 +86,7 @@ export function useChannelFilterEditor(idPrefix: string) {
               id: filter.id,
               name: filter.name,
               description: filter.description,
-              kind: "pattern",
+              kind: CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern,
               pattern: "",
               isRegex: false,
               action: filter.action,
@@ -102,13 +108,15 @@ export function useChannelFilterEditor(idPrefix: string) {
   )
 
   const handleAddFilter = useCallback(
-    (kind: "pattern" | "probe" = "pattern") => {
+    (
+      kind: ChannelModelFilterRuleKind = CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern,
+    ) => {
       const timestamp = Date.now()
       const base = {
         id: safeRandomUUID(idPrefix),
         name: "",
         description: "",
-        action: "include" as const,
+        action: CHANNEL_FILTER_ACTIONS.Include,
         enabled: true,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -116,16 +124,16 @@ export function useChannelFilterEditor(idPrefix: string) {
 
       setFilters((prev) => [
         ...prev,
-        kind === "probe"
+        kind === CHANNEL_MODEL_FILTER_RULE_KINDS.Probe
           ? {
               ...base,
-              kind: "probe",
+              kind: CHANNEL_MODEL_FILTER_RULE_KINDS.Probe,
               probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-              match: "all",
+              match: CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES.All,
             }
           : {
               ...base,
-              kind: "pattern",
+              kind: CHANNEL_MODEL_FILTER_RULE_KINDS.Pattern,
               pattern: "",
               isRegex: false,
             },
@@ -215,16 +223,16 @@ export function useChannelFilterEditor(idPrefix: string) {
       } catch {
         setJsonText("")
       }
-      setViewMode("visual")
+      setViewMode(CHANNEL_FILTER_EDITOR_VIEW_MODES.Visual)
     },
     [],
   )
 
   const showVisual = useCallback(() => {
-    if (viewMode === "visual") return
+    if (viewMode === CHANNEL_FILTER_EDITOR_VIEW_MODES.Visual) return
     try {
       setFilters(jsonText.trim() ? parseJsonFilters(jsonText) : [])
-      setViewMode("visual")
+      setViewMode(CHANNEL_FILTER_EDITOR_VIEW_MODES.Visual)
     } catch (error) {
       toast.error(
         t("filters.messages.jsonInvalid", { error: getErrorMessage(error) }),
@@ -233,13 +241,13 @@ export function useChannelFilterEditor(idPrefix: string) {
   }, [jsonText, parseJsonFilters, t, viewMode])
 
   const showJson = useCallback(() => {
-    if (viewMode === "json") return
+    if (viewMode === CHANNEL_FILTER_EDITOR_VIEW_MODES.Json) return
     try {
       setJsonText(JSON.stringify(filters, null, 2))
     } catch {
       setJsonText("")
     }
-    setViewMode("json")
+    setViewMode(CHANNEL_FILTER_EDITOR_VIEW_MODES.Json)
   }, [filters, viewMode])
   return {
     filters,

@@ -7,6 +7,7 @@ import {
   useState,
 } from "react"
 
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import {
@@ -786,7 +787,7 @@ export function useAccountDialog({
   ])
 
   const handleOpenCookiePermissionSettings = useCallback(() => {
-    void openSettingsTab("permissions")
+    void openSettingsTab(BASIC_SETTINGS_TAB_IDS.Permissions)
   }, [])
 
   const { handleAutoDetect, handleShowManualForm } = useAccountDialogDetection({

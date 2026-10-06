@@ -6,6 +6,8 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { SegmentedControl } from "~/components/SegmentedControl"
 import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUsageAnalyticsViewModel } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsViewModel"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
@@ -98,8 +100,8 @@ export default function UsageAnalytics() {
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="accountUsage"
-            anchor="usage-history-sync"
+            tabId={BASIC_SETTINGS_TAB_IDS.AccountUsage}
+            anchor={SETTINGS_ANCHORS.USAGE_HISTORY_SYNC}
             label={t("actions.openAccountUsageSettings")}
             analyticsAction={{
               featureId: PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics,

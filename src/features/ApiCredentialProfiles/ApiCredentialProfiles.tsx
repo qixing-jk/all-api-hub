@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
@@ -278,7 +279,7 @@ export default function ApiCredentialProfiles({
                 action.kind ===
                 UNIFIED_API_GUIDANCE_ACTION_KINDS.ConfigureManagedSite
               ) {
-                void openSettingsTab("managedSite", {
+                void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
                   preserveHistory: true,
                 })
                 return

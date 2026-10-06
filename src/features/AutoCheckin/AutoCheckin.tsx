@@ -7,6 +7,8 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
@@ -136,8 +138,8 @@ export default function AutoCheckin(props: {
           <>
             <AutoCheckinRiskHint />
             <OptionsPageSettingsTitleAction
-              tabId="checkinRedeem"
-              anchor="auto-checkin"
+              tabId={BASIC_SETTINGS_TAB_IDS.CheckinRedeem}
+              anchor={SETTINGS_ANCHORS.AUTO_CHECKIN}
             />
           </>
         }

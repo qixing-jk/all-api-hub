@@ -6,6 +6,7 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { Button, Notice } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -491,7 +492,7 @@ export default function SiteAnnouncementsPage({
   }
 
   const handleOpenPollingSettings = useCallback(() => {
-    void openSettingsTab("siteAnnouncements", {
+    void openSettingsTab(BASIC_SETTINGS_TAB_IDS.SiteAnnouncements, {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
@@ -511,7 +512,7 @@ export default function SiteAnnouncementsPage({
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="siteAnnouncements"
+            tabId={BASIC_SETTINGS_TAB_IDS.SiteAnnouncements}
             anchor={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             label={t("actions.pollingSettings")}
           />

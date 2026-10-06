@@ -10,6 +10,7 @@ import {
   NoticeActionButton,
   SearchableSelect,
 } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
@@ -808,7 +809,7 @@ export default function KeyManagement(props: {
               {t("keyManagement:managedSiteSetupRecovery.description")}{" "}
               <NoticeActionButton
                 onClick={() =>
-                  void openSettingsTab("managedSite", {
+                  void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
                     preserveHistory: true,
                   })
                 }

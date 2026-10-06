@@ -1,4 +1,6 @@
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { sendBrowserNotification } from "~/services/notifications/delivery/browser"
 import { sendDingtalkNotification } from "~/services/notifications/delivery/dingtalk"
 import { sendFeishuNotification } from "~/services/notifications/delivery/feishu"
@@ -54,18 +56,21 @@ const TASK_NAVIGATION_TARGETS: Record<
   },
   [TASK_NOTIFICATION_TASKS.WebdavAutoSync]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
-    searchParams: { tab: "dataBackup", anchor: "webdav-auto-sync" },
+    searchParams: {
+      tab: BASIC_SETTINGS_TAB_IDS.DataBackup,
+      anchor: SETTINGS_ANCHORS.WEBDAV_AUTO_SYNC,
+    },
   },
   [TASK_NOTIFICATION_TASKS.ManagedSiteModelSync]: {
     menuItemId: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,
   },
   [TASK_NOTIFICATION_TASKS.UsageHistorySync]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
-    searchParams: { tab: "accountUsage" },
+    searchParams: { tab: BASIC_SETTINGS_TAB_IDS.AccountUsage },
   },
   [TASK_NOTIFICATION_TASKS.BalanceHistoryCapture]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
-    searchParams: { tab: "balanceHistory" },
+    searchParams: { tab: BASIC_SETTINGS_TAB_IDS.BalanceHistory },
   },
   [TASK_NOTIFICATION_TASKS.SiteAnnouncements]: {
     menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,

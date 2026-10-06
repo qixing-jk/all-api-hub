@@ -6,6 +6,10 @@ import {
 } from "~/types/taskNotifications"
 import { t } from "~/utils/i18n/core"
 
+const TELEGRAM_MESSAGE_MAX_LENGTH = 4096
+const TELEGRAM_NOTIFICATION_LABEL_KEY =
+  "settings:taskNotifications.channels.telegram.title"
+
 /** Delivers a plain-text Telegram Bot message. */
 export async function sendTelegramNotification(
   content: TaskNotificationContent,
@@ -26,7 +30,10 @@ export async function sendTelegramNotification(
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `${content.title}\n${content.message}`.slice(0, 4096),
+        text: `${content.title}\n${content.message}`.slice(
+          0,
+          TELEGRAM_MESSAGE_MAX_LENGTH,
+        ),
         disable_web_page_preview: true,
       }),
     },
@@ -35,7 +42,7 @@ export async function sendTelegramNotification(
   if (!response.ok) {
     throw new Error(
       await getNotificationHttpErrorMessage(
-        "settings:taskNotifications.channels.telegram.title",
+        TELEGRAM_NOTIFICATION_LABEL_KEY,
         response,
       ),
     )

@@ -1,6 +1,8 @@
 import { useCallback } from "react"
 
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
@@ -27,8 +29,8 @@ export function useUsageAnalyticsViewModel() {
     !data.isLoading && (!data.store || filters.availableDayKeys.length === 0)
   const handleOpenAccountUsageSettings = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
-      tab: "accountUsage",
-      anchor: "usage-history-sync",
+      tab: BASIC_SETTINGS_TAB_IDS.AccountUsage,
+      anchor: SETTINGS_ANCHORS.USAGE_HISTORY_SYNC,
     })
   }, [])
   return {

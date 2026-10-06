@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { IconButton } from "~/components/ui"
+import type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 import { openSettingsTab } from "~/utils/navigation"
 
 interface OptionsPageSettingsTitleActionProps {
-  tabId: string
+  tabId: BasicSettingsTabId
   anchor?: string
   label?: string
   analyticsAction?: ProductAnalyticsScopedActionConfig

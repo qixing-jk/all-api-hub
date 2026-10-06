@@ -1,19 +1,23 @@
 import { SETTINGS_ANCHORS } from "./settingsAnchors"
 
+export const BASIC_SETTINGS_TAB_IDS = {
+  General: "general",
+  SiteAnnouncements: "siteAnnouncements",
+  Notifications: "notifications",
+  BalanceHistory: "balanceHistory",
+  AccountManagement: "accountManagement",
+  Refresh: "refresh",
+  CheckinRedeem: "checkinRedeem",
+  WebAiApiCheck: "webAiApiCheck",
+  AccountUsage: "accountUsage",
+  DataBackup: "dataBackup",
+  ManagedSite: "managedSite",
+  ClaudeCodeRouter: "claudeCodeRouter",
+  Permissions: "permissions",
+} as const
+
 export type BasicSettingsTabId =
-  | "general"
-  | "siteAnnouncements"
-  | "notifications"
-  | "balanceHistory"
-  | "accountManagement"
-  | "refresh"
-  | "checkinRedeem"
-  | "webAiApiCheck"
-  | "accountUsage"
-  | "dataBackup"
-  | "managedSite"
-  | "claudeCodeRouter"
-  | "permissions"
+  (typeof BASIC_SETTINGS_TAB_IDS)[keyof typeof BASIC_SETTINGS_TAB_IDS]
 
 export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
   {
@@ -83,7 +87,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.USAGE_HISTORY_SYNC]: "accountUsage",
     "usage-history-sync-state": "accountUsage",
     webdav: "dataBackup",
-    "webdav-auto-sync": "dataBackup",
+    [SETTINGS_ANCHORS.WEBDAV_AUTO_SYNC]: "dataBackup",
     "import-export-entry": "dataBackup",
     "new-api": "managedSite",
     [SETTINGS_ANCHORS.NEW_API_TOTP_SECRET]: "managedSite",

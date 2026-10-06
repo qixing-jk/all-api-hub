@@ -1,4 +1,7 @@
-import type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
+import {
+  BASIC_SETTINGS_TAB_IDS,
+  type BasicSettingsTabId,
+} from "~/constants/basicSettingsTabs"
 import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
@@ -496,7 +499,7 @@ const _openPermissionsOnboardingPage = (params?: { reason?: string }) => {
  * @param tabId Unique identifier for the tab to activate.
  */
 const _openSettingsTab = (
-  tabId: string,
+  tabId: BasicSettingsTabId,
   options?: { preserveHistory?: boolean; anchor?: string },
 ) => {
   return navigateToBasicSettings(tabId, options)
@@ -888,7 +891,7 @@ export const openSettingsTabInNewTab = async (
 
 /** Opens local shield diagnostics, preserving the originating options workflow. */
 export const openProtectionBypassHistory = () =>
-  openSettingsTab("refresh", {
+  openSettingsTab(BASIC_SETTINGS_TAB_IDS.Refresh, {
     anchor: SETTINGS_ANCHORS.SHIELD_HISTORY,
     preserveHistory: true,
   })

@@ -88,4 +88,5 @@ export const SETTINGS_ANCHORS = {
   PRODUCT_ANALYTICS: "product-analytics",
   PRODUCT_ANALYTICS_ENABLED: "product-analytics-enabled",
   USAGE_HISTORY_SYNC: "usage-history-sync",
+  WEBDAV_AUTO_SYNC: "webdav-auto-sync",
 } as const

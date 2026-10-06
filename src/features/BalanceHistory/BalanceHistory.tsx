@@ -28,7 +28,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { ANIMATIONS } from "~/constants/designTokens"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -40,6 +42,7 @@ import { formatMoneyFixed } from "~/utils/core/money"
 
 import BalanceHistoryAccountSummaryTable from "./components/BalanceHistoryAccountSummaryTable"
 import {
+  BALANCE_HISTORY_TREND_SERIES_SCOPES,
   QUICK_RANGES,
   type BalanceHistoryTrendSeriesScope,
   type BalanceHistoryVisibleMetric,
@@ -120,8 +123,8 @@ export default function BalanceHistory() {
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="balanceHistory"
-            anchor="balance-history"
+            tabId={BASIC_SETTINGS_TAB_IDS.BalanceHistory}
+            anchor={SETTINGS_ANCHORS.BALANCE_HISTORY}
             analyticsAction={{
               featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
               actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
@@ -620,10 +623,18 @@ export default function BalanceHistory() {
                                   )
                                 }
                               >
-                                <DropdownMenuRadioItem value="accounts">
+                                <DropdownMenuRadioItem
+                                  value={
+                                    BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts
+                                  }
+                                >
                                   {t("trend.scopes.accounts")}
                                 </DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="total">
+                                <DropdownMenuRadioItem
+                                  value={
+                                    BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
+                                  }
+                                >
                                   {t("trend.scopes.total")}
                                 </DropdownMenuRadioItem>
                               </DropdownMenuRadioGroup>
@@ -631,7 +642,8 @@ export default function BalanceHistory() {
                           </DropdownMenu>
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          {trendScope === "total"
+                          {trendScope ===
+                          BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
                             ? t("trend.subtitleTotal")
                             : t("trend.subtitle")}
                         </div>

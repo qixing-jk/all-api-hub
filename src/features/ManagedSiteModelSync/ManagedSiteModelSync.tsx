@@ -6,6 +6,7 @@ import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { EmptyState } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import LoadingSkeleton from "~/features/ManagedSiteModelSync/components/LoadingSkeleton"
 import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCard"
@@ -52,8 +53,8 @@ export default function ManagedSiteModelSync(props: ManagedSiteModelSyncProps) {
         title={t("execution.title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="managedSite"
-            anchor="managed-site-model-sync"
+            tabId={BASIC_SETTINGS_TAB_IDS.ManagedSite}
+            anchor={SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC}
           />
         }
         description={t("description")}
@@ -106,7 +107,7 @@ export default function ManagedSiteModelSync(props: ManagedSiteModelSyncProps) {
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncSettings,
               }}
               onConfigureAutoSync={() => {
-                void openSettingsTab("managedSite", {
+                void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
                   preserveHistory: true,
                   anchor: SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC,
                 })

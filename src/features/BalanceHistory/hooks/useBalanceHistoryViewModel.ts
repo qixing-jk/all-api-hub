@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   buildAccountDisplayNameMap,
@@ -24,6 +26,8 @@ import { formatMoneyFixed } from "~/utils/core/money"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import {
+  BALANCE_HISTORY_BREAKDOWN_CHART_TYPES,
+  BALANCE_HISTORY_TREND_SERIES_SCOPES,
   type BalanceHistoryBreakdownChartType,
   type BalanceHistoryTrendSeriesScope,
   type BalanceHistoryVisibleMetric,
@@ -75,20 +79,23 @@ export function useBalanceHistoryViewModel() {
     useState<BalanceHistoryVisibleMetric>("balance")
   const [trendChartType, setTrendChartType] =
     useState<BalanceHistoryTrendChartType>("line")
-  const [trendScope, setTrendScope] =
-    useState<BalanceHistoryTrendSeriesScope>("accounts")
+  const [trendScope, setTrendScope] = useState<BalanceHistoryTrendSeriesScope>(
+    BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts,
+  )
 
   const [breakdownMetric, setBreakdownMetric] =
     useState<BalanceHistoryVisibleMetric>("balance")
   const [breakdownChartType, setBreakdownChartType] =
-    useState<BalanceHistoryBreakdownChartType>("pie")
+    useState<BalanceHistoryBreakdownChartType>(
+      BALANCE_HISTORY_BREAKDOWN_CHART_TYPES.Pie,
+    )
   const [breakdownBalanceDayKey, setBreakdownBalanceDayKey] =
     useState<string>("")
 
   const openBalanceHistorySettings = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
-      tab: "balanceHistory",
-      anchor: "balance-history",
+      tab: BASIC_SETTINGS_TAB_IDS.BalanceHistory,
+      anchor: SETTINGS_ANCHORS.BALANCE_HISTORY,
     })
   }, [])
 
