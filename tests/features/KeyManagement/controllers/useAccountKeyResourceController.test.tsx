@@ -10,10 +10,8 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
 } from "~/features/KeyManagement/constants"
-import {
-  isAccountKeyResourceRouteTransitionAcknowledged,
-  useAccountKeyResourceController,
-} from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
+import { isAccountKeyResourceRouteTransitionAcknowledged } from "~/features/KeyManagement/controllers/accountKeyResourceWorkflowSupport"
+import { useAccountKeyResourceController } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -408,11 +406,9 @@ describe("useAccountKeyResourceController", () => {
       .fn()
       .mockResolvedValueOnce([recoveryScope, destination])
       .mockResolvedValue([recoveryScope])
-    const submit = vi
-      .fn()
-      .mockResolvedValue({
-        facts: createFacts(destination.scopeKey, "key-created"),
-      })
+    const submit = vi.fn().mockResolvedValue({
+      facts: createFacts(destination.scopeKey, "key-created"),
+    })
     const session = recoverySession({
       listScopes,
       openCreateEditor: vi.fn().mockResolvedValue({

@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next"
 
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
+  ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
   hasUsableAccountRuntimeKeySecret,
 } from "~/services/accounts/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
-import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -264,10 +268,13 @@ export function useKeyManagementInventoryPresentation({
     )
     const knownTotal = scopedEntries.length + nativeUnfilteredRows.length
     const knownEnabled =
-      scopedEntries.filter((entry) => entry.runtimeKey.status === "active")
-        .length +
-      nativeUnfilteredRows.filter((row) => row.facts.status === "enabled")
-        .length
+      scopedEntries.filter(
+        (entry) =>
+          entry.runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active,
+      ).length +
+      nativeUnfilteredRows.filter(
+        (row) => row.facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
+      ).length
     const knownShowing = filteredEntries.length + nativeRows.length
     const includedAccountIds =
       selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE

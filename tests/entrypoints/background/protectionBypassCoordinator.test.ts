@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   createProtectionBypassCoordinator,
-  getProtectionBypassDecisionErrorCode,
   resolveProtectionBypassExecution,
 } from "~/entrypoints/background/protectionBypassCoordinator"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -19,6 +18,7 @@ import {
   type ProtectionBypassExecution,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
+import { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"

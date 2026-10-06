@@ -21,10 +21,18 @@ export interface AccountQueryState {
   errorMessage?: string
 }
 
+export const MODEL_LIST_FALLBACK_STATUS_SCOPES = {
+  Account: "account",
+  RuntimeKey: "runtime-key",
+} as const
+
+export type ModelListFallbackStatusScope =
+  (typeof MODEL_LIST_FALLBACK_STATUS_SCOPES)[keyof typeof MODEL_LIST_FALLBACK_STATUS_SCOPES]
+
 export interface AccountFallbackControls {
   isAvailable: boolean
   isActive: boolean
-  statusScope: "account" | "runtime-key"
+  statusScope: ModelListFallbackStatusScope
   runtimeKeys: AccountRuntimeKey[]
   selectedRuntimeKeyId: string | null
   setSelectedRuntimeKeyId: (runtimeKeyId: string | null) => void

@@ -41,7 +41,10 @@ import {
   trackModelDataLoadCompletion,
 } from "../modelDataDiagnostics"
 import { MODEL_LIST_QUERY_SCOPE_VALUES } from "../modelDataStates"
-import type { AccountFallbackControls } from "./modelDataTypes"
+import {
+  MODEL_LIST_FALLBACK_STATUS_SCOPES,
+  type AccountFallbackControls,
+} from "./modelDataTypes"
 
 /** Owns transient fallback keys, catalog reads and stale-result protection for one account scope. */
 export function useAccountCatalogFallback({
@@ -478,8 +481,8 @@ export function useAccountCatalogFallback({
       statusScope:
         getAccountSiteModelListProfile(currentAccount.siteType).statusScope ===
         ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token
-          ? "runtime-key"
-          : "account",
+          ? MODEL_LIST_FALLBACK_STATUS_SCOPES.RuntimeKey
+          : MODEL_LIST_FALLBACK_STATUS_SCOPES.Account,
       runtimeKeys: scopedFallbackRuntimeKeys,
       selectedRuntimeKeyId: scopedSelectedFallbackRuntimeKeyId,
       setSelectedRuntimeKeyId: setSelectedFallbackRuntimeKeyId,

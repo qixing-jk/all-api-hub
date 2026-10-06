@@ -33,23 +33,51 @@ export type DeleteState = {
   failure: ResourceFailure | null
 }
 
-export type ActiveMutationSession = "submit" | "delete"
+export const ACTIVE_MUTATION_SESSIONS = {
+  Submit: "submit",
+  Delete: "delete",
+} as const
+
+export type ActiveMutationSession =
+  (typeof ACTIVE_MUTATION_SESSIONS)[keyof typeof ACTIVE_MUTATION_SESSIONS]
+
+export const MANAGED_RESOURCE_SESSION_PHASES = {
+  Idle: "idle",
+  DetailLoading: "detail-loading",
+  DetailOpen: "detail-open",
+  EditorLoading: "editor-loading",
+  EditorOpen: "editor-open",
+  DeleteConfirmation: "delete-confirmation",
+  Submit: "submit",
+  DeleteExecution: "delete-execution",
+} as const
 
 export type ManagedResourceSessionPhase =
-  | "idle"
-  | "detail-loading"
-  | "detail-open"
-  | "editor-loading"
-  | "editor-open"
-  | "delete-confirmation"
-  | "submit"
-  | "delete-execution"
+  (typeof MANAGED_RESOURCE_SESSION_PHASES)[keyof typeof MANAGED_RESOURCE_SESSION_PHASES]
+
+export const MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS = {
+  OpenFailed: "open-failed",
+  SaveFailed: "save-failed",
+  SaveUncertain: "save-uncertain",
+  SavedRefreshFailed: "saved-refresh-failed",
+} as const
 
 export type ManagedResourceEditorFeedback =
-  | { kind: "open-failed"; failure: ResourceFailure }
-  | { kind: "save-failed"; failure: ResourceFailure }
-  | { kind: "save-uncertain"; failure: ResourceFailure }
-  | { kind: "saved-refresh-failed" }
+  | {
+      kind: typeof MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.OpenFailed
+      failure: ResourceFailure
+    }
+  | {
+      kind: typeof MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed
+      failure: ResourceFailure
+    }
+  | {
+      kind: typeof MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveUncertain
+      failure: ResourceFailure
+    }
+  | {
+      kind: typeof MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SavedRefreshFailed
+    }
 
 export type ManagedResourceMutationOptions = {
   readEditor?: <T>(read: () => Promise<T>, signal?: AbortSignal) => Promise<T>

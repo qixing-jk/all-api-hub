@@ -3,10 +3,14 @@ import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { type TEMP_CONTEXT_TASK_KINDS } from "~/services/protectionBypass/contracts"
 import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
   type TempWindowCheckinPageAction,
   type TempWindowPageAccountIdentity,
 } from "~/types/tempWindowFetch"
-import { type CheckinPageActionTriggerResult } from "~/types/turnstile"
+import {
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type CheckinPageActionTriggerResult,
+} from "~/types/turnstile"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -150,7 +154,7 @@ export async function executeTempWindowCheckinPageAction(
     if (identity.userId !== normalizedExpectedUserId) {
       sendResponse({
         success: false,
-        reason: "identity_mismatch",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch,
         identity,
         expectedUserId: normalizedExpectedUserId,
       })
@@ -160,13 +164,13 @@ export async function executeTempWindowCheckinPageAction(
     const triggerResponse = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentTriggerCheckinPageAction,
       requestId: tempRequestId,
-      trigger: trigger ?? { kind: "checkinButton" },
+      trigger: trigger ?? { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
     })
 
     if (!triggerResponse || triggerResponse.success !== true) {
       sendResponse({
         success: false,
-        reason: "trigger_failed",
+        reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
         identity,
         error: triggerResponse?.error ?? TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR,
       })
@@ -177,13 +181,15 @@ export async function executeTempWindowCheckinPageAction(
       success: true
     }
     const reason =
-      triggerResult.status === "clicked"
-        ? "clicked"
-        : triggerResult.status === "target_not_found"
-          ? "target_not_found"
-          : triggerResult.status === "throttled"
-            ? "throttled"
-            : "trigger_failed"
+      triggerResult.status === TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
+        ? TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
+        : triggerResult.status ===
+            TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound
+          ? TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound
+          : triggerResult.status ===
+              TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Throttled
+            ? TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Throttled
+            : TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed
 
     sendResponse({
       success: triggerResult.clicked,
@@ -211,7 +217,7 @@ export async function executeTempWindowCheckinPageAction(
     })
     sendResponse({
       success: false,
-      reason: "trigger_failed",
+      reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
       error: failure.error,
       code: failure.code,
     })

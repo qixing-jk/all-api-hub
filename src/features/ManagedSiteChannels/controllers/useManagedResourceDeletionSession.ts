@@ -5,6 +5,7 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   assertManagedSiteMutationResult,
@@ -18,13 +19,14 @@ import {
 } from "~/services/productAnalytics/contracts"
 
 import { EMPTY_MANAGED_RESOURCE_CAPABILITIES } from "../utils/managedResource"
-import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
 import {
   startManagedResourceControllerAction,
   type ManagedResourceAnalyticsCompletion,
 } from "./managedResourceControllerAnalytics"
 import { canAcceptDeleteEffectsLocally } from "./managedResourceMutationPolicy"
 import {
+  ACTIVE_MUTATION_SESSIONS,
+  MANAGED_RESOURCE_SESSION_PHASES,
   type DeleteExecutionResult,
   type DeleteResult,
   type DeleteState,
@@ -130,8 +132,9 @@ export function useManagedResourceDeletionSession({
     ) => {
       if (
         !workspace ||
-        activeMutationSession.current !== "delete" ||
-        sessionPhase.current !== "delete-execution" ||
+        activeMutationSession.current !== ACTIVE_MUTATION_SESSIONS.Delete ||
+        sessionPhase.current !==
+          MANAGED_RESOURCE_SESSION_PHASES.DeleteExecution ||
         deletePromise.current
       ) {
         return deletePromise.current ?? Promise.resolve([])
@@ -326,9 +329,12 @@ export function useManagedResourceDeletionSession({
                   }
                 : current,
             )
-            endMutationSession("delete")
-            if (sessionPhase.current === "delete-execution")
-              sessionPhase.current = "idle"
+            endMutationSession(ACTIVE_MUTATION_SESSIONS.Delete)
+            if (
+              sessionPhase.current ===
+              MANAGED_RESOURCE_SESSION_PHASES.DeleteExecution
+            )
+              sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
           }
         })
       deletePromise.current = execution
@@ -352,7 +358,7 @@ export function useManagedResourceDeletionSession({
         !workspace ||
         !capabilities.canDelete ||
         deleteState.requiresFreshRead ||
-        sessionPhase.current !== "idle" ||
+        sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle ||
         rowKeys.length === 0 ||
         new Set(rowKeys).size !== rowKeys.length
       ) {
@@ -379,8 +385,9 @@ export function useManagedResourceDeletionSession({
         }))
         return Promise.resolve([])
       }
-      if (!beginMutationSession("delete")) return Promise.resolve([])
-      sessionPhase.current = "delete-confirmation"
+      if (!beginMutationSession(ACTIVE_MUTATION_SESSIONS.Delete))
+        return Promise.resolve([])
+      sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.DeleteConfirmation
       deleteSession.current = {
         targets: resolvedTargets as {
           rowKey: string
@@ -417,7 +424,7 @@ export function useManagedResourceDeletionSession({
         !workspace ||
         !capabilities.canDelete ||
         deleteState.requiresFreshRead ||
-        sessionPhase.current !== "idle"
+        sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle
       ) {
         setDeleteState((current) => ({
           ...current,
@@ -433,8 +440,8 @@ export function useManagedResourceDeletionSession({
         }))
         return false
       }
-      if (!beginMutationSession("delete")) return false
-      sessionPhase.current = "delete-confirmation"
+      if (!beginMutationSession(ACTIVE_MUTATION_SESSIONS.Delete)) return false
+      sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.DeleteConfirmation
       deleteSession.current = {
         targets: [{ rowKey, ref: { ...ref } }],
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
@@ -466,7 +473,10 @@ export function useManagedResourceDeletionSession({
     if (!session || !workspace || !capabilities.canDelete) {
       return Promise.resolve([])
     }
-    if (sessionPhase.current !== "delete-confirmation")
+    if (
+      sessionPhase.current !==
+      MANAGED_RESOURCE_SESSION_PHASES.DeleteConfirmation
+    )
       return Promise.resolve([])
     const isSessionCurrent = session.targets.every(({ rowKey, ref }) => {
       const currentRef = resolveRef?.(rowKey)
@@ -477,8 +487,8 @@ export function useManagedResourceDeletionSession({
     })
     if (!isSessionCurrent) {
       deleteSession.current = null
-      endMutationSession("delete")
-      sessionPhase.current = "idle"
+      endMutationSession(ACTIVE_MUTATION_SESSIONS.Delete)
+      sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
       setDeleteState((current) => ({
         ...current,
         isOpen: false,
@@ -487,7 +497,7 @@ export function useManagedResourceDeletionSession({
       }))
       return Promise.resolve([])
     }
-    sessionPhase.current = "delete-execution"
+    sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.DeleteExecution
     return executeDeleteTargets(
       session.targets,
       session.actionId,
@@ -505,8 +515,8 @@ export function useManagedResourceDeletionSession({
   const cancelDelete = useCallback(() => {
     if (deletePromise.current) return
     deleteSession.current = null
-    endMutationSession("delete")
-    sessionPhase.current = "idle"
+    endMutationSession(ACTIVE_MUTATION_SESSIONS.Delete)
+    sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
     setDeleteState((current) => ({
       ...current,
       isOpen: false,

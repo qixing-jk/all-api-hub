@@ -24,10 +24,11 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
-import type {
-  AccountKeyResourceFacts,
-  AccountKeyResourceRef,
-  ResourceFailure,
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+  type AccountKeyResourceRef,
+  type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
@@ -478,7 +479,7 @@ export function TokenList(props: TokenListProps) {
             row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
         )
         const totalEnabledNativeRows = totalNativeRows.filter(
-          (row) => row.facts.status === "enabled",
+          (row) => row.facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
         ).length
         return {
           account,

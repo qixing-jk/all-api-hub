@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next"
 
-import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/accountRuntimeKeys"
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -29,17 +33,17 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       title: row.facts.displayName,
       accountLabel: row.accountName,
       status:
-        status === "enabled"
-          ? "active"
-          : status === "unknown"
+        status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
+          ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+          : status === ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
             ? "unknown"
-            : "inactive",
+            : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
       statusLabel:
-        status === "enabled"
+        status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
           ? t("keyManagement:native.status.enabled")
-          : status === "disabled"
+          : status === ACCOUNT_KEY_RESOURCE_STATUSES.Disabled
             ? t("keyManagement:native.status.disabled")
-            : status === "expired"
+            : status === ACCOUNT_KEY_RESOURCE_STATUSES.Expired
               ? t("keyManagement:native.status.expired")
               : t("keyManagement:native.status.unknown"),
       secretAvailability: availability,

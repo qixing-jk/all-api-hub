@@ -42,6 +42,9 @@ import {
   projectManagedResourceMutationFailure,
 } from "./managedResourceMutationPolicy"
 import {
+  ACTIVE_MUTATION_SESSIONS,
+  MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS,
+  MANAGED_RESOURCE_SESSION_PHASES,
   type ActiveMutationSession,
   type ManagedResourceEditorFeedback,
   type ManagedResourceMutationOptions,
@@ -65,7 +68,7 @@ export function useManagedResourceMutationController({
 }: ManagedResourceMutationOptions) {
   const [opening, setOpening] = useState<ChannelDialogOpeningState>({
     attemptId: 0,
-    status: "idle",
+    status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
   })
   const retryOpeningRef = useRef<(() => void) | undefined>(undefined)
   const [detail, setDetail] = useState<ManagedResourceRowData | null>(null)
@@ -80,7 +83,9 @@ export function useManagedResourceMutationController({
   const [isSaving, setIsSaving] = useState(false)
 
   const activeMutationSession = useRef<ActiveMutationSession | null>(null)
-  const sessionPhase = useRef<ManagedResourceSessionPhase>("idle")
+  const sessionPhase = useRef<ManagedResourceSessionPhase>(
+    MANAGED_RESOURCE_SESSION_PHASES.Idle,
+  )
   const generation = useRef(0)
   const activeAbort = useRef<AbortController | undefined>(undefined)
   const submitPromise = useRef<
@@ -134,7 +139,7 @@ export function useManagedResourceMutationController({
   })
 
   const invalidate = useCallback(() => {
-    sessionPhase.current = "idle"
+    sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
     activeMutationSession.current = null
     generation.current += 1
     activeAbort.current?.abort()
@@ -148,7 +153,10 @@ export function useManagedResourceMutationController({
   }, [invalidateDeletion])
   useEffect(() => {
     invalidate()
-    setOpening({ attemptId: generation.current, status: "idle" })
+    setOpening({
+      attemptId: generation.current,
+      status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+    })
     retryOpeningRef.current = undefined
     setDetail(null)
     setEditor(null)
@@ -162,13 +170,17 @@ export function useManagedResourceMutationController({
   const runSession = useCallback(
     async <T>(
       mode: "create" | "edit" | "view",
-      loadingPhase: "detail-loading" | "editor-loading",
-      openPhase: "detail-open" | "editor-open",
+      loadingPhase:
+        | typeof MANAGED_RESOURCE_SESSION_PHASES.DetailLoading
+        | typeof MANAGED_RESOURCE_SESSION_PHASES.EditorLoading,
+      openPhase:
+        | typeof MANAGED_RESOURCE_SESSION_PHASES.DetailOpen
+        | typeof MANAGED_RESOURCE_SESSION_PHASES.EditorOpen,
       operation: (signal: AbortSignal) => Promise<T>,
       accept: (value: T) => void,
       isStillCurrent: () => boolean = () => true,
     ) => {
-      if (sessionPhase.current !== "idle") return
+      if (sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle) return
       sessionPhase.current = loadingPhase
       const current = ++generation.current
       const controller = new AbortController()
@@ -183,11 +195,17 @@ export function useManagedResourceMutationController({
         const value = await operation(controller.signal)
         if (current === generation.current && isStillCurrent()) {
           accept(value)
-          setOpening({ attemptId: current, status: "idle" })
+          setOpening({
+            attemptId: current,
+            status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+          })
           sessionPhase.current = openPhase
         } else if (current === generation.current) {
-          setOpening({ attemptId: current, status: "idle" })
-          sessionPhase.current = "idle"
+          setOpening({
+            attemptId: current,
+            status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+          })
+          sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
         }
       } catch (error) {
         if (
@@ -204,14 +222,17 @@ export function useManagedResourceMutationController({
           sessionPhase.current = openPhase
           throw error
         } else if (current === generation.current) {
-          setOpening({ attemptId: current, status: "idle" })
+          setOpening({
+            attemptId: current,
+            status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+          })
         }
       } finally {
         if (
           current === generation.current &&
           sessionPhase.current === loadingPhase
         )
-          sessionPhase.current = "idle"
+          sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
       }
     },
     [],
@@ -246,7 +267,7 @@ export function useManagedResourceMutationController({
       if (
         !workspace ||
         !mapFacts ||
-        sessionPhase.current !== "idle" ||
+        sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle ||
         deleteState.requiresFreshRead
       )
         return Promise.resolve()
@@ -262,8 +283,8 @@ export function useManagedResourceMutationController({
       }
       return runSession(
         "view",
-        "detail-loading",
-        "detail-open",
+        MANAGED_RESOURCE_SESSION_PHASES.DetailLoading,
+        MANAGED_RESOURCE_SESSION_PHASES.DetailOpen,
         (signal) => workspace.get(ref, { signal }),
         (value) => {
           setDetailFailure(null)
@@ -292,7 +313,7 @@ export function useManagedResourceMutationController({
   const openCreate = useCallback(() => {
     if (
       !workspace?.capabilities.canCreate ||
-      sessionPhase.current !== "idle" ||
+      sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle ||
       deleteState.requiresFreshRead
     )
       return Promise.resolve()
@@ -307,8 +328,8 @@ export function useManagedResourceMutationController({
     }
     return runSession(
       "create",
-      "editor-loading",
-      "editor-open",
+      MANAGED_RESOURCE_SESSION_PHASES.EditorLoading,
+      MANAGED_RESOURCE_SESSION_PHASES.EditorOpen,
       (signal) => workspace.openCreateEditor({ signal }),
       (value) => {
         setEditorFeedback(null)
@@ -323,7 +344,7 @@ export function useManagedResourceMutationController({
         activeEditorAnalytics.current = undefined
       }
       setEditorFeedback({
-        kind: "open-failed",
+        kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.OpenFailed,
         failure: toSafeManagedResourceFailure(error),
       })
     })
@@ -333,7 +354,7 @@ export function useManagedResourceMutationController({
     (rowKey: string) => {
       if (
         !workspace?.capabilities.canUpdate ||
-        sessionPhase.current !== "idle" ||
+        sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.Idle ||
         deleteState.requiresFreshRead
       )
         return Promise.resolve()
@@ -342,7 +363,7 @@ export function useManagedResourceMutationController({
         ref = resolveRowRef(rowKey)
       } catch (error) {
         setEditorFeedback({
-          kind: "open-failed",
+          kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.OpenFailed,
           failure: toSafeManagedResourceFailure(error),
         })
         return Promise.resolve()
@@ -358,8 +379,8 @@ export function useManagedResourceMutationController({
       }
       return runSession(
         "edit",
-        "editor-loading",
-        "editor-open",
+        MANAGED_RESOURCE_SESSION_PHASES.EditorLoading,
+        MANAGED_RESOURCE_SESSION_PHASES.EditorOpen,
         (signal) =>
           readEditor
             ? readEditor(
@@ -377,7 +398,7 @@ export function useManagedResourceMutationController({
         .then(() => {
           if (
             activeEditorAnalytics.current === analyticsCompletion &&
-            sessionPhase.current !== "editor-open"
+            sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
           ) {
             analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
             activeEditorAnalytics.current = undefined
@@ -391,7 +412,7 @@ export function useManagedResourceMutationController({
             activeEditorAnalytics.current = undefined
           }
           setEditorFeedback({
-            kind: "open-failed",
+            kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.OpenFailed,
             failure: toSafeManagedResourceFailure(error),
           })
         })
@@ -410,12 +431,15 @@ export function useManagedResourceMutationController({
   const submit = useCallback(
     (values: EditableResourceProjection) => {
       if (submitPromise.current) return submitPromise.current
-      if (!editor || sessionPhase.current !== "editor-open")
+      if (
+        !editor ||
+        sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
+      )
         return Promise.resolve(undefined)
       const validation = editor.validate(values)
       if (!validation.valid) {
         setEditorFeedback({
-          kind: "save-failed",
+          kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed,
           failure: {
             code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
             fieldIssues: validation.issues,
@@ -423,8 +447,9 @@ export function useManagedResourceMutationController({
         })
         return Promise.resolve(undefined)
       }
-      if (!beginMutationSession("submit")) return Promise.resolve(undefined)
-      sessionPhase.current = "submit"
+      if (!beginMutationSession(ACTIVE_MUTATION_SESSIONS.Submit))
+        return Promise.resolve(undefined)
+      sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Submit
       const current = generation.current
       const submittedMode = editorMode ?? MANAGED_RESOURCE_EDITOR_MODES.Edit
       const analyticsCompletion =
@@ -485,7 +510,11 @@ export function useManagedResourceMutationController({
               setEditor(null)
               setEditorMode(null)
               setEditorFeedback(
-                refreshAccepted ? null : { kind: "saved-refresh-failed" },
+                refreshAccepted
+                  ? null
+                  : {
+                      kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SavedRefreshFailed,
+                    },
               )
               if (!refreshAccepted) requireFreshRead()
               analyticsCompletion?.complete(
@@ -503,7 +532,7 @@ export function useManagedResourceMutationController({
             }
             case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
               setEditorFeedback({
-                kind: "save-failed",
+                kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed,
                 failure: projectManagedResourceMutationFailure(
                   mutationResult,
                   secretCollection,
@@ -520,7 +549,7 @@ export function useManagedResourceMutationController({
               setEditor(null)
               setEditorMode(null)
               setEditorFeedback({
-                kind: "save-uncertain",
+                kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveUncertain,
                 failure: projectManagedResourceMutationFailure(
                   mutationResult,
                   secretCollection,
@@ -542,7 +571,7 @@ export function useManagedResourceMutationController({
           // Public managed errors include authoritative-read failures before update dispatch.
           if (!(error instanceof ManagedResourceError)) throw error
           setEditorFeedback({
-            kind: "save-failed",
+            kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed,
             failure: toSafeManagedResourceFailure(error),
           })
           analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -556,9 +585,11 @@ export function useManagedResourceMutationController({
             submitPromise.current = undefined
             if (activeSubmitAnalytics.current === analyticsCompletion)
               activeSubmitAnalytics.current = undefined
-            endMutationSession("submit")
-            if (sessionPhase.current === "submit")
-              sessionPhase.current = closesEditor ? "idle" : "editor-open"
+            endMutationSession(ACTIVE_MUTATION_SESSIONS.Submit)
+            if (sessionPhase.current === MANAGED_RESOURCE_SESSION_PHASES.Submit)
+              sessionPhase.current = closesEditor
+                ? MANAGED_RESOURCE_SESSION_PHASES.Idle
+                : MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
           }
         })
       submitPromise.current = promise
@@ -585,30 +616,36 @@ export function useManagedResourceMutationController({
 
   const closeDetail = useCallback(() => {
     if (
-      sessionPhase.current !== "detail-loading" &&
-      sessionPhase.current !== "detail-open"
+      sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.DetailLoading &&
+      sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.DetailOpen
     )
       return
-    setOpening({ attemptId: generation.current + 1, status: "idle" })
+    setOpening({
+      attemptId: generation.current + 1,
+      status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+    })
     generation.current += 1
     activeAbort.current?.abort()
     activeAbort.current = undefined
-    sessionPhase.current = "idle"
+    sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
     setDetail(null)
     setDetailFailure(null)
   }, [])
 
   const closeEditor = useCallback(() => {
     if (
-      sessionPhase.current !== "editor-loading" &&
-      sessionPhase.current !== "editor-open"
+      sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.EditorLoading &&
+      sessionPhase.current !== MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
     )
       return
-    setOpening({ attemptId: generation.current + 1, status: "idle" })
+    setOpening({
+      attemptId: generation.current + 1,
+      status: MANAGED_RESOURCE_SESSION_PHASES.Idle,
+    })
     generation.current += 1
     activeAbort.current?.abort()
     activeAbort.current = undefined
-    sessionPhase.current = "idle"
+    sessionPhase.current = MANAGED_RESOURCE_SESSION_PHASES.Idle
     activeEditorAnalytics.current?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
     activeEditorAnalytics.current = undefined
     setEditor(null)

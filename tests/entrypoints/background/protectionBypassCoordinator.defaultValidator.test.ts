@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  createProtectionBypassCoordinator,
-  getProtectionBypassDecisionErrorCode,
-} from "~/entrypoints/background/protectionBypassCoordinator"
+import { createProtectionBypassCoordinator } from "~/entrypoints/background/protectionBypassCoordinator"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildManagedResourceMatchCandidate,

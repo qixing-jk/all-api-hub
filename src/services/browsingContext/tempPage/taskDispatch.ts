@@ -1,3 +1,7 @@
+import {
+  OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
+  OPENROUTER_BOOTSTRAP_MUTATION_STATES,
+} from "~/constants/openRouterBootstrap"
 import { executeTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import { handleTempWindowOpenRouterManagementKeyAction } from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
 import {
@@ -5,7 +9,14 @@ import {
   type ProtectionBypassSurface,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
-import { resolveTempWindowRequestPolicy } from "~/utils/browser/tempWindowRequestSource"
+import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
+  TEMP_WINDOW_TURNSTILE_STATUSES,
+} from "~/types/tempWindowFetch"
+import {
+  resolveTempWindowRequestPolicy,
+  type TEMP_WINDOW_REQUEST_BLOCKED_REASONS,
+} from "~/utils/browser/tempWindowRequestSource"
 import { t } from "~/utils/i18n/core"
 
 import { executeTempWindowCheckinPageAction } from "./checkinTask"
@@ -40,7 +51,10 @@ function resolveAuthorizedTaskPresentation(
       source: ProtectionBypassSurface
       suppressMinimize: boolean
     }
-  | { kind: "blocked"; reason: "firefox_popup_unsupported" } {
+  | {
+      kind: "blocked"
+      reason: typeof TEMP_WINDOW_REQUEST_BLOCKED_REASONS.FirefoxPopupUnsupported
+    } {
   const policy = resolveTempWindowRequestPolicy({
     tempWindowRequestSource: presentationSource,
     suppressMinimize:
@@ -63,18 +77,25 @@ function buildPresentationFailure(task: TempContextTask, error: string) {
     return {
       success: false,
       error,
-      turnstile: { status: "error", hasTurnstile: false },
+      turnstile: {
+        status: TEMP_WINDOW_TURNSTILE_STATUSES.Error,
+        hasTurnstile: false,
+      },
     }
   }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
-    return { success: false, reason: "trigger_failed", error }
+    return {
+      success: false,
+      reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
+      error,
+    }
   }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
     return {
       requestId: task.params.requestId,
-      operation: "create",
-      mutationState: "not_dispatched",
-      attemptOutcome: "failed",
+      operation: task.params.operation.kind,
+      mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.NotDispatched,
+      attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
       label: task.params.operation.label,
     } as const
   }

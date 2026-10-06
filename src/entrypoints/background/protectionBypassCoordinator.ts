@@ -43,6 +43,10 @@ import {
   type ProtectionBypassPolicyState,
 } from "~/services/protectionBypass/policy"
 import { readProtectionBypassPolicy } from "~/services/protectionBypass/preferencePolicy"
+import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
+  TEMP_WINDOW_TURNSTILE_STATUSES,
+} from "~/types/tempWindowFetch"
 import { hasWindowsAPI } from "~/utils/browser/browserApi"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { t } from "~/utils/i18n/core"
@@ -63,8 +67,6 @@ type ExecuteAuthorizedTask = (
 const executeCoordinatorAuthorizedTask: ExecuteAuthorizedTask =
   executeAuthorizedTempContextTask
 
-export { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
-
 /** Builds the operation-specific failure response used at runtime boundaries. */
 function buildTaskFailure(
   task: TempContextTask | undefined,
@@ -76,11 +78,19 @@ function buildTaskFailure(
       success: false,
       error,
       code,
-      turnstile: { status: "error", hasTurnstile: false },
+      turnstile: {
+        status: TEMP_WINDOW_TURNSTILE_STATUSES.Error,
+        hasTurnstile: false,
+      },
     }
   }
   if (task?.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
-    return { success: false, reason: "trigger_failed", error, code }
+    return {
+      success: false,
+      reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
+      error,
+      code,
+    }
   }
   return { success: false, error, code }
 }

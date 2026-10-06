@@ -193,6 +193,14 @@ export interface AccountKeyRuntimeKeySession {
   ): Promise<AccountRuntimeKeyResolution>
 }
 
+export const ACCOUNT_KEY_GROUP_EMPTY_VALUES = {
+  AccountGroup: "account-group",
+  Ungrouped: "ungrouped",
+} as const
+
+export type AccountKeyGroupEmptyValue =
+  (typeof ACCOUNT_KEY_GROUP_EMPTY_VALUES)[keyof typeof ACCOUNT_KEY_GROUP_EMPTY_VALUES]
+
 /** Adapter-owned display semantics. Monetary amounts are USD; timestamps are milliseconds. */
 export type AccountKeyDisplayFact =
   | {
@@ -229,14 +237,24 @@ export type AccountKeyDisplayFact =
       readonly kind: "group"
       readonly value: string | readonly string[]
       /** The provider decides whether an empty group inherits the account group. */
-      readonly emptyValue: "account-group" | "ungrouped"
+      readonly emptyValue: AccountKeyGroupEmptyValue
     }
+
+export const ACCOUNT_KEY_RESOURCE_STATUSES = {
+  Enabled: "enabled",
+  Disabled: "disabled",
+  Expired: "expired",
+  Unknown: "unknown",
+} as const
+
+export type AccountKeyResourceStatus =
+  (typeof ACCOUNT_KEY_RESOURCE_STATUSES)[keyof typeof ACCOUNT_KEY_RESOURCE_STATUSES]
 
 export type AccountKeyResourceFacts = {
   readonly ref: AccountKeyResourceRef
   readonly displayName: string
   readonly maskedLabel: string
-  readonly status: "enabled" | "disabled" | "expired" | "unknown"
+  readonly status: AccountKeyResourceStatus
   /** Safe machine policy projected by the provider, never parsed from display fields. */
   readonly runtimeKey?: {
     readonly modelAccess: AccountRuntimeKeyModelAccess
@@ -270,11 +288,19 @@ export type AccountKeyResourcePage = {
   nextCursor?: string
 }
 
+export const ACCOUNT_KEY_MUTATION_CERTAINTIES = {
+  NotApplied: "not-applied",
+  PossiblyApplied: "possibly-applied",
+} as const
+
+export type AccountKeyMutationCertainty =
+  (typeof ACCOUNT_KEY_MUTATION_CERTAINTIES)[keyof typeof ACCOUNT_KEY_MUTATION_CERTAINTIES]
+
 export class AccountKeyResourceError extends Error {
   constructor(
     readonly failure: ResourceFailure,
     /** Only explicit mutation evidence may authorize a retry after submit. */
-    readonly mutationCertainty?: "not-applied" | "possibly-applied",
+    readonly mutationCertainty?: AccountKeyMutationCertainty,
   ) {
     super(failure.message?.trim() || failure.code)
     this.name = "AccountKeyResourceError"

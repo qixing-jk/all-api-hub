@@ -25,7 +25,14 @@ import {
 } from "./accountListOrdering"
 import * as accountListDndRuntimeLoader from "./loadAccountListDndRuntime"
 
-type DndLoadState = "inactive" | "loading" | "ready"
+export const DND_LOAD_STATES = {
+  Inactive: "inactive",
+  Loading: "loading",
+  Ready: "ready",
+} as const
+
+export type DndLoadState =
+  (typeof DND_LOAD_STATES)[keyof typeof DND_LOAD_STATES]
 type AccountListDndRuntime = Awaited<
   ReturnType<typeof accountListDndRuntimeLoader.loadAccountListDndRuntime>
 >
@@ -58,7 +65,9 @@ export function useAccountListReordering({
   const [reorderAccountIds, setReorderAccountIds] = useState<string[] | null>(
     null,
   )
-  const [dndLoadState, setDndLoadState] = useState<DndLoadState>("inactive")
+  const [dndLoadState, setDndLoadState] = useState<DndLoadState>(
+    DND_LOAD_STATES.Inactive,
+  )
   const dndLoadPromiseRef = useRef<Promise<AccountListDndRuntime> | null>(null)
   const dndRuntimeRef = useRef<AccountListDndRuntime | null>(null)
   const isReorderSavingRef = useRef(false)
@@ -105,7 +114,7 @@ export function useAccountListReordering({
   const shouldRenderSortableList =
     isReorderMode &&
     isManualSortFeatureEnabled &&
-    dndLoadState === "ready" &&
+    dndLoadState === DND_LOAD_STATES.Ready &&
     dndRuntimeRef.current !== null
 
   const resolvedReorderDisabledReason = isReorderMode
@@ -228,20 +237,20 @@ export function useAccountListReordering({
     }
 
     if (dndRuntimeRef.current !== null) {
-      if (dndLoadState !== "ready") {
-        setDndLoadState("ready")
+      if (dndLoadState !== DND_LOAD_STATES.Ready) {
+        setDndLoadState(DND_LOAD_STATES.Ready)
       }
       return Promise.resolve(dndRuntimeRef.current)
     }
 
     if (dndLoadPromiseRef.current !== null) {
-      if (dndLoadState === "inactive") {
-        setDndLoadState("loading")
+      if (dndLoadState === DND_LOAD_STATES.Inactive) {
+        setDndLoadState(DND_LOAD_STATES.Loading)
       }
       return dndLoadPromiseRef.current
     }
 
-    setDndLoadState("loading")
+    setDndLoadState(DND_LOAD_STATES.Loading)
 
     const loadPromise = accountListDndRuntimeLoader
       .loadAccountListDndRuntime()
@@ -249,14 +258,14 @@ export function useAccountListReordering({
         dndRuntimeRef.current = runtime
         dndLoadPromiseRef.current = Promise.resolve(runtime)
         if (isMountedRef.current) {
-          setDndLoadState("ready")
+          setDndLoadState(DND_LOAD_STATES.Ready)
         }
         return runtime
       })
       .catch((error) => {
         dndLoadPromiseRef.current = null
         if (isMountedRef.current) {
-          setDndLoadState("inactive")
+          setDndLoadState(DND_LOAD_STATES.Inactive)
         }
         throw error
       })

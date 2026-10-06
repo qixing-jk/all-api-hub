@@ -8,6 +8,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { type TEMP_CONTEXT_TASK_KINDS } from "~/services/protectionBypass/contracts"
 import {
+  TEMP_WINDOW_TURNSTILE_STATUSES,
   type TempWindowFetch,
   type TempWindowTurnstileFetch,
   type TempWindowTurnstileMeta,
@@ -259,7 +260,7 @@ export async function executeTempWindowTurnstileFetch(
     turnstilePreTrigger,
   } = request
   const turnstile: TempWindowTurnstileMeta = {
-    status: "error",
+    status: TEMP_WINDOW_TURNSTILE_STATUSES.Error,
     hasTurnstile: false,
   }
 
@@ -356,14 +357,14 @@ export async function executeTempWindowTurnstileFetch(
       turnstileResponse?.success &&
       typeof turnstileResponse?.status === "string"
         ? String(turnstileResponse.status)
-        : "error"
+        : TEMP_WINDOW_TURNSTILE_STATUSES.Error
 
     turnstile.status =
-      status === "not_present" ||
-      status === "token_obtained" ||
-      status === "timeout"
+      status === TEMP_WINDOW_TURNSTILE_STATUSES.NotPresent ||
+      status === TEMP_WINDOW_TURNSTILE_STATUSES.TokenObtained ||
+      status === TEMP_WINDOW_TURNSTILE_STATUSES.Timeout
         ? status
-        : "error"
+        : TEMP_WINDOW_TURNSTILE_STATUSES.Error
     turnstile.hasTurnstile = Boolean(turnstileResponse?.detection?.hasTurnstile)
 
     if (!token) {

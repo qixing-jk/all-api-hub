@@ -4,9 +4,10 @@ import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
 } from "~/services/accountTokens/apiTokenKey"
-import type {
-  AccountKeyResourceFacts,
-  AccountKeyResourceRef,
+import {
+  ACCOUNT_KEY_RESOURCE_STATUSES,
+  type AccountKeyResourceFacts,
+  type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
@@ -419,11 +420,11 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
     label: facts.displayName,
     secret,
     status:
-      facts.status === "enabled"
-        ? "active"
-        : facts.status === "unknown"
+      facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
+        ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+        : facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Unknown
           ? "unknown"
-          : "inactive",
+          : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
   })
 
 /** Stable external selection identity, retaining IDs emitted before native migration. */
