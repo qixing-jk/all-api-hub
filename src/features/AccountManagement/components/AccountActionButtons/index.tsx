@@ -32,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
-import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -67,6 +66,10 @@ import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  getStaticAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -493,9 +496,15 @@ export default function AccountActionButtons({
     navigateAfterClosingMoreActions(() => openModelsPage(site.id))
   }
 
-  const pageRoutes = getAccountSiteApiRouter(site.siteType)
+  const canOpenUsagePage = Boolean(
+    getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.Usage),
+  )
   const canOpenRedeemPage = Boolean(
-    site.checkIn?.customCheckIn?.redeemUrl || pageRoutes.redeemPath,
+    getStaticAccountSiteRouteUrl(
+      site,
+      SITE_ROUTE_KINDS.Redeem,
+      site.checkIn?.customCheckIn?.redeemUrl,
+    ),
   )
 
   const handleNavigateToUsageManagement = () => {
@@ -1232,7 +1241,7 @@ export default function AccountActionButtons({
 
                 <DropdownMenuSeparator className="bg-secondary my-density-1" />
 
-                {(pageRoutes.usagePath || canOpenRedeemPage) && (
+                {(canOpenUsagePage || canOpenRedeemPage) && (
                   <AccountActionSubmenu
                     icon={PanelsTopLeft}
                     label={t("actions.relatedPages")}
@@ -1240,7 +1249,7 @@ export default function AccountActionButtons({
                     <ProductAnalyticsScope
                       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
                     >
-                      {pageRoutes.usagePath && (
+                      {canOpenUsagePage && (
                         <AccountActionMenuItem
                           onClick={handleNavigateToUsageManagement}
                           icon={ChartPie}

@@ -1,7 +1,8 @@
 import { Storage } from "@plasmohq/storage"
 
-import { MANAGED_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   isManagedResourceRefFor,
   type ManagedResourceRef,
@@ -242,9 +243,15 @@ class LegacyChannelConfigMigration {
 
       const inventoryResults = await Promise.allSettled(
         targets.map(async (target) => {
-          // AxonHub uses opaque ids, never legacy numeric channel-config identities.
-          // Its availability must not block migration for numeric-id providers.
-          if (target.siteType === SITE_TYPES.AXON_HUB) return []
+          // Sites without historical numeric identities must not block migration.
+          const legacyNumericIdentity = getAccountSiteDefinition(
+            target.siteType,
+          )?.managedResource?.legacyNumericChannelConfig
+          if (legacyNumericIdentity === false) return []
+          if (legacyNumericIdentity !== true)
+            throw new Error(
+              "Legacy numeric channel identity metadata is unavailable",
+            )
           const refs = await runAbortableTask(
             async (signal) => {
               const registration = getManagedResourceRegistration(

@@ -231,7 +231,6 @@ const siteTypeImportOwners = [
   "src/services/preferences/userPreferences.ts", // Stored provider configuration selection.
   "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
   "src/services/accounts/migrations/sub2apiAuthMigration.ts", // Historical authentication format.
-  "src/services/managedSites/legacyChannelConfigMigration.ts", // Historical numeric channel identities.
   "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
   "src/services/productAnalytics/settings.ts", // Fixed analytics event schema.
   "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.

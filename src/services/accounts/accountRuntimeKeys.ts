@@ -1,7 +1,4 @@
-import {
-  ACCOUNT_SITE_ADAPTER_FAMILIES,
-  type AccountSiteType,
-} from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
@@ -61,15 +58,18 @@ export const getAccountRuntimeKeyLocatorIdentity = (
   locator: AccountRuntimeKeyLocator,
 ): string => {
   switch (locator.source) {
-    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken:
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken: {
       // Released account-token associations refer to these providers' single
       // account scope. Preserve their identity when inventory becomes native.
-      if (isLegacyAccountKeyResourceSite(locator.siteType)) {
+      const legacyScope = getAccountSiteDefinition(
+        locator.siteType,
+      )?.legacyAccountTokenScope
+      if (legacyScope) {
         return JSON.stringify([
           ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
           locator.accountId,
           locator.siteType,
-          "account",
+          legacyScope,
           String(locator.tokenId),
         ])
       }
@@ -79,6 +79,7 @@ export const getAccountRuntimeKeyLocatorIdentity = (
         locator.siteType,
         locator.tokenId,
       ])
+    }
     case ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource:
       return JSON.stringify([
         locator.source,
@@ -432,17 +433,6 @@ export const getAccountRuntimeKeyExportId = (
   if (isAccountKeyResourceRuntimeKey(key) && key.legacyTokenId !== undefined)
     return String(key.legacyTokenId)
   return key.id
-}
-
-/** Only providers that historically exposed numeric account token identities. */
-function isLegacyAccountKeyResourceSite(siteType: AccountSiteType) {
-  const family = getAccountSiteDefinition(siteType)?.adapterFamily
-  return (
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2 ||
-    family === ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix
-  )
 }
 
 /** Formats the runtime secret without changing the provider's original credential. */

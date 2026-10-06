@@ -24,7 +24,8 @@ vi.mock("~/utils/core/formatters", () => ({
   formatRelativeTime: formatRelativeTimeMock,
 }))
 
-vi.mock("~/utils/core/url", () => ({
+vi.mock("~/utils/core/url", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/core/url")>()),
   joinUrl: joinUrlMock,
 }))
 

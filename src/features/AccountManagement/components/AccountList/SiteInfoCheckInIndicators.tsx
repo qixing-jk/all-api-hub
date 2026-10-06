@@ -15,11 +15,14 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/checkInFilter"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
+import {
+  getStaticAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
@@ -217,7 +220,9 @@ export function SiteInfoCheckInIndicators({
             checkedIn={siteState.checkedIn}
             label={checkInLabel(siteState.checkedIn)}
             onClick={() => void handleCheckIn("site")}
-            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
+            disabled={
+              !getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.CheckIn)
+            }
             testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />
         )}

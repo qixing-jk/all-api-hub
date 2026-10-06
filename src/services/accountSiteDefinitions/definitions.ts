@@ -162,7 +162,10 @@ const LEGACY_MANAGED_CHANNEL_POLICY = {
   tableFieldIds: [],
   detailFieldIds: [],
   settingsTarget: { tabId: "managedSite" },
-} as const satisfies Omit<ManagedResourceProductPolicy, "consoleRoutes">
+} as const satisfies Omit<
+  ManagedResourceProductPolicy,
+  "consoleRoutes" | "legacyNumericChannelConfig"
+>
 
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
@@ -275,6 +278,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_API)] },
       routes: {
@@ -307,8 +311,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
     },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: { channels: "/channels", tokens: "/keys" },
       tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -342,6 +348,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: { hostnames: [APIYI_HOSTNAME] },
       browserUserStorage: "apiyi",
@@ -368,6 +375,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       displayName: "LaoZhang API",
       browserUserStorage: "apiyi",
@@ -408,6 +416,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         hostnames: [MODELFLARE_HOSTNAME],
@@ -438,6 +447,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: { titlePatterns: [/\bany\s*router\b/i] },
       routes: {
@@ -461,12 +471,14 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.SUB2API,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
+    legacyAccountTokenScope: "account",
     accountLogin: {
       // Wei-Shaw/sub2api@881f320: public settings and native OAuth start routes.
       methods: ["github", "google", "linuxdo", "oidc", "dingtalk", "wechat"],
     },
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: { channels: "/admin/accounts", tokens: "/keys" },
       labelKey: "settings:managedSite.sub2api",
       getStartedUrl: "https://github.com/Wei-Shaw/sub2api#deployment",
@@ -532,6 +544,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.AIHUBMIX,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.AIHUBMIX)],
@@ -704,6 +717,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.VO_API_V2,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         titlePatterns: [/^(?:.* - )?VoAPI公益站$/i],
@@ -981,6 +995,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: {
         channels: "/management.html",
         tokens: "/management.html",
@@ -998,6 +1013,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: { channels: "/model", tokens: "/keys" },
       labelKey: "settings:managedSite.octopus",
       getStartedUrl: "https://github.com/bestruirui/octopus#-quick-start",
@@ -1012,6 +1028,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: false,
       consoleRoutes: { channels: "/channels", tokens: "/api-keys" },
       labelKey: "settings:managedSite.axonHub",
       getStartedUrl:
@@ -1031,6 +1048,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: {
         channels: "/settings/providers",
         tokens: "/dashboard/users",
@@ -1054,6 +1072,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: {
         channels: "/dashboard/providers",
         tokens: "/dashboard/api-manager",
@@ -1082,6 +1101,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: {
         channels: "/groups",
         tokens: "/access-keys",
@@ -1117,8 +1137,10 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: { channels: "/admin/channels", tokens: "/app/tokens" },
       labelKey: "settings:managedSite.veloera",
       getStartedUrl: "https://github.com/Veloera/Veloera#部署",
@@ -1147,8 +1169,10 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: true,
       consoleRoutes: { channels: "/panel/channel", tokens: "/panel/token" },
       labelKey: "settings:managedSite.doneHub",
       getStartedUrl: "https://github.com/deanxv/done-hub#部署",
@@ -1179,6 +1203,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_HUB)] },
       routes: {
@@ -1208,6 +1233,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.V_API)],
@@ -1230,6 +1256,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.VO_API)],
@@ -1252,6 +1279,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     accountLogin: NEW_API_COMPATIBLE_LOGIN,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       routes: {
         loginPath: "/login",
@@ -1280,6 +1308,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.RIX_API)],
@@ -1325,6 +1354,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       routes: {
         loginPath: "/login",
@@ -1347,6 +1377,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     accountLogin: NEW_API_COMPATIBLE_LOGIN,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       detection: { titlePatterns: [/wong\s*公益站/i] },
       routes: {
@@ -1364,6 +1395,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.UNKNOWN,
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    legacyAccountTokenScope: "account",
     onboarding: {
       routes: {
         loginPath: "/login",
