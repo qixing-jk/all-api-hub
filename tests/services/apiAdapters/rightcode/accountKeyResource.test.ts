@@ -109,6 +109,7 @@ describe("rightCodeAccountKeyResources", () => {
         quota_limit: 12.5,
         used_quota: 2.5,
         expired_at: "2030-01-01T00:00:00Z",
+        allowed_models: ["gpt-5.5"],
       }),
     ])
     const session = await openSession()
@@ -126,6 +127,12 @@ describe("rightCodeAccountKeyResources", () => {
       },
       { fieldId: "used_quota", kind: "money", role: "used", amountUsd: 2.5 },
       { fieldId: "expires_at", kind: "expiry", timestampMs: 1893456000000 },
+      {
+        fieldId: "models",
+        kind: "restriction",
+        role: "models",
+        value: ["gpt-5.5"],
+      },
     ])
   })
 

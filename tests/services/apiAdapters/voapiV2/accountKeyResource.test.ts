@@ -1142,6 +1142,12 @@ it.each([1893456000, 1893456000000])(
       },
       { fieldId: "used", kind: "money", role: "used", amountUsd: 3 },
       { fieldId: "expireTime", kind: "expiry", timestampMs: 1893456000000 },
+      {
+        fieldId: "groups",
+        kind: "group",
+        value: ["9"],
+        emptyValue: "ungrouped",
+      },
     ])
   },
 )

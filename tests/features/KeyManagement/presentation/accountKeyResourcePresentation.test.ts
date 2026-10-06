@@ -14,6 +14,90 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
+it("renders declared restriction and group semantics independently of native field names", () => {
+  const row: NativeKeyManagementRow = {
+    kind: "account-key-resource",
+    rowKey: "row",
+    accountId: "a",
+    accountName: "A",
+    scopeName: "Account",
+    facts: {
+      ref: {
+        accountId: "a",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "1",
+      },
+      displayName: "Key",
+      maskedLabel: "sk-masked",
+      status: "enabled",
+      actions: { canUpdate: true, canDelete: true },
+      fields: [
+        { fieldId: "group", kind: "text", value: "misleading" },
+        { fieldId: "models", kind: "text", value: "misleading" },
+        { fieldId: "allow_ips", kind: "text", value: "misleading" },
+        { fieldId: "subnet", kind: "text", value: "misleading" },
+      ],
+      displayFacts: [
+        {
+          fieldId: "routing",
+          kind: "group",
+          value: ["alpha", "beta"],
+          emptyValue: "ungrouped",
+        },
+        {
+          fieldId: "permitted",
+          kind: "restriction",
+          role: "models",
+          value: ["model-a", "model-b"],
+        },
+        {
+          fieldId: "network",
+          kind: "restriction",
+          role: "ip",
+          value: "192.0.2.1",
+        },
+        { fieldId: "empty", kind: "restriction", role: "subnet", value: [] },
+      ],
+    },
+  }
+  const adapter = getAccountKeyResourceCardAdapter(SITE_TYPES.NEW_API)
+  const build = (facts: NativeKeyManagementRow["facts"]) =>
+    adapter.buildPresentation({ ...row, facts }, t, {
+      hasAssociatedSecret: false,
+    })
+  const card = build(row.facts)
+  expect(card.contextFact?.value).toBe("alpha, beta")
+  expect(card.detailFacts).toEqual([
+    {
+      id: "permitted",
+      label: "keyManagement:keyDetails.models",
+      value: "model-a, model-b",
+    },
+    {
+      id: "network",
+      label: "keyManagement:keyDetails.ipLimits",
+      value: "192.0.2.1",
+    },
+  ])
+  expect(
+    build({
+      ...row.facts,
+      displayFacts: [
+        {
+          fieldId: "routing",
+          kind: "group",
+          value: "",
+          emptyValue: "ungrouped",
+        },
+      ],
+    }).contextFact?.value,
+  ).toBe("keyManagement:keyDetails.ungrouped")
+  const undeclared = build({ ...row.facts, displayFacts: undefined })
+  expect(undeclared.contextFact).toBeUndefined()
+  expect(undeclared.detailFacts).toEqual([])
+})
+
 describe("native resource card presentation", () => {
   it("uses common facts without assigning another provider's meaning to fields", () => {
     const row: NativeKeyManagementRow = {
@@ -238,6 +322,31 @@ it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
         },
       },
       displayFacts: [
+        {
+          fieldId: "provider_group",
+          kind: "group",
+          value: [],
+          emptyValue:
+            siteType === SITE_TYPES.NEW_API ? "account-group" : "ungrouped",
+        },
+        {
+          fieldId: "models",
+          kind: "restriction",
+          role: "models",
+          value: ["model-a", "model-b"],
+        },
+        {
+          fieldId: "ip_whitelist",
+          kind: "restriction",
+          role: "ip",
+          value: "192.0.2.1",
+        },
+        {
+          fieldId: "subnet",
+          kind: "restriction",
+          role: "subnet",
+          value: "192.0.2.0/24",
+        },
         {
           fieldId: "quota",
           kind: "money",

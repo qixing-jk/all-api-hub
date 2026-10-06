@@ -218,6 +218,19 @@ export type AccountKeyDisplayFact =
       readonly kind: "last-used"
       readonly timestampMs: number
     }
+  | {
+      readonly fieldId: string
+      readonly kind: "restriction"
+      readonly role: "models" | "ip" | "subnet"
+      readonly value: string | readonly string[]
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "group"
+      readonly value: string | readonly string[]
+      /** The provider decides whether an empty group inherits the account group. */
+      readonly emptyValue: "account-group" | "ungrouped"
+    }
 
 export type AccountKeyResourceFacts = {
   readonly ref: AccountKeyResourceRef
@@ -239,7 +252,7 @@ export type AccountKeyResourceFacts = {
     readonly legacyTokenId?: number
   }
   readonly fields: readonly ResourceDisplayFact[]
-  /** Absent means no provider-specific money or time interpretation is available. */
+  /** Provider-owned presentation semantics; raw fields are never evidence of these meanings. */
   readonly displayFacts?: readonly AccountKeyDisplayFact[]
   readonly searchValues?: readonly string[]
   readonly actions: Readonly<{ canUpdate: boolean; canDelete: boolean }>
