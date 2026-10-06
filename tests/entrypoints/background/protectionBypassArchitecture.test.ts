@@ -138,7 +138,7 @@ function requiresStructuralAnalysis(source: string): boolean {
 async function findAuthorizedAdapterImporters(): Promise<string[]> {
   const sources = await readSourceFiles()
   const adapterImportPattern =
-    /import\s*\{[^}]*\bexecuteAuthorizedTempContextTask\b[^}]*\}\s*from\s*["'][^"']*tempWindowPool["']/s
+    /import\s*\{[^}]*\bexecuteAuthorizedTempContextTask\b[^}]*\}\s*from\s*["'][^"']*(?:tempWindowPool|tempPage\/taskDispatch)["']/s
 
   return sources
     .filter(({ source }) => adapterImportPattern.test(source))
@@ -1038,31 +1038,66 @@ describe("protection bypass architecture", () => {
         new RegExp(`export\\s+(?:async\\s+)?function\\s+${handler}\\b`),
       )
     }
+    const lifecycleSources = await Promise.all(
+      ["runtime", "openingAdapter", "compositeWindow"].map((module) =>
+        fs.readFile(
+          path.join(
+            repoRoot,
+            `src/services/browsingContext/tempPage/${module}.ts`,
+          ),
+          "utf8",
+        ),
+      ),
+    )
     for (const browserCall of [
       "createTab",
       "createWindow",
       "openTabInCompositeWindow",
       "acquireTempContext",
     ]) {
-      expect(source).toMatch(new RegExp(`\\b${browserCall}\\(`))
+      expect(lifecycleSources.join("\n")).toMatch(
+        new RegExp(`\\b${browserCall}\\(`),
+      )
     }
-
-    const exportedFunctions = Array.from(
-      source.matchAll(/^export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)\b/gm),
-      (match) => match[1],
-    ).sort()
-    expect(exportedFunctions).toEqual([
+    const entrypoint = parseSource(source, tempWindowPoolPath)
+    const exportedNames = entrypoint.statements
+      .flatMap((statement) =>
+        ts.isExportDeclaration(statement) &&
+        !statement.isTypeOnly &&
+        statement.exportClause &&
+        ts.isNamedExports(statement.exportClause)
+          ? statement.exportClause.elements.map((element) => element.name.text)
+          : [],
+      )
+      .sort()
+    expect(exportedNames).toEqual([
       "cleanupTempContextsOnSuspend",
       "executeAuthorizedTempContextTask",
       "handleCloseTempWindow",
       "setupTempWindowListeners",
+      "tempWindowBackgroundRuntime",
     ])
+    expect(source).not.toMatch(/createTab|createWindow|acquireTempContext/)
   })
 
   it("allows only the Coordinator to import the authorized pool adapter", async () => {
     await expect(findAuthorizedAdapterImporters()).resolves.toEqual([
       "src/entrypoints/background/protectionBypassCoordinator.ts",
     ])
+  })
+
+  it("keeps concrete temporary-page tasks internal to the authorized dispatcher", async () => {
+    const sources = await readSourceFiles()
+    const externalTaskImports = sources
+      .filter(
+        ({ relativePath, source }) =>
+          !relativePath.startsWith("src/services/browsingContext/tempPage/") &&
+          /(?:import|export)[\s\S]*?from\s*["'][^"']*tempPage\/(?:sessionTasks|fetchTasks|checkinTask)["']/.test(
+            source,
+          ),
+      )
+      .map(({ relativePath }) => relativePath)
+    expect(externalTaskImports).toEqual([])
   })
 
   it("allows only the shared transport and runtime listener to reference the protected task action", async () => {
@@ -1128,15 +1163,21 @@ describe("protection bypass architecture", () => {
 
     const [fetchSource, poolSource, contractsSource] = await Promise.all([
       fs.readFile(tempWindowFetchPath, "utf8"),
-      fs.readFile(tempWindowPoolPath, "utf8"),
+      fs.readFile(
+        path.join(
+          repoRoot,
+          "src/services/browsingContext/tempPage/sessionTasks.ts",
+        ),
+        "utf8",
+      ),
       fs.readFile(protectionBypassContractsPath, "utf8"),
     ])
     expect(fetchSource).toMatch(
       /export\s+async\s+function\s+tempWindowGetRenderedTitle\b/,
     )
     expect(poolSource).toMatch(/async\s+function\s+executeOpenTempContext\b/)
-    expect(poolSource).not.toMatch(
-      /export\s+async\s+function\s+executeOpenTempContext\b/,
+    expect(await fs.readFile(tempWindowPoolPath, "utf8")).not.toContain(
+      "executeOpenTempContext",
     )
     expect(contractsSource).toMatch(
       /export\s+interface\s+OpenTempContextParams\b/,

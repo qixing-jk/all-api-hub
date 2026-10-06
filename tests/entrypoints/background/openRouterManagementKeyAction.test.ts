@@ -1422,7 +1422,7 @@ describe("OpenRouter Management Key background action", () => {
   })
 
   it("settles with a pre-dispatch failure when the temp runtime rejects", async () => {
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/runtime", () => ({
       tempWindowBackgroundRuntime: {
         run: vi.fn().mockRejectedValue(new Error("runtime unavailable")),
       },

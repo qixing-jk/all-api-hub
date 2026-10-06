@@ -4,15 +4,15 @@ import {
   cancelTempCheckinFeedbackScan,
   executeTempCheckinFeedbackScan,
 } from "~/entrypoints/background/checkinFeedbackScan"
-import { tempWindowBackgroundRuntime } from "~/entrypoints/background/tempWindowPool"
 import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
+import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
 import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 
 afterEach(() => vi.useRealTimers())
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   tempWindowBackgroundRuntime: {
     run: vi.fn(async (_url, _options, task) => task()),
     acquire: vi.fn(),

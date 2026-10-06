@@ -19,7 +19,7 @@ vi.mock(
   () => mocks.pageContract,
 )
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   tempWindowBackgroundRuntime: {
     run: async (_url: string, _options: unknown, task: () => Promise<void>) =>
       task(),
