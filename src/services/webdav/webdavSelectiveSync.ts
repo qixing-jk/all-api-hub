@@ -1,17 +1,13 @@
+import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
-import {
-  apiCredentialProfilesStorage,
-  coerceApiCredentialProfilesConfig,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { mergeFeatureGuidanceStates } from "~/services/featureGuidance/featureGuidanceState"
+import { normalizeBackupForMerge } from "~/services/importExport/backupCodec"
 import type {
   BackupFullV2,
   RawBackupData,
-} from "~/services/importExport/importExportService"
-import {
-  BACKUP_VERSION,
-  normalizeBackupForMerge,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupContracts"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {

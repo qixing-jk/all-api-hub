@@ -1,14 +1,12 @@
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
-import { isAccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
   reconcileAccountKeyInventory,
   type AccountKeyInventoryReconciliationResult,
 } from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
 import {
   buildAccountKeyResourceRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
@@ -17,35 +15,24 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
-  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
-  AccountKeyResourceError,
-  type AccountKeyResourceSession,
-  type ResourceFailure,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
-import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
 } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
-import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairDeleteInvalidResourcesRequest,
   AccountKeyRepairDeleteInvalidResourcesResult,
-  AccountKeyRepairInvalidResource,
   AccountKeyRepairManagedSiteImportReceipt,
   AccountKeyRepairProgress,
-  AccountKeyRepairRecordManagedSiteImportResultsRequest,
   AccountKeyRepairRequirementResult,
   AccountKeyRepairSkipReason,
   AccountKeyRepairStartOptions,
 } from "~/types/accountKeyAutoProvisioning"
 import {
-  ACCOUNT_KEY_REPAIR_ERRORS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
   ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES,
@@ -59,6 +46,7 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
+import { deleteInvalidRepairResources } from "./deleteInvalidRepairResources"
 import {
   AccountKeyRepairMessageTypes,
   onAccountKeyRepairMessage,
@@ -69,126 +57,17 @@ import {
   discardRepairCreatedRuntimeSecrets,
   resetRepairCreatedRuntimeSecrets,
 } from "./repairCreatedRuntimeSecrets"
+import {
+  ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT,
+  assertControlledManagedSiteImportRequest,
+  assertInvalidResourceDeleteRequest,
+  getControlledAccountKeyResourceFailure,
+} from "./repairRequestValidation"
 
 const logger = createLogger("AccountKeyRepair")
 
 // A job can accumulate target/resource pairs until the next manual run, so
 // retain recency eviction independently of the browser's storage quota.
-const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
-const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
-  "invalid_managed_site_import_results_request"
-const ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT = 500
-const INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS = 30_000
-
-const managedSiteImportStatuses = new Set<string>(
-  Object.values(ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES),
-)
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
-
-const hasOnlyKeys = (
-  value: Record<string, unknown>,
-  allowedKeys: readonly string[],
-) => Object.keys(value).every((key) => allowedKeys.includes(key))
-
-const isControlledAccountKeyResourceRef = (
-  value: unknown,
-): value is AccountKeyRepairInvalidResource["ref"] =>
-  isRecord(value) &&
-  hasOnlyKeys(value, ["accountId", "siteType", "scopeKey", "resourceId"]) &&
-  typeof value.accountId === "string" &&
-  value.accountId.length > 0 &&
-  isAccountSiteType(value.siteType) &&
-  typeof value.scopeKey === "string" &&
-  value.scopeKey.length > 0 &&
-  typeof value.resourceId === "string" &&
-  value.resourceId.length > 0
-
-const isControlledManagedSiteImportRequest = (
-  request: unknown,
-): request is AccountKeyRepairRecordManagedSiteImportResultsRequest =>
-  isRecord(request) &&
-  hasOnlyKeys(request, ["jobId", "targetFingerprint", "items"]) &&
-  typeof request.jobId === "string" &&
-  typeof request.targetFingerprint === "string" &&
-  /^[a-f0-9]{64}$/.test(request.targetFingerprint) &&
-  Array.isArray(request.items) &&
-  request.items.length > 0 &&
-  request.items.length <=
-    ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT &&
-  request.items.every(
-    (item) =>
-      isRecord(item) &&
-      hasOnlyKeys(item, ["resourceRef", "status"]) &&
-      isControlledAccountKeyResourceRef(item.resourceRef) &&
-      typeof item.status === "string" &&
-      managedSiteImportStatuses.has(item.status),
-  )
-
-const isControlledInvalidResourceDeleteRequest = (
-  request: unknown,
-): request is AccountKeyRepairDeleteInvalidResourcesRequest => {
-  if (
-    !isRecord(request) ||
-    !hasOnlyKeys(request, ["resources", "cleanupLinkedChannels"]) ||
-    (request.cleanupLinkedChannels !== undefined &&
-      typeof request.cleanupLinkedChannels !== "boolean") ||
-    !Array.isArray(request.resources) ||
-    request.resources.length === 0 ||
-    request.resources.length > ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT
-  ) {
-    return false
-  }
-
-  const seenRefs = new Set<string>()
-  return request.resources.every((resource) => {
-    if (
-      !isRecord(resource) ||
-      !hasOnlyKeys(resource, [
-        "accountId",
-        "accountName",
-        "siteType",
-        "siteUrlOrigin",
-        "ref",
-        "displayLabel",
-        "groupLabel",
-        "reason",
-      ]) ||
-      typeof resource.accountId !== "string" ||
-      typeof resource.accountName !== "string" ||
-      !isAccountSiteType(resource.siteType) ||
-      typeof resource.siteUrlOrigin !== "string" ||
-      !isControlledAccountKeyResourceRef(resource.ref) ||
-      resource.ref.accountId !== resource.accountId ||
-      resource.ref.siteType !== resource.siteType ||
-      (resource.displayLabel !== undefined &&
-        typeof resource.displayLabel !== "string") ||
-      (resource.groupLabel !== undefined &&
-        typeof resource.groupLabel !== "string") ||
-      typeof resource.reason !== "string"
-    ) {
-      return false
-    }
-    const refId = buildAccountKeyResourceRuntimeKeyId(resource.ref)
-    if (seenRefs.has(refId)) return false
-    seenRefs.add(refId)
-    return true
-  })
-}
-
-/**
- * Rejects runtime payloads that contain fields outside the receipt protocol.
- * In particular, callers cannot supply `updatedAt`; the background owns receipt
- * ordering so untrusted messages cannot displace newer bounded receipts.
- */
-function assertControlledManagedSiteImportRequest(
-  request: unknown,
-): asserts request is AccountKeyRepairRecordManagedSiteImportResultsRequest {
-  if (!isControlledManagedSiteImportRequest(request)) {
-    throw new Error(ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR)
-  }
-}
 
 const getManagedSiteImportReceiptKey = (
   receipt: Pick<
@@ -200,34 +79,6 @@ const getManagedSiteImportReceiptKey = (
     receipt.targetFingerprint,
     receipt.resourceRef,
   )
-
-const accountKeyResourceFailureCodes = new Set<string>(
-  Object.values(ACCOUNT_KEY_RESOURCE_FAILURE_CODES),
-)
-
-const getControlledAccountKeyResourceFailure = (
-  error: unknown,
-): ResourceFailure | undefined =>
-  error instanceof AccountKeyResourceError ||
-  (isRecord(error) &&
-    isRecord(error.failure) &&
-    typeof error.failure.code === "string" &&
-    accountKeyResourceFailureCodes.has(error.failure.code))
-    ? (error.failure as ResourceFailure)
-    : undefined
-
-const mapInvalidDeleteFailure = (error: unknown): ResourceFailure =>
-  error instanceof DOMException && error.name === "TimeoutError"
-    ? {
-        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-        message: error.message,
-      }
-    : getControlledAccountKeyResourceFailure(error) ?? {
-        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-        ...(error instanceof Error && error.message
-          ? { message: error.message }
-          : {}),
-      }
 
 const createEmptySummary = (): AccountKeyRepairProgress["summary"] => ({
   complete: 0,
@@ -887,145 +738,10 @@ class AccountKeyRepairRunner {
   async deleteInvalidResources(
     request: unknown,
   ): Promise<AccountKeyRepairDeleteInvalidResourcesResult> {
-    if (!isControlledInvalidResourceDeleteRequest(request)) {
-      throw new Error(ACCOUNT_KEY_REPAIR_ERRORS.InvalidResourceDeleteRequest)
-    }
+    assertInvalidResourceDeleteRequest(request)
 
     const progress = await this.getProgress()
-    const currentInvalidByRef = new Map(
-      progress.results.flatMap((accountResult) =>
-        accountResult.invalidResources.map(
-          (resource) =>
-            [
-              buildAccountKeyResourceRuntimeKeyId(resource.ref),
-              resource,
-            ] as const,
-        ),
-      ),
-    )
-    const allAccounts = await accountQueries.getAllAccounts()
-    const accountById = new Map(
-      allAccounts.map((account) => [account.id, account] as const),
-    )
-    const sessionByAccountId = new Map<string, AccountKeyResourceSession>()
-    const results: AccountKeyRepairDeleteInvalidResourcesResult["results"] = []
-
-    for (const requestedResource of request.resources) {
-      const resource =
-        currentInvalidByRef.get(
-          buildAccountKeyResourceRuntimeKeyId(requestedResource.ref),
-        ) ?? requestedResource
-      const account = accountById.get(resource.accountId)
-      const accountCapabilities = account
-        ? getSiteTypeCapabilities(account.site_type).account
-        : undefined
-      if (
-        !account ||
-        account.site_type !== resource.siteType ||
-        getOriginKey(account.site_url) !== resource.siteUrlOrigin ||
-        !currentInvalidByRef.has(
-          buildAccountKeyResourceRuntimeKeyId(resource.ref),
-        ) ||
-        !accountCapabilities?.keyResourceManagement
-      ) {
-        results.push({
-          resource,
-          outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
-          failure: {
-            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-          },
-          finishedAt: Date.now(),
-        })
-        continue
-      }
-
-      try {
-        const { request: apiRequest } =
-          createAccountApiRequestFromStoredAccount(account)
-        let session = sessionByAccountId.get(account.id)
-        if (!session) {
-          session = await runAbortableTask(
-            (signal) =>
-              accountCapabilities.keyResourceManagement!.open(
-                {
-                  account: {
-                    id: account.id,
-                    name: resource.accountName,
-                    siteType: account.site_type,
-                  },
-                  request: apiRequest,
-                },
-                signal ? { signal } : undefined,
-              ),
-            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-          )
-          sessionByAccountId.set(account.id, session)
-        }
-        const collection = await runAbortableTask(
-          (signal) =>
-            session.openCollection(
-              resource.ref.scopeKey,
-              signal ? { signal } : undefined,
-            ),
-          { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-        )
-        let cleanupInput: Parameters<typeof deleteWithLinkedChannelCleanup>[0] =
-          null
-        if (request.cleanupLinkedChannels) {
-          const facts = await runAbortableTask(
-            (signal) =>
-              collection.get(resource.ref, signal ? { signal } : undefined),
-            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-          )
-          cleanupInput = await buildAccountKeyResourceLinkedCleanupInput({
-            account: {
-              id: account.id,
-              siteType: account.site_type,
-              baseUrl: account.site_url,
-            },
-            ref: resource.ref,
-            runtimeKeyBaseUrl: facts.runtimeKey?.baseUrl,
-            resolveProvider: () =>
-              runAbortableTask(
-                (signal) =>
-                  session.runtimeKey?.resolve(resource.ref, { signal }) ??
-                  Promise.resolve(undefined),
-                { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-              ),
-          })
-        }
-        await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
-          await runAbortableTask(
-            (signal) =>
-              collection.delete(resource.ref, signal ? { signal } : undefined),
-            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-          )
-        })
-        results.push({
-          resource,
-          outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
-          finishedAt: Date.now(),
-        })
-      } catch (error) {
-        const failure = mapInvalidDeleteFailure(error)
-        results.push(
-          failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            ? {
-                resource,
-                outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
-                failure,
-                finishedAt: Date.now(),
-              }
-            : {
-                resource,
-                outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
-                failure,
-                finishedAt: Date.now(),
-              },
-        )
-      }
-    }
+    const { results } = await deleteInvalidRepairResources(request, progress)
 
     const appliedRefKeys = new Set(
       results.flatMap((result) =>

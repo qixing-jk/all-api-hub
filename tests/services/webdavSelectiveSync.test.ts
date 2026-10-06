@@ -9,7 +9,7 @@ import {
   createEmptyFeatureGuidanceState,
   PRODUCT_TOUR_OUTCOMES,
 } from "~/services/featureGuidance/featureGuidanceState"
-import { readBackupFeatureGuidance } from "~/services/importExport/importExportService"
+import { readBackupFeatureGuidance } from "~/services/importExport/backupCodec"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {

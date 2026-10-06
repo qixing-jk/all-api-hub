@@ -1,21 +1,18 @@
+import { BACKUP_VERSION } from "~/constants/importExport"
 import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
-  BACKUP_VERSION,
   ImportExportError,
-  importFromBackupObject as importFromBackupObjectService,
-  normalizeBackupForMerge,
-  parseBackupSummary,
   type BackupAccountsPartialV2,
   type BackupFullV2,
   type BackupPreferencesPartialV2,
-  type BackupV2,
   type ImportFromBackupOptions,
   type ImportResult,
   type RawBackupData,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupContracts"
+import { importFromBackupObject as importFromBackupObjectService } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
@@ -31,14 +28,6 @@ import { t } from "~/utils/i18n/core"
  * Unified logger scoped to import/export UI wrappers for backups and preferences.
  */
 const logger = createLogger("ImportExportUtils")
-
-export { BACKUP_VERSION, normalizeBackupForMerge, parseBackupSummary }
-export type {
-  BackupFullV2,
-  BackupPreferencesPartialV2,
-  BackupV2,
-  RawBackupData,
-}
 
 /** Maps owned backup and migration failures to user-facing localized copy. */
 export function getImportExportErrorMessage(error: unknown): string | null {

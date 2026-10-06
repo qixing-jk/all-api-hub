@@ -102,7 +102,7 @@ const dynamicImportAllowlist = [
     imports: ["./devDiscoveryFixtures"],
   },
   {
-    file: "src/features/AutoCheckin/AutoCheckin.tsx",
+    file: "src/features/AutoCheckin/hooks/useAutoCheckinViewModel.tsx",
     imports: ["~/services/checkin/autoCheckin/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.

@@ -1,4 +1,4 @@
-import { mergeApiCredentialProfilesConfigs } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { mergeApiCredentialProfilesConfigs } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {

@@ -26,7 +26,6 @@ import {
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
-import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -56,10 +55,7 @@ import type {
   ManagedModelChannel,
   ManagedModelChannelSummaryListData,
 } from "~/types/managedResourceModels"
-import {
-  ALL_PRESET_STANDARD_MODELS,
-  DEFAULT_MODEL_REDIRECT_PREFERENCES,
-} from "~/types/managedSiteModelRedirect"
+import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import {
   type ExecutionItemResult,
   type ExecutionResult,
@@ -89,12 +85,13 @@ import {
   userPreferences,
 } from "../../preferences/userPreferences"
 import { normalizeChannelProcessingTimeout } from "./channelProcessingTimeout"
+import { saveModelSyncExecution } from "./executionResults"
 import {
   onModelSyncMessage,
   type ModelSyncUpdateSettingsRequest,
 } from "./messaging"
-import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
+import { createModelSyncRedirectUpdater } from "./redirectUpdater"
 import { managedSiteModelSyncStorage } from "./storage"
 
 const logger = createLogger("ManagedSiteModelSync")
@@ -599,16 +596,16 @@ class ModelSyncScheduler {
       }),
     )
 
-    const standardModels =
-      modelRedirectConfig.standardModels.length > 0
-        ? modelRedirectConfig.standardModels
-        : ALL_PRESET_STANDARD_MODELS
+    const redirectUpdater = createModelSyncRedirectUpdater({
+      allChannels,
+      service,
+      siteType,
+      modelRedirectConfig,
+    })
 
     const progress = this.startProgress(progressOwner, channels.length)
 
     let failureCount = 0
-    let mappingSuccessCount = 0
-    let mappingErrorCount = 0
 
     let result
     try {
@@ -621,117 +618,21 @@ class ModelSyncScheduler {
           if (!payload.lastResult.ok) {
             failureCount += 1
           } else {
-            // Generate and apply model redirect mapping immediately after successful sync
-            if (modelRedirectConfig.enabled && standardModels.length > 0) {
-              try {
-                // Find the channel that was just synced
-                const channel = allChannels.find(
-                  (c) =>
-                    getManagedResourceRefKey(c.ref) ===
-                    getManagedResourceRefKey(payload.lastResult.resourceRef),
-                )
-                if (!channel) {
-                  logger.warn("Channel not found", {
-                    resourceRef: payload.lastResult.resourceRef,
-                  })
-                } else {
-                  const actualModels = payload.lastResult.newModels || []
-
-                  const oldModelsSet = new Set(
-                    (payload.lastResult.oldModels ?? [])
-                      .map((model) => model.trim())
-                      .filter(Boolean),
-                  )
-                  const newModelsSet = new Set(
-                    (payload.lastResult.newModels ?? [])
-                      .map((model) => model.trim())
-                      .filter(Boolean),
-                  )
-                  const modelsChanged =
-                    oldModelsSet.size !== newModelsSet.size ||
-                    Array.from(oldModelsSet).some(
-                      (model) => !newModelsSet.has(model),
-                    )
-
-                  const newMapping =
-                    ModelRedirectService.generateModelMappingForChannel(
-                      standardModels,
-                      actualModels,
-                    )
-
-                  // Use unified method for incremental merge and apply
-                  const shouldPruneMissingTargetsOnSync =
-                    modelRedirectConfig.pruneMissingTargetsOnModelSync &&
-                    modelsChanged &&
-                    newModelsSet.size > 0
-
-                  const { prunedCount, updated } =
-                    await ModelRedirectService.applyModelMappingToChannel(
-                      channel,
-                      newMapping,
-                      service,
-                      shouldPruneMissingTargetsOnSync
-                        ? {
-                            pruneMissingTargets: true,
-                            availableModels: actualModels,
-                            modelMappingPolicy:
-                              getSiteTypeCapabilities(siteType).managedSites
-                                ?.models?.modelMappingPolicy,
-                          }
-                        : undefined,
-                    )
-                  mappingSuccessCount++
-                  logger.info("Applied model redirects to channel", {
-                    resourceRef: channel.ref,
-                    channelName: channel.name,
-                    mappingCount: Object.keys(newMapping).length,
-                    modelsChanged,
-                    pruneMissingTargetsOnModelSync:
-                      shouldPruneMissingTargetsOnSync,
-                    prunedCount,
-                    updated,
-                  })
-                }
-              } catch (error) {
-                logger.error("Failed to apply mapping for channel", {
-                  resourceRef: payload.lastResult.resourceRef,
-                  channelName: payload.lastResult.channelName,
-                  error,
-                })
-                mappingErrorCount++
-              }
-            }
+            await redirectUpdater.applySuccessfulResult(payload.lastResult)
           }
 
           progress.update(payload.completed, payload.lastResult, failureCount)
         },
       })
 
-      // Save execution result
-      await managedSiteModelSyncStorage.saveLastExecution(result)
-
-      // Cache upstream model options for allow-list selection, only if full sync
-      if (!resourceRefs) {
-        const collectedModels = collectModelsFromExecution(result)
-        if (collectedModels.length > 0) {
-          await managedSiteModelSyncStorage.saveChannelUpstreamModelOptions(
-            collectedModels,
-          )
-        }
-      }
+      await saveModelSyncExecution(result, !resourceRefs)
 
       logger.info("Execution completed", {
         successCount: result.statistics.successCount,
         total: result.statistics.total,
       })
 
-      // Log model redirect mapping results
-      if (modelRedirectConfig.enabled && standardModels.length > 0) {
-        logger.info("Model redirect mappings applied", {
-          succeeded: mappingSuccessCount,
-          failed: mappingErrorCount,
-        })
-      }
+      redirectUpdater.logSummary()
 
       return result
     } finally {
@@ -784,18 +685,7 @@ class ModelSyncScheduler {
         },
       })
 
-      // Save execution result
-      await managedSiteModelSyncStorage.saveLastExecution(result)
-
-      // Cache upstream model options for allow-list selection, only if full sync
-      if (!resourceRefs) {
-        const collectedModels = collectModelsFromExecution(result)
-        if (collectedModels.length > 0) {
-          await managedSiteModelSyncStorage.saveChannelUpstreamModelOptions(
-            collectedModels,
-          )
-        }
-      }
+      await saveModelSyncExecution(result, !resourceRefs)
 
       logger.info("Provider execution completed", {
         successCount: result.statistics.successCount,
