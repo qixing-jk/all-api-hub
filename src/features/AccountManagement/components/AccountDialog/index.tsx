@@ -238,16 +238,14 @@ export default function AccountDialog({
           ...addModeSiteInfoProps,
         }
 
-  const postSaveSub2ApiDialogSessionId =
-    typeof state.postSaveSub2ApiDialogSessionId === "number"
-      ? state.postSaveSub2ApiDialogSessionId
+  const postSaveKeyInputSessionId =
+    typeof state.postSaveKeyInputSessionId === "number"
+      ? state.postSaveKeyInputSessionId
       : null
-  const postSaveSub2ApiDialogHandlers =
-    postSaveSub2ApiDialogSessionId !== null &&
-    typeof handlers.getPostSaveSub2ApiDialogHandlers === "function"
-      ? handlers.getPostSaveSub2ApiDialogHandlers(
-          postSaveSub2ApiDialogSessionId,
-        )
+  const postSaveKeyInputDialogHandlers =
+    postSaveKeyInputSessionId !== null &&
+    typeof handlers.getPostSaveKeyInputDialogHandlers === "function"
+      ? handlers.getPostSaveKeyInputDialogHandlers(postSaveKeyInputSessionId)
       : null
 
   const postSaveOneTimeKeySaveAction = state.postSaveOneTimeSecret
@@ -554,19 +552,18 @@ export default function AccountDialog({
         />
       ) : null}
 
-      {state.postSaveSub2ApiAccount ? (
+      {state.postSaveKeyInputAccount ? (
         <AddTokenDialog
           isOpen={true}
           onClose={
-            postSaveSub2ApiDialogHandlers?.onClose ??
-            handlers.handlePostSaveSub2ApiTokenDialogClose
+            postSaveKeyInputDialogHandlers?.onClose ??
+            handlers.handlePostSaveKeyInputTokenDialogClose
           }
-          availableAccounts={[state.postSaveSub2ApiAccount]}
-          preSelectedAccountId={state.postSaveSub2ApiAccount.id}
-          prefillNotice={t("tokenProvisioning.createRequiresGroupSelection")}
+          availableAccounts={[state.postSaveKeyInputAccount]}
+          preSelectedAccountId={state.postSaveKeyInputAccount.id}
           onSuccess={
-            postSaveSub2ApiDialogHandlers?.onSuccess ??
-            handlers.handlePostSaveSub2ApiTokenCreated
+            postSaveKeyInputDialogHandlers?.onSuccess ??
+            handlers.handlePostSaveKeyInputTokenCreated
           }
           showOneTimeKeyDialog={false}
         />

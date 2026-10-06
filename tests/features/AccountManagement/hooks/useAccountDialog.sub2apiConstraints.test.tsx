@@ -246,6 +246,126 @@ describe("useAccountDialog Sub2API constraints", () => {
     })
   })
 
+  it.each([
+    "url",
+    "url-round-trip",
+    "site-type",
+    "close",
+    "refresh-mode",
+    "credentials",
+  ])("ignores a pending Sub2API import after changing %s", async (change) => {
+    let finish!: (value: unknown) => void
+    mockResolveAccountBrowserSession.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      result.current.handlers.handleSub2apiUseRefreshTokenChange(true)
+    })
+    let pending!: Promise<void>
+    await act(async () => {
+      pending = result.current.handlers.handleImportSub2apiSession()
+    })
+    expect(result.current.state.isImportingSub2apiSession).toBe(true)
+    await act(async () => {
+      if (change === "url")
+        result.current.setters.setUrl("https://other.example.com")
+      if (change === "url-round-trip") {
+        result.current.setters.setUrl("https://other.example.com")
+        result.current.setters.setUrl("https://sub2.example.com")
+      }
+      if (change === "site-type")
+        result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      if (change === "close") await result.current.handlers.handleClose()
+      if (change === "refresh-mode")
+        result.current.handlers.handleSub2apiUseRefreshTokenChange(false)
+      if (change === "credentials")
+        result.current.setters.setAccessToken("manually-edited-token")
+    })
+    const draftBeforeCompletion = result.current.state.draft
+    await act(async () => {
+      finish({
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: SITE_TYPES.SUB2API,
+        accessToken: "stale-token",
+        userId: "42",
+        user: { username: "stale-user" },
+        sub2apiAuth: { refreshToken: "stale-refresh", tokenExpiresAt: 123 },
+      })
+      await pending
+    })
+    expect(result.current.state.draft).toEqual(draftBeforeCompletion)
+    expect(result.current.state.isImportingSub2apiSession).toBe(false)
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+  })
+
+  it("keeps the newer import loading when an older request completes", async () => {
+    let finishOld!: (value: unknown) => void
+    let finishNew!: (value: unknown) => void
+    mockResolveAccountBrowserSession
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishOld = resolve
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishNew = resolve
+        }),
+      )
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+    let oldRequest!: Promise<void>
+    let newRequest!: Promise<void>
+    await act(async () => {
+      oldRequest = result.current.handlers.handleImportSub2apiSession()
+    })
+    await act(async () => {
+      newRequest = result.current.handlers.handleImportSub2apiSession()
+    })
+    await act(async () => {
+      finishOld(null)
+      await oldRequest
+    })
+    expect(result.current.state.isImportingSub2apiSession).toBe(true)
+    expect(mockToastError).not.toHaveBeenCalled()
+    await act(async () => {
+      finishNew({
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        siteType: SITE_TYPES.SUB2API,
+        accessToken: "new-token",
+        sub2apiAuth: { refreshToken: "new-refresh" },
+      })
+      await newRequest
+    })
+    expect(result.current.state.accessToken).toBe("new-token")
+    expect(result.current.state.sub2apiRefreshToken).toBe("new-refresh")
+    expect(result.current.state.isImportingSub2apiSession).toBe(false)
+  })
+
   it("imports Sub2API session data through the browser-session reader", async () => {
     mockResolveAccountBrowserSession.mockImplementationOnce(async (options) => {
       const noRefreshSession = {

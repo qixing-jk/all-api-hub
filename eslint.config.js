@@ -271,13 +271,12 @@ const siteTypeImportOwners = [
   "src/features/ManagedSiteChannels/presentation/sites/**", // Provider field and table presentation definitions.
   "src/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview.tsx", // Development fixture.
   "src/services/accountSiteOnboarding/metadata.ts", // Unknown-site metadata fallback.
-  "src/services/accounts/accountCreation.ts", // Unknown account identity fallback.
   "src/services/accounts/accountDefaults.ts", // Default account identity.
+  "src/services/accounts/accountPersistence/request.ts", // Shared save input normalization.
   "src/services/accounts/accountFormValidation.ts", // Unknown account identity validation.
   "src/services/accounts/accountSiteProfile/contentSessionHint.ts", // Unknown session identity validation.
   "src/services/accounts/accountSiteProfile/profiles.ts", // Default profile.
   "src/services/accounts/accountStorage/accountRefresh.ts", // Unknown identity detection recovery.
-  "src/services/accounts/accountUpdate.ts", // Unknown account identity fallback.
   "src/services/accounts/autoDetect/recovery.ts", // Unknown detection recovery.
   "src/services/accounts/siteName.ts", // Unknown site display name.
   "src/services/accounts/utils/siteRouteResolver.ts", // Unknown route fallback.

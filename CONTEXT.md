@@ -74,6 +74,12 @@ regardless of whether the key comes from an API token resource or an account
 service credential.
 _Avoid_: API token, token row
 
+**Account Post-save Workflow**:
+The follow-up to an already saved account that may obtain an Account Runtime Key,
+wait for required key input or one-time-secret acknowledgement, and continue to
+managed-site configuration.
+_Avoid_: account save, Sub2API group selection
+
 **Channel Verification Protocol**:
 The inference protocol used to verify models for a Managed Upstream Resource.
 It is derived from that resource's upstream-native channel type; identical type
@@ -133,6 +139,8 @@ _Avoid_: provider
 - An **Account Runtime Key** is not necessarily an API token resource. API token
   CRUD, token metadata, and service-credential rotation remain source-specific
   behavior behind the account runtime key source.
+- An **Account Post-save Workflow** follows account persistence; waiting for key
+  input or acknowledgement does not mean the account has not been saved.
 - A **Managed Upstream Resource** may have a **Channel Verification Protocol**,
   but model discovery support alone does not imply model verification support.
 - **Automatic Check-in Intent**, **Check-in Readiness**, **Check-in Execution

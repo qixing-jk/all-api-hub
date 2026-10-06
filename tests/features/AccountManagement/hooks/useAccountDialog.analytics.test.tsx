@@ -335,6 +335,56 @@ describe("useAccountDialog analytics", () => {
     )
   })
 
+  it.each([
+    ["URL change", "resolved"],
+    ["URL change", "rejected"],
+    ["close", "resolved"],
+    ["close", "rejected"],
+  ] as const)(
+    "cancels popup preparation after %s when preparation is %s",
+    async (transition, outcome) => {
+      mockIsExtensionPopup.mockReturnValue(true)
+      let resolvePreparation!: () => void
+      let rejectPreparation!: (error: Error) => void
+      mockStartPopupCriticalFlow.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            resolvePreparation = resolve
+            rejectPreparation = reject
+          }),
+      )
+      mockAutoDetectAccount.mockResolvedValueOnce({ success: false })
+      const { result } = renderAddHook()
+      await waitFor(() => expect(result.current).not.toBeNull())
+      await setUrlAndWait(result, "https://private.example.com")
+      let detection!: Promise<unknown>
+      act(() => {
+        detection = result.current.handlers.handleAutoDetect().then(
+          () => null,
+          (error: unknown) => error,
+        )
+      })
+      await waitFor(() => expect(mockStartPopupCriticalFlow).toHaveBeenCalled())
+      await act(async () => {
+        if (transition === "close") await result.current.handlers.handleClose()
+        else result.current.setters.setUrl("https://other.example.com")
+      })
+      await act(async () => {
+        if (outcome === "resolved") resolvePreparation()
+        else rejectPreparation(new Error("late popup preparation failure"))
+        expect(await detection).toBeNull()
+      })
+      expect(mockAutoDetectAccount).not.toHaveBeenCalled()
+      expect(result.current.state.detectionError).toBeNull()
+      expect(result.current.state.isDetecting).toBe(false)
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        expect.any(Object),
+      )
+      expectNoSensitiveAnalyticsFields()
+    },
+  )
+
   it("does not track sidepanel or options auto-detect as a popup critical flow", async () => {
     mockIsExtensionPopup.mockReturnValue(false)
     mockAutoDetectAccount.mockResolvedValueOnce({
@@ -364,6 +414,33 @@ describe("useAccountDialog analytics", () => {
 
     expect(mockStartPopupCriticalFlow).not.toHaveBeenCalled()
     expect(mockCompletePopupCriticalFlow).not.toHaveBeenCalled()
+  })
+
+  it("reports a current popup preparation failure and admits a later retry", async () => {
+    mockIsExtensionPopup.mockReturnValue(true)
+    const failure = new Error("popup preparation failed")
+    mockStartPopupCriticalFlow.mockRejectedValueOnce(failure)
+    const { result } = renderAddHook()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await setUrlAndWait(result, "https://private.example.com")
+    await act(async () => {
+      await expect(result.current.handlers.handleAutoDetect()).rejects.toBe(
+        failure,
+      )
+    })
+    expect(result.current.state.detectionError).not.toBeNull()
+    expect(result.current.state.isDetecting).toBe(false)
+    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({ diagnostics: expect.any(Object) }),
+    )
+    mockAutoDetectAccount.mockResolvedValueOnce({ success: false })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    expect(mockStartPopupCriticalFlow).toHaveBeenCalledTimes(2)
+    expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
   })
 
   it("tracks failed account auto-detect with safe context and a safe error category", async () => {

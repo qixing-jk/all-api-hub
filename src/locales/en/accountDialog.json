@@ -48,8 +48,8 @@
       "loadingSavedAccount": "Loading saved account...",
       "openingManagedSiteDialog": "Opening channel setup...",
       "savingAccount": "Saving account...",
-      "waitingForOneTimeKey": "Save the one-time key first...",
-      "waitingForSub2ApiGroup": "Choose a Sub2API group..."
+      "waitingForKeyInput": "Complete the key input...",
+      "waitingForOneTimeKey": "Save the one-time key first..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

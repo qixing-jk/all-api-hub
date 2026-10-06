@@ -819,6 +819,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     productProfile: {
+      authSession: {
+        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken,
+      },
       metrics: {
         deferredTodayStatsAvailability:
           createUnsupportedTodayStatsAvailability(),
@@ -874,6 +877,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     productProfile: {
+      authSession: {
+        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken,
+      },
       metrics: {
         deferredTodayStatsAvailability:
           createUnsupportedTodayStatsAvailability(),

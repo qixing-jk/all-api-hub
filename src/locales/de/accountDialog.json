@@ -48,8 +48,8 @@
       "loadingSavedAccount": "Gespeichertes Konto wird geladen...",
       "openingManagedSiteDialog": "Kanal-Setup öffnen...",
       "savingAccount": "Konto wird gespeichert...",
-      "waitingForOneTimeKey": "Speichern Sie zuerst den Einmalschlüssel...",
-      "waitingForSub2ApiGroup": "Wählen Sie eine Sub2API-Gruppe..."
+      "waitingForKeyInput": "Erforderliche Angaben zum Erstellen des Schlüssels ergänzen…",
+      "waitingForOneTimeKey": "Speichern Sie zuerst den Einmalschlüssel..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

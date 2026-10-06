@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
 import type { Sub2ApiAuthConfig } from "~/types"
 
 import { ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS } from "./contracts"
@@ -29,23 +30,15 @@ export function normalizeAccountSiteSupplementalAuth({
     return {}
   }
 
-  const refreshToken =
-    typeof sub2apiAuth?.refreshToken === "string"
-      ? sub2apiAuth.refreshToken.trim()
-      : ""
-  if (!refreshToken) return {}
-
-  const tokenExpiresAt =
-    typeof sub2apiAuth?.tokenExpiresAt === "number" &&
-    Number.isFinite(sub2apiAuth.tokenExpiresAt) &&
-    sub2apiAuth.tokenExpiresAt > 0
-      ? sub2apiAuth.tokenExpiresAt
-      : undefined
-
+  const normalized = normalizeSub2ApiAuth(sub2apiAuth)
+  if (!normalized) return {}
+  const tokenExpiresAt = normalized.tokenExpiresAt
   return {
     sub2apiAuth: {
-      refreshToken,
-      ...(tokenExpiresAt ? { tokenExpiresAt } : {}),
+      refreshToken: normalized.refreshToken,
+      ...(tokenExpiresAt !== undefined && tokenExpiresAt > 0
+        ? { tokenExpiresAt }
+        : {}),
     },
   }
 }

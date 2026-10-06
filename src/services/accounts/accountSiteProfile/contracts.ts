@@ -5,6 +5,7 @@ import type { AccountTodayStatsAvailability } from "~/types/accountTodayStats"
 export const ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS = {
   None: "none",
   Sub2ApiRefreshToken: "sub2api_refresh_token",
+  KimiRefreshToken: "kimi_refresh_token",
 } as const
 
 export type AccountSiteSupplementalAuthKind =

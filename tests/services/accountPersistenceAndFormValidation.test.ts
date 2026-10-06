@@ -94,26 +94,26 @@ describe("account persistence and form validation", () => {
       )
 
       await expect(
-        validateAndUpdateAccount(
-          "account-1",
-          "https://openrouter.ai",
-          "OpenRouter",
-          "",
-          "management-key",
-          "",
-          "7.0",
-          "",
-          [],
-          checkInDisabled,
-          SITE_TYPES.OPENROUTER,
-          AuthTypeEnum.AccessToken,
-          "",
-          undefined,
-          false,
-          false,
-          undefined,
-          { deferDataRefresh: true },
-        ),
+        validateAndUpdateAccount({
+          accountId: "account-1",
+          url: "https://openrouter.ai",
+          siteName: "OpenRouter",
+          username: "",
+          accessToken: "management-key",
+          userId: "",
+          exchangeRate: "7.0",
+          notes: "",
+          tagIds: [],
+          checkInConfig: checkInDisabled,
+          siteType: SITE_TYPES.OPENROUTER,
+          authType: AuthTypeEnum.AccessToken,
+          cookieAuthSessionCookie: "",
+          manualBalanceUsd: undefined,
+          excludeFromTotalBalance: false,
+          excludeFromTodayIncome: false,
+          sub2apiAuth: undefined,
+          options: { deferDataRefresh: true },
+        }),
       ).resolves.toEqual({
         success: false,
         message: "messages:errors.validation.updateAccountFailed",
@@ -133,21 +133,21 @@ describe("account persistence and form validation", () => {
         today_income: 0,
         checkIn: buildCheckInConfig(),
       })
-      const result = await validateAndUpdateAccount(
-        "account-1",
-        "https://api.example.com",
-        "Test Site",
-        "user",
-        "token",
-        "1",
-        "7.0",
-        "notes",
-        [],
-        checkInDisabled,
-        "openai",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "user",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "notes",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: "openai",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result.success).toBe(true)
       expect(result.feedbackLevel).toBe("success")
@@ -168,21 +168,21 @@ describe("account persistence and form validation", () => {
 
     it("clears tagIds even when data refresh fails", async () => {
       mockFetchAccountData.mockRejectedValueOnce(new Error("network error"))
-      const result = await validateAndUpdateAccount(
-        "account-1",
-        "https://api.example.com",
-        "Test Site",
-        "user",
-        "token",
-        "1",
-        "7.0",
-        "notes",
-        [],
-        checkInDisabled,
-        "openai",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "user",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "notes",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: "openai",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result.success).toBe(true)
       expect(result).toMatchObject({
@@ -211,21 +211,21 @@ describe("account persistence and form validation", () => {
       })
       mockUpdateAccountWithCheckInDraft.mockResolvedValueOnce(false)
 
-      const result = await validateAndUpdateAccount(
-        "account-1",
-        "https://api.example.com",
-        "Test Site",
-        "user",
-        "token",
-        "1",
-        "7.0",
-        "notes",
-        [],
-        checkInDisabled,
-        "openai",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "user",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "notes",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: "openai",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result).toEqual({
         success: false,
@@ -237,21 +237,21 @@ describe("account persistence and form validation", () => {
       mockFetchAccountData.mockRejectedValueOnce(new Error("network error"))
       mockUpdateAccountWithCheckInDraft.mockResolvedValueOnce(false)
 
-      const result = await validateAndUpdateAccount(
-        "account-1",
-        "https://api.example.com",
-        "Test Site",
-        "user",
-        "token",
-        "1",
-        "7.0",
-        "notes",
-        [],
-        checkInDisabled,
-        "openai",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "user",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "notes",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: "openai",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result).toEqual({
         success: false,
@@ -269,21 +269,21 @@ describe("account persistence and form validation", () => {
         today_income: 0,
         checkIn: buildCheckInConfig(),
       })
-      const result = await validateAndUpdateAccount(
-        "account-1",
-        "https://api.example.com",
-        "Test Site",
-        "user",
-        "token",
-        "1",
-        "7.0",
-        "notes",
-        [],
-        checkInDisabled,
-        "legacy-invalid-site",
-        AuthTypeEnum.AccessToken,
-        "",
-      )
+      const result = await validateAndUpdateAccount({
+        accountId: "account-1",
+        url: "https://api.example.com",
+        siteName: "Test Site",
+        username: "user",
+        accessToken: "token",
+        userId: "1",
+        exchangeRate: "7.0",
+        notes: "notes",
+        tagIds: [],
+        checkInConfig: checkInDisabled,
+        siteType: "legacy-invalid-site",
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      })
 
       expect(result.success).toBe(true)
       const { getSiteTypeCapabilities } = await import(

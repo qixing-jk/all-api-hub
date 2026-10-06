@@ -6,6 +6,7 @@ import {
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
+import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
 import {
@@ -37,26 +38,6 @@ const hasNonEmptyString = (value: unknown): value is string =>
 
 const normalizeOptionalString = (value: unknown): string | undefined =>
   hasNonEmptyString(value) ? value.trim() : undefined
-
-const normalizeSub2ApiAuth = (
-  value: unknown,
-): AccountBrowserSession["sub2apiAuth"] => {
-  if (!value || typeof value !== "object") return undefined
-
-  const refreshToken = normalizeOptionalString(
-    (value as { refreshToken?: unknown }).refreshToken,
-  )
-  if (!refreshToken) return undefined
-
-  const tokenExpiresAt = (value as { tokenExpiresAt?: unknown }).tokenExpiresAt
-
-  return {
-    refreshToken,
-    ...(typeof tokenExpiresAt === "number" && Number.isFinite(tokenExpiresAt)
-      ? { tokenExpiresAt }
-      : {}),
-  }
-}
 
 const normalizeFetchContext = (
   value: unknown,

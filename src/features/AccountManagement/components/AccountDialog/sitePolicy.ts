@@ -8,7 +8,6 @@ import {
 import type { AccountSiteDefinitionOnboardingMetadata } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { isKimiOpenPlatformSiteType } from "~/services/kimiOpenPlatform/deployments"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import { type AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 
@@ -29,6 +28,7 @@ export interface AccountDialogSitePolicy {
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
   allowCookieAutoImport: boolean
+  allowKimiOpenPlatformAuthState: boolean
   allowSub2ApiRefreshTokenState: boolean
   openSub2ApiTokenDialogPostSave: boolean
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
@@ -70,6 +70,9 @@ export function getAccountDialogSitePolicy(
     requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: allowsCookieAuth,
     allowCookieAutoImport: allowsCookieAuth,
+    allowKimiOpenPlatformAuthState:
+      productProfile.authSession.kind ===
+      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.KimiRefreshToken,
     allowSub2ApiRefreshTokenState: usesSub2ApiRefreshSession,
     openSub2ApiTokenDialogPostSave: usesSub2ApiRefreshSession,
     deferSuccessForOneTimeKeyPostSaveFlow:
@@ -106,7 +109,7 @@ export function normalizeAccountDialogDraftForSitePolicy(params: {
     sub2apiTokenExpiresAt: policy.allowSub2ApiRefreshTokenState
       ? draft.sub2apiTokenExpiresAt
       : null,
-    kimiOpenPlatformAuth: isKimiOpenPlatformSiteType(draft.siteType)
+    kimiOpenPlatformAuth: policy.allowKimiOpenPlatformAuthState
       ? draft.kimiOpenPlatformAuth
       : null,
   }
@@ -157,23 +160,6 @@ export function buildSub2ApiAuthFromAccountDialogDraft(params: {
       ? { tokenExpiresAt: draft.sub2apiTokenExpiresAt }
       : {}),
   }
-}
-
-/**
- * Determines whether a saved account should open the Sub2API token creation dialog.
- */
-export function shouldOpenSub2ApiTokenDialogForAccountDialogSite(params: {
-  policy: AccountDialogSitePolicy
-  skipSub2ApiKeyPrompt: boolean
-  hasDisplayData: boolean
-}): boolean {
-  const { policy, skipSub2ApiKeyPrompt, hasDisplayData } = params
-
-  return (
-    policy.openSub2ApiTokenDialogPostSave &&
-    !skipSub2ApiKeyPrompt &&
-    hasDisplayData
-  )
 }
 
 /**

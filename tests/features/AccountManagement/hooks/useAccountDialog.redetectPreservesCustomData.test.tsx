@@ -2109,6 +2109,70 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.detectionError).toBeNull()
   })
 
+  it("ignores recovery from an auto-detect request after the dialog is externally closed", async () => {
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
+
+    const prefill = {
+      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+      siteUrl: "https://first.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+    } as const
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          prefill,
+          onClose: vi.fn(),
+          onSuccess: vi.fn(),
+        }),
+      { initialProps: { isOpen: true } },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://first.example.invalid")
+    })
+
+    let detectPromise!: Promise<void>
+    await act(async () => {
+      detectPromise = result.current.handlers.handleAutoDetect()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
+    })
+
+    rerender({ isOpen: false })
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://first.example.invalid")
+    })
+    detectDeferred.resolve({
+      kind: "detected",
+      success: false,
+      message: "Detection incomplete",
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        accessToken: "first-session-token",
+      },
+    })
+
+    await act(async () => {
+      await detectPromise
+    })
+
+    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state.detectionError).toBeNull()
+    expect(result.current.state.userId).toBe("")
+    expect(result.current.state.accessToken).toBe("")
+  })
+
   it("ignores recovery from an auto-detect request after the dialog reopens", async () => {
     const detectDeferred = createDeferred<AccountAutoDetectResponse>()
     mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
@@ -2310,6 +2374,72 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
     expect(result.current.state.showManualForm).toBe(true)
   })
+
+  it.each(["url", "close", "cookie"] as const)(
+    "ignores automatic cookie completion after changing %s",
+    async (change) => {
+      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      let resolveCookie!: (response: { success: boolean; data: string }) => void
+      vi.mocked(sendRuntimeMessage).mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveCookie = resolve
+        }),
+      )
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        success: true,
+        data: {
+          username: "user",
+          accessToken: "token",
+          userId: "1",
+          siteName: "Site",
+          siteType: "new-api",
+          checkIn: buildCheckInConfig(),
+        },
+      })
+      const { result, rerender } = renderHook(
+        ({ isOpen }) =>
+          useAccountDialog({
+            mode: DIALOG_MODES.ADD,
+            isOpen,
+            onClose: vi.fn(),
+          }),
+        { initialProps: { isOpen: true } },
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://cookie.example.com")
+        result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+      })
+      let detecting!: Promise<void>
+      act(() => {
+        detecting = result.current.handlers.handleAutoDetect()
+      })
+      await waitFor(() =>
+        expect(sendRuntimeMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+          }),
+        ),
+      )
+      if (change === "close") rerender({ isOpen: false })
+      else
+        act(() => {
+          if (change === "url")
+            result.current.setters.setUrl("https://other.example.com")
+          else
+            result.current.setters.setCookieAuthSessionCookie("session=manual")
+        })
+      await act(async () => {
+        resolveCookie({ success: true, data: "session=old" })
+        await detecting
+      })
+      expect(result.current.state.cookieAuthSessionCookie).toBe(
+        change === "cookie" ? "session=manual" : "",
+      )
+      if (change !== "cookie")
+        expect(result.current.state.isDetected).toBe(false)
+    },
+  )
 
   it("auto-imports cookie auth headers after a successful cookie-based auto-detect", async () => {
     const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")

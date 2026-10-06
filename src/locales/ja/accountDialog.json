@@ -48,8 +48,8 @@
       "loadingSavedAccount": "保存済みアカウントを読み込んでいます...",
       "openingManagedSiteDialog": "チャンネル設定を開いています...",
       "savingAccount": "アカウントを保存しています...",
-      "waitingForOneTimeKey": "ワンタイムキーを先に保存してください...",
-      "waitingForSub2ApiGroup": "Sub2API グループを選択してください..."
+      "waitingForKeyInput": "キー作成に必要な入力を完了してください…",
+      "waitingForOneTimeKey": "ワンタイムキーを先に保存してください..."
     }
   },
   "aihubmixDefaultKeyPrompt": {

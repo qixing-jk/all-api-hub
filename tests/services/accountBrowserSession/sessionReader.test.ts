@@ -255,6 +255,30 @@ describe("account browser-session reader", () => {
     expect(mockExecuteProtectionBypassTask).not.toHaveBeenCalled()
   })
 
+  it.each([0, -1])(
+    "preserves finite browser-session expiry %s for refresh recovery",
+    async (tokenExpiresAt) => {
+      mockSendTabMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "42",
+          accessToken: "jwt-from-tab",
+          sub2apiAuth: { refreshToken: " refresh-token ", tokenExpiresAt },
+        },
+      })
+      const session = await readAccountBrowserSessionFromTab({
+        tabId: 12,
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      })
+      expect(session?.sub2apiAuth).toEqual({
+        refreshToken: "refresh-token",
+        tokenExpiresAt,
+      })
+    },
+  )
+
   it("reads and normalizes a successful tab content-session response", async () => {
     mockSendTabMessage.mockResolvedValueOnce({
       success: true,

@@ -1,6 +1,5 @@
 /** Account creation workflow. */
 
-import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import {
   createLoginProviderClaimGuard,
   LoginProviderClaimConflictError,
@@ -14,6 +13,10 @@ import {
   EMPTY_ACCOUNT_INFO_METRICS,
 } from "~/services/accounts/accountPersistence/constants"
 import {
+  normalizeAccountSaveInput,
+  type AccountCreateRequest,
+} from "~/services/accounts/accountPersistence/request"
+import {
   buildAccountPersistenceContext,
   getAccountHealthFailureReason,
   getAccountOperationLogDetails,
@@ -21,7 +24,6 @@ import {
   accountPersistenceLogger as logger,
   prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
-  type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
@@ -30,70 +32,36 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type CheckInConfig,
-  type KimiOpenPlatformAuthConfig,
-  type SiteAccount,
-  type Sub2ApiAuthConfig,
-} from "~/types"
+import { SiteHealthStatus, type SiteAccount } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
-import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
-interface ValidateAndSaveAccountOptions {
-  skipAutoProvisionKeyOnAccountAdd?: boolean
-  deferDataRefresh?: boolean
-  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
-}
-
-/**
- * 验证并保存账号信息（用于新增）
- *
- * Validates user-supplied account form data, fetches the freshest remote
- * account metrics, and persists the resulting record via accountMutations.
- * @param url - Target site URL entered by the user.
- * @param siteName - Display name for the account.
- * @param username - Username retrieved from the remote site.
- * @param accessToken - Auth token required for API calls.
- * @param userId - Site-scoped account identity entered by the user.
- * @param exchangeRate - Recharge exchange rate configured in UI.
- * @param notes - Free-form notes provided by user.
- * @param tagIds - Optional tag ids originating from the tag picker.
- * @param checkInConfig - Check-in configuration captured from UI.
- * @param siteType - Classifier describing the site (OneAPI, etc.).
- * @param authType - Authentication strategy (cookie/token/none).
- * @param cookieAuthSessionCookie - Session cookie for cookie auth.
- * @returns Success payload with new account id or a failure descriptor.
- */
+/** Validates form data and persists an account addition. */
 export async function validateAndSaveAccount(
-  url: string,
-  siteName: string,
-  username: string,
-  accessToken: string,
-  userId: string,
-  exchangeRate: string,
-  notes: string,
-  tagIds: TagIdsInput,
-  checkInConfig: CheckInConfig,
-  siteType: string,
-  authType: AuthTypeEnum,
-  cookieAuthSessionCookie: string,
-  manualBalanceUsd?: string,
-  excludeFromTotalBalance = false,
-  excludeFromTodayIncome = false,
-  sub2apiAuth?: Sub2ApiAuthConfig,
-  options: ValidateAndSaveAccountOptions = {},
+  request: AccountCreateRequest,
 ): Promise<AccountSaveResponse> {
-  const sessionCookieHeader =
-    authType === AuthTypeEnum.Cookie
-      ? extractSessionCookieHeader(cookieAuthSessionCookie)
-      : ""
-  const normalizedSiteType = isAccountSiteType(siteType)
-    ? siteType
-    : SITE_TYPES.UNKNOWN
+  const {
+    url,
+    siteName,
+    username,
+    accessToken,
+    userId,
+    exchangeRate,
+    notes,
+    tagIds,
+    checkInConfig,
+    siteType,
+    authType,
+    cookieAuthSessionCookie,
+    manualBalanceUsd,
+    excludeFromTotalBalance,
+    excludeFromTodayIncome,
+    sub2apiAuth,
+    normalizedSiteType,
+    sessionCookieHeader,
+  } = normalizeAccountSaveInput(request)
+  const { options = {} } = request
 
   // 表单验证
   if (
