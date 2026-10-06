@@ -1,15 +1,18 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
+import { GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/gptLoad"
 import { OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/omniroute"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
+import { getManagedResourceFieldValuePresentation } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import { getManagedResourcePresentationSemantics } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
 import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import zhCnCommon from "~/locales/zh-CN/common.json"
 import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceDisplayFacts } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -55,6 +58,42 @@ const createManagedResourcePresentationMapper = (
   })
 
 describe("managedResourcePresentation", () => {
+  it.each([
+    [
+      SITE_TYPES.OMNIROUTE,
+      OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Provider,
+      " openai ",
+    ],
+    [
+      SITE_TYPES.GPT_LOAD,
+      GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS.Provider,
+      " openai_compatible ",
+    ],
+  ] as const)(
+    "preserves %s native type slugs through the shared create-only field vocabulary",
+    (siteType, fieldId, value) => {
+      const vocabulary = getManagedResourceFieldValuePresentation(
+        siteType,
+        MANAGED_RESOURCE_KINDS.Channel,
+        fieldId,
+      )
+      expect(vocabulary).toBeDefined()
+      const mapper = createPresentationMapper({
+        fieldIds: [fieldId],
+        semantics: { fieldValuePresentations: { [fieldId]: vocabulary! } },
+      })
+      const row = mapper.map({
+        ...createManagedResourceFacts(),
+        fields: [{ fieldId, kind: "text", value }],
+      })
+      expect(row.cells[fieldId]).toMatchObject({
+        kind: "text",
+        value: value.trim(),
+        sortValue: value,
+      })
+    },
+  )
+
   it("renders the gateway's connection-test state in the active language", async () => {
     const resourceI18n = await createResourceTestI18n({
       en: { common: enCommon, managedSiteChannels: enManagedSiteChannels },

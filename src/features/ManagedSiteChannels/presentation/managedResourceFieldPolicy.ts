@@ -110,6 +110,8 @@ export type ManagedResourceFieldPresentation =
     resolveCredentialListHelp?: ManagedResourceTextResolver
     /** Selects an existing channel control without coupling it to a provider field ID. */
     channelFieldRole?: ManagedResourceChannelFieldRole
+    /** Identifies a native resource type without changing its editor control. */
+    resourceType?: boolean
     advancedControl?: "string-map" | "json" | "model-input" | "model-list"
     suggestionSourceFieldId?: string
     mapKeysTargetFieldId?: string
@@ -213,8 +215,12 @@ const axonHubStatusOptionLabelResolvers = {
     t("managedSiteChannels:statusLabels.autoDisabled"),
 } as const
 
-const axonHubChannelTypeFallbackLabelResolver = (t: TFunction) =>
+const resolveUnsupportedResourceType = (t: TFunction) =>
   t("managedSiteChannels:editor.options.channelType.unsupported")
+
+/** Slug-based native types have no translated option vocabulary. */
+const resolveNativeTypeSlug = (t: TFunction, value?: string) =>
+  value?.trim() || resolveUnsupportedResourceType(t)
 
 const managedResourceStatusFallbackLabelResolver = (t: TFunction) =>
   t("managedSiteChannels:editor.options.status.unknown")
@@ -238,7 +244,7 @@ const axonHubFields = [
     resolveLabel: (t) => t("channelDialog:fields.type.label"),
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
     optionLabelResolvers: axonHubChannelTypeOptionLabelResolvers,
-    resolveOptionFallback: axonHubChannelTypeFallbackLabelResolver,
+    resolveOptionFallback: resolveUnsupportedResourceType,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
   },
   {
@@ -472,7 +478,7 @@ const createNewApiFamilyFields = (
       order: 20,
       resolveLabel: (t) => t("channelDialog:fields.type.label"),
       optionLabelResolvers: typeOptionLabelResolvers,
-      resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
+      resolveOptionFallback: resolveUnsupportedResourceType,
       renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
       channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
     },
@@ -878,6 +884,8 @@ const sub2ApiCreateFields = [
     resolveHelp: (t) =>
       t("managedSiteChannels:editor.fields.sub2apiPlatform.help"),
     optionLabelResolvers: sub2ApiPlatformOptionLabelResolvers,
+    resourceType: true,
+    resolveOptionFallback: resolveUnsupportedResourceType,
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
   },
   {
@@ -1007,7 +1015,7 @@ const createNativeChannelFields = (
     order: 20,
     resolveLabel: (t) => t("channelDialog:fields.type.label"),
     optionLabelResolvers: typeOptionLabelResolvers,
-    resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
+    resolveOptionFallback: resolveUnsupportedResourceType,
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
   },
@@ -1104,6 +1112,7 @@ const omniRouteProviderField = {
   // itself and no translated vocabulary exists to resolve here.
   renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
   channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+  resolveOptionFallback: resolveNativeTypeSlug,
 } as const satisfies ManagedResourceFieldPresentation
 
 /**
@@ -1238,7 +1247,7 @@ const gptLoadCreateFields = [
     resolveLabel: (t) => t("channelDialog:fields.type.label"),
     resolveHelp: (t) =>
       t("managedSiteChannels:editor.fields.gptLoadProvider.help"),
-    resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
+    resolveOptionFallback: resolveNativeTypeSlug,
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
   },
@@ -1471,11 +1480,17 @@ export const getManagedResourceFieldValuePresentation = (
   kind: ManagedResourceKind,
   fieldId: string,
 ) => {
-  const field = getManagedResourceFieldPolicy(
-    siteType,
-    kind,
-    MANAGED_RESOURCE_EDITOR_MODES.Edit,
-  )?.fields.find((candidate) => candidate.fieldId === fieldId)
+  const field =
+    getManagedResourceFieldPolicy(
+      siteType,
+      kind,
+      MANAGED_RESOURCE_EDITOR_MODES.Edit,
+    )?.fields.find((candidate) => candidate.fieldId === fieldId) ??
+    getManagedResourceFieldPolicy(
+      siteType,
+      kind,
+      MANAGED_RESOURCE_EDITOR_MODES.Create,
+    )?.fields.find((candidate) => candidate.fieldId === fieldId)
   if (!field?.optionLabelResolvers && !field?.resolveOptionFallback) {
     return undefined
   }
@@ -1501,8 +1516,29 @@ export const getManagedResourceFieldOptionLabel = (
       ? presentation.optionLabelResolvers[value]
       : presentation.resolveOptionFallback
   return resolver
-    ? resolver(t)
+    ? resolver(t, value)
     : MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER(t)
+}
+
+/** Uses the editor's native type vocabulary without exposing field IDs to callers. */
+export function getManagedResourceTypeLabel(
+  siteType: ManagedSiteType,
+  value: string | number,
+  t: TFunction,
+): string {
+  const field = getManagedResourceFieldPolicy(
+    siteType,
+    MANAGED_RESOURCE_KINDS.Channel,
+    MANAGED_RESOURCE_EDITOR_MODES.Create,
+  )?.fields.find(
+    (candidate) =>
+      candidate.resourceType ||
+      candidate.channelFieldRole === MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+  )
+  if (!field || (typeof value === "number" && !field.optionLabelResolvers)) {
+    return resolveUnsupportedResourceType(t)
+  }
+  return getManagedResourceFieldOptionLabel(field, String(value).trim(), t)
 }
 
 /** The same semantic credential field can use a scalar or collection editor per native capability. */

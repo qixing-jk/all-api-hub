@@ -303,6 +303,7 @@ export const sub2ApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             // the account ungrouped.
             // github.com/Wei-Shaw/sub2api/blob/b7dba62678a834080564966c002fd0ca2b328b7a/backend/internal/service/admin_account.go
             groups: [],
+            groupAssignment: "platform-default-if-available",
             enabled: source.status === "enabled",
           },
           adjustments: {

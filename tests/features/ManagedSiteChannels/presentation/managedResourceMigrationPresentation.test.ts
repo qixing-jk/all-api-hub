@@ -3,10 +3,24 @@ import { describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { DoneHubChannelType } from "~/constants/doneHub"
-import { type ChannelType } from "~/constants/newApi"
-import { SITE_TYPES } from "~/constants/siteType"
-import { VeloeraChannelType } from "~/constants/veloera"
+import {
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelType,
+} from "~/constants/doneHub"
+import { GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/gptLoad"
+import {
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+  type ChannelType,
+} from "~/constants/newApi"
+import { MANAGED_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import {
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelType,
+} from "~/constants/veloera"
+import {
+  getManagedResourceFieldOptionLabel,
+  getManagedResourceFieldPolicy,
+} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import {
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
@@ -19,6 +33,7 @@ import jaManagedSiteChannels from "~/locales/ja/managedSiteChannels.json"
 import viManagedSiteChannels from "~/locales/vi/managedSiteChannels.json"
 import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -46,6 +61,10 @@ const translations: Record<string, string> = {
   "managedSiteChannels:statusLabels.unknown": "Unknown",
   "managedSiteChannels:editor.options.channelType.unsupported":
     "Unsupported type",
+  "managedSiteChannels:editor.options.channelType.openai": "OpenAI",
+  "managedSiteChannels:editor.options.channelType.anthropic": "Anthropic",
+  "managedSiteChannels:editor.options.channelType.openaiResponses":
+    "OpenAI Responses",
   "managedSiteChannels:migration.generalWarnings.createOnly": "Create only",
   "managedSiteChannels:migration.generalWarnings.targetRoutingDefaults":
     "Target routing defaults",
@@ -185,7 +204,141 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
   blockedCount: 1,
 }
 
+const typeVocabularyCases = [
+  [SITE_TYPES.NEW_API, NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type, 1],
+  [
+    SITE_TYPES.VELOERA,
+    VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+    VeloeraChannelType.GitHubModels,
+  ],
+  [
+    SITE_TYPES.DONE_HUB,
+    DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    DoneHubChannelType.GitHubModels,
+  ],
+  [SITE_TYPES.OCTOPUS, "type", OctopusOutboundType.Anthropic],
+  [SITE_TYPES.AXON_HUB, "type", AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES],
+  [SITE_TYPES.CLAUDE_CODE_HUB, "type", CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX],
+  [SITE_TYPES.SUB2API, "platform", "anthropic"],
+  [SITE_TYPES.CLI_PROXY_API, "type", "vertex-api-key"],
+  [SITE_TYPES.OMNIROUTE, "provider", "openai"],
+  [
+    SITE_TYPES.GPT_LOAD,
+    GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS.Provider,
+    "openai_compatible",
+  ],
+] as const
+
 describe("managedResourceMigrationPresentation", () => {
+  it("covers every registered Managed Site Type's native vocabulary", () => {
+    expect(typeVocabularyCases.map(([siteType]) => siteType).sort()).toEqual(
+      [...MANAGED_SITE_TYPES].sort(),
+    )
+  })
+
+  it.each(typeVocabularyCases)(
+    "shares the %s editor vocabulary for source and target types in the current locale",
+    async (siteType, fieldId, type) => {
+      const i18n = createInstance()
+      await i18n.init({
+        lng: "zh-CN",
+        fallbackLng: false,
+        resources: {
+          "zh-CN": { managedSiteChannels: zhCnManagedSiteChannels },
+        },
+      })
+      const localT = i18n.getFixedT("zh-CN", "managedSiteChannels")
+      const field = getManagedResourceFieldPolicy(
+        siteType,
+        MANAGED_RESOURCE_KINDS.Channel,
+        "create",
+      )!.fields.find((candidate) => candidate.fieldId === fieldId)!
+      const expected = getManagedResourceFieldOptionLabel(
+        field,
+        String(type),
+        localT,
+      )
+      const ready = atIndex(preview.items, 0)
+      if (ready.status !== "ready") throw new Error("fixture")
+      const mapped = mapManagedResourceMigrationPreview(
+        projectManagedResourceMigrationPreview({
+          ...preview,
+          sourceSiteType: siteType,
+          targetSiteType: siteType,
+          items: [
+            {
+              ...ready,
+              source: buildSource({
+                sourceSiteType: siteType,
+                resourceType: type,
+              }),
+              target: {
+                ...ready.target,
+                projection: { ...ready.target.projection, type },
+              },
+            },
+          ],
+        }),
+        { t: localT, getSiteLabel: String },
+      )
+      expect(
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+      ).toMatchObject({ source: expected, target: expected })
+    },
+  )
+
+  it.each([SITE_TYPES.AXON_HUB, SITE_TYPES.SUB2API] as const)(
+    "uses the declared platform-default group policy for %s without inferring it from Site Type",
+    (targetSiteType) => {
+      const ready = atIndex(preview.items, 0)
+      if (ready.status !== "ready") throw new Error("fixture")
+      const mapped = mapManagedResourceMigrationPreview(
+        projectManagedResourceMigrationPreview({
+          ...preview,
+          targetSiteType,
+          items: [
+            {
+              ...ready,
+              target: {
+                ...ready.target,
+                projection: {
+                  ...ready.target.projection,
+                  groups: [],
+                  groupAssignment: "platform-default-if-available",
+                },
+              },
+              warningCodes: [
+                MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+              ],
+            },
+          ],
+        }),
+        { t, getSiteLabel: String },
+      )
+      expect(
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+          ?.target,
+      ).toBe("Platform default group (if available)")
+      expect(atIndex(mapped.rows, 0).warningText).toEqual([
+        "Source groups are not copied. Check the target platform's default group after migration.",
+      ])
+    },
+  )
+
+  it("shows declared groups when no platform-default policy is supplied, even for Sub2API", () => {
+    const mapped = mapManagedResourceMigrationPreview(
+      projectManagedResourceMigrationPreview({
+        ...preview,
+        targetSiteType: SITE_TYPES.SUB2API,
+      }),
+      { t, getSiteLabel: String },
+    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+        ?.target,
+    ).toBe("default, fallback")
+  })
+
   it("explains split keys, unknown counts, and key-change blockers", () => {
     const ready = atIndex(preview.items, 0)
     if (ready.status !== "ready") throw new Error("fixture")
@@ -460,6 +613,10 @@ describe("managedResourceMigrationPresentation", () => {
     ],
     [SITE_TYPES.AXON_HUB, 14, "Unsupported type"],
     [SITE_TYPES.GPT_LOAD, " openai_compatible ", "openai_compatible"],
+    [SITE_TYPES.GPT_LOAD, "", "Unsupported type"],
+    [SITE_TYPES.GPT_LOAD, 14, "Unsupported type"],
+    [SITE_TYPES.CLI_PROXY_API, "unknown-provider", "Unsupported type"],
+    [SITE_TYPES.SUB2API, "unknown-platform", "Unsupported type"],
     [SITE_TYPES.CLAUDE_CODE_HUB, 14, "Unsupported type"],
   ] as const)(
     "shows the native %s source type %s without New API label fallback",
@@ -503,6 +660,7 @@ describe("managedResourceMigrationPresentation", () => {
                 ...readyItem.target.projection,
                 type: "anthropic",
                 groups: [],
+                groupAssignment: "platform-default-if-available",
               },
             },
             warningCodes: [

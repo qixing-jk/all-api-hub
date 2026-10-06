@@ -92,7 +92,7 @@ export type ManagedResourcePresentationSemantics = {
         optionLabelResolvers: Readonly<
           Record<string, ManagedResourceTextResolver>
         >
-        resolveOptionFallback?: ManagedResourceTextResolver
+        resolveOptionFallback?: (t: TFunction, value?: string) => string
       }
     >
   >
@@ -171,7 +171,9 @@ const presentCell = (
           ? resolveOptionLabel(
               valuePresentation.optionLabelResolvers,
               cell.value,
-              valuePresentation.resolveOptionFallback ?? (() => cell.value),
+              () =>
+                valuePresentation.resolveOptionFallback?.(t, cell.value) ??
+                cell.value,
               t,
             )
           : cell.value,

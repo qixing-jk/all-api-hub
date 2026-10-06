@@ -153,6 +153,9 @@ describe("Sub2API channel migration", () => {
     const prepared = await target.prepare(source)
 
     expect(prepared.projection.groups).toEqual([])
+    expect(prepared.projection).toMatchObject({
+      groupAssignment: "platform-default-if-available",
+    })
     expect(
       toMigrationWarningCodes({
         lossSignals: source.lossSignals,
@@ -195,6 +198,7 @@ describe("Sub2API channel migration", () => {
         baseUrl: "http://upstream.example.invalid/custom",
         models: ["claude-sonnet-4-5"],
         groups: [],
+        groupAssignment: "platform-default-if-available",
         enabled: false,
       },
       adjustments: {

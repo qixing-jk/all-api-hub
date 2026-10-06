@@ -1,14 +1,6 @@
 import type { TFunction } from "i18next"
 
-import { AxonHubChannelTypeNames } from "~/constants/axonHub"
-import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
-import { DoneHubChannelTypeNames } from "~/constants/doneHub"
-import { ChannelTypeNames } from "~/constants/newApi"
-import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import type { ManagedSiteType } from "~/constants/siteType"
-import { SITE_TYPES } from "~/constants/siteType"
-import { SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS } from "~/constants/sub2api"
-import { VeloeraChannelTypeNames } from "~/constants/veloera"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -30,6 +22,7 @@ import type {
   ManagedSiteMigrationPreviewState,
   ManagedSiteMigrationResult,
 } from "./contracts"
+import { getManagedResourceTypeLabel } from "./managedResourceFieldPolicy"
 
 type ManagedResourceMigrationPresentationOptions = {
   t: TFunction
@@ -148,6 +141,9 @@ export function projectManagedResourceMigrationPreview(
             baseUrl: target.baseUrl,
             models: [...target.models],
             groups: [...target.groups],
+            ...(target.groupAssignment === "platform-default-if-available"
+              ? { groupAssignment: target.groupAssignment }
+              : {}),
             enabled: target.enabled,
             keyCount: target.keyCount ?? 1,
           },
@@ -182,9 +178,6 @@ export const getMigrationPreviewErrorMessage = (t: TFunction) =>
   t("managedSiteChannels:migration.preview.loadFailed", {
     error: t("common:labels.unknown"),
   })
-
-const resolveUnsupportedChannelTypeLabel = (t: TFunction) =>
-  t("managedSiteChannels:editor.options.channelType.unsupported")
 
 type ManagedSiteMigrationResultCounts = {
   created: number
@@ -226,9 +219,6 @@ const comparisonFieldIds = [
   "groups",
   "status",
 ] as const satisfies readonly ManagedSiteMigrationComparison["id"][]
-
-const hasOwn = (value: object, key: PropertyKey): boolean =>
-  Object.prototype.hasOwnProperty.call(value, key)
 
 const getComparisonLabel = (
   t: TFunction,
@@ -343,54 +333,6 @@ const getBlockedReasonText = (
   }
 }
 
-const getTypeText = (
-  t: TFunction,
-  siteType: ManagedSiteType,
-  type: ManagedSiteMigrationSource["resourceType"],
-): string => {
-  const catalogs: Partial<
-    Record<ManagedSiteType, Readonly<Record<string, string>>>
-  > = {
-    [SITE_TYPES.NEW_API]: ChannelTypeNames,
-    [SITE_TYPES.VELOERA]: VeloeraChannelTypeNames,
-    [SITE_TYPES.DONE_HUB]: DoneHubChannelTypeNames,
-    [SITE_TYPES.OCTOPUS]: OctopusOutboundTypeNames,
-    [SITE_TYPES.AXON_HUB]: AxonHubChannelTypeNames,
-    [SITE_TYPES.CLAUDE_CODE_HUB]: ClaudeCodeHubProviderTypeNames,
-    [SITE_TYPES.SUB2API]: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
-    [SITE_TYPES.CLI_PROXY_API]: {
-      "openai-compatibility": "OpenAI Compatibility",
-      "claude-api-key": "Claude",
-      "gemini-api-key": "Gemini",
-      "codex-api-key": "Codex",
-      "xai-api-key": "xAI",
-    },
-  }
-  const catalog = catalogs[siteType]
-  const catalogLabel =
-    catalog && hasOwn(catalog, type) ? catalog[type] : undefined
-  if (catalogLabel) return catalogLabel
-  // OmniRoute channel types are built-in provider slugs; the gateway publishes
-  // no display vocabulary for them, so the slug is the label.
-  if (
-    siteType === SITE_TYPES.OMNIROUTE &&
-    typeof type === "string" &&
-    type.trim()
-  ) {
-    return type.trim()
-  }
-  // gpt-load channel types are the gateway's own driver ids, so the id is the
-  // only vocabulary the preview can show without inventing a translation.
-  if (
-    siteType === SITE_TYPES.GPT_LOAD &&
-    typeof type === "string" &&
-    type.trim()
-  ) {
-    return type.trim()
-  }
-  return resolveUnsupportedChannelTypeLabel(t)
-}
-
 const getStatusText = (
   t: TFunction,
   status: ManagedSiteMigrationSource["status"] | boolean,
@@ -461,8 +403,16 @@ const getComparisonValues = (
     ],
     baseUrl: [source?.baseUrl ?? "", target?.baseUrl ?? ""],
     type: [
-      source ? getTypeText(t, source.sourceSiteType, source.resourceType) : "",
-      target ? getTypeText(t, preview.targetSiteType, target.type) : "",
+      source
+        ? getManagedResourceTypeLabel(
+            source.sourceSiteType,
+            source.resourceType,
+            t,
+          )
+        : "",
+      target
+        ? getManagedResourceTypeLabel(preview.targetSiteType, target.type, t)
+        : "",
     ],
     models: [
       source ? formatList(source.models) : "",
@@ -471,7 +421,7 @@ const getComparisonValues = (
     groups: [
       source ? formatList(source.groups) : "",
       target
-        ? preview.targetSiteType === SITE_TYPES.SUB2API
+        ? target.groupAssignment === "platform-default-if-available"
           ? t("managedSiteChannels:migration.sub2apiDefaultGroup")
           : formatList(target.groups)
         : "",
@@ -520,7 +470,9 @@ export function mapManagedResourceMigrationPreview(
         comparisons,
         warningText: item.warningCodes.flatMap((code) => {
           const text =
-            preview.targetSiteType === SITE_TYPES.SUB2API &&
+            item.status === "ready" &&
+            item.target.projection.groupAssignment ===
+              "platform-default-if-available" &&
             code ===
               MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP
               ? options.t(
