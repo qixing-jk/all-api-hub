@@ -29,15 +29,9 @@
     "title": "No announcement records"
   },
   "filters": {
-    "allReadStates": "All states",
     "allSites": "All sites",
-    "allSiteTypes": "All types",
-    "read": "Read",
-    "readState": "Read state",
     "searchSite": "Search sites",
-    "site": "Site",
-    "siteType": "Site type",
-    "unread": "Unread"
+    "site": "Site"
   },
   "loading": "Loading announcements...",
   "messages": {
@@ -53,6 +47,16 @@
     "multipleUnread_other": "{{title}}, plus {{count}} unread announcements",
     "title": "{{site}} has new announcements"
   },
+  "overview": {
+    "description": "See the announcement totals and filter down to what you care about.",
+    "title": "Overview"
+  },
+  "search": {
+    "clear": "Clear",
+    "placeholder": "Search announcement title or body...",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results"
+  },
   "status": {
     "aggregateIssues": "{{failed}} site(s) failed and {{unsupported}} do not support announcement checks. Select a site to view details and retry failures.",
     "aggregateIssuesTitle": "Some sites need attention",
@@ -63,11 +67,6 @@
     "unsupportedTitle": "Announcement endpoint unsupported"
   },
   "summary": {
-    "filtered_one": "Showing {{count}} of {{total}} announcement",
-    "filtered_other": "Showing {{count}} of {{total}} announcements",
-    "notified_one": "{{count}} system notification sent",
-    "notified_other": "{{count}} system notifications sent",
-    "sites": "Sites",
     "total": "Total",
     "unread": "Unread"
   },

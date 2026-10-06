@@ -176,6 +176,16 @@ function splitAnnouncementTitleLine(line: string): AnnouncementLineParts {
 }
 
 /**
+ * Reduces announcement content to searchable plain text.
+ *
+ * Unlike a summary this keeps the whole body, so matching a phrase near the end
+ * of a long announcement still works, while formatting markers never match.
+ */
+export function getAnnouncementPlainText(value: string): string {
+  return stripAnnouncementFormatting(value)
+}
+
+/**
  * Builds a plain-text preview for an announcement body.
  */
 export function getAnnouncementPreviewText(

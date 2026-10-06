@@ -1,11 +1,2 @@
-import type { LucideIcon } from "lucide-react"
-
-export type UnreadFilter = "all" | "unread" | "read"
-
-export interface AnnouncementMetric {
-  key: string
-  label: string
-  value: number
-  icon: LucideIcon
-  tone: "accent" | "info" | "neutral"
-}
+/** Read-state scope applied by the announcement overview statistics. */
+export type UnreadFilter = "all" | "unread"

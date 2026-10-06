@@ -22,22 +22,16 @@
     "addAccount": "Thêm tài khoản",
     "description": "Thông báo mới sẽ được hiển thị ở đây sau khi được kiểm tra dưới nền.",
     "descriptionWhenPollingDisabled": "Bạn có thể kiểm tra thủ công ngay bây giờ; tự động lấy có thể được quản lý trong cài đặt.",
-    "filtered": "Không có thông báo nào với các bộ lọc hiện tại",
+    "filtered": "Không có thông báo nào khớp với bộ lọc hiện tại",
     "noAccounts": "Thêm tài khoản trước khi kiểm tra thông báo",
     "noAccountsDesc": "Kiểm tra thông báo cần ít nhất một tài khoản đang bật để biết nên lấy thông báo từ những trang nào.",
     "pollingSettingsLink": "Cấu hình tự động lấy",
     "title": "Chưa có bản ghi thông báo nào"
   },
   "filters": {
-    "allReadStates": "Tất cả trạng thái",
     "allSites": "Tất cả trang web",
-    "allSiteTypes": "Tất cả loại",
-    "read": "Đã đọc",
-    "readState": "Trạng thái đọc",
     "searchSite": "Tìm kiếm trang web",
-    "site": "Trang web",
-    "siteType": "Loại trang web",
-    "unread": "Chưa đọc"
+    "site": "Trang web"
   },
   "loading": "Đang tải thông báo...",
   "messages": {
@@ -52,6 +46,15 @@
     "multipleUnread_other": "{{title}}, còn {{count}} thông báo chưa đọc",
     "title": "{{site}} có thông báo mới"
   },
+  "overview": {
+    "description": "Xem nhanh số liệu thông báo và lọc nội dung bạn quan tâm.",
+    "title": "Tổng quan"
+  },
+  "search": {
+    "clear": "Xóa",
+    "placeholder": "Tìm tiêu đề hoặc nội dung thông báo...",
+    "resultCount_other": "{{count}} kết quả"
+  },
   "status": {
     "aggregateIssues": "{{failed}} trang thất bại và {{unsupported}} trang không hỗ trợ kiểm tra thông báo. Hãy chọn trang để xem chi tiết và thử lại.",
     "aggregateIssuesTitle": "Một số trang cần được xử lý",
@@ -62,9 +65,6 @@
     "unsupportedTitle": "Tạm thời không hỗ trợ API thông báo"
   },
   "summary": {
-    "filtered_other": "Đang hiển thị {{count}} / {{total}} thông báo",
-    "notified_other": "{{count}} thông báo hệ thống đã được gửi",
-    "sites": "Trang web liên quan",
     "total": "Tổng số thông báo",
     "unread": "Thông báo chưa đọc"
   },

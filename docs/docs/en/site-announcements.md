@@ -74,8 +74,8 @@ If a site has no usable announcement endpoint, or the endpoint returns empty con
 
 The **`Site Announcements`** page supports:
 
-- **Summary metrics**: view total announcements, unread announcements, and affected sites.
-- **Filters**: filter by site, site type, and read state.
+- **Overview**: view the announcement total and unread count for the selected site, and click either counter to switch between all and unread. The site selector sits in the top-right corner.
+- **Search**: match announcement titles or bodies, with the current result count on the right.
 - **Expand details**: open an announcement to read the full content.
 - **Mark as read**: mark one announcement, or the current filtered set, as read.
 - **Check now**: manually trigger announcement polling and refresh local records.

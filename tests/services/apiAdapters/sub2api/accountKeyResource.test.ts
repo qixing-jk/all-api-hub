@@ -1230,16 +1230,14 @@ describe("Sub2API account key resources", () => {
 })
 
 it("keeps Sub2API dollar amounts unscaled in display facts", async () => {
-  mockFetchSub2ApiKeys
-    .mockReset()
-    .mockResolvedValue([
-      token({
-        quota: 10,
-        quota_used: 3,
-        group_name: "",
-        ip_whitelist: ["192.0.2.1"],
-      }),
-    ])
+  mockFetchSub2ApiKeys.mockReset().mockResolvedValue([
+    token({
+      quota: 10,
+      quota_used: 3,
+      group_name: "",
+      ip_whitelist: ["192.0.2.1"],
+    }),
+  ])
   mockFetchSub2ApiGroupDescriptors.mockReset().mockResolvedValue([])
   const session = await sub2ApiAccountKeyResources.open({
     account: { id: "account-example", siteType: SITE_TYPES.SUB2API },

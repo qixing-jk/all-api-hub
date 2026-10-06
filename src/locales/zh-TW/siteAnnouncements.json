@@ -29,15 +29,9 @@
     "title": "暫無公告記錄"
   },
   "filters": {
-    "allReadStates": "全部狀態",
     "allSites": "全部站點",
-    "allSiteTypes": "全部類型",
-    "read": "已讀",
-    "readState": "閱讀狀態",
     "searchSite": "搜尋站點",
-    "site": "站點",
-    "siteType": "站點類型",
-    "unread": "未讀"
+    "site": "站點"
   },
   "loading": "正在載入公告...",
   "messages": {
@@ -52,6 +46,15 @@
     "multipleUnread_other": "{{title}}，還有 {{count}} 則未讀公告",
     "title": "{{site}} 有新公告"
   },
+  "overview": {
+    "description": "快速查看公告統計並篩選你關心的內容。",
+    "title": "公告概覽"
+  },
+  "search": {
+    "clear": "清除",
+    "placeholder": "搜尋公告標題或內容...",
+    "resultCount_other": "{{count}} 則"
+  },
   "status": {
     "aggregateIssues": "{{failed}} 個站點檢查失敗，{{unsupported}} 個站點不支援公告檢查。請選擇站點查看詳情並重試失敗項目。",
     "aggregateIssuesTitle": "部分站點需要處理",
@@ -62,9 +65,6 @@
     "unsupportedTitle": "暫不支援公告介面"
   },
   "summary": {
-    "filtered_other": "目前顯示 {{count}} / {{total}} 則公告",
-    "notified_other": "{{count}} 則已發送系統通知",
-    "sites": "涉及站點",
     "total": "公告總數",
     "unread": "未讀公告"
   },

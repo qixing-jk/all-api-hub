@@ -244,6 +244,8 @@ describe("LinkCard", () => {
 })
 ```
 
+The wrapper renders its children behind `UserPreferencesProvider` and the other app providers, which defer until their initial load settles. Nothing is in the DOM for the first `await` after `render`, so a synchronous `getBy*` throws "Unable to find an accessible element" even though the component is correct. Reach the first render with `findBy*` (or `await screen.findByRole(...)`) and query synchronously only afterwards.
+
 #### i18n in Tests (Translation Key Assertions)
 
 By default, tests SHOULD assert **translation keys** (e.g. `ui:searchableSelect.noOptions`) instead of localized copy (English/Chinese strings). This keeps tests stable when translations change.

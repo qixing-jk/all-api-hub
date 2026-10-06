@@ -29,15 +29,9 @@
     "title": "No hay registros de anuncios"
   },
   "filters": {
-    "allReadStates": "Todos los estados",
     "allSites": "Todos los sitios",
-    "allSiteTypes": "Todos los tipos",
-    "read": "Leídos",
-    "readState": "Estado de lectura",
     "searchSite": "Buscar sitios",
-    "site": "Sitio",
-    "siteType": "Tipo de sitio",
-    "unread": "Sin leer"
+    "site": "Sitio"
   },
   "loading": "Cargando anuncios...",
   "messages": {
@@ -54,6 +48,17 @@
     "multipleUnread_other": "{{title}}, más {{count}} anuncios sin leer",
     "title": "{{site}} tiene anuncios nuevos"
   },
+  "overview": {
+    "description": "Consulta las estadísticas de anuncios y filtra el contenido que te interesa.",
+    "title": "Resumen"
+  },
+  "search": {
+    "clear": "Borrar",
+    "placeholder": "Buscar título o contenido del anuncio...",
+    "resultCount_one": "{{count}} resultado",
+    "resultCount_many": "{{count}} resultados",
+    "resultCount_other": "{{count}} resultados"
+  },
   "status": {
     "aggregateIssues": "{{failed}} sitio(s) fallaron y {{unsupported}} no admiten la comprobación de anuncios. Selecciona un sitio para ver detalles y reintentar.",
     "aggregateIssuesTitle": "Algunos sitios requieren atención",
@@ -64,13 +69,6 @@
     "unsupportedTitle": "Endpoint de anuncios no compatible"
   },
   "summary": {
-    "filtered_one": "Mostrando {{count}} de {{total}} anuncio",
-    "filtered_many": "Mostrando {{count}} de {{total}} anuncios",
-    "filtered_other": "Mostrando {{count}} de {{total}} anuncios",
-    "notified_one": "{{count}} notificación del sistema enviada",
-    "notified_many": "{{count}} notificaciones del sistema enviadas",
-    "notified_other": "{{count}} notificaciones del sistema enviadas",
-    "sites": "Sitios",
     "total": "Total",
     "unread": "Sin leer"
   },

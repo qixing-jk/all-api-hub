@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, Inbox, Megaphone, RefreshCcw } from "lucide-react"
+import { CheckCheck, Megaphone, RefreshCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -41,16 +41,17 @@ import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
-import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
 import { SiteAnnouncementsList } from "./components/SiteAnnouncementsList"
+import { SiteAnnouncementsOverviewCard } from "./components/SiteAnnouncementsOverviewCard"
+import { SiteAnnouncementsSearchBar } from "./components/SiteAnnouncementsSearchBar"
 import { SiteAnnouncementsStatusAlert } from "./components/SiteAnnouncementsStatusAlert"
-import { SiteAnnouncementsSummaryMetrics } from "./components/SiteAnnouncementsSummaryMetrics"
-import type { AnnouncementMetric, UnreadFilter } from "./types"
+import type { UnreadFilter } from "./types"
 import { useSiteAnnouncementsDevSection } from "./useSiteAnnouncementsDevSection"
 import {
   buildSiteOptions,
-  buildSiteTypeOptions,
   filterSiteAnnouncements,
+  matchesUnreadFilter,
+  matchSiteAnnouncementQuery,
 } from "./utils"
 
 interface SiteAnnouncementsPageProps {
@@ -93,7 +94,7 @@ export default function SiteAnnouncementsPage({
   const [isLoading, setIsLoading] = useState(true)
   const [isChecking, setIsChecking] = useState(false)
   const [siteKey, setSiteKey] = useState("all")
-  const [siteType, setSiteType] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
   const [unreadFilter, setUnreadFilter] = useState<UnreadFilter>("all")
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
@@ -181,11 +182,6 @@ export default function SiteAnnouncementsPage({
     [records, status],
   )
 
-  const siteTypeOptions = useMemo(
-    () => buildSiteTypeOptions(records, status),
-    [records, status],
-  )
-
   const selectedSourceKeys = useMemo(
     () =>
       siteOptions.find((option) => option.value === siteKey)?.sourceKeys ?? [
@@ -193,15 +189,34 @@ export default function SiteAnnouncementsPage({
       ],
     [siteOptions, siteKey],
   )
-  const filteredRecords = useMemo(
+
+  // The overview counters describe the selected site, so they are computed
+  // before the read-state and search filters narrow the list.
+  const siteScopedRecords = useMemo(
     () =>
       filterSiteAnnouncements(records, {
         siteKey,
         siteKeys: selectedSourceKeys,
-        siteType,
-        unreadFilter,
+        unreadFilter: "all",
       }),
-    [records, siteKey, selectedSourceKeys, siteType, unreadFilter],
+    [records, siteKey, selectedSourceKeys],
+  )
+  // Search narrows the visible list only. Manual checks and the overview
+  // counters keep following site + read-state, so a query never silently
+  // rescopes which accounts a check touches.
+  const visibleRecords = useMemo(
+    () =>
+      siteScopedRecords.filter((record) =>
+        matchesUnreadFilter(record, unreadFilter),
+      ),
+    [siteScopedRecords, unreadFilter],
+  )
+  const filteredRecords = useMemo(
+    () =>
+      visibleRecords.filter((record) =>
+        matchSiteAnnouncementQuery(record, searchQuery),
+      ),
+    [visibleRecords, searchQuery],
   )
 
   const selectedStatus =
@@ -219,68 +234,35 @@ export default function SiteAnnouncementsPage({
   const hasAggregateIssues =
     aggregateFailedSiteCount + aggregateUnsupportedSiteCount > 0
   const manualCheckAccountIds = useMemo(() => {
-    const accountIds = filteredRecords.map((record) => record.accountId)
+    const accountIds = visibleRecords.map((record) => record.accountId)
     // A site may have no cached announcements yet. Its polling status still
     // identifies the selected source; never turn that selection into "all".
     if (unreadFilter === "all") {
       for (const site of status) {
         if (siteKey !== "all" && !selectedSourceKeys.includes(site.siteKey))
           continue
-        if (siteType !== "all" && site.siteType !== siteType) continue
         accountIds.push(site.accountId)
       }
     }
     return [...new Set(accountIds)]
-  }, [
-    filteredRecords,
-    status,
-    siteKey,
-    selectedSourceKeys,
-    siteType,
-    unreadFilter,
-  ])
+  }, [visibleRecords, status, siteKey, selectedSourceKeys, unreadFilter])
   const shouldScopeManualCheck =
-    records.length > 0 ||
-    siteKey !== "all" ||
-    siteType !== "all" ||
-    unreadFilter !== "all"
+    records.length > 0 || siteKey !== "all" || unreadFilter !== "all"
   const canRunManualCheck =
     !isLoading && (!shouldScopeManualCheck || manualCheckAccountIds.length > 0)
-  const unreadCount = records.filter((record) => !record.read).length
-  const notifiedCount = records.filter((record) => record.notifiedAt).length
-  const affectedSiteCount = siteOptions.filter(
-    (option) => option.announcementCount > 0,
-  ).length
+  const totalCount = siteScopedRecords.length
+  const unreadCount = siteScopedRecords.filter((record) => !record.read).length
   const isPollingDisabled = !siteAnnouncementNotifications.enabled
   const hasCachedRecords = records.length > 0
   const showNoAccountsSetup = enabledAccountCount === 0 && !hasCachedRecords
-
-  const metrics = useMemo<AnnouncementMetric[]>(
-    () => [
-      {
-        key: "total",
-        label: t("summary.total"),
-        value: records.length,
-        icon: Megaphone,
-        tone: "accent",
-      },
-      {
-        key: "unread",
-        label: t("summary.unread"),
-        value: unreadCount,
-        icon: Inbox,
-        tone: "info",
-      },
-      {
-        key: "sites",
-        label: t("summary.sites"),
-        value: affectedSiteCount,
-        icon: Bell,
-        tone: "neutral",
-      },
-    ],
-    [affectedSiteCount, records.length, t, unreadCount],
-  )
+  // The empty state splits on what hid the list: an empty cache is a different
+  // problem from a site, read-state or search scope with no match.
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const hasActiveFilters = siteKey !== "all" || unreadFilter !== "all"
+  const showFilteredEmptyState =
+    hasCachedRecords &&
+    filteredRecords.length === 0 &&
+    (hasSearchQuery || hasActiveFilters)
 
   const handleCheckNow = async (surfaceId: ProductAnalyticsSurfaceId) => {
     if (!canRunManualCheck || isChecking) return
@@ -597,20 +579,21 @@ export default function SiteAnnouncementsPage({
         }
       />
 
-      <SiteAnnouncementsSummaryMetrics metrics={metrics} />
-
-      <SiteAnnouncementsFiltersCard
+      <SiteAnnouncementsOverviewCard
         siteKey={siteKey}
-        siteType={siteType}
         unreadFilter={unreadFilter}
         siteOptions={siteOptions}
-        siteTypeOptions={siteTypeOptions}
-        filteredCount={filteredRecords.length}
-        totalCount={records.length}
-        notifiedCount={notifiedCount}
+        allSitesCount={records.length}
+        totalCount={totalCount}
+        unreadCount={unreadCount}
         onSiteKeyChange={setSiteKey}
-        onSiteTypeChange={setSiteType}
         onUnreadFilterChange={setUnreadFilter}
+      />
+
+      <SiteAnnouncementsSearchBar
+        value={searchQuery}
+        resultCount={filteredRecords.length}
+        onChange={setSearchQuery}
       />
 
       {siteKey === "all" && hasAggregateIssues ? (
@@ -663,9 +646,9 @@ export default function SiteAnnouncementsPage({
             title={
               showNoAccountsSetup
                 ? t("empty.noAccounts")
-                : !hasCachedRecords
-                  ? t("empty.title")
-                  : t("empty.filtered")
+                : showFilteredEmptyState
+                  ? t("empty.filtered")
+                  : t("empty.title")
             }
             description={
               showNoAccountsSetup ? (

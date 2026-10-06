@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   buildSiteOptions,
-  buildSiteTypeOptions,
   filterSiteAnnouncements,
   formatAnnouncementTimestamp,
   formatDateTime,
   getAnnouncementSourceUrl,
-  getMetricToneClasses,
+  matchSiteAnnouncementQuery,
 } from "~/features/SiteAnnouncements/utils"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 
@@ -84,7 +83,6 @@ describe("SiteAnnouncements utils", () => {
       filterSiteAnnouncements([record, accountRecord], {
         siteKey: record.siteKey,
         siteKeys: options[0]!.sourceKeys,
-        siteType: "all",
         unreadFilter: "all",
       }),
     ).toHaveLength(2)
@@ -113,7 +111,7 @@ describe("SiteAnnouncements utils", () => {
     )
   })
 
-  it("builds source urls and stable site/type filter options", () => {
+  it("builds source urls and stable site filter options", () => {
     expect(getAnnouncementSourceUrl(record)).toBe(
       "https://example.com/dashboard",
     )
@@ -165,15 +163,9 @@ describe("SiteAnnouncements utils", () => {
       { value: "site-1", label: "Example", announcementCount: 1 },
       { value: "site-3", label: "Gamma", announcementCount: 0 },
     ])
-    expect(
-      buildSiteTypeOptions([
-        record,
-        { ...record, id: "record-2", siteType: "sub2api", fingerprint: "fp-2" },
-      ]),
-    ).toEqual(["new-api", "sub2api"])
   })
 
-  it("filters announcements by site, site type, and read state", () => {
+  it("filters announcements by site and read state", () => {
     const secondRecord: SiteAnnouncementRecord = {
       ...record,
       id: "record-2",
@@ -187,53 +179,62 @@ describe("SiteAnnouncements utils", () => {
     expect(
       filterSiteAnnouncements([record, secondRecord], {
         siteKey: "all",
-        siteType: "all",
         unreadFilter: "all",
       }),
     ).toEqual([record, secondRecord])
     expect(
       filterSiteAnnouncements([record, secondRecord], {
         siteKey: "site-1",
-        siteType: "new-api",
         unreadFilter: "unread",
       }),
     ).toEqual([record])
     expect(
       filterSiteAnnouncements([record, secondRecord], {
         siteKey: "site-1",
-        siteType: "all",
         unreadFilter: "all",
       }),
     ).toEqual([record])
     expect(
       filterSiteAnnouncements([record, secondRecord], {
         siteKey: "all",
-        siteType: "sub2api",
-        unreadFilter: "all",
-      }),
-    ).toEqual([secondRecord])
-    expect(
-      filterSiteAnnouncements([record, secondRecord], {
-        siteKey: "all",
-        siteType: "all",
         unreadFilter: "unread",
       }),
     ).toEqual([record])
-    expect(
-      filterSiteAnnouncements([record, secondRecord], {
-        siteKey: "all",
-        siteType: "all",
-        unreadFilter: "read",
-      }),
-    ).toEqual([secondRecord])
   })
 
-  it("returns tone classes for each metric color", () => {
-    expect(getMetricToneClasses("accent")).toContain("bg-primary-soft")
-    expect(getMetricToneClasses("info")).toContain("bg-info-soft")
-    expect(getMetricToneClasses("neutral")).toContain("bg-muted")
-    expect(getMetricToneClasses("unknown" as any)).toEqual(
-      getMetricToneClasses(undefined as any),
+  it("matches the search query against announcement titles and bodies", () => {
+    const bodyMatch: SiteAnnouncementRecord = {
+      ...record,
+      id: "record-2",
+      siteKey: "site-2",
+      title: "Quota restored",
+      content: "The provider rotated billing infrastructure",
+      fingerprint: "fp-2",
+    }
+
+    expect(matchSiteAnnouncementQuery(record, "")).toBe(true)
+    expect(matchSiteAnnouncementQuery(record, "   ")).toBe(true)
+    expect(matchSiteAnnouncementQuery(record, "notice")).toBe(true)
+    expect(matchSiteAnnouncementQuery(record, "NO")).toBe(true)
+    expect(matchSiteAnnouncementQuery(bodyMatch, "quot")).toBe(true)
+    expect(matchSiteAnnouncementQuery(bodyMatch, "billing")).toBe(true)
+    expect(matchSiteAnnouncementQuery(bodyMatch, "notice")).toBe(false)
+  })
+
+  it("ignores markdown formatting that only appears in raw announcement content", () => {
+    const markdownRecord: SiteAnnouncementRecord = {
+      ...record,
+      id: "record-2",
+      title: "",
+      content: "## Maintenance window\n\n- Second line",
+      fingerprint: "fp-2",
+    }
+
+    expect(matchSiteAnnouncementQuery(markdownRecord, "maintenance")).toBe(true)
+    expect(matchSiteAnnouncementQuery(markdownRecord, "second line")).toBe(true)
+    expect(matchSiteAnnouncementQuery(markdownRecord, "##")).toBe(false)
+    expect(matchSiteAnnouncementQuery(markdownRecord, "announcements:")).toBe(
+      false,
     )
   })
 })

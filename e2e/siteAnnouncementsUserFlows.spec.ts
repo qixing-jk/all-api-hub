@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test"
+
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -37,6 +39,37 @@ const POLLING_SITE_KEY = `site:new-api:${POLLING_SITE_URL}`
 const POLLING_NOTICE_TEXT =
   "Background polling notice. Scheduler fetched this through the MV3 alarm path."
 const POLLING_INTERVAL_MINUTES = 15
+
+/**
+ * The overview card and the search row must both span the content column, and
+ * opening the site selector must not reflow the page.
+ */
+async function assertOverviewAndSearchAreFullWidth(page: Page) {
+  const overviewCard = page.locator('[data-slot="card"]').first()
+  const searchInput = page.getByPlaceholder(
+    "Search announcement title or body...",
+  )
+  const contentWidth = (await page
+    .locator("[data-options-page-content]")
+    .boundingBox())!.width
+  const cardBox = (await overviewCard.boundingBox())!
+  const searchBox = (await searchInput.boundingBox())!
+
+  expect(cardBox.width).toBeGreaterThan(contentWidth * 0.95)
+  expect(searchBox.width).toBeGreaterThan(contentWidth * 0.95)
+
+  // The site options render in a portal layer, so opening the popover must
+  // leave every layout box on the page exactly where it was.
+  await page.getByRole("combobox", { name: "Site", exact: true }).click()
+  await expect(
+    page.getByRole("option", { name: "Announcement Hub A" }),
+  ).toBeVisible()
+  expect(await overviewCard.boundingBox()).toEqual(cardBox)
+  expect(await searchInput.boundingBox()).toEqual(searchBox)
+
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("option")).toHaveCount(0)
+}
 
 async function readSiteAnnouncementsStore(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
@@ -236,14 +269,34 @@ test("filters cached site announcements and marks unread items as read", async (
   ).toBeVisible()
   await expect(page.getByText("Scheduled maintenance window")).toBeVisible()
   await expect(page.getByText("Model quota restored")).toBeVisible()
-  await expect(page.getByText("Showing 2 of 2 announcements")).toBeVisible()
+  await expect(page.getByText("2 results")).toBeVisible()
 
-  await page.getByRole("combobox").nth(2).click()
-  await page.getByRole("option", { name: "Unread" }).click()
+  // The overview card and the search row both span the full content column,
+  // and the site popover floats over the page instead of reserving width.
+  await assertOverviewAndSearchAreFullWidth(page)
+
+  // Both counters double as the read-state filter; the unread one is second.
+  await page.getByRole("button", { name: /^Unread/ }).click()
 
   await expect(page.getByText("Scheduled maintenance window")).toBeVisible()
   await expect(page.getByText("Model quota restored")).toHaveCount(0)
-  await expect(page.getByText(/Showing 1 of 2 announcement/)).toBeVisible()
+  await expect(page.getByText("1 result")).toBeVisible()
+
+  // Search stacks on top of the read-state filter. Skipped announcements stay
+  // hidden by the filter even when they match the query.
+  const searchInput = page.getByPlaceholder(
+    "Search announcement title or body...",
+  )
+  await searchInput.fill("quota")
+  await expect(
+    page.getByText("No announcements match the current filters"),
+  ).toBeVisible()
+
+  await searchInput.fill("maintenance")
+  await expect(page.getByText("Scheduled maintenance window")).toBeVisible()
+  await expect(page.getByText("1 result")).toBeVisible()
+
+  await searchInput.fill("")
 
   await page.getByText("Scheduled maintenance window").click()
   await expect(
@@ -498,123 +551,116 @@ test("virtualizes long cached announcement histories while keeping the last anno
     .toBe(true)
 })
 
-for (const filter of ["site", "site type"] as const) {
-  test(`checks only the selected LaoZhang ${filter} with an empty announcement cache`, async ({
-    context,
-    extensionId,
-    page,
-  }) => {
-    const serviceWorker = await getServiceWorker(context)
-    const laozhangUrl = "https://laozhang-announcements.example.com"
-    const sub2apiUrl = "https://sub2api-announcements.example.com"
-    const laozhangKey = `site:laozhang:${laozhangUrl}`
-    const sub2apiKey = `account:sub2api:sub-account:${sub2apiUrl}`
-    let sub2apiRequests = 0
-    await context.route(`${laozhangUrl}/api/status`, (route) =>
-      route.fulfill({
-        json: {
-          success: true,
-          data: { announcements_enabled: true, announcements: [] },
+test("checks only the selected LaoZhang site with an empty announcement cache", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const laozhangUrl = "https://laozhang-announcements.example.com"
+  const sub2apiUrl = "https://sub2api-announcements.example.com"
+  const laozhangKey = `site:laozhang:${laozhangUrl}`
+  const sub2apiKey = `account:sub2api:sub-account:${sub2apiUrl}`
+  let sub2apiRequests = 0
+  await context.route(`${laozhangUrl}/api/status`, (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: { announcements_enabled: true, announcements: [] },
+      },
+    }),
+  )
+  await context.route(`${laozhangUrl}/api/notice`, (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          content: "LaoZhang selected notice",
+          version: "",
+          audience: "mainland",
         },
-      }),
-    )
-    await context.route(`${laozhangUrl}/api/notice`, (route) =>
-      route.fulfill({
-        json: {
-          success: true,
-          data: {
-            content: "LaoZhang selected notice",
-            version: "",
-            audience: "mainland",
-          },
-        },
-      }),
-    )
-    await context.route(`${laozhangUrl}/api/user/messages**`, (route) =>
-      route.fulfill({
-        json: { success: true, data: { messages: [], total: 0 } },
-      }),
-    )
-    await context.route(`${sub2apiUrl}/api/v1/announcements**`, (route) => {
-      sub2apiRequests += 1
-      return route.fulfill({ json: { data: [] } })
-    })
-    await seedUserPreferences(serviceWorker, {
-      siteAnnouncementNotifications: {
-        enabled: false,
-        notificationEnabled: false,
       },
-    })
-    await seedStoredAccounts(serviceWorker, [
-      createStoredAccount({
-        id: "lz-account",
-        site_name: "LaoZhang Filter Hub",
-        site_url: laozhangUrl,
-        site_type: SITE_TYPES.LAOZHANG,
-      }),
-      createStoredAccount({
-        id: "sub-account",
-        site_name: "Sub2API Filter Hub",
-        site_url: sub2apiUrl,
-        site_type: SITE_TYPES.SUB2API,
-      }),
-    ])
-    await seedSiteAnnouncementsStore(serviceWorker, {
-      [laozhangKey]: {
-        siteKey: laozhangKey,
-        siteName: "LaoZhang Filter Hub",
-        siteType: SITE_TYPES.LAOZHANG,
-        baseUrl: laozhangUrl,
-        accountId: "lz-account",
-        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
-        status: SITE_ANNOUNCEMENT_STATUS.Never,
-        records: [],
-      },
-      [sub2apiKey]: {
-        siteKey: sub2apiKey,
-        siteName: "Sub2API Filter Hub",
-        siteType: SITE_TYPES.SUB2API,
-        baseUrl: sub2apiUrl,
-        accountId: "sub-account",
-        sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
-        status: SITE_ANNOUNCEMENT_STATUS.Never,
-        records: [],
-      },
-    })
-    await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
-    await waitForExtensionRoot(page)
-    await expect(
-      page.getByRole("heading", { name: "Site Announcements", exact: true }),
-    ).toBeVisible()
-    if (filter === "site") {
-      await page.getByRole("combobox", { name: "Site", exact: true }).click()
-      await page.getByRole("option", { name: "LaoZhang Filter Hub" }).click()
-    } else {
-      await page.getByRole("combobox").nth(1).click()
-      await page.getByRole("option", { name: "laozhang", exact: true }).click()
-    }
-    await page
-      .getByRole("button", { name: "Check now", exact: true })
-      .first()
-      .click()
-    await expect(
-      page.getByRole("heading", {
-        name: "LaoZhang selected notice",
-        exact: true,
-      }),
-    ).toBeVisible()
-    const store = await readSiteAnnouncementsStore(serviceWorker)
-    expect(store?.sites[laozhangKey]).toMatchObject({
-      status: SITE_ANNOUNCEMENT_STATUS.Success,
-    })
-    expect(store?.sites[sub2apiKey]).toMatchObject({
+    }),
+  )
+  await context.route(`${laozhangUrl}/api/user/messages**`, (route) =>
+    route.fulfill({
+      json: { success: true, data: { messages: [], total: 0 } },
+    }),
+  )
+  await context.route(`${sub2apiUrl}/api/v1/announcements**`, (route) => {
+    sub2apiRequests += 1
+    return route.fulfill({ json: { data: [] } })
+  })
+  await seedUserPreferences(serviceWorker, {
+    siteAnnouncementNotifications: {
+      enabled: false,
+      notificationEnabled: false,
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "lz-account",
+      site_name: "LaoZhang Filter Hub",
+      site_url: laozhangUrl,
+      site_type: SITE_TYPES.LAOZHANG,
+    }),
+    createStoredAccount({
+      id: "sub-account",
+      site_name: "Sub2API Filter Hub",
+      site_url: sub2apiUrl,
+      site_type: SITE_TYPES.SUB2API,
+    }),
+  ])
+  await seedSiteAnnouncementsStore(serviceWorker, {
+    [laozhangKey]: {
+      siteKey: laozhangKey,
+      siteName: "LaoZhang Filter Hub",
+      siteType: SITE_TYPES.LAOZHANG,
+      baseUrl: laozhangUrl,
+      accountId: "lz-account",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
       status: SITE_ANNOUNCEMENT_STATUS.Never,
       records: [],
-    })
-    expect(store?.sites[sub2apiKey]?.lastCheckedAt).toBeUndefined()
-    expect(sub2apiRequests).toBe(0)
+    },
+    [sub2apiKey]: {
+      siteKey: sub2apiKey,
+      siteName: "Sub2API Filter Hub",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: sub2apiUrl,
+      accountId: "sub-account",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Account,
+      status: SITE_ANNOUNCEMENT_STATUS.Never,
+      records: [],
+    },
   })
-}
+  await page.goto(SITE_ANNOUNCEMENTS_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expect(
+    page.getByRole("heading", { name: "Site Announcements", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("combobox", { name: "Site", exact: true }).click()
+  await page.getByRole("option", { name: "LaoZhang Filter Hub" }).click()
+  await page
+    .getByRole("button", { name: "Check now", exact: true })
+    .first()
+    .click()
+  await expect(
+    page.getByRole("heading", {
+      name: "LaoZhang selected notice",
+      exact: true,
+    }),
+  ).toBeVisible()
+  const store = await readSiteAnnouncementsStore(serviceWorker)
+  expect(store?.sites[laozhangKey]).toMatchObject({
+    status: SITE_ANNOUNCEMENT_STATUS.Success,
+  })
+  expect(store?.sites[sub2apiKey]).toMatchObject({
+    status: SITE_ANNOUNCEMENT_STATUS.Never,
+    records: [],
+  })
+  expect(store?.sites[sub2apiKey]?.lastCheckedAt).toBeUndefined()
+  expect(sub2apiRequests).toBe(0)
+})
 
 test("polls independent account Message centers alongside one shared public source", async ({
   context,
@@ -851,7 +897,7 @@ test("polls site announcements through the MV3 alarm scheduler and stores fetche
     page.getByRole("heading", { name: "Background polling notice" }),
   ).toBeVisible()
   await expect(page.getByText(POLLING_SITE_NAME)).toBeVisible()
-  await expect(page.getByText("Showing 1 of 1 announcement")).toBeVisible()
+  await expect(page.getByText("1 result")).toBeVisible()
 })
 
 test("reconciles, filters, and clears site announcement MV3 alarms", async ({
