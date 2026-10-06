@@ -254,6 +254,7 @@ const toFacts = (
     })
   }
   return {
+    keyCleanupBaseUrls: [getBaseUrl(account)],
     ref,
     displayName: account.name || `Sub2API account ${account.id}`,
     status: normalizedStatus,

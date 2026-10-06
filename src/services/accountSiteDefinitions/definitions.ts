@@ -60,6 +60,7 @@ import {
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
   MANAGED_RESOURCE_KINDS,
+  type AccountSiteBackendFamily,
   type AccountSiteDefinition,
   type AccountSiteLoginConfig,
   type ManagedResourceProductPolicy,
@@ -1417,3 +1418,13 @@ export const SITE_TYPE_DEFINITIONS: readonly AccountSiteDefinition[] = [
   ...COMPATIBLE_ACCOUNT_SITE_DEFINITIONS,
   ...MANAGED_ONLY_SITE_DEFINITIONS,
 ]
+
+/** Derives family membership from account registrations without a second site list. */
+export type AccountSiteTypeForAdapterFamily<
+  Family extends AccountSiteBackendFamily,
+> = Extract<
+  | (typeof ACCOUNT_SITE_DEFINITIONS)[number]
+  | (typeof ACCOUNT_SITE_DEFINITION_OVERRIDES)[number]
+  | (typeof COMPATIBLE_ACCOUNT_SITE_DEFINITIONS)[number],
+  { adapterFamily: Family }
+>["siteType"]

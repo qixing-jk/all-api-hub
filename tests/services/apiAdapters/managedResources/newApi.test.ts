@@ -141,6 +141,12 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("New API native managed resource", () => {
+  it("projects native cleanup URLs independently of display fields", async () => {
+    const api = await newApiManagedResourceRegistration.open()
+    const page = await api.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([channel.base_url])
+  })
+
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.getPreferences.mockResolvedValue({ newApi: config })

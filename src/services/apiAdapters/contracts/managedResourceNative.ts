@@ -94,7 +94,7 @@ export type ResourceDisplayFacts = {
   fields: readonly ResourceDisplayFact[]
   /** Safe, non-rendered values used by the shared local search index. */
   searchValues?: readonly string[]
-  /** All known upstream URLs for key cleanup; an empty list requires reading detail. */
+  /** All known upstream URLs for key cleanup. Absent or empty requires reading detail; display fields are not cleanup evidence. */
   keyCleanupBaseUrls?: readonly string[]
   actions: {
     canUpdate: boolean

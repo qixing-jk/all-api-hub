@@ -317,6 +317,7 @@ const toFacts = (
   ]
 
   return {
+    keyCleanupBaseUrls: [detail.url ?? ""],
     ref,
     displayName: detail.name || `Provider ${detail.id}`,
     status,

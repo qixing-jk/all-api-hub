@@ -202,14 +202,7 @@ export async function prepareLinkedChannelCleanup(
     const page = await bounded((options) => workspace.list({ cursor }, options))
     received += page.items.length
     for (const item of page.items) {
-      const urls =
-        item.keyCleanupBaseUrls ??
-        item.fields.flatMap((field) =>
-          field.kind === "text" &&
-          (field.fieldId === "baseURL" || field.fieldId.endsWith(".baseUrl"))
-            ? [field.value]
-            : [],
-        )
+      const urls = item.keyCleanupBaseUrls ?? []
       if (urls.some((url) => url.trim()) && !matchesUrl(urls, input.baseUrl))
         continue
       const identity = getManagedResourceRefKey(item.ref)

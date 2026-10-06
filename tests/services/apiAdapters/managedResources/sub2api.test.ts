@@ -209,6 +209,9 @@ describe("Sub2API native managed resource", () => {
   it("uses native account search for non-empty display queries and shows safe facts", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
     const page = await workspace.list({ search: "Primary upstream" })
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([
+      account.credentials.base_url,
+    ])
 
     expect(mocks.searchAccounts).toHaveBeenCalledWith(
       config,

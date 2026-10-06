@@ -88,6 +88,7 @@ function toFacts(
   const value = resource.value
   const name = value.name || value["base-url"] || resource.kind
   return {
+    keyCleanupBaseUrls: [value["base-url"] ?? ""],
     ref,
     displayName: name,
     status:

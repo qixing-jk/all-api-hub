@@ -935,6 +935,7 @@ const toFacts = (
   const status = toStatus(channel.status)
   const supportedState = status !== MANAGED_RESOURCE_STATUSES.Unknown
   return {
+    keyCleanupBaseUrls: [channel.baseURL ?? ""],
     ref,
     displayName: channel.name,
     status,
