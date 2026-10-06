@@ -95,11 +95,20 @@ export async function prepareDefaultAccountKeyCreationInSession(
     return {
       kind: "ready",
       create: () =>
-        (result ??= Promise.resolve().then(async () => {
-          options.signal?.throwIfAborted()
-          const created = await editor.submit(editor.initialValues, options)
-          return { ...created, ref: created.facts?.ref ?? null }
-        })),
+        (result ??= Promise.resolve()
+          .then(async () => {
+            options.signal?.throwIfAborted()
+            const created = await editor.submit(editor.initialValues, options)
+            return { ...created, ref: created.facts?.ref ?? null }
+          })
+          .catch((error) => {
+            if (
+              error instanceof AccountKeyResourceError &&
+              error.mutationCertainty === "not-applied"
+            )
+              result = undefined
+            throw error
+          })),
     }
   }
 
@@ -126,12 +135,15 @@ export async function prepareDefaultAccountKeyCreationInSession(
       if (mutation.certainty !== "applied") {
         // Only a proved non-write may be retried. Keep uncertain outcomes cached.
         if (mutation.certainty === "not-applied") result = undefined
-        throw new AccountKeyResourceError({
-          ...mutation.failure,
-          ...(mutation.certainty === "possibly-applied"
-            ? { code: "mutation_state_uncertain" as const }
-            : {}),
-        })
+        throw new AccountKeyResourceError(
+          {
+            ...mutation.failure,
+            ...(mutation.certainty === "possibly-applied"
+              ? { code: "mutation_state_uncertain" as const }
+              : {}),
+          },
+          mutation.certainty,
+        )
       }
       const { ref, createdSecret } = mutation.value
       let facts: AccountKeyResourceFacts | null = null

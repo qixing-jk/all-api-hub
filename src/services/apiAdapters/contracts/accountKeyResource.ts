@@ -258,7 +258,11 @@ export type AccountKeyResourcePage = {
 }
 
 export class AccountKeyResourceError extends Error {
-  constructor(readonly failure: ResourceFailure) {
+  constructor(
+    readonly failure: ResourceFailure,
+    /** Only explicit mutation evidence may authorize a retry after submit. */
+    readonly mutationCertainty?: "not-applied" | "possibly-applied",
+  ) {
     super(failure.message?.trim() || failure.code)
     this.name = "AccountKeyResourceError"
   }

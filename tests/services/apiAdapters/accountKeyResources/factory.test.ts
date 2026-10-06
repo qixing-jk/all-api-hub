@@ -678,6 +678,9 @@ describe("defineAccountKeyResourceCapability", () => {
       submitError = error
     }
     expect(submitError).toBeInstanceOf(AccountKeyResourceError)
+    expect((submitError as AccountKeyResourceError).mutationCertainty).toBe(
+      "not-applied",
+    )
     expect((submitError as AccountKeyResourceError).failure).toEqual({
       code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
       fieldIssues: [
@@ -1061,6 +1064,7 @@ describe("defineAccountKeyResourceCapability", () => {
       retryingEditor.submit({ name: "First" }),
     ).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied },
+      mutationCertainty: "not-applied",
     })
     await expect(
       retryingEditor.submit({ name: "Recovered" }),

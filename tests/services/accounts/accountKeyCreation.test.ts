@@ -91,6 +91,33 @@ const setup = (owner: DisplaySiteData, policy = "editor-defaults") => {
 }
 
 describe("native account key creation", () => {
+  it("does not replay default editor creation after an unclassified submit failure", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    const failure = new AccountKeyResourceError({ code: "unavailable" })
+    submit.mockRejectedValue(failure)
+    const plan = await prepareDefaultAccountKeyCreation(owner)
+    if (plan.kind !== "ready") throw new Error("Expected default creation")
+    await expect(plan.create()).rejects.toBe(failure)
+    await expect(plan.create()).rejects.toBe(failure)
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("retries default editor creation only after an explicit non-write", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    submit.mockRejectedValueOnce(
+      new AccountKeyResourceError({ code: "unavailable" }, "not-applied"),
+    )
+    const plan = await prepareDefaultAccountKeyCreation(owner)
+    if (plan.kind !== "ready") throw new Error("Expected default creation")
+    await expect(plan.create()).rejects.toMatchObject({
+      mutationCertainty: "not-applied",
+    })
+    await expect(plan.create()).resolves.toMatchObject({ facts: facts(owner) })
+    expect(submit).toHaveBeenCalledTimes(2)
+  })
+
   beforeEach(() => {
     context.mockReset()
     inventory.mockReset()

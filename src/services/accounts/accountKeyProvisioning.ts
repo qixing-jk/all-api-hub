@@ -72,7 +72,8 @@ function once(
   guards: WriteGuards,
   identity: string,
   operation: (
-    values?: EditableResourceProjection,
+    values: EditableResourceProjection | undefined,
+    markWriteStarted: () => void,
   ) => Promise<AccountKeyCreationResult>,
 ) {
   let pending: Promise<AccountKeyCreationResult> | undefined
@@ -80,17 +81,34 @@ function once(
     (pending ??= Promise.resolve().then(async () => {
       assertWritable(guards, identity)
       guards.set(identity, "pending")
+      let writeStarted = false
       try {
-        const result = await operation(values)
+        const result = await operation(values, () => {
+          writeStarted = true
+        })
         guards.set(identity, "applied")
         return result
       } catch (error) {
         if (
-          error instanceof AccountKeyResourceError &&
-          error.failure.code === "mutation_state_uncertain"
-        )
+          (error instanceof AccountKeyResourceError &&
+            error.failure.code === "mutation_state_uncertain") ||
+          (writeStarted &&
+            !(
+              error instanceof AccountKeyResourceError &&
+              error.mutationCertainty === "not-applied"
+            ))
+        ) {
           guards.set(identity, "uncertain")
-        else {
+          if (
+            error instanceof AccountKeyResourceError &&
+            error.failure.code === "mutation_state_uncertain"
+          )
+            throw error
+          throw new AccountKeyResourceError(
+            { code: "mutation_state_uncertain" },
+            "possibly-applied",
+          )
+        } else {
           guards.delete(identity)
           pending = undefined
         }
@@ -163,7 +181,7 @@ async function preparePlan(
     key,
     label,
     editor,
-    create: once(guards, identity(key), async (values) => {
+    create: once(guards, identity(key), async (values, markWriteStarted) => {
       options.signal?.throwIfAborted()
       const projection = values ?? editor.initialValues
       const validation = editor.validate(projection)
@@ -172,6 +190,7 @@ async function preparePlan(
           code: "validation_failed",
           fieldIssues: validation.issues,
         })
+      markWriteStarted()
       const created = await editor.submit(projection, options)
       return { ...created, ref: created.facts?.ref ?? null }
     }),
@@ -223,19 +242,23 @@ async function preparePlan(
           create: once(
             guards,
             identity(requirement.requirementKey),
-            async () => {
+            async (_values, markWriteStarted) => {
               options.signal?.throwIfAborted()
+              markWriteStarted()
               const result = await provisioning.provision(
                 requirement.requirementKey,
                 options,
               )
               if (result.certainty !== "applied")
-                throw new AccountKeyResourceError({
-                  ...result.failure,
-                  ...(result.certainty === "possibly-applied"
-                    ? { code: "mutation_state_uncertain" as const }
-                    : {}),
-                })
+                throw new AccountKeyResourceError(
+                  {
+                    ...result.failure,
+                    ...(result.certainty === "possibly-applied"
+                      ? { code: "mutation_state_uncertain" as const }
+                      : {}),
+                  },
+                  result.certainty,
+                )
               const { ref, createdSecret } = result.value
               let facts: AccountKeyCreationResult["facts"] = null
               try {
@@ -267,7 +290,15 @@ async function preparePlan(
         {
           key: "default",
           label: source.label,
-          create: once(guards, identity("default"), () => defaultPlan.create()),
+          create: once(
+            guards,
+            identity("default"),
+            (_values, markWriteStarted) => {
+              options.signal?.throwIfAborted()
+              markWriteStarted()
+              return defaultPlan.create()
+            },
+          ),
         },
       ],
     }

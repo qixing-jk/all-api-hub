@@ -171,10 +171,13 @@ export type AccountKeyResourceDefinition<
 }
 
 const validationFailure = (fieldIssues?: readonly ResourceFieldIssue[]) =>
-  new AccountKeyResourceError({
-    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-    ...(fieldIssues === undefined ? {} : { fieldIssues }),
-  })
+  new AccountKeyResourceError(
+    {
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+      ...(fieldIssues === undefined ? {} : { fieldIssues }),
+    },
+    "not-applied",
+  )
 
 const unexpectedFailure = () =>
   new AccountKeyResourceError({
@@ -496,6 +499,7 @@ export function defineAccountKeyResourceCapability<
               if (resolution.status === "not-applied") {
                 throw new AccountKeyResourceError(
                   mapFailure(resolution.failure),
+                  "not-applied",
                 )
               }
               const failure = mapFailure(resolution.failure)
