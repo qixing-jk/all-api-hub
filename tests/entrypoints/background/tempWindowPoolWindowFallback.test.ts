@@ -1900,7 +1900,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 605 })
 
     const { handleCloseTempWindow, tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     const contextPending = tempWindowBackgroundRuntime.acquire(
       "https://example.invalid/settings/management-keys",
@@ -3709,7 +3709,7 @@ describe("tempWindowPool window fallback", () => {
 
   it("dispatches an authorized feedback task with its acquisition policy and reply", async () => {
     const { executeAuthorizedTempContextTask } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/taskDispatch"
     )
     const params = {
       originUrl: "https://example.com",
@@ -3742,7 +3742,7 @@ describe("tempWindowPool window fallback", () => {
       return { id: 509 }
     })
     const { tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     await expect(
       tempWindowBackgroundRuntime.acquire(
@@ -3760,7 +3760,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 508 })
     tabsGetMock.mockResolvedValue({ status: "loading" })
     const { tempWindowBackgroundRuntime } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~/services/browsingContext/tempPage/runtime"
     )
     const controller = new AbortController()
     const pending = tempWindowBackgroundRuntime.acquire(

@@ -1,12 +1,12 @@
-import {
-  cancelTempWindowOpenRouterManagementKeyAction,
-  handleTempWindowOpenRouterManagementKeyAction as handleProductionAction,
-  markTempWindowOpenRouterManagementKeyDispatched,
-} from "~/entrypoints/background/openrouter/managementKeyAction"
 import type {
   TempWindowOpenRouterManagementKeyActionParams,
   TempWindowOpenRouterManagementKeyActionResult,
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+import {
+  cancelTempWindowOpenRouterManagementKeyAction,
+  handleTempWindowOpenRouterManagementKeyAction as handleProductionAction,
+  markTempWindowOpenRouterManagementKeyDispatched,
+} from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
 
 const authorizeTestAcquire = async () => ({
   kind: "allowed" as const,

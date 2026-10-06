@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
 import {
   cancelTempCheckinFeedbackScan,
   executeTempCheckinFeedbackScan,
-} from "~/entrypoints/background/checkinFeedbackScan"
-import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
+} from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
 import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"

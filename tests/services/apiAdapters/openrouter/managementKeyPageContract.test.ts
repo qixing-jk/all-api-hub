@@ -253,7 +253,7 @@ describe("OpenRouter Management Key page contract", () => {
 
   it("is the shared contract imported by background and content consumers", () => {
     const consumerPaths = [
-      "../../../../src/entrypoints/background/openrouter/managementKeyAction.ts",
+      "../../../../src/services/browsingContext/tempPage/openrouterManagementKeyAction.ts",
       "../../../../src/entrypoints/content/messageHandlers/handlers/openRouterManagementKey.ts",
       "../../../../src/entrypoints/content/messageHandlers/openrouter/managementKeyPage.ts",
     ]

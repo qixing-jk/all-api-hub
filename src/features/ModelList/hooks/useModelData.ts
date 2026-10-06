@@ -7,11 +7,6 @@ import { useAllAccountsModelData } from "./useAllAccountsModelData"
 import { useProfileModelData } from "./useProfileModelData"
 import { useSingleAccountModelData } from "./useSingleAccountModelData"
 
-export type {
-  AccountFallbackControls,
-  PersonalizedCatalogFallbackControls,
-} from "./modelDataTypes"
-
 /**
  * Provides model pricing data for either a single account or all accounts.
  * @param params Hook input parameters.

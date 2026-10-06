@@ -14,7 +14,7 @@ import {
   Spinner,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
+import type { AccountFallbackControls } from "~/features/ModelList/hooks/modelDataTypes"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,

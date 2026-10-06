@@ -3,6 +3,8 @@ import {
   API_ERROR_CODES,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import { type AuthorizeTempContextAtAcquire } from "~/services/browsingContext/tempPage/contracts"
+import { executeAuthorizedTempContextTask } from "~/services/browsingContext/tempPage/taskDispatch"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import {
   DEFAULT_PREFERENCES,
@@ -49,10 +51,6 @@ import {
   validateProtectionBypassTaskResource,
   type ValidateProtectionBypassTaskResource,
 } from "./protectionBypassResourceValidation"
-import {
-  executeAuthorizedTempContextTask,
-  type AuthorizeTempContextAtAcquire,
-} from "./tempWindowPool"
 
 type ExecuteAuthorizedTask = (
   task: TempContextTask,

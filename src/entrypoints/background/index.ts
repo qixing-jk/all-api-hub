@@ -1,12 +1,12 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
-import {
-  cleanupTempContextsOnSuspend,
-  setupTempWindowListeners,
-} from "~/entrypoints/background/tempWindowPool"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
+import {
+  cleanupTempContextsOnSuspend,
+  setupTempWindowListeners,
+} from "~/services/browsingContext/tempPage/runtime"
 import { appendLogHistory } from "~/services/logging/logHistory"
 import {
   hasNewOptionalPermissions,

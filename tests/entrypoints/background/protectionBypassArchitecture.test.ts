@@ -23,7 +23,7 @@ const tempWindowFetchPath = path.join(
 )
 const tempWindowPoolPath = path.join(
   repoRoot,
-  "src/entrypoints/background/tempWindowPool.ts",
+  "src/services/browsingContext/tempPage/taskDispatch.ts",
 )
 const tempWindowTypesPath = path.join(repoRoot, "src/types/tempWindowFetch.ts")
 const protectionBypassContractsPath = path.join(
@@ -1059,24 +1059,17 @@ describe("protection bypass architecture", () => {
         new RegExp(`\\b${browserCall}\\(`),
       )
     }
-    const entrypoint = parseSource(source, tempWindowPoolPath)
-    const exportedNames = entrypoint.statements
-      .flatMap((statement) =>
-        ts.isExportDeclaration(statement) &&
-        !statement.isTypeOnly &&
-        statement.exportClause &&
-        ts.isNamedExports(statement.exportClause)
-          ? statement.exportClause.elements.map((element) => element.name.text)
-          : [],
-      )
-      .sort()
-    expect(exportedNames).toEqual([
-      "cleanupTempContextsOnSuspend",
-      "executeAuthorizedTempContextTask",
-      "handleCloseTempWindow",
-      "setupTempWindowListeners",
-      "tempWindowBackgroundRuntime",
-    ])
+    const dispatcher = parseSource(source, tempWindowPoolPath)
+    const exportedFunctions = dispatcher.statements.flatMap((statement) =>
+      ts.isFunctionDeclaration(statement) &&
+      statement.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+      ) &&
+      statement.name
+        ? [statement.name.text]
+        : [],
+    )
+    expect(exportedFunctions).toEqual(["executeAuthorizedTempContextTask"])
     expect(source).not.toMatch(/createTab|createWindow|acquireTempContext/)
   })
 
@@ -1176,8 +1169,8 @@ describe("protection bypass architecture", () => {
       /export\s+async\s+function\s+tempWindowGetRenderedTitle\b/,
     )
     expect(poolSource).toMatch(/async\s+function\s+executeOpenTempContext\b/)
-    expect(await fs.readFile(tempWindowPoolPath, "utf8")).not.toContain(
-      "executeOpenTempContext",
+    expect(await fs.readFile(tempWindowPoolPath, "utf8")).not.toMatch(
+      /export[\s\S]*?from["'][^"']*sessionTasks/,
     )
     expect(contractsSource).toMatch(
       /export\s+interface\s+OpenTempContextParams\b/,

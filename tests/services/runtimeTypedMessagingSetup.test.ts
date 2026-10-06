@@ -1002,7 +1002,7 @@ describe("typed runtime messaging setup", () => {
       }
     })
 
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/taskDispatch", () => ({
       executeAuthorizedTempContextTask,
     }))
     vi.doMock("~/services/history/dailyBalanceHistory/messaging", () => ({
@@ -1385,7 +1385,7 @@ describe("typed runtime messaging setup", () => {
       items: [],
     })
 
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/taskDispatch", () => ({
       executeAuthorizedTempContextTask,
     }))
     vi.doMock("~/services/preferences/userPreferences", async () => {
@@ -1485,7 +1485,9 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import("~/services/checkin/autoCheckin/scheduler")
+    const scheduler = await import(
+      "~/services/checkin/autoCheckin/schedulerMessaging"
+    )
 
     scheduler.setupAutoCheckinMessagingListeners()
     scheduler.setupAutoCheckinMessagingListeners()
@@ -1541,49 +1543,50 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import("~/services/checkin/autoCheckin/scheduler")
-    vi.spyOn(scheduler.autoCheckinScheduler, "runCheckins").mockImplementation(
+    const scheduler = await import(
+      "~/services/checkin/autoCheckin/schedulerMessaging"
+    )
+    const { autoCheckinScheduler } = await import(
+      "~/services/checkin/autoCheckin/schedulerCore"
+    )
+    vi.spyOn(autoCheckinScheduler, "runCheckins").mockImplementation(
       runCheckins,
     )
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugTriggerDailyAlarmNow",
     ).mockImplementation(debugTriggerDailyAlarmNow)
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugTriggerRetryAlarmNow",
     ).mockImplementation(debugTriggerRetryAlarmNow)
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugResetLastDailyRunDay",
     ).mockImplementation(debugResetLastDailyRunDay)
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugScheduleDailyAlarmForToday",
     ).mockImplementation(debugScheduleDailyAlarmForToday)
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "pretriggerDailyOnUiOpen",
     ).mockImplementation(pretriggerDailyOnUiOpen)
-    vi.spyOn(scheduler.autoCheckinScheduler, "retryAccount").mockImplementation(
+    vi.spyOn(autoCheckinScheduler, "retryAccount").mockImplementation(
       retryAccount,
     )
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "verifyAccountStatus",
-    ).mockImplementation(verifyAccountStatus)
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "getAccountDisplayData",
-    ).mockImplementation(getAccountDisplayData)
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "updateSettings",
-    ).mockImplementation(updateSettings)
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "scheduleNextRun",
-    ).mockImplementation(scheduleNextRun)
+    vi.spyOn(autoCheckinScheduler, "verifyAccountStatus").mockImplementation(
+      verifyAccountStatus,
+    )
+    vi.spyOn(autoCheckinScheduler, "getAccountDisplayData").mockImplementation(
+      getAccountDisplayData,
+    )
+    vi.spyOn(autoCheckinScheduler, "updateSettings").mockImplementation(
+      updateSettings,
+    )
+    vi.spyOn(autoCheckinScheduler, "scheduleNextRun").mockImplementation(
+      scheduleNextRun,
+    )
 
     scheduler.setupAutoCheckinMessagingListeners()
 
@@ -1881,7 +1884,7 @@ describe("typed runtime messaging setup", () => {
     )
     let savedStatus: unknown = null
 
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/taskDispatch", () => ({
       executeAuthorizedTempContextTask,
     }))
     vi.doMock("~/services/checkin/autoCheckin/messaging", () => ({
@@ -2054,7 +2057,9 @@ describe("typed runtime messaging setup", () => {
     const execution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
     )
-    const scheduler = await import("~/services/checkin/autoCheckin/scheduler")
+    const scheduler = await import(
+      "~/services/checkin/autoCheckin/schedulerMessaging"
+    )
     scheduler.setupAutoCheckinMessagingListeners()
 
     await expect(
@@ -2112,45 +2117,46 @@ describe("typed runtime messaging setup", () => {
       },
     }))
 
-    const scheduler = await import("~/services/checkin/autoCheckin/scheduler")
-    vi.spyOn(scheduler.autoCheckinScheduler, "runCheckins").mockRejectedValue(
+    const scheduler = await import(
+      "~/services/checkin/autoCheckin/schedulerMessaging"
+    )
+    const { autoCheckinScheduler } = await import(
+      "~/services/checkin/autoCheckin/schedulerCore"
+    )
+    vi.spyOn(autoCheckinScheduler, "runCheckins").mockRejectedValue(
       new Error("run failed"),
     )
+    vi.spyOn(autoCheckinScheduler, "scheduleNextRun").mockRejectedValue(
+      new Error("reschedule failed"),
+    )
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "scheduleNextRun",
-    ).mockRejectedValue(new Error("reschedule failed"))
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugTriggerDailyAlarmNow",
     ).mockRejectedValue(new Error("daily debug failed"))
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugTriggerRetryAlarmNow",
     ).mockRejectedValue(new Error("retry debug failed"))
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugResetLastDailyRunDay",
     ).mockRejectedValue(new Error("reset failed"))
     vi.spyOn(
-      scheduler.autoCheckinScheduler,
+      autoCheckinScheduler,
       "debugScheduleDailyAlarmForToday",
     ).mockRejectedValue(new Error("schedule today failed"))
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "pretriggerDailyOnUiOpen",
-    ).mockRejectedValue(new Error("pretrigger failed"))
-    vi.spyOn(scheduler.autoCheckinScheduler, "retryAccount").mockRejectedValue(
+    vi.spyOn(autoCheckinScheduler, "pretriggerDailyOnUiOpen").mockRejectedValue(
+      new Error("pretrigger failed"),
+    )
+    vi.spyOn(autoCheckinScheduler, "retryAccount").mockRejectedValue(
       new Error("retry failed"),
     )
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "getAccountDisplayData",
-    ).mockRejectedValue(new Error("account info failed"))
-    vi.spyOn(
-      scheduler.autoCheckinScheduler,
-      "updateSettings",
-    ).mockRejectedValue(new Error("settings failed"))
+    vi.spyOn(autoCheckinScheduler, "getAccountDisplayData").mockRejectedValue(
+      new Error("account info failed"),
+    )
+    vi.spyOn(autoCheckinScheduler, "updateSettings").mockRejectedValue(
+      new Error("settings failed"),
+    )
 
     scheduler.setupAutoCheckinMessagingListeners()
 

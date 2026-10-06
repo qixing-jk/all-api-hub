@@ -103,7 +103,7 @@ describe("OpenRouter Management Key temp-context port", () => {
 
   it("fails closed when Coordinator authorization is omitted", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
     )
     const sendResponse = vi.fn()
 

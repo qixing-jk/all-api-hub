@@ -127,7 +127,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
     }))
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/runtime", () => ({
       cleanupTempContextsOnSuspend: vi.fn().mockResolvedValue(undefined),
       setupTempWindowListeners: vi.fn(),
     }))
@@ -215,7 +215,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/services/updates/changelogIndex")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
-    vi.doUnmock("~/entrypoints/background/tempWindowPool")
+    vi.doUnmock("~/services/browsingContext/tempPage/runtime")
     vi.doUnmock("~/entrypoints/background/contextMenus")
     vi.doUnmock("~/entrypoints/background/cookieInterceptor")
     vi.doUnmock("~/entrypoints/background/devActionBranding")

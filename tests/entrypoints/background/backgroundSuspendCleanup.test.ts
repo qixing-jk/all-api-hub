@@ -119,7 +119,7 @@ describe("background onSuspend temp-context cleanup", () => {
       }
     })
 
-    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+    vi.doMock("~/services/browsingContext/tempPage/runtime", () => ({
       cleanupTempContextsOnSuspend: cleanupTempContextsOnSuspendMock,
       setupTempWindowListeners: vi.fn(),
     }))
@@ -214,7 +214,7 @@ describe("background onSuspend temp-context cleanup", () => {
     delete (globalThis as any).defineBackground
 
     vi.doUnmock("~/utils/browser/browserApi")
-    vi.doUnmock("~/entrypoints/background/tempWindowPool")
+    vi.doUnmock("~/services/browsingContext/tempPage/runtime")
     vi.doUnmock("~/entrypoints/background/tempContextReclamation")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
     vi.doUnmock("~/entrypoints/background/contextMenus")

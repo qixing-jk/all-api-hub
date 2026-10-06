@@ -4,7 +4,7 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
-import { resolveTempContextOpenMode } from "~/entrypoints/background/tempContextModeResolver"
+import { resolveTempContextOpenMode } from "~/services/browsingContext/tempPage/tempContextModeResolver"
 import { BROWSER_FOCUS_STATES } from "~/utils/browser/browserFocus"
 
 describe("resolveTempContextOpenMode", () => {

@@ -1,9 +1,9 @@
 import {
   cleanupTempContextsOnSuspend,
-  executeAuthorizedTempContextTask as executeAuthorizedProductionTask,
   handleCloseTempWindow,
   setupTempWindowListeners,
-} from "~/entrypoints/background/tempWindowPool"
+} from "~/services/browsingContext/tempPage/runtime"
+import { executeAuthorizedTempContextTask as executeAuthorizedProductionTask } from "~/services/browsingContext/tempPage/taskDispatch"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

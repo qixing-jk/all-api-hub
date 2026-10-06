@@ -1,5 +1,5 @@
 import { autoRefreshService } from "~/services/accounts/autoRefreshService"
-import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduler"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/schedulerCore"
 import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHistory/scheduler"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { legacyChannelConfigMigration } from "~/services/managedSites/legacyChannelConfigMigration"

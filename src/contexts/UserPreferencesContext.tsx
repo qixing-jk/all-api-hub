@@ -56,8 +56,6 @@ import { useDisplayPreferenceActions } from "./userPreferences/useDisplayPrefere
 import { useManagedSitePreferenceActions } from "./userPreferences/useManagedSitePreferenceActions"
 import { useRuntimePreferenceActions } from "./userPreferences/useRuntimePreferenceActions"
 
-export type { PreferenceSaveOptions } from "./userPreferences/preferenceContextTypes"
-
 const logger = createLogger("UserPreferencesContext")
 
 const UserPreferencesContext = createContext<

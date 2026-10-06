@@ -71,7 +71,7 @@ const mocks = vi.hoisted(() => ({
   trackStarPromotionAction: vi.fn(),
 }))
 
-vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
+vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
   cancelTempCheckinFeedbackScan: mocks.cancelTempCheckinFeedbackScan,
 }))
 
@@ -115,18 +115,21 @@ vi.mock("~/utils/navigation", () => ({
   openBugReportPage: mocks.openBugReportPage,
 }))
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   handleCloseTempWindow: mocks.handleCloseTempWindow,
 }))
 
-vi.mock("~/entrypoints/background/openrouter/managementKeyAction", () => ({
-  handleTempWindowOpenRouterManagementKeyAction:
-    mocks.handleTempWindowOpenRouterManagementKeyAction,
-  cancelTempWindowOpenRouterManagementKeyAction:
-    mocks.cancelTempWindowOpenRouterManagementKeyAction,
-  markTempWindowOpenRouterManagementKeyDispatched:
-    mocks.markTempWindowOpenRouterManagementKeyDispatched,
-}))
+vi.mock(
+  "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
+  () => ({
+    handleTempWindowOpenRouterManagementKeyAction:
+      mocks.handleTempWindowOpenRouterManagementKeyAction,
+    cancelTempWindowOpenRouterManagementKeyAction:
+      mocks.cancelTempWindowOpenRouterManagementKeyAction,
+    markTempWindowOpenRouterManagementKeyDispatched:
+      mocks.markTempWindowOpenRouterManagementKeyDispatched,
+  }),
+)
 
 vi.mock("~/services/models/modelSync", () => ({
   setupManagedSiteModelSyncMessagingListeners:
@@ -138,7 +141,7 @@ vi.mock("~/services/updates/releaseUpdateService", () => ({
     mocks.setupReleaseUpdateMessagingListeners,
 }))
 
-vi.mock("~/services/checkin/autoCheckin/scheduler", () => ({
+vi.mock("~/services/checkin/autoCheckin/schedulerMessaging", () => ({
   setupAutoCheckinMessagingListeners: mocks.setupAutoCheckinMessagingListeners,
 }))
 
