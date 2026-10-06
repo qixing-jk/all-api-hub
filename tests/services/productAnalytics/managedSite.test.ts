@@ -13,6 +13,12 @@ describe("product analytics managed-site helpers", () => {
     [SITE_TYPES.AXON_HUB, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub],
     [SITE_TYPES.SUB2API, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Sub2Api],
     [
+      SITE_TYPES.CLI_PROXY_API,
+      PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.CliProxyApi,
+    ],
+    [SITE_TYPES.OMNIROUTE, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.OmniRoute],
+    [SITE_TYPES.GPT_LOAD, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.GptLoad],
+    [
       SITE_TYPES.CLAUDE_CODE_HUB,
       PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.ClaudeCodeHub,
     ],
@@ -26,6 +32,9 @@ describe("product analytics managed-site helpers", () => {
     SITE_TYPES.AIHUBMIX,
     SITE_TYPES.UNKNOWN,
     "private-fork",
+    "constructor",
+    "toString",
+    "__proto__",
     undefined,
   ])(
     "returns undefined for non-managed or unknown site type %s",

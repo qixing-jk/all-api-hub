@@ -42,10 +42,10 @@ import {
   PRODUCT_ANALYTICS_SORT_FIELDS,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsEventPayload,
-  type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
 } from "./contracts"
 import { trackProductAnalyticsEvent } from "./dispatch"
+import { resolveProductAnalyticsManagedSiteType } from "./managedSite"
 import {
   SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY,
   SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
@@ -168,23 +168,6 @@ function isSortingPriorityCustomized(
       defaultCriterion.priority !== criterion.priority
     )
   })
-}
-
-function isManagedSiteType(
-  value: UserPreferences["managedSiteType"],
-): value is ProductAnalyticsManagedSiteType {
-  return (
-    value === SITE_TYPES.NEW_API ||
-    value === SITE_TYPES.VELOERA ||
-    value === SITE_TYPES.DONE_HUB ||
-    value === SITE_TYPES.OCTOPUS ||
-    value === SITE_TYPES.AXON_HUB ||
-    value === SITE_TYPES.CLAUDE_CODE_HUB ||
-    value === SITE_TYPES.CLI_PROXY_API ||
-    value === SITE_TYPES.SUB2API ||
-    value === SITE_TYPES.OMNIROUTE ||
-    value === SITE_TYPES.GPT_LOAD
-  )
 }
 
 function hasText(value: unknown): boolean {
@@ -449,9 +432,9 @@ function buildManagedSiteSnapshot(
   return {
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
     entrypoint,
-    managed_site_type: isManagedSiteType(preferences.managedSiteType)
-      ? preferences.managedSiteType
-      : SITE_TYPES.NEW_API,
+    managed_site_type:
+      resolveProductAnalyticsManagedSiteType(preferences.managedSiteType) ??
+      SITE_TYPES.NEW_API,
     new_api_configured: isNewApiConfigured(preferences.newApi),
     done_hub_configured: isDoneHubConfigured(preferences.doneHub),
     veloera_configured: isVeloeraConfigured(preferences.veloera),
