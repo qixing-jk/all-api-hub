@@ -283,6 +283,7 @@ export function useAccountRowActions({
   const PinToggleIcon = isPinned ? PinOff : Pin
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
       inviteLinkAbortControllerRef.current?.abort()

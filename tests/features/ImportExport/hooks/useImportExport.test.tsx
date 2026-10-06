@@ -80,6 +80,9 @@ vi.mock("~/utils/i18n/applyPreferenceLanguage", () => ({
 vi.mock("~/features/ImportExport/utils", () => ({
   importFromBackupObject: (...args: unknown[]) =>
     importFromBackupObjectMock(...args),
+}))
+
+vi.mock("~/services/importExport/backupCodec", () => ({
   parseBackupSummary: (...args: unknown[]) => parseBackupSummaryMock(...args),
 }))
 
