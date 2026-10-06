@@ -806,9 +806,11 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
  * @param account Account metadata that may contain a custom check-in URL.
  */
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
-  const customCheckInUrl =
-    account.checkIn?.customCheckIn?.url ||
-    (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn))
+  const customCheckInUrl = await resolveAccountSiteRouteUrl(
+    account,
+    SITE_ROUTE_KINDS.CheckIn,
+    account.checkIn?.customCheckIn?.url,
+  )
   if (customCheckInUrl) await createActiveTab(customCheckInUrl)
 }
 
@@ -817,9 +819,11 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
  * @param account Account metadata that can optionally override redeem path.
  */
 const _openRedeemPage = async (account: DisplaySiteData) => {
-  const redeemUrl =
-    account.checkIn?.customCheckIn?.redeemUrl ||
-    (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.Redeem))
+  const redeemUrl = await resolveAccountSiteRouteUrl(
+    account,
+    SITE_ROUTE_KINDS.Redeem,
+    account.checkIn?.customCheckIn?.redeemUrl,
+  )
   if (redeemUrl) await createActiveTab(redeemUrl)
 }
 

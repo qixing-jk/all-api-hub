@@ -85,7 +85,7 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   },
 }))
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/taskDispatch", () => ({
   executeAuthorizedTempContextTask: mockExecuteAuthorizedTempContextTask,
 }))
 

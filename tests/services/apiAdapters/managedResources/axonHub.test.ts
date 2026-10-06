@@ -705,6 +705,9 @@ describe("AxonHub native managed-resource Adapter", () => {
   it("maps native list and detail responses to safe display facts", async () => {
     const workspace = await openWorkspace()
     const page = await workspace.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([
+      "https://gateway.example.invalid",
+    ])
     const detail = await workspace.get(refFor())
 
     expect(page.items[0]).toMatchObject({

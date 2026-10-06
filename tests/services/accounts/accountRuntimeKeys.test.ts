@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   appendOrReplaceAccountRuntimeKey,
@@ -18,6 +18,7 @@ import {
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
 } from "~/services/accounts/accountRuntimeKeys"
+import * as siteDefinitions from "~/services/accountSiteDefinitions/registry"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const account = buildDisplaySiteData({
@@ -52,7 +53,48 @@ const service = (authenticated = true) =>
   })
 
 describe("account runtime keys", () => {
-  it.each(["new-api", "sub2api", "voapi-v2", "AIHubMix"] as const)(
+  it("preserves released token associations when the current adapter family changes", () => {
+    const definition = siteDefinitions.getAccountSiteDefinition("new-api")!
+    const lookup = vi.spyOn(siteDefinitions, "getAccountSiteDefinition")
+    lookup.mockReturnValue({ ...definition, adapterFamily: "unsupported" })
+    try {
+      expect(
+        isAccountRuntimeKeyLocatorEqual(
+          {
+            source: "account_token",
+            accountId: account.id,
+            siteType: "new-api",
+            tokenId: 42,
+          },
+          { source: "account_key_resource", ref },
+        ),
+      ).toBe(true)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
+
+  it.each([
+    "one-api",
+    "new-api",
+    "apiyi",
+    "laozhang",
+    "ModelFlare",
+    "anyrouter",
+    "Veloera",
+    "one-hub",
+    "done-hub",
+    "v-api",
+    "voapi-v2",
+    "VoAPI",
+    "Super-API",
+    "Rix-Api",
+    "neo-Api",
+    "wong-gongyi",
+    "sub2api",
+    "AIHubMix",
+    "unknown",
+  ] as const)(
     "preserves historical %s associations without a legacy runtime variant",
     (siteType) => {
       const old = {
@@ -77,6 +119,31 @@ describe("account runtime keys", () => {
           ...current,
           ref: { ...current.ref, accountId: "other" },
         }),
+      ).toBe(false)
+    },
+  )
+
+  it.each([
+    "sharedchat",
+    "freemodel",
+    "RightCode",
+    "openrouter",
+    "kimi",
+    "kimi-global",
+    "grsai",
+  ] as const)(
+    "does not invent a released numeric-token association for %s",
+    (siteType) => {
+      expect(
+        isAccountRuntimeKeyLocatorEqual(
+          {
+            source: "account_token",
+            accountId: account.id,
+            siteType,
+            tokenId: 42,
+          },
+          { source: "account_key_resource", ref: { ...ref, siteType } },
+        ),
       ).toBe(false)
     },
   )

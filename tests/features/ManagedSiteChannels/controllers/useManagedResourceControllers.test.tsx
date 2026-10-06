@@ -3607,4 +3607,81 @@ describe("useManagedResourceMutationController", () => {
     await act(async () => result.current.openCreate())
     expect(newWorkspace.openCreateEditor).toHaveBeenCalledOnce()
   })
+
+  it("fails validation when openDelete cannot resolve row ref", async () => {
+    const workspace = createManagedResourceWorkspace()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        resolveRef: () => undefined,
+      }),
+    )
+
+    act(() => {
+      const opened = result.current.openDelete("unresolvable-row")
+      expect(opened).toBe(false)
+    })
+
+    expect(result.current.deleteState.failure).toEqual({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    })
+  })
+
+  it("returns empty array when confirmDelete is called outside delete confirmation phase", async () => {
+    const workspace = createManagedResourceWorkspace()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({ workspace }),
+    )
+
+    let results!: any
+    await act(async () => {
+      results = await result.current.confirmDelete()
+    })
+
+    expect(results).toEqual([])
+  })
+
+  it("returns false when recoverFreshRead encounters rejected refresh", async () => {
+    const workspace = createManagedResourceWorkspace({
+      delete: vi.fn(
+        async () =>
+          ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "permission denied",
+              code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+            },
+          }) as const,
+      ),
+    })
+    const refresh = vi
+      .fn<() => Promise<boolean>>()
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error("refresh rejected"))
+
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+      }),
+    )
+
+    act(() => {
+      result.current.openDelete("stale-row")
+    })
+    await act(async () => {
+      await result.current.confirmDelete()
+    })
+
+    expect(result.current.deleteState.requiresFreshRead).toBe(true)
+
+    let recovered!: boolean
+    await act(async () => {
+      recovered = await result.current.recoverFreshRead()
+    })
+
+    expect(recovered).toBe(false)
+    expect(result.current.deleteState.requiresFreshRead).toBe(true)
+  })
 })

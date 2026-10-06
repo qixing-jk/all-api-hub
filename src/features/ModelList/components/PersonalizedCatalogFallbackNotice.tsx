@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
-import type { PersonalizedCatalogFallbackControls } from "~/features/ModelList/hooks/useModelData"
+import type { PersonalizedCatalogFallbackControls } from "~/features/ModelList/hooks/modelDataTypes"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 
 interface PersonalizedCatalogFallbackNoticeProps {

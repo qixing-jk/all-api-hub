@@ -88,11 +88,15 @@ export interface TempWindowOctopusApiFetchParams {
   resourceBinding?: OctopusApiResourceBinding
 }
 
+export const TEMP_WINDOW_TURNSTILE_STATUSES = {
+  NotPresent: "not_present",
+  TokenObtained: "token_obtained",
+  Timeout: "timeout",
+  Error: "error",
+} as const
+
 export type TempWindowTurnstileStatus =
-  | "not_present"
-  | "token_obtained"
-  | "timeout"
-  | "error"
+  (typeof TEMP_WINDOW_TURNSTILE_STATUSES)[keyof typeof TEMP_WINDOW_TURNSTILE_STATUSES]
 
 export interface TempWindowTurnstileMeta {
   status: TempWindowTurnstileStatus
@@ -118,14 +122,18 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
   turnstilePreTrigger?: TurnstilePreTrigger
 }
 
+export const TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS = {
+  Clicked: "clicked",
+  IdentityMissing: "identity_missing",
+  IdentityMismatch: "identity_mismatch",
+  InvalidRequest: "invalid_request",
+  TargetNotFound: "target_not_found",
+  Throttled: "throttled",
+  TriggerFailed: "trigger_failed",
+} as const
+
 export type TempWindowCheckinPageActionReason =
-  | "clicked"
-  | "identity_missing"
-  | "identity_mismatch"
-  | "invalid_request"
-  | "target_not_found"
-  | "throttled"
-  | "trigger_failed"
+  (typeof TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS)[keyof typeof TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS]
 
 export interface TempWindowPageAccountIdentity {
   userId: string

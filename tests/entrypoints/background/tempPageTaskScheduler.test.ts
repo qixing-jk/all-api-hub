@@ -4,7 +4,7 @@ import {
   createTempPageTaskScheduler,
   TEMP_PAGE_TASK_CONCURRENCY,
   type TempPageTaskScheduler,
-} from "~/entrypoints/background/tempPageTaskScheduler"
+} from "~/services/browsingContext/tempPage/tempPageTaskScheduler"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

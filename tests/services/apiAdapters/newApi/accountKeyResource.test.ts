@@ -2387,7 +2387,7 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
   })
 })
 
-it("projects native quota units and timestamps to explicit display facts", async () => {
+it("projects native quota, time, group and restrictions to explicit display facts", async () => {
   mockFetchAccountTokens.mockReset()
   mockFetchAccountTokens.mockResolvedValue([
     token({
@@ -2396,6 +2396,10 @@ it("projects native quota units and timestamps to explicit display facts", async
       unlimited_quota: false,
       expired_time: 1893456000,
       accessed_time: 1750000000,
+      group: "",
+      model_limits_enabled: true,
+      model_limits: "model-a,model-b",
+      allow_ips: "192.0.2.1",
     }),
   ])
   const session = await createNewApiAccountKeyResources(
@@ -2416,5 +2420,18 @@ it("projects native quota units and timestamps to explicit display facts", async
     { fieldId: "usedQuota", kind: "money", role: "used", amountUsd: 1 },
     { fieldId: "expired_time", kind: "expiry", timestampMs: 1893456000000 },
     { fieldId: "accessed_time", kind: "last-used", timestampMs: 1750000000000 },
+    { fieldId: "group", kind: "group", value: "", emptyValue: "account-group" },
+    {
+      fieldId: "models",
+      kind: "restriction",
+      role: "models",
+      value: ["model-a", "model-b"],
+    },
+    {
+      fieldId: "allow_ips",
+      kind: "restriction",
+      role: "ip",
+      value: "192.0.2.1",
+    },
   ])
 })

@@ -54,7 +54,7 @@ vi.mock("~/services/models/modelSync", () => ({
   modelSyncScheduler: { initialize: modelSyncInitMock },
 }))
 
-vi.mock("~/services/checkin/autoCheckin/scheduler", () => ({
+vi.mock("~/services/checkin/autoCheckin/schedulerCore", () => ({
   autoCheckinScheduler: { initialize: autoCheckinInitMock },
 }))
 

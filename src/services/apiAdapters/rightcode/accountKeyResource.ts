@@ -159,6 +159,12 @@ const toFacts = (
         amountUsd: toOptionalFiniteNumber(entry.key.used_quota) ?? 0,
       },
       keyExpiryDisplayFact(field.ExpiresAt, snapshot.expiresAt ?? ""),
+      {
+        fieldId: field.Models,
+        kind: "restriction",
+        role: "models",
+        value: snapshot.allowedModels,
+      },
     ],
     fields: [
       ...(entry.channel

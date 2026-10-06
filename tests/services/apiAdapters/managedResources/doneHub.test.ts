@@ -109,6 +109,12 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("DoneHub native managed resource", () => {
+  it("projects native cleanup URLs independently of display fields", async () => {
+    const api = await doneHubManagedResourceRegistration.open()
+    const page = await api.list()
+    expect(page.items[0]?.keyCleanupBaseUrls).toEqual([channel.base_url])
+  })
+
   it("retains every other key while cleaning a multi-key channel", async () => {
     mocks.fetchChannelRaw.mockResolvedValue({
       ...channel,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { checkTempContextProtectionGuards } from "~/entrypoints/background/tempContextProtectionGuards"
+import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 
 describe("checkTempContextProtectionGuards", () => {
   const browserAny = globalThis.browser as any

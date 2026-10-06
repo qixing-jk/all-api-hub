@@ -1,4 +1,7 @@
-import { getAccountSiteApiRouter } from "~/constants/siteType"
+import {
+  getStaticAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { normalizeSearchText } from "~/services/search/accountSearch"
 import {
   buildAnnouncementDisplayText,
@@ -6,7 +9,6 @@ import {
 } from "~/services/siteAnnouncements/text"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 import { formatRelativeTime } from "~/utils/core/formatters"
-import { joinUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import type { UnreadFilter } from "./types"
@@ -52,8 +54,10 @@ export function formatAnnouncementTimestamp(record: SiteAnnouncementRecord) {
  * Returns the normal site UI surface where the cached announcement can be inspected.
  */
 export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
-  const path = getAccountSiteApiRouter(record.siteType).siteAnnouncementsPath
-  return path === null ? null : joinUrl(record.baseUrl, path)
+  return getStaticAccountSiteRouteUrl(
+    record,
+    SITE_ROUTE_KINDS.SiteAnnouncements,
+  )
 }
 
 /**

@@ -52,7 +52,7 @@ vi.mock("~/utils/core/environment", async (importOriginal) => ({
   isTestMode: () => envFlags.test,
 }))
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   tempWindowBackgroundRuntime: { acquire: acquireMock },
 }))
 

@@ -283,6 +283,15 @@ describe("account site definition registry", () => {
     )
   })
 
+  it("explicitly declares legacy numeric-channel compatibility for every managed site", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(
+        getAccountSiteDefinition(siteType)?.managedResource
+          ?.legacyNumericChannelConfig,
+      ).toBe(siteType !== SITE_TYPES.AXON_HUB)
+    }
+  })
+
   it("matches current legacy site-type surfaces", () => {
     expect(ACCOUNT_SITE_TYPES).toEqual(LEGACY_ACCOUNT_SITE_TYPES)
     expect(ACCOUNT_SITE_TYPE_VALUES).toEqual(LEGACY_ACCOUNT_SITE_TYPE_VALUES)

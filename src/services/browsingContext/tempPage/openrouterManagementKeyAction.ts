@@ -18,10 +18,8 @@ import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/o
 import { PROTECTION_BYPASS_DENIED_REASONS } from "~/services/protectionBypass/contracts"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 
-import {
-  tempWindowBackgroundRuntime,
-  type AuthorizeTempContextAtAcquire,
-} from "../tempWindowPool"
+import type { AuthorizeTempContextAtAcquire } from "./contracts"
+import { tempWindowBackgroundRuntime } from "./runtime"
 
 type OpenRouterManagementKeyActionState = {
   request: TempWindowOpenRouterManagementKeyActionParams

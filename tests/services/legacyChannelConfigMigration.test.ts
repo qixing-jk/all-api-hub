@@ -143,6 +143,56 @@ describe("legacyChannelConfigMigration", () => {
     expect(migrateLegacyNumericConfigsMock).toHaveBeenCalledOnce()
   })
 
+  it("does not enumerate a configured site that declares no legacy numeric identity", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      siteType === "new-api"
+        ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+        : null,
+    )
+    getManagedResourceRegistrationMock.mockImplementation(() => {
+      throw new Error("This inventory must not be opened")
+    })
+    const { legacyChannelConfigMigration } = await loadMigration()
+    const definitions = await import(
+      "~/services/accountSiteDefinitions/registry"
+    )
+    const definition = definitions.getAccountSiteDefinition("new-api")!
+    vi.spyOn(definitions, "getAccountSiteDefinition").mockReturnValue({
+      ...definition,
+      managedResource: {
+        ...definition.managedResource!,
+        legacyNumericChannelConfig: false,
+      },
+    })
+
+    await expect(
+      legacyChannelConfigMigration.initialize(),
+    ).resolves.toMatchObject({ status: "completed" })
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
+    expect(migrateLegacyNumericConfigsMock).toHaveBeenCalledWith([])
+  })
+
+  it("preserves legacy data when historical identity metadata is unavailable", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      siteType === "new-api"
+        ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+        : null,
+    )
+    const { legacyChannelConfigMigration } = await loadMigration()
+    const definitions = await import(
+      "~/services/accountSiteDefinitions/registry"
+    )
+    vi.spyOn(definitions, "getAccountSiteDefinition").mockReturnValue(undefined)
+
+    await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+      status: "deferred",
+      reason: "inventory-failed",
+    })
+    expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
+  })
+
   it("ignores malformed retry state instead of treating it as active backoff", async () => {
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE, {
       attempt: 0,

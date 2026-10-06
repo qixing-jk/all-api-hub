@@ -11,7 +11,13 @@ import {
 } from "~/utils/browser"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 
-type TempWindowRequestBlockedReason = "firefox_popup_unsupported" | null
+export const TEMP_WINDOW_REQUEST_BLOCKED_REASONS = {
+  FirefoxPopupUnsupported: "firefox_popup_unsupported",
+} as const
+
+export type TempWindowRequestBlockedReason =
+  | (typeof TEMP_WINDOW_REQUEST_BLOCKED_REASONS)[keyof typeof TEMP_WINDOW_REQUEST_BLOCKED_REASONS]
+  | null
 
 /** Normalizes untrusted presentation metadata without granting authorization. */
 export function normalizeTempWindowRequestSource(
@@ -72,7 +78,7 @@ export function resolveTempWindowRequestPolicy({
   const blockedReason: TempWindowRequestBlockedReason =
     resolvedSource === TEMP_WINDOW_REQUEST_SOURCES.Popup &&
     isProtectionBypassFirefoxEnv()
-      ? "firefox_popup_unsupported"
+      ? TEMP_WINDOW_REQUEST_BLOCKED_REASONS.FirefoxPopupUnsupported
       : null
 
   return {

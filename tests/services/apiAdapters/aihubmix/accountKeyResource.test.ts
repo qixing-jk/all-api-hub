@@ -288,6 +288,18 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
     { fieldId: "used_quota", kind: "money", role: "used", amountUsd: 1 },
     { fieldId: "expired_time", kind: "expiry", timestampMs: "never" },
     { fieldId: "accessed_time", kind: "last-used", timestampMs: 1750000000000 },
+    {
+      fieldId: "models",
+      kind: "restriction",
+      role: "models",
+      value: ["model-a"],
+    },
+    {
+      fieldId: "subnet",
+      kind: "restriction",
+      role: "subnet",
+      value: "192.0.2.0/24",
+    },
   ])
   expect(atIndex(page.items, 0).fields).toContainEqual({
     fieldId: "accessed_time",
