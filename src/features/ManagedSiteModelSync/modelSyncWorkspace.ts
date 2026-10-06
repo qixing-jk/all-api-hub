@@ -1,4 +1,7 @@
-import { type FilterStatus } from "~/features/ManagedSiteModelSync/components/FilterBar"
+import {
+  MODEL_SYNC_FILTER_STATUSES,
+  type FilterStatus,
+} from "~/features/ManagedSiteModelSync/components/FilterBar"
 import { getModelSyncHistoryResourceId } from "~/features/ManagedSiteModelSync/executionIdentity"
 import { type ProductAnalyticsStatusKind } from "~/services/productAnalytics/contracts"
 import type { ExecutionHistoryItemResult } from "~/types/managedSiteModelSync"
@@ -24,7 +27,11 @@ export const getTabValueFromIndex = (
 export const getStatusKindFromFilterStatus = (
   status: FilterStatus,
 ): ProductAnalyticsStatusKind | undefined =>
-  status === "all" ? undefined : status === "success" ? "healthy" : "error"
+  status === MODEL_SYNC_FILTER_STATUSES.All
+    ? undefined
+    : status === MODEL_SYNC_FILTER_STATUSES.Success
+      ? "healthy"
+      : "error"
 
 export const filterExecutionItems = (
   items: ExecutionHistoryItemResult[],
@@ -32,8 +39,8 @@ export const filterExecutionItems = (
   keyword: string,
 ) =>
   items.filter((item) => {
-    if (status === "success" && !item.ok) return false
-    if (status === "failed" && item.ok) return false
+    if (status === MODEL_SYNC_FILTER_STATUSES.Success && !item.ok) return false
+    if (status === MODEL_SYNC_FILTER_STATUSES.Failed && item.ok) return false
 
     if (keyword) {
       const normalizedKeyword = keyword.toLowerCase()

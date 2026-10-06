@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { type FilterStatus } from "~/features/ManagedSiteModelSync/components/FilterBar"
+import {
+  MODEL_SYNC_FILTER_STATUSES,
+  type FilterStatus,
+} from "~/features/ManagedSiteModelSync/components/FilterBar"
 import { getModelSyncHistoryItemKey } from "~/features/ManagedSiteModelSync/executionIdentity"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
@@ -85,7 +88,9 @@ export function useManagedSiteModelSyncViewModel({
     routeParams?.resourceRef &&
       (!routedResourceRef || !canUseResource(routedResourceRef)),
   )
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>(
+    MODEL_SYNC_FILTER_STATUSES.All,
+  )
   const [searchKeyword, setSearchKeyword] = useState("")
   const [historySelectedKeys, setHistorySelectedKeys] = useState<Set<string>>(
     new Set(),
