@@ -49,6 +49,7 @@ import {
 
 import {
   BATCH_VERIFY_ROW_STATUSES,
+  BATCH_VERIFY_ROW_SUMMARIES,
   type BatchVerifyRow,
   type BatchVerifyRowStatus,
 } from "../batchVerificationState"
@@ -75,23 +76,23 @@ function resolveFailureSummaryText(
 /** Translate the current row outcome without changing or replaying its probes. */
 function getRowSummary(t: TFunction, row: BatchVerifyRow): string {
   switch (row.summary) {
-    case "pending":
+    case BATCH_VERIFY_ROW_SUMMARIES.Pending:
       return t("modelList:batchVerify.messages.pending")
-    case "running":
+    case BATCH_VERIFY_ROW_SUMMARIES.Running:
       return t("modelList:batchVerify.status.running")
-    case "no-key":
+    case BATCH_VERIFY_ROW_SUMMARIES.NoKey:
       return t("modelList:batchVerify.messages.noCompatibleRuntimeKey")
-    case "no-probes":
+    case BATCH_VERIFY_ROW_SUMMARIES.NoProbes:
       return t("modelList:batchVerify.messages.noApplicableProbes")
-    case "stopped":
+    case BATCH_VERIFY_ROW_SUMMARIES.Stopped:
       return t("modelList:batchVerify.messages.stopped")
-    case "not-selected":
+    case BATCH_VERIFY_ROW_SUMMARIES.NotSelected:
       return t("modelList:batchVerify.messages.notSelected")
-    case "failed":
+    case BATCH_VERIFY_ROW_SUMMARIES.Failed:
       return row.results[0]
         ? resolveFailureSummaryText(t, row.results[0])
         : t("modelList:batchVerify.messages.unexpected")
-    case "results":
+    case BATCH_VERIFY_ROW_SUMMARIES.Results:
       return t("modelList:batchVerify.messages.probeSummary", {
         count: row.results.length,
         pass: row.results.filter(
@@ -105,6 +106,8 @@ function getRowSummary(t: TFunction, row: BatchVerifyRow): string {
             result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
         ).length,
       })
+    default:
+      return row.summary
   }
 }
 

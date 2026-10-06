@@ -25,19 +25,26 @@ export const BATCH_VERIFY_ROW_STATUSES = {
 export type BatchVerifyRowStatus =
   (typeof BATCH_VERIFY_ROW_STATUSES)[keyof typeof BATCH_VERIFY_ROW_STATUSES]
 
+export const BATCH_VERIFY_ROW_SUMMARIES = {
+  Pending: "pending",
+  Running: "running",
+  NoKey: "no-key",
+  NoProbes: "no-probes",
+  Results: "results",
+  Failed: "failed",
+  Stopped: "stopped",
+  NotSelected: "not-selected",
+} as const
+
+export type BatchVerifyRowSummary =
+  | (typeof BATCH_VERIFY_ROW_SUMMARIES)[keyof typeof BATCH_VERIFY_ROW_SUMMARIES]
+  | (string & {})
+
 export type BatchVerifyRow = {
   item: BatchVerifyModelItem
   status: BatchVerifyRowStatus
   latencyMs: number
-  summary:
-    | "pending"
-    | "running"
-    | "no-key"
-    | "no-probes"
-    | "results"
-    | "failed"
-    | "stopped"
-    | "not-selected"
+  summary: BatchVerifyRowSummary
   results: ApiVerificationProbeResult[]
   runtimeKeyName?: string
   errorCategory?: ProductAnalyticsErrorCategory
@@ -61,7 +68,7 @@ export function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
     item,
     status: BATCH_VERIFY_ROW_STATUSES.PENDING,
     latencyMs: 0,
-    summary: "pending",
+    summary: BATCH_VERIFY_ROW_SUMMARIES.Pending,
     results: [],
   }))
 }

@@ -41,6 +41,7 @@ import { createLogger } from "~/utils/core/logger"
 
 import {
   BATCH_VERIFY_ROW_STATUSES,
+  BATCH_VERIFY_ROW_SUMMARIES,
   buildRows,
   DEFAULT_SELECTED_PROBE_IDS,
   deriveBatchVerifyRowStatus,
@@ -200,7 +201,7 @@ export function useBatchVerifyModels({
       updateRow(item.key, {
         status: BATCH_VERIFY_ROW_STATUSES.RUNNING,
         latencyMs: 0,
-        summary: "running",
+        summary: BATCH_VERIFY_ROW_SUMMARIES.Running,
         results: [],
         runtimeKeyName: undefined,
         errorCategory: undefined,
@@ -234,7 +235,7 @@ export function useBatchVerifyModels({
                   updateRow(item.key, {
                     status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
                     latencyMs: 0,
-                    summary: "no-key",
+                    summary: BATCH_VERIFY_ROW_SUMMARIES.NoKey,
                     results: [],
                   })
                   return null
@@ -276,7 +277,7 @@ export function useBatchVerifyModels({
           updateRow(item.key, {
             status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
             latencyMs: 0,
-            summary: "no-probes",
+            summary: BATCH_VERIFY_ROW_SUMMARIES.NoProbes,
             results: [],
             runtimeKeyName: credentials.runtimeKeyName,
           })
@@ -387,7 +388,7 @@ export function useBatchVerifyModels({
         updateRow(item.key, {
           status,
           latencyMs: getRowLatency(results),
-          summary: "results",
+          summary: BATCH_VERIFY_ROW_SUMMARIES.Results,
           results,
           runtimeKeyName: credentials.runtimeKeyName,
           errorCategory,
@@ -447,7 +448,7 @@ export function useBatchVerifyModels({
         updateRow(item.key, {
           status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: result.latencyMs,
-          summary: "failed",
+          summary: BATCH_VERIFY_ROW_SUMMARIES.Failed,
           results: [result],
           errorCategory,
         })
@@ -473,7 +474,7 @@ export function useBatchVerifyModels({
           ? {
               ...row,
               status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: "stopped" as const,
+              summary: BATCH_VERIFY_ROW_SUMMARIES.Stopped,
               results: [],
             }
           : row,
@@ -508,7 +509,7 @@ export function useBatchVerifyModels({
           : {
               ...row,
               status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: "not-selected",
+              summary: BATCH_VERIFY_ROW_SUMMARIES.NotSelected,
             },
       ),
     )
