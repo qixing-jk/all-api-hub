@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useAccountCookieSession } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountCookieSession"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
@@ -41,7 +42,9 @@ const {
   mockEnsurePermissionsDetailed: vi.fn(),
   mockHasPermission: vi.fn(),
   mockHasPermissions: vi.fn(),
-  mockOnOptionalPermissionsChanged: vi.fn(() => vi.fn()),
+  mockOnOptionalPermissionsChanged: vi.fn<
+    typeof import("~/services/permissions/permissionManager").onOptionalPermissionsChanged
+  >(() => vi.fn()),
 }))
 
 const { mockOnTabActivated, mockOnTabUpdated } = vi.hoisted(() => ({
@@ -162,6 +165,114 @@ describe("useAccountDialog cookie import feedback", () => {
     })
     await accountDataTransfer.clearAllData()
   })
+
+  it("leaves automatic detection free to continue when cookie reading rejects", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
+      new Error("cookie read failed"),
+    )
+    const applyCookie = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountCookieSession({
+        isOpen: true,
+        mode: DIALOG_MODES.ADD,
+        url: "https://new-api.example.com",
+        authType: AuthTypeEnum.Cookie,
+        getContext: () => ({}),
+        applyCookie,
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    let shouldContinue: boolean | undefined
+    await act(async () => {
+      shouldContinue = await result.current.importAutomatically(() => true)
+    })
+    expect(shouldContinue).toBe(true)
+    expect(applyCookie).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(result.current.state.isImportingCookies).toBe(false)
+  })
+
+  it("refreshes cookie permission feedback after optional permissions change", async () => {
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => result.current.setters.setAuthType(AuthTypeEnum.Cookie))
+    await waitFor(() =>
+      expect(result.current.state.cookieAuthPermissionsGranted).toBe(true),
+    )
+    mockHasPermissions.mockResolvedValue(false)
+    const changed = mockOnOptionalPermissionsChanged.mock.calls.at(-1)![0]
+    await act(async () => {
+      changed()
+    })
+    await waitFor(() =>
+      expect(result.current.state.cookieAuthPermissionsGranted).toBe(false),
+    )
+  })
+
+  it("requires a URL before dispatching a manual cookie import", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+    expect(sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+      }),
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      "accountDialog:messages.urlRequired",
+    )
+  })
+
+  it.each([
+    { success: true, data: "" },
+    { success: false, errorCode: COOKIE_IMPORT_FAILURE_REASONS.ReadFailed },
+  ])(
+    "reports empty or unreadable cookie results without replacing the draft: %j",
+    async (response) => {
+      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      vi.mocked(sendRuntimeMessage).mockResolvedValueOnce(response)
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://new-api.example.com")
+        result.current.setters.setCookieAuthSessionCookie("session=existing")
+      })
+      await act(async () => {
+        await result.current.handlers.handleImportCookieAuthSessionCookie()
+      })
+      expect(result.current.state.cookieAuthSessionCookie).toBe(
+        "session=existing",
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        response.success
+          ? "accountDialog:messages.importCookiesEmpty"
+          : "accountDialog:messages.importCookiesFailedUnknown",
+      )
+      expect(result.current.state.isImportingCookies).toBe(false)
+    },
+  )
 
   it.each([
     "url",

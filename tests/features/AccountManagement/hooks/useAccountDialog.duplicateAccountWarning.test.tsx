@@ -148,7 +148,15 @@ describe("useAccountDialog duplicate account warning", () => {
     expect(result.current.state.showManualForm).toBe(false)
   })
 
-  it.each(["url", "userId", "accessToken", "siteType", "cookie"] as const)(
+  it.each([
+    "url",
+    "userId",
+    "accessToken",
+    "siteType",
+    "cookie",
+    "draft-userId",
+    "draft-siteType",
+  ] as const)(
     "cancels the pending confirmation when %s changes",
     async (field) => {
       await accountStorage.addAccount(
@@ -175,6 +183,12 @@ describe("useAccountDialog duplicate account warning", () => {
           result.current.setters.setAccessToken("other-token")
         else if (field === "siteType")
           result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        else if (field === "draft-userId")
+          result.current.setters.setDraftPartial({ userId: "other-user" })
+        else if (field === "draft-siteType")
+          result.current.setters.setDraftPartial({
+            siteType: SITE_TYPES.SUB2API,
+          })
         else result.current.setters.setCookieAuthSessionCookie("session=other")
       })
       expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
@@ -185,6 +199,26 @@ describe("useAccountDialog duplicate account warning", () => {
       expect(result.current.state.showManualForm).toBe(false)
     },
   )
+
+  it("keeps current manual admission available when duplicate storage lookup fails", async () => {
+    const { result } = await renderDuplicateWarningHook()
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setUserId(defaultAccountInfo.id)
+    })
+    const lookup = vi
+      .spyOn(accountQueries, "getAllAccountsOrThrow")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    try {
+      await act(async () => {
+        await result.current.handlers.handleShowManualForm()
+      })
+      expect(result.current.state.showManualForm).toBe(true)
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+    } finally {
+      lookup.mockRestore()
+    }
+  })
 
   it("ignores a duplicate lookup that finishes after closing", async () => {
     const existing = buildSiteAccount({ site_url: "https://api.example.com" })
