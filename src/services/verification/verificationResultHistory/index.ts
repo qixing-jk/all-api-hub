@@ -9,10 +9,7 @@ export type {
   PersistedApiVerificationStatus,
 } from "./types"
 export { API_VERIFICATION_HISTORY_STATUSES } from "./types"
-export {
-  useLatestProfileVerificationSummaries,
-  useVerificationResultHistorySummaries,
-} from "./useVerificationResultHistorySummaries"
+export { useLatestProfileVerificationSummaries } from "./useVerificationResultHistorySummaries"
 export {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,

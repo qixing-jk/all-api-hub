@@ -48,6 +48,23 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
+// The profile store below is an in-memory fixture; retention reads the same owners.
+vi.mock(
+  "~/services/apiCredentialProfiles/profileConfigReader",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiCredentialProfiles/profileConfigReader")
+      >()
+    return {
+      ...actual,
+      listApiCredentialProfileIdsOrThrow: vi.fn(async () =>
+        store.map(({ id }) => id),
+      ),
+    }
+  },
+)
+
 let store: ApiCredentialProfile[] = []
 let profileLinks: ApiCredentialProfileLink[] = []
 const mockOpenModelsPage = vi.fn()

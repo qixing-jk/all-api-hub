@@ -19,10 +19,16 @@ vi.mock("~/services/verification/verificationResultHistory", () => ({
   createProfileModelVerificationHistoryTarget: vi.fn(() => "profile-target"),
   serializeVerificationHistoryTarget: vi.fn((target) => String(target)),
   getVerificationSummaryLatencyMs: vi.fn(() => null),
-  useVerificationResultHistorySummaries: vi.fn(() => ({
-    summariesByKey: {},
-  })),
 }))
+
+vi.mock(
+  "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries",
+  () => ({
+    useVerificationResultHistorySummaries: vi.fn(() => ({
+      summariesByKey: {},
+    })),
+  }),
+)
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()

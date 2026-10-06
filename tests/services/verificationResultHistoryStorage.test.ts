@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { MockInstance } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { browser } from "wxt/browser"
 
 import { Storage } from "@plasmohq/storage"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import * as profileConfigReader from "~/services/apiCredentialProfiles/profileConfigReader"
 import { API_VERIFICATION_HISTORY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
@@ -49,7 +49,7 @@ describe("verificationResultHistoryStorage", () => {
       .spyOn(accountConfigStore, "readAccounts")
       .mockRejectedValue(new Error("accounts unavailable"))
     listProfileIdsSpy = vi
-      .spyOn(apiCredentialProfilesStorage, "listProfileIdsOrThrow")
+      .spyOn(profileConfigReader, "listApiCredentialProfileIdsOrThrow")
       .mockRejectedValue(new Error("profiles unavailable"))
   })
 

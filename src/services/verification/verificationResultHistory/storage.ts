@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { listApiCredentialProfileIdsOrThrow } from "~/services/apiCredentialProfiles/profileConfigReader"
 import {
   API_VERIFICATION_HISTORY_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -723,9 +723,7 @@ class VerificationResultHistoryStorageService {
     let liveAccountIds: Set<string> | undefined
 
     try {
-      liveProfileIds = new Set(
-        await apiCredentialProfilesStorage.listProfileIdsOrThrow(),
-      )
+      liveProfileIds = new Set(await listApiCredentialProfileIdsOrThrow())
     } catch (error) {
       logger.error("Skipping profile ownership check; profiles unreadable", {
         error,

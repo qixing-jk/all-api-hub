@@ -43,11 +43,11 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 })
 
 vi.mock(
-  "~/services/verification/verificationResultHistory",
+  "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries",
   async (importOriginal) => {
     const original =
       await importOriginal<
-        typeof import("~/services/verification/verificationResultHistory")
+        typeof import("~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries")
       >()
 
     return {

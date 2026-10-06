@@ -17,16 +17,13 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import {
-  createBatchVerifyModelItems,
-  type BatchVerifyModelItem,
-} from "~/features/ModelList/batchVerification"
 import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
+import { useModelListVerificationResults } from "~/features/ModelList/hooks/useModelListVerificationResults"
+import { useModelListVerificationWorkflow } from "~/features/ModelList/hooks/useModelListVerificationWorkflow"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   resolveModelManagementSource,
-  type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
   canEnableModelPriceComparison,
@@ -45,14 +42,6 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import {
-  createAccountModelVerificationHistoryTarget,
-  createProfileModelVerificationHistoryTarget,
-  useVerificationResultHistorySummaries,
-  type ApiVerificationHistoryTarget,
-} from "~/services/verification/verificationResultHistory"
-import type { DisplaySiteData } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   openKeysPage,
   pushWithinOptionsPage,
@@ -75,19 +64,6 @@ import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "./groupSelectionScopes"
 import { useModelListData } from "./hooks/useModelListData"
 import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "./sortModes"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
-import {
-  applyVerificationResultView,
-  type ModelListVerificationResultFilter,
-} from "./verificationResultFilters"
-
-type ModelListDisplayedResultCountBaseFilters = NonNullable<
-  Parameters<ReturnType<typeof useModelListData>["getFilteredResultCount"]>[0]
->
-
-interface ModelListDisplayedResultCountFilters
-  extends ModelListDisplayedResultCountBaseFilters {
-  selectedVerificationResults?: ModelListVerificationResultFilter[]
-}
 
 /**
  * Model list page showing pricing details with filtering by account, provider, and group.
@@ -355,165 +331,40 @@ export default function ModelList(props: {
     allAccountsFilterAccountIds,
   ])
 
-  const modelVerificationTargets = useMemo(() => {
-    return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
-      (acc, item) => {
-        const source = item.source
-        const modelId = item.model.model_name?.trim()
-        if (!modelId) return acc
+  const {
+    displayedModels,
+    getDisplayedResultCount,
+    verificationSummariesByKey,
+  } = useModelListVerificationResults({
+    filteredModels,
+    selectedVerificationResults,
+    sortMode,
+    getFilteredModels,
+    getFilteredResultCount,
+  })
 
-        const historyTarget =
-          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-            ? createProfileModelVerificationHistoryTarget(
-                source.profile.id,
-                modelId,
-              )
-            : createAccountModelVerificationHistoryTarget(
-                source.account.id,
-                modelId,
-              )
-        if (historyTarget) {
-          acc.push(historyTarget)
-        }
-
-        return acc
-      },
-      [],
-    )
-  }, [filteredModels])
-  const { summariesByKey: verificationSummariesByKey } =
-    useVerificationResultHistorySummaries(modelVerificationTargets)
-  const displayedModels = useMemo(
-    () =>
-      applyVerificationResultView(filteredModels, {
-        selectedResults: selectedVerificationResults,
-        shouldSortByLatency:
-          sortMode === MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
-        verificationSummariesByKey,
-      }),
-    [
-      filteredModels,
-      selectedVerificationResults,
-      sortMode,
-      verificationSummariesByKey,
-    ],
-  )
-  const getDisplayedResultCount = useCallback(
-    (filters: ModelListDisplayedResultCountFilters = {}) => {
-      if (
-        !filters.selectedVerificationResults &&
-        filters.sortMode !== MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC
-      ) {
-        return getFilteredResultCount(filters)
-      }
-
-      const selectedResults =
-        filters.selectedVerificationResults ?? selectedVerificationResults
-      const {
-        selectedVerificationResults: _selectedVerificationResults,
-        ...baseFilters
-      } = filters
-
-      return applyVerificationResultView(getFilteredModels(baseFilters), {
-        selectedResults,
-        shouldSortByLatency:
-          filters.sortMode === MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC,
-        verificationSummariesByKey,
-      }).length
-    },
-    [
-      getFilteredModels,
-      getFilteredResultCount,
-      selectedVerificationResults,
-      verificationSummariesByKey,
-    ],
-  )
-
-  const [verifyContext, setVerifyContext] = useState<{
-    account: DisplaySiteData
-    modelId: string
-    modelEnableGroups?: string[]
-  } | null>(null)
-
-  const [verifyCliContext, setVerifyCliContext] = useState<{
-    source: ModelManagementItemSource
-    modelId: string
-  } | null>(null)
-
-  const [verifyProfileContext, setVerifyProfileContext] = useState<{
-    profile: ApiCredentialProfile
-    modelId: string
-  } | null>(null)
-
-  const [modelKeyContext, setModelKeyContext] = useState<{
-    account: DisplaySiteData
-    modelId: string
-    modelEnableGroups?: string[]
-    returnToVerify?: boolean
-  } | null>(null)
-
-  const [batchVerifyContext, setBatchVerifyContext] = useState<{
-    items: BatchVerifyModelItem[]
-  } | null>(null)
-
-  const handleVerifyModel = (
-    source: ModelManagementItemSource,
-    modelId: string,
-    modelEnableGroups?: string[],
-  ) => {
-    if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
-      setVerifyProfileContext({
-        profile: source.profile,
-        modelId,
-      })
-      return
-    }
-
-    setVerifyContext({ account: source.account, modelId, modelEnableGroups })
-  }
-
-  const handleVerifyCliSupport = (
-    source: ModelManagementItemSource,
-    modelId: string,
-  ) => {
-    setVerifyCliContext({ source, modelId })
-  }
-
-  const handleOpenModelKeyDialog = (
-    account: DisplaySiteData,
-    modelId: string,
-    modelEnableGroups?: string[],
-  ) => setModelKeyContext({ account, modelId, modelEnableGroups })
-
-  const handleManageVerifyModelKey = () => {
-    if (!verifyContext) return
-    setModelKeyContext({ ...verifyContext, returnToVerify: true })
-    setVerifyContext(null)
-  }
-
-  const handleCloseModelKeyDialog = () => {
-    if (modelKeyContext?.returnToVerify) {
-      const { returnToVerify: _returnToVerify, ...nextVerifyContext } =
-        modelKeyContext
-      setVerifyContext(nextVerifyContext)
-    }
-    setModelKeyContext(null)
-  }
-
-  const batchVerifyItems = useMemo(
-    () => createBatchVerifyModelItems(displayedModels),
-    [displayedModels],
-  )
-
-  const handleOpenBatchVerify = () => {
-    if (batchVerifyItems.length === 0) return
-    setBatchVerifyContext({ items: batchVerifyItems })
-  }
-
-  const canBatchVerifyModels =
-    !!selectedSource &&
-    sourceCapabilities.supportsBatchCredentialVerification &&
-    batchVerifyItems.length > 0
+  const {
+    verifyContext,
+    verifyCliContext,
+    verifyProfileContext,
+    modelKeyContext,
+    batchVerifyContext,
+    handleVerifyModel,
+    handleVerifyCliSupport,
+    handleOpenModelKeyDialog,
+    handleManageVerifyModelKey,
+    handleCloseModelKeyDialog,
+    handleOpenBatchVerify,
+    canBatchVerifyModels,
+    handleCloseModelVerification,
+    handleCloseCliVerification,
+    handleCloseProfileVerification,
+    handleCloseBatchVerification,
+  } = useModelListVerificationWorkflow({
+    displayedModels,
+    selectedSource,
+    sourceCapabilities,
+  })
 
   const handleOpenAccountManagement = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
@@ -813,7 +664,7 @@ export default function ModelList(props: {
           {verifyContext && (
             <VerifyApiDialog
               isOpen={true}
-              onClose={() => setVerifyContext(null)}
+              onClose={handleCloseModelVerification}
               account={verifyContext.account}
               initialModelId={verifyContext.modelId}
               modelEnableGroups={verifyContext.modelEnableGroups}
@@ -827,14 +678,14 @@ export default function ModelList(props: {
               MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ? (
                 <VerifyCliSupportDialog
                   isOpen={true}
-                  onClose={() => setVerifyCliContext(null)}
+                  onClose={handleCloseCliVerification}
                   account={verifyCliContext.source.account}
                   initialModelId={verifyCliContext.modelId}
                 />
               ) : (
                 <VerifyCliSupportDialog
                   isOpen={true}
-                  onClose={() => setVerifyCliContext(null)}
+                  onClose={handleCloseCliVerification}
                   profile={verifyCliContext.source.profile}
                   initialModelId={verifyCliContext.modelId}
                 />
@@ -845,7 +696,7 @@ export default function ModelList(props: {
           {verifyProfileContext && (
             <VerifyApiCredentialProfileDialog
               isOpen={true}
-              onClose={() => setVerifyProfileContext(null)}
+              onClose={handleCloseProfileVerification}
               profile={verifyProfileContext.profile}
               initialModelId={verifyProfileContext.modelId}
             />
@@ -864,7 +715,7 @@ export default function ModelList(props: {
           {batchVerifyContext && (
             <BatchVerifyModelsDialog
               isOpen={true}
-              onClose={() => setBatchVerifyContext(null)}
+              onClose={handleCloseBatchVerification}
               items={batchVerifyContext.items}
             />
           )}

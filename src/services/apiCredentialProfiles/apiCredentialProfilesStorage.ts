@@ -16,7 +16,6 @@ import {
   assertDuplicateRequestHeaders,
   cloneConfig,
   clonePersistedValue,
-  coerceApiCredentialProfilesConfig,
   coerceApiCredentialProfilesConfigWithRemap,
   coerceApiCredentialTelemetryConfig,
   coerceOptionalTimestamp,
@@ -31,6 +30,7 @@ import {
   normalizeSourceUrl,
   normalizeTagIdList,
 } from "~/services/apiCredentialProfiles/profileConfigCodec"
+import { readApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigReader"
 import type {
   ApiCredentialProfileCaptureInput,
   ApiCredentialProfileCaptureResult,
@@ -47,8 +47,8 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import type { VerificationOwnerReconcileInput } from "~/services/verification/verificationResultHistory"
-import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
+import type { VerificationOwnerReconcileInput } from "~/services/verification/verificationResultHistory/storage"
+import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory/storage"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfileLink,
@@ -188,26 +188,6 @@ class ApiCredentialProfilesStorageService {
     )
   }
 
-  private async readConfig(): Promise<ApiCredentialProfilesConfig> {
-    const raw = await this.storage.get(
-      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
-    )
-    return coerceApiCredentialProfilesConfig(raw)
-  }
-
-  /**
-   * List the ids of profiles that currently exist, propagating read failures.
-   *
-   * Deliberately not built on {@link getConfig}, which folds a failed read into
-   * an empty default: a caller that reaps data keyed by profile id would read
-   * "no profiles exist" and delete everything. Callers that must distinguish
-   * "unreadable" from "empty" use this instead of {@link listProfiles}.
-   */
-  async listProfileIdsOrThrow(): Promise<string[]> {
-    const config = await this.readConfig()
-    return config.profiles.map((profile) => profile.id)
-  }
-
   private async saveConfig(next: ApiCredentialProfilesConfig): Promise<void> {
     await this.storage.set(
       API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
@@ -227,7 +207,7 @@ class ApiCredentialProfilesStorageService {
    */
   async getConfig(): Promise<ApiCredentialProfilesConfig> {
     try {
-      return await this.readConfig()
+      return await readApiCredentialProfilesConfig()
     } catch (error) {
       logger.error("Failed to load API credential profiles config", error)
       return createDefaultConfig()
@@ -273,7 +253,7 @@ class ApiCredentialProfilesStorageService {
         const now = Date.now()
         const { config: merged, profileIdRemap } =
           mergeApiCredentialProfilesConfigsWithRemap({
-            local: await this.readConfig(),
+            local: await readApiCredentialProfilesConfig(),
             incoming: raw,
             now,
           })
@@ -318,7 +298,7 @@ class ApiCredentialProfilesStorageService {
     }
 
     return this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       const identityKey = getIdentityKey(candidateProfile)
       const existing = config.profiles.find(
         (profile) => getIdentityKey(profile) === identityKey,
@@ -460,7 +440,7 @@ class ApiCredentialProfilesStorageService {
   ): Promise<ApiCredentialProfileLink> {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       if (!config.profiles.some(({ id }) => id === input.profileId)) {
         throw new Error("Profile not found.")
       }
@@ -496,7 +476,7 @@ class ApiCredentialProfilesStorageService {
   ): Promise<ApiCredentialProfileLink> {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       const current = config.links.find(({ id }) => id === input.id)
       if (!current) throw new Error("Credential profile link not found.")
       if (!config.profiles.some(({ id }) => id === input.profileId)) {
@@ -548,7 +528,7 @@ class ApiCredentialProfilesStorageService {
 
   async unlinkProfile(id: string): Promise<boolean> {
     return this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       const removedLinks = config.links.filter((link) => link.id === id)
       const links = config.links.filter((link) => link.id !== id)
       if (links.length === config.links.length) return false
@@ -588,7 +568,7 @@ class ApiCredentialProfilesStorageService {
 
     const { created, isNew, profileIdRemap } = await this.withStorageWriteLock(
       async () => {
-        const config = cloneConfig(await this.readConfig())
+        const config = cloneConfig(await readApiCredentialProfilesConfig())
 
         const identityKey = getIdentityKey(nextProfile)
         const existing = config.profiles.find(
@@ -655,7 +635,7 @@ class ApiCredentialProfilesStorageService {
   ): Promise<ApiCredentialProfile> {
     const { profile, hasRequestContextChanged, profileIdRemap } =
       await this.withStorageWriteLock(async () => {
-        const config = cloneConfig(await this.readConfig())
+        const config = cloneConfig(await readApiCredentialProfilesConfig())
         const profiles = Array.isArray(config.profiles) ? config.profiles : []
         const current = profiles.find((p) => p.id === id)
         if (!current) {
@@ -834,7 +814,7 @@ class ApiCredentialProfilesStorageService {
     expectedProfile?: ApiCredentialProfile,
   ): Promise<ApiCredentialProfile> {
     return this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       const profiles = Array.isArray(config.profiles) ? config.profiles : []
       const current = profiles.find((profile) => profile.id === id)
       if (!current) {
@@ -898,7 +878,7 @@ class ApiCredentialProfilesStorageService {
     const { result, profileIdRemap } = await this.withStorageWriteLock(
       async () => {
         const now = Date.now()
-        const config = cloneConfig(await this.readConfig())
+        const config = cloneConfig(await readApiCredentialProfilesConfig())
         const profiles = Array.isArray(config.profiles) ? config.profiles : []
 
         let updatedProfiles = 0
@@ -954,7 +934,7 @@ class ApiCredentialProfilesStorageService {
    */
   async deleteProfile(id: string): Promise<boolean> {
     const deleted = await this.withStorageWriteLock(async () => {
-      const config = cloneConfig(await this.readConfig())
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
       const profiles = Array.isArray(config.profiles) ? config.profiles : []
       const filtered = profiles.filter((p) => p.id !== id)
       if (filtered.length === profiles.length) {

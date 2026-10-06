@@ -10,19 +10,18 @@ import {
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Button, Card, Checkbox, Spinner } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { useBatchTokenActions } from "~/features/KeyManagement/hooks/useBatchTokenActions"
+import { isBatchSelectableEntry } from "~/features/KeyManagement/runtimeKeyExportEligibility"
 import { cn } from "~/lib/utils"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
   getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
-  hasUsableAccountRuntimeKeySecret,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import {
   ACCOUNT_KEY_RESOURCE_STATUSES,
@@ -32,29 +31,16 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfileLink,
 } from "~/types/apiCredentialProfiles"
 import {
-  isResolvedManagedSiteTokenBatchExportItemInput,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
   type ManagedSiteBatchImportIntent,
-  type ManagedSiteTokenBatchExportExecutionResult,
-  type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
-import { createLogger } from "~/utils/core/logger"
 
 import {
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
@@ -64,7 +50,6 @@ import { useTokenCredentialAssociations } from "../hooks/useTokenCredentialAssoc
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
-  type ApiCredentialProfileSaveEntry,
   type KeyManagementDisplayRow,
   type KeyManagementEntry,
   type NativeKeyManagementRow,
@@ -76,25 +61,10 @@ import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExport
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenEmptyState } from "./TokenEmptyState"
 
-const logger = createLogger("TokenList")
-
 const MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT = {
   source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
   verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
 } satisfies ManagedSiteBatchImportIntent
-
-const isBatchSelectableEntry = (entry: KeyManagementEntry) =>
-  entry.runtimeKey.capabilities.export &&
-  (supportsRecoverableAccountRuntimeKeySecrets(entry.runtimeKey.siteType) ||
-    hasUsableAccountRuntimeKeySecret(entry.runtimeKey))
-
-const isBatchSnapshotEligible = (
-  items: ReadonlyArray<Pick<KeyManagementEntry, "runtimeKey">>,
-  eligibilityByRuntimeKeyId: ReadonlyMap<string, boolean>,
-) =>
-  items.every(
-    (item) => eligibilityByRuntimeKeyId.get(item.runtimeKey.id) === true,
-  )
 
 interface GuidedManagedSiteImportTarget {
   accountId?: string
@@ -233,17 +203,6 @@ export function TokenList(props: TokenListProps) {
     runtimeKey: AccountRuntimeKey
     account: DisplaySiteData
   } | null>(null)
-  const [batchExportOpen, setBatchExportOpen] = useState(false)
-  const [batchExportItems, setBatchExportItems] = useState<
-    ManagedSiteTokenBatchExportItemInput[]
-  >([])
-
-  const [isBatchApiProfilesSaving, setIsBatchApiProfilesSaving] =
-    useState(false)
-  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(
-    () => new Set(),
-  )
-
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
@@ -503,92 +462,32 @@ export function TokenList(props: TokenListProps) {
     entries,
   ])
 
-  const eligibleEntries = useMemo(
-    () => actionEntries.filter(isBatchSelectableEntry),
-    [actionEntries],
-  )
-  const eligibleEntryIds = useMemo(
-    () => new Set(eligibleEntries.map((entry) => entry.id)),
-    [eligibleEntries],
-  )
-  const filteredEligibleEntries = useMemo(
-    () =>
-      filteredActionEntries.filter((entry) => eligibleEntryIds.has(entry.id)),
-    [eligibleEntryIds, filteredActionEntries],
-  )
-  const hasFilteredIneligibleEntries =
-    filteredEligibleEntries.length < filteredActionEntries.length
-  const filteredEligibleEntryIds = useMemo(
-    () => new Set(filteredEligibleEntries.map((entry) => entry.id)),
-    [filteredEligibleEntries],
-  )
-  const selectedVisibleCount = useMemo(
-    () =>
-      Array.from(selectedEntryIds).filter((entryId) =>
-        filteredEligibleEntryIds.has(entryId),
-      ).length,
-    [filteredEligibleEntryIds, selectedEntryIds],
-  )
-  const allFilteredSelected =
-    filteredEligibleEntries.length > 0 &&
-    selectedVisibleCount === filteredEligibleEntries.length
-  const visibleSelectionChecked =
-    selectedVisibleCount === 0
-      ? false
-      : selectedVisibleCount === filteredEligibleEntries.length
-        ? true
-        : "indeterminate"
-  const selectedEntries = useMemo(
-    () => eligibleEntries.filter((entry) => selectedEntryIds.has(entry.id)),
-    [eligibleEntries, selectedEntryIds],
-  )
-  const selectedManagedSiteBatchItems = useMemo(
-    (): ManagedSiteTokenBatchExportItemInput[] =>
-      selectedEntries.map((entry) => ({
-        account: entry.runtimeKey.account as DisplaySiteData,
-        runtimeKey: entry.runtimeKey,
-      })),
-    [selectedEntries],
-  )
-  const selectedApiProfileItems = useMemo(
-    (): ApiCredentialProfileSaveEntry[] => selectedEntries,
-    [selectedEntries],
-  )
-
-  const currentBatchEligibilityByRuntimeKeyId = useMemo(
-    () =>
-      new Map(
-        actionEntries.map((entry) => [
-          entry.runtimeKey.id,
-          isBatchSelectableEntry(entry),
-        ]),
-      ),
-    [actionEntries],
-  )
-  const isBatchExportSnapshotEligible = useMemo(
-    () =>
-      isBatchSnapshotEligible(
-        batchExportItems.filter(isResolvedManagedSiteTokenBatchExportItemInput),
-        currentBatchEligibilityByRuntimeKeyId,
-      ),
-    [batchExportItems, currentBatchEligibilityByRuntimeKeyId],
-  )
-
-  useEffect(() => {
-    setSelectedEntryIds((prev) => {
-      const next = new Set(
-        Array.from(prev).filter((entryId) => eligibleEntryIds.has(entryId)),
-      )
-      return next.size === prev.size ? prev : next
-    })
-  }, [eligibleEntryIds])
-
-  useEffect(() => {
-    if (batchExportOpen && !isBatchExportSnapshotEligible) {
-      setBatchExportOpen(false)
-      setBatchExportItems([])
-    }
-  }, [batchExportOpen, isBatchExportSnapshotEligible])
+  const {
+    batchExportOpen,
+    batchExportItems,
+    isBatchApiProfilesSaving,
+    selectedEntryIds,
+    filteredEligibleEntries,
+    hasFilteredIneligibleEntries,
+    selectedVisibleCount,
+    visibleSelectionChecked,
+    selectedEntries,
+    selectedManagedSiteBatchItems,
+    selectedApiProfileItems,
+    isBatchExportSnapshotEligible,
+    getSelectionProps,
+    toggleFilteredSelection,
+    toggleGroupSelection,
+    clearSelection,
+    openBatchExportDialog,
+    closeBatchExportDialog,
+    handleBatchSaveToApiProfiles,
+    handleBatchExportCompleted,
+  } = useBatchTokenActions({
+    actionEntries,
+    filteredActionEntries,
+    onManagedSiteImportSuccess,
+  })
 
   const collapseAll = useCallback(() => {
     if (!groupedRows) return
@@ -612,130 +511,6 @@ export function TokenList(props: TokenListProps) {
       }
       return next
     })
-  }
-
-  const toggleEntrySelection = (entryId: string, checked: boolean) => {
-    setSelectedEntryIds((prev) => {
-      const next = new Set(prev)
-      if (checked) {
-        next.add(entryId)
-      } else {
-        next.delete(entryId)
-      }
-      return next
-    })
-  }
-
-  const getSelectionProps = (entryId: string) => {
-    const isBatchSelectable = eligibleEntryIds.has(entryId)
-    return {
-      isSelected: isBatchSelectable && selectedEntryIds.has(entryId),
-      onSelectionChange: isBatchSelectable
-        ? (checked: boolean) => toggleEntrySelection(entryId, checked)
-        : undefined,
-      selectionDisabledReason: isBatchSelectable
-        ? undefined
-        : t("keyManagement:batchSelection.unavailableReason"),
-    }
-  }
-
-  const toggleFilteredSelection = () => {
-    setSelectedEntryIds((prev) => {
-      const next = new Set(prev)
-      for (const entry of filteredEligibleEntries) {
-        if (allFilteredSelected) {
-          next.delete(entry.id)
-        } else {
-          next.add(entry.id)
-        }
-      }
-      return next
-    })
-  }
-
-  const toggleGroupSelection = (
-    groupEntries: KeyManagementEntry[],
-    checked: boolean | "indeterminate",
-  ) => {
-    setSelectedEntryIds((prev) => {
-      const next = new Set(prev)
-      const shouldSelect = checked === true
-
-      for (const entry of groupEntries) {
-        if (shouldSelect) {
-          next.add(entry.id)
-        } else {
-          next.delete(entry.id)
-        }
-      }
-
-      return next
-    })
-  }
-
-  const clearSelection = () => {
-    setSelectedEntryIds(new Set())
-  }
-
-  const openBatchExportDialog = () => {
-    setBatchExportItems(selectedManagedSiteBatchItems)
-    setBatchExportOpen(true)
-  }
-
-  const closeBatchExportDialog = () => {
-    setBatchExportOpen(false)
-    setBatchExportItems([])
-  }
-
-  const handleBatchSaveToApiProfiles = async () => {
-    if (selectedApiProfileItems.length === 0 || isBatchApiProfilesSaving) return
-
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountRuntimeKeysToApiCredentialProfiles,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementPage,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    setIsBatchApiProfilesSaving(true)
-    try {
-      await saveAccountRuntimeKeysToApiCredentialProfiles({
-        items: selectedApiProfileItems,
-        t,
-        logger,
-        source: "TokenListBatchAction",
-      })
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      clearSelection()
-    } catch {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-    } finally {
-      setIsBatchApiProfilesSaving(false)
-    }
-  }
-
-  const handleBatchExportCompleted = (
-    result: ManagedSiteTokenBatchExportExecutionResult,
-  ) => {
-    if (!onManagedSiteImportSuccess) return
-
-    const selectedTokenByIdentity = new Map(
-      batchExportItems.flatMap((item) =>
-        isResolvedManagedSiteTokenBatchExportItemInput(item)
-          ? [[item.runtimeKey.id, item.runtimeKey] as const]
-          : [],
-      ),
-    )
-
-    for (const item of result.items) {
-      if (!item.success) continue
-      const token = selectedTokenByIdentity.get(item.id)
-      if (!token) continue
-      void Promise.resolve(onManagedSiteImportSuccess(token))
-    }
   }
 
   const handleCloseDeeplinkExport = () => {
