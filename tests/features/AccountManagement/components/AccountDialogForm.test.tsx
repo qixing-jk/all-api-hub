@@ -333,6 +333,23 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows configured credential guidance without requiring a title", async () => {
+    const props = createProps()
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.OPENROUTER)
+    policy.accessTokenPresentation.accessTokenGuidanceTitleKey = undefined
+    render(<AccountForm {...props} sitePolicy={policy} />)
+    expect(
+      await screen.findByText(
+        "accountDialog:form.openrouterManagementKeyGuidance",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "accountDialog:form.openrouterManagementKeyGuidanceTitle",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("hides manual OpenRouter guidance after detection fills the management key", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.OPENROUTER

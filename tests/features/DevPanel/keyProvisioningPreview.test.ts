@@ -11,6 +11,95 @@ import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyR
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 describe("key provisioning preview plans", () => {
+  const openFixture = async (
+    siteType: Parameters<typeof createKeyProvisioningPreviewAccount>[0],
+    options: Parameters<typeof createKeyProvisioningFixtureSession>[3] = {},
+  ) => {
+    const account = createKeyProvisioningPreviewAccount(siteType)
+    return createKeyProvisioningFixtureSession(
+      account,
+      getSiteTypeCapabilities(siteType).account!.keyResourceManagement!,
+      "all-groups",
+      options,
+    )
+  }
+
+  it.each([
+    ["new-api", "group", "Premium"],
+    ["voapi-v2", "groups", ["2"]],
+    ["sub2api", "group_id", "2"],
+  ] as const)(
+    "binds the selected %s requirement to its native editor",
+    async (siteType, field, value) => {
+      const session = await openFixture(siteType)
+      const scope = await session.resolveDefaultScope()
+      const snapshot = await session.provisioning!.inspect()
+      const selected = snapshot.requirements[1]!
+      const editor = await session.openCreateEditor(
+        scope.scopeKey,
+        {},
+        undefined,
+        selected.requirementKey,
+      )
+      expect(editor.initialValues[field]).toEqual(value)
+      expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+      const created = await editor.submit(editor.initialValues)
+      expect(created.facts?.displayName).toBe(selected.displayName)
+    },
+  )
+
+  it("lists created local resources and rejects missing or unsupported mutations", async () => {
+    const session = await openFixture("new-api")
+    const scope = await session.resolveDefaultScope()
+    expect(await session.listScopes()).toEqual([scope])
+    const collection = await session.openCollection(scope.scopeKey)
+    expect(await collection.list()).toEqual({ items: [] })
+    const snapshot = await session.provisioning!.inspect()
+    const result = await session.provisioning!.provision(
+      snapshot.requirements[0]!.requirementKey,
+    )
+    expect(result.certainty).toBe("applied")
+    if (result.certainty !== "applied")
+      throw new Error("Expected a confirmed local write")
+    const { ref } = result.value
+    expect((await collection.list()).items).toEqual([await collection.get(ref)])
+    await expect(
+      collection.get({ ...ref, resourceId: "missing" }),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+    expect(() => collection.openEditEditor(ref)).toThrow()
+    expect(() => collection.delete(ref)).toThrow()
+  })
+
+  it("propagates cancellation during local provisioning without recording a write", async () => {
+    const controller = new AbortController()
+    const created = vi.fn()
+    const session = await openFixture("new-api", {
+      signal: controller.signal,
+      delayMs: 1,
+      onCreated: created,
+    })
+    const snapshot = await session.provisioning!.inspect()
+    const pending = session.provisioning!.provision(
+      snapshot.requirements[0]!.requirementKey,
+    )
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    expect(created).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid fixture input before creation and accepts a corrected native selection", async () => {
+    const created = vi.fn()
+    const session = await openFixture("voapi-v2", { onCreated: created })
+    const scope = await session.resolveDefaultScope()
+    const editor = await session.openCreateEditor(scope.scopeKey)
+    await expect(editor.submit(editor.initialValues)).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    expect(created).not.toHaveBeenCalled()
+    await editor.submit({ ...editor.initialValues, groups: ["1"] })
+    expect(created).toHaveBeenCalledOnce()
+  })
+
   it("accepts the OpenRouter creator option offered by its local native fixture", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
     try {
