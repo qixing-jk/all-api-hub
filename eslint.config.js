@@ -252,6 +252,8 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
   "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
   "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Default identity and explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts", // Explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
   "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
   "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.

@@ -1,3 +1,4 @@
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
@@ -127,3 +128,21 @@ export function createEmptyAccountDialogDraft(
 }
 
 export type { AddAccountPrefill }
+
+/**
+ * Determines the initial phase and provenance for add and edit dialogs.
+ */
+export function getInitialFlowState(mode: DialogMode): {
+  phase: AccountDialogPhase
+  formSource: AccountDialogFormSource
+} {
+  return mode === DIALOG_MODES.EDIT
+    ? {
+        phase: ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+        formSource: ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT,
+      }
+    : {
+        phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
+        formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+      }
+}

@@ -10,46 +10,22 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
-import {
-  DATA_TYPE_BALANCE,
-  DATA_TYPE_CHECK_IN_REQUIREMENT,
-  DATA_TYPE_CONSUMPTION,
-  DATA_TYPE_CREATED_AT,
-  DATA_TYPE_CUSTOM_CHECK_IN_URL,
-  DATA_TYPE_CUSTOM_REDEEM_URL,
-  DATA_TYPE_INCOME,
-} from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { isAccountRelatedTab } from "~/features/AccountManagement/utils/accountOpenTabMatch"
 import toast from "~/lib/notify"
-import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
-import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolicy"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
-import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile"
-import { isSameAccountSiteOrigin } from "~/services/accounts/accountSiteProfile/urls"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
-import { accountEntryLayout } from "~/services/accounts/accountStorage/accountEntryLayout"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
-import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   buildEstimatedTodayIncomeMoneyTotals,
   convertQuotaToMoney,
   estimateTodayIncomeForAccount,
 } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
-import {
-  createAccountContextBoostResolver,
-  createDynamicSortComparator,
-  OPEN_TAB_MATCH_TIER,
-  type AccountContextBoost,
-  type OpenTabMatchTiers,
-} from "~/services/preferences/utils/sortingPriority"
+import { type AccountContextBoost } from "~/services/preferences/utils/sortingPriority"
 import {
   createAutomaticProtectionBypassExecution,
   withProtectionBypassUserCommand,
@@ -75,38 +51,18 @@ import type {
   TagStore,
 } from "~/types"
 import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
-import {
-  getActiveTabs,
-  getAllTabs,
-  onRuntimeMessage,
-  onTabActivated,
-  onTabRemoved,
-  onTabUpdated,
-} from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
+
+import { useAccountBrowsingContext } from "./useAccountBrowsingContext"
+import { useAccountEntryLayout } from "./useAccountEntryLayout"
 
 /**
  * Unified logger scoped to account data context and refresh orchestration.
  */
 const logger = createLogger("AccountDataContext")
-
-const CURRENT_TAB_IDENTITY_CACHE_MS = 1500
-
-type CurrentTabIdentityCache = {
-  tabId: number
-  url: string
-  siteType: SiteAccount["site_type"]
-  candidateUserIdsKey: string
-  completedAt: number | null
-  identity: Promise<string | null>
-}
-
-type TabCheckOptions = {
-  force?: boolean
-  pageIsLoading?: boolean
-}
 
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {
@@ -191,27 +147,15 @@ export const AccountDataProvider = ({
   refreshKey?: number
 }) => {
   const { t } = useTranslation("account")
-  const {
-    currencyType,
-    showTodayCashflow,
-    sortField: initialSortField,
-    sortOrder: initialSortOrder,
-    updateSortConfig,
-    sortingPriorityConfig,
-    refreshOnOpen,
-    preferences,
-  } = useUserPreferencesContext()
+  const { refreshOnOpen, preferences } = useUserPreferencesContext()
   const estimatedTodayIncomeEnabled =
     preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [bookmarks, setBookmarks] = useState<SiteBookmark[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
-  const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>([])
   const [stats, setStats] = useState<AccountStats>(createEmptyAccountStats)
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>()
   const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
-  const [hasResolvedInitialOpenTabs, setHasResolvedInitialOpenTabs] =
-    useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isRefreshingDisabledAccounts, setIsRefreshingDisabledAccounts] =
     useState(false)
@@ -234,23 +178,6 @@ export const AccountDataProvider = ({
     totalAccounts: 0,
   })
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
-  const [selectedSortField, setSortField] =
-    useState<ActiveSortField>(initialSortField)
-  const sortField =
-    showTodayCashflow === false &&
-    (selectedSortField === DATA_TYPE_CONSUMPTION ||
-      selectedSortField === DATA_TYPE_INCOME)
-      ? DATA_TYPE_BALANCE
-      : selectedSortField
-  const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
-  const [detectedSiteAccounts, setDetectedSiteAccounts] = useState<
-    SiteAccount[]
-  >([])
-  const [detectedAccount, setDetectedAccount] = useState<SiteAccount | null>(
-    null,
-  )
-  const [isDetecting, setIsDetecting] = useState(true)
-  const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>([])
   const [tagStore, setTagStore] = useState<TagStore>({
     version: 1,
     tagsById: {},
@@ -329,173 +256,45 @@ export const AccountDataProvider = ({
   )
   const hasLoadedAccountDataRef = useRef(false)
   hasLoadedAccountDataRef.current = hasLoadedAccountData
-  const hasResolvedInitialOpenTabsRef = useRef(false)
-  hasResolvedInitialOpenTabsRef.current = hasResolvedInitialOpenTabs
+
+  const {
+    detectedSiteAccounts,
+    detectedAccount,
+    isDetecting,
+    matchedTabTiers,
+    hasResolvedInitialOpenTabs,
+  } = useAccountBrowsingContext({
+    accounts,
+    displayData,
+    enabled: hasLoadedAccountData,
+  })
+
+  const {
+    orderedAccountIds,
+    pinnedAccountIds,
+    sortedData,
+    getAccountContextBoost,
+    sortField,
+    sortOrder,
+    handleSort,
+    clearSortConfig,
+    handleReorder,
+    handleBookmarkReorder,
+    isAccountPinned,
+    pinAccount,
+    unpinAccount,
+    togglePinAccount,
+    syncEntryLayout,
+  } = useAccountEntryLayout({
+    displayData,
+    bookmarks,
+    detectedAccount,
+    matchedTabTiers,
+  })
 
   // Passive browser identity checks must not hold the saved-account list behind
   // a network request. Its optional current-account ordering can settle later.
   const isInitialLoad = !hasLoadedAccountData || !hasResolvedInitialOpenTabs
-
-  const currentTabUserCacheRef = useRef<CurrentTabIdentityCache | null>(null)
-
-  const currentTabCheckSeqRef = useRef(0)
-
-  const checkCurrentTab = useCallback(async (options?: TabCheckOptions) => {
-    // Guard against stale async updates: if a newer check starts while this one is awaiting,
-    // this `seq` lets us no-op any state updates from older runs.
-    const seq = (currentTabCheckSeqRef.current += 1)
-    setIsDetecting(true)
-
-    try {
-      // Look up the currently active tab. We need both the URL (for origin matching) and the
-      // tab ID (for messaging + deduping repeated checks for the same tab).
-      const tabs = await excludeInternalTabs(await getActiveTabs())
-      const tab = tabs?.[0]
-      const tabUrl = typeof tab?.url === "string" ? tab.url : null
-      const tabId = typeof tab?.id === "number" ? tab.id : null
-
-      if (!tab || !tabUrl || tabId === null) {
-        if (seq !== currentTabCheckSeqRef.current) return
-        // No valid tab context: clear both site-level and user-level detections.
-        currentTabUserCacheRef.current = null
-        setDetectedSiteAccounts([])
-        setDetectedAccount(null)
-        return
-      }
-
-      let parsedUrl: URL
-      try {
-        parsedUrl = new URL(tabUrl)
-      } catch (error) {
-        logger.debug("Failed to parse active tab URL", { tabUrl, error })
-        if (seq !== currentTabCheckSeqRef.current) return
-        // Invalid URL: clear detection to avoid showing stale state from a previous tab.
-        currentTabUserCacheRef.current = null
-        setDetectedSiteAccounts([])
-        setDetectedAccount(null)
-        return
-      }
-
-      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-        if (seq !== currentTabCheckSeqRef.current) return
-        // Non-web pages (chrome://, about:, etc.) can't be matched to stored site accounts.
-        currentTabUserCacheRef.current = null
-        setDetectedSiteAccounts([])
-        setDetectedAccount(null)
-        return
-      }
-
-      // Site-level detection: find any stored accounts that belong to the same origin.
-      // This answers "does this site already exist in the user's accounts?".
-      const originAccounts = accountsRef.current.filter((account) => {
-        return isSameAccountSiteOrigin(
-          {
-            url: account.site_url,
-            siteType: account.site_type,
-          },
-          { url: tabUrl },
-        )
-      })
-      if (seq !== currentTabCheckSeqRef.current) return
-      setDetectedSiteAccounts(originAccounts)
-
-      const [firstOriginAccount] = originAccounts
-      if (
-        firstOriginAccount === undefined ||
-        options?.pageIsLoading ||
-        tab.status === "loading"
-      ) {
-        // A loading page may still host the previous document. Invalidate its
-        // identity now and wait for completion before contacting a content script.
-        currentTabUserCacheRef.current = null
-        setDetectedAccount(null)
-        return
-      }
-
-      const siteTypeForUserRead =
-        resolveAccountSiteContentSessionHintForOrigin({
-          origin: parsedUrl.origin,
-          candidateAccounts: originAccounts,
-        }) ?? firstOriginAccount.site_type
-
-      const candidateUserIds = [
-        ...new Set(
-          originAccounts
-            .map((account) => normalizeAccountIdentity(account.account_info.id))
-            .filter((id): id is string => id !== null),
-        ),
-      ].sort()
-      const candidateUserIdsKey = JSON.stringify(candidateUserIds)
-      let currentRead = currentTabUserCacheRef.current
-      const isSameReadContext =
-        currentRead?.tabId === tabId &&
-        currentRead.url === tabUrl &&
-        currentRead.siteType === siteTypeForUserRead &&
-        currentRead.candidateUserIdsKey === candidateUserIdsKey
-      const canReuseRead =
-        !options?.force &&
-        isSameReadContext &&
-        currentRead &&
-        (currentRead.completedAt === null ||
-          Date.now() - currentRead.completedAt < CURRENT_TAB_IDENTITY_CACHE_MS)
-
-      if (!currentRead || !canReuseRead) {
-        // Preserve the last ordering during a same-page passive check. Apply a
-        // changed or unconfirmed identity when that check settles, without flicker.
-        if (!isSameReadContext) setDetectedAccount(null)
-        // Cache the promise so a newer tab event waits for the same verification.
-        // Completion only updates this entry, never a later tab's cache.
-        const entry: CurrentTabIdentityCache = {
-          tabId,
-          url: tabUrl,
-          siteType: siteTypeForUserRead,
-          candidateUserIdsKey,
-          completedAt: null,
-          identity: readAccountBrowserIdentityFromTab({
-            tabId,
-            baseUrl: parsedUrl.origin,
-            siteType: siteTypeForUserRead,
-            candidateUserIds,
-          }).then((userId) => {
-            entry.completedAt = Date.now()
-            return userId
-          }),
-        }
-        currentRead = entry
-        currentTabUserCacheRef.current = entry
-      }
-
-      const verifiedUserId = await currentRead.identity
-      if (seq !== currentTabCheckSeqRef.current) return
-
-      if (!verifiedUserId) {
-        // We know the site exists in storage (originAccounts), but we can't confirm which login is active.
-        setDetectedAccount(null)
-        return
-      }
-
-      // If we can verify userId, match it to a specific stored account for this origin.
-      const matchedAccount =
-        findAccountsBySiteIdentity({
-          accounts: originAccounts,
-          siteUrl: tabUrl,
-          userId: verifiedUserId,
-        })[0] ?? null
-
-      setDetectedAccount(matchedAccount)
-    } catch (error) {
-      logger.error("Error detecting current tab account", error)
-      if (seq !== currentTabCheckSeqRef.current) return
-      // Defensive reset to avoid leaving the UI in a partially-updated state.
-      currentTabUserCacheRef.current = null
-      setDetectedSiteAccounts([])
-      setDetectedAccount(null)
-    } finally {
-      if (seq === currentTabCheckSeqRef.current) {
-        setIsDetecting(false)
-      }
-    }
-  }, [])
 
   const loadAccountData = useCallback(async () => {
     try {
@@ -558,9 +357,13 @@ export const AccountDataProvider = ({
         ...allBookmarks.map((bookmark) => bookmark.id),
       ])
 
-      setOrderedAccountIds(storedOrderedIds.filter((id) => entryIdSet.has(id)))
+      syncEntryLayout({
+        orderedIds: storedOrderedIds.filter((id) => entryIdSet.has(id)),
+      })
 
-      setPinnedAccountIds(pinnedIds.filter((id) => entryIdSet.has(id)))
+      syncEntryLayout({
+        pinnedIds: pinnedIds.filter((id) => entryIdSet.has(id)),
+      })
 
       if (allAccounts.length > 0) {
         const latestSyncTime = Math.max(
@@ -579,6 +382,7 @@ export const AccountDataProvider = ({
     }
   }, [
     buildDisplayDataWithBalanceHistory,
+    syncEntryLayout,
     estimatedTodayIncomeEnabled,
     prevTotalConsumption,
     prevBalances,
@@ -805,45 +609,6 @@ export const AccountDataProvider = ({
     loadAccountData()
   }, [loadAccountData, refreshKey])
 
-  useEffect(() => {
-    if (!hasLoadedAccountData) {
-      return
-    }
-
-    // Tab 激活变化时检测
-    const cleanupActivated = onTabActivated(() => {
-      void checkCurrentTab({ force: true })
-    })
-
-    // Tab URL 或状态更新时检测（只对当前 tab）
-    const cleanupUpdated = onTabUpdated(async (tabId, changeInfo) => {
-      const tabs = await getActiveTabs()
-      if (tabs[0]?.id === tabId) {
-        void checkCurrentTab({
-          force:
-            changeInfo.status === "complete" ||
-            typeof changeInfo.url === "string",
-          pageIsLoading: changeInfo.status === "loading",
-        })
-      }
-    })
-
-    // 清理监听器
-    return () => {
-      cleanupActivated()
-      cleanupUpdated()
-    }
-  }, [checkCurrentTab, hasLoadedAccountData])
-
-  useEffect(() => {
-    if (!hasLoadedAccountData) {
-      return
-    }
-
-    // accounts refresh/update may change origin matches; re-check current tab to keep UI hints accurate.
-    void checkCurrentTab()
-  }, [accounts, checkCurrentTab, hasLoadedAccountData])
-
   const reloadAccountsById = useCallback(
     async (accountIds: string[]) => {
       const uniqueIds = Array.from(
@@ -1016,369 +781,7 @@ export const AccountDataProvider = ({
     })
   }, [loadAccountData, reloadAccountsById])
 
-  const handleSort = useCallback(
-    (field: SortField) => {
-      if (
-        showTodayCashflow === false &&
-        (field === DATA_TYPE_CONSUMPTION || field === DATA_TYPE_INCOME)
-      ) {
-        return
-      }
-
-      let newOrder: SortOrder
-      if (sortField === field) {
-        newOrder = sortOrder === "asc" ? "desc" : "asc"
-        setSortOrder(newOrder)
-      } else {
-        newOrder =
-          field === DATA_TYPE_CREATED_AT ||
-          field === DATA_TYPE_CHECK_IN_REQUIREMENT ||
-          field === DATA_TYPE_CUSTOM_CHECK_IN_URL ||
-          field === DATA_TYPE_CUSTOM_REDEEM_URL
-            ? "desc"
-            : "asc"
-        setSortField(field)
-        setSortOrder(newOrder)
-      }
-      updateSortConfig(field, newOrder)
-    },
-    [showTodayCashflow, sortField, sortOrder, updateSortConfig],
-  )
-
-  const clearSortConfig = useCallback(() => {
-    setSortField(null)
-    void updateSortConfig(null, sortOrder)
-  }, [sortOrder, updateSortConfig])
-
-  useEffect(() => {
-    if (showTodayCashflow !== false) return
-
-    if (
-      selectedSortField !== DATA_TYPE_CONSUMPTION &&
-      selectedSortField !== DATA_TYPE_INCOME
-    ) {
-      return
-    }
-
-    const fallbackField: SortField = DATA_TYPE_BALANCE
-    setSortField(fallbackField)
-    void updateSortConfig(fallbackField, sortOrder)
-  }, [showTodayCashflow, selectedSortField, sortOrder, updateSortConfig])
-
-  const handleReorder = useCallback(
-    async (ids: string[]) => {
-      // Preserve the fixed pinned segment while saving the visible manual order.
-      const pinnedSet = new Set(pinnedAccountIds)
-      const visibleAccountIdSet = new Set(ids)
-      const allAccountIdSet = new Set(displayData.map((account) => account.id))
-      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
-      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
-      const merged = [...pinnedSegment, ...nonPinnedSegment]
-      const previousPinnedIds = pinnedAccountIds
-      const previousOrderedIds = orderedAccountIds
-
-      // Check if pinned order has changed
-      const pinnedAccountsInState = pinnedAccountIds.filter((id) =>
-        visibleAccountIdSet.has(id),
-      )
-      const shouldUpdatePinnedOrder =
-        pinnedSegment.length > 0 &&
-        pinnedSegment.length === pinnedAccountsInState.length &&
-        pinnedSegment.some((id, index) => id !== pinnedAccountsInState[index])
-
-      const optimisticPinnedIds = shouldUpdatePinnedOrder
-        ? replaceIdListSubset({
-            existingIds: previousPinnedIds,
-            subsetIdSet: visibleAccountIdSet,
-            nextSubsetIds: pinnedSegment,
-          })
-        : previousPinnedIds
-      const optimisticOrderedIds = replaceIdListSubset({
-        existingIds: previousOrderedIds,
-        subsetIdSet: visibleAccountIdSet,
-        nextSubsetIds: merged,
-      })
-
-      setPinnedAccountIds(optimisticPinnedIds)
-      setOrderedAccountIds(optimisticOrderedIds)
-
-      try {
-        const didPersistOrder = await accountEntryLayout.setAccountListOrder({
-          pinnedIds: optimisticPinnedIds.filter((id) =>
-            allAccountIdSet.has(id),
-          ),
-          orderedIds: optimisticOrderedIds.filter((id) =>
-            allAccountIdSet.has(id),
-          ),
-        })
-
-        if (!didPersistOrder) {
-          throw new Error("Failed to persist account order")
-        }
-      } catch (error) {
-        logger.error("Failed to persist account reorder", { ids, error })
-        setPinnedAccountIds(previousPinnedIds)
-        setOrderedAccountIds(previousOrderedIds)
-        throw error
-      }
-
-      try {
-        const [nextPinnedIds, nextOrderedIds] = await Promise.all([
-          accountEntryLayout.getPinnedList(),
-          accountEntryLayout.getOrderedList(),
-        ])
-
-        setPinnedAccountIds(nextPinnedIds)
-        setOrderedAccountIds(nextOrderedIds)
-      } catch (error) {
-        logger.warn("Persisted account reorder but failed to refresh order", {
-          error,
-        })
-      }
-    },
-    [displayData, orderedAccountIds, pinnedAccountIds],
-  )
-
-  const handleBookmarkReorder = useCallback(
-    async (ids: string[]) => {
-      const pinnedSet = new Set(pinnedAccountIds)
-      const visibleBookmarkIdSet = new Set(ids)
-      const allBookmarkIdSet = new Set(bookmarks.map((bookmark) => bookmark.id))
-      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
-      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
-      const merged = [...pinnedSegment, ...nonPinnedSegment]
-      const previousPinnedIds = pinnedAccountIds
-      const previousOrderedIds = orderedAccountIds
-
-      const pinnedBookmarksInState = pinnedAccountIds.filter((id) =>
-        visibleBookmarkIdSet.has(id),
-      )
-
-      const shouldUpdatePinnedOrder =
-        pinnedSegment.length > 0 &&
-        pinnedSegment.length === pinnedBookmarksInState.length &&
-        pinnedSegment.some((id, index) => id !== pinnedBookmarksInState[index])
-
-      const optimisticPinnedIds = shouldUpdatePinnedOrder
-        ? replaceIdListSubset({
-            existingIds: previousPinnedIds,
-            subsetIdSet: visibleBookmarkIdSet,
-            nextSubsetIds: pinnedSegment,
-          })
-        : previousPinnedIds
-      const optimisticOrderedIds = replaceIdListSubset({
-        existingIds: previousOrderedIds,
-        subsetIdSet: visibleBookmarkIdSet,
-        nextSubsetIds: merged,
-      })
-
-      setPinnedAccountIds(optimisticPinnedIds)
-      setOrderedAccountIds(optimisticOrderedIds)
-
-      try {
-        if (shouldUpdatePinnedOrder) {
-          const didPersistPinned = await accountEntryLayout.setPinnedListSubset(
-            {
-              entryType: "bookmark",
-              ids: optimisticPinnedIds.filter((id) => allBookmarkIdSet.has(id)),
-            },
-          )
-
-          if (!didPersistPinned) {
-            throw new Error("Failed to persist pinned bookmark order")
-          }
-        }
-
-        const didPersistOrder = await accountEntryLayout.setOrderedListSubset({
-          entryType: "bookmark",
-          ids: optimisticOrderedIds.filter((id) => allBookmarkIdSet.has(id)),
-        })
-
-        if (!didPersistOrder) {
-          throw new Error("Failed to persist bookmark order")
-        }
-
-        const [nextPinnedIds, nextOrderedIds] = await Promise.all([
-          accountEntryLayout.getPinnedList(),
-          accountEntryLayout.getOrderedList(),
-        ])
-
-        setPinnedAccountIds(nextPinnedIds)
-        setOrderedAccountIds(nextOrderedIds)
-      } catch (error) {
-        logger.error("Failed to persist bookmark reorder", { ids, error })
-        setPinnedAccountIds(previousPinnedIds)
-        setOrderedAccountIds(previousOrderedIds)
-      }
-    },
-    [bookmarks, orderedAccountIds, pinnedAccountIds],
-  )
-
   // State to hold related-page match tiers from open tabs
-  const [matchedTabTiers, setMatchedTabTiers] = useState<OpenTabMatchTiers>({})
-  const openTabsCheckSeqRef = useRef(0)
-  // Check and match open tabs with accounts
-  const checkOpenTabs = useCallback(async () => {
-    const seq = (openTabsCheckSeqRef.current += 1)
-    try {
-      const tabs = await excludeInternalTabs(await getAllTabs())
-      if (seq !== openTabsCheckSeqRef.current) return
-      if (tabs.length === 0 || displayData.length === 0) {
-        setMatchedTabTiers({})
-        return
-      }
-
-      const [activeTab] = await getActiveTabs()
-      if (seq !== openTabsCheckSeqRef.current) return
-
-      // The viewed tab outranks related pages left open elsewhere. It only counts
-      // when it survived the internal-page filter, so extension task pages cannot
-      // claim the tier even when another tab shows the same URL.
-      const activeTabId =
-        typeof activeTab?.id === "number" &&
-        tabs.some((tab) => tab.id === activeTab.id)
-          ? activeTab.id
-          : undefined
-
-      const tiers: OpenTabMatchTiers = {}
-
-      // Only recognized sites and explicitly configured pages establish a relation.
-      for (const account of displayData) {
-        const relatedTabs = tabs.filter((tab) =>
-          isAccountRelatedTab(account, tab.url),
-        )
-        if (relatedTabs.length === 0) continue
-        tiers[account.id] = relatedTabs.some((tab) => tab.id === activeTabId)
-          ? OPEN_TAB_MATCH_TIER.ACTIVE
-          : OPEN_TAB_MATCH_TIER.BACKGROUND
-      }
-
-      setMatchedTabTiers(tiers)
-    } catch (error) {
-      if (seq !== openTabsCheckSeqRef.current) return
-      logger.error("Error matching open tabs", error)
-      setMatchedTabTiers({})
-    } finally {
-      if (
-        seq === openTabsCheckSeqRef.current &&
-        !hasResolvedInitialOpenTabsRef.current
-      ) {
-        setHasResolvedInitialOpenTabs(true)
-      }
-    }
-  }, [displayData])
-
-  // Update matched scores when displayData changes or tabs change
-  useEffect(() => {
-    if (!hasLoadedAccountData) {
-      return
-    }
-
-    void checkOpenTabs()
-
-    // Listen for tab changes
-    const cleanupActivated = onTabActivated(() => {
-      if (!hasLoadedAccountDataRef.current) {
-        return
-      }
-      void checkOpenTabs()
-    })
-
-    const cleanupUpdated = onTabUpdated(() => {
-      if (!hasLoadedAccountDataRef.current) {
-        return
-      }
-      void checkOpenTabs()
-    })
-
-    const cleanupRemoved = onTabRemoved(() => {
-      if (!hasLoadedAccountDataRef.current) {
-        return
-      }
-      void checkOpenTabs()
-    })
-
-    return () => {
-      // Invalidate scans from the previous account snapshot or an unmounted UI.
-      openTabsCheckSeqRef.current += 1
-      cleanupActivated()
-      cleanupUpdated()
-      cleanupRemoved()
-    }
-  }, [checkOpenTabs, hasLoadedAccountData])
-
-  const isAccountPinned = useCallback(
-    (id: string) => pinnedAccountIds.includes(id),
-    [pinnedAccountIds],
-  )
-
-  const pinAccount = useCallback(async (id: string) => {
-    const success = await accountEntryLayout.pinAccount(id)
-    if (success) {
-      setPinnedAccountIds((prev) => [
-        id,
-        ...prev.filter((pinnedId) => pinnedId !== id),
-      ])
-    }
-    return success
-  }, [])
-
-  const unpinAccount = useCallback(async (id: string) => {
-    const success = await accountEntryLayout.unpinAccount(id)
-    if (success) {
-      setPinnedAccountIds((prev) => prev.filter((pinnedId) => pinnedId !== id))
-    }
-    return success
-  }, [])
-
-  const togglePinAccount = useCallback(
-    async (id: string) => {
-      if (isAccountPinned(id)) {
-        return unpinAccount(id)
-      }
-      return pinAccount(id)
-    },
-    [isAccountPinned, pinAccount, unpinAccount],
-  )
-
-  const getAccountContextBoost = useMemo(
-    () =>
-      createAccountContextBoostResolver(
-        sortingPriorityConfig,
-        detectedAccount?.id,
-        matchedTabTiers,
-      ),
-    [sortingPriorityConfig, detectedAccount?.id, matchedTabTiers],
-  )
-
-  const sortedData = useMemo(() => {
-    const manualOrderIndices: Record<string, number> = {}
-    orderedAccountIds.forEach((id, index) => {
-      manualOrderIndices[id] = index
-    })
-    const comparator = createDynamicSortComparator(
-      sortingPriorityConfig,
-      detectedAccount,
-      sortField,
-      currencyType,
-      sortOrder,
-      matchedTabTiers,
-      pinnedAccountIds,
-      manualOrderIndices,
-    )
-    return [...displayData].sort(comparator)
-  }, [
-    displayData,
-    sortingPriorityConfig,
-    detectedAccount,
-    sortField,
-    currencyType,
-    sortOrder,
-    matchedTabTiers,
-    pinnedAccountIds,
-    orderedAccountIds,
-  ])
-
   const tagCountsById = useMemo(() => {
     const counts: Record<string, number> = {}
 
