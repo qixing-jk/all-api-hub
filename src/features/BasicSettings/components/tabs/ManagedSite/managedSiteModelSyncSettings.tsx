@@ -1,9 +1,6 @@
-import type { TFunction } from "i18next"
-import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
-import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import {
   ActionGroup,
   Button,
@@ -15,129 +12,12 @@ import {
   Modal,
   Switch,
   WorkflowTransitionButton,
-  type CompactMultiSelectOption,
 } from "~/components/ui"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
-import toast from "~/lib/notify"
-import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
-import { modelMetadataService } from "~/services/models/modelMetadata"
-import type { ModelMetadata } from "~/services/models/modelMetadata/types"
-import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_EDITOR_MODES,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsActionId,
-} from "~/services/productAnalytics/contracts"
-import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import {
-  DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
-  isProbeChannelModelFilterRule,
-} from "~/types/channelModelFilters"
-import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
-import type { PartialWithNested } from "~/types/utils"
-import { getErrorMessage } from "~/utils/core/error"
-import { safeRandomUUID } from "~/utils/core/identifier"
-import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
-import { pushWithinOptionsPage } from "~/utils/navigation"
-import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
+import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncTargetIds"
+import { useManagedSiteModelSyncSettingsViewModel } from "~/features/BasicSettings/hooks/useManagedSiteModelSyncSettingsViewModel"
 
-import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"
-
-type UserManagedSiteModelSyncConfig = NonNullable<
-  typeof DEFAULT_PREFERENCES.managedSiteModelSync
->
-
-type ManagedSiteModelSyncPreferenceUpdate = PartialWithNested<
-  ManagedSiteModelSyncPreferences,
-  "rateLimit"
->
-
-type UserManagedSiteModelSyncConfigUpdate = PartialWithNested<
-  UserManagedSiteModelSyncConfig,
-  "rateLimit"
->
-
-type EditableFilter = ChannelModelFilterRule
-
-type NumericInputCommitOptions = {
-  persistedValue: number
-  min: number
-  max: number
-  allowDecimal?: boolean
-  createUpdate: (value: number) => ManagedSiteModelSyncPreferenceUpdate
-}
-
-/**
- * Moves a filter one position up or down within the editable filter list.
- */
-function moveFilterById(
-  filters: EditableFilter[],
-  filterId: string,
-  direction: "up" | "down",
-) {
-  const index = filters.findIndex((filter) => filter.id === filterId)
-  if (index < 0) {
-    return filters
-  }
-
-  const targetIndex = direction === "up" ? index - 1 : index + 1
-  if (targetIndex < 0 || targetIndex >= filters.length) {
-    return filters
-  }
-
-  const next = [...filters]
-  const current = next[index]
-  const target = next[targetIndex]
-  if (current === undefined || target === undefined) return filters
-  next[index] = target
-  next[targetIndex] = current
-  return next
-}
-
-/**
- * Unified logger scoped to the Managed Site model sync settings section.
- */
-const logger = createLogger("ManagedSiteModelSyncSettings")
-
-const MODEL_SYNC_SETTINGS_ANALYTICS_CONTEXT = {
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
-  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-} as const
-
-const CHANNEL_PROCESSING_TIMEOUT_MAX_SECONDS = 43_200
-const DEFAULT_MODEL_SYNC_PREFERENCES = DEFAULT_PREFERENCES.managedSiteModelSync!
-
-/**
- * Starts an analytics span for model-sync settings actions using fixed enums.
- */
-function startSettingsAnalyticsAction(actionId: ProductAnalyticsActionId) {
-  return startProductAnalyticsAction({
-    ...MODEL_SYNC_SETTINGS_ANALYTICS_CONTEXT,
-    actionId,
-  })
-}
-
-/**
- * Render the Managed Site Model Sync settings UI and manage its local state and interactions.
- *
- * This component displays controls for enabling auto-sync, adjusting interval, concurrency,
- * retries and rate limits, selecting allowed models (loaded from model metadata), and navigating
- * to the sync execution view. It loads model metadata on mount, persists preference changes via
- * the user preferences context, and shows success/error toasts for save operations.
- * @returns The settings section React element for configuring Managed Site Model Sync.
- */
+/** Model-sync settings view. */
 export default function ManagedSiteModelSyncSettings() {
   const { t } = useTranslation([
     "managedSiteModelSync",
@@ -146,554 +26,46 @@ export default function ManagedSiteModelSyncSettings() {
     "common",
   ])
   const {
-    preferences: userPrefs,
-    updateNewApiModelSync,
-    resetNewApiModelSyncConfig,
-  } = useUserPreferencesContext()
-  const [channelUpstreamModelOptions, setChannelUpstreamModelOptions] =
-    useState<CompactMultiSelectOption[]>([])
-  const [optionsLoading, setOptionsLoading] = useState(true)
-  const [optionsError, setOptionsError] = useState<string | null>(null)
-
-  // Convert from persisted user prefs to ManagedSiteModelSyncPreferences format
-  const rawPrefs = userPrefs?.managedSiteModelSync ?? userPrefs?.newApiModelSync
-  const preferences = useMemo<ManagedSiteModelSyncPreferences>(
-    () =>
-      rawPrefs
-        ? {
-            enableSync: rawPrefs.enabled,
-            intervalMs: rawPrefs.interval,
-            concurrency: rawPrefs.concurrency,
-            maxRetries: rawPrefs.maxRetries,
-            channelProcessingTimeout: rawPrefs.channelProcessingTimeout ?? 0,
-            rateLimit: rawPrefs.rateLimit,
-            allowedModels: rawPrefs.allowedModels ?? [],
-            globalChannelModelFilters: rawPrefs.globalChannelModelFilters ?? [],
-          }
-        : {
-            enableSync: DEFAULT_MODEL_SYNC_PREFERENCES.enabled,
-            intervalMs: DEFAULT_MODEL_SYNC_PREFERENCES.interval,
-            concurrency: DEFAULT_MODEL_SYNC_PREFERENCES.concurrency,
-            maxRetries: DEFAULT_MODEL_SYNC_PREFERENCES.maxRetries,
-            channelProcessingTimeout:
-              DEFAULT_MODEL_SYNC_PREFERENCES.channelProcessingTimeout,
-            rateLimit: DEFAULT_MODEL_SYNC_PREFERENCES.rateLimit,
-            allowedModels: DEFAULT_MODEL_SYNC_PREFERENCES.allowedModels,
-            globalChannelModelFilters:
-              DEFAULT_MODEL_SYNC_PREFERENCES.globalChannelModelFilters,
-          },
-    [rawPrefs],
-  )
-  const [
+    channelProcessingTimeoutMaxSeconds,
+    channelUpstreamModelOptions,
+    optionsLoading,
+    optionsError,
+    preferences,
     isGlobalChannelModelFiltersDialogOpen,
-    setIsGlobalChannelModelFiltersDialogOpen,
-  ] = useState(false)
-  const [globalChannelModelFiltersDraft, setGlobalChannelModelFiltersDraft] =
-    useState<EditableFilter[]>([])
-  const [
+    globalChannelModelFiltersDraft,
+    jsonText,
+    setJsonText,
+    viewMode,
+    showVisual,
+    showJson,
+    handleGlobalFilterFieldChange,
+    handleAddGlobalFilter,
+    handleRemoveGlobalFilter,
+    handleMoveGlobalFilter,
     isSavingGlobalChannelModelFilters,
-    setIsSavingGlobalChannelModelFilters,
-  ] = useState(false)
-  const [jsonText, setJsonText] = useState("")
-  const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
-
-  useEffect(() => {
-    let isMounted = true
-    const loadChannelUpstreamOptions = async () => {
-      try {
-        setOptionsLoading(true)
-        setOptionsError(null)
-
-        const response = await sendModelSyncMessage(
-          ModelSyncMessageTypes.GetChannelUpstreamModelOptions,
-        )
-
-        if (response?.success && Array.isArray(response.data)) {
-          if (isMounted) {
-            setChannelUpstreamModelOptions(buildOptionsFromIds(response.data))
-          }
-          return
-        }
-
-        await modelMetadataService.initialize()
-        const models = modelMetadataService.getAllMetadata()
-        if (isMounted) {
-          setChannelUpstreamModelOptions(buildModelOptions(models))
-        }
-      } catch (error: any) {
-        logger.error("Failed to load allowed model options", error)
-        if (isMounted) {
-          setOptionsError(error?.message || "Unknown error")
-          setChannelUpstreamModelOptions([])
-        }
-      } finally {
-        if (isMounted) {
-          setOptionsLoading(false)
-        }
-      }
-    }
-
-    void loadChannelUpstreamOptions()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  const savePreferences = async (
-    updates: ManagedSiteModelSyncPreferenceUpdate,
-  ) => {
-    const isGlobalFiltersUpdate =
-      updates.globalChannelModelFilters !== undefined
-    const tracker = startSettingsAnalyticsAction(
-      isGlobalFiltersUpdate
-        ? PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters
-        : PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
-    )
-
-    try {
-      // Convert to UserPreferences.modelSync format
-      const userPrefsUpdate: UserManagedSiteModelSyncConfigUpdate = {}
-      if (updates.enableSync !== undefined) {
-        userPrefsUpdate.enabled = updates.enableSync
-      }
-      if (updates.intervalMs !== undefined) {
-        userPrefsUpdate.interval = updates.intervalMs
-      }
-      if (updates.concurrency !== undefined) {
-        userPrefsUpdate.concurrency = updates.concurrency
-      }
-      if (updates.maxRetries !== undefined) {
-        userPrefsUpdate.maxRetries = updates.maxRetries
-      }
-      if (updates.channelProcessingTimeout !== undefined) {
-        userPrefsUpdate.channelProcessingTimeout =
-          updates.channelProcessingTimeout
-      }
-      if (updates.rateLimit !== undefined) {
-        userPrefsUpdate.rateLimit = updates.rateLimit
-      }
-      if (updates.allowedModels !== undefined) {
-        userPrefsUpdate.allowedModels = updates.allowedModels
-      }
-      if (updates.globalChannelModelFilters !== undefined) {
-        userPrefsUpdate.globalChannelModelFilters =
-          updates.globalChannelModelFilters
-      }
-
-      const writeResult = await updateNewApiModelSync(userPrefsUpdate)
-
-      if (!writeResult.ok) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
-        toast.error(
-          getPreferenceWriteFailureMessage(writeResult.reason, {
-            fallback: t("settings:messages.saveSettingsFailed"),
-          }),
-        )
-        return false
-      } else if (!updates.globalChannelModelFilters) {
-        // Avoid double toast when saving from the global filters dialog,
-        // which already shows a dedicated success message.
-        toast.success(t("managedSiteModelSync:messages.success.settingsSaved"))
-      }
-      if (isGlobalFiltersUpdate) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            editorMode:
-              viewMode === "json"
-                ? PRODUCT_ANALYTICS_EDITOR_MODES.Json
-                : PRODUCT_ANALYTICS_EDITOR_MODES.Visual,
-          },
-        })
-      } else {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      }
-      return true
-    } catch (error) {
-      logger.error("Failed to save preferences", error)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
-      toast.error(t("settings:messages.saveSettingsFailed"))
-      return false
-    }
-  }
-
-  const commitNumericInput = async (
-    draft: string,
-    {
-      persistedValue,
-      min,
-      max,
-      allowDecimal = false,
-      createUpdate,
-    }: NumericInputCommitOptions,
-  ) => {
-    const nextValue = Number(draft)
-    const isValid =
-      draft.trim() !== "" &&
-      Number.isFinite(nextValue) &&
-      (allowDecimal || Number.isInteger(nextValue)) &&
-      nextValue >= min &&
-      nextValue <= max
-
-    if (!isValid) {
-      toast.error(
-        t("managedSiteModelSync:messages.error.invalidSettingValue", {
-          min,
-          max,
-        }),
-      )
-      return { ok: false }
-    }
-    if (nextValue === persistedValue) {
-      return { ok: true, value: String(persistedValue) }
-    }
-
-    const saved = await savePreferences(createUpdate(nextValue))
-    return { ok: saved, value: String(nextValue) }
-  }
-
-  const savedVersion = userPrefs?.lastUpdated ?? 0
-  const intervalHoursField = useDeferredPreferenceField({
-    savedValue: String(preferences.intervalMs / (1000 * 60 * 60)),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.intervalMs / (1000 * 60 * 60),
-        min: 1,
-        max: 720,
-        allowDecimal: true,
-        createUpdate: (hours) => ({
-          intervalMs: hours * 60 * 60 * 1000,
-        }),
-      }),
-  })
-  const concurrencyField = useDeferredPreferenceField({
-    savedValue: String(preferences.concurrency),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.concurrency,
-        min: 1,
-        max: 10,
-        createUpdate: (concurrency) => ({ concurrency }),
-      }),
-  })
-  const maxRetriesField = useDeferredPreferenceField({
-    savedValue: String(preferences.maxRetries),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.maxRetries,
-        min: 0,
-        max: 5,
-        createUpdate: (maxRetries) => ({ maxRetries }),
-      }),
-  })
-  const channelProcessingTimeoutField = useDeferredPreferenceField({
-    savedValue: String(preferences.channelProcessingTimeout),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.channelProcessingTimeout,
-        min: 0,
-        max: CHANNEL_PROCESSING_TIMEOUT_MAX_SECONDS,
-        createUpdate: (channelProcessingTimeout) => ({
-          channelProcessingTimeout,
-        }),
-      }),
-  })
-  const requestsPerMinuteField = useDeferredPreferenceField({
-    savedValue: String(preferences.rateLimit.requestsPerMinute),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.rateLimit.requestsPerMinute,
-        min: 5,
-        max: 120,
-        createUpdate: (requestsPerMinute) => ({
-          rateLimit: { requestsPerMinute },
-        }),
-      }),
-  })
-  const burstField = useDeferredPreferenceField({
-    savedValue: String(preferences.rateLimit.burst),
-    savedVersion,
-    onCommit: (draft) =>
-      commitNumericInput(draft, {
-        persistedValue: preferences.rateLimit.burst,
-        min: 1,
-        max: 20,
-        createUpdate: (burst) => ({
-          rateLimit: { burst },
-        }),
-      }),
-  })
-
-  const handleOpenGlobalChannelModelFilters = () => {
-    startSettingsAnalyticsAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
-    ).complete(PRODUCT_ANALYTICS_RESULTS.Success)
-
-    const currentFilters = preferences.globalChannelModelFilters ?? []
-    setGlobalChannelModelFiltersDraft(currentFilters)
-    try {
-      setJsonText(JSON.stringify(currentFilters, null, 2))
-    } catch {
-      setJsonText("")
-    }
-    setViewMode("visual")
-    setIsGlobalChannelModelFiltersDialogOpen(true)
-  }
-
-  const handleCloseGlobalChannelModelFilters = () => {
-    if (isSavingGlobalChannelModelFilters) {
-      return
-    }
-    setIsGlobalChannelModelFiltersDialogOpen(false)
-  }
-
-  const handleGlobalFilterFieldChange = (
-    id: string,
-    field: EditableFilterField,
-    value: any,
-  ) => {
-    setGlobalChannelModelFiltersDraft((prev) =>
-      prev.map((filter) => {
-        if (filter.id !== id) {
-          return filter
-        }
-
-        if (field === "kind") {
-          if (value === "probe") {
-            return {
-              id: filter.id,
-              name: filter.name,
-              description: filter.description,
-              kind: "probe",
-              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-              match: "all",
-              action: filter.action,
-              enabled: filter.enabled,
-              createdAt: filter.createdAt,
-              updatedAt: Date.now(),
-            }
-          }
-
-          return {
-            id: filter.id,
-            name: filter.name,
-            description: filter.description,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-            action: filter.action,
-            enabled: filter.enabled,
-            createdAt: filter.createdAt,
-            updatedAt: Date.now(),
-          }
-        }
-
-        return {
-          ...filter,
-          [field]: value,
-          updatedAt: Date.now(),
-        }
-      }),
-    )
-  }
-
-  const handleAddGlobalFilter = (kind: "pattern" | "probe" = "pattern") => {
-    const now = Date.now()
-    const base = {
-      id: safeRandomUUID("global-channel-filter"),
-      name: "",
-      action: "include" as const,
-      enabled: true,
-      createdAt: now,
-      updatedAt: now,
-      description: "",
-    }
-    const newFilter: EditableFilter =
-      kind === "probe"
-        ? {
-            ...base,
-            kind: "probe",
-            probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-            match: "all",
-          }
-        : {
-            ...base,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-          }
-    setGlobalChannelModelFiltersDraft((prev) => [...prev, newFilter])
-  }
-
-  const handleRemoveGlobalFilter = (id: string) => {
-    setGlobalChannelModelFiltersDraft((prev) =>
-      prev.filter((filter) => filter.id !== id),
-    )
-  }
-
-  const handleMoveGlobalFilter = (id: string, direction: "up" | "down") => {
-    setGlobalChannelModelFiltersDraft((prev) =>
-      moveFilterById(prev, id, direction),
-    )
-  }
-
-  const validateGlobalChannelModelFilters = (
-    rules: EditableFilter[],
-  ): string | undefined => {
-    for (const filter of rules) {
-      const name = filter.name.trim()
-
-      if (!name) {
-        return t("managedSiteChannels:filters.messages.validationName")
-      }
-
-      if (isProbeChannelModelFilterRule(filter)) {
-        if (filter.probeIds.length === 0) {
-          return t("managedSiteChannels:filters.messages.validationProbeIds")
-        }
-        continue
-      }
-
-      const pattern = filter.pattern.trim()
-      if (!pattern) {
-        return t("managedSiteChannels:filters.messages.validationPattern")
-      }
-
-      if (filter.isRegex) {
-        try {
-          new RegExp(pattern)
-        } catch (error) {
-          return t("managedSiteChannels:filters.messages.validationRegex", {
-            error: getErrorMessage(error),
-          })
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  const handleSaveGlobalChannelModelFilters = async () => {
-    let rulesToSave: EditableFilter[]
-
-    if (viewMode === "json") {
-      try {
-        rulesToSave = parseJsonGlobalChannelModelFilters(t, jsonText)
-      } catch (error) {
-        toast.error(
-          t("managedSiteChannels:filters.messages.jsonInvalid", {
-            error: getErrorMessage(error),
-          }),
-        )
-        return
-      }
-    } else {
-      rulesToSave = globalChannelModelFiltersDraft
-    }
-
-    const validationError = validateGlobalChannelModelFilters(rulesToSave)
-    if (validationError) {
-      toast.error(validationError)
-      return
-    }
-
-    setIsSavingGlobalChannelModelFilters(true)
-
-    try {
-      const payload = normalizeChannelFilters(
-        rulesToSave.map((filter) => ({
-          ...filter,
-          name: filter.name.trim(),
-          description: filter.description?.trim() || undefined,
-        })),
-        {
-          idPrefix: "global-channel-filter",
-        },
-      )
-
-      const saved = await savePreferences({
-        globalChannelModelFilters: payload,
-      })
-      if (!saved) {
-        return
-      }
-      setGlobalChannelModelFiltersDraft(payload)
-      toast.success(t("managedSiteChannels:filters.messages.saved"))
-      setIsGlobalChannelModelFiltersDialogOpen(false)
-    } catch (error) {
-      toast.error(
-        t("managedSiteChannels:filters.messages.saveFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setIsSavingGlobalChannelModelFilters(false)
-    }
-  }
-
-  const handleNavigateToExecution = () => {
-    startSettingsAnalyticsAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
-    ).complete(PRODUCT_ANALYTICS_RESULTS.Success)
-
-    // Navigate to the ManagedSiteModelSync page
-    pushWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`)
-  }
+    savePreferences,
+    intervalHoursField,
+    concurrencyField,
+    maxRetriesField,
+    channelProcessingTimeoutField,
+    requestsPerMinuteField,
+    burstField,
+    handleOpenGlobalChannelModelFilters,
+    handleCloseGlobalChannelModelFilters,
+    handleSaveGlobalChannelModelFilters,
+    handleNavigateToExecution,
+    resetDisabled,
+    handleReset,
+  } = useManagedSiteModelSyncSettingsViewModel()
 
   return (
     <SettingSection
       resetRequiresConfirmation
-      resetDisabled={
-        matchesDefaultSettings(rawPrefs, DEFAULT_MODEL_SYNC_PREFERENCES) &&
-        ![
-          intervalHoursField,
-          concurrencyField,
-          maxRetriesField,
-          channelProcessingTimeoutField,
-          requestsPerMinuteField,
-          burstField,
-        ].some((field) => field.isDirty) &&
-        matchesDefaultSettings(
-          globalChannelModelFiltersDraft,
-          DEFAULT_MODEL_SYNC_PREFERENCES.globalChannelModelFilters,
-        )
-      }
+      resetDisabled={resetDisabled}
       id="managed-site-model-sync"
       title={t("managedSiteModelSync:settings.title")}
       description={t("managedSiteModelSync:description")}
-      onReset={async () => {
-        const tracker = startSettingsAnalyticsAction(
-          PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
-        )
-        const result = await resetNewApiModelSyncConfig()
-        if (result.ok) {
-          const defaults = DEFAULT_MODEL_SYNC_PREFERENCES
-          intervalHoursField.setDraft(
-            String(defaults.interval / (60 * 60 * 1000)),
-          )
-          concurrencyField.setDraft(String(defaults.concurrency))
-          maxRetriesField.setDraft(String(defaults.maxRetries))
-          channelProcessingTimeoutField.setDraft(
-            String(defaults.channelProcessingTimeout),
-          )
-          requestsPerMinuteField.setDraft(
-            String(defaults.rateLimit.requestsPerMinute),
-          )
-          burstField.setDraft(String(defaults.rateLimit.burst))
-          setGlobalChannelModelFiltersDraft(defaults.globalChannelModelFilters)
-        }
-        tracker.complete(
-          result.ok
-            ? PRODUCT_ANALYTICS_RESULTS.Success
-            : PRODUCT_ANALYTICS_RESULTS.Failure,
-        )
-        return result
-      }}
+      onReset={handleReset}
     >
       <Card padding="none">
         <CardList>
@@ -806,7 +178,7 @@ export default function ManagedSiteModelSyncSettings() {
                 <Input
                   type="number"
                   min="0"
-                  max={String(CHANNEL_PROCESSING_TIMEOUT_MAX_SECONDS)}
+                  max={String(channelProcessingTimeoutMaxSeconds)}
                   step="1"
                   value={channelProcessingTimeoutField.draft}
                   onChange={(event) =>
@@ -1010,108 +382,11 @@ export default function ManagedSiteModelSyncSettings() {
           onMoveFilter={handleMoveGlobalFilter}
           onRemoveFilter={handleRemoveGlobalFilter}
           onFieldChange={handleGlobalFilterFieldChange}
-          onClickViewVisual={() => {
-            if (viewMode === "visual") return
-            try {
-              const parsed = jsonText.trim()
-                ? parseJsonGlobalChannelModelFilters(t, jsonText)
-                : []
-              setGlobalChannelModelFiltersDraft(parsed)
-              setViewMode("visual")
-            } catch (error) {
-              toast.error(
-                t("managedSiteChannels:filters.messages.jsonInvalid", {
-                  error: getErrorMessage(error),
-                }),
-              )
-            }
-          }}
-          onClickViewJson={() => {
-            if (viewMode === "json") return
-            try {
-              setJsonText(
-                JSON.stringify(globalChannelModelFiltersDraft, null, 2),
-              )
-            } catch {
-              setJsonText("")
-            }
-            setViewMode("json")
-          }}
+          onClickViewVisual={showVisual}
+          onClickViewJson={showJson}
           onChangeJsonText={setJsonText}
         />
       </Modal>
     </SettingSection>
   )
-}
-
-/**
- * Parses JSON text into strongly typed global channel model filters.
- * @param t Translation helper for user-facing validation errors.
- * @param rawJson Raw JSON string entered by the user.
- * @returns Parsed filters array guaranteeing id/name/pattern fields.
- * @throws {Error} When JSON is invalid or missing required fields.
- */
-function parseJsonGlobalChannelModelFilters(
-  t: TFunction,
-  rawJson: string,
-): EditableFilter[] {
-  const trimmed = rawJson.trim()
-  if (!trimmed) {
-    return []
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(trimmed)
-  } catch (error) {
-    throw new Error(getErrorMessage(error))
-  }
-
-  if (!Array.isArray(parsed)) {
-    throw new Error(t("managedSiteChannels:filters.messages.jsonArrayRequired"))
-  }
-
-  parsed.forEach((item, index) => {
-    if (!item || typeof item !== "object") {
-      throw new Error(
-        t("managedSiteChannels:filters.messages.jsonItemNotObject", { index }),
-      )
-    }
-  })
-
-  return normalizeChannelFilters(parsed as any[], {
-    idPrefix: "global-channel-filter",
-  })
-}
-
-/**
- * Builds sorted multi-select options from an array of model metadata.
- * @param metadata Array of model metadata objects to convert into select options.
- * @returns Options consumable by compact multi-select inputs.
- */
-function buildModelOptions(
-  metadata: ModelMetadata[],
-): CompactMultiSelectOption[] {
-  const options = metadata.map((model) => ({
-    label: model.id,
-    value: model.id,
-  }))
-  return options.sort((a, b) => a.label.localeCompare(b.label))
-}
-
-/**
- * Converts plain model ID strings into sorted compact multi-select options.
- * @param modelIds Array of model identifiers returned from remote APIs.
- * @returns Options list sorted alphabetically by label.
- */
-function buildOptionsFromIds(modelIds: string[]): CompactMultiSelectOption[] {
-  const options = modelIds
-    .map((model) => model.trim())
-    .filter(Boolean)
-    .map((model) => ({
-      label: model,
-      value: model,
-    }))
-
-  return options.sort((a, b) => a.label.localeCompare(b.label))
 }

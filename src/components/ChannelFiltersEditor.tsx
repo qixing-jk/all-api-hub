@@ -15,18 +15,14 @@ import { Switch } from "~/components/ui/Switch"
 import type {
   ChannelModelFilterRule,
   ChannelModelFilterRuleKind,
-  ChannelModelPatternFilterRule,
-  ChannelModelProbeFilterRule,
+  EditableFilterField,
 } from "~/types/channelModelFilters"
 import {
   CHANNEL_MODEL_FILTER_PROBE_IDS,
   isProbeChannelModelFilterRule,
 } from "~/types/channelModelFilters"
 
-export type EditableFilter = ChannelModelFilterRule
-export type EditableFilterField =
-  | keyof ChannelModelPatternFilterRule
-  | keyof ChannelModelProbeFilterRule
+type EditableFilter = ChannelModelFilterRule
 
 interface ChannelFiltersEditorProps {
   filters: EditableFilter[]

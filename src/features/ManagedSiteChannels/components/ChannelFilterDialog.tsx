@@ -2,16 +2,13 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
-import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { ActionGroup, Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import { useChannelFilterEditor } from "~/hooks/useChannelFilterEditor"
 import toast from "~/lib/notify"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  normalizeChannelFilters,
-  type IncomingChannelFilter,
-} from "~/services/managedSites/channelModelFilterRules"
+import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -24,13 +21,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import {
-  DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
-  isProbeChannelModelFilterRule,
-} from "~/types/channelModelFilters"
 import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
-import { safeRandomUUID } from "~/utils/core/identifier"
 
 import {
   fetchChannelFilters,
@@ -51,33 +43,6 @@ interface ChannelFilterDialogProps {
 }
 
 type EditableFilter = ChannelModelFilterRule
-
-/**
- * Moves a filter one position up or down within the editable filter list.
- */
-function moveFilterById(
-  filters: EditableFilter[],
-  filterId: string,
-  direction: "up" | "down",
-) {
-  const index = filters.findIndex((filter) => filter.id === filterId)
-  if (index < 0) {
-    return filters
-  }
-
-  const targetIndex = direction === "up" ? index - 1 : index + 1
-  if (targetIndex < 0 || targetIndex >= filters.length) {
-    return filters
-  }
-
-  const next = [...filters]
-  const current = next[index]
-  const target = next[targetIndex]
-  if (current === undefined || target === undefined) return filters
-  next[index] = target
-  next[targetIndex] = current
-  return next
-}
 
 /**
  * Builds the storage identity used when channel filters have a resource ref.
@@ -103,19 +68,30 @@ export default function ChannelFilterDialog({
   onClose,
 }: ChannelFilterDialogProps) {
   const { t } = useTranslation("managedSiteChannels")
-  const [filters, setFilters] = useState<EditableFilter[]>([])
+  const {
+    filters,
+    setFilters,
+    jsonText,
+    setJsonText,
+    viewMode,
+    resetEditor,
+    handleFieldChange,
+    handleAddFilter,
+    handleRemoveFilter,
+    handleMoveFilter,
+    validateFilters,
+    parseJsonFilters,
+    showVisual,
+    showJson,
+  } = useChannelFilterEditor("channel-filter")
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [jsonText, setJsonText] = useState("")
-  const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
 
   const resetState = useCallback(() => {
-    setFilters([])
+    resetEditor([], "")
     setIsLoading(false)
     setIsSaving(false)
-    setJsonText("")
-    setViewMode("visual")
-  }, [])
+  }, [resetEditor])
 
   const loadFilters = useCallback(async () => {
     if (!channel) return
@@ -138,7 +114,7 @@ export default function ChannelFilterDialog({
     } finally {
       setIsLoading(false)
     }
-  }, [channel, onClose, t])
+  }, [channel, onClose, setFilters, setJsonText, t])
 
   useEffect(() => {
     if (open && channel) {
@@ -157,150 +133,6 @@ export default function ChannelFilterDialog({
         channel.resourceRef.managedSiteType,
       ).managedSites?.models?.resolveVerificationProtocol?.(channel.type),
   )
-
-  const handleFieldChange = (
-    filterId: string,
-    field: EditableFilterField,
-    value: any,
-  ) => {
-    setFilters((prev) =>
-      prev.map((filter) => {
-        if (filter.id !== filterId) {
-          return filter
-        }
-
-        if (field === "kind") {
-          if (value === "probe") {
-            return {
-              id: filter.id,
-              name: filter.name,
-              description: filter.description,
-              kind: "probe",
-              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-              match: "all",
-              action: filter.action,
-              enabled: filter.enabled,
-              createdAt: filter.createdAt,
-              updatedAt: Date.now(),
-            }
-          }
-
-          return {
-            id: filter.id,
-            name: filter.name,
-            description: filter.description,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-            action: filter.action,
-            enabled: filter.enabled,
-            createdAt: filter.createdAt,
-            updatedAt: Date.now(),
-          }
-        }
-
-        return {
-          ...filter,
-          [field]: value,
-          updatedAt: Date.now(),
-        }
-      }),
-    )
-  }
-
-  const handleAddFilter = (kind: "pattern" | "probe" = "pattern") => {
-    const timestamp = Date.now()
-    const base = {
-      id: safeRandomUUID("channel-filter"),
-      name: "",
-      description: "",
-      action: "include" as const,
-      enabled: true,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }
-
-    setFilters((prev) => [
-      ...prev,
-      kind === "probe"
-        ? {
-            ...base,
-            kind: "probe",
-            probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
-            match: "all",
-          }
-        : {
-            ...base,
-            kind: "pattern",
-            pattern: "",
-            isRegex: false,
-          },
-    ])
-  }
-
-  const handleRemoveFilter = (filterId: string) => {
-    setFilters((prev) => prev.filter((filter) => filter.id !== filterId))
-  }
-
-  const handleMoveFilter = (filterId: string, direction: "up" | "down") => {
-    setFilters((prev) => moveFilterById(prev, filterId, direction))
-  }
-
-  const validateFilters = (rules: EditableFilter[]) => {
-    for (const filter of rules) {
-      if (!filter.name.trim()) {
-        return t("filters.messages.validationName")
-      }
-      if (isProbeChannelModelFilterRule(filter)) {
-        if (filter.probeIds.length === 0) {
-          return t("filters.messages.validationProbeIds")
-        }
-        continue
-      }
-
-      if (!filter.pattern.trim()) {
-        return t("filters.messages.validationPattern")
-      }
-      if (filter.isRegex) {
-        try {
-          new RegExp(filter.pattern.trim())
-        } catch (error) {
-          return t("filters.messages.validationRegex", {
-            error: (error as Error).message,
-          })
-        }
-      }
-    }
-    return null
-  }
-
-  const parseJsonFilters = (rawJson: string): EditableFilter[] => {
-    const trimmed = rawJson.trim()
-    if (!trimmed) {
-      return []
-    }
-
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(trimmed)
-    } catch (error) {
-      throw new Error(getErrorMessage(error))
-    }
-
-    if (!Array.isArray(parsed)) {
-      throw new Error(t("filters.messages.jsonArrayRequired"))
-    }
-
-    parsed.forEach((item, index) => {
-      if (!item || typeof item !== "object") {
-        throw new Error(t("filters.messages.jsonItemNotObject", { index }))
-      }
-    })
-
-    return normalizeChannelFilters(parsed as IncomingChannelFilter[], {
-      idPrefix: "channel-filter",
-    })
-  }
 
   const handleSave = async () => {
     const editorMode =
@@ -443,29 +275,8 @@ export default function ChannelFilterDialog({
         onMoveFilter={handleMoveFilter}
         onRemoveFilter={handleRemoveFilter}
         onFieldChange={handleFieldChange}
-        onClickViewVisual={() => {
-          if (viewMode === "visual") return
-          try {
-            const parsed = jsonText.trim() ? parseJsonFilters(jsonText) : []
-            setFilters(parsed)
-            setViewMode("visual")
-          } catch (error) {
-            toast.error(
-              t("filters.messages.jsonInvalid", {
-                error: getErrorMessage(error),
-              }),
-            )
-          }
-        }}
-        onClickViewJson={() => {
-          if (viewMode === "json") return
-          try {
-            setJsonText(JSON.stringify(filters, null, 2))
-          } catch {
-            setJsonText("")
-          }
-          setViewMode("json")
-        }}
+        onClickViewVisual={showVisual}
+        onClickViewJson={showJson}
         onChangeJsonText={setJsonText}
         testIds={{
           viewJsonButton:

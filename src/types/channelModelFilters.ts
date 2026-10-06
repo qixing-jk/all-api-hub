@@ -65,3 +65,7 @@ export function isPatternChannelModelFilterRule(
 ): rule is ChannelModelPatternFilterRule {
   return rule.kind === "pattern"
 }
+
+export type EditableFilterField =
+  | keyof ChannelModelPatternFilterRule
+  | keyof ChannelModelProbeFilterRule
