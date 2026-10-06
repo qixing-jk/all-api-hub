@@ -7,7 +7,10 @@ import {
   OPENROUTER_BOOTSTRAP_MUTATION_STATES,
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES } from "~/constants/siteType"
-import { useOpenRouterAccountOnboarding as useOpenRouterAccountOnboardingProduction } from "~/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding"
+import {
+  useOpenRouterAccountOnboarding as useOpenRouterAccountOnboardingProduction,
+  type OpenRouterOnboardingStart,
+} from "~/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -20,23 +23,29 @@ const testExecution = userCommandExecution(
 
 function useOpenRouterAccountOnboarding() {
   const hook = useOpenRouterAccountOnboardingProduction()
+  type Preparation = NonNullable<
+    ReturnType<typeof hook.tryPrepareForStart>
+  >["preparation"]
   return {
     ...hook,
+    releasePreparation: (preparation: Preparation) =>
+      preparation.run(async () => {}),
     startPrepared: (
       params: Omit<
-        Parameters<typeof hook.startPrepared>[0],
+        Parameters<OpenRouterOnboardingStart>[0],
         "protectionBypassExecution"
       > & {
-        protectionBypassExecution?: Parameters<
-          typeof hook.startPrepared
-        >[0]["protectionBypassExecution"]
+        preparation: Preparation
+        protectionBypassExecution?: Parameters<OpenRouterOnboardingStart>[0]["protectionBypassExecution"]
       },
     ) =>
-      hook.startPrepared({
-        ...params,
-        protectionBypassExecution:
-          params.protectionBypassExecution ?? testExecution,
-      }),
+      params.preparation.run((start) =>
+        start({
+          ...params,
+          protectionBypassExecution:
+            params.protectionBypassExecution ?? testExecution,
+        }),
+      ),
   }
 }
 
@@ -70,6 +79,28 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
 }))
 
 describe("useOpenRouterAccountOnboarding", () => {
+  it("releases an admitted preparation when caller setup fails before dispatch", async () => {
+    const { result } = renderHook(useOpenRouterAccountOnboardingProduction)
+    await waitFor(() => expect(result.current).not.toBeNull())
+    act(() => {
+      result.current.resetSession({
+        url: "https://openrouter.ai",
+        siteType: SITE_TYPES.OPENROUTER,
+        credential: "",
+      })
+    })
+    const admission = result.current.tryPrepareForStart()!
+    await act(async () => {
+      await expect(
+        admission.preparation.run(async () => {
+          throw new Error("popup setup failed")
+        }),
+      ).rejects.toThrow("popup setup failed")
+    })
+    expect(mockOnboardOpenRouterAccount).not.toHaveBeenCalled()
+    expect(result.current.tryPrepareForStart()).not.toBeNull()
+  })
+
   beforeEach(() => {
     mockOnboardOpenRouterAccount.mockReset()
     mockCancelOpenRouterAccountProvisioning.mockReset()
@@ -487,14 +518,14 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(firstAdmission).not.toBeNull()
     expect(result.current.tryPrepareForStart()).toBeNull()
 
-    act(() => {
-      result.current.releasePreparation(firstAdmission!.preparation)
+    await act(async () => {
+      await result.current.releasePreparation(firstAdmission!.preparation)
     })
     const replacementAdmission = result.current.tryPrepareForStart()
     expect(replacementAdmission).not.toBeNull()
 
-    act(() => {
-      result.current.releasePreparation(firstAdmission!.preparation)
+    await act(async () => {
+      await result.current.releasePreparation(firstAdmission!.preparation)
     })
     expect(result.current.tryPrepareForStart()).toBeNull()
 
