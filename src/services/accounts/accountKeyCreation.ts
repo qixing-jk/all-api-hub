@@ -138,11 +138,13 @@ export async function prepareDefaultAccountKeyCreationInSession(
         throw new AccountKeyResourceError(
           {
             ...mutation.failure,
-            ...(mutation.certainty === "possibly-applied"
+            ...(mutation.certainty !== "not-applied"
               ? { code: "mutation_state_uncertain" as const }
               : {}),
           },
-          mutation.certainty,
+          mutation.certainty === "not-applied"
+            ? "not-applied"
+            : "possibly-applied",
         )
       }
       const { ref, createdSecret } = mutation.value

@@ -246,24 +246,27 @@ describe("interactive account key provisioning plans", () => {
     },
   )
 
-  it("never replays an uncertain mutation", async () => {
-    const { session } = setup()
-    session.provisioning.provision.mockResolvedValueOnce({
-      certainty: "possibly-applied",
-      failure: { code: "unexpected" },
-    } as never)
-    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
-    await expect(plan.entries[0]!.create()).rejects.toBeInstanceOf(
-      AccountKeyResourceError,
-    )
-    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
-      failure: { code: "mutation_state_uncertain" },
-    })
-    expect(session.provisioning.provision).toHaveBeenCalledOnce()
-    await expect(
-      prepareAccountKeyProvisioning(account, "all-groups"),
-    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
-  })
+  it.each(["possibly-applied", "partially-applied"] as const)(
+    "never replays a %s mutation",
+    async (certainty) => {
+      const { session } = setup()
+      session.provisioning.provision.mockResolvedValueOnce({
+        certainty,
+        failure: { code: "unexpected" },
+      } as never)
+      const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+      await expect(plan.entries[0]!.create()).rejects.toBeInstanceOf(
+        AccountKeyResourceError,
+      )
+      await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      expect(session.provisioning.provision).toHaveBeenCalledOnce()
+      await expect(
+        prepareAccountKeyProvisioning(account, "all-groups"),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    },
+  )
 
   it("keeps a confirmed write guarded while inventory is eventually consistent", async () => {
     setup()

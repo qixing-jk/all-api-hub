@@ -253,11 +253,13 @@ async function preparePlan(
                 throw new AccountKeyResourceError(
                   {
                     ...result.failure,
-                    ...(result.certainty === "possibly-applied"
+                    ...(result.certainty !== "not-applied"
                       ? { code: "mutation_state_uncertain" as const }
                       : {}),
                   },
-                  result.certainty,
+                  result.certainty === "not-applied"
+                    ? "not-applied"
+                    : "possibly-applied",
                 )
               const { ref, createdSecret } = result.value
               let facts: AccountKeyCreationResult["facts"] = null
