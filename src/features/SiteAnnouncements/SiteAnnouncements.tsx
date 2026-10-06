@@ -583,6 +583,7 @@ export default function SiteAnnouncementsPage({
         siteKey={siteKey}
         unreadFilter={unreadFilter}
         siteOptions={siteOptions}
+        allSitesCount={records.length}
         totalCount={totalCount}
         unreadCount={unreadCount}
         onSiteKeyChange={setSiteKey}

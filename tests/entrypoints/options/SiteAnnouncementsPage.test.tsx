@@ -366,6 +366,19 @@ describe("SiteAnnouncementsPage", () => {
       screen.getByRole("heading", { name: "Full maintenance window" }),
     ).toBeInTheDocument()
     expect(screen.queryByText("Beta update")).not.toBeInTheDocument()
+
+    // The selected site narrows the counters, but "All sites" still advertises
+    // every cached announcement, matching the per-site counts below it.
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    expect(
+      screen.getByRole("option", {
+        name: /siteAnnouncements:filters\.allSites/,
+      }),
+    ).toHaveTextContent("2")
   })
 
   it("counts unread announcements inside the selected site scope", async () => {

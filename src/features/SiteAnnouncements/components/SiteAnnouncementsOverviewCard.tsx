@@ -11,6 +11,11 @@ interface SiteAnnouncementsOverviewCardProps {
   siteKey: string
   unreadFilter: UnreadFilter
   siteOptions: SiteAnnouncementSiteOption[]
+  /**
+   * The unscoped total across every site, used for the "All sites" row so its
+   * count stays the sum of the per-site counts below it.
+   */
+  allSitesCount: number
   totalCount: number
   unreadCount: number
   onSiteKeyChange: (value: string) => void
@@ -25,6 +30,7 @@ export function SiteAnnouncementsOverviewCard({
   siteKey,
   unreadFilter,
   siteOptions,
+  allSitesCount,
   totalCount,
   unreadCount,
   onSiteKeyChange,
@@ -82,7 +88,7 @@ export function SiteAnnouncementsOverviewCard({
                     aria-hidden="true"
                     className="text-muted-foreground text-xs tabular-nums"
                   >
-                    {totalCount}
+                    {allSitesCount}
                   </span>
                 ),
               },

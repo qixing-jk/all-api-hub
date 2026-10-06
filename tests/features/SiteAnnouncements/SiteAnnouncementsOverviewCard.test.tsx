@@ -19,6 +19,7 @@ function renderCard(
     siteKey: "all",
     unreadFilter: "all" as const,
     siteOptions,
+    allSitesCount: 4,
     totalCount: 4,
     unreadCount: 2,
     onSiteKeyChange: vi.fn(),
@@ -98,5 +99,31 @@ describe("SiteAnnouncementsOverviewCard", () => {
     await user.click(screen.getByRole("option", { name: /Beta API/ }))
 
     expect(props.onSiteKeyChange).toHaveBeenCalledWith("site-2")
+  })
+
+  it("keeps the all-sites option on the unscoped total while a site is selected", async () => {
+    const user = userEvent.setup()
+    // One site is selected, so the statistics describe that site only. The
+    // "All sites" row must still advertise every cached announcement, matching
+    // the sum of the per-site counts underneath it.
+    renderCard({ siteKey: "site-1", allSitesCount: 4, totalCount: 1 })
+
+    expect(
+      await screen.findByRole("button", {
+        name: /siteAnnouncements:summary\.total/,
+      }),
+    ).toHaveTextContent("1")
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+
+    expect(
+      screen.getByRole("option", {
+        name: /siteAnnouncements:filters\.allSites/,
+      }),
+    ).toHaveTextContent("4")
   })
 })
