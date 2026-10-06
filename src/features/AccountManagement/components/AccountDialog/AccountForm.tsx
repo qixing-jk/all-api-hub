@@ -58,6 +58,7 @@ const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
 type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "siteTypeLabel"
+  | "accessTokenPresentation"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
   | "allowSub2ApiRefreshTokenState"
@@ -193,7 +194,10 @@ export default function AccountForm({
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
-  const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
+  const credentialPresentation = sitePolicy.accessTokenPresentation
+  const accessTokenLabel = t(
+    credentialPresentation.accessTokenLabelKey ?? "form.accessToken",
+  )
   const accessTokenInputRef = useRef<HTMLInputElement>(null)
   const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(
     ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"],
@@ -358,14 +362,7 @@ export default function AccountForm({
 
         {authType === AuthTypeEnum.AccessToken && (
           <>
-            <FormField
-              label={
-                isOpenRouterManagementKey
-                  ? t("form.openrouterManagementKey")
-                  : t("form.accessToken")
-              }
-              required
-            >
+            <FormField label={accessTokenLabel} required>
               <Input
                 ref={accessTokenInputRef}
                 type="password"
@@ -378,22 +375,22 @@ export default function AccountForm({
                 }}
                 value={accessToken}
                 onChange={(e) => onAccessTokenChange(e.target.value)}
-                placeholder={
-                  isOpenRouterManagementKey
-                    ? t("form.openrouterManagementKey")
-                    : t("form.accessToken")
-                }
+                placeholder={accessTokenLabel}
                 leftIcon={<KeyRound className="h-5 w-5" />}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
                 required
               />
             </FormField>
-            {isOpenRouterManagementKey &&
+            {credentialPresentation.accessTokenGuidanceKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert
                   variant="default"
-                  title={t("form.openrouterManagementKeyGuidanceTitle")}
-                  description={t("form.openrouterManagementKeyGuidance")}
+                  title={
+                    credentialPresentation.accessTokenGuidanceTitleKey
+                      ? t(credentialPresentation.accessTokenGuidanceTitleKey)
+                      : undefined
+                  }
+                  description={t(credentialPresentation.accessTokenGuidanceKey)}
                 />
               )}
           </>

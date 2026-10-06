@@ -4,7 +4,10 @@ import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/account
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { FREEMODEL_OPENAI_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
+import {
+  defineAccountKeyResourceCapability,
+  type AccountKeyResourceEditorDefinition,
+} from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -23,6 +26,31 @@ import {
   type FreeModelKey,
 } from "~/services/apiService/freemodel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+
+/** Universal key creation uses the same name-only definition in real and local sessions. */
+export function createFreeModelKeyEditor(
+  nameHint?: string,
+): AccountKeyResourceEditorDefinition<{ name: string }> {
+  return {
+    fields: [
+      { fieldId: "name", type: RESOURCE_FIELD_TYPES.Text, required: true },
+    ],
+    initialValues: {
+      name: nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
+    },
+    validate: (values) => {
+      if (typeof values.name !== "string" || !values.name.trim())
+        return {
+          valid: false,
+          issues: [
+            { fieldId: "name", code: RESOURCE_FIELD_ISSUE_CODES.Required },
+          ],
+        }
+      return { valid: true }
+    },
+    buildCommand: (values) => ({ name: String(values.name).trim() }),
+  }
+}
 
 const facts = (key: FreeModelKey, ref: AccountKeyResourceRef) => ({
   ref,
@@ -85,29 +113,8 @@ export const freeModelKeyResources = defineAccountKeyResourceCapability({
   toListFacts: facts,
   toDetailFacts: facts,
   // Universal keys are created by name, matching the website's key contract.
-  createEditor: async (_config, _scope, _options, _inventory, intent) => {
-    return {
-      fields: [
-        { fieldId: "name", type: RESOURCE_FIELD_TYPES.Text, required: true },
-      ],
-      initialValues: {
-        name: intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
-      },
-      validate: (values) => {
-        if (typeof values.name !== "string" || !values.name.trim())
-          return {
-            valid: false,
-            issues: [
-              { fieldId: "name", code: RESOURCE_FIELD_ISSUE_CODES.Required },
-            ],
-          }
-        return { valid: true }
-      },
-      buildCommand: (values) => ({
-        name: String(values.name).trim(),
-      }),
-    }
-  },
+  createEditor: async (_config, _scope, _options, _inventory, intent) =>
+    createFreeModelKeyEditor(intent?.nameHint),
   editEditor: () => {
     throw unsupported()
   },

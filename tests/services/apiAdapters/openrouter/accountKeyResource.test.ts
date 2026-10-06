@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { openRouterAccountKeyResources } from "~/services/apiAdapters/openrouter/accountKeyResource"
+import {
+  createOpenRouterKeyEditorProjection,
+  openRouterAccountKeyResources,
+} from "~/services/apiAdapters/openrouter/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -117,6 +120,28 @@ const openSession = async () => {
 }
 
 describe("openRouterAccountKeyResources", () => {
+  it("rejects arbitrary creators when no creator inventory is supplied", () => {
+    const scope = {
+      scopeKey: "preview",
+      routeKey: "preview",
+      displayName: "Preview",
+      isDefault: true,
+    }
+    const editor = createOpenRouterKeyEditorProjection(scope, [scope])
+    expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [OPENROUTER_KEY_FIELD_IDS.Creator]: "unknown-creator",
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: [
+        { fieldId: OPENROUTER_KEY_FIELD_IDS.Creator, code: "invalid_value" },
+      ],
+    })
+  })
+
   it("provides valid defaults for foreground creation without group selection", async () => {
     const session = await openSession()
     const scope = await session.resolveDefaultScope()

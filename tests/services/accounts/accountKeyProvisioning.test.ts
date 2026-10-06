@@ -78,6 +78,33 @@ describe("interactive account key provisioning plans", () => {
     prepareDefault.mockResolvedValue({ kind: "input-required" })
   })
 
+  it("uses the adapter's empty-requirement fallback rather than its family", async () => {
+    const { session, nativeEditor } = setup()
+    session.provisioning.inspect.mockResolvedValue({
+      requirements: [],
+      items: [],
+      emptyRequirementsAction: "default-creation",
+    } as never)
+    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+    expect(plan.entries[0]?.editor).toBe(nativeEditor)
+  })
+
+  it("does not infer default creation from New API ancestry when the adapter declares no fallback", async () => {
+    account = buildDisplaySiteData({
+      id: crypto.randomUUID(),
+      siteType: "new-api",
+    })
+    const { session } = setup()
+    session.provisioning.inspect.mockResolvedValue({
+      requirements: [],
+      items: [],
+    })
+    await expect(
+      prepareAccountKeyProvisioning(account, "all-groups"),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+    expect(prepareDefault).not.toHaveBeenCalled()
+  })
+
   it("offers a native editor for default creation that needs user input", async () => {
     const { nativeEditor } = setup()
     const plan = await prepareAccountKeyProvisioning(account, "default")
@@ -165,6 +192,7 @@ describe("interactive account key provisioning plans", () => {
     session.provisioning.inspect.mockResolvedValue({
       requirements: [],
       items: [],
+      emptyRequirementsAction: "default-creation",
     })
     const plan = await prepareAccountKeyProvisioning(account, "all-groups")
     expect(plan.entries).toHaveLength(1)
@@ -209,6 +237,7 @@ describe("interactive account key provisioning plans", () => {
               },
             ],
         ...(partial ? { partialFailure: { code: "unavailable" } } : {}),
+        emptyRequirementsAction: "default-creation",
       } as never)
       await expect(
         prepareAccountKeyProvisioning(account, "all-groups"),
@@ -217,24 +246,27 @@ describe("interactive account key provisioning plans", () => {
     },
   )
 
-  it("never replays an uncertain mutation", async () => {
-    const { session } = setup()
-    session.provisioning.provision.mockResolvedValueOnce({
-      certainty: "possibly-applied",
-      failure: { code: "unexpected" },
-    } as never)
-    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
-    await expect(plan.entries[0]!.create()).rejects.toBeInstanceOf(
-      AccountKeyResourceError,
-    )
-    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
-      failure: { code: "mutation_state_uncertain" },
-    })
-    expect(session.provisioning.provision).toHaveBeenCalledOnce()
-    await expect(
-      prepareAccountKeyProvisioning(account, "all-groups"),
-    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
-  })
+  it.each(["possibly-applied", "partially-applied"] as const)(
+    "never replays a %s mutation",
+    async (certainty) => {
+      const { session } = setup()
+      session.provisioning.provision.mockResolvedValueOnce({
+        certainty,
+        failure: { code: "unexpected" },
+      } as never)
+      const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+      await expect(plan.entries[0]!.create()).rejects.toBeInstanceOf(
+        AccountKeyResourceError,
+      )
+      await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      expect(session.provisioning.provision).toHaveBeenCalledOnce()
+      await expect(
+        prepareAccountKeyProvisioning(account, "all-groups"),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    },
+  )
 
   it("keeps a confirmed write guarded while inventory is eventually consistent", async () => {
     setup()
@@ -273,6 +305,69 @@ describe("interactive account key provisioning plans", () => {
     )
   })
 
+  it("accepts corrected input in the same plan after validation proves no write occurred", async () => {
+    const { nativeEditor } = setup()
+    const plan = await prepareAccountKeyProvisioning(account, "default")
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    nativeEditor.validate.mockReturnValue({ valid: true })
+    await expect(plan.entries[0]!.create({ quota: 10 })).resolves.toMatchObject(
+      { ref },
+    )
+    expect(nativeEditor.submit).toHaveBeenCalledOnce()
+  })
+
+  it.each(["editor", "automatic", "default-ready"] as const)(
+    "retains an uncertain guard after an unclassified %s write failure",
+    async (kind) => {
+      const { session, nativeEditor } = setup()
+      const failure =
+        kind === "editor"
+          ? new AccountKeyResourceError({ code: "validation_failed" })
+          : new Error("Response lost after dispatch")
+      nativeEditor.validate.mockReturnValue({ valid: true })
+      const create = vi.fn().mockRejectedValue(failure)
+      if (kind === "editor") nativeEditor.submit.mockRejectedValue(failure)
+      if (kind === "automatic")
+        session.provisioning.provision.mockRejectedValue(failure)
+      if (kind === "default-ready")
+        prepareDefault.mockResolvedValue({ kind: "ready", create })
+      const mode = kind === "automatic" ? "all-groups" : "default"
+      const plan = await prepareAccountKeyProvisioning(account, mode)
+      await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      await expect(
+        prepareAccountKeyProvisioning(account, mode),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(
+        kind === "editor"
+          ? nativeEditor.submit
+          : kind === "automatic"
+            ? session.provisioning.provision
+            : create,
+      ).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("allows an explicit editor non-write to retry in the same plan", async () => {
+    const { nativeEditor } = setup()
+    nativeEditor.validate.mockReturnValue({ valid: true })
+    nativeEditor.submit.mockRejectedValueOnce(
+      new AccountKeyResourceError({ code: "unavailable" }, "not-applied"),
+    )
+    const plan = await prepareAccountKeyProvisioning(account, "default")
+    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    await expect(plan.entries[0]!.create()).resolves.toMatchObject({ ref })
+    expect(nativeEditor.submit).toHaveBeenCalledTimes(2)
+  })
+
   it("returns confirmed creation even when the detail read fails", async () => {
     const { session } = setup()
     session.openCollection.mockRejectedValue(new Error("detail unavailable"))
@@ -283,19 +378,24 @@ describe("interactive account key provisioning plans", () => {
     })
   })
 
-  it("rejects a proved non-write without retaining an uncertain guard", async () => {
-    const { session } = setup()
-    session.provisioning.provision.mockResolvedValueOnce({
-      certainty: "not-applied",
-      failure: { code: "unavailable" },
-    } as never)
-    const plan = await prepareAccountKeyProvisioning(account, "all-groups")
-    await expect(plan.entries[0]!.create()).rejects.toMatchObject({
-      failure: { code: "unavailable" },
-    })
-    const next = await prepareAccountKeyProvisioning(account, "all-groups")
-    await expect(next.entries[0]!.create()).resolves.toMatchObject({ ref })
-  })
+  it.each([false, true])(
+    "retries a proved non-write with reopen=%s",
+    async (reopen) => {
+      const { session } = setup()
+      session.provisioning.provision.mockResolvedValueOnce({
+        certainty: "not-applied",
+        failure: { code: "unavailable" },
+      } as never)
+      const plan = await prepareAccountKeyProvisioning(account, "all-groups")
+      await expect(plan.entries[0]!.create()).rejects.toMatchObject({
+        failure: { code: "unavailable" },
+      })
+      const next = reopen
+        ? await prepareAccountKeyProvisioning(account, "all-groups")
+        : plan
+      await expect(next.entries[0]!.create()).resolves.toMatchObject({ ref })
+    },
+  )
 
   it("rejects providers without native key management", async () => {
     context.mockReturnValue({ request: {} })

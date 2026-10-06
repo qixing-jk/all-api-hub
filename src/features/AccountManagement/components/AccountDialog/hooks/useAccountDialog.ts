@@ -174,7 +174,10 @@ import {
   type AccountDialogRecoveryState,
   type AddAccountPrefill,
 } from "../models"
-import { useOpenRouterAccountOnboarding } from "./useOpenRouterAccountOnboarding"
+import {
+  useOpenRouterAccountOnboarding,
+  type OpenRouterOnboardingStart,
+} from "./useOpenRouterAccountOnboarding"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
@@ -426,9 +429,7 @@ export function useAccountDialog({
     notifySiteChange: notifyOpenRouterSiteChange,
     notifyCredentialChange: notifyOpenRouterCredentialChange,
     tryPrepareForStart: tryPrepareOpenRouterOnboardingStart,
-    releasePreparation: releaseOpenRouterOnboardingPreparation,
     abandonForOtherAutoDetect: abandonOpenRouterOnboardingForOtherAutoDetect,
-    startPrepared: startPreparedOpenRouterOnboarding,
     beforeClose: beforeOpenRouterOnboardingClose,
     confirmSavedCredential: confirmSavedOpenRouterCredential,
   } = useOpenRouterAccountOnboarding()
@@ -2219,18 +2220,14 @@ export function useAccountDialog({
     })
   }
 
-  const runAutoDetectInvocation = async (runGeneration: number) => {
+  const runAdmittedAutoDetectInvocation = async (
+    runGeneration: number,
+    startOpenRouterOnboarding?: OpenRouterOnboardingStart,
+  ) => {
     const requestedUrl = url.trim()
     const isCurrentAutoDetectRun = () =>
       autoDetectRunGenerationRef.current === runGeneration &&
       selectedSiteUrlRef.current.trim() === requestedUrl
-    const isRequestedOpenRouterBootstrap =
-      isCanonicalOpenRouterUrl(requestedUrl)
-    const openRouterAdmission = isRequestedOpenRouterBootstrap
-      ? tryPrepareOpenRouterOnboardingStart()
-      : null
-    if (isRequestedOpenRouterBootstrap && !openRouterAdmission) return
-
     const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
     )
@@ -2241,7 +2238,7 @@ export function useAccountDialog({
     const createAutoDetectAnalyticsInsights = (
       result?:
         | Awaited<ReturnType<typeof autoDetectAccount>>
-        | Awaited<ReturnType<typeof startPreparedOpenRouterOnboarding>>,
+        | Awaited<ReturnType<OpenRouterOnboardingStart>>,
       fallbackUsed = false,
     ): ProductAnalyticsActionInsights => {
       const resultData = result && "data" in result ? result.data : undefined
@@ -2327,11 +2324,7 @@ export function useAccountDialog({
       return
     }
 
-    if (openRouterAdmission?.clearCreatedCredential) {
-      setAccessToken("")
-    }
-
-    if (!isRequestedOpenRouterBootstrap) {
+    if (!startOpenRouterOnboarding) {
       const { clearCreatedCredential } =
         abandonOpenRouterOnboardingForOtherAutoDetect()
       if (clearCreatedCredential) setAccessToken("")
@@ -2344,11 +2337,6 @@ export function useAccountDialog({
       try {
         await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
       } catch (error) {
-        if (openRouterAdmission) {
-          releaseOpenRouterOnboardingPreparation(
-            openRouterAdmission.preparation,
-          )
-        }
         logger.error("Failed to prepare popup auto-detect flow", { error })
         const detectionError = analyzeAutoDetectError(error)
         setDetectionError(detectionError)
@@ -2366,22 +2354,20 @@ export function useAccountDialog({
           insights: createAutoDetectAnalyticsInsights(undefined, true),
         })
         setIsDetecting(false)
-        if (openRouterAdmission) return
+        if (startOpenRouterOnboarding) return
         throw error
       }
     }
 
     try {
-      if (isRequestedOpenRouterBootstrap) {
-        if (!openRouterAdmission) return
+      if (startOpenRouterOnboarding) {
         let onboardingError: unknown
         let shouldShowDetectionError = false
         const outcome = await withProtectionBypassUserCommand(
           PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
           getCurrentTempWindowRequestSource(),
           (protectionBypassExecution) =>
-            startPreparedOpenRouterOnboarding({
-              preparation: openRouterAdmission.preparation,
+            startOpenRouterOnboarding({
               protectionBypassExecution,
               onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
               onCredentialCreated: (credential) => {
@@ -2564,14 +2550,23 @@ export function useAccountDialog({
         insights: createAutoDetectAnalyticsInsights(undefined, true),
       })
     } finally {
-      if (openRouterAdmission) {
-        releaseOpenRouterOnboardingPreparation(openRouterAdmission.preparation)
-      }
       if (shouldTrackPopupInterruption) {
         await completePopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
       }
       setIsDetecting(false)
     }
+  }
+
+  const runAutoDetectInvocation = async (runGeneration: number) => {
+    if (!isCanonicalOpenRouterUrl(url.trim())) {
+      return runAdmittedAutoDetectInvocation(runGeneration)
+    }
+    const admission = tryPrepareOpenRouterOnboardingStart()
+    if (!admission) return
+    return admission.preparation.run(async (start) => {
+      if (admission.clearCreatedCredential) setAccessToken("")
+      await runAdmittedAutoDetectInvocation(runGeneration, start)
+    })
   }
 
   const handleAutoDetect = async () => {

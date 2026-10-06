@@ -44,7 +44,8 @@ const MAX_KEY_NAME_LENGTH = 32
 const nameOf = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
 
-const editor = (name = "") => ({
+/** Native name-only key editor, also used by local provisioning fixtures. */
+export const createKimiKeyEditor = (name = "") => ({
   fields: [
     {
       fieldId: "name",
@@ -176,8 +177,10 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
     },
     toDetailFacts: keyFacts,
     createEditor: async (_config, _scope, _options, _inventory, intent) =>
-      editor(intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME),
-    editEditor: (_config, _scope, detail) => editor(detail.name),
+      createKimiKeyEditor(
+        intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
+      ),
+    editEditor: (_config, _scope, detail) => createKimiKeyEditor(detail.name),
     create: async (config, scope, command) => {
       const created = await createKimiKey(
         config.request,

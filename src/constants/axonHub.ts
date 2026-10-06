@@ -82,32 +82,14 @@ export const AXON_HUB_TABLE_FIELD_IDS = [
   AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
 ] as const
 
-export const AxonHubChannelTypeNames: Record<AxonHubChannelType, string> = {
-  [AXON_HUB_CHANNEL_TYPE.OPENAI]: "OpenAI",
-  [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: "OpenAI Responses",
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: "Anthropic",
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: "Anthropic AWS",
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: "Anthropic GCP",
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: "Gemini OpenAI",
-  [AXON_HUB_CHANNEL_TYPE.GEMINI]: "Gemini",
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: "Gemini Vertex",
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: "DeepSeek",
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: "DeepSeek Anthropic",
-  [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: "OpenRouter",
-  [AXON_HUB_CHANNEL_TYPE.XAI]: "xAI",
-  [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: "SiliconFlow",
-  [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: "Volcengine",
-  [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: "GitHub Copilot",
-  [AXON_HUB_CHANNEL_TYPE.CLAUDECODE]: "Claude Code",
-  [AXON_HUB_CHANNEL_TYPE.NANOGPT]: "NanoGPT",
-  [AXON_HUB_CHANNEL_TYPE.OLLAMA]: "Ollama",
-}
+const AXON_HUB_CHANNEL_TYPES = new Set<string>(
+  Object.values(AXON_HUB_CHANNEL_TYPE),
+)
 
 export const isAxonHubChannelType = (
   value: unknown,
 ): value is AxonHubChannelType =>
-  typeof value === "string" &&
-  Object.prototype.hasOwnProperty.call(AxonHubChannelTypeNames, value)
+  typeof value === "string" && AXON_HUB_CHANNEL_TYPES.has(value)
 
 /** Matches beta5: model auto-sync is unavailable for provider-managed credentials. */
 export const isAxonHubModelAutoSyncSupported = (value: unknown): boolean =>

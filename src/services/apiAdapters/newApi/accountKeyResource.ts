@@ -196,6 +196,7 @@ const inspectProvisioning = async (
 
   return {
     requirements,
+    emptyRequirementsAction: "default-creation",
     items: tokens.map((token) => {
       const group = token.group?.trim() || ""
       const effectiveGroup = group || currentUserGroup || ""

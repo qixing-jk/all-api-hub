@@ -1,6 +1,7 @@
 import {
   accountKeySourceSignature,
   prepareDefaultAccountKeyCreation,
+  type AccountKeyCreationPlan,
   type AccountKeyCreationResult,
 } from "~/services/accounts/accountKeyCreation"
 import { analyzeAccountKeyProvisioningSnapshot } from "~/services/accounts/accountKeyInventoryReconciliation"
@@ -8,11 +9,10 @@ import {
   createDisplayAccountApiContext,
   fetchDisplayAccountRuntimeKeys,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions/contracts"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   AccountKeyResourceError,
   type AccountKeyResourceEditor,
+  type AccountKeyResourceSession,
   type EditableResourceProjection,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -37,10 +37,30 @@ type Options = ResourceOperationOptions & {
 }
 
 const writeGuards = new Map<string, "pending" | "applied" | "uncertain">()
+type WriteGuards = typeof writeGuards
+
+type AccountKeyProvisioningSource = {
+  readonly identity: string
+  readonly label: string
+  readonly session: AccountKeyResourceSession
+  hasUsableRuntimeKey(options: ResourceOperationOptions): Promise<boolean>
+  prepareDefaultCreation(
+    options: ResourceOperationOptions,
+  ): Promise<AccountKeyCreationPlan>
+}
+
+/** Local resource sessions share planning without retaining guards across preview restarts. */
+export function createAccountKeyProvisioningPlanner(
+  source: AccountKeyProvisioningSource,
+) {
+  const guards: WriteGuards = new Map()
+  return (mode: AccountKeyAutoProvisionMode, options: Options = {}) =>
+    preparePlan(source, mode, options, guards)
+}
 
 /** Holds only write state, never a response-only secret, across foreground reopenings. */
-const assertWritable = (identity: string) => {
-  const guard = writeGuards.get(identity)
+const assertWritable = (guards: WriteGuards, identity: string) => {
+  const guard = guards.get(identity)
   if (guard)
     throw new AccountKeyResourceError({
       code: guard === "uncertain" ? "mutation_state_uncertain" : "unavailable",
@@ -49,27 +69,49 @@ const assertWritable = (identity: string) => {
 
 /** A confirmed or uncertain write belongs to this plan and must never be replayed. */
 function once(
+  guards: WriteGuards,
   identity: string,
   operation: (
-    values?: EditableResourceProjection,
+    values: EditableResourceProjection | undefined,
+    markWriteStarted: () => void,
   ) => Promise<AccountKeyCreationResult>,
 ) {
   let pending: Promise<AccountKeyCreationResult> | undefined
   return (values?: EditableResourceProjection) =>
     (pending ??= Promise.resolve().then(async () => {
-      assertWritable(identity)
-      writeGuards.set(identity, "pending")
+      assertWritable(guards, identity)
+      guards.set(identity, "pending")
+      let writeStarted = false
       try {
-        const result = await operation(values)
-        writeGuards.set(identity, "applied")
+        const result = await operation(values, () => {
+          writeStarted = true
+        })
+        guards.set(identity, "applied")
         return result
       } catch (error) {
         if (
-          error instanceof AccountKeyResourceError &&
-          error.failure.code === "mutation_state_uncertain"
-        )
-          writeGuards.set(identity, "uncertain")
-        else writeGuards.delete(identity)
+          (error instanceof AccountKeyResourceError &&
+            error.failure.code === "mutation_state_uncertain") ||
+          (writeStarted &&
+            !(
+              error instanceof AccountKeyResourceError &&
+              error.mutationCertainty === "not-applied"
+            ))
+        ) {
+          guards.set(identity, "uncertain")
+          if (
+            error instanceof AccountKeyResourceError &&
+            error.failure.code === "mutation_state_uncertain"
+          )
+            throw error
+          throw new AccountKeyResourceError(
+            { code: "mutation_state_uncertain" },
+            "possibly-applied",
+          )
+        } else {
+          guards.delete(identity)
+          pending = undefined
+        }
         throw error
       }
     }))
@@ -82,8 +124,6 @@ export async function prepareAccountKeyProvisioning(
   options: Options = {},
 ): Promise<AccountKeyProvisioningPlan> {
   options.signal?.throwIfAborted()
-  const source = accountKeySourceSignature(account)
-  const identity = (key: string) => JSON.stringify([source, key])
   const { accountKeyResources, request } =
     createDisplayAccountApiContext(account)
   if (!accountKeyResources)
@@ -98,6 +138,40 @@ export async function prepareAccountKeyProvisioning(
     },
     options,
   )
+  return preparePlan(
+    {
+      identity: accountKeySourceSignature(account),
+      label: account.name,
+      session,
+      hasUsableRuntimeKey: async (operationOptions) =>
+        (
+          await fetchDisplayAccountRuntimeKeys(account, {
+            ...options,
+            ...operationOptions,
+          })
+        ).some((key) => key.status === "active"),
+      prepareDefaultCreation: (operationOptions) =>
+        prepareDefaultAccountKeyCreation(account, {
+          ...options,
+          ...operationOptions,
+        }),
+    },
+    mode,
+    options,
+    writeGuards,
+  )
+}
+
+/** Plans against adapter facts while keeping coverage, validation and write guards in one owner. */
+async function preparePlan(
+  source: AccountKeyProvisioningSource,
+  mode: AccountKeyAutoProvisionMode,
+  options: Options,
+  guards: WriteGuards,
+): Promise<AccountKeyProvisioningPlan> {
+  options.signal?.throwIfAborted()
+  const { session } = source
+  const identity = (key: string) => JSON.stringify([source.identity, key])
   const scope = await session.resolveDefaultScope(options)
   const editorEntry = (
     key: string,
@@ -107,7 +181,7 @@ export async function prepareAccountKeyProvisioning(
     key,
     label,
     editor,
-    create: once(identity(key), async (values) => {
+    create: once(guards, identity(key), async (values, markWriteStarted) => {
       options.signal?.throwIfAborted()
       const projection = values ?? editor.initialValues
       const validation = editor.validate(projection)
@@ -116,6 +190,7 @@ export async function prepareAccountKeyProvisioning(
           code: "validation_failed",
           fieldIssues: validation.issues,
         })
+      markWriteStarted()
       const created = await editor.submit(projection, options)
       return { ...created, ref: created.facts?.ref ?? null }
     }),
@@ -135,19 +210,18 @@ export async function prepareAccountKeyProvisioning(
       // a complete empty inventory may enter the native default-key workflow.
       if (
         !snapshot.items.length &&
-        getAccountSiteDefinition(account.siteType)?.adapterFamily ===
-          ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
+        snapshot.emptyRequirementsAction === "default-creation"
       )
-        return prepareAccountKeyProvisioning(account, "default", options)
+        return preparePlan(source, "default", options, guards)
       throw new AccountKeyResourceError({ code: "unavailable" })
     }
     for (const requirement of snapshot.requirements) {
       options.signal?.throwIfAborted()
       if (analysis.coveredRequirementKeys.has(requirement.requirementKey)) {
-        writeGuards.delete(identity(requirement.requirementKey))
+        guards.delete(identity(requirement.requirementKey))
         continue
       }
-      assertWritable(identity(requirement.requirementKey))
+      assertWritable(guards, identity(requirement.requirementKey))
       if (requirement.provisioning.kind === "input-required") {
         entries.push(
           editorEntry(
@@ -165,51 +239,68 @@ export async function prepareAccountKeyProvisioning(
         entries.push({
           key: requirement.requirementKey,
           label: requirement.displayName,
-          create: once(identity(requirement.requirementKey), async () => {
-            options.signal?.throwIfAborted()
-            const result = await provisioning.provision(
-              requirement.requirementKey,
-              options,
-            )
-            if (result.certainty !== "applied")
-              throw new AccountKeyResourceError({
-                ...result.failure,
-                ...(result.certainty === "possibly-applied"
-                  ? { code: "mutation_state_uncertain" as const }
-                  : {}),
-              })
-            const { ref, createdSecret } = result.value
-            let facts: AccountKeyCreationResult["facts"] = null
-            try {
-              facts = await (
-                await session.openCollection(ref.scopeKey, options)
-              ).get(ref, options)
-            } catch {
-              /* A failed detail read cannot undo a confirmed write. */
-            }
-            return { ref, facts, ...(createdSecret ? { createdSecret } : {}) }
-          }),
+          create: once(
+            guards,
+            identity(requirement.requirementKey),
+            async (_values, markWriteStarted) => {
+              options.signal?.throwIfAborted()
+              markWriteStarted()
+              const result = await provisioning.provision(
+                requirement.requirementKey,
+                options,
+              )
+              if (result.certainty !== "applied")
+                throw new AccountKeyResourceError(
+                  {
+                    ...result.failure,
+                    ...(result.certainty !== "not-applied"
+                      ? { code: "mutation_state_uncertain" as const }
+                      : {}),
+                  },
+                  result.certainty === "not-applied"
+                    ? "not-applied"
+                    : "possibly-applied",
+                )
+              const { ref, createdSecret } = result.value
+              let facts: AccountKeyCreationResult["facts"] = null
+              try {
+                facts = await (
+                  await session.openCollection(ref.scopeKey, options)
+                ).get(ref, options)
+              } catch {
+                /* A failed detail read cannot undo a confirmed write. */
+              }
+              return { ref, facts, ...(createdSecret ? { createdSecret } : {}) }
+            },
+          ),
         })
       }
     }
     return { coveredCount: analysis.coveredRequirementKeys.size, entries }
   }
 
-  const inventory = await fetchDisplayAccountRuntimeKeys(account, options)
-  if (inventory.some((key) => key.status === "active")) {
-    writeGuards.delete(identity("default"))
+  if (await source.hasUsableRuntimeKey(options)) {
+    guards.delete(identity("default"))
     return { coveredCount: 1, entries: [] }
   }
-  assertWritable(identity("default"))
-  const defaultPlan = await prepareDefaultAccountKeyCreation(account, options)
+  assertWritable(guards, identity("default"))
+  const defaultPlan = await source.prepareDefaultCreation(options)
   if (defaultPlan.kind === "ready")
     return {
       coveredCount: 0,
       entries: [
         {
           key: "default",
-          label: account.name,
-          create: once(identity("default"), () => defaultPlan.create()),
+          label: source.label,
+          create: once(
+            guards,
+            identity("default"),
+            (_values, markWriteStarted) => {
+              options.signal?.throwIfAborted()
+              markWriteStarted()
+              return defaultPlan.create()
+            },
+          ),
         },
       ],
     }
@@ -219,7 +310,7 @@ export async function prepareAccountKeyProvisioning(
     entries: [
       editorEntry(
         "default",
-        account.name,
+        source.label,
         await session.openCreateEditor(scope.scopeKey, options),
       ),
     ],

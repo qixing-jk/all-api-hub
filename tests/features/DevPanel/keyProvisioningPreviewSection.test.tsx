@@ -18,9 +18,15 @@ const { nativePrepare, realSave } = vi.hoisted(() => ({
   nativePrepare: vi.fn(),
   realSave: vi.fn(),
 }))
-vi.mock("~/services/accounts/accountKeyProvisioning", () => ({
-  prepareAccountKeyProvisioning: nativePrepare,
-}))
+vi.mock(
+  "~/services/accounts/accountKeyProvisioning",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/accountKeyProvisioning")
+    >()),
+    prepareAccountKeyProvisioning: nativePrepare,
+  }),
+)
 vi.mock(
   "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
   () => ({ buildOneTimeApiKeyProfileSaveAction: realSave }),

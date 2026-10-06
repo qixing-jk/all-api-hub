@@ -94,6 +94,10 @@ type OpenRouterOnboardingStartParams = {
   onCredentialCreated: (credential: string) => void
 }
 
+export type OpenRouterOnboardingStart = (
+  params: Omit<OpenRouterOnboardingStartParams, "preparation">,
+) => Promise<OpenRouterOnboardingRunResult>
+
 const hasSameNormalizedCredential = (left: string, right: string) =>
   left.trim() === right.trim()
 
@@ -398,19 +402,6 @@ export function useOpenRouterAccountOnboarding() {
     [consumeRecoveryReminder, invalidatePreparation, setRecoveryState],
   )
 
-  const tryPrepareForStart = useCallback(() => {
-    if (reservationRef.current || activeRef.current) return null
-
-    const recoveryTransition = abandonRecovery()
-    const preparation = {
-      id: ++preparationIdRef.current,
-      contextVersion: contextVersionRef.current,
-      sessionId: sessionIdRef.current,
-    }
-    reservationRef.current = { preparation, phase: "prepared", valid: true }
-    return { ...recoveryTransition, preparation }
-  }, [abandonRecovery])
-
   const abandonForOtherAutoDetect = useCallback(
     () => abandonRecovery(),
     [abandonRecovery],
@@ -561,6 +552,35 @@ export function useOpenRouterAccountOnboarding() {
     ],
   )
 
+  /** Reserves synchronously; caller setup and dispatch share one hook-owned lifetime. */
+  const tryPrepareForStart = useCallback(() => {
+    if (reservationRef.current || activeRef.current) return null
+
+    const recoveryTransition = abandonRecovery()
+    const preparation = {
+      id: ++preparationIdRef.current,
+      contextVersion: contextVersionRef.current,
+      sessionId: sessionIdRef.current,
+    }
+    reservationRef.current = { preparation, phase: "prepared", valid: true }
+    return {
+      ...recoveryTransition,
+      preparation: {
+        async run<T>(
+          operation: (start: OpenRouterOnboardingStart) => Promise<T>,
+        ) {
+          try {
+            return await operation((params) =>
+              startPrepared({ ...params, preparation }),
+            )
+          } finally {
+            releasePreparation(preparation)
+          }
+        },
+      },
+    }
+  }, [abandonRecovery, releasePreparation, startPrepared])
+
   const beforeClose = useCallback(async () => {
     invalidatePreparation()
     const active = activeRef.current
@@ -632,9 +652,7 @@ export function useOpenRouterAccountOnboarding() {
     notifySiteChange,
     notifyCredentialChange,
     tryPrepareForStart,
-    releasePreparation,
     abandonForOtherAutoDetect,
-    startPrepared,
     beforeClose,
     confirmSavedCredential,
   }

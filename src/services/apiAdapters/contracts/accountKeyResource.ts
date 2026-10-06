@@ -146,6 +146,8 @@ export type AccountKeyProvisioningSnapshot = {
   readonly requirements: readonly AccountKeyProvisioningRequirement[]
   readonly items: readonly AccountKeyProvisioningInventoryItem[]
   readonly partialFailure?: ResourceFailure
+  /** Only a complete empty inventory may enter the adapter's default creation workflow. */
+  readonly emptyRequirementsAction?: "default-creation"
 }
 
 export type AccountKeyProvisionedResource = {
@@ -256,7 +258,11 @@ export type AccountKeyResourcePage = {
 }
 
 export class AccountKeyResourceError extends Error {
-  constructor(readonly failure: ResourceFailure) {
+  constructor(
+    readonly failure: ResourceFailure,
+    /** Only explicit mutation evidence may authorize a retry after submit. */
+    readonly mutationCertainty?: "not-applied" | "possibly-applied",
+  ) {
     super(failure.message?.trim() || failure.code)
     this.name = "AccountKeyResourceError"
   }

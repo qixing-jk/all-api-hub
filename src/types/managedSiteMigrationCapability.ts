@@ -50,6 +50,8 @@ export type ManagedSiteMigrationPreviewProjection = {
   baseUrl: string
   models: string[]
   groups: string[]
+  /** The target chooses its platform's default group when available; source groups are not copied. */
+  groupAssignment?: "platform-default-if-available"
   enabled: boolean
 }
 

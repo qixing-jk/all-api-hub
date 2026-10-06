@@ -11,6 +11,7 @@ import {
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_FIELD_ISSUE_CODES,
+  type AccountKeyCreationIntent,
   type AccountKeyResourceFacts,
   type AccountKeyResourceOpenInput,
   type AccountKeyScope,
@@ -882,6 +883,36 @@ const loadWorkspaceScopeInventory = async (
   }
 }
 
+/** Native create fields, defaults and validation shared with local fixture sessions. */
+export function createOpenRouterKeyEditorProjection(
+  scope: AccountKeyScope,
+  scopes: readonly AccountKeyScope[],
+  intent?: AccountKeyCreationIntent,
+  knownCreatorValues: () => ReadonlySet<string> = () => new Set(),
+) {
+  const field = OPENROUTER_KEY_FIELD_IDS
+  const knownWorkspaceIds = new Set(scopes.map((entry) => entry.scopeKey))
+  return {
+    fields: createFields(scopes),
+    initialValues: {
+      [field.Name]: intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
+      [field.Workspace]: scope.scopeKey,
+      [field.Creator]: null,
+      [field.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Unlimited,
+      [field.Limit]: null,
+      [field.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.None,
+      [field.ExpiresAt]: null,
+      [field.IncludeByokInLimit]: false,
+    },
+    validate: (values: EditableResourceProjection) =>
+      createValidation(values, {
+        create: true,
+        knownWorkspaceIds,
+        knownCreatorValues: knownCreatorValues(),
+      }),
+  }
+}
+
 /** OpenRouter native key resources use only the documented Management API fields. */
 export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
   {
@@ -1050,24 +1081,12 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       let creatorOptionSequence = 0
       const field = OPENROUTER_KEY_FIELD_IDS
       return {
-        fields: createFields(scopeEntries),
-        initialValues: {
-          [field.Name]:
-            intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
-          [field.Workspace]: scope.scopeKey,
-          [field.Creator]: null,
-          [field.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Unlimited,
-          [field.Limit]: null,
-          [field.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.None,
-          [field.ExpiresAt]: null,
-          [field.IncludeByokInLimit]: false,
-        },
-        validate: (values) =>
-          createValidation(values, {
-            create: true,
-            knownWorkspaceIds,
-            knownCreatorValues: new Set(creatorIdsByOptionValue.keys()),
-          }),
+        ...createOpenRouterKeyEditorProjection(
+          scope,
+          scopeEntries,
+          intent,
+          () => new Set(creatorIdsByOptionValue.keys()),
+        ),
         loadOptions: async (fieldId, values, loadOptions) => {
           if (fieldId !== field.Creator) return []
           const workspaceId = values[field.Workspace]

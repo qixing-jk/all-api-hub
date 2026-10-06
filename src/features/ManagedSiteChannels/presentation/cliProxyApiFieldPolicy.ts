@@ -46,6 +46,7 @@ export const cliProxyApiFields = [
   },
   {
     fieldId: "type",
+    resourceType: true,
     section: "basic",
     order: 0,
     renderer: "select",
@@ -59,6 +60,8 @@ export const cliProxyApiFields = [
       "xai-api-key": () => "xAI",
       "interactions-api-key": () => "Gemini Interactions",
     },
+    resolveOptionFallback: (t) =>
+      t("managedSiteChannels:editor.options.channelType.unsupported"),
   },
   {
     fieldId: "name",

@@ -53,7 +53,8 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
     resolveHelp?: ResourceFieldTextResolver
   }[]
   optionLabelResolvers?: Readonly<Record<string, ResourceFieldTextResolver>>
-  resolveOptionFallback?: ResourceFieldTextResolver
+  /** Unknown option labels may depend on the native value, such as a provider slug. */
+  resolveOptionFallback?: (t: TFunction, value?: string) => string
   optionSourceFieldIds?: readonly string[]
   customValuesMirrorFieldId?: string
   autoSelectFirstOption?: boolean
@@ -263,5 +264,5 @@ export const getResourceFieldOptionLabel = <TSection extends string>(
       : undefined
   return resolver
     ? resolver(t)
-    : presentation.resolveOptionFallback?.(t) ?? value
+    : presentation.resolveOptionFallback?.(t, value) ?? value
 }

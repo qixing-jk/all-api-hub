@@ -643,6 +643,7 @@ describe("New API account key resources", () => {
     })
     const snapshot = await session.provisioning!.inspect()
 
+    expect(snapshot.emptyRequirementsAction).toBe("default-creation")
     expect(
       snapshot.requirements.map((requirement) => requirement.displayName),
     ).toEqual(["default", "vip"])

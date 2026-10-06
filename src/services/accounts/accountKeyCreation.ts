@@ -12,9 +12,11 @@ import {
 import {
   AccountKeyResourceError,
   type AccountKeyCreationIntent,
+  type AccountKeyDefaultCreationPolicy,
   type AccountKeyProvisioningRequirement,
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
+  type AccountKeyResourceSession,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
@@ -69,6 +71,17 @@ export async function prepareDefaultAccountKeyCreation(
     },
     options,
   )
+  return prepareDefaultAccountKeyCreationInSession(session, policy, options)
+}
+
+/** Shares default selection and one-shot creation between real and local resource sessions. */
+export async function prepareDefaultAccountKeyCreationInSession(
+  session: AccountKeyResourceSession,
+  policy: AccountKeyDefaultCreationPolicy,
+  options: Options = {},
+): Promise<AccountKeyCreationPlan> {
+  options.signal?.throwIfAborted()
+  if (policy === "requires-input") return { kind: "input-required" }
   if (policy === "editor-defaults" || options.intent) {
     const scope = await session.resolveDefaultScope(options)
     const editor = await session.openCreateEditor(
@@ -82,11 +95,20 @@ export async function prepareDefaultAccountKeyCreation(
     return {
       kind: "ready",
       create: () =>
-        (result ??= Promise.resolve().then(async () => {
-          options.signal?.throwIfAborted()
-          const created = await editor.submit(editor.initialValues, options)
-          return { ...created, ref: created.facts?.ref ?? null }
-        })),
+        (result ??= Promise.resolve()
+          .then(async () => {
+            options.signal?.throwIfAborted()
+            const created = await editor.submit(editor.initialValues, options)
+            return { ...created, ref: created.facts?.ref ?? null }
+          })
+          .catch((error) => {
+            if (
+              error instanceof AccountKeyResourceError &&
+              error.mutationCertainty === "not-applied"
+            )
+              result = undefined
+            throw error
+          })),
     }
   }
 
@@ -113,12 +135,17 @@ export async function prepareDefaultAccountKeyCreation(
       if (mutation.certainty !== "applied") {
         // Only a proved non-write may be retried. Keep uncertain outcomes cached.
         if (mutation.certainty === "not-applied") result = undefined
-        throw new AccountKeyResourceError({
-          ...mutation.failure,
-          ...(mutation.certainty === "possibly-applied"
-            ? { code: "mutation_state_uncertain" as const }
-            : {}),
-        })
+        throw new AccountKeyResourceError(
+          {
+            ...mutation.failure,
+            ...(mutation.certainty !== "not-applied"
+              ? { code: "mutation_state_uncertain" as const }
+              : {}),
+          },
+          mutation.certainty === "not-applied"
+            ? "not-applied"
+            : "possibly-applied",
+        )
       }
       const { ref, createdSecret } = mutation.value
       let facts: AccountKeyResourceFacts | null = null
