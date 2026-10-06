@@ -6,14 +6,14 @@ import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateGptLoadCredential } from "~/services/managedSites/providers/gptLoad"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 /**
  * Configures one self-hosted gpt-load deployment.
@@ -40,33 +40,30 @@ export default function GptLoadSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.gptLoad,
+    defaults: DEFAULT_PREFERENCES.gptLoad,
+    reset: resetGptLoadConfig,
+    fields: {
+      managementKey: {
+        setting: t("gptLoad.fields.managementKeyLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateGptLoadConfig({ managementKey: value }, options),
+      },
+      baseUrl: {
+        setting: t("gptLoad.fields.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.Trimmed,
+        update: (value, options) =>
+          updateGptLoadConfig({ baseUrl: value }, options),
+      },
+    },
   })
   const [isValidating, setIsValidating] = useState(false)
-
-  const handleCredentialChange = async (value: string) => {
-    const credential = value.trim()
-    if (credential === gptLoadManagementKey) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("gptLoad.fields.managementKeyLabel"),
-      update: (options) =>
-        updateGptLoadConfig({ managementKey: credential }, options),
-    })
-  }
-
-  const handleBaseUrlChange = async (value: string) => {
-    const baseUrl = value.trim()
-    if (baseUrl === gptLoadBaseUrl) return
-    await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("gptLoad.fields.baseUrlLabel"),
-      update: (options) => updateGptLoadConfig({ baseUrl }, options),
-    })
-  }
 
   const handleValidateConfig = async () => {
     const baseUrl = localConfig.baseUrl.trim()
@@ -119,14 +116,7 @@ export default function GptLoadSettings() {
       id={SETTINGS_ANCHORS.GPT_LOAD}
       title={t("gptLoad.title")}
       description={t("gptLoad.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.gptLoad,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.gptLoad,
-        reset: resetGptLoadConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -146,7 +136,7 @@ export default function GptLoadSettings() {
                     baseUrl: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={(event) => commitField("baseUrl", event.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("gptLoad.fields.baseUrlPlaceholder")}
               />
@@ -172,7 +162,9 @@ export default function GptLoadSettings() {
                     managementKey: event.target.value,
                   }))
                 }
-                onBlur={(event) => handleCredentialChange(event.target.value)}
+                onBlur={(event) =>
+                  commitField("managementKey", event.target.value)
+                }
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("gptLoad.fields.managementKeyPlaceholder")}
               />

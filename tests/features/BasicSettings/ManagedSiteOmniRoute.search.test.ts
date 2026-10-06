@@ -2,21 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  managedSiteOmniRouteSearchControls,
-  managedSiteOmniRouteSearchSections,
-} from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteOmniRoute.search"
+import { omniRouteSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteOmniRoute.search"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("OmniRoute managed-site settings search definitions", () => {
   it("maps every rendered setting to its shared target ID", () => {
-    expect(atIndex(managedSiteOmniRouteSearchSections, 0).targetId).toBe(
+    expect(atIndex(omniRouteSettingsSearch.sections, 0).targetId).toBe(
       SETTINGS_ANCHORS.OMNIROUTE,
     )
     expect(
-      managedSiteOmniRouteSearchControls.map(
-        (definition) => definition.targetId,
-      ),
+      omniRouteSettingsSearch.controls.map((definition) => definition.targetId),
     ).toEqual([
       SETTINGS_ANCHORS.OMNIROUTE_BASE_URL,
       SETTINGS_ANCHORS.OMNIROUTE_CREDENTIAL,
@@ -26,7 +21,7 @@ describe("OmniRoute managed-site settings search definitions", () => {
   })
 
   it("shows the entries only for the OmniRoute managed-site selection", () => {
-    const visibility = atIndex(managedSiteOmniRouteSearchControls, 0).isVisible!
+    const visibility = atIndex(omniRouteSettingsSearch.controls, 0).isVisible!
     expect(visibility({ managedSiteType: SITE_TYPES.OMNIROUTE } as any)).toBe(
       true,
     )

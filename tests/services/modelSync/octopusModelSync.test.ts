@@ -42,14 +42,22 @@ vi.mock("~/services/apiService/octopus", async (original) => ({
   updateChannel: vi.fn((...args) => updateChannelMock(...args)),
 }))
 
-vi.mock("~/services/apiAdapters/managedResources/octopusOperations", () => {
-  const octopusManagedResourceModels = {
-    updateModels: (...args: unknown[]) => updateModelsMock(...args),
-  }
-  return {
-    octopusManagedResourceModels,
-  }
-})
+vi.mock(
+  "~/services/apiAdapters/managedResources/octopusOperations",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("~/services/apiAdapters/managedResources/octopusOperations")
+      >()
+    const octopusManagedResourceModels = {
+      ...actual.octopusManagedResourceModels,
+      updateModels: (...args: unknown[]) => updateModelsMock(...args),
+    }
+    return {
+      octopusManagedResourceModels,
+    }
+  },
+)
 
 vi.mock("~/services/verification/aiApiVerification", async (original) => ({
   ...(await original<

@@ -74,6 +74,12 @@ regardless of whether the key comes from an API token resource or an account
 service credential.
 _Avoid_: API token, token row
 
+**Channel Verification Protocol**:
+The inference protocol used to verify models for a Managed Upstream Resource.
+It is derived from that resource's upstream-native channel type; identical type
+identifiers in different Managed Site Types do not imply the same protocol.
+_Avoid_: site type, channel type
+
 **Automatic Check-in Intent**:
 A user's choice that an account may participate in automatic check-in,
 independent of current method support, readiness, and the latest result.
@@ -127,6 +133,8 @@ _Avoid_: provider
 - An **Account Runtime Key** is not necessarily an API token resource. API token
   CRUD, token metadata, and service-credential rotation remain source-specific
   behavior behind the account runtime key source.
+- A **Managed Upstream Resource** may have a **Channel Verification Protocol**,
+  but model discovery support alone does not imply model verification support.
 - **Automatic Check-in Intent**, **Check-in Readiness**, **Check-in Execution
   Outcome**, and **Check-in Reason** are independent facts. A failed attempt does
   not disable the user's intent, and a disabled intent is not an execution

@@ -9,7 +9,7 @@ import type { EditableResourceProjection } from "~/services/apiAdapters/contract
 import type {
   ManagedResourceEditorFieldPolicy,
   ManagedResourceFieldPresentation,
-} from "./managedResourceFieldPolicy"
+} from "./managedResourceFieldPresentation"
 
 /** New API field layout; generic controls remain independent of provider IDs. */
 export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =

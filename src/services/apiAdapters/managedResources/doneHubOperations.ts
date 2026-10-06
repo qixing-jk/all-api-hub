@@ -1,11 +1,14 @@
-import { DoneHubChannelStatus } from "~/constants/doneHub"
+import { DoneHubChannelStatus, DoneHubChannelType } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelRequestOptions,
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import {
+  createChannelVerificationProtocolResolver,
+  toManagedModelChannelList,
+} from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   requireManagedResourceChannelId,
   requireNumericManagedResourceId,
@@ -33,6 +36,7 @@ import {
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type {
   DoneHubCreateChannelPayload,
   DoneHubUpdateChannelPayload,
@@ -213,6 +217,21 @@ export const doneHubChannelOperations = {
 }
 
 export const doneHubManagedResourceModels = {
+  resolveVerificationProtocol: createChannelVerificationProtocolResolver({
+    [DoneHubChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.AzureOpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.XAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [DoneHubChannelType.Gemini]: API_TYPES.GOOGLE,
+    [DoneHubChannelType.VertexAI]: API_TYPES.GOOGLE,
+    [DoneHubChannelType.PaLM2]: API_TYPES.GOOGLE,
+  }),
   modelMappingPolicy: {
     // DoneHub's billing prefix is not part of the upstream model identity.
     normalizeTargetForAvailability: (target: string) =>

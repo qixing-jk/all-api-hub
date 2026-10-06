@@ -6,7 +6,9 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-export const managedSiteOctopusSearchSections: OptionsSearchItemDefinition[] = [
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:octopus",
     "managedSite",
@@ -16,12 +18,11 @@ export const managedSiteOctopusSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["octopus"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
 ]
 
-export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:octopus-base-url",
     "managedSite",
@@ -36,7 +37,6 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "base url"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -53,7 +53,6 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "username"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -70,7 +69,6 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "password"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -87,7 +85,12 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "validate", "login"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
 ]
+
+export const octopusSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.OCTOPUS,
+  sections,
+  controls,
+)

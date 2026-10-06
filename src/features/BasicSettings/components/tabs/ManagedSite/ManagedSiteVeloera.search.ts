@@ -6,7 +6,9 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-export const managedSiteVeloeraSearchSections: OptionsSearchItemDefinition[] = [
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:veloera",
     "managedSite",
@@ -16,12 +18,11 @@ export const managedSiteVeloeraSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["veloera"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
 ]
 
-export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:veloera-base-url",
     "managedSite",
@@ -36,7 +37,6 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "base url"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -53,7 +53,6 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "admin credentials", "base url"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -70,7 +69,6 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "token"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -87,7 +85,12 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "user id"],
-      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
 ]
+
+export const veloeraSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.VELOERA,
+  sections,
+  controls,
+)

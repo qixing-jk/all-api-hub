@@ -1,3 +1,4 @@
+import { ChannelType as NewApiChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
@@ -5,7 +6,10 @@ import type {
   ManagedSiteChannelSecretReadOptions,
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import {
+  createChannelVerificationProtocolResolver,
+  toManagedModelChannelList,
+} from "~/services/apiAdapters/managedResources/modelInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   createChannel,
@@ -39,6 +43,7 @@ import {
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
 } from "~/services/managedSites/providers/newApiChannelSecrets"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   CHANNEL_STATUS,
   type CreateChannelPayload,
@@ -324,6 +329,28 @@ export const newApiChannelOperations = {
 }
 
 export const newApiManagedResourceModels = {
+  resolveVerificationProtocol: createChannelVerificationProtocolResolver({
+    [NewApiChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OpenAIMax]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OhMyGPT]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AILS]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AIProxy]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.API2GPT]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AIGC2D]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [NewApiChannelType.Gemini]: API_TYPES.GOOGLE,
+    [NewApiChannelType.VertexAi]: API_TYPES.GOOGLE,
+    [NewApiChannelType.PaLM]: API_TYPES.GOOGLE,
+  }),
   modelMappingPolicy: { supportsChaining: true },
   list: async (config, options) =>
     toManagedModelChannelList(

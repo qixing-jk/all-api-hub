@@ -268,8 +268,7 @@ const siteTypeImportOwners = [
   "src/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings.tsx", // Provider settings.
-  "src/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.ts", // Provider field presentation.
-  "src/features/ManagedSiteChannels/presentation/managedResourceTablePolicy.ts", // Provider table presentation.
+  "src/features/ManagedSiteChannels/presentation/sites/**", // Provider field and table presentation definitions.
   "src/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview.tsx", // Development fixture.
   "src/services/accountSiteOnboarding/metadata.ts", // Unknown-site metadata fallback.
   "src/services/accounts/accountCreation.ts", // Unknown account identity fallback.

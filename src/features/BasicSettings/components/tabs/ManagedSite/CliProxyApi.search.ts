@@ -6,7 +6,9 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-export const cliProxyApiSearchSections: OptionsSearchItemDefinition[] = [
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:cli-proxy",
     "managedSite",
@@ -16,13 +18,11 @@ export const cliProxyApiSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["cli", "cliproxy", "cliproxyapi", "cli-proxy-api", "cpa"],
-      isVisible: (context) =>
-        context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
   ),
 ]
 
-export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:cli-proxy-base-url",
     "managedSite",
@@ -37,8 +37,6 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:cliProxyApi.title",
       ],
       keywords: ["cli", "proxy", "cliproxy", "cliproxyapi", "cpa", "base url"],
-      isVisible: (context) =>
-        context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
   ),
   buildControlDefinition(
@@ -63,8 +61,6 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "key",
         "management key",
       ],
-      isVisible: (context) =>
-        context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
   ),
   buildControlDefinition(
@@ -89,8 +85,12 @@ export const cliProxyApiSearchControls: OptionsSearchItemDefinition[] = [
         "check connection",
         "verify",
       ],
-      isVisible: (context) =>
-        context.managedSiteType === SITE_TYPES.CLI_PROXY_API,
     },
   ),
 ]
+
+export const cliProxyApiSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.CLI_PROXY_API,
+  sections,
+  controls,
+)

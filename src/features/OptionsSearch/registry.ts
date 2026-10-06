@@ -22,10 +22,6 @@ import {
   generalSearchSections,
 } from "~/features/BasicSettings/components/tabs/General/General.search"
 import {
-  cliProxyApiSearchControls,
-  cliProxyApiSearchSections,
-} from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search"
-import {
   managedSiteSearchControls,
   managedSiteSearchSections,
 } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSite.search"
@@ -75,7 +71,6 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchSections,
   ...webAiApiCheckSearchSections,
   ...managedSiteSearchSections,
-  ...cliProxyApiSearchSections,
   ...claudeCodeRouterSearchSections,
   ...permissionsSearchSections,
   ...importExportSearchSections,
@@ -90,7 +85,6 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchControls,
   ...webAiApiCheckSearchControls,
   ...managedSiteSearchControls,
-  ...cliProxyApiSearchControls,
   ...claudeCodeRouterSearchControls,
   ...permissionsSearchControls,
   ...importExportSearchControls,

@@ -1,10 +1,5 @@
-import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { DoneHubChannelType } from "~/constants/doneHub"
-import { ChannelType as NewApiChannelType } from "~/constants/newApi"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { VeloeraChannelType } from "~/constants/veloera"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
 import {
   assertManagedResourceRefForSite,
@@ -15,7 +10,6 @@ import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/ch
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
-  API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   toSanitizedErrorSummary,
@@ -33,7 +27,6 @@ import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
-import { OctopusOutboundType } from "~/types/octopus"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ManagedSiteModelSyncProbeFilters")
@@ -63,6 +56,7 @@ export class ProbeFilterUnavailableError extends Error {
 export interface ProbeFilterContext {
   channel: Pick<ManagedModelChannel, "ref" | "type" | "baseUrl" | "credential">
   matching?: Pick<ManagedResourceMatchingCapability, "fetchSecretKey">
+  models?: Pick<ManagedResourceModelsCapability, "resolveVerificationProtocol">
   managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string
@@ -74,120 +68,6 @@ interface ProbeExecutionInput {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
-}
-
-// Type ids come from each provider's pinned channel constants. Equal numbers
-// across New API, DoneHub and Octopus do not identify the same upstream protocol.
-const CHANNEL_VERIFICATION_PROTOCOLS: Partial<
-  Record<ManagedSiteType, Readonly<Record<string, ApiVerificationApiType>>>
-> = {
-  [SITE_TYPES.NEW_API]: {
-    [NewApiChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.OpenAIMax]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.OhMyGPT]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.AILS]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.AIProxy]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.API2GPT]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.AIGC2D]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
-    [NewApiChannelType.Anthropic]: API_TYPES.ANTHROPIC,
-    [NewApiChannelType.Gemini]: API_TYPES.GOOGLE,
-    [NewApiChannelType.VertexAi]: API_TYPES.GOOGLE,
-    [NewApiChannelType.PaLM]: API_TYPES.GOOGLE,
-  },
-  [SITE_TYPES.VELOERA]: {
-    [VeloeraChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
-    [VeloeraChannelType.Anthropic]: API_TYPES.ANTHROPIC,
-    [VeloeraChannelType.Gemini]: API_TYPES.GOOGLE,
-    [VeloeraChannelType.VertexAi]: API_TYPES.GOOGLE,
-    [VeloeraChannelType.PaLM]: API_TYPES.GOOGLE,
-  },
-  [SITE_TYPES.DONE_HUB]: {
-    [DoneHubChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.AzureOpenAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.XAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
-    [DoneHubChannelType.Anthropic]: API_TYPES.ANTHROPIC,
-    [DoneHubChannelType.Gemini]: API_TYPES.GOOGLE,
-    [DoneHubChannelType.VertexAI]: API_TYPES.GOOGLE,
-    [DoneHubChannelType.PaLM2]: API_TYPES.GOOGLE,
-  },
-  // https://github.com/bestruirui/octopus: native OutboundType distinguishes
-  // Chat Completions, Responses, Anthropic and Gemini; embeddings lack chat probes.
-  [SITE_TYPES.OCTOPUS]: {
-    [OctopusOutboundType.OpenAIChat]: API_TYPES.OPENAI_COMPATIBLE,
-    [OctopusOutboundType.OpenAIResponse]: API_TYPES.OPENAI,
-    [OctopusOutboundType.Anthropic]: API_TYPES.ANTHROPIC,
-    [OctopusOutboundType.Gemini]: API_TYPES.GOOGLE,
-    [OctopusOutboundType.Volcengine]: API_TYPES.OPENAI_COMPATIBLE,
-  },
-  [SITE_TYPES.AXON_HUB]: {
-    [AXON_HUB_CHANNEL_TYPE.OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: API_TYPES.OPENAI,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.XAI]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.NANOGPT]: API_TYPES.OPENAI_COMPATIBLE,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: API_TYPES.ANTHROPIC,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: API_TYPES.ANTHROPIC,
-    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: API_TYPES.ANTHROPIC,
-    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: API_TYPES.ANTHROPIC,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI]: API_TYPES.GOOGLE,
-    [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: API_TYPES.GOOGLE,
-  },
-  [SITE_TYPES.CLAUDE_CODE_HUB]: {
-    [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]:
-      API_TYPES.OPENAI_COMPATIBLE,
-    [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: API_TYPES.OPENAI,
-    [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: API_TYPES.ANTHROPIC,
-    [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: API_TYPES.GOOGLE,
-  },
-}
-
-/**
- * Maps only channel types whose protocol is represented by API Verification.
- * Image/video/search-only providers and provider-specific protocols remain
- * unsupported until reusable verification probes exist for those surfaces.
- */
-export function resolveApiVerificationTypeForChannelType(
-  siteType: ManagedSiteType,
-  channelType: unknown,
-): ApiVerificationApiType | null {
-  const rawType =
-    typeof channelType === "number" || typeof channelType === "string"
-      ? String(channelType).trim()
-      : ""
-  const type = /^\d+$/.test(rawType) ? String(Number(rawType)) : rawType
-  const protocols = CHANNEL_VERIFICATION_PROTOCOLS[siteType]
-  return protocols && Object.hasOwn(protocols, type)
-    ? protocols[type] ?? null
-    : null
 }
 
 /**
@@ -281,8 +161,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 async function getProbeExecutionInput(
   context: ProbeFilterContext,
 ): Promise<ProbeExecutionInput> {
-  const apiType = resolveApiVerificationTypeForChannelType(
-    context.managedConfig.siteType,
+  const apiType = context.models?.resolveVerificationProtocol?.(
     context.channel.type,
   )
   if (!apiType) {

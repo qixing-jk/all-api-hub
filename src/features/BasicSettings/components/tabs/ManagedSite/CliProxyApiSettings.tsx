@@ -5,17 +5,17 @@ import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLin
 import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import {
   CliProxyApiError,
   listAllCliProxyApiProviders,
 } from "~/services/apiService/cliProxyApi"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
-import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
+import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
 
 const CLI_PROXY_API_MANAGEMENT_DOC_URL =
   "https://help.router-for.me/management/api"
@@ -45,10 +45,27 @@ export default function CliProxyApiSettings() {
   const {
     draft: localConfig,
     setDraft: setLocalConfig,
-    expectedLastUpdated,
-  } = usePreferenceDraft({
-    savedValue: savedConfig,
+    commitField,
+    resetProps,
+  } = useManagedSiteConfigDraft({
+    savedConfig,
     savedVersion: preferences.lastUpdated,
+    storedConfig: preferences?.cliProxyApi,
+    defaults: DEFAULT_PREFERENCES.cliProxyApi,
+    reset: resetCliProxyApiConfig,
+    fields: {
+      baseUrl: {
+        setting: t("cliProxyApi.baseUrlLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedComparison,
+        update: (value, options) => updateCliProxyApiBaseUrl(value, options),
+      },
+      managementKey: {
+        setting: t("cliProxyApi.managementKeyLabel"),
+        policy: MANAGED_SITE_CONFIG_TEXT_POLICIES.TrimmedComparison,
+        update: (value, options) =>
+          updateCliProxyApiManagementKey(value, options),
+      },
+    },
   })
   const [isCheckingConnection, setIsCheckingConnection] = useState(false)
   const localBaseUrl = localConfig.baseUrl
@@ -98,16 +115,9 @@ export default function CliProxyApiSettings() {
 
   const handleBaseUrlChange = async (url: string) => {
     const trimmedUrl = url.trim()
-    setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
+    const writeResult = await commitField("baseUrl", url)
 
-    if (trimmedUrl === cliProxyApiBaseUrl.trim()) return
-    const writeResult = await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("cliProxyApi.baseUrlLabel"),
-      update: (options) => updateCliProxyApiBaseUrl(trimmedUrl, options),
-    })
-
-    if (writeResult.ok && trimmedUrl && localKey.trim()) {
+    if (writeResult?.ok && trimmedUrl && localKey.trim()) {
       await runConnectionCheckWithToast({
         baseUrl: trimmedUrl,
         managementKey: localKey,
@@ -117,16 +127,9 @@ export default function CliProxyApiSettings() {
 
   const handleKeyChange = async (key: string) => {
     const trimmedKey = key.trim()
-    setLocalConfig((prev) => ({ ...prev, managementKey: trimmedKey }))
+    const writeResult = await commitField("managementKey", key)
 
-    if (trimmedKey === cliProxyApiManagementKey.trim()) return
-    const writeResult = await runPreferenceUpdateWithToast({
-      expectedLastUpdated,
-      setting: t("cliProxyApi.managementKeyLabel"),
-      update: (options) => updateCliProxyApiManagementKey(trimmedKey, options),
-    })
-
-    if (writeResult.ok && localBaseUrl.trim() && trimmedKey) {
+    if (writeResult?.ok && localBaseUrl.trim() && trimmedKey) {
       await runConnectionCheckWithToast({
         baseUrl: localBaseUrl,
         managementKey: trimmedKey,
@@ -142,14 +145,7 @@ export default function CliProxyApiSettings() {
       id="cli-proxy"
       title={t("cliProxyApi.title")}
       description={t("cliProxyApi.description")}
-      {...createPreferenceDraftReset({
-        draft: localConfig,
-        storedValue: preferences?.cliProxyApi,
-        savedValue: savedConfig,
-        defaults: DEFAULT_PREFERENCES.cliProxyApi,
-        reset: resetCliProxyApiConfig,
-        setDraft: setLocalConfig,
-      })}
+      {...resetProps}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >

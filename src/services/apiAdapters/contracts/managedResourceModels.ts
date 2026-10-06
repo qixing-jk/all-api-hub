@@ -1,6 +1,7 @@
 import type { ManagedSiteVoidMutationResult } from "~/services/managedSites/mutations"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
 
 import type { ManagedResourceModelSyncWorkflow } from "./managedResourceModelSync"
@@ -20,6 +21,10 @@ export interface ManagedModelMappingPolicy {
 export interface ManagedResourceModelsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > {
+  /** The adapter alone interprets its native channel types for verification. */
+  resolveVerificationProtocol?(
+    channelType: unknown,
+  ): ApiVerificationApiType | null
   /** Native sync execution for providers whose payload cannot use the shared channel runner. */
   createSync?(
     config: TConfig,

@@ -7,15 +7,15 @@ import {
 } from "~/features/OptionsSearch/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
-const isGptLoad = (context: { managedSiteType: string }) =>
-  context.managedSiteType === SITE_TYPES.GPT_LOAD
+import { defineManagedSiteSettingsSearch } from "./defineManagedSiteSettingsSearch"
+
 const breadcrumbs = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.managedSite",
   "settings:gptLoad.title",
 ]
 
-export const managedSiteGptLoadSearchSections: OptionsSearchItemDefinition[] = [
+const sections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:gpt-load",
     "managedSite",
@@ -25,12 +25,11 @@ export const managedSiteGptLoadSearchSections: OptionsSearchItemDefinition[] = [
     {
       keywordKeys: ["common:actions.reset"],
       keywords: ["gpt-load", "self-hosted gateway", "负载均衡"],
-      isVisible: isGptLoad,
     },
   ),
 ]
 
-export const managedSiteGptLoadSearchControls: OptionsSearchItemDefinition[] = [
+const controls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:gpt-load-base-url",
     "managedSite",
@@ -41,7 +40,6 @@ export const managedSiteGptLoadSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:gptLoad.fields.baseUrlDesc",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["gpt-load", "base url", "dashboard", "地址"],
-      isVisible: isGptLoad,
     },
   ),
   buildControlDefinition(
@@ -54,7 +52,6 @@ export const managedSiteGptLoadSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:gptLoad.fields.managementKeyDesc",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["gpt-load", "management key", "AUTH_KEY", "管理密钥"],
-      isVisible: isGptLoad,
     },
   ),
   buildControlDefinition(
@@ -67,7 +64,12 @@ export const managedSiteGptLoadSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:gptLoad.validation.description",
       breadcrumbsKeys: breadcrumbs,
       keywords: ["gpt-load", "validate", "connection", "验证"],
-      isVisible: isGptLoad,
     },
   ),
 ]
+
+export const gptLoadSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.GPT_LOAD,
+  sections,
+  controls,
+)

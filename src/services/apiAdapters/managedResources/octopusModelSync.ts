@@ -230,6 +230,7 @@ async function runForChannel(
             credential: channel.keys[0]?.channel_key,
           },
           managedConfig: { siteType: SITE_TYPES.OCTOPUS, config },
+          models: octopusManagedResourceModels,
           cache: new Map(),
           abortSignal,
         },

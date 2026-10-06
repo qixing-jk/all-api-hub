@@ -1,11 +1,14 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { VeloeraChannelStatus } from "~/constants/veloera"
+import { VeloeraChannelStatus, VeloeraChannelType } from "~/constants/veloera"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelRequestOptions,
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import {
+  createChannelVerificationProtocolResolver,
+  toManagedModelChannelList,
+} from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   requireManagedResourceChannelId,
   requireNumericManagedResourceId,
@@ -34,6 +37,7 @@ import {
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type {
   VeloeraCreateChannelPayload,
   VeloeraUpdateChannelPayload,
@@ -216,6 +220,22 @@ export const veloeraChannelOperations = {
 }
 
 export const veloeraManagedResourceModels = {
+  resolveVerificationProtocol: createChannelVerificationProtocolResolver({
+    [VeloeraChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [VeloeraChannelType.Gemini]: API_TYPES.GOOGLE,
+    [VeloeraChannelType.VertexAi]: API_TYPES.GOOGLE,
+    [VeloeraChannelType.PaLM]: API_TYPES.GOOGLE,
+  }),
   list: async (config, options) =>
     toManagedModelChannelList(
       await listAllChannels(

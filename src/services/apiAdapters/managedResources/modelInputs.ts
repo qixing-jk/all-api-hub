@@ -1,5 +1,6 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
 
 /** Fields shared by the native New API, Veloera and DoneHub model workflows. */
@@ -39,5 +40,19 @@ export function toManagedModelChannelList(
       disabled: disabledStatuses.includes(channel.status),
       modelMapping: channel.model_mapping,
     })),
+  }
+}
+
+/** Native ids may arrive as numbers or strings; equal ids across adapters are unrelated. */
+export function createChannelVerificationProtocolResolver(
+  protocols: Readonly<Record<string, ApiVerificationApiType>>,
+): (channelType: unknown) => ApiVerificationApiType | null {
+  return (channelType) => {
+    const rawType =
+      typeof channelType === "number" || typeof channelType === "string"
+        ? String(channelType).trim()
+        : ""
+    const type = /^\d+$/.test(rawType) ? String(Number(rawType)) : rawType
+    return Object.hasOwn(protocols, type) ? protocols[type] ?? null : null
   }
 }

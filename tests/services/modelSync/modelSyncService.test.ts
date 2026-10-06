@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DoneHubChannelType } from "~/constants/doneHub"
 import { ChannelType } from "~/constants/newApi"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
   applyChannelModelFilters,
-  matchesProbeFilterRule,
+  matchesProbeFilterRule as evaluateProbeFilterRule,
+  type ProbeFilterContext,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -71,6 +72,25 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     runApiVerificationProbe: runApiVerificationProbeMock,
   }
 })
+
+// Supply the same adapter-owned protocol decision that the real sync callers provide.
+const matchesProbeFilterRule = (
+  rule: ChannelModelProbeFilterRule,
+  modelId: string,
+  context: ProbeFilterContext,
+) => {
+  context.models = getSiteTypeCapabilitiesMock(
+    context.managedConfig.siteType,
+  )?.managedSites?.models
+  return evaluateProbeFilterRule(rule, modelId, context)
+}
+const resolveApiVerificationTypeForChannelType = (
+  siteType: ManagedSiteType,
+  channelType: unknown,
+) =>
+  getSiteTypeCapabilitiesMock(
+    siteType,
+  )?.managedSites?.models?.resolveVerificationProtocol?.(channelType) ?? null
 
 const makeFilterRule = (
   partial: Partial<ChannelModelPatternFilterRule>,
@@ -282,13 +302,19 @@ const makeChannelConfigs = (
     }),
   )
 
-beforeEach(() => {
+beforeEach(async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/apiAdapters/registry")
+  >("~/services/apiAdapters/registry")
   vi.clearAllMocks()
   getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
     siteType,
     managedSites: {
       matching: getManagedSiteCapabilitiesForTypeMock()?.matching,
       models: {
+        resolveVerificationProtocol:
+          actual.getSiteTypeCapabilities(siteType).managedSites?.models
+            ?.resolveVerificationProtocol,
         list: listAllChannelsMock,
         fetchModels: fetchChannelModelsMock,
         updateModels: updateChannelModelsMock,
@@ -1288,11 +1314,43 @@ describe("ModelSyncService - probe-backed filters", () => {
     })
   })
 
-  it("maps supported string and numeric channel types to verification api types", async () => {
-    const { resolveApiVerificationTypeForChannelType } = await import(
-      "~/services/models/modelSync/channelModelFilterEvaluator"
+  it("uses the adapter's protocol decision for a native channel type", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        models: { resolveVerificationProtocol: () => "anthropic" },
+      },
+    })
+    await matchesProbeFilterRule(makeProbeRule(), "model-a", {
+      channel: makeChannel({
+        id: 1,
+        type: "adapter-native-type",
+        credential: "sk-test",
+      }),
+      managedConfig: makeExampleRuntimeConfig(),
+      cache: new Map(),
+    })
+    expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ apiType: "anthropic" }),
     )
+  })
 
+  it("does not infer a protocol when the adapter declares the channel unsupported", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        models: { resolveVerificationProtocol: () => null },
+      },
+    })
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", {
+        channel: makeChannel({ id: 1, credential: "sk-test" }),
+        managedConfig: makeExampleRuntimeConfig(),
+        cache: new Map(),
+      }),
+    ).rejects.toMatchObject({ reason: "channel-type-unsupported" })
+    expect(runApiVerificationProbeMock).not.toHaveBeenCalled()
+  })
+
+  it("maps supported string and numeric channel types to verification api types", async () => {
     expect(
       resolveApiVerificationTypeForChannelType(
         SITE_TYPES.NEW_API,
@@ -1319,10 +1377,6 @@ describe("ModelSyncService - probe-backed filters", () => {
   it.each([undefined, null, {}])(
     "rejects malformed native channel type %j during protocol selection",
     async (channelType) => {
-      const { resolveApiVerificationTypeForChannelType } = await import(
-        "~/services/models/modelSync/channelModelFilterEvaluator"
-      )
-
       expect(
         resolveApiVerificationTypeForChannelType(
           SITE_TYPES.NEW_API,
