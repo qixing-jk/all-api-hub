@@ -83,8 +83,9 @@ jobs:
           AAH_SKIP_E2E_BUILD: "1"
           AAH_E2E_SMOKE_ONLY: "1"
           # Retain each file's configured execution mode without fullyParallel.
-          # Bound persistent extension contexts to avoid startup contention.
-          AAH_E2E_WORKERS: "4"
+          # Four workers produced retries in Chrome 116/122 on hosted runners.
+          # Keep two persistent contexts until higher concurrency is stable.
+          AAH_E2E_WORKERS: "2"
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
         # Retain the budget for slow versions and retries until the new
