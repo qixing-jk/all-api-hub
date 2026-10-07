@@ -1724,6 +1724,17 @@ describe("AutoCheckin account actions", () => {
   it("keeps existing results rendered while a manual refresh is loading", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
+    const { siteTypeObservations } = await import(
+      "~/services/siteDetection/siteTypeObservations"
+    )
+
+    // Status loading also awaits storage after the runtime response arrives.
+    vi.spyOn(siteTypeObservations, "readForAccounts")
+      .mockResolvedValueOnce({})
+      .mockImplementationOnce(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        return {}
+      })
 
     let statusCalls = 0
     let resolveRefresh:
@@ -1792,25 +1803,25 @@ describe("AutoCheckin account actions", () => {
       },
     })
 
-    await waitFor(() => {
-      expect(screen.getByText("Alpha")).toBeInTheDocument()
-    })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        insights: {
-          itemCount: 1,
-          successCount: 1,
-          failureCount: 0,
-          skippedCount: 0,
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          },
         },
-      },
-    )
+      )
+    })
+    expect(screen.getByText("Alpha")).toBeInTheDocument()
   })
 })
