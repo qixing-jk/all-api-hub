@@ -232,6 +232,31 @@ const renderEditor = (overrides: Record<string, unknown> = {}) => {
 }
 
 describe("ChannelFiltersEditor", () => {
+  it.each([false, true])(
+    "adds probe rules with existing rules: %s",
+    async (hasRules) => {
+      const user = userEvent.setup()
+      const { props } = renderEditor({
+        filters: hasRules ? [buildFilter()] : [],
+      })
+
+      await user.click(
+        screen.getByRole("button", { name: "filters.addProbeRule" }),
+      )
+
+      expect(props.onAddFilter).toHaveBeenCalledWith("probe")
+    },
+  )
+
+  it("changes an existing rule from a pattern to a probe", () => {
+    const { props } = renderEditor({ filters: [buildFilter()] })
+
+    fireEvent.change(screen.getByRole("combobox", { name: "filter-kind" }), {
+      target: { value: "probe" },
+    })
+
+    expect(props.onFieldChange).toHaveBeenCalledWith("rule-1", "kind", "probe")
+  })
   it("renders a loading state instead of editor controls", () => {
     renderEditor({ isLoading: true })
 

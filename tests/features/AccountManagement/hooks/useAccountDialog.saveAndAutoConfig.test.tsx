@@ -1420,53 +1420,80 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast.success).not.toHaveBeenCalled()
   })
 
-  it("uses a warning toast for partial-success updates when latest account data stays stale", async () => {
-    mockValidateAndUpdateAccount.mockResolvedValueOnce({
-      success: true,
-      accountId: "existing-account-id",
-      message: "Account settings saved, but latest metrics are still stale.",
-      feedbackLevel: "warning",
-    })
+  it.each(["rejected", "thrown"])(
+    "reports a %s refresh from a partial-success update warning",
+    async (failure) => {
+      mockValidateAndUpdateAccount.mockResolvedValueOnce({
+        success: true,
+        accountId: "existing-account-id",
+        message: "Account settings saved, but latest metrics are still stale.",
+        feedbackLevel: "warning",
+      })
 
-    const { result } = renderEditHook({
-      account: {
-        id: "existing-account-id",
-      },
-    })
+      const { result } = renderEditHook({
+        account: {
+          id: "existing-account-id",
+        },
+      })
 
-    await waitFor(() => {
-      expect(result.current.state).toBeTruthy()
-    })
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
 
-    await act(async () => {
-      result.current.setters.setUrl("https://edit.example.com")
-      result.current.setters.setSiteName("Edit Example")
-      result.current.setters.setUsername("user")
-      result.current.setters.setAccessToken("token")
-      result.current.setters.setUserId("1")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType("one-api")
-    })
+      await act(async () => {
+        result.current.setters.setUrl("https://edit.example.com")
+        result.current.setters.setSiteName("Edit Example")
+        result.current.setters.setUsername("user")
+        result.current.setters.setAccessToken("token")
+        result.current.setters.setUserId("1")
+        result.current.setters.setExchangeRate("7")
+        result.current.setters.setSiteType("one-api")
+      })
 
-    await act(async () => {
-      await result.current.handlers.handleSaveAccount()
-    })
+      await act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      })
 
-    expect(toast.warning).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        action: expect.any(Object),
-      }),
-    )
-    const updateWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
-      ?.action
-    expect(updateWarningAction).toEqual(
-      expect.objectContaining({
-        label: "common:actions.refresh",
-      }),
-    )
-    expect(toast.success).not.toHaveBeenCalled()
-  })
+      expect(toast.warning).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          action: expect.any(Object),
+        }),
+      )
+      const updateWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+        ?.action
+      expect(updateWarningAction).toEqual(
+        expect.objectContaining({
+          label: "common:actions.refresh",
+        }),
+      )
+      expect(toast.success).not.toHaveBeenCalled()
+      if (failure === "thrown") {
+        vi.mocked(accountStorage.refreshAccount).mockRejectedValueOnce(
+          new Error("Refresh unavailable"),
+        )
+      } else {
+        vi.mocked(accountStorage.refreshAccount).mockResolvedValueOnce({
+          refreshed: false,
+        } as Awaited<ReturnType<typeof accountStorage.refreshAccount>>)
+      }
+
+      vi.mocked(toast.loading).mockReturnValueOnce("refresh-toast")
+      await act(async () => {
+        await updateWarningAction!.onClick()
+      })
+
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "existing-account-id",
+        true,
+        expect.anything(),
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.refreshAccount",
+        expect.objectContaining({ id: expect.anything() }),
+      )
+    },
+  )
 
   it("falls back to the local warning copy when a partial-success save returns an empty message", async () => {
     mockValidateAndSaveAccount.mockResolvedValueOnce({

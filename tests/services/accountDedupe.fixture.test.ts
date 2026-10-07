@@ -5,7 +5,7 @@ import { normalizeSiteAccount } from "~/services/accounts/accountDefaults"
 import {
   normalizeBackupForMerge,
   parseBackupSummary,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupCodec"
 import fixture from "~~/tests/fixtures/accounts/suspected-duplicates.json"
 
 describe("importable duplicate detection demo", () => {

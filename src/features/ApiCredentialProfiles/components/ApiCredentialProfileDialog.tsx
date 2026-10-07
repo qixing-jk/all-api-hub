@@ -1,6 +1,4 @@
-import { KeyRound, Pencil, Plus, X } from "lucide-react"
-import type { ChangeEvent } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { KeyRound, Pencil, Plus } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -13,29 +11,10 @@ import {
   SearchableSelect,
   Textarea,
 } from "~/components/ui"
-import {
-  formatDatePickerTimestamp,
-  parseDatePickerTimestamp,
-} from "~/components/ui/datePickerValue"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
-import toast from "~/lib/notify"
-import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
-  API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS,
-  coerceApiCredentialTelemetryJsonPathMap,
-  isSupportedApiCredentialTelemetryEndpoint,
-  type ApiCredentialTelemetryJsonPathField,
-} from "~/services/apiCredentialProfiles/telemetryConfig"
-import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
-import {
-  OPTIONAL_PERMISSION_IDS,
-  requestPermissionDetailed,
-} from "~/services/permissions/permissionManager"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -45,78 +24,15 @@ import {
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
-import type { Tag } from "~/types"
-import type {
-  ApiCredentialProfile,
-  ApiCredentialTelemetryCapabilityMode,
-  ApiCredentialTelemetryConfig,
-  ApiCredentialTelemetryJsonPathMap,
-} from "~/types/apiCredentialProfiles"
-import {
-  API_CREDENTIAL_TELEMETRY_MODES,
-  DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
-} from "~/types/apiCredentialProfiles"
-import { createLogger } from "~/utils/core/logger"
 
+import { useApiCredentialProfileEditor } from "../hooks/useApiCredentialProfileEditor"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
+import type { ApiCredentialProfileDialogProps } from "./apiCredentialProfileDialogContracts"
+import { ApiCredentialRequestHeaderFields } from "./ApiCredentialRequestHeaderFields"
+import { ApiCredentialTelemetryFields } from "./ApiCredentialTelemetryFields"
 
-/**
- * Unified logger scoped to the API credential profile dialog.
- */
-const logger = createLogger("ApiCredentialProfileDialog")
 const dialogSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog
-
-type SaveProfileInput = {
-  id?: string
-  name: string
-  apiType: ApiVerificationApiType
-  baseUrl: string
-  apiKey: string
-  requestHeaders?: Record<string, string>
-  tagIds: string[]
-  notes: string
-  sourceUrl: string
-  expiresAt?: number | null
-  telemetryConfig?: ApiCredentialTelemetryConfig
-}
-
-interface ApiCredentialProfileDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  profile?: ApiCredentialProfile | null
-  addPrefill?: {
-    name?: string
-    baseUrl?: string
-    apiKeyCreateUrl?: string
-    apiKeyCreateHint?: string
-  } | null
-  tags: Tag[]
-  createTag: (name: string) => Promise<Tag>
-  renameTag: (tagId: string, name: string) => Promise<Tag>
-  deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
-  onSave: (input: SaveProfileInput) => Promise<void>
-}
-
-/**
- * Normalizes a profile baseUrl for safe persistence based on the selected API type.
- */
-function normalizeBaseUrl(
-  apiType: ApiVerificationApiType,
-  baseUrl: string,
-): string | null {
-  return toProtocolRoot(apiType, baseUrl)
-}
-
-/**
- * Falls back to the default telemetry preset when the profile has no mode yet.
- */
-function normalizeTelemetryMode(
-  mode: ApiCredentialTelemetryConfig["mode"] | undefined,
-): ApiCredentialTelemetryCapabilityMode {
-  return mode ?? DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode
-}
-
 /**
  * Add/edit modal for API credential profiles.
  */
@@ -138,43 +54,38 @@ export function ApiCredentialProfileDialog({
     "keyManagement",
   ])
 
-  const isEditMode = Boolean(profile)
-  const dialogTitle = isEditMode
-    ? t("apiCredentialProfiles:dialog.editTitle")
-    : t("apiCredentialProfiles:dialog.addTitle")
-
-  const [name, setName] = useState("")
-  const [apiType, setApiType] = useState<ApiVerificationApiType>(
-    API_TYPES.OPENAI_COMPATIBLE,
-  )
-  const [baseUrl, setBaseUrl] = useState("")
-  const [apiKey, setApiKey] = useState("")
-  const [requestHeaderRows, setRequestHeaderRows] = useState<
-    Array<{ id: number; name: string; value: string }>
-  >([])
-  const [tagIds, setTagIds] = useState<string[]>([])
-  const [notes, setNotes] = useState("")
-  const [sourceUrl, setSourceUrl] = useState("")
-  const [expiresAtInput, setExpiresAtInput] = useState("")
-  const [telemetryMode, setTelemetryMode] =
-    useState<ApiCredentialTelemetryCapabilityMode>(
-      DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode,
-    )
-  const [customEndpoint, setCustomEndpoint] = useState("")
-  const [customBearerToken, setCustomBearerToken] = useState("")
-  const [customJsonPaths, setCustomJsonPaths] =
-    useState<ApiCredentialTelemetryJsonPathMap>({})
-
-  const [isSaving, setIsSaving] = useState(false)
-
-  const [errors, setErrors] = useState<{
-    name?: string
-    baseUrl?: string
-    apiKey?: string
-    requestHeaders?: string
-    telemetryEndpoint?: string
-    telemetryJsonPaths?: string
-  }>({})
+  const editor = useApiCredentialProfileEditor({
+    isOpen,
+    onClose,
+    profile,
+    addPrefill,
+    onSave,
+  })
+  const {
+    isEditMode,
+    normalizedBaseUrlPreview,
+    dialogTitle,
+    name,
+    setName,
+    apiType,
+    setApiType,
+    baseUrl,
+    setBaseUrl,
+    apiKey,
+    setApiKey,
+    tagIds,
+    setTagIds,
+    notes,
+    setNotes,
+    sourceUrl,
+    setSourceUrl,
+    expiresAtInput,
+    setExpiresAtInput,
+    isSaving,
+    errors,
+    handleClose,
+    handleSave,
+  } = editor
 
   const nameInputId = "api-credential-profile-name"
   const baseUrlInputId = "api-credential-profile-baseUrl"
@@ -182,276 +93,6 @@ export function ApiCredentialProfileDialog({
   const notesInputId = "api-credential-profile-notes"
   const sourceUrlInputId = "api-credential-profile-sourceUrl"
   const expiresAtInputId = "api-credential-profile-expiresAt"
-  const telemetryModeInputId = "api-credential-profile-telemetry-mode"
-  const customEndpointInputId =
-    "api-credential-profile-telemetry-custom-endpoint"
-  const customBearerTokenInputId =
-    "api-credential-profile-telemetry-bearer-token"
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    setErrors({})
-
-    if (profile) {
-      setName(profile.name ?? "")
-      setApiType(profile.apiType)
-      setBaseUrl(profile.baseUrl ?? "")
-      setApiKey(profile.apiKey ?? "")
-      setRequestHeaderRows(
-        Object.entries(profile.requestHeaders ?? {}).map(
-          ([name, value], id) => ({ id, name, value }),
-        ),
-      )
-      setTagIds(profile.tagIds ?? [])
-      setNotes(profile.notes ?? "")
-      setSourceUrl(profile.sourceUrl ?? "")
-      setExpiresAtInput(formatDatePickerTimestamp(profile.expiresAt))
-      setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
-      setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
-      setCustomBearerToken(
-        profile.telemetryConfig?.customEndpoint?.bearerToken ?? "",
-      )
-      setCustomJsonPaths(
-        profile.telemetryConfig?.customEndpoint?.jsonPaths ?? {},
-      )
-      return
-    }
-
-    setName(addPrefill?.name ?? "")
-    setApiType(API_TYPES.OPENAI_COMPATIBLE)
-    setBaseUrl(addPrefill?.baseUrl ?? "")
-    setApiKey("")
-    setRequestHeaderRows([])
-    setTagIds([])
-    setNotes("")
-    setSourceUrl("")
-    setExpiresAtInput("")
-    setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
-    setCustomEndpoint("")
-    setCustomBearerToken("")
-    setCustomJsonPaths({})
-  }, [addPrefill, isOpen, profile])
-
-  const normalizedBaseUrlPreview = useMemo(() => {
-    const normalized = normalizeBaseUrl(apiType, baseUrl)
-    return normalized ?? ""
-  }, [apiType, baseUrl])
-  const telemetryJsonPathFields = useMemo(() => {
-    const labels = {
-      balanceUsd: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.balanceUsd",
-      ),
-      todayCostUsd: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCostUsd",
-      ),
-      todayRequests: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayRequests",
-      ),
-      todayPromptTokens: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayPromptTokens",
-      ),
-      todayCompletionTokens: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCompletionTokens",
-      ),
-      todayTotalTokens: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayTotalTokens",
-      ),
-      totalUsedUsd: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalUsedUsd",
-      ),
-      totalGrantedUsd: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalGrantedUsd",
-      ),
-      totalAvailableUsd: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalAvailableUsd",
-      ),
-      expiresAt: t("apiCredentialProfiles:dialog.telemetryJsonPaths.expiresAt"),
-    }
-    return API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS.map((field) => ({
-      field,
-      label: labels[field],
-    }))
-  }, [t])
-
-  const buildRequestHeaders = () => {
-    const rows = requestHeaderRows.filter(
-      ({ name, value }) => name.trim() || value.trim(),
-    )
-    const names = rows.map(({ name }) => name.trim().toLowerCase())
-    if (new Set(names).size !== names.length) {
-      throw new Error(
-        t("apiCredentialProfiles:dialog.errors.requestHeadersInvalid"),
-      )
-    }
-    return normalizeHeaderOverrides(
-      Object.fromEntries(rows.map(({ name, value }) => [name, value])),
-    )
-  }
-
-  const validate = () => {
-    const nextErrors: typeof errors = {}
-
-    const trimmedName = name.trim()
-    if (!trimmedName) {
-      nextErrors.name = t("apiCredentialProfiles:dialog.errors.nameRequired")
-    }
-
-    const trimmedKey = apiKey.trim()
-    if (!trimmedKey) {
-      nextErrors.apiKey = t("apiCredentialProfiles:dialog.errors.keyRequired")
-    }
-
-    const normalizedBaseUrl = normalizeBaseUrl(apiType, baseUrl)
-    if (!normalizedBaseUrl) {
-      nextErrors.baseUrl = t(
-        "apiCredentialProfiles:dialog.errors.baseUrlInvalid",
-      )
-    }
-
-    if (
-      telemetryMode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint
-    ) {
-      const trimmedEndpoint = customEndpoint.trim()
-
-      if (!trimmedEndpoint) {
-        nextErrors.telemetryEndpoint = t(
-          "apiCredentialProfiles:dialog.errors.telemetryEndpointRequired",
-        )
-      } else if (
-        normalizedBaseUrl &&
-        !isSupportedApiCredentialTelemetryEndpoint(
-          normalizedBaseUrl,
-          trimmedEndpoint,
-        )
-      ) {
-        nextErrors.telemetryEndpoint = t(
-          "apiCredentialProfiles:dialog.errors.telemetryEndpointInvalid",
-        )
-      }
-
-      const jsonPaths = coerceApiCredentialTelemetryJsonPathMap(customJsonPaths)
-      const rawJsonPathCount = Object.values(customJsonPaths).filter(
-        (value) => typeof value === "string" && value.trim(),
-      ).length
-      if (rawJsonPathCount === 0) {
-        nextErrors.telemetryJsonPaths = t(
-          "apiCredentialProfiles:dialog.errors.telemetryJsonPathRequired",
-        )
-      } else if (Object.keys(jsonPaths).length !== rawJsonPathCount) {
-        nextErrors.telemetryJsonPaths = t(
-          "apiCredentialProfiles:dialog.errors.telemetryJsonPathInvalid",
-        )
-      }
-    }
-
-    try {
-      buildRequestHeaders()
-    } catch {
-      nextErrors.requestHeaders = t(
-        "apiCredentialProfiles:dialog.errors.requestHeadersInvalid",
-      )
-    }
-    setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0 ? normalizedBaseUrl : null
-  }
-
-  const buildTelemetryConfig = (): ApiCredentialTelemetryConfig => {
-    if (
-      telemetryMode !== API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint
-    ) {
-      return { mode: telemetryMode }
-    }
-
-    return {
-      mode: API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
-      customEndpoint: {
-        endpoint: customEndpoint.trim(),
-        ...(customBearerToken.trim()
-          ? { bearerToken: customBearerToken.trim() }
-          : {}),
-        jsonPaths: coerceApiCredentialTelemetryJsonPathMap(customJsonPaths),
-      },
-    }
-  }
-
-  const handleJsonPathChange =
-    (field: ApiCredentialTelemetryJsonPathField) =>
-    (event: ChangeEvent<HTMLInputElement>) => {
-      setCustomJsonPaths((prev) => ({
-        ...prev,
-        [field]: event.target.value,
-      }))
-    }
-
-  const handleClose = () => {
-    if (isSaving) return
-    onClose()
-  }
-
-  const handleSave = async () => {
-    const normalizedBaseUrl = validate()
-    if (!normalizedBaseUrl) return
-
-    void trackProductAnalyticsActionStarted({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-      actionId: isEditMode
-        ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
-        : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
-      surfaceId: dialogSurface,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    setIsSaving(true)
-    try {
-      const requestHeaders = buildRequestHeaders()
-      if (
-        requestHeaders["user-agent"] !== undefined &&
-        import.meta.env.BROWSER !== "firefox"
-      ) {
-        // Request from the Save gesture; background refreshes never prompt.
-        const result = await requestPermissionDetailed(
-          OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
-        )
-        if (!result.success) {
-          setErrors({
-            requestHeaders: t(
-              "apiCredentialProfiles:dialog.errors.userAgentPermission",
-            ),
-          })
-          return
-        }
-      }
-      await onSave({
-        id: profile?.id,
-        name: name.trim(),
-        apiType,
-        baseUrl: normalizedBaseUrl,
-        apiKey: apiKey.trim(),
-        ...(requestHeaderRows.length || profile?.requestHeaders
-          ? { requestHeaders }
-          : {}),
-        tagIds,
-        notes: notes.trim(),
-        sourceUrl: sourceUrl.trim(),
-        expiresAt: parseDatePickerTimestamp(expiresAtInput),
-        telemetryConfig: buildTelemetryConfig(),
-      })
-
-      toast.success(
-        isEditMode
-          ? t("apiCredentialProfiles:messages.updated")
-          : t("apiCredentialProfiles:messages.created"),
-      )
-      handleClose()
-    } catch (error) {
-      logger.error("Failed to save profile", error)
-      toast.error(t("apiCredentialProfiles:messages.saveFailed"))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   return (
     <ProductAnalyticsScope
       entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
@@ -696,311 +337,9 @@ export function ApiCredentialProfileDialog({
             />
           </FormField>
 
-          <FormField
-            label={t("apiCredentialProfiles:dialog.fields.telemetryPreset")}
-            description={t(
-              "apiCredentialProfiles:dialog.hints.telemetryPreset",
-            )}
-            htmlFor={telemetryModeInputId}
-          >
-            <SearchableSelect
-              id={telemetryModeInputId}
-              aria-label={t(
-                "apiCredentialProfiles:dialog.fields.telemetryPreset",
-              )}
-              options={[
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.Auto,
-                  label: t("apiCredentialProfiles:dialog.telemetryModes.auto"),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.Disabled,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.disabled",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.deepSeekBalance",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.glmQuota",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.kimiQuota",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.kimiOpenPlatformBalance",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.openCodeGoUsage",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.sub2apiUsage",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.openaiBilling",
-                  ),
-                },
-                {
-                  value: API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
-                  label: t(
-                    "apiCredentialProfiles:dialog.telemetryModes.customReadOnlyEndpoint",
-                  ),
-                },
-              ]}
-              value={telemetryMode}
-              onChange={(value) =>
-                setTelemetryMode(value as ApiCredentialTelemetryCapabilityMode)
-              }
-              placeholder={t(
-                "apiCredentialProfiles:dialog.placeholders.telemetryPreset",
-              )}
-              disabled={isSaving}
-            />
-          </FormField>
+          <ApiCredentialTelemetryFields editor={editor} />
 
-          {telemetryMode ===
-            API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint && (
-            <details
-              open
-              className="border-border py-density-3 rounded-lg border px-3"
-            >
-              <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
-                {t("apiCredentialProfiles:dialog.customTelemetry.title")}
-              </summary>
-              <div className="mt-density-3 space-y-density-4">
-                <FormField
-                  label={t(
-                    "apiCredentialProfiles:dialog.fields.telemetryEndpoint",
-                  )}
-                  required
-                  error={errors.telemetryEndpoint}
-                  description={t(
-                    "apiCredentialProfiles:dialog.hints.telemetryEndpoint",
-                  )}
-                  htmlFor={customEndpointInputId}
-                >
-                  <Input
-                    id={customEndpointInputId}
-                    value={customEndpoint}
-                    onChange={(e) => setCustomEndpoint(e.target.value)}
-                    placeholder={t(
-                      "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
-                    )}
-                    disabled={isSaving}
-                  />
-                </FormField>
-
-                <FormField
-                  label={t(
-                    "apiCredentialProfiles:dialog.fields.telemetryBearerToken",
-                  )}
-                  description={t(
-                    "apiCredentialProfiles:dialog.hints.telemetryBearerToken",
-                  )}
-                  htmlFor={customBearerTokenInputId}
-                >
-                  <Input
-                    id={customBearerTokenInputId}
-                    type="password"
-                    revealable
-                    revealLabels={{
-                      show: t("keyManagement:actions.showKey"),
-                      hide: t("keyManagement:actions.hideKey"),
-                    }}
-                    value={customBearerToken}
-                    onChange={(event) =>
-                      setCustomBearerToken(event.target.value)
-                    }
-                    placeholder={t(
-                      "apiCredentialProfiles:dialog.placeholders.telemetryBearerToken",
-                    )}
-                    disabled={isSaving}
-                    leftIcon={<KeyRound className="h-5 w-5" />}
-                  />
-                </FormField>
-
-                <div className="space-y-density-2">
-                  <div>
-                    <div className="dark:text-foreground text-secondary-foreground text-sm font-medium">
-                      {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
-                    </div>
-                    <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
-                      {t(
-                        "apiCredentialProfiles:dialog.hints.telemetryJsonPaths",
-                      )}
-                    </p>
-                  </div>
-                  <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
-                    {telemetryJsonPathFields.map(({ field, label }) => {
-                      const inputId = `api-credential-profile-telemetry-path-${field}`
-                      return (
-                        <FormField key={field} label={label} htmlFor={inputId}>
-                          <Input
-                            id={inputId}
-                            value={customJsonPaths[field] ?? ""}
-                            onChange={handleJsonPathChange(field)}
-                            placeholder={t(
-                              "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
-                            )}
-                            disabled={isSaving}
-                          />
-                        </FormField>
-                      )
-                    })}
-                  </div>
-                  {errors.telemetryJsonPaths && (
-                    <p className="text-destructive-text text-xs">
-                      {errors.telemetryJsonPaths}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </details>
-          )}
-
-          <details
-            open={requestHeaderRows.length > 0}
-            className="border-border py-density-3 rounded-lg border px-3"
-          >
-            <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
-              {t("apiCredentialProfiles:dialog.requestHeaders.title")}
-            </summary>
-            <div className="mt-density-3 space-y-density-3">
-              {requestHeaderRows.map((row) => (
-                <div
-                  key={row.id}
-                  className="gap-density-3 grid grid-cols-[minmax(0,1fr)_auto] items-end sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto]"
-                >
-                  <FormField
-                    className="col-span-2 min-w-0 sm:col-span-1"
-                    label={t(
-                      "apiCredentialProfiles:dialog.requestHeaders.name",
-                    )}
-                    htmlFor={`api-credential-header-name-${row.id}`}
-                  >
-                    <Input
-                      id={`api-credential-header-name-${row.id}`}
-                      containerClassName="w-full"
-                      placeholder="User-Agent"
-                      value={row.name}
-                      disabled={isSaving}
-                      onChange={(event) =>
-                        setRequestHeaderRows((rows) =>
-                          rows.map((item) =>
-                            item.id === row.id
-                              ? { ...item, name: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </FormField>
-                  <FormField
-                    className="min-w-0"
-                    label={t(
-                      "apiCredentialProfiles:dialog.requestHeaders.value",
-                    )}
-                    htmlFor={`api-credential-header-value-${row.id}`}
-                  >
-                    <Input
-                      id={`api-credential-header-value-${row.id}`}
-                      containerClassName="w-full"
-                      placeholder={t(
-                        "apiCredentialProfiles:dialog.requestHeaders.value",
-                      )}
-                      type="password"
-                      revealable
-                      revealLabels={{
-                        show: t("keyManagement:actions.showKey"),
-                        hide: t("keyManagement:actions.hideKey"),
-                      }}
-                      value={row.value}
-                      disabled={isSaving}
-                      onChange={(event) =>
-                        setRequestHeaderRows((rows) =>
-                          rows.map((item) =>
-                            item.id === row.id
-                              ? { ...item, value: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </FormField>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    disabled={isSaving}
-                    aria-label={t(
-                      "apiCredentialProfiles:dialog.requestHeaders.remove",
-                    )}
-                    onClick={() =>
-                      setRequestHeaderRows((rows) =>
-                        rows.filter((item) => item.id !== row.id),
-                      )
-                    }
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isSaving}
-                onClick={() =>
-                  setRequestHeaderRows((rows) => [
-                    ...rows,
-                    {
-                      id: Math.max(-1, ...rows.map((row) => row.id)) + 1,
-                      name: "",
-                      value: "",
-                    },
-                  ])
-                }
-              >
-                <Plus className="h-4 w-4" />
-                {t("apiCredentialProfiles:dialog.requestHeaders.add")}
-              </Button>
-              <p className="text-muted-foreground text-xs">
-                {t("apiCredentialProfiles:dialog.requestHeaders.hint")}
-              </p>
-            </div>
-          </details>
-
-          {errors.requestHeaders && (
-            <p role="alert" className="text-destructive-text text-xs">
-              {errors.requestHeaders}
-            </p>
-          )}
+          <ApiCredentialRequestHeaderFields editor={editor} />
 
           <div className="text-muted-foreground text-xs">
             {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {

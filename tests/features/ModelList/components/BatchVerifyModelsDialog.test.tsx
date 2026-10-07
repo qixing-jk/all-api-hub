@@ -9,10 +9,10 @@ import {
   MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
 } from "~/features/ModelList/batchVerification"
 import {
-  BatchVerifyModelsDialog,
   deriveBatchVerifyRowStatus,
   getBatchVerifyFailureLogIds,
-} from "~/features/ModelList/components/BatchVerifyModelsDialog"
+} from "~/features/ModelList/batchVerificationState"
+import { BatchVerifyModelsDialog } from "~/features/ModelList/components/BatchVerifyModelsDialog"
 import {
   getBatchVerifyModelCheckboxTestId,
   getBatchVerifyRowTestId,

@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { BACKUP_VERSION } from "~/constants/importExport"
 import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
+import { type BackupFullV2 } from "~/services/importExport/backupContracts"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -47,11 +49,7 @@ import {
   webDavAnalyticsContext,
 } from "../components/webDavAnalytics"
 import { getPersistWebdavConfigErrorMessage } from "../components/webdavPreferenceFeedback"
-import {
-  BACKUP_VERSION,
-  getImportExportErrorMessage,
-  type BackupFullV2,
-} from "../utils"
+import { getImportExportErrorMessage } from "../utils"
 import type { WebdavConfigState } from "./useWebdavConfig"
 
 const logger = createLogger("WebDAVSettings")

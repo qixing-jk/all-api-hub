@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
-  apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
   mergeApiCredentialProfilesConfigs,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+} from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { SiteHealthStatus } from "~/types"
 import {

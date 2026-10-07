@@ -1,11 +1,11 @@
 import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
-import {
-  apiCredentialProfilesStorage,
-  type ApiCredentialProfileCaptureInput,
-  type ApiCredentialProfileCaptureResult,
-  type ApiCredentialProfileLinkInput,
-  type ApiCredentialProfileRelinkInput,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import type {
+  ApiCredentialProfileCaptureInput,
+  ApiCredentialProfileCaptureResult,
+  ApiCredentialProfileLinkInput,
+  ApiCredentialProfileRelinkInput,
+} from "~/services/apiCredentialProfiles/profileStorageContracts"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 
 /** Public Interface for durable credential-to-runtime-key associations. */

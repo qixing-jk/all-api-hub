@@ -1,10 +1,36 @@
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 
-export type ChannelFilterAction = "include" | "exclude"
+export const CHANNEL_FILTER_ACTIONS = {
+  Include: "include",
+  Exclude: "exclude",
+} as const
 
-export type ChannelModelFilterRuleKind = "pattern" | "probe"
+export type ChannelFilterAction =
+  (typeof CHANNEL_FILTER_ACTIONS)[keyof typeof CHANNEL_FILTER_ACTIONS]
 
-export type ChannelModelProbeFilterMatchMode = "all" | "any"
+export const CHANNEL_MODEL_FILTER_RULE_KINDS = {
+  Pattern: "pattern",
+  Probe: "probe",
+} as const
+
+export type ChannelModelFilterRuleKind =
+  (typeof CHANNEL_MODEL_FILTER_RULE_KINDS)[keyof typeof CHANNEL_MODEL_FILTER_RULE_KINDS]
+
+export const CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES = {
+  All: "all",
+  Any: "any",
+} as const
+
+export type ChannelModelProbeFilterMatchMode =
+  (typeof CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES)[keyof typeof CHANNEL_MODEL_PROBE_FILTER_MATCH_MODES]
+
+export const CHANNEL_FILTER_EDITOR_VIEW_MODES = {
+  Visual: "visual",
+  Json: "json",
+} as const
+
+export type ChannelFilterEditorViewMode =
+  (typeof CHANNEL_FILTER_EDITOR_VIEW_MODES)[keyof typeof CHANNEL_FILTER_EDITOR_VIEW_MODES]
 
 interface ChannelModelFilterRuleBase {
   id: string
@@ -65,3 +91,7 @@ export function isPatternChannelModelFilterRule(
 ): rule is ChannelModelPatternFilterRule {
   return rule.kind === "pattern"
 }
+
+export type EditableFilterField =
+  | keyof ChannelModelPatternFilterRule
+  | keyof ChannelModelProbeFilterRule

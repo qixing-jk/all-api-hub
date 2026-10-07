@@ -34,6 +34,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import {
   BASIC_SETTINGS_ANCHOR_TO_TAB,
+  BASIC_SETTINGS_TAB_IDS,
   type BasicSettingsTabId as TabId,
 } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -109,24 +110,33 @@ const WebAiApiCheckTab = createLazyTabComponent(
 )
 
 const PERMISSIONS_TAB_CONFIG: TabConfig = {
-  id: "permissions",
+  id: BASIC_SETTINGS_TAB_IDS.Permissions,
   component: PermissionsTab,
 }
 
 const TAB_CONFIGS = [
-  { id: "general", component: GeneralTab },
-  { id: "siteAnnouncements", component: SiteAnnouncementsTab },
-  { id: "notifications", component: NotificationsTab },
-  { id: "accountManagement", component: AccountManagementTab },
-  { id: "refresh", component: AutoRefreshTab },
-  { id: "checkinRedeem", component: CheckinRedeemTab },
-  { id: "balanceHistory", component: BalanceHistoryTab },
-  { id: "accountUsage", component: UsageHistorySyncTab },
-  { id: "webAiApiCheck", component: WebAiApiCheckTab },
-  { id: "managedSite", component: ManagedSiteTab },
-  { id: "claudeCodeRouter", component: ClaudeCodeRouterTab },
+  { id: BASIC_SETTINGS_TAB_IDS.General, component: GeneralTab },
+  {
+    id: BASIC_SETTINGS_TAB_IDS.SiteAnnouncements,
+    component: SiteAnnouncementsTab,
+  },
+  { id: BASIC_SETTINGS_TAB_IDS.Notifications, component: NotificationsTab },
+  {
+    id: BASIC_SETTINGS_TAB_IDS.AccountManagement,
+    component: AccountManagementTab,
+  },
+  { id: BASIC_SETTINGS_TAB_IDS.Refresh, component: AutoRefreshTab },
+  { id: BASIC_SETTINGS_TAB_IDS.CheckinRedeem, component: CheckinRedeemTab },
+  { id: BASIC_SETTINGS_TAB_IDS.BalanceHistory, component: BalanceHistoryTab },
+  { id: BASIC_SETTINGS_TAB_IDS.AccountUsage, component: UsageHistorySyncTab },
+  { id: BASIC_SETTINGS_TAB_IDS.WebAiApiCheck, component: WebAiApiCheckTab },
+  { id: BASIC_SETTINGS_TAB_IDS.ManagedSite, component: ManagedSiteTab },
+  {
+    id: BASIC_SETTINGS_TAB_IDS.ClaudeCodeRouter,
+    component: ClaudeCodeRouterTab,
+  },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
-  { id: "dataBackup", component: DataBackupTab },
+  { id: BASIC_SETTINGS_TAB_IDS.DataBackup, component: DataBackupTab },
 ] satisfies TabConfig[]
 
 interface SettingsTabItem {
@@ -193,7 +203,8 @@ function resolveSelectedTabIndexFromUrl(): number {
   })
 
   if (tab) {
-    const normalizedTab = tab === "sync" ? "accountUsage" : tab
+    const normalizedTab =
+      tab === "sync" ? BASIC_SETTINGS_TAB_IDS.AccountUsage : tab
     const index = TAB_CONFIGS.findIndex((config) => config.id === normalizedTab)
     if (index >= 0) {
       return index
@@ -228,31 +239,31 @@ function resolveSelectedTabIndexFromUrl(): number {
  */
 function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
   switch (tabId) {
-    case "general":
+    case BASIC_SETTINGS_TAB_IDS.General:
       return t("settings:tabs.general")
-    case "siteAnnouncements":
+    case BASIC_SETTINGS_TAB_IDS.SiteAnnouncements:
       return t("settings:tabs.siteAnnouncements")
-    case "notifications":
+    case BASIC_SETTINGS_TAB_IDS.Notifications:
       return t("settings:tabs.notifications")
-    case "balanceHistory":
+    case BASIC_SETTINGS_TAB_IDS.BalanceHistory:
       return t("settings:tabs.balanceHistory")
-    case "accountManagement":
+    case BASIC_SETTINGS_TAB_IDS.AccountManagement:
       return t("settings:tabs.accountManagement")
-    case "refresh":
+    case BASIC_SETTINGS_TAB_IDS.Refresh:
       return t("settings:tabs.refresh")
-    case "checkinRedeem":
+    case BASIC_SETTINGS_TAB_IDS.CheckinRedeem:
       return t("settings:tabs.checkinRedeem")
-    case "webAiApiCheck":
+    case BASIC_SETTINGS_TAB_IDS.WebAiApiCheck:
       return t("settings:tabs.webAiApiCheck")
-    case "accountUsage":
+    case BASIC_SETTINGS_TAB_IDS.AccountUsage:
       return t("settings:tabs.accountUsage")
-    case "dataBackup":
+    case BASIC_SETTINGS_TAB_IDS.DataBackup:
       return t("settings:tabs.dataBackup")
-    case "managedSite":
+    case BASIC_SETTINGS_TAB_IDS.ManagedSite:
       return t("settings:tabs.managedSite")
-    case "claudeCodeRouter":
+    case BASIC_SETTINGS_TAB_IDS.ClaudeCodeRouter:
       return t("settings:tabs.claudeCodeRouter")
-    case "permissions":
+    case BASIC_SETTINGS_TAB_IDS.Permissions:
       return t("settings:tabs.permissions")
     default:
       return assertNever(tabId, `Unexpected settings tab id: ${tabId}`)

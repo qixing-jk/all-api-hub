@@ -1,21 +1,19 @@
+import { BACKUP_VERSION } from "~/constants/importExport"
 import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
-  BACKUP_VERSION,
+  IMPORT_EXPORT_ERROR_CODES,
   ImportExportError,
-  importFromBackupObject as importFromBackupObjectService,
-  normalizeBackupForMerge,
-  parseBackupSummary,
   type BackupAccountsPartialV2,
   type BackupFullV2,
   type BackupPreferencesPartialV2,
-  type BackupV2,
   type ImportFromBackupOptions,
   type ImportResult,
   type RawBackupData,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupContracts"
+import { importFromBackupObject as importFromBackupObjectService } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
@@ -32,25 +30,17 @@ import { t } from "~/utils/i18n/core"
  */
 const logger = createLogger("ImportExportUtils")
 
-export { BACKUP_VERSION, normalizeBackupForMerge, parseBackupSummary }
-export type {
-  BackupFullV2,
-  BackupPreferencesPartialV2,
-  BackupV2,
-  RawBackupData,
-}
-
 /** Maps owned backup and migration failures to user-facing localized copy. */
 export function getImportExportErrorMessage(error: unknown): string | null {
   if (error instanceof ImportExportError) {
     switch (error.code) {
-      case "FORMAT_NOT_CORRECT":
+      case IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect:
         return t("importExport:import.formatNotCorrect")
-      case "IMPORT_FAILED":
+      case IMPORT_EXPORT_ERROR_CODES.ImportFailed:
         return t("importExport:import.importOperationFailed")
-      case "NO_IMPORTABLE_DATA":
+      case IMPORT_EXPORT_ERROR_CODES.NoImportableData:
         return t("importExport:import.noImportableData")
-      case "VERSION_NOT_SUPPORTED":
+      case IMPORT_EXPORT_ERROR_CODES.VersionNotSupported:
         return t("importExport:import.versionNotSupported")
     }
   }

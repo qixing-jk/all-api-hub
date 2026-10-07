@@ -1,7 +1,5 @@
-import {
-  apiCredentialProfilesStorage,
-  coerceApiCredentialTelemetryConfig,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { coerceApiCredentialTelemetryConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import {
   getTelemetryAdapter,
   queryModels,

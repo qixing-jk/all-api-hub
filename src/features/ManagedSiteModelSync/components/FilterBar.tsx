@@ -5,7 +5,14 @@ import { useTranslation } from "react-i18next"
 import { Input } from "~/components/ui"
 import { type ExecutionStatistics } from "~/types/managedSiteModelSync"
 
-export type FilterStatus = "all" | "success" | "failed"
+export const MODEL_SYNC_FILTER_STATUSES = {
+  All: "all",
+  Success: "success",
+  Failed: "failed",
+} as const
+
+export type FilterStatus =
+  (typeof MODEL_SYNC_FILTER_STATUSES)[keyof typeof MODEL_SYNC_FILTER_STATUSES]
 
 interface FilterBarProps {
   status: FilterStatus
@@ -71,21 +78,21 @@ export default function FilterBar({
     <div className="gap-y-density-3 flex flex-wrap gap-x-3">
       <div className="gap-y-density-2 flex gap-x-2">
         {renderFilterButton(
-          "all",
+          MODEL_SYNC_FILTER_STATUSES.All,
           t("execution.filters.all"),
           "bg-primary text-primary-foreground",
           <List className="h-4 w-4" />,
           statistics.total,
         )}
         {renderFilterButton(
-          "success",
+          MODEL_SYNC_FILTER_STATUSES.Success,
           t("execution.filters.success"),
           "bg-success text-success-foreground",
           <CircleCheck className="h-4 w-4" />,
           statistics.successCount,
         )}
         {renderFilterButton(
-          "failed",
+          MODEL_SYNC_FILTER_STATUSES.Failed,
           t("execution.filters.failed"),
           "bg-destructive text-destructive-foreground",
           <CircleX className="h-4 w-4" />,

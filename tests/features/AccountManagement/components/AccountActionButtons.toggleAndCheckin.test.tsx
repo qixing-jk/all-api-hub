@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { useAccountRowActions } from "~/features/AccountManagement/components/AccountActionButtons/useAccountRowActions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -22,7 +23,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { act, render } from "~~/tests/test-utils/render"
+import { act, render, renderHook } from "~~/tests/test-utils/render"
 
 import {
   accountDataContextValue,
@@ -48,6 +49,143 @@ import {
 
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
+
+  it.each([
+    [
+      CHECKIN_RESULT_STATUS.SUCCESS,
+      {},
+      "autoCheckin:providerFallback.checkinSuccessful",
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      {},
+      "autoCheckin:providerFallback.checkinFailed",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      { message: "Provider denied check-in" },
+      "Provider denied check-in",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      {
+        messageKey: "autoCheckin:providerFallback.checkinFailed",
+        messageParams: { count: 2 },
+      },
+      "autoCheckin:providerFallback.checkinFailed",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.SKIPPED,
+      {},
+      "autoCheckin:providerFallback.unknownError",
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    ],
+    [
+      "future-status",
+      {},
+      "autoCheckin:messages.success.runCompleted",
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    ],
+  ])(
+    "reports quick-checkin %s with its provider message and analytics",
+    async (status, details, message, analyticsResult) => {
+      const site = buildDisplaySiteData({
+        id: "fallback",
+        name: "Fallback Site",
+        siteType: SITE_TYPES.NEW_API,
+        checkIn: createEnabledCheckIn(),
+      })
+      sendRuntimeMessageMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({
+          success: true,
+          data: { perAccount: { fallback: { status, ...details } } },
+        })
+      const { result } = renderHook(() =>
+        useAccountRowActions({
+          site,
+          onCopyKey: vi.fn(),
+          onDeleteAccount: vi.fn(),
+        }),
+      )
+
+      await act(async () => {
+        await result.current.handleQuickCheckin()
+      })
+
+      const expectedMessage =
+        status === "future-status" ? message : `Fallback Site: ${message}`
+      const toastMock =
+        status === CHECKIN_RESULT_STATUS.SUCCESS || status === "future-status"
+          ? toastSuccessMock
+          : toastErrorMock
+      expect(toastMock).toHaveBeenCalledWith(expectedMessage)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        analyticsResult,
+        expect.anything(),
+      )
+      expect(loadAccountDataMock).toHaveBeenCalled()
+    },
+  )
+
+  it("reports pin persistence errors as failed actions", async () => {
+    mockTogglePinAccount.mockRejectedValueOnce(new Error("Storage unavailable"))
+    const { result } = renderHook(() =>
+      useAccountRowActions({
+        site: buildDisplaySiteData(),
+        onCopyKey: vi.fn(),
+        onDeleteAccount: vi.fn(),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleTogglePin()
+    })
+
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.anything(),
+    )
+  })
+
+  it("opens the key inventory for the selected account", () => {
+    const site = buildDisplaySiteData()
+    const onCopyKey = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountRowActions({ site, onCopyKey, onDeleteAccount: vi.fn() }),
+    )
+
+    act(() => {
+      result.current.handleOpenKeyList()
+    })
+
+    expect(onCopyKey).toHaveBeenCalledWith(site)
+  })
+
+  it("blocks share snapshots for disabled accounts", async () => {
+    const { result } = renderHook(() =>
+      useAccountRowActions({
+        site: buildDisplaySiteData({ disabled: true }),
+        onCopyKey: vi.fn(),
+        onDeleteAccount: vi.fn(),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleShareSnapshot()
+    })
+
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:toast.error.shareSnapshotAccountDisabled",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+  })
 
   it.each([
     [SITE_TYPES.NEW_API, "feedback"],
@@ -807,6 +945,253 @@ describe("AccountActionButtons", () => {
       expect(mockTogglePinAccount).toHaveBeenCalledWith("acc-pin")
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "messages:toast.success.accountPinned",
+      )
+    })
+  })
+
+  it("shows an unpin toggle when the account is pinned and confirms unpinning", async () => {
+    accountDataContextValue.isPinFeatureEnabled = true
+    accountDataContextValue.isAccountPinned.mockReturnValue(true)
+    mockTogglePinAccount.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-unpin",
+          disabled: false,
+          name: "Pinned Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.unpin",
+    })
+
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(mockTogglePinAccount).toHaveBeenCalledWith("acc-unpin")
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "messages:toast.success.accountUnpinned",
+      )
+    })
+  })
+
+  it("enables a disabled account and shows success toast", async () => {
+    mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-enable",
+          disabled: true,
+          name: "Disabled Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.enableAccount",
+    })
+
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(mockHandleSetAccountDisabled).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-enable" }),
+        false,
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: {
+            targetState: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
+          },
+        }),
+      )
+    })
+  })
+
+  it("does not offer quick-checkin in more actions menu when the account is disabled", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-disabled",
+          disabled: true,
+          name: "Disabled Quick Site",
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    expect(
+      within(menu).queryByRole("menuitem", {
+        name: "account:actions.quickCheckin",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("skips quick-checkin with error toast when invoked on a disabled account", async () => {
+    const site = buildDisplaySiteData({
+      id: "acc-quick-disabled-hook",
+      disabled: true,
+      name: "Disabled Quick Site",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: createEnabledCheckIn(),
+    })
+    const { result } = renderHook(() =>
+      useAccountRowActions({
+        site,
+        onCopyKey: vi.fn(),
+        onDeleteAccount: vi.fn(),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleQuickCheckin()
+    })
+
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.accountDisabled",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+  })
+
+  it("shows rawMessage in toast on successful quick-checkin", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-raw")
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          perAccount: {
+            "acc-quick-raw": {
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              rawMessage: "Raw checkin output",
+            },
+          },
+        },
+      })
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-raw",
+          disabled: false,
+          name: "Raw Message Site",
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
+
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "Raw Message Site: Raw checkin output",
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+          },
+        }),
+      )
+    })
+  })
+
+  it("shows providerFallback for already checked and success statuses without messages", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-fallback")
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          perAccount: {
+            "acc-quick-fallback": {
+              status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            },
+          },
+        },
+      })
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-fallback",
+          disabled: false,
+          name: "Fallback Site",
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
+
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "Fallback Site: autoCheckin:providerFallback.alreadyCheckedToday",
       )
     })
   })

@@ -18,6 +18,7 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -374,7 +375,7 @@ function AccountManagementContent({
         title={t("account:title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="accountManagement"
+            tabId={BASIC_SETTINGS_TAB_IDS.AccountManagement}
             anchor="account-management"
           />
         }

@@ -21,7 +21,7 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupContracts"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,

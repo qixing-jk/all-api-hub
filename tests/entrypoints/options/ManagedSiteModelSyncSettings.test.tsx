@@ -1747,41 +1747,52 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
 
-  it("navigates to the execution page and resets the section through SettingSection", async () => {
-    render(<ManagedSiteModelSyncSettings />)
+  it.each([true, false])(
+    "navigates to execution and reports settings reset success: %s",
+    async (ok) => {
+      if (!ok)
+        mockResetNewApiModelSyncConfig.mockResolvedValueOnce({
+          ok: false,
+          error: new Error("Storage unavailable"),
+        })
+      render(<ManagedSiteModelSyncSettings />)
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "managedSiteModelSync:settings.viewExecutionButton",
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole("button", { name: "common:actions.reset" }),
-    )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "managedSiteModelSync:settings.viewExecutionButton",
+        }),
+      )
+      fireEvent.click(
+        screen.getByRole("button", { name: "common:actions.reset" }),
+      )
 
-    await waitFor(() => {
-      expect(mockResetNewApiModelSyncConfig).toHaveBeenCalledTimes(1)
-    })
+      await waitFor(() => {
+        expect(mockResetNewApiModelSyncConfig).toHaveBeenCalledTimes(1)
+      })
 
-    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-    expect(mockedPushWithinOptionsPage).toHaveBeenCalledWith(
-      `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`,
-    )
-  })
+      expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        ok
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
+      )
+      expect(mockedPushWithinOptionsPage).toHaveBeenCalledWith(
+        `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`,
+      )
+    },
+  )
 })

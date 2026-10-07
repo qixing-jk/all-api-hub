@@ -4,6 +4,7 @@ import "./accountActionButtonsMocks"
 
 import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { StrictMode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -153,6 +154,61 @@ describe("AccountActionButtons", () => {
         },
       )
     })
+  })
+
+  it("restores copying state and allows copying invite link again under StrictMode remounts", async () => {
+    const user = userEvent.setup({ skipHover: true })
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      get: () => ({ writeText: clipboardWriteTextMock }),
+    })
+    const site = buildDisplaySiteData({
+      id: "invite-row-strict",
+      disabled: false,
+      name: "Invite Row Strict",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://invite.example.invalid",
+    })
+
+    render(
+      <StrictMode>
+        <AccountActionButtons
+          site={site}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />
+      </StrictMode>,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
+    const copyInviteLinkItem = await screen.findByRole("menuitem", {
+      name: "account:actions.copyInviteLink",
+    })
+
+    await user.click(copyInviteLinkItem)
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+        "https://invite.example.invalid/register?aff=row",
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "account:actions.copyInviteLink",
+      }),
+    ).toBeEnabled()
   })
 
   it("tracks a cancelled invite-link copy without showing failure feedback", async () => {

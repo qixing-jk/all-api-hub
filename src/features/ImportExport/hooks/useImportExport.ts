@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import toast from "~/lib/notify"
+import { parseBackupSummary } from "~/services/importExport/backupCodec"
 import {
   IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,
   type ImportPlan,
-} from "~/services/importExport/importExportService"
+} from "~/services/importExport/backupContracts"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -23,7 +24,7 @@ import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
-import { importFromBackupObject, parseBackupSummary } from "../utils"
+import { importFromBackupObject } from "../utils"
 
 /**
  * Unified logger scoped to the Import/Export options page hook.

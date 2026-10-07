@@ -2,12 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { Suspense, type ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  buildKiloCodeCreateTokenToastId,
-  KiloCodeExportDialog,
-} from "~/components/KiloCodeExportDialog"
+import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildKiloCodeCreateTokenToastId } from "~/features/KiloCodeExport/hooks/useKiloCodeTokenInventory"
 import type {
   AccountKeyCreationResult,
   EnsureAccountKeyResult,

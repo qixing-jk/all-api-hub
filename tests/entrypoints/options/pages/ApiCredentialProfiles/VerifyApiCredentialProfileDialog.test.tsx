@@ -1945,104 +1945,129 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(await screen.findByText("Stored m1 history")).toBeInTheDocument()
   })
 
-  it("persists and clears history for the currently selected model target", async () => {
-    const user = userEvent.setup()
+  it.each([false, true])(
+    "persists model-target history and handles clear failure: %s",
+    async (clearFails) => {
+      const user = userEvent.setup()
 
-    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["m0", "m1"])
-    mockRunApiVerificationProbe.mockResolvedValueOnce({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 7,
-      summary: "Generated text",
-    })
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["m0", "m1"])
+      mockRunApiVerificationProbe.mockResolvedValueOnce({
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 7,
+        summary: "Generated text",
+      })
 
-    render(
-      <VerifyApiCredentialProfileDialog
-        isOpen={true}
-        onClose={() => {}}
-        profile={{
-          id: "p-1",
-          name: "Profile",
-          apiType: API_TYPES.OPENAI_COMPATIBLE,
-          baseUrl: "https://example.com",
-          apiKey: "sk-test",
-          tagIds: [],
-          notes: "",
-          createdAt: 1,
-          updatedAt: 1,
-        }}
-        initialModelId="m0"
-      />,
-    )
+      render(
+        <VerifyApiCredentialProfileDialog
+          isOpen={true}
+          onClose={() => {}}
+          profile={{
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-test",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+          initialModelId="m0"
+        />,
+      )
 
-    await waitFor(() =>
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
-        expect.objectContaining({
-          baseUrl: "https://example.com",
-          apiKey: "sk-test",
-          abortSignal: expect.any(AbortSignal),
-        }),
-      ),
-    )
+      await waitFor(() =>
+        expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseUrl: "https://example.com",
+            apiKey: "sk-test",
+            abortSignal: expect.any(AbortSignal),
+          }),
+        ),
+      )
 
-    await user.click(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-    )
-    await user.click(await screen.findByText("m1"))
-
-    await waitFor(() => {
-      expect(
+      await user.click(
         screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-      ).toHaveTextContent("m1")
-    })
+      )
+      await user.click(await screen.findByText("m1"))
 
-    const probeCard = await screen.findByTestId(
-      getApiCredentialProfileVerifyProbeTestId("text-generation"),
-    )
-    await user.click(
-      within(probeCard).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
-    )
+      await waitFor(() => {
+        expect(
+          screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
+        ).toHaveTextContent("m1")
+      })
 
-    await waitFor(() =>
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
-        expect.objectContaining({
-          probeId: "text-generation",
-          modelId: "m1",
+      const probeCard = await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      )
+      await user.click(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.runOne",
         }),
-      ),
-    )
+      )
 
-    const initialTarget = requireHistoryTarget(
-      createProfileModelVerificationHistoryTarget("p-1", "m0"),
-    )
-    const selectedTarget = requireHistoryTarget(
-      createProfileModelVerificationHistoryTarget("p-1", "m1"),
-    )
+      await waitFor(() =>
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+          expect.objectContaining({
+            probeId: "text-generation",
+            modelId: "m1",
+          }),
+        ),
+      )
 
-    expect(
-      await verificationResultHistoryStorage.getLatestSummary(initialTarget),
-    ).toBeNull()
-    expect(
-      await verificationResultHistoryStorage.getLatestSummary(selectedTarget),
-    ).toMatchObject({
-      targetKey: "profile:p-1:model:m1",
-      resolvedModelId: "m1",
-    })
+      const initialTarget = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "m0"),
+      )
+      const selectedTarget = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "m1"),
+      )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "aiApiVerification:verifyDialog.history.clear",
-      }),
-    )
-
-    await waitFor(async () => {
+      expect(
+        await verificationResultHistoryStorage.getLatestSummary(initialTarget),
+      ).toBeNull()
       expect(
         await verificationResultHistoryStorage.getLatestSummary(selectedTarget),
-      ).toBeNull()
-    })
-  })
+      ).toMatchObject({
+        targetKey: "profile:p-1:model:m1",
+        resolvedModelId: "m1",
+      })
+
+      const clearSpy = vi.spyOn(verificationResultHistoryStorage, "clearTarget")
+      if (clearFails)
+        clearSpy.mockRejectedValueOnce(new Error("History unavailable"))
+      await user.click(
+        screen.getByRole("button", {
+          name: "aiApiVerification:verifyDialog.history.clear",
+        }),
+      )
+
+      if (clearFails) {
+        await waitFor(() =>
+          expect(loggerErrorMock).toHaveBeenCalledWith(
+            "Failed to clear verification history",
+            expect.anything(),
+          ),
+        )
+        expect(
+          await verificationResultHistoryStorage.getLatestSummary(
+            selectedTarget,
+          ),
+        ).toMatchObject({ resolvedModelId: "m1" })
+        expect(
+          within(probeCard).getByText("Generated text"),
+        ).toBeInTheDocument()
+        return
+      }
+      await waitFor(async () => {
+        expect(
+          await verificationResultHistoryStorage.getLatestSummary(
+            selectedTarget,
+          ),
+        ).toBeNull()
+      })
+    },
+  )
 
   it("waits for persistence to settle before enabling close controls", async () => {
     const user = userEvent.setup()

@@ -10,10 +10,10 @@ import {
   NoticeActionButton,
   SearchableSelect,
 } from "~/components/ui"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
-import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
@@ -25,29 +25,14 @@ import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import {
-  ACCOUNT_RUNTIME_KEY_SOURCES,
-  getAccountRuntimeKeyLocatorAccountId,
-  type AccountRuntimeKey,
-  type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import {
   canCreateAccountKeyResources,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
-import {
-  getManagedSiteCapabilities,
-  getSiteTypeCapabilities,
-} from "~/services/apiAdapters/registry"
-import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
-import {
-  MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
-  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
-  type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/tokenChannelStatus"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
@@ -58,14 +43,12 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
-import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,
   openModelsPage,
   openSettingsTab,
   pushWithinOptionsPage,
-  replaceWithinOptionsPage,
 } from "~/utils/navigation"
 
 import { AccountKeyResourceEditorDialog } from "./components/AccountKeyResource/AccountKeyResourceEditorDialog"
@@ -88,20 +71,13 @@ import {
   KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES,
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
-  type KeyManagementAssociationTargetLookupState,
   type KeyManagementAssociationTargetState,
 } from "./constants"
-import {
-  useAccountKeyResourceController,
-  type AccountKeyResourceRouteTransition,
-} from "./controllers/useAccountKeyResourceController"
-import {
-  getCredentialAssociationForLocator,
-  KEY_CREDENTIAL_ASSOCIATION_STATES,
-} from "./credentialAssociations"
 import { useKeyCredentialAssociations } from "./hooks/useKeyCredentialAssociations"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 import { useKeyManagementInventoryPresentation } from "./hooks/useKeyManagementInventoryPresentation"
+import { useKeyManagementManagedSiteActions } from "./hooks/useKeyManagementManagedSiteActions"
+import { useKeyManagementRouteCoordinator } from "./hooks/useKeyManagementRouteCoordinator"
 import { useManagedSiteKeyStatuses } from "./hooks/useManagedSiteKeyStatuses"
 import { getAccountKeyScopeMessages } from "./presentation/accountKeyResourcePresentation"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
@@ -132,24 +108,6 @@ const nativeStatusOptions = (t: TFunction) => [
 ]
 
 /** Ignore in-place URL sync from a page still mounted for its exit animation. */
-function replaceActiveKeysRoute(params?: Record<string, string | undefined>) {
-  const currentPage = window.location.hash.slice(1).split("?")[0]
-  if (currentPage && currentPage !== MENU_ITEM_IDS.KEYS) return
-  replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, params)
-}
-
-const getRouteSignature = (params?: Record<string, string | undefined>) =>
-  JSON.stringify(
-    Object.entries(params ?? {})
-      .filter((entry): entry is [string, string] => entry[1] !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right)),
-  )
-
-const getAssociationLocatorWorkspace = (locator: AccountRuntimeKeyLocator) =>
-  locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
-    ? locator.ref.scopeKey
-    : undefined
-
 const getAssociationTargetStatusMessage = (
   state: KeyManagementAssociationTargetState,
   t: TFunction,
@@ -185,55 +143,6 @@ const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
   }
 }
 
-const canRetryNewApiManagedVerification = (
-  managedSiteStatus?: ManagedSiteTokenChannelStatus,
-) => {
-  if (!managedSiteStatus) {
-    return false
-  }
-
-  if (
-    managedSiteStatus.status !== MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-  ) {
-    return false
-  }
-
-  if (
-    managedSiteStatus.reason !==
-    MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
-  ) {
-    return false
-  }
-
-  return Boolean(
-    managedSiteStatus.recovery?.loginCredentialsConfigured ||
-      managedSiteStatus.recovery?.authenticatedBrowserSessionExists,
-  )
-}
-
-const getRecoverableNewApiCandidateChannel = (
-  managedSiteStatus?: ManagedSiteTokenChannelStatus,
-) => {
-  if (!managedSiteStatus) {
-    return null
-  }
-
-  if (
-    managedSiteStatus.status !== MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-  ) {
-    return null
-  }
-
-  if (
-    managedSiteStatus.reason !==
-    MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
-  ) {
-    return null
-  }
-
-  return getRecoverableManagedSiteChannelCandidate(managedSiteStatus.assessment)
-}
-
 /**
  * Key management page rendering header, filters, token list, and dialogs.
  * @param props Component props optionally carrying routing context.
@@ -256,17 +165,6 @@ export default function KeyManagement(props: {
   const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
     useState(false)
   const accountSelectorTriggerRef = useRef<HTMLButtonElement>(null)
-  const acknowledgedNativeRouteTransitionIdRef = useRef<string | null>(null)
-  const routeAssociationId =
-    routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]
-  const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
-  const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
-  const associationNavigationActiveRef = useRef(Boolean(routeAssociationId))
-  const [pendingNativeRoute, setPendingNativeRoute] = useState<{
-    params: Record<string, string>
-    transition: AccountKeyResourceRouteTransition
-    sourceRouteSignature: string
-  } | null>(null)
   const verification = useNewApiManagedVerification()
   const {
     preferences,
@@ -286,14 +184,11 @@ export default function KeyManagement(props: {
   const {
     displayData,
     selectedAccount,
-    setSelectedAccount,
     searchTerm,
-    setSearchTerm,
     isLoading,
     currentAccountLoadError,
     currentAccountUnsupportedKeyManagement,
     allAccountsFilterAccountIds,
-    setAllAccountsFilterAccountIds,
     refreshServiceCredentials,
     entries,
     filteredEntries,
@@ -315,80 +210,22 @@ export default function KeyManagement(props: {
     profiles: credentialProfiles,
     reloadLinks: reloadCredentialProfileLinks,
   })
-  const requestedAssociation = useMemo<ApiCredentialProfileLink | null>(
-    () =>
-      routeAssociationId
-        ? credentialProfileLinks.find(
-            (link) => link.id === routeAssociationId,
-          ) ?? null
-        : null,
-    [credentialProfileLinks, routeAssociationId],
-  )
-  const associationNeedsConfirmation = useMemo(() => {
-    if (!requestedAssociation) return null
-    const association = getCredentialAssociationForLocator(
-      credentialProfileLinks,
-      requestedAssociation.locator,
-    )
-    return !(
-      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked &&
-      association.associationId === requestedAssociation.id
-    )
-  }, [credentialProfileLinks, requestedAssociation])
-  const associationTarget = requestedAssociation
-  const [associationTargetStatus, setAssociationTargetStatus] =
-    useState<KeyManagementAssociationTargetLookupState>(
-      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating,
-    )
-
-  useEffect(() => {
-    associationNavigationActiveRef.current = Boolean(routeAssociationId)
-    setAssociationTargetStatus(
-      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating,
-    )
-  }, [routeAssociationId])
-
-  const routeSignature = getRouteSignature(routeParams)
-  const routeTransition =
-    pendingNativeRoute &&
-    getRouteSignature(pendingNativeRoute.params) === routeSignature
-      ? pendingNativeRoute.transition
-      : undefined
-
-  const nativeKeys = useAccountKeyResourceController({
-    accounts: displayData,
-    selectedAccount,
+  const {
+    nativeKeys,
+    routeAssociationId,
+    requestedAssociation,
+    associationNeedsConfirmation,
+    associationTarget,
+    associationTargetStatus,
+    setAssociationTargetStatus,
+    handleAccountSummaryClick,
+    handleSelectedAccountChange,
+    clearAssociationTarget,
+    handleSearchTermChange,
+  } = useKeyManagementRouteCoordinator({
     routeParams,
-    routeTransition,
-    replaceRoute: (params, transition) => {
-      const nextParams = { ...params }
-      if (params[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId] === routeAccountId) {
-        for (const key of [
-          KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport,
-          KEY_MANAGEMENT_ROUTE_PARAMS.TokenId,
-        ]) {
-          const value = routeParams?.[key]
-          if (value !== undefined) nextParams[key] = value
-        }
-      }
-      if (associationNavigationActiveRef.current && routeAssociationId) {
-        nextParams[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId] =
-          routeAssociationId
-      }
-      if (transition) {
-        const pending = {
-          params: nextParams,
-          transition,
-          sourceRouteSignature: routeSignature,
-        }
-        acknowledgedNativeRouteTransitionIdRef.current = null
-        setPendingNativeRoute(pending)
-      } else {
-        acknowledgedNativeRouteTransitionIdRef.current = null
-        setPendingNativeRoute(null)
-      }
-      replaceActiveKeysRoute(nextParams)
-    },
+    credentialProfileLinks,
+    inventory: credentialInventory,
   })
 
   const getProfileForLocator = credentialAssociations.getProfileForLocator
@@ -416,71 +253,6 @@ export default function KeyManagement(props: {
     refreshKey: refreshManagedSiteTokenStatusForToken,
     confirm: confirmManagedSiteTokenStatusWithChannelKey,
   } = useManagedSiteKeyStatuses(managedRuntimeKeys)
-
-  useEffect(() => {
-    if (!associationTarget) return
-
-    const accountId = getAccountRuntimeKeyLocatorAccountId(
-      associationTarget.locator,
-    )
-    const workspaceScopeKey = getAssociationLocatorWorkspace(
-      associationTarget.locator,
-    )
-    // A reload temporarily clears the scope inventory. Retain this account's
-    // route until its scope can be resolved, so navigation cannot replay loading.
-    const workspace =
-      (selectedAccount === accountId
-        ? nativeKeys.scopes.find(
-            (scope) => scope.scopeKey === workspaceScopeKey,
-          )?.routeKey
-        : undefined) ??
-      (routeAccountId === accountId ? routeWorkspace : undefined)
-    const nextParams = {
-      [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: associationTarget.id,
-      [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: accountId,
-      ...(workspace
-        ? { [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: workspace }
-        : {}),
-    }
-
-    setSearchTerm("")
-    setAllAccountsFilterAccountIds([])
-    setSelectedAccount(accountId)
-    if (getRouteSignature(nextParams) !== routeSignature) {
-      replaceActiveKeysRoute(nextParams)
-    }
-  }, [
-    associationTarget,
-    nativeKeys.scopes,
-    routeAccountId,
-    routeSignature,
-    routeWorkspace,
-    selectedAccount,
-    setAllAccountsFilterAccountIds,
-    setSearchTerm,
-    setSelectedAccount,
-  ])
-
-  const setNativeSearch = nativeKeys.setSearch
-  useEffect(() => {
-    setNativeSearch(searchTerm)
-  }, [searchTerm, setNativeSearch])
-
-  useEffect(() => {
-    if (!pendingNativeRoute) return
-    if (routeTransition) {
-      acknowledgedNativeRouteTransitionIdRef.current = routeTransition.id
-      return
-    }
-    if (
-      acknowledgedNativeRouteTransitionIdRef.current ===
-        pendingNativeRoute.transition.id ||
-      routeSignature !== pendingNativeRoute.sourceRouteSignature
-    ) {
-      acknowledgedNativeRouteTransitionIdRef.current = null
-      setPendingNativeRoute(null)
-    }
-  }, [pendingNativeRoute, routeSignature, routeTransition])
 
   useEffect(() => {
     let cancelled = false
@@ -518,20 +290,6 @@ export default function KeyManagement(props: {
     setRepairStartOnOpen(false)
   }
 
-  const handleAccountSummaryClick = (accountId: string) => {
-    associationNavigationActiveRef.current = false
-    if (routeAssociationId) {
-      replaceActiveKeysRoute(
-        selectedAccount ? { accountId: selectedAccount } : undefined,
-      )
-    }
-    setAllAccountsFilterAccountIds((currentAccountIds) =>
-      currentAccountIds.includes(accountId)
-        ? currentAccountIds.filter((id) => id !== accountId)
-        : [...currentAccountIds, accountId],
-    )
-  }
-
   const handleOpenAccountManagement = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }, [])
@@ -539,32 +297,6 @@ export default function KeyManagement(props: {
   const handleOpenSelectedAccountModels = useCallback(() => {
     void openModelsPage(selectedAccount)
   }, [selectedAccount])
-
-  const handleSelectedAccountChange = useCallback(
-    (accountId: string) => {
-      associationNavigationActiveRef.current = false
-      setSelectedAccount(accountId)
-      acknowledgedNativeRouteTransitionIdRef.current = null
-      setPendingNativeRoute(null)
-      replaceActiveKeysRoute(accountId ? { accountId } : undefined)
-    },
-    [setSelectedAccount],
-  )
-
-  const clearAssociationTarget = useCallback(() => {
-    associationNavigationActiveRef.current = false
-    replaceActiveKeysRoute(
-      selectedAccount ? { accountId: selectedAccount } : undefined,
-    )
-  }, [selectedAccount])
-
-  const handleSearchTermChange = useCallback(
-    (value: string) => {
-      if (routeAssociationId) clearAssociationTarget()
-      setSearchTerm(value)
-    },
-    [clearAssociationTarget, routeAssociationId, setSearchTerm],
-  )
 
   const handleRefreshTokens = useCallback(
     async (accountId?: string) => {
@@ -605,17 +337,22 @@ export default function KeyManagement(props: {
     [displayData, refreshServiceCredentials, nativeKeys, selectedAccount],
   )
 
-  const handleRefreshManagedSiteStatuses = useCallback(async () => {
-    await withProtectionBypassUserCommand(
-      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-      PROTECTION_BYPASS_SURFACES.Options,
-      async (protectionBypassExecution) => {
-        await refreshManagedSiteTokenStatuses({
-          protectionBypassExecution,
-        })
-      },
-    )
-  }, [refreshManagedSiteTokenStatuses])
+  const {
+    handleRefreshManagedSiteStatuses,
+    handleManagedSiteVerificationRetry,
+    handleManagedSiteImportSuccess,
+  } = useKeyManagementManagedSiteActions({
+    managedSiteType,
+    newApiBaseUrl,
+    newApiUserId,
+    newApiUsername,
+    newApiPassword,
+    newApiTotpSecret,
+    verification,
+    refreshManagedSiteTokenStatuses,
+    refreshManagedSiteTokenStatusForToken,
+    confirmManagedSiteTokenStatusWithChannelKey,
+  })
 
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
@@ -630,104 +367,6 @@ export default function KeyManagement(props: {
 
     setIsAccountSelectorOpen(true)
   }, [])
-
-  const handleManagedSiteVerificationRetry = async (
-    runtimeKey: AccountRuntimeKey,
-    managedSiteStatus: ManagedSiteTokenChannelStatus,
-  ) => {
-    if (
-      getManagedSiteCapabilities(managedSiteType).matching.secretVerification
-        ?.kind !== MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS.NEW_API_SESSION
-    ) {
-      return
-    }
-
-    const candidateChannel =
-      getRecoverableNewApiCandidateChannel(managedSiteStatus)
-
-    if (candidateChannel) {
-      const resourceRef = candidateChannel.ref
-      let resolvedChannelKey = ""
-
-      await loadNewApiChannelKeyWithVerification({
-        resourceRef,
-        command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-        label: runtimeKey.label,
-        requestKind: "token",
-        config: {
-          baseUrl: newApiBaseUrl,
-          userId: newApiUserId,
-          username: newApiUsername,
-          password: newApiPassword,
-          totpSecret: newApiTotpSecret,
-        },
-        setKey: (key) => {
-          resolvedChannelKey = key
-        },
-        onLoaded: async () => {
-          await confirmManagedSiteTokenStatusWithChannelKey(
-            runtimeKey,
-            managedSiteStatus,
-            {
-              resourceRef,
-              channelKey: resolvedChannelKey,
-            },
-          )
-        },
-        openVerification: verification.openNewApiManagedVerification,
-      })
-      return
-    }
-
-    const refreshedStatus =
-      (await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-        PROTECTION_BYPASS_SURFACES.Options,
-        async (protectionBypassExecution) =>
-          await refreshManagedSiteTokenStatusForToken(runtimeKey, {
-            protectionBypassExecution,
-          }),
-      )) ?? managedSiteStatus
-
-    if (!canRetryNewApiManagedVerification(refreshedStatus)) {
-      return
-    }
-
-    const refreshedCandidateChannel =
-      getRecoverableNewApiCandidateChannel(refreshedStatus)
-    if (!refreshedCandidateChannel) {
-      return
-    }
-
-    verification.openNewApiManagedVerification({
-      kind: "token",
-      label: runtimeKey.label,
-      config: {
-        baseUrl: newApiBaseUrl,
-        userId: newApiUserId,
-        username: newApiUsername,
-        password: newApiPassword,
-        totpSecret: newApiTotpSecret,
-      },
-      onVerified: async () => {
-        await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-          PROTECTION_BYPASS_SURFACES.Options,
-          async (protectionBypassExecution) => {
-            await refreshManagedSiteTokenStatusForToken(runtimeKey, {
-              protectionBypassExecution,
-            })
-          },
-        )
-      },
-    })
-  }
-
-  const handleManagedSiteImportSuccess = async (
-    runtimeKey: AccountRuntimeKey,
-  ) => {
-    await refreshManagedSiteTokenStatusForToken(runtimeKey)
-  }
 
   const addTokenAvailableAccounts = useMemo(
     () => displayData.filter(canCreateAccountKeyResources),
@@ -1170,7 +809,7 @@ export default function KeyManagement(props: {
               {t("keyManagement:managedSiteSetupRecovery.description")}{" "}
               <NoticeActionButton
                 onClick={() =>
-                  void openSettingsTab("managedSite", {
+                  void openSettingsTab(BASIC_SETTINGS_TAB_IDS.ManagedSite, {
                     preserveHistory: true,
                   })
                 }

@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileDialog"
+import toast from "~/lib/notify"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -166,6 +167,52 @@ function renderDialog(
 }
 
 describe("ApiCredentialProfileDialog", () => {
+  it.each([
+    ["name", "nameRequired"],
+    ["apiKey", "keyRequired"],
+    ["baseUrl", "baseUrlInvalid"],
+  ])(
+    "rejects missing %s before persisting a profile",
+    async (field, errorKey) => {
+      const { onSave } = renderDialog({
+        profile: buildProfile({ [field]: "" }),
+      })
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "common:actions.save" }),
+      )
+
+      expect(
+        await screen.findByText(
+          `apiCredentialProfiles:dialog.errors.${errorKey}`,
+        ),
+      ).toBeVisible()
+      expect(onSave).not.toHaveBeenCalled()
+    },
+  )
+
+  it("retains profile edits and restores Save after persistence throws", async () => {
+    const onSave = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Storage unavailable"))
+    renderDialog({ profile: buildProfile(), onSave })
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "apiCredentialProfiles:messages.saveFailed",
+      ),
+    )
+    expect(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+    ).toHaveValue("Profile")
+    expect(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    ).not.toBeDisabled()
+  })
   it("places labeled request header fields after the credential settings", () => {
     renderDialog({
       profile: buildProfile({ requestHeaders: { "x-client": "test" } }),

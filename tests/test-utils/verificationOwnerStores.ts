@@ -1,7 +1,7 @@
 import { vi } from "vitest"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import * as profileConfigReader from "~/services/apiCredentialProfiles/profileConfigReader"
 
 /**
  * Declares that a suite does not model the persisted account and profile stores.
@@ -20,7 +20,7 @@ export function stubVerificationOwnerStoresUnavailable(): void {
     new Error("accounts unavailable"),
   )
   vi.spyOn(
-    apiCredentialProfilesStorage,
-    "listProfileIdsOrThrow",
+    profileConfigReader,
+    "listApiCredentialProfileIdsOrThrow",
   ).mockRejectedValue(new Error("profiles unavailable"))
 }

@@ -1,15 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  BACKUP_VERSION,
-  importFromBackupObject,
-  normalizeBackupForMerge,
-  parseBackupSummary,
-  type BackupFullV2,
-  type BackupPreferencesPartialV2,
-  type BackupV2,
-  type RawBackupData,
-} from "~/features/ImportExport/utils"
+import { BACKUP_VERSION } from "~/constants/importExport"
+import { importFromBackupObject } from "~/features/ImportExport/utils"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
@@ -17,6 +9,17 @@ import {
   featureGuidanceState,
   PRODUCT_TOUR_OUTCOMES,
 } from "~/services/featureGuidance/featureGuidanceState"
+import {
+  normalizeBackupForMerge,
+  parseBackupSummary,
+} from "~/services/importExport/backupCodec"
+import {
+  IMPORT_EXPORT_ERROR_CODES,
+  type BackupFullV2,
+  type BackupPreferencesPartialV2,
+  type BackupV2,
+  type RawBackupData,
+} from "~/services/importExport/backupContracts"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
@@ -102,6 +105,16 @@ vi.mock(
         mergeConfig: vi.fn(),
         exportConfig: vi.fn(),
       } as unknown as typeof actual.apiCredentialProfilesStorage,
+    }
+  },
+)
+
+vi.mock(
+  import("~/services/apiCredentialProfiles/profileConfigCodec"),
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
       coerceApiCredentialProfilesConfig: (raw: unknown) =>
         raw as ReturnType<typeof actual.coerceApiCredentialProfilesConfig>,
     }
@@ -1657,7 +1670,7 @@ describe("normalizeBackupForMerge", () => {
         },
         null,
       ),
-    ).toThrow("FORMAT_NOT_CORRECT")
+    ).toThrow(IMPORT_EXPORT_ERROR_CODES.FormatNotCorrect)
   })
 
   beforeEach(() => {

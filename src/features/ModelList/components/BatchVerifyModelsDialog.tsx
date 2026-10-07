@@ -1,13 +1,6 @@
 import type { TFunction } from "i18next"
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
 import type { HTMLAttributes } from "react"
+import { forwardRef, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
@@ -26,14 +19,9 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
-  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
-  pickBatchVerifyCompatibleRuntimeKey,
-  resolveBatchVerifyApiType,
   type BatchVerifyApiTypeMode,
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import {
   getBatchVerifyModelCheckboxTestId,
@@ -41,36 +29,15 @@ import {
 } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import {
-  collectAccountRuntimeKeySecrets,
-  type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import {
-  fetchDisplayAccountRuntimeKeys,
-  resolveDisplayAccountRuntimeKeySecret,
-} from "~/services/accounts/utils/apiServiceRequest"
-import {
-  resolveProductAnalyticsErrorCategoryFromError,
-  startProductAnalyticsAction,
-} from "~/services/productAnalytics/actions"
-import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
-  API_VERIFICATION_MODES,
-  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
-  runApiVerificationProbe,
-  type ApiVerificationApiType,
-  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -79,155 +46,14 @@ import {
   getApiVerificationModeLabel,
   getApiVerificationProbeLabel,
 } from "~/services/verification/aiApiVerification/i18n"
+
 import {
-  buildSafeProbeFailureDiagnostics,
-  toSanitizedErrorSummary,
-} from "~/services/verification/aiApiVerification/utils"
-import {
-  createAccountModelVerificationHistoryTarget,
-  createProfileModelVerificationHistoryTarget,
-  createVerificationHistorySummary,
-  verificationResultHistoryStorage,
-  type ApiVerificationHistorySummary,
-} from "~/services/verification/verificationResultHistory"
-import { createLogger } from "~/utils/core/logger"
-
-const BATCH_VERIFY_ROW_STATUSES = {
-  PENDING: "pending",
-  RUNNING: "running",
-  PASS: "pass",
-  FAIL: "fail",
-  SKIPPED: "skipped",
-} as const
-
-type BatchVerifyRowStatus =
-  (typeof BATCH_VERIFY_ROW_STATUSES)[keyof typeof BATCH_VERIFY_ROW_STATUSES]
-
-type BatchVerifyRow = {
-  item: BatchVerifyModelItem
-  status: BatchVerifyRowStatus
-  latencyMs: number
-  summary:
-    | "pending"
-    | "running"
-    | "no-key"
-    | "no-probes"
-    | "results"
-    | "failed"
-    | "stopped"
-    | "not-selected"
-  results: ApiVerificationProbeResult[]
-  runtimeKeyName?: string
-  errorCategory?: ProductAnalyticsErrorCategory
-}
-
-type AccountBatchVerifyModelItem = BatchVerifyModelItem & {
-  source: Extract<
-    BatchVerifyModelItem["source"],
-    { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
-  >
-}
-
-type BatchVerifyModelsDialogProps = {
-  isOpen: boolean
-  onClose: () => void
-  items: BatchVerifyModelItem[]
-}
-
-const logger = createLogger("BatchVerifyModelsDialog")
-
-/** Normalize optional secrets before passing them to shared redaction. */
-function filterRedactions(values: Array<string | undefined>): string[] {
-  return values.filter((value): value is string => Boolean(value))
-}
-
-/** Build the initial row state for the current batch item snapshot. */
-function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
-  return items.map((item) => ({
-    item,
-    status: BATCH_VERIFY_ROW_STATUSES.PENDING,
-    latencyMs: 0,
-    summary: "pending",
-    results: [],
-  }))
-}
-
-/** Resolve the initial API type mode from the first profile-backed item. */
-function getDefaultApiTypeMode(
-  items: BatchVerifyModelItem[],
-): BatchVerifyApiTypeMode {
-  const profileItem = items.find(
-    (
-      item,
-    ): item is BatchVerifyModelItem & {
-      source: Extract<
-        BatchVerifyModelItem["source"],
-        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
-      >
-    } => item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
-  )
-  return (
-    profileItem?.source.profile.apiType ??
-    MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO
-  )
-}
-
-/** Narrow a batch row to account-backed sources before token lookup. */
-function isAccountBatchVerifyModelItem(
-  item: BatchVerifyModelItem,
-): item is AccountBatchVerifyModelItem {
-  return item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-}
-
-/** Check whether a row status is terminal for progress accounting. */
-function isCompletedStatus(status: BatchVerifyRowStatus) {
-  return (
-    status === BATCH_VERIFY_ROW_STATUSES.PASS ||
-    status === BATCH_VERIFY_ROW_STATUSES.FAIL ||
-    status === BATCH_VERIFY_ROW_STATUSES.SKIPPED
-  )
-}
-
-/** Collapse probe results into the row status shown in the batch table. */
-export function deriveBatchVerifyRowStatus(
-  results: ApiVerificationProbeResult[],
-): BatchVerifyRowStatus {
-  if (results.length === 0) return BATCH_VERIFY_ROW_STATUSES.SKIPPED
-  if (
-    results.some(
-      (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-    )
-  ) {
-    return BATCH_VERIFY_ROW_STATUSES.FAIL
-  }
-  if (
-    results.some(
-      (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-    )
-  ) {
-    return BATCH_VERIFY_ROW_STATUSES.PASS
-  }
-  return BATCH_VERIFY_ROW_STATUSES.SKIPPED
-}
-
-/** Extract stable identifiers for failure logs without exposing secrets. */
-export function getBatchVerifyFailureLogIds(item: BatchVerifyModelItem) {
-  return {
-    accountId:
-      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-        ? item.source.account.id
-        : undefined,
-    profileId:
-      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-        ? item.source.profile.id
-        : undefined,
-  }
-}
-
-/** Sum the latencies reported by all completed probes for a row. */
-function getRowLatency(results: ApiVerificationProbeResult[]) {
-  return results.reduce((total, result) => total + (result.latencyMs || 0), 0)
-}
+  BATCH_VERIFY_ROW_STATUSES,
+  BATCH_VERIFY_ROW_SUMMARIES,
+  type BatchVerifyRow,
+  type BatchVerifyRowStatus,
+} from "../batchVerificationState"
+import { useBatchVerifyModels } from "../hooks/useBatchVerifyModels"
 
 /** Resolve a failed probe row to localized, stable user-facing feedback. */
 function resolveFailureSummaryText(
@@ -250,23 +76,23 @@ function resolveFailureSummaryText(
 /** Translate the current row outcome without changing or replaying its probes. */
 function getRowSummary(t: TFunction, row: BatchVerifyRow): string {
   switch (row.summary) {
-    case "pending":
+    case BATCH_VERIFY_ROW_SUMMARIES.Pending:
       return t("modelList:batchVerify.messages.pending")
-    case "running":
+    case BATCH_VERIFY_ROW_SUMMARIES.Running:
       return t("modelList:batchVerify.status.running")
-    case "no-key":
+    case BATCH_VERIFY_ROW_SUMMARIES.NoKey:
       return t("modelList:batchVerify.messages.noCompatibleRuntimeKey")
-    case "no-probes":
+    case BATCH_VERIFY_ROW_SUMMARIES.NoProbes:
       return t("modelList:batchVerify.messages.noApplicableProbes")
-    case "stopped":
+    case BATCH_VERIFY_ROW_SUMMARIES.Stopped:
       return t("modelList:batchVerify.messages.stopped")
-    case "not-selected":
+    case BATCH_VERIFY_ROW_SUMMARIES.NotSelected:
       return t("modelList:batchVerify.messages.notSelected")
-    case "failed":
+    case BATCH_VERIFY_ROW_SUMMARIES.Failed:
       return row.results[0]
         ? resolveFailureSummaryText(t, row.results[0])
         : t("modelList:batchVerify.messages.unexpected")
-    case "results":
+    case BATCH_VERIFY_ROW_SUMMARIES.Results:
       return t("modelList:batchVerify.messages.probeSummary", {
         count: row.results.length,
         pass: row.results.filter(
@@ -280,26 +106,10 @@ function getRowSummary(t: TFunction, row: BatchVerifyRow): string {
             result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
         ).length,
       })
+    default:
+      return row.summary
   }
 }
-
-/** Pick a valid probe id for synthetic failure records. */
-function getFirstApplicableProbeId(
-  apiType: ApiVerificationApiType,
-  selectedProbeIds: ApiVerificationProbeId[],
-): ApiVerificationProbeId {
-  const probeDefinitions = getApiVerificationProbeDefinitions(apiType)
-  const availableProbeIds = new Set(probeDefinitions.map((probe) => probe.id))
-  return (
-    selectedProbeIds.find((probeId) => availableProbeIds.has(probeId)) ??
-    probeDefinitions[0]?.id ??
-    API_VERIFICATION_PROBE_IDS.TextGeneration
-  )
-}
-
-const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = [
-  API_VERIFICATION_PROBE_IDS.TextGeneration,
-]
 
 /** Cap the batch row list to half the viewport while preserving a test-safe fallback. */
 function getBatchVerifyListMaxHeight() {
@@ -332,6 +142,11 @@ const BatchVerifyRowsItem = forwardRef<
   )
 })
 
+type BatchVerifyModelsDialogProps = {
+  isOpen: boolean
+  onClose: () => void
+  items: BatchVerifyModelItem[]
+}
 /**
  * Dialog for running a New API-style batch model availability test over the
  * currently filtered model list snapshot.
@@ -342,98 +157,32 @@ export function BatchVerifyModelsDialog({
   items,
 }: BatchVerifyModelsDialogProps) {
   const { t } = useTranslation(["modelList", "aiApiVerification"])
-  const [rows, setRows] = useState<BatchVerifyRow[]>(() => buildRows(items))
-  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
-    API_VERIFICATION_MODES.Streaming,
-  )
-  const [apiTypeMode, setApiTypeMode] = useState<BatchVerifyApiTypeMode>(() =>
-    getDefaultApiTypeMode(items),
-  )
-  const [selectedProbeIds, setSelectedProbeIds] = useState<
-    ApiVerificationProbeId[]
-  >(DEFAULT_SELECTED_PROBE_IDS)
-  const [selectedModelKeys, setSelectedModelKeys] = useState<string[]>(() =>
-    items.map((item) => item.key),
-  )
+  const {
+    rows,
+    selectedModelKeys,
+    verificationMode,
+    setVerificationMode,
+    apiTypeMode,
+    setApiTypeMode,
+    selectedProbeIds,
+    selectedModelKeySet,
+    isRunning,
+    hasStarted,
+    summary,
+    canClose,
+    canStart,
+    areAllModelsSelected,
+    toggleProbe,
+    toggleModel,
+    selectAllModels,
+    clearSelectedModels,
+    runBatch,
+    stopBatch,
+  } = useBatchVerifyModels({ isOpen, items })
   const [listHeight, setListHeight] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
-  const [hasStarted, setHasStarted] = useState(false)
-  const shouldStopRef = useRef(false)
-  const batchAbortControllerRef = useRef<AbortController | null>(null)
-  /**
-   * Results waiting for the next bulk write. Flushing in batches keeps the store
-   * write count proportional to `MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE`
-   * instead of the number of verified models.
-   */
-  const pendingSummariesRef = useRef<ApiVerificationHistorySummary[]>([])
-  const batchFailureCategoryRef = useRef<
-    ProductAnalyticsErrorCategory | undefined
-  >(undefined)
-  const previousDialogSnapshotRef = useRef({
-    isOpen: false,
-    items,
-  })
-  const runtimeKeyCacheRef = useRef(
-    new Map<string, Promise<AccountRuntimeKey[]>>(),
-  )
-  const resolvedRuntimeKeyCacheRef = useRef(
-    new Map<string, Promise<AccountRuntimeKey>>(),
-  )
-  const clearCachedRuntimeKeyPromises = useCallback(() => {
-    runtimeKeyCacheRef.current.clear()
-    resolvedRuntimeKeyCacheRef.current.clear()
-  }, [])
-
   useEffect(() => {
-    const previousSnapshot = previousDialogSnapshotRef.current
-
-    if (!isOpen) {
-      previousDialogSnapshotRef.current = { isOpen, items }
-      return
-    }
-
-    const opened = !previousSnapshot.isOpen
-    const itemsChanged = previousSnapshot.items !== items
-    if (!opened && !itemsChanged) return
-    if (isRunning) return
-
-    previousDialogSnapshotRef.current = { isOpen, items }
-    shouldStopRef.current = false
-    clearCachedRuntimeKeyPromises()
-    setRows(buildRows(items))
-    setListHeight(0)
-    setApiTypeMode(getDefaultApiTypeMode(items))
-    setVerificationMode(API_VERIFICATION_MODES.Streaming)
-    setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
-    setSelectedModelKeys(items.map((item) => item.key))
-    setIsRunning(false)
-    setHasStarted(false)
-  }, [clearCachedRuntimeKeyPromises, isOpen, isRunning, items])
-
-  const summary = useMemo(() => {
-    return rows.reduce(
-      (acc, row) => {
-        acc.total += 1
-        if (row.status === BATCH_VERIFY_ROW_STATUSES.PASS) acc.pass += 1
-        if (row.status === BATCH_VERIFY_ROW_STATUSES.FAIL) acc.fail += 1
-        if (row.status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) acc.skipped += 1
-        if (row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING) acc.running += 1
-        if (row.status === BATCH_VERIFY_ROW_STATUSES.PENDING) acc.pending += 1
-        if (isCompletedStatus(row.status)) acc.completed += 1
-        return acc
-      },
-      {
-        total: 0,
-        completed: 0,
-        pass: 0,
-        fail: 0,
-        skipped: 0,
-        running: 0,
-        pending: 0,
-      },
-    )
-  }, [rows])
-
+    if (!hasStarted) setListHeight(0)
+  }, [rows, hasStarted])
   const apiTypeOptions = useMemo(
     () => [
       {
@@ -475,571 +224,6 @@ export function BatchVerifyModelsDialog({
       }),
     )
   }, [t])
-
-  const canClose = !isRunning
-  const selectedModelKeySet = useMemo(
-    () => new Set(selectedModelKeys),
-    [selectedModelKeys],
-  )
-  const canStart = selectedModelKeys.length > 0 && selectedProbeIds.length > 0
-  const areAllModelsSelected =
-    items.length > 0 && selectedModelKeys.length === items.length
-
-  const updateRow = useCallback(
-    (key: string, patch: Partial<Omit<BatchVerifyRow, "item">>) => {
-      setRows((currentRows) =>
-        currentRows.map((row) =>
-          row.item.key === key ? { ...row, ...patch } : row,
-        ),
-      )
-    },
-    [],
-  )
-
-  const toggleProbe = useCallback((probeId: ApiVerificationProbeId) => {
-    setSelectedProbeIds((currentProbeIds) =>
-      currentProbeIds.includes(probeId)
-        ? currentProbeIds.filter((currentProbeId) => currentProbeId !== probeId)
-        : [...currentProbeIds, probeId],
-    )
-  }, [])
-
-  const toggleModel = useCallback((modelKey: string) => {
-    setSelectedModelKeys((currentModelKeys) =>
-      currentModelKeys.includes(modelKey)
-        ? currentModelKeys.filter(
-            (currentModelKey) => currentModelKey !== modelKey,
-          )
-        : [...currentModelKeys, modelKey],
-    )
-  }, [])
-
-  const selectAllModels = useCallback(() => {
-    setSelectedModelKeys(items.map((item) => item.key))
-  }, [items])
-
-  const clearSelectedModels = useCallback(() => {
-    setSelectedModelKeys([])
-  }, [])
-
-  const getAccountRuntimeKeys = useCallback(
-    (item: AccountBatchVerifyModelItem): Promise<AccountRuntimeKey[]> => {
-      const account = item.source.account
-      const cached = runtimeKeyCacheRef.current.get(account.id)
-      if (cached) return cached
-
-      const promise = fetchDisplayAccountRuntimeKeys(account)
-      runtimeKeyCacheRef.current.set(account.id, promise)
-      return promise
-    },
-    [],
-  )
-
-  const getResolvedRuntimeKey = useCallback(
-    (
-      item: AccountBatchVerifyModelItem,
-      runtimeKey: AccountRuntimeKey,
-      abortSignal?: AbortSignal,
-    ): Promise<AccountRuntimeKey> => {
-      const cacheKey = `${item.source.account.id}:${runtimeKey.id}`
-      const cached = resolvedRuntimeKeyCacheRef.current.get(cacheKey)
-      const promise =
-        cached ??
-        resolveDisplayAccountRuntimeKeySecret(item.source.account, runtimeKey, {
-          abortSignal,
-        })
-      if (!cached) {
-        const cachedPromise = promise.catch((error) => {
-          resolvedRuntimeKeyCacheRef.current.delete(cacheKey)
-          throw error
-        })
-        cachedPromise.catch(() => {})
-        resolvedRuntimeKeyCacheRef.current.set(cacheKey, cachedPromise)
-      }
-
-      if (!abortSignal || !cached) return promise
-      if (abortSignal.aborted) {
-        return Promise.reject(
-          abortSignal.reason ?? new DOMException("Aborted", "AbortError"),
-        )
-      }
-
-      return Promise.race([
-        promise,
-        new Promise<AccountRuntimeKey>((_resolve, reject) => {
-          abortSignal.addEventListener(
-            "abort",
-            () =>
-              reject(
-                abortSignal.reason ?? new DOMException("Aborted", "AbortError"),
-              ),
-            { once: true },
-          )
-        }),
-      ])
-    },
-    [],
-  )
-
-  /**
-   * Writes the pending results in one store write.
-   *
-   * Swaps the buffer before awaiting so concurrent workers cannot flush the same
-   * results twice. A failure is logged for the batch: one unwritable store must
-   * not discard the other results, and the rows report their own probe outcomes
-   * regardless of persistence.
-   */
-  const flushPendingResults = useCallback(async () => {
-    const pending = pendingSummariesRef.current
-    if (pending.length === 0) return
-
-    pendingSummariesRef.current = []
-    try {
-      await verificationResultHistoryStorage.upsertLatestSummaries(pending)
-    } catch (persistError) {
-      logger.error("Failed to persist batch verification results", {
-        count: pending.length,
-        message: toSanitizedErrorSummary(persistError, []),
-      })
-    }
-  }, [])
-
-  const persistResult = useCallback(
-    async (
-      item: BatchVerifyModelItem,
-      apiType: ApiVerificationApiType,
-      results: ApiVerificationProbeResult[],
-    ) => {
-      const target =
-        item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-          ? createProfileModelVerificationHistoryTarget(
-              item.source.profile.id,
-              item.modelId,
-            )
-          : createAccountModelVerificationHistoryTarget(
-              item.source.account.id,
-              item.modelId,
-            )
-      if (!target) return
-
-      const historySummary = createVerificationHistorySummary({
-        target,
-        apiType,
-        preferredModelId: item.modelId,
-        results,
-      })
-      if (!historySummary) return
-
-      pendingSummariesRef.current.push(historySummary)
-      if (
-        pendingSummariesRef.current.length >=
-        MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE
-      ) {
-        await flushPendingResults()
-      }
-    },
-    [flushPendingResults],
-  )
-
-  const runOne = useCallback(
-    async (item: BatchVerifyModelItem, abortSignal: AbortSignal) => {
-      const isStopped = () => shouldStopRef.current || abortSignal.aborted
-      if (isStopped()) return undefined
-
-      const startedAt = Date.now()
-      updateRow(item.key, {
-        status: BATCH_VERIFY_ROW_STATUSES.RUNNING,
-        latencyMs: 0,
-        summary: "running",
-        results: [],
-        runtimeKeyName: undefined,
-        errorCategory: undefined,
-      })
-
-      let apiKey = ""
-      let accountRuntimeKeySecretsToRedact: string[] = []
-      const apiType = resolveBatchVerifyApiType(apiTypeMode, item.modelId)
-      const selectedProbeIdSet = new Set(selectedProbeIds)
-
-      try {
-        const credentials =
-          item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-            ? {
-                baseUrl: item.source.profile.baseUrl,
-                apiKey: item.source.profile.apiKey,
-                requestHeaders: item.source.profile.requestHeaders,
-                runtimeKeyName: undefined,
-              }
-            : await (async () => {
-                if (!isAccountBatchVerifyModelItem(item)) return null
-                const account = item.source.account
-                const runtimeKeys = await getAccountRuntimeKeys(item)
-                if (isStopped()) return null
-
-                const runtimeKey = pickBatchVerifyCompatibleRuntimeKey(
-                  runtimeKeys,
-                  item,
-                )
-                if (!runtimeKey) {
-                  updateRow(item.key, {
-                    status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-                    latencyMs: 0,
-                    summary: "no-key",
-                    results: [],
-                  })
-                  return null
-                }
-
-                accountRuntimeKeySecretsToRedact =
-                  collectAccountRuntimeKeySecrets([runtimeKey])
-                const resolvedRuntimeKey = await getResolvedRuntimeKey(
-                  item,
-                  runtimeKey,
-                  abortSignal,
-                )
-                if (isStopped()) return null
-                accountRuntimeKeySecretsToRedact =
-                  collectAccountRuntimeKeySecrets([
-                    runtimeKey,
-                    resolvedRuntimeKey,
-                  ])
-
-                return {
-                  baseUrl: resolvedRuntimeKey.baseUrl || account.baseUrl,
-                  apiKey: resolvedRuntimeKey.secret,
-                  runtimeKeyName: runtimeKey.label,
-                }
-              })()
-
-        if (!credentials || isStopped()) {
-          return isStopped() ? undefined : BATCH_VERIFY_ROW_STATUSES.SKIPPED
-        }
-
-        apiKey = credentials.apiKey
-        const probesToRun = getApiVerificationProbeDefinitions(apiType).filter(
-          (probe) =>
-            selectedProbeIdSet.has(probe.id) &&
-            (!probe.requiresModelId || item.modelId.trim()),
-        )
-
-        if (probesToRun.length === 0) {
-          updateRow(item.key, {
-            status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-            latencyMs: 0,
-            summary: "no-probes",
-            results: [],
-            runtimeKeyName: credentials.runtimeKeyName,
-          })
-          return BATCH_VERIFY_ROW_STATUSES.SKIPPED
-        }
-
-        const results: ApiVerificationProbeResult[] = []
-        let stoppedBeforeCompletingProbes = false
-        for (const probe of probesToRun) {
-          if (isStopped()) {
-            stoppedBeforeCompletingProbes = true
-            break
-          }
-
-          try {
-            const result = await runApiVerificationProbe({
-              baseUrl: credentials.baseUrl,
-              apiKey: credentials.apiKey,
-              requestHeaders:
-                item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-                  ? item.source.profile.requestHeaders
-                  : undefined,
-              apiType,
-              mode: verificationMode,
-              modelId: item.modelId,
-              probeId: probe.id,
-              abortSignal,
-            })
-            if (isStopped()) {
-              stoppedBeforeCompletingProbes = true
-              break
-            }
-            results.push(result)
-          } catch (error) {
-            if (isStopped()) {
-              stoppedBeforeCompletingProbes = true
-              break
-            }
-
-            const redactions =
-              item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-                ? filterRedactions([
-                    item.source.profile.apiKey,
-                    ...Object.values(item.source.profile.requestHeaders ?? {}),
-                    item.source.profile.baseUrl,
-                  ])
-                : filterRedactions([
-                    item.source.account.token,
-                    item.source.account.cookieAuthSessionCookie,
-                    apiKey,
-                  ])
-
-            const sanitizedMessage = toSanitizedErrorSummary(error, redactions)
-            const diagnostics = buildSafeProbeFailureDiagnostics(
-              error,
-              sanitizedMessage,
-            )
-            results.push({
-              id: probe.id,
-              mode:
-                probe.id === API_VERIFICATION_PROBE_IDS.Models
-                  ? undefined
-                  : verificationMode,
-              status: API_VERIFICATION_PROBE_STATUSES.Fail,
-              latencyMs: 0,
-              summary: sanitizedMessage || "Unexpected error",
-              ...diagnostics,
-              summaryKey:
-                diagnostics.summaryKey ??
-                (sanitizedMessage
-                  ? undefined
-                  : "verifyDialog.errors.unexpected"),
-            })
-          }
-        }
-
-        if (stoppedBeforeCompletingProbes || isStopped()) return undefined
-
-        await persistResult(item, apiType, results).catch((persistError) => {
-          logger.error("Failed to persist batch verification result", {
-            modelId: item.modelId,
-            message: toSanitizedErrorSummary(persistError, [apiKey]),
-          })
-        })
-
-        const status = deriveBatchVerifyRowStatus(results)
-        const errorCategory =
-          status === BATCH_VERIFY_ROW_STATUSES.FAIL
-            ? results
-                .filter(
-                  (result) =>
-                    result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-                )
-                .map((result) =>
-                  resolveProductAnalyticsErrorCategoryFromProbeResult(result),
-                )
-                .find(
-                  (category) =>
-                    category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-                ) ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-            : undefined
-        if (
-          errorCategory &&
-          errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-        ) {
-          batchFailureCategoryRef.current ??= errorCategory
-        }
-        updateRow(item.key, {
-          status,
-          latencyMs: getRowLatency(results),
-          summary: "results",
-          results,
-          runtimeKeyName: credentials.runtimeKeyName,
-          errorCategory,
-        })
-        return status
-      } catch (error) {
-        if (isStopped()) return undefined
-
-        const redactions =
-          item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-            ? filterRedactions([
-                item.source.profile.apiKey,
-                ...Object.values(item.source.profile.requestHeaders ?? {}),
-                item.source.profile.baseUrl,
-              ])
-            : filterRedactions([
-                item.source.account.token,
-                item.source.account.cookieAuthSessionCookie,
-                apiKey,
-                ...accountRuntimeKeySecretsToRedact,
-              ])
-        const message = toSanitizedErrorSummary(error, redactions)
-
-        logger.error("Batch model verification failed", {
-          ...getBatchVerifyFailureLogIds(item),
-          modelId: item.modelId,
-          message,
-        })
-
-        const diagnostics = buildSafeProbeFailureDiagnostics(error, message)
-        const probeId = getFirstApplicableProbeId(apiType, selectedProbeIds)
-        const result: ApiVerificationProbeResult = {
-          id: probeId,
-          mode:
-            probeId === API_VERIFICATION_PROBE_IDS.Models
-              ? undefined
-              : verificationMode,
-          status: BATCH_VERIFY_ROW_STATUSES.FAIL,
-          latencyMs: Date.now() - startedAt,
-          summary: message || "Unexpected error",
-          ...diagnostics,
-          summaryKey:
-            diagnostics.summaryKey ??
-            (message ? undefined : "verifyDialog.errors.unexpected"),
-        }
-        const errorCategory =
-          resolveProductAnalyticsErrorCategoryFromError(error)
-        if (errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown) {
-          batchFailureCategoryRef.current ??= errorCategory
-        }
-        await persistResult(item, apiType, [result]).catch((persistError) => {
-          logger.error("Failed to persist batch verification failure", {
-            modelId: item.modelId,
-            message: toSanitizedErrorSummary(persistError, redactions),
-          })
-        })
-        updateRow(item.key, {
-          status: BATCH_VERIFY_ROW_STATUSES.FAIL,
-          latencyMs: result.latencyMs,
-          summary: "failed",
-          results: [result],
-          errorCategory,
-        })
-        return BATCH_VERIFY_ROW_STATUSES.FAIL
-      }
-    },
-    [
-      apiTypeMode,
-      verificationMode,
-      getAccountRuntimeKeys,
-      getResolvedRuntimeKey,
-      persistResult,
-      selectedProbeIds,
-      updateRow,
-    ],
-  )
-
-  const markUnfinishedRowsStopped = useCallback(() => {
-    setRows((currentRows) =>
-      currentRows.map((row) =>
-        row.status === BATCH_VERIFY_ROW_STATUSES.PENDING ||
-        row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING
-          ? {
-              ...row,
-              status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: "stopped" as const,
-              results: [],
-            }
-          : row,
-      ),
-    )
-  }, [])
-
-  const runBatch = async () => {
-    if (isRunning || !canStart) return
-
-    const selectedItems = items.filter((item) =>
-      selectedModelKeySet.has(item.key),
-    )
-    shouldStopRef.current = false
-    clearCachedRuntimeKeyPromises()
-    const abortController = new AbortController()
-    batchAbortControllerRef.current = abortController
-    batchFailureCategoryRef.current = undefined
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StartBatchModelVerify,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    setHasStarted(true)
-    setIsRunning(true)
-    setRows(
-      buildRows(items).map((row) =>
-        selectedModelKeySet.has(row.item.key)
-          ? row
-          : {
-              ...row,
-              status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: "not-selected",
-            },
-      ),
-    )
-
-    let nextIndex = 0
-    const selectedOutcomes: BatchVerifyRowStatus[] = []
-    const workerCount = Math.min(
-      MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-      selectedItems.length,
-    )
-
-    const worker = async () => {
-      while (!shouldStopRef.current) {
-        const index = nextIndex
-        nextIndex += 1
-        const item = selectedItems[index]
-        if (!item) return
-        const outcome = await runOne(item, abortController.signal)
-        if (outcome) {
-          selectedOutcomes.push(outcome)
-        }
-      }
-    }
-
-    try {
-      await Promise.all(
-        Array.from({ length: workerCount }, async () => {
-          await worker()
-        }),
-      )
-    } finally {
-      if (shouldStopRef.current) {
-        markUnfinishedRowsStopped()
-      }
-      // Flush the last partial batch on every exit path, including stop and
-      // failure, so completed results always reach storage.
-      await flushPendingResults()
-      if (batchAbortControllerRef.current === abortController) {
-        batchAbortControllerRef.current = null
-      }
-      setIsRunning(false)
-      const completionInsights = {
-        itemCount: selectedItems.length,
-        successCount: selectedOutcomes.filter(
-          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.PASS,
-        ).length,
-        failureCount: selectedOutcomes.filter(
-          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.FAIL,
-        ).length,
-      }
-      if (shouldStopRef.current) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-      } else if (
-        selectedOutcomes.some(
-          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.FAIL,
-        )
-      ) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory:
-            batchFailureCategoryRef.current ??
-            PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: completionInsights,
-        })
-      } else if (
-        selectedOutcomes.every(
-          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-        )
-      ) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-      } else {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: completionInsights,
-        })
-      }
-    }
-  }
-
-  const stopBatch = () => {
-    shouldStopRef.current = true
-    batchAbortControllerRef.current?.abort()
-  }
 
   const statusVariant = (status: BatchVerifyRowStatus) => {
     if (status === BATCH_VERIFY_ROW_STATUSES.PASS) return "success"

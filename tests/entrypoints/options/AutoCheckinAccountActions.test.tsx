@@ -198,6 +198,185 @@ describe("AutoCheckin account actions", () => {
     ).toBeVisible()
   })
 
+  it.each(["rejected", "thrown"])(
+    "reports a %s manual refresh without discarding existing results",
+    async (failure) => {
+      const user = userEvent.setup()
+      const browserApi = await import("~/utils/browser/browserApi")
+      let statusCalls = 0
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: any) => {
+          if (message !== AutoCheckinMessageTypes.GetStatus)
+            return { success: true }
+          if (++statusCalls > 1) {
+            if (failure === "thrown") throw new Error("Status unavailable")
+            return { success: false, error: "Status unavailable" }
+          }
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.SUCCESS,
+                  timestamp: 1700000000000,
+                },
+              },
+            },
+          }
+        },
+      )
+      render(<AutoCheckin routeParams={{}} />)
+      expect(await screen.findByText("Alpha")).toBeInTheDocument()
+
+      await user.click(
+        screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+      )
+
+      await waitFor(() =>
+        expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        ),
+      )
+      expect(screen.getByText("Alpha")).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+      ).not.toBeDisabled()
+    },
+  )
+
+  it("reports a rejected manual run and restores its action", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus)
+          return { success: true, data: { perAccount: {} } }
+        if (message === AutoCheckinMessageTypes.RunNow)
+          return { success: false, error: "Run unavailable" }
+        return { success: true }
+      },
+    )
+    render(<AutoCheckin routeParams={{}} />)
+    const runButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+
+    await user.click(runButton)
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.runFailed",
+      ),
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+    expect(
+      screen.getByRole("button", { name: "autoCheckin:execution.runNow" }),
+    ).toBeEnabled()
+  })
+
+  it.each([
+    [{ success: false }, PRODUCT_ANALYTICS_RESULTS.Failure],
+    [
+      { success: true, lastRunResult: "failed" },
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      { success: true, lastRunResult: "skipped" },
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    ],
+    [{ success: true, pendingRetry: true }, PRODUCT_ANALYTICS_RESULTS.Skipped],
+  ])(
+    "tracks retry outcome %j and restores the retry action",
+    async (response, expectedResult) => {
+      const user = userEvent.setup()
+      const browserApi = await import("~/utils/browser/browserApi")
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: any) => {
+          if (message === AutoCheckinMessageTypes.GetStatus)
+            return {
+              success: true,
+              data: {
+                perAccount: {
+                  alpha: {
+                    accountId: "alpha",
+                    accountName: "Alpha",
+                    status: CHECKIN_RESULT_STATUS.FAILED,
+                    timestamp: 1700000000000,
+                  },
+                },
+              },
+            }
+          if (message === AutoCheckinMessageTypes.RetryAccount) return response
+          return { success: true }
+        },
+      )
+      render(<AutoCheckin routeParams={{}} />)
+      const retryButton = await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      })
+
+      await user.click(retryButton)
+
+      await waitFor(() =>
+        expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+          expectedResult,
+          expect.anything(),
+        ),
+      )
+      expect(retryButton).not.toBeDisabled()
+    },
+  )
+
+  it("reports a thrown retry request and restores its action", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus)
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.FAILED,
+                  timestamp: 1700000000000,
+                },
+              },
+            },
+          }
+        if (message === AutoCheckinMessageTypes.RetryAccount)
+          throw new Error("Retry unavailable")
+        return { success: true }
+      },
+    )
+    render(<AutoCheckin routeParams={{}} />)
+    const retryButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.actions.retryAccount",
+    })
+
+    await user.click(retryButton)
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.retryFailed",
+      ),
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+    await waitFor(() => expect(retryButton).not.toBeDisabled())
+  })
+
   it.each(["disabled", "missing"])(
     "does not repeatedly fail account-info reads for a %s account when another account is retried",
     async (unavailableAccount) => {
@@ -1724,6 +1903,17 @@ describe("AutoCheckin account actions", () => {
   it("keeps existing results rendered while a manual refresh is loading", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
+    const { siteTypeObservations } = await import(
+      "~/services/siteDetection/siteTypeObservations"
+    )
+
+    // Status loading also awaits storage after the runtime response arrives.
+    vi.spyOn(siteTypeObservations, "readForAccounts")
+      .mockResolvedValueOnce({})
+      .mockImplementationOnce(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        return {}
+      })
 
     let statusCalls = 0
     let resolveRefresh:
@@ -1792,25 +1982,25 @@ describe("AutoCheckin account actions", () => {
       },
     })
 
-    await waitFor(() => {
-      expect(screen.getByText("Alpha")).toBeInTheDocument()
-    })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        insights: {
-          itemCount: 1,
-          successCount: 1,
-          failureCount: 0,
-          skippedCount: 0,
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          },
         },
-      },
-    )
+      )
+    })
+    expect(screen.getByText("Alpha")).toBeInTheDocument()
   })
 })

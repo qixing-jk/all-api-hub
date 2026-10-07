@@ -8,10 +8,12 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import {
   apiCredentialProfilesStorage,
-  coerceApiCredentialProfilesConfig,
-  mergeApiCredentialProfilesConfigs,
   subscribeToApiCredentialProfilesChanges,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  coerceApiCredentialProfilesConfig,
+  mergeApiCredentialProfilesConfigs,
+} from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { isSupportedApiCredentialTelemetryEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"

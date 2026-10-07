@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next"
 import {
   ChevronDown,
   LineChart,
@@ -6,7 +5,6 @@ import {
   Scissors,
   Settings,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
@@ -30,1025 +28,91 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { ANIMATIONS } from "~/constants/designTokens"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import toast from "~/lib/notify"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import {
-  buildAccountDisplayNameMap,
-  compareAccountDisplayNames,
-} from "~/services/accounts/utils/accountDisplayName"
-import {
-  computeRetentionCutoffDayKey,
-  listDayKeysInRange,
-} from "~/services/history/dailyBalanceHistory/dayKeys"
-import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
-import {
-  buildAccountRangeSummaries,
-  buildPerAccountDailyBalanceMoneySeries,
-  type DailyBalanceHistoryMetric,
-} from "~/services/history/dailyBalanceHistory/selectors"
-import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
-import {
-  PROTECTION_BYPASS_SURFACES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-} from "~/services/protectionBypass/contracts"
-import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { tagStorage } from "~/services/tags/tagStorage"
-import { listTagsSorted } from "~/services/tags/tagStoreUtils"
-import type { CurrencyType, SiteAccount, TagStore } from "~/types"
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
-import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { assertNever } from "~/utils/core/assert"
-import {
-  getDayKeyFromUnixSeconds,
-  subtractDaysFromDayKey,
-} from "~/utils/core/dayKey"
-import { getErrorMessage } from "~/utils/core/error"
-import { getCurrencySymbol } from "~/utils/core/formatters"
-import { createLogger } from "~/utils/core/logger"
+import { subtractDaysFromDayKey } from "~/utils/core/dayKey"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { pushWithinOptionsPage } from "~/utils/navigation"
 
-import BalanceHistoryAccountSummaryTable, {
-  type BalanceHistoryAccountSummaryRow,
-} from "./components/BalanceHistoryAccountSummaryTable"
+import BalanceHistoryAccountSummaryTable from "./components/BalanceHistoryAccountSummaryTable"
 import {
-  buildAccountBreakdownBarOption,
-  buildAccountBreakdownPieOption,
-  buildMultiSeriesTrendOption,
-  type BalanceHistoryTrendChartType,
-} from "./echartsOptions"
+  BALANCE_HISTORY_TREND_SERIES_SCOPES,
+  QUICK_RANGES,
+  type BalanceHistoryTrendSeriesScope,
+  type BalanceHistoryVisibleMetric,
+} from "./contracts"
+import { useBalanceHistoryViewModel } from "./hooks/useBalanceHistoryViewModel"
+import {
+  getBalanceHistoryMetricLabel,
+  getBalanceHistoryQuickRangeLabel,
+  getBalanceHistoryTrendScopeLabel,
+} from "./presentation"
 import { BALANCE_HISTORY_TEST_IDS } from "./testIds"
 
-const logger = createLogger("BalanceHistoryPage")
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const balanceHistorySurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage
-
-const QUICK_RANGES = [
-  { id: "7d", days: 7 },
-  { id: "30d", days: 30 },
-  { id: "90d", days: 90 },
-  { id: "180d", days: 180 },
-  { id: "365d", days: 365 },
-] as const
-
-type BalanceHistoryBreakdownChartType = "pie" | "bar"
-type BalanceHistoryTrendSeriesScope = "accounts" | "total"
-type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
-type BalanceHistoryVisibleMetric = DailyBalanceHistoryMetric
-
-/**
- * Returns the localized label for a supported balance-history metric.
- */
-function getBalanceHistoryMetricLabel(
-  t: TFunction,
-  metric: BalanceHistoryVisibleMetric,
-) {
-  switch (metric) {
-    case "balance":
-      return t("balanceHistory:metrics.balance")
-    case "income":
-      return t("balanceHistory:metrics.income")
-    case "estimatedIncome":
-      return t("balanceHistory:metrics.estimatedIncome")
-    case "outcome":
-      return t("balanceHistory:metrics.outcome")
-    case "net":
-      return t("balanceHistory:metrics.net")
-    default:
-      return assertNever(metric, `Unexpected balance history metric: ${metric}`)
-  }
-}
-
-/**
- * Keeps a selected metric within the currently enabled Balance History surface.
- */
-function resolveVisibleMetric(
-  metric: BalanceHistoryVisibleMetric,
-  estimatedTodayIncomeEnabled: boolean,
-): BalanceHistoryVisibleMetric {
-  return metric === "estimatedIncome" && !estimatedTodayIncomeEnabled
-    ? "income"
-    : metric
-}
-
-/**
- * Returns the localized label for the current trend aggregation scope.
- */
-function getBalanceHistoryTrendScopeLabel(
-  t: TFunction,
-  scope: BalanceHistoryTrendSeriesScope,
-) {
-  switch (scope) {
-    case "accounts":
-      return t("balanceHistory:trend.scopes.accounts")
-    case "total":
-      return t("balanceHistory:trend.scopes.total")
-    default:
-      return assertNever(scope, `Unexpected trend scope: ${scope}`)
-  }
-}
-
-/**
- * Returns the localized label for a preset date range chip.
- */
-function getBalanceHistoryQuickRangeLabel(
-  t: TFunction,
-  rangeId: BalanceHistoryQuickRangeId,
-) {
-  switch (rangeId) {
-    case "7d":
-      return t("balanceHistory:filters.quickRanges.7d")
-    case "30d":
-      return t("balanceHistory:filters.quickRanges.30d")
-    case "90d":
-      return t("balanceHistory:filters.quickRanges.90d")
-    case "180d":
-      return t("balanceHistory:filters.quickRanges.180d")
-    case "365d":
-      return t("balanceHistory:filters.quickRanges.365d")
-    default:
-      return assertNever(rangeId, `Unexpected quick range id: ${rangeId}`)
-  }
-}
-
-/**
- * Clamp a retention-days value coming from user preferences or input.
- */
-function clampRetentionDays(value: unknown): number {
-  return clampBalanceHistoryRetentionDays(value)
-}
-
-/**
- * Balance History options page that visualizes daily balance snapshots.
- */
+/** Render history filters and charts from the composed reporting model. */
 export default function BalanceHistory() {
   const { t } = useTranslation("balanceHistory")
-
-  const { preferences, currencyType, updateCurrencyType } =
-    useUserPreferencesContext()
-  const estimatedTodayIncomeEnabled =
-    preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
-
-  const [accounts, setAccounts] = useState<SiteAccount[]>([])
-  const [tagStore, setTagStore] = useState<TagStore | null>(null)
-  const [store, setStore] = useState<DailyBalanceHistoryStore | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
-
-  const [trendMetric, setTrendMetric] =
-    useState<BalanceHistoryVisibleMetric>("balance")
-  const [trendChartType, setTrendChartType] =
-    useState<BalanceHistoryTrendChartType>("line")
-  const [trendScope, setTrendScope] =
-    useState<BalanceHistoryTrendSeriesScope>("accounts")
-
-  const [breakdownMetric, setBreakdownMetric] =
-    useState<BalanceHistoryVisibleMetric>("balance")
-  const [breakdownChartType, setBreakdownChartType] =
-    useState<BalanceHistoryBreakdownChartType>("pie")
-  const [breakdownBalanceDayKey, setBreakdownBalanceDayKey] =
-    useState<string>("")
-
-  const loadData = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountQueries.getEnabledAccounts(),
-        dailyBalanceHistoryStorage.getStore(),
-        tagStorage.getTagStore(),
-      ])
-      setAccounts(nextAccounts)
-      setStore(nextStore)
-      setTagStore(nextTagStore)
-    } catch (error) {
-      logger.error("Failed to load data", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadData()
-  }, [loadData])
-
-  const handleRefreshNow = useCallback(async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshBalanceHistorySnapshots,
-      surfaceId: balanceHistorySurface,
-      entrypoint: optionsEntrypoint,
-    })
-    let toastId: string | undefined
-    try {
-      toastId = toast.loading(t("messages.loading.refreshing"))
-      await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
-        PROTECTION_BYPASS_SURFACES.Options,
-        async (protectionBypassExecution) => {
-          const response = await sendBalanceHistoryMessage(
-            BalanceHistoryMessageTypes.RefreshNow,
-            {
-              ...(selectedAccountIds.length
-                ? { accountIds: selectedAccountIds }
-                : {}),
-              protectionBypassExecution,
-            },
-          )
-
-          if (!response?.success) {
-            throw new Error(response?.error || "Unknown error")
-          }
-
-          toast.success(t("messages.success.refreshCompleted"), { id: toastId })
-          await loadData()
-        },
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      toast.error(
-        t("messages.error.refreshFailed", { error: getErrorMessage(error) }),
-        { id: toastId },
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-    }
-  }, [loadData, selectedAccountIds, t])
-
-  const handlePruneNow = useCallback(async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.PruneBalanceHistorySnapshots,
-      surfaceId: balanceHistorySurface,
-      entrypoint: optionsEntrypoint,
-    })
-    let toastId: string | undefined
-    try {
-      toastId = toast.loading(t("messages.loading.pruning"))
-      const response = await sendBalanceHistoryMessage(
-        BalanceHistoryMessageTypes.Prune,
-      )
-
-      if (!response?.success) {
-        throw new Error(response?.error || "Unknown error")
-      }
-
-      toast.success(t("messages.success.pruneCompleted"), { id: toastId })
-      await loadData()
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      toast.error(
-        t("messages.error.pruneFailed", { error: getErrorMessage(error) }),
-        { id: toastId },
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-    }
-  }, [loadData, t])
-
-  const openBalanceHistorySettings = useCallback(() => {
-    pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
-      tab: "balanceHistory",
-      anchor: "balance-history",
-    })
-  }, [])
-
-  const tagOptions = useMemo(() => {
-    if (!tagStore) return []
-    const tags = listTagsSorted(tagStore)
-    const counts = new Map<string, number>()
-    for (const account of accounts) {
-      for (const id of account.tagIds ?? []) {
-        counts.set(id, (counts.get(id) ?? 0) + 1)
-      }
-    }
-
-    return tags.map((tag) => ({
-      value: tag.id,
-      label: tag.name,
-      count: counts.get(tag.id) ?? 0,
-      variant: "outline" as const,
-    }))
-  }, [accounts, tagStore])
-
-  const accountsForSelectedTags = useMemo(() => {
-    if (selectedTagIds.length === 0) {
-      return accounts
-    }
-
-    const selected = new Set(selectedTagIds)
-    return accounts.filter((account) =>
-      (account.tagIds ?? []).some((id) => selected.has(id)),
-    )
-  }, [accounts, selectedTagIds])
-
-  const accountDisplayLabelById = useMemo(
-    () => buildAccountDisplayNameMap(accounts),
-    [accounts],
-  )
-
-  const manualBalanceAccountIds = useMemo(
-    () =>
-      new Set(
-        accounts
-          .filter(
-            (account) =>
-              typeof account.manualBalanceUsd === "string" &&
-              account.manualBalanceUsd.trim().length > 0,
-          )
-          .map((account) => account.id),
-      ),
-    [accounts],
-  )
-
-  useEffect(() => {
-    if (!estimatedTodayIncomeEnabled && trendMetric === "estimatedIncome") {
-      setTrendMetric("income")
-    }
-  }, [estimatedTodayIncomeEnabled, trendMetric])
-
-  useEffect(() => {
-    if (!estimatedTodayIncomeEnabled && breakdownMetric === "estimatedIncome") {
-      setBreakdownMetric("income")
-    }
-  }, [breakdownMetric, estimatedTodayIncomeEnabled])
-
-  const effectiveTrendMetric = resolveVisibleMetric(
-    trendMetric,
-    estimatedTodayIncomeEnabled,
-  )
-  const effectiveBreakdownMetric = resolveVisibleMetric(
-    breakdownMetric,
-    estimatedTodayIncomeEnabled,
-  )
-
-  const effectiveAccountIds = useMemo(() => {
-    const available = new Set(
-      accountsForSelectedTags.map((account) => account.id),
-    )
-
-    if (selectedAccountIds.length === 0) {
-      return Array.from(available)
-    }
-
-    return selectedAccountIds.filter((id) => available.has(id))
-  }, [accountsForSelectedTags, selectedAccountIds])
-
-  const nowUnixSeconds = Math.floor(Date.now() / 1000)
-  const maxDayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
-  const retentionDays =
-    preferences.balanceHistory?.retentionDays ??
-    DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
-  const safeRetentionDays = clampRetentionDays(retentionDays)
-  const minDayKey = computeRetentionCutoffDayKey({
-    retentionDays: safeRetentionDays,
-    nowUnixSeconds,
-  })
-
-  const [startDayKey, setStartDayKey] = useState<string>("")
-  const [endDayKey, setEndDayKey] = useState<string>("")
-
-  // Initialize the date range once we know the retention window.
-  useEffect(() => {
-    if (startDayKey || endDayKey) {
-      return
-    }
-
-    const defaultDays = Math.min(30, safeRetentionDays)
-    setEndDayKey(maxDayKey)
-    setStartDayKey(subtractDaysFromDayKey(maxDayKey, defaultDays - 1))
-  }, [endDayKey, maxDayKey, safeRetentionDays, startDayKey])
-
-  // Initialize the breakdown reference day once the range is ready.
-  useEffect(() => {
-    if (breakdownBalanceDayKey || !endDayKey) return
-    setBreakdownBalanceDayKey(endDayKey)
-  }, [breakdownBalanceDayKey, endDayKey])
-
-  // Clamp the range when retention changes or when the user types an out-of-bounds date.
-  useEffect(() => {
-    if (!startDayKey || !endDayKey) return
-
-    let nextStart = startDayKey
-    let nextEnd = endDayKey
-
-    if (nextStart < minDayKey) nextStart = minDayKey
-    if (nextEnd > maxDayKey) nextEnd = maxDayKey
-    if (nextStart > nextEnd) nextStart = nextEnd
-
-    if (nextStart !== startDayKey) setStartDayKey(nextStart)
-    if (nextEnd !== endDayKey) setEndDayKey(nextEnd)
-  }, [endDayKey, maxDayKey, minDayKey, startDayKey])
-
-  const exchangeRateByAccountId = useMemo(() => {
-    return new Map(
-      accounts.map((account) => [account.id, account.exchange_rate]),
-    )
-  }, [accounts])
-
-  const currencySymbol = getCurrencySymbol(currencyType)
-
-  const handleCurrencyChange = useCallback(
-    (next: CurrencyType) => {
-      if (next === currencyType) return
-      void updateCurrencyType(next)
-    },
-    [currencyType, updateCurrencyType],
-  )
-
-  const formatAxisMoneyValue = useCallback(
-    (value: number | string, _index: number): string => {
-      void _index
-      const numeric = typeof value === "number" ? value : Number(value)
-      if (!Number.isFinite(numeric)) return ""
-      return formatMoneyFixed(numeric)
-    },
-    [],
-  )
-
-  const formatTooltipMoneyValue = useCallback(
-    (value: number | string, _dataIndex: number): string => {
-      void _dataIndex
-      const numeric = typeof value === "number" ? value : Number(value)
-      if (!Number.isFinite(numeric)) return "-"
-      return `${currencySymbol}${formatMoneyFixed(numeric)}`
-    },
-    [currencySymbol],
-  )
-
-  const effectiveRange = useMemo(() => {
-    return {
-      startDayKey: startDayKey || minDayKey,
-      endDayKey: endDayKey || maxDayKey,
-    }
-  }, [endDayKey, maxDayKey, minDayKey, startDayKey])
-
-  const accountOptions = useMemo(() => {
-    const selected = new Set(selectedAccountIds)
-    const hasStore = Boolean(store)
-
-    const dayKeys = listDayKeysInRange({
-      startDayKey: effectiveRange.startDayKey,
-      endDayKey: effectiveRange.endDayKey,
-    })
-
-    type SortableOption = {
-      option: {
-        value: string
-        label: string
-        title: string
-        disabled?: boolean
-      }
-      baseName: string
-      username: string
-      isSelected: boolean
-      hasData: boolean
-    }
-
-    const sortable: SortableOption[] = accountsForSelectedTags.map(
-      (account) => {
-        const label = accountDisplayLabelById.get(account.id) ?? account.id
-        const perDay = store?.snapshotsByAccountId?.[account.id]
-
-        let snapshotDays = 0
-        if (perDay) {
-          for (const dayKey of dayKeys) {
-            if (perDay[dayKey]) snapshotDays += 1
-          }
-        }
-
-        const hasSnapshotData = snapshotDays > 0
-        const isSelected = selected.has(account.id)
-        const noDataInRange = hasStore && !hasSnapshotData
-
-        const titleLines = [
-          ...(noDataInRange ? [t("filters.noDataInRange")] : []),
-          account.site_name,
-          account.account_info.username,
-          account.site_url,
-          account.site_type,
-        ]
-
-        return {
-          option: {
-            value: account.id,
-            label,
-            title: titleLines.join("\n"),
-            disabled: noDataInRange && !isSelected,
-          },
-          baseName: account.site_name,
-          username: account.account_info.username,
-          isSelected,
-          hasData: !hasStore || hasSnapshotData,
-        }
-      },
-    )
-
-    sortable.sort((a, b) => {
-      if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1
-      if (a.hasData !== b.hasData) return a.hasData ? -1 : 1
-      return compareAccountDisplayNames(
-        {
-          id: a.option.value,
-          name: a.option.label,
-          baseName: a.baseName,
-          username: a.username,
-        },
-        {
-          id: b.option.value,
-          name: b.option.label,
-          baseName: b.baseName,
-          username: b.username,
-        },
-      )
-    })
-
-    return sortable.map((item) => item.option)
-  }, [
-    accountDisplayLabelById,
-    accountsForSelectedTags,
-    effectiveRange.endDayKey,
-    effectiveRange.startDayKey,
+  const {
+    isInitialLoading,
+    handleRefreshNow,
+    handlePruneNow,
+    shouldShowCashflowWarning,
+    shouldShowEnableBalanceHistoryHint,
+    openBalanceHistorySettings,
+    tagOptions,
+    selectedTagIds,
+    setSelectedTagIds,
+    accountOptions,
     selectedAccountIds,
-    store,
-    t,
-  ])
-
-  // Keep the breakdown reference day within the currently selected range.
-  useEffect(() => {
-    if (!breakdownBalanceDayKey) return
-
-    let next = breakdownBalanceDayKey
-    if (next < effectiveRange.startDayKey) next = effectiveRange.startDayKey
-    if (next > effectiveRange.endDayKey) next = effectiveRange.endDayKey
-
-    if (next !== breakdownBalanceDayKey) setBreakdownBalanceDayKey(next)
-  }, [
-    breakdownBalanceDayKey,
-    effectiveRange.endDayKey,
-    effectiveRange.startDayKey,
-  ])
-
-  const perAccountSeries = useMemo(() => {
-    return buildPerAccountDailyBalanceMoneySeries({
-      store,
-      accountIds: effectiveAccountIds,
-      startDayKey: effectiveRange.startDayKey,
-      endDayKey: effectiveRange.endDayKey,
-      currencyType,
-      exchangeRateByAccountId,
-      estimatedTodayIncomeEnabled,
-      manualBalanceAccountIds,
-    })
-  }, [
+    setSelectedAccountIds,
     currencyType,
-    effectiveAccountIds,
-    effectiveRange.endDayKey,
-    effectiveRange.startDayKey,
-    estimatedTodayIncomeEnabled,
-    exchangeRateByAccountId,
-    manualBalanceAccountIds,
-    store,
-  ])
-
-  const totalTrendValues = useMemo((): Array<number | null> => {
-    // Best-effort aggregation: sum accounts that have data for each day.
-    // Keep gaps only when no selected accounts have a value for that day.
-    const totals: Array<number | null> = perAccountSeries.dayKeys.map(
-      () => null,
-    )
-
-    for (let index = 0; index < perAccountSeries.dayKeys.length; index += 1) {
-      let sum = 0
-      let covered = 0
-
-      for (const accountId of effectiveAccountIds) {
-        const value =
-          perAccountSeries.seriesByAccountId[accountId]?.[
-            effectiveTrendMetric
-          ]?.[index]
-
-        if (typeof value !== "number" || !Number.isFinite(value)) continue
-        covered += 1
-        sum += value
-      }
-
-      totals[index] = covered > 0 ? sum : null
-    }
-
-    return totals
-  }, [
-    effectiveAccountIds,
-    effectiveTrendMetric,
-    perAccountSeries.dayKeys,
-    perAccountSeries.seriesByAccountId,
-  ])
-
-  const totalTrendCoverageSummary = useMemo(() => {
-    const totalAccounts = effectiveAccountIds.length
-
-    const coverageCounts = perAccountSeries.coverageByDay.map((coverage) => {
-      if (effectiveTrendMetric === "balance") return coverage.snapshotAccounts
-      if (effectiveTrendMetric === "estimatedIncome")
-        return coverage.estimatedIncomeAccounts
-      if (effectiveTrendMetric === "income") return coverage.incomeAccounts
-      if (effectiveTrendMetric === "outcome") return coverage.outcomeAccounts
-      return coverage.cashflowAccounts
-    })
-
-    const availableCoverage = coverageCounts.filter((count) => count > 0)
-    const availableDays = availableCoverage.length
-
-    const minCovered = availableDays > 0 ? Math.min(...availableCoverage) : 0
-    const maxCovered = availableDays > 0 ? Math.max(...availableCoverage) : 0
-
-    const partialDays = availableCoverage.filter(
-      (count) => count < totalAccounts,
-    ).length
-
-    return {
-      totalAccounts,
-      minCovered,
-      maxCovered,
-      partialDays,
-    }
-  }, [
-    effectiveAccountIds.length,
-    effectiveTrendMetric,
-    perAccountSeries.coverageByDay,
-  ])
-
-  const rangeSummaries = useMemo(() => {
-    return buildAccountRangeSummaries({
-      store,
-      accountIds: effectiveAccountIds,
-      startDayKey: effectiveRange.startDayKey,
-      endDayKey: effectiveRange.endDayKey,
-      currencyType,
-      exchangeRateByAccountId,
-      estimatedTodayIncomeEnabled,
-      manualBalanceAccountIds,
-    })
-  }, [
-    currencyType,
-    effectiveAccountIds,
-    effectiveRange.endDayKey,
-    effectiveRange.startDayKey,
-    estimatedTodayIncomeEnabled,
-    exchangeRateByAccountId,
-    manualBalanceAccountIds,
-    store,
-  ])
-
-  const trendSeries = useMemo(() => {
-    const series: Array<{ name: string; values: Array<number | null> }> = []
-
-    if (trendScope === "total") {
-      const hasAnyData = totalTrendValues.some(
-        (value) => typeof value === "number" && Number.isFinite(value),
-      )
-
-      return hasAnyData
-        ? [
-            {
-              name: t("trend.scopes.total"),
-              values: totalTrendValues,
-            },
-          ]
-        : []
-    }
-
-    for (const accountId of effectiveAccountIds) {
-      const values =
-        perAccountSeries.seriesByAccountId[accountId]?.[effectiveTrendMetric] ??
-        perAccountSeries.dayKeys.map(() => null)
-
-      const hasAnyData = values.some(
-        (value) => typeof value === "number" && Number.isFinite(value),
-      )
-      if (!hasAnyData) continue
-
-      series.push({
-        name: accountDisplayLabelById.get(accountId) ?? accountId,
-        values,
-      })
-    }
-
-    return series
-  }, [
-    accountDisplayLabelById,
-    effectiveAccountIds,
-    effectiveTrendMetric,
-    perAccountSeries.dayKeys,
-    perAccountSeries.seriesByAccountId,
-    t,
-    totalTrendValues,
-    trendScope,
-  ])
-
-  const trendOption = useMemo(() => {
-    const metricLabel = getBalanceHistoryMetricLabel(t, effectiveTrendMetric)
-    return buildMultiSeriesTrendOption({
-      dayKeys: perAccountSeries.dayKeys,
-      series: trendSeries,
-      chartType: trendChartType,
-      yAxisLabel: `${metricLabel} (${currencySymbol})`,
-      axisLabelFormatter: formatAxisMoneyValue,
-      valueFormatter: formatTooltipMoneyValue,
-    })
-  }, [
+    handleCurrencyChange,
+    safeRetentionDays,
+    startDayKey,
+    minDayKey,
+    maxDayKey,
+    setStartDayKey,
+    endDayKey,
+    setEndDayKey,
+    snapshotAvailableDays,
+    snapshotCompleteDays,
+    cashflowAvailableDays,
+    perAccountSeries,
+    isStoreEmpty,
+    overviewTotals,
     currencySymbol,
-    formatAxisMoneyValue,
-    formatTooltipMoneyValue,
-    perAccountSeries.dayKeys,
-    t,
-    effectiveTrendMetric,
-    trendChartType,
-    trendSeries,
-  ])
-
-  const breakdownData = useMemo(() => {
-    const entries: Array<{ name: string; value: number }> = []
-
-    if (effectiveBreakdownMetric === "balance") {
-      const referenceDayKey = breakdownBalanceDayKey || effectiveRange.endDayKey
-      const referenceIndex = perAccountSeries.dayKeys.indexOf(referenceDayKey)
-
-      for (const accountId of effectiveAccountIds) {
-        const value =
-          referenceIndex >= 0
-            ? perAccountSeries.seriesByAccountId[accountId]?.balance?.[
-                referenceIndex
-              ]
-            : null
-
-        if (typeof value !== "number" || !Number.isFinite(value)) continue
-
-        entries.push({
-          name: accountDisplayLabelById.get(accountId) ?? accountId,
-          value,
-        })
-      }
-    } else {
-      for (const summary of rangeSummaries.summaries) {
-        const value =
-          effectiveBreakdownMetric === "income"
-            ? summary.incomeTotal
-            : effectiveBreakdownMetric === "outcome"
-              ? summary.outcomeTotal
-              : effectiveBreakdownMetric === "estimatedIncome"
-                ? summary.estimatedIncomeTotal
-                : summary.netTotal
-
-        if (typeof value !== "number" || !Number.isFinite(value)) continue
-
-        entries.push({
-          name:
-            accountDisplayLabelById.get(summary.accountId) ?? summary.accountId,
-          value,
-        })
-      }
-    }
-
-    entries.sort((a, b) => b.value - a.value)
-
-    const values = entries.map((entry) => entry.value)
-    return {
-      categories: entries.map((entry) => entry.name),
-      values,
-      coveredAccounts: entries.length,
-      totalAccounts: effectiveAccountIds.length,
-      hasNegativeValues: values.some((value) => value < 0),
-    }
-  }, [
-    accountDisplayLabelById,
-    breakdownBalanceDayKey,
     effectiveBreakdownMetric,
-    effectiveAccountIds,
-    effectiveRange.endDayKey,
-    perAccountSeries.dayKeys,
-    perAccountSeries.seriesByAccountId,
-    rangeSummaries.summaries,
-  ])
-
-  useEffect(() => {
-    if (breakdownChartType === "pie" && breakdownData.hasNegativeValues) {
-      setBreakdownChartType("bar")
-    }
-  }, [breakdownChartType, breakdownData.hasNegativeValues])
-
-  const breakdownOption = useMemo(() => {
-    if (!breakdownData.values.length) return null
-
-    const valueLabel = `${getBalanceHistoryMetricLabel(t, effectiveBreakdownMetric)} (${currencySymbol})`
-
-    return breakdownChartType === "pie"
-      ? buildAccountBreakdownPieOption({
-          categories: breakdownData.categories,
-          values: breakdownData.values,
-          valueLabel,
-          valueFormatter: formatTooltipMoneyValue,
-        })
-      : buildAccountBreakdownBarOption({
-          categories: breakdownData.categories,
-          values: breakdownData.values,
-          valueLabel,
-          axisLabelFormatter: formatAxisMoneyValue,
-          valueFormatter: formatTooltipMoneyValue,
-        })
-  }, [
+    setBreakdownMetric,
+    estimatedTodayIncomeEnabled,
+    breakdownData,
     breakdownChartType,
-    breakdownData.categories,
-    breakdownData.values,
-    currencySymbol,
-    formatAxisMoneyValue,
-    formatTooltipMoneyValue,
-    t,
-    effectiveBreakdownMetric,
-  ])
-
-  const overviewTotals = useMemo(() => {
-    let endBalanceCovered = 0
-    let endBalanceSum = 0
-    let netCovered = 0
-    let netSum = 0
-    let incomeCovered = 0
-    let incomeSum = 0
-    let outcomeCovered = 0
-    let outcomeSum = 0
-
-    for (const summary of rangeSummaries.summaries) {
-      if (typeof summary.endBalance === "number") {
-        endBalanceCovered += 1
-        endBalanceSum += summary.endBalance
-      }
-
-      if (typeof summary.netTotal === "number") {
-        netCovered += 1
-        netSum += summary.netTotal
-      }
-
-      if (typeof summary.incomeTotal === "number") {
-        incomeCovered += 1
-        incomeSum += summary.incomeTotal
-      }
-
-      if (typeof summary.outcomeTotal === "number") {
-        outcomeCovered += 1
-        outcomeSum += summary.outcomeTotal
-      }
-    }
-
-    return {
-      totalAccounts: effectiveAccountIds.length,
-      endBalance: endBalanceCovered ? endBalanceSum : null,
-      endBalanceCovered,
-      rangeNet: netCovered ? netSum : null,
-      rangeNetCovered: netCovered,
-      incomeTotal: incomeCovered ? incomeSum : null,
-      incomeCovered,
-      outcomeTotal: outcomeCovered ? outcomeSum : null,
-      outcomeCovered,
-    }
-  }, [effectiveAccountIds.length, rangeSummaries.summaries])
-
-  const tableRows = useMemo<BalanceHistoryAccountSummaryRow[]>(() => {
-    return rangeSummaries.summaries.map((summary) => ({
-      id: summary.accountId,
-      label:
-        accountDisplayLabelById.get(summary.accountId) ?? summary.accountId,
-      startBalance: summary.startBalance,
-      endBalance: summary.endBalance,
-      netTotal: summary.netTotal,
-      incomeTotal: summary.incomeTotal,
-      estimatedIncomeTotal: summary.estimatedIncomeTotal,
-      outcomeTotal: summary.outcomeTotal,
-      snapshotDays: summary.snapshotDays,
-      cashflowDays: summary.cashflowDays,
-      estimatedIncomeDays: summary.estimatedIncomeDays,
-      totalDays: summary.totalDays,
-    }))
-  }, [accountDisplayLabelById, rangeSummaries.summaries])
-
-  const enabled =
-    preferences.balanceHistory?.enabled ??
-    DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled
-  const endOfDayCaptureEnabled =
-    preferences.balanceHistory?.endOfDayCapture?.enabled ?? false
-
-  const shouldShowCashflowWarning =
-    enabled &&
-    (preferences.showTodayCashflow ?? true) === false &&
-    !endOfDayCaptureEnabled
-
-  const isStoreEmpty = (
-    store?.snapshotsByAccountId
-      ? Object.keys(store.snapshotsByAccountId).length === 0
-      : true
-  ) as boolean
-
-  const snapshotCompleteDays = useMemo(() => {
-    const totals = perAccountSeries.coverageByDay.reduce(
-      (acc, item) => {
-        if (item.snapshotAccounts === item.totalAccounts)
-          acc.snapshotComplete += 1
-        if (item.cashflowAccounts === item.totalAccounts)
-          acc.cashflowComplete += 1
-        return acc
-      },
-      { snapshotComplete: 0, cashflowComplete: 0 },
-    )
-    return totals
-  }, [perAccountSeries.coverageByDay])
-
-  const snapshotAvailableDays = useMemo(() => {
-    return perAccountSeries.coverageByDay.reduce(
-      (acc, item) => acc + (item.snapshotAccounts > 0 ? 1 : 0),
-      0,
-    )
-  }, [perAccountSeries.coverageByDay])
-
-  const cashflowAvailableDays = useMemo(() => {
-    return perAccountSeries.coverageByDay.reduce(
-      (acc, item) => acc + (item.cashflowAccounts > 0 ? 1 : 0),
-      0,
-    )
-  }, [perAccountSeries.coverageByDay])
-
-  const incomeAvailableDays = useMemo(() => {
-    return perAccountSeries.coverageByDay.reduce(
-      (acc, item) => acc + (item.incomeAccounts > 0 ? 1 : 0),
-      0,
-    )
-  }, [perAccountSeries.coverageByDay])
-
-  const outcomeAvailableDays = useMemo(() => {
-    return perAccountSeries.coverageByDay.reduce(
-      (acc, item) => acc + (item.outcomeAccounts > 0 ? 1 : 0),
-      0,
-    )
-  }, [perAccountSeries.coverageByDay])
-
-  const estimatedIncomeAvailableDays = useMemo(() => {
-    return perAccountSeries.coverageByDay.reduce(
-      (acc, item) => acc + (item.estimatedIncomeAccounts > 0 ? 1 : 0),
-      0,
-    )
-  }, [perAccountSeries.coverageByDay])
-
-  const hasAnyPerAccountTrendMetricData =
-    effectiveTrendMetric === "balance"
-      ? snapshotAvailableDays > 0
-      : effectiveTrendMetric === "estimatedIncome"
-        ? estimatedIncomeAvailableDays > 0
-        : effectiveTrendMetric === "income"
-          ? incomeAvailableDays > 0
-          : effectiveTrendMetric === "outcome"
-            ? outcomeAvailableDays > 0
-            : cashflowAvailableDays > 0
-
-  const hasAnyTotalTrendMetricData = useMemo(() => {
-    return totalTrendValues.some(
-      (value) => typeof value === "number" && Number.isFinite(value),
-    )
-  }, [totalTrendValues])
-
-  const hasAnyTrendMetricData =
-    trendScope === "total"
-      ? hasAnyTotalTrendMetricData
-      : hasAnyPerAccountTrendMetricData
-
-  const shouldShowIncompleteTotalHint =
-    trendScope === "total" &&
-    hasAnyTotalTrendMetricData &&
-    totalTrendCoverageSummary.partialDays > 0 &&
-    totalTrendCoverageSummary.totalAccounts > 1
-
-  const isInitialLoading =
-    isLoading && accounts.length === 0 && store === null && tagStore === null
-
-  // When balance history capture is disabled and no snapshots exist yet,
-  // show a clear CTA instead of rendering filters + an empty state.
-  const shouldShowEnableBalanceHistoryHint = !enabled && !isInitialLoading
-
+    setBreakdownChartType,
+    breakdownBalanceDayKey,
+    effectiveRange,
+    setBreakdownBalanceDayKey,
+    breakdownOption,
+    effectiveTrendMetric,
+    setTrendMetric,
+    trendScope,
+    setTrendScope,
+    trendChartType,
+    setTrendChartType,
+    hasAnyTrendMetricData,
+    trendOption,
+    shouldShowIncompleteTotalHint,
+    totalTrendCoverageSummary,
+    tableRows,
+    isLoading,
+  } = useBalanceHistoryViewModel()
   return (
     <div
       className="space-y-density-6 py-density-4 sm:py-density-6 px-4 sm:px-6"
@@ -1059,8 +123,8 @@ export default function BalanceHistory() {
         title={t("title")}
         titleActions={
           <OptionsPageSettingsTitleAction
-            tabId="balanceHistory"
-            anchor="balance-history"
+            tabId={BASIC_SETTINGS_TAB_IDS.BalanceHistory}
+            anchor={SETTINGS_ANCHORS.BALANCE_HISTORY}
             analyticsAction={{
               featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
               actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
@@ -1559,10 +623,18 @@ export default function BalanceHistory() {
                                   )
                                 }
                               >
-                                <DropdownMenuRadioItem value="accounts">
+                                <DropdownMenuRadioItem
+                                  value={
+                                    BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts
+                                  }
+                                >
                                   {t("trend.scopes.accounts")}
                                 </DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="total">
+                                <DropdownMenuRadioItem
+                                  value={
+                                    BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
+                                  }
+                                >
                                   {t("trend.scopes.total")}
                                 </DropdownMenuRadioItem>
                               </DropdownMenuRadioGroup>
@@ -1570,7 +642,8 @@ export default function BalanceHistory() {
                           </DropdownMenu>
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          {trendScope === "total"
+                          {trendScope ===
+                          BALANCE_HISTORY_TREND_SERIES_SCOPES.Total
                             ? t("trend.subtitleTotal")
                             : t("trend.subtitle")}
                         </div>

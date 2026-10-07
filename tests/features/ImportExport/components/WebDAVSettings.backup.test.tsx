@@ -6,7 +6,7 @@ import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAut
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import toast from "~/lib/notify"
-import { ImportExportError } from "~/services/importExport/importExportService"
+import { ImportExportError } from "~/services/importExport/backupContracts"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import {

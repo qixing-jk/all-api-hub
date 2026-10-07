@@ -102,7 +102,7 @@ const dynamicImportAllowlist = [
     imports: ["./devDiscoveryFixtures"],
   },
   {
-    file: "src/features/AutoCheckin/AutoCheckin.tsx",
+    file: "src/features/AutoCheckin/hooks/useAutoCheckinViewModel.tsx",
     imports: ["~/services/checkin/autoCheckin/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
@@ -252,6 +252,8 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
   "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
   "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Default identity and explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts", // Explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
   "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
   "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.
@@ -308,6 +310,7 @@ export default defineConfig([
       "test-results/**",
       "tailwind.config.js",
       "src/public/react-devtools-backend.js",
+      ".scratch/**",
     ],
   },
   { languageOptions: { globals: globalsConfig } },
