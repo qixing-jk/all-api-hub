@@ -51,6 +51,143 @@ describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
 
   it.each([
+    [
+      CHECKIN_RESULT_STATUS.SUCCESS,
+      {},
+      "autoCheckin:providerFallback.checkinSuccessful",
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      {},
+      "autoCheckin:providerFallback.checkinFailed",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      { message: "Provider denied check-in" },
+      "Provider denied check-in",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.FAILED,
+      {
+        messageKey: "autoCheckin:providerFallback.checkinFailed",
+        messageParams: { count: 2 },
+      },
+      "autoCheckin:providerFallback.checkinFailed",
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    ],
+    [
+      CHECKIN_RESULT_STATUS.SKIPPED,
+      {},
+      "autoCheckin:providerFallback.unknownError",
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    ],
+    [
+      "future-status",
+      {},
+      "autoCheckin:messages.success.runCompleted",
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    ],
+  ])(
+    "reports quick-checkin %s with its provider message and analytics",
+    async (status, details, message, analyticsResult) => {
+      const site = buildDisplaySiteData({
+        id: "fallback",
+        name: "Fallback Site",
+        siteType: SITE_TYPES.NEW_API,
+        checkIn: createEnabledCheckIn(),
+      })
+      sendRuntimeMessageMock
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({
+          success: true,
+          data: { perAccount: { fallback: { status, ...details } } },
+        })
+      const { result } = renderHook(() =>
+        useAccountRowActions({
+          site,
+          onCopyKey: vi.fn(),
+          onDeleteAccount: vi.fn(),
+        }),
+      )
+
+      await act(async () => {
+        await result.current.handleQuickCheckin()
+      })
+
+      const expectedMessage =
+        status === "future-status" ? message : `Fallback Site: ${message}`
+      const toastMock =
+        status === CHECKIN_RESULT_STATUS.SUCCESS || status === "future-status"
+          ? toastSuccessMock
+          : toastErrorMock
+      expect(toastMock).toHaveBeenCalledWith(expectedMessage)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        analyticsResult,
+        expect.anything(),
+      )
+      expect(loadAccountDataMock).toHaveBeenCalled()
+    },
+  )
+
+  it("reports pin persistence errors as failed actions", async () => {
+    mockTogglePinAccount.mockRejectedValueOnce(new Error("Storage unavailable"))
+    const { result } = renderHook(() =>
+      useAccountRowActions({
+        site: buildDisplaySiteData(),
+        onCopyKey: vi.fn(),
+        onDeleteAccount: vi.fn(),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleTogglePin()
+    })
+
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.anything(),
+    )
+  })
+
+  it("opens the key inventory for the selected account", () => {
+    const site = buildDisplaySiteData()
+    const onCopyKey = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountRowActions({ site, onCopyKey, onDeleteAccount: vi.fn() }),
+    )
+
+    act(() => {
+      result.current.handleOpenKeyList()
+    })
+
+    expect(onCopyKey).toHaveBeenCalledWith(site)
+  })
+
+  it("blocks share snapshots for disabled accounts", async () => {
+    const { result } = renderHook(() =>
+      useAccountRowActions({
+        site: buildDisplaySiteData({ disabled: true }),
+        onCopyKey: vi.fn(),
+        onDeleteAccount: vi.fn(),
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleShareSnapshot()
+    })
+
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:toast.error.shareSnapshotAccountDisabled",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+  })
+
+  it.each([
     [SITE_TYPES.NEW_API, "feedback"],
     [SITE_TYPES.UNKNOWN, "request"],
   ] as const)(

@@ -1808,78 +1808,83 @@ describe("VerifyCliSupportDialog", () => {
     expect(runAllButton).toBeDisabled()
   })
 
-  it("surfaces HTTP failure summaries and retry state when a tool run throws", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([
-      {
-        id: 1,
-        user_id: 1,
-        key: "secret",
-        status: 1,
-        name: "token-1",
-        models: "",
-        model_limits: "",
-        created_time: 0,
-        accessed_time: 0,
-        expired_time: 0,
-        remain_quota: 0,
-        unlimited_quota: true,
-        used_quota: 0,
-      },
-    ])
-    mockRunCliSupportTool.mockRejectedValueOnce({
-      statusCode: 401,
-      message: "Unauthorized",
-    })
+  it.each([401, 503])(
+    "surfaces HTTP %s failure summaries and retry state when a tool run throws",
+    async (statusCode) => {
+      mockFetchAccountTokens.mockResolvedValueOnce([
+        {
+          id: 1,
+          user_id: 1,
+          key: "secret",
+          status: 1,
+          name: "token-1",
+          models: "",
+          model_limits: "",
+          created_time: 0,
+          accessed_time: 0,
+          expired_time: 0,
+          remain_quota: 0,
+          unlimited_quota: true,
+          used_quota: 0,
+        },
+      ])
+      mockRunCliSupportTool.mockRejectedValueOnce({
+        statusCode,
+        message: "Unauthorized",
+      })
 
-    render(
-      <VerifyCliSupportDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={{
-          id: "a1",
-          name: "Account",
-          username: "u",
-          balance: { USD: 0, CNY: 0 },
-          todayConsumption: { USD: 0, CNY: 0 },
-          todayIncome: { USD: 0, CNY: 0 },
-          todayTokens: { upload: 0, download: 0 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-          health: { status: "healthy" as any },
-          siteType: SITE_TYPES.NEW_API,
-          baseUrl: "https://example.com",
-          token: "t",
-          userId: "1",
-          authType: "access_token" as any,
-          checkIn: buildCheckInConfig(),
-        }}
-        initialModelId="gpt-test"
-      />,
-    )
+      render(
+        <VerifyCliSupportDialog
+          isOpen={true}
+          onClose={() => {}}
+          account={{
+            id: "a1",
+            name: "Account",
+            username: "u",
+            balance: { USD: 0, CNY: 0 },
+            todayConsumption: { USD: 0, CNY: 0 },
+            todayIncome: { USD: 0, CNY: 0 },
+            todayTokens: { upload: 0, download: 0 },
+            todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+            health: { status: "healthy" as any },
+            siteType: SITE_TYPES.NEW_API,
+            baseUrl: "https://example.com",
+            token: "t",
+            userId: "1",
+            authType: "access_token" as any,
+            checkIn: buildCheckInConfig(),
+          }}
+          initialModelId="gpt-test"
+        />,
+      )
 
-    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
-    const runButton = within(toolCard).getByRole("button", {
-      name: "cliSupportVerification:verifyDialog.actions.runOne",
-    })
-    await waitFor(() => expect(runButton).toBeEnabled())
-    fireEvent.click(runButton)
+      const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+      const runButton = within(toolCard).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.runOne",
+      })
+      await waitFor(() => expect(runButton).toBeEnabled())
+      fireEvent.click(runButton)
 
-    expect(
-      await within(toolCard).findByText(
-        "cliSupportVerification:verifyDialog.summaries.unauthorized",
-      ),
-    ).toBeInTheDocument()
-    expect(
-      within(toolCard).getByRole("button", {
-        name: "cliSupportVerification:verifyDialog.actions.retry",
-      }),
-    ).toBeInTheDocument()
+      expect(
+        await within(toolCard).findByText(
+          `cliSupportVerification:verifyDialog.summaries.${statusCode === 401 ? "unauthorized" : "httpError"}`,
+        ),
+      ).toBeInTheDocument()
+      expect(
+        within(toolCard).getByRole("button", {
+          name: "cliSupportVerification:verifyDialog.actions.retry",
+        }),
+      ).toBeInTheDocument()
 
-    const outputToggle = within(toolCard).getByRole("button", {
-      name: "cliSupportVerification:verifyDialog.details.output",
-    })
-    fireEvent.click(outputToggle)
-    expect(await within(toolCard).findByText(/401/)).toBeInTheDocument()
-  })
+      const outputToggle = within(toolCard).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.details.output",
+      })
+      fireEvent.click(outputToggle)
+      expect(
+        await within(toolCard).findByText(new RegExp(String(statusCode))),
+      ).toBeInTheDocument()
+    },
+  )
 
   it("does not use message-derived HTTP status for CLI failure analytics", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
@@ -2026,6 +2031,56 @@ describe("VerifyCliSupportDialog", () => {
         "aiApiVerification:verifyDialog.modes.nonStreaming",
       ),
     ).toBeVisible()
+  })
+
+  it("retains profile context and permits retry after a CLI request fails", async () => {
+    mockRunCliSupportTool.mockRejectedValueOnce({
+      statusCode: 503,
+      message: "Service unavailable",
+    })
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible",
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+    const card = await screen.findByTestId(getCliToolCardTestId("claude"))
+    const runButton = within(card).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+
+    fireEvent.click(runButton)
+
+    expect(
+      await within(card).findByText(
+        "cliSupportVerification:verifyDialog.summaries.httpError",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(card).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.retry",
+      }),
+    ).toBeEnabled()
+    fireEvent.click(
+      within(card).getByRole("button", {
+        name: "cliSupportVerification:verifyDialog.details.input",
+      }),
+    )
+    expect(within(card).getByText(/https:\/\/example.com/)).toBeInTheDocument()
+    expect(within(card).queryByText(/profile-secret/)).not.toBeInTheDocument()
   })
 
   it("runs all CLI tools sequentially from a stored profile", async () => {

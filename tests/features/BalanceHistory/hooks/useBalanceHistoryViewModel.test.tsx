@@ -170,6 +170,22 @@ describe("useBalanceHistoryViewModel", () => {
     expect(result.current.accountOptions).toHaveLength(2)
   })
 
+  it.each([
+    [12.5, "12.50", "$12.50"],
+    ["-3.25", "-3.25", "$-3.25"],
+    ["invalid", "", "-"],
+    [Infinity, "", "-"],
+  ])(
+    "formats chart values %s without displaying non-finite money",
+    (value, axis, tooltip) => {
+      renderHook(() => useBalanceHistoryViewModel())
+      const [options] = vi.mocked(useBalanceHistoryReporting).mock.calls.at(-1)!
+
+      expect(options.formatAxisMoneyValue(value, 0)).toBe(axis)
+      expect(options.formatTooltipMoneyValue(value, 0)).toBe(tooltip)
+    },
+  )
+
   it("navigates to settings when openBalanceHistorySettings is called", () => {
     const { result } = renderHook(() => useBalanceHistoryViewModel())
 

@@ -21,6 +21,7 @@ import {
   openCheckInPage,
   openCheckInPages,
 } from "~/utils/navigation"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -109,6 +110,157 @@ describe("useAutoCheckinRecovery", () => {
       expect.objectContaining({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
+      }),
+    )
+  })
+
+  it.each(["bulk", "account"])(
+    "coalesces repeated %s external check-in opens while navigation is pending",
+    async (scope) => {
+      const pending =
+        createDeferred<Awaited<ReturnType<typeof openExternalCheckIns>>>()
+      vi.mocked(openExternalCheckIns).mockReturnValueOnce(pending.promise)
+      const { result } = renderHook(() =>
+        useAutoCheckinRecovery({
+          resolveAutoCheckinAccount: resolveAutoCheckinAccountMock,
+          loadStatus: loadStatusMock,
+          failedManualAccountIds: [],
+          externalCheckInAccounts: [sampleAccount],
+          accountInfoById: { "acc-rec-1": sampleAccount },
+        }),
+      )
+      const open = () =>
+        scope === "bulk"
+          ? result.current.handleOpenExternalCheckIns(
+              {} as MouseEvent<HTMLButtonElement>,
+            )
+          : result.current.handleOpenAccountExternalCheckIn("acc-rec-1")
+      let first!: Promise<void>
+      act(() => {
+        first = open()
+      })
+      await act(async () => {
+        await open()
+      })
+      expect(openExternalCheckIns).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        pending.resolve({
+          openedAccountCount: 1,
+          skipped: false,
+          partialFailure: false,
+          failed: false,
+        } as Awaited<ReturnType<typeof openExternalCheckIns>>)
+        await first
+      })
+
+      expect(result.current.isOpeningExternalCheckIns).toBe(false)
+      expect(result.current.openingExternalCheckInAccountId).toBeNull()
+    },
+  )
+
+  it("does not open an external check-in for an account missing from the snapshot", async () => {
+    const { result } = renderHook(() =>
+      useAutoCheckinRecovery({
+        resolveAutoCheckinAccount: resolveAutoCheckinAccountMock,
+        loadStatus: loadStatusMock,
+        failedManualAccountIds: [],
+        externalCheckInAccounts: [],
+        accountInfoById: {},
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleOpenAccountExternalCheckIn("missing")
+    })
+
+    expect(openExternalCheckIns).not.toHaveBeenCalled()
+    expect(result.current.openingExternalCheckInAccountId).toBeNull()
+  })
+
+  it("restores disable state and reports a failed account lookup", async () => {
+    resolveAutoCheckinAccountMock.mockRejectedValueOnce(
+      new Error("Account unavailable"),
+    )
+    const { result } = renderHook(() =>
+      useAutoCheckinRecovery({
+        resolveAutoCheckinAccount: resolveAutoCheckinAccountMock,
+        loadStatus: loadStatusMock,
+        failedManualAccountIds: [],
+        externalCheckInAccounts: [],
+        accountInfoById: {},
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleDisableAccount("missing")
+    })
+
+    expect(result.current.disablingAccountId).toBeNull()
+    expect(accountMutations.setAccountDisabled).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:toast.error.operationFailed",
+    )
+    expect(analyticsTrackerMock.complete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.anything(),
+    )
+  })
+
+  it("keeps deletion closed when the account lookup fails", async () => {
+    resolveAutoCheckinAccountMock.mockRejectedValueOnce(
+      new Error("Account unavailable"),
+    )
+    const { result } = renderHook(() =>
+      useAutoCheckinRecovery({
+        resolveAutoCheckinAccount: resolveAutoCheckinAccountMock,
+        loadStatus: loadStatusMock,
+        failedManualAccountIds: [],
+        externalCheckInAccounts: [],
+        accountInfoById: {},
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleDeleteAccount("missing")
+    })
+
+    expect(result.current.deletingAccountId).toBeNull()
+    expect(result.current.deleteDialogAccount).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:toast.error.operationFailed",
+    )
+  })
+
+  it("restores bulk-open state when navigation throws", async () => {
+    vi.mocked(openCheckInPages).mockRejectedValueOnce(
+      new Error("Browser unavailable"),
+    )
+    const { result } = renderHook(() =>
+      useAutoCheckinRecovery({
+        resolveAutoCheckinAccount: resolveAutoCheckinAccountMock,
+        loadStatus: loadStatusMock,
+        failedManualAccountIds: ["acc-rec-1"],
+        externalCheckInAccounts: [],
+        accountInfoById: {},
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleOpenFailedManualSignIns(
+        {} as MouseEvent<HTMLButtonElement>,
+      )
+    })
+
+    expect(result.current.isOpeningFailedManualSignIns).toBe(false)
+    expect(toast.dismiss).toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.openFailedManualFailed",
+    )
+    expect(analyticsTrackerMock.complete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({ failureCount: 1 }),
       }),
     )
   })

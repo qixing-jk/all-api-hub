@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { useLocateManagedSiteChannel } from "~/features/AccountManagement/components/AccountActionButtons/useLocateManagedSiteChannel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -24,7 +25,7 @@ import {
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
-import { render } from "~~/tests/test-utils/render"
+import { act, render, renderHook } from "~~/tests/test-utils/render"
 
 import {
   accountDataContextValue,
@@ -51,6 +52,78 @@ import {
 
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
+
+  it.each(["draft-error", "empty-models", "search-error"])(
+    "keeps URL search available after channel lookup %s",
+    async (failure) => {
+      fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+      const prepareFormData = vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: failure === "empty-models" ? [] : ["gpt-4"],
+        key: "sk-1",
+      })
+      if (failure === "draft-error")
+        prepareFormData.mockRejectedValueOnce(new Error("Draft unavailable"))
+      const search = vi.fn().mockRejectedValue(new Error("Search unavailable"))
+      getManagedSiteCapabilitiesMock.mockReturnValueOnce({
+        siteType: SITE_TYPES.NEW_API,
+        config: {
+          get: vi.fn().mockResolvedValue({
+            baseUrl: "https://admin.example",
+            adminToken: "admin-test",
+            userId: "1",
+          }),
+        },
+        channelDrafts: { prepareFormData },
+        matching: { search },
+      } as any)
+      const { result } = renderHook(() =>
+        useLocateManagedSiteChannel({
+          site: buildDisplaySiteData({ baseUrl: "https://api.example.com" }),
+          canLocateManagedSiteChannel: true,
+          isManagedSiteChannelLookupSupported: true,
+        }),
+      )
+
+      await act(async () => {
+        await result.current()
+      })
+
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      if (failure === "search-error") {
+        expect(toastErrorMock).toHaveBeenCalledWith(
+          "account:actions.channelLocateFailed",
+        )
+      } else {
+        expect(search).not.toHaveBeenCalled()
+        expect(toastWarningMock).toHaveBeenCalledWith(
+          "account:actions.channelLocateInputPreparationFallback",
+        )
+      }
+    },
+  )
+
+  it.each([false, true])(
+    "skips channel lookup with unavailable capability: %s",
+    async (supported) => {
+      const { result } = renderHook(() =>
+        useLocateManagedSiteChannel({
+          site: buildDisplaySiteData(),
+          canLocateManagedSiteChannel: !supported,
+          isManagedSiteChannelLookupSupported: supported,
+        }),
+      )
+
+      await act(async () => {
+        await result.current()
+      })
+
+      expect(getManagedSiteCapabilitiesMock).not.toHaveBeenCalled()
+      expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+    },
+  )
 
   it("tracks an unknown failure when pinning does not change state", async () => {
     accountDataContextValue.isPinFeatureEnabled = true

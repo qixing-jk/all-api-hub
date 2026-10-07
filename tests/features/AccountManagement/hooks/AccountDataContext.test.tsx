@@ -1406,6 +1406,56 @@ describe("AccountDataContext actions", () => {
     })
   })
 
+  it("rolls back bookmark ordering when pinned-order persistence fails", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([{ id: "b1" }, { id: "b2" }])
+    mockGetOrderedList.mockResolvedValue(["b1", "b2"])
+    mockGetPinnedList.mockResolvedValue(["b1", "b2"])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetPinnedListSubset.mockResolvedValue(false)
+    const getLatestCtx = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["b1", "b2"]),
+    )
+    mockSetOrderedListSubset.mockClear()
+
+    await act(async () => {
+      await getLatestCtx().handleBookmarkReorder(["b2", "b1"])
+    })
+
+    expect(getLatestCtx().pinnedAccountIds).toEqual(["b1", "b2"])
+    expect(getLatestCtx().orderedAccountIds).toEqual(["b1", "b2"])
+    expect(mockSetOrderedListSubset).not.toHaveBeenCalled()
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Failed to persist bookmark reorder",
+      expect.objectContaining({
+        error: new Error("Failed to persist pinned bookmark order"),
+      }),
+    )
+  })
+
+  it("keeps pin ids unique when an already pinned account is pinned again", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([{ id: "b1" }, { id: "b2" }])
+    mockGetOrderedList.mockResolvedValue(["b1", "b2"])
+    mockGetPinnedList.mockResolvedValue(["b1", "b2"])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    const getLatestCtx = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["b1", "b2"]),
+    )
+
+    await act(async () => {
+      await getLatestCtx().pinAccount("b2")
+    })
+
+    expect(getLatestCtx().pinnedAccountIds).toEqual(["b2", "b1"])
+  })
+
   it("preserves hidden bookmark ids when persisting a filtered reorder", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
