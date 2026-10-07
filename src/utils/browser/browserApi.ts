@@ -20,6 +20,33 @@ export { getLocalStorage } from "~/utils/browser/extensionStorage"
  */
 const logger = createLogger("BrowserApi")
 
+/**
+ * Native Chrome still has callback-only APIs below some Promise-support
+ * milestones. Keep Firefox/native browser Promise calls separate, and consume
+ * runtime.lastError inside the Chrome callback while it is available.
+ */
+function runBrowserAsyncApi<T>(
+  promiseCall: () => Promise<T>,
+  callbackCall: (callback: (value: T) => void) => Promise<T> | void,
+): Promise<T> {
+  const nativeChrome = (globalThis as any).chrome
+  if (!nativeChrome || browser !== nativeChrome) {
+    return promiseCall()
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const pending = callbackCall((value) => {
+      const error = nativeChrome.runtime?.lastError
+      if (error) {
+        reject(new Error(error.message))
+      } else {
+        resolve(value)
+      }
+    })
+    pending?.then(resolve, reject)
+  })
+}
+
 // 确保 browser 全局对象可用
 if (typeof (globalThis as any).browser === "undefined") {
   // Prefer chrome if present; otherwise leave undefined to fail fast where appropriate
@@ -1118,15 +1145,19 @@ export function createContextMenu(
 export async function removeContextMenu(
   menuItemId: number | string,
 ): Promise<void> {
-  const remove = (globalThis as any).browser?.contextMenus?.remove as
-    | ((id: number | string) => Promise<void> | void)
+  const contextMenus = (globalThis as any).browser?.contextMenus
+  const remove = contextMenus?.remove as
+    | ((id: number | string, callback?: () => void) => Promise<void> | void)
     | undefined
 
   if (typeof remove !== "function") {
     return
   }
 
-  await remove(menuItemId)
+  await runBrowserAsyncApi(
+    () => Promise.resolve(remove.call(contextMenus, menuItemId)),
+    (callback) => remove.call(contextMenus, menuItemId, callback),
+  )
 }
 
 /**
@@ -1181,7 +1212,15 @@ export async function createNotification(
   }
 
   try {
-    return await browser.notifications.create(notificationId, options)
+    return await runBrowserAsyncApi(
+      () => browser.notifications.create(notificationId, options),
+      (callback) =>
+        (globalThis as any).chrome.notifications.create(
+          notificationId,
+          options,
+          callback,
+        ),
+    )
   } catch (error) {
     logger.warn("notifications.create failed", {
       notificationId,
@@ -1204,7 +1243,16 @@ export async function clearNotification(
   }
 
   try {
-    return (await browser.notifications.clear(notificationId)) || false
+    return (
+      (await runBrowserAsyncApi(
+        () => browser.notifications.clear(notificationId),
+        (callback) =>
+          (globalThis as any).chrome.notifications.clear(
+            notificationId,
+            callback,
+          ),
+      )) || false
+    )
   } catch (error) {
     logger.warn("notifications.clear failed", {
       notificationId,
@@ -1215,19 +1263,46 @@ export async function clearNotification(
 }
 
 /**
- * Subscribes to notification click events and returns an unsubscribe callback.
+ * Subscribes to notification clicks, including optional permission grants after
+ * startup. Revocation detaches the old event before a later grant reattaches.
  */
 export function onNotificationClicked(
   callback: (notificationId: string) => void | Promise<void>,
 ): () => void {
-  if (!hasNotificationsAPI()) {
-    logger.warn("Notifications API not supported")
-    return () => {}
+  type ClickEvent = {
+    addListener: (listener: typeof callback) => void
+    removeListener: (listener: typeof callback) => void
+  }
+  let subscribedEvent: ClickEvent | undefined
+
+  const attach = () => {
+    if (subscribedEvent) return
+    const event = (globalThis as any).browser?.notifications?.onClicked
+    if (
+      typeof event?.addListener === "function" &&
+      typeof event?.removeListener === "function"
+    ) {
+      event.addListener(callback)
+      subscribedEvent = event
+    }
+  }
+  const detach = () => {
+    subscribedEvent?.removeListener(callback)
+    subscribedEvent = undefined
   }
 
-  browser.notifications.onClicked.addListener(callback)
+  const stopAdded = onPermissionsAdded((permissions) => {
+    if (permissions.permissions?.includes("notifications")) attach()
+  })
+  const stopRemoved = onPermissionsRemoved((permissions) => {
+    if (permissions.permissions?.includes("notifications")) detach()
+  })
+  attach()
+
   return () => {
-    browser.notifications.onClicked.removeListener(callback)
+    stopAdded()
+    stopRemoved()
+    detach()
   }
 }
 
@@ -1356,6 +1431,16 @@ export async function requestRuntimeUpdateCheck(): Promise<RuntimeUpdateCheckRes
     try {
       const maybePromise = requestUpdateCheck(
         (status: RuntimeUpdateCheckStatus, details?: { version?: string }) => {
+          const error =
+            (globalThis as any).browser?.runtime?.lastError ??
+            (globalThis as any).chrome?.runtime?.lastError
+          if (error) {
+            if (!settled) {
+              settled = true
+              reject(new Error(error.message))
+            }
+            return
+          }
           finish({
             status,
             version: details?.version,
@@ -1408,7 +1493,7 @@ export async function requestRuntimeUpdateCheck(): Promise<RuntimeUpdateCheckRes
  */
 export async function isAllowedIncognitoAccess(): Promise<boolean | null> {
   try {
-    return browser.extension.isAllowedIncognitoAccess()
+    return await browser.extension.isAllowedIncognitoAccess()
   } catch (error) {
     logger.debug(
       "extension.isAllowedIncognitoAccess failed",

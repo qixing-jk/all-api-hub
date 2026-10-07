@@ -99,6 +99,197 @@ vi.mock("~/utils/core/logger", () => ({
 const originalBrowser = (globalThis as any).browser
 const originalChrome = (globalThis as any).chrome
 
+describe("browserApi callback-only Chromium compatibility", () => {
+  afterEach(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  function installNativeChrome(api: Record<string, unknown>) {
+    const nativeChrome = { runtime: {}, ...api }
+    ;(globalThis as any).browser = nativeChrome
+    ;(globalThis as any).chrome = nativeChrome
+    return nativeChrome
+  }
+
+  it("waits for callback-only menu removal before allowing recreation", async () => {
+    let complete: (() => void) | undefined
+    installNativeChrome({
+      contextMenus: {
+        remove: vi.fn((_id, callback) => {
+          complete = callback
+        }),
+      },
+    })
+    let settled = false
+    const pending = removeContextMenu("owned-menu").then(() => {
+      settled = true
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    expect(complete).toBeTypeOf("function")
+    complete!()
+    await pending
+    expect(settled).toBe(true)
+  })
+
+  it("returns callback-only notification creation and clearing results", async () => {
+    installNativeChrome({
+      notifications: {
+        create: vi.fn((_id, _options, callback) => {
+          queueMicrotask(() => callback?.("created-notification"))
+        }),
+        clear: vi.fn((_id, callback) => {
+          queueMicrotask(() => callback?.(true))
+        }),
+      },
+    })
+    await expect(
+      createNotification("test", {
+        type: "basic",
+        iconUrl: "icon.png",
+        title: "Test",
+        message: "Test message",
+      }),
+    ).resolves.toBe("created-notification")
+    await expect(clearNotification("test")).resolves.toBe(true)
+  })
+
+  it("accepts Promise-returning adapters in the native Chrome namespace", async () => {
+    installNativeChrome({
+      notifications: {
+        create: vi.fn().mockResolvedValue("test"),
+        clear: vi.fn().mockResolvedValue(true),
+      },
+    })
+    await expect(
+      createNotification("test", {
+        type: "basic",
+        title: "Test",
+        message: "Test",
+        iconUrl: "icon.png",
+      }),
+    ).resolves.toBe("test")
+    await expect(clearNotification("test")).resolves.toBe(true)
+  }, 1000)
+
+  it("preserves callback errors during context menu removal", async () => {
+    const nativeChrome = installNativeChrome({
+      contextMenus: {
+        remove: vi.fn((_id, callback) => {
+          queueMicrotask(() => {
+            Object.assign(nativeChrome.runtime, {
+              lastError: { message: "Cannot find menu item" },
+            })
+            callback?.()
+            delete (nativeChrome.runtime as any).lastError
+          })
+        }),
+      },
+    })
+    await expect(removeContextMenu("missing")).rejects.toThrow(
+      "Cannot find menu item",
+    )
+  })
+
+  it("reports callback notification errors through the existing safe results", async () => {
+    const nativeChrome = installNativeChrome({
+      notifications: {
+        create: vi.fn((_id, _options, callback) => {
+          Object.assign(nativeChrome.runtime, {
+            lastError: { message: "Permission denied" },
+          })
+          callback(undefined)
+          delete (nativeChrome.runtime as any).lastError
+        }),
+        clear: vi.fn((_id, callback) => {
+          Object.assign(nativeChrome.runtime, {
+            lastError: { message: "Permission denied" },
+          })
+          callback(false)
+          delete (nativeChrome.runtime as any).lastError
+        }),
+      },
+    })
+    await expect(
+      createNotification("test", {
+        type: "basic",
+        title: "Test",
+        message: "Test",
+        iconUrl: "icon.png",
+      }),
+    ).resolves.toBeNull()
+    await expect(clearNotification("test")).resolves.toBe(false)
+  })
+
+  it("rejects callback update-check failures instead of accepting an empty status", async () => {
+    const nativeChrome = installNativeChrome({
+      runtime: {
+        requestUpdateCheck: vi.fn((callback) => {
+          Object.assign(nativeChrome.runtime, {
+            lastError: { message: "Update check unavailable" },
+          })
+          callback(undefined)
+          delete (nativeChrome.runtime as any).lastError
+        }),
+      },
+    })
+    await expect(requestRuntimeUpdateCheck()).rejects.toThrow(
+      "Update check unavailable",
+    )
+  })
+
+  it("returns unknown when an asynchronous incognito permission read fails", async () => {
+    installNativeChrome({
+      extension: {
+        isAllowedIncognitoAccess: vi
+          .fn()
+          .mockRejectedValue(new Error("Unavailable")),
+      },
+    })
+    await expect(isAllowedIncognitoAccess()).resolves.toBeNull()
+  })
+
+  it("restores notification clicks after optional permission grants and re-grants", () => {
+    let grant: ((permissions: { permissions: string[] }) => void) | undefined
+    let revoke: ((permissions: { permissions: string[] }) => void) | undefined
+    const added = {
+      addListener: vi.fn((listener) => {
+        grant = listener
+      }),
+      removeListener: vi.fn(),
+    }
+    const removed = {
+      addListener: vi.fn((listener) => {
+        revoke = listener
+      }),
+      removeListener: vi.fn(),
+    }
+    const nativeChrome = installNativeChrome({
+      permissions: { onAdded: added, onRemoved: removed },
+    }) as any
+    const listener = vi.fn()
+    const cleanup = onNotificationClicked(listener)
+    const first = { addListener: vi.fn(), removeListener: vi.fn() }
+    nativeChrome.notifications = { onClicked: first }
+    expect(grant).toBeTypeOf("function")
+    grant!({ permissions: ["notifications"] })
+    grant!({ permissions: ["notifications"] })
+    expect(first.addListener).toHaveBeenCalledExactlyOnceWith(listener)
+    revoke!({ permissions: ["notifications"] })
+    expect(first.removeListener).toHaveBeenCalledExactlyOnceWith(listener)
+    const second = { addListener: vi.fn(), removeListener: vi.fn() }
+    nativeChrome.notifications = { onClicked: second }
+    grant!({ permissions: ["notifications"] })
+    expect(second.addListener).toHaveBeenCalledExactlyOnceWith(listener)
+    cleanup()
+    expect(second.removeListener).toHaveBeenCalledExactlyOnceWith(listener)
+    expect(added.removeListener).toHaveBeenCalledWith(grant)
+    expect(removed.removeListener).toHaveBeenCalledWith(revoke)
+  })
+})
+
 // Note: these helpers now use the unified logger, so tests avoid asserting on `console.*` output.
 describe("browserApi alarms helpers", () => {
   beforeEach(() => {
