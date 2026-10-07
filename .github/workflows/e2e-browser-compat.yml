@@ -95,11 +95,34 @@ jobs:
           # Scheduled runs use two contexts; manual trials can compare four
           # without changing the scheduled default or shard assignments.
           AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/compatibility
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
         # Retain the budget for slow versions and retries until the new
         # concurrency has been measured across every version in CI.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --global-timeout=2100000 --reporter=list,github,html
+        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --reporter=list,github,html
+
+      # Performance measurements need a single browser context on the runner.
+      # Execute the complete file once per Chrome version, outside the sharded
+      # functional suite, retaining its timing and virtualization assertions.
+      - name: Run isolated performance E2E
+        if: ${{ !cancelled() && matrix.shard == 2 }}
+        timeout-minutes: 10
+        env:
+          AAH_E2E_CHROME_EXECUTABLE_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
+          AAH_SKIP_E2E_BUILD: "1"
+          AAH_E2E_SMOKE_ONLY: "1"
+          AAH_E2E_WORKERS: "1"
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/performance
+        run: pnpm exec playwright test e2e/multiAccountPerformance.spec.ts --project=chromium --output=test-results/performance --reporter=list,github,html
+
+      - name: Upload performance measurements
+        if: ${{ !cancelled() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-performance-${{ matrix.chrome_version }}-${{ github.run_attempt }}
+          path: playwright-report/performance/
+          retention-days: 7
 
       - name: Upload Playwright artifacts (failure)
         if: failure()

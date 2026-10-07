@@ -14,6 +14,26 @@ function job(source: string, name: string) {
 }
 
 describe("scheduled E2E build reuse", () => {
+  it("isolates performance measurements from concurrent browser contexts", () => {
+    const source = workflow("e2e-browser-compat")
+    expect(source).toContain('--grep-invert="major pages with"')
+    const performance = source
+      .split("      - name: Run isolated performance E2E")[1]
+      ?.split("      - name:")[0]
+    expect(performance).toBeDefined()
+    expect(performance).toContain(
+      "if: ${{ !cancelled() && matrix.shard == 2 }}",
+    )
+    expect(performance).toContain('AAH_E2E_WORKERS: "1"')
+    expect(performance).toContain("e2e/multiAccountPerformance.spec.ts")
+    expect(performance).not.toContain("--shard=")
+    expect(performance).toContain(
+      "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/performance",
+    )
+    expect(source).toContain(
+      "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/compatibility",
+    )
+  })
   it("bounds compatibility file concurrency while retaining every version and shard", () => {
     const source = workflow("e2e-browser-compat")
     const tests = job(source, "chrome-compat")
