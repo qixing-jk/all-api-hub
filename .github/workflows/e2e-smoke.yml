@@ -51,6 +51,7 @@ concurrency:
 
 jobs:
   release-changes:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
   e2e-build:
@@ -58,7 +59,7 @@ jobs:
     name: E2E build (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: ${{ needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
     strategy:
       fail-fast: false
@@ -119,8 +120,8 @@ jobs:
       fail-fast: false
       matrix:
         # The default suite is sharded across runners with Playwright's native
-        # --shard flag to cut wall-clock time; each shard builds nothing extra
-        # because the extension is built in this job's own step.
+        # --shard flag to cut wall-clock time; all shards reuse the
+        # default extension artifact from e2e-build.
         include:
           - name: default-shard-1
             e2e_type: default
