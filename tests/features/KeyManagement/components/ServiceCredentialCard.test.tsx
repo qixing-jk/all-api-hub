@@ -628,166 +628,199 @@ describe("ServiceCredentialCard", () => {
     ).toBeInTheDocument()
   })
 
-  it("exposes third-party export consumers from the service credential URL and key", async () => {
-    const user = userEvent.setup()
-    const account = buildDisplaySiteData({
-      id: "sharedchat-account",
-      name: "SharedChat",
-      tagIds: ["tag-a"],
-      baseUrl: "https://sharedchat.example.invalid",
-    })
-    const credential = {
-      kind: "singleton_service_key" as const,
-      service: "codex",
-      label: "Codex API Key",
-      key: "sk-service-credential",
-      isAuthenticated: true,
-      baseUrl: "https://sharedchat.example.invalid/v1",
+  describe("third-party export consumers", () => {
+    function renderExportCredential() {
+      const user = userEvent.setup()
+      const account = buildDisplaySiteData({
+        id: "sharedchat-account",
+        name: "SharedChat",
+        tagIds: ["tag-a"],
+        baseUrl: "https://sharedchat.example.invalid",
+      })
+      const credential = {
+        kind: "singleton_service_key" as const,
+        service: "codex",
+        label: "Codex API Key",
+        key: "sk-service-credential",
+        isAuthenticated: true,
+        baseUrl: "https://sharedchat.example.invalid/v1",
+      }
+
+      render(
+        <ServiceCredentialCard
+          account={account}
+          credential={credential}
+          onCopy={vi.fn().mockResolvedValue(undefined)}
+        />,
+        {
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        },
+      )
+      return { user, account }
     }
 
-    render(
-      <ServiceCredentialCard
-        account={account}
-        credential={credential}
-        onCopy={vi.fn().mockResolvedValue(undefined)}
-      />,
-      {
-        withThemeProvider: false,
-        withUserPreferencesProvider: false,
-      },
-    )
-
-    await selectExportAction(user, "keyManagement:actions.useInCherry")
-    expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://sharedchat.example.invalid",
-        providerName: "SharedChat - Codex API Key",
-        apiKey: "sk-service-credential",
-      }),
-    )
-
-    await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
-    expect(mockKelivoExportDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        initialValue: expect.objectContaining({
-          apiType: API_TYPES.OPENAI_COMPATIBLE,
-          baseUrl: "https://sharedchat.example.invalid/v1",
-          apiKey: "sk-service-credential",
-          name: "SharedChat - Codex API Key",
-        }),
-        analyticsContext: expect.objectContaining({
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
-        }),
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", { name: "close Kelivo export" }),
-    )
-    expect(
-      screen.queryByRole("button", { name: "close Kelivo export" }),
-    ).not.toBeInTheDocument()
-
-    await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
-    expect(mockCCSwitchDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        source: expect.objectContaining({
+    it("opens Cherry Studio with the service URL and key", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(user, "keyManagement:actions.useInCherry")
+      expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
+        expect.objectContaining({
           baseUrl: "https://sharedchat.example.invalid",
           providerName: "SharedChat - Codex API Key",
-          resolveApiKey: expect.any(Function),
-        }),
-      }),
-    )
-    await expect(
-      mockCCSwitchDialog.mock.lastCall?.[0].source.resolveApiKey(),
-    ).resolves.toBe("sk-service-credential")
-
-    await selectExportAction(user, "keyManagement:actions.exportToAiToolbox")
-    expect(mockAiToolboxDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        source: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid",
-          providerName: "SharedChat - Codex API Key",
-          resolveApiKey: expect.any(Function),
-        }),
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", { name: "close AI Toolbox export" }),
-    )
-    expect(
-      screen.queryByRole("button", { name: "close AI Toolbox export" }),
-    ).not.toBeInTheDocument()
-
-    await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
-    expect(mockKiloCodeDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        profile: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid/v1",
           apiKey: "sk-service-credential",
         }),
-      }),
-    )
+      )
+    })
 
-    await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
-    expect(
-      screen.getByRole("dialog", { name: "Cursor++ export" }),
-    ).toBeVisible()
-    expect(mockCursorPlusDialog).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        source: expect.objectContaining({
-          id: "service_credential:sharedchat-account:codex",
-          providerName: "SharedChat",
-          credentialName: "Codex API Key",
-          baseUrl: "https://sharedchat.example.invalid",
-          resolveApiKey: expect.any(Function),
+    it("exports and closes the Kelivo profile", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.copyKelivoImportCode",
+      )
+      expect(mockKelivoExportDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialValue: expect.objectContaining({
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            apiKey: "sk-service-credential",
+            name: "SharedChat - Codex API Key",
+          }),
+          analyticsContext: expect.objectContaining({
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+          }),
         }),
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", { name: "close Cursor++ export" }),
-    )
-    expect(
-      screen.queryByRole("dialog", { name: "Cursor++ export" }),
-    ).not.toBeInTheDocument()
+      )
+      await user.click(
+        screen.getByRole("button", { name: "close Kelivo export" }),
+      )
+      expect(
+        screen.queryByRole("button", { name: "close Kelivo export" }),
+      ).not.toBeInTheDocument()
+    })
 
-    await selectExportAction(
-      user,
-      "keyManagement:actions.importToClaudeCodeRouter",
-    )
-    expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        source: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid",
-          providerName: "SharedChat - Codex API Key",
-          resolveApiKey: expect.any(Function),
+    it("exports the CC Switch source and resolves its key", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
+      expect(mockCCSwitchDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          source: expect.objectContaining({
+            baseUrl: "https://sharedchat.example.invalid",
+            providerName: "SharedChat - Codex API Key",
+            resolveApiKey: expect.any(Function),
+          }),
         }),
-        routerApiKey: "ccr-management-key",
-        routerBaseUrl: "https://router.example.invalid",
-      }),
-    )
+      )
+      await expect(
+        mockCCSwitchDialog.mock.lastCall?.[0].source.resolveApiKey(),
+      ).resolves.toBe("sk-service-credential")
+    })
 
-    await selectExportAction(user, "keyManagement:actions.importToManagedSite")
-    expect(mockOpenWithAccount).toHaveBeenCalledWith(
-      account,
-      expect.objectContaining({
-        source: "service_credential",
-        label: "Codex API Key",
-        baseUrl: "https://sharedchat.example.invalid/v1",
-        secret: "sk-service-credential",
-      }),
-      expect.any(Function),
-      {
-        managedSiteStatus: undefined,
-      },
-    )
-  }, 30_000)
+    it("exports and closes the AI Toolbox source", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(user, "keyManagement:actions.exportToAiToolbox")
+      expect(mockAiToolboxDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          source: expect.objectContaining({
+            baseUrl: "https://sharedchat.example.invalid",
+            providerName: "SharedChat - Codex API Key",
+            resolveApiKey: expect.any(Function),
+          }),
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "close AI Toolbox export" }),
+      )
+      expect(
+        screen.queryByRole("button", { name: "close AI Toolbox export" }),
+      ).not.toBeInTheDocument()
+    })
+
+    it("exports the Kilo Code profile", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
+      expect(mockKiloCodeDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          profile: expect.objectContaining({
+            baseUrl: "https://sharedchat.example.invalid/v1",
+            apiKey: "sk-service-credential",
+          }),
+        }),
+      )
+    })
+
+    it("exports and closes the Cursor++ source", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
+      expect(
+        screen.getByRole("dialog", { name: "Cursor++ export" }),
+      ).toBeVisible()
+      expect(mockCursorPlusDialog).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          source: expect.objectContaining({
+            id: "service_credential:sharedchat-account:codex",
+            providerName: "SharedChat",
+            credentialName: "Codex API Key",
+            baseUrl: "https://sharedchat.example.invalid",
+            resolveApiKey: expect.any(Function),
+          }),
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "close Cursor++ export" }),
+      )
+      expect(
+        screen.queryByRole("dialog", { name: "Cursor++ export" }),
+      ).not.toBeInTheDocument()
+    })
+
+    it("imports the Claude Code Router source with router settings", async () => {
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToClaudeCodeRouter",
+      )
+      expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          source: expect.objectContaining({
+            baseUrl: "https://sharedchat.example.invalid",
+            providerName: "SharedChat - Codex API Key",
+            resolveApiKey: expect.any(Function),
+          }),
+          routerApiKey: "ccr-management-key",
+          routerBaseUrl: "https://router.example.invalid",
+        }),
+      )
+    })
+
+    it("imports the managed-site credential resource", async () => {
+      const { user, account } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      expect(mockOpenWithAccount).toHaveBeenCalledWith(
+        account,
+        expect.objectContaining({
+          source: "service_credential",
+          label: "Codex API Key",
+          baseUrl: "https://sharedchat.example.invalid/v1",
+          secret: "sk-service-credential",
+        }),
+        expect.any(Function),
+        {
+          managedSiteStatus: undefined,
+        },
+      )
+    })
+  })
 
   it("shows a local error when Cherry Studio cannot be opened", async () => {
     mockOpenInCherryStudio.mockImplementationOnce(() => {

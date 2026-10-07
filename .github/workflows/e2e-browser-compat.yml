@@ -1,7 +1,16 @@
 name: E2E Browser Compatibility
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: Workers per browser compatibility shard
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "2"
+          - "4"
   schedule:
     - cron: "23 18 * * *"
 
@@ -10,8 +19,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  e2e-build:
+    uses: ./.github/workflows/e2e-build.yml
+
   chrome-compat:
     name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/3)
+    needs: e2e-build
     runs-on: ubuntu-latest
     # Covers the 35-minute test budget plus setup, the failure report, and
     # artifact upload, so a timeout never truncates the evidence.
@@ -19,8 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Only the per-job setup duplicates when this count grows: the budget
-        # and the CI minutes are set by the tests, which are split evenly.
+        # All Chrome versions and shards reuse the same extension build.
         shard: [1, 2, 3]
         chrome_version:
           # 114 is the current Chromium support floor for this build: the
@@ -60,8 +72,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build extension
-        run: pnpm build:e2e
+      - name: Download E2E extension
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
 
       - name: Setup Chrome ${{ matrix.chrome_version }}
         id: setup_chrome
@@ -76,14 +91,38 @@ jobs:
           AAH_E2E_CHROME_EXECUTABLE_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
           AAH_SKIP_E2E_BUILD: "1"
           AAH_E2E_SMOKE_ONLY: "1"
+          # Retain each file's configured execution mode without fullyParallel.
+          # Scheduled runs use two contexts; manual trials can compare four
+          # without changing the scheduled default or shard assignments.
+          AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/compatibility
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
-        # Three shards put the heaviest one at ~19 minutes of the ~47 this
-        # suite needs per Chrome version, so the budget only covers a night that
-        # runs far longer than planned. Exhausting it fails the job while every
-        # test that never started only reads as "did not run", which hides the
-        # real cause.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --global-timeout=2100000 --reporter=list,github,html
+        # Retain the budget for slow versions and retries until the new
+        # concurrency has been measured across every version in CI.
+        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --reporter=list,github,html
+
+      # Performance measurements need a single browser context on the runner.
+      # Execute the complete file once per Chrome version, outside the sharded
+      # functional suite, retaining its timing and virtualization assertions.
+      - name: Run isolated performance E2E
+        if: ${{ !cancelled() && matrix.shard == 2 }}
+        timeout-minutes: 10
+        env:
+          AAH_E2E_CHROME_EXECUTABLE_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
+          AAH_SKIP_E2E_BUILD: "1"
+          AAH_E2E_SMOKE_ONLY: "1"
+          AAH_E2E_WORKERS: "1"
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/performance
+        run: pnpm exec playwright test e2e/multiAccountPerformance.spec.ts --project=chromium --output=test-results/performance --reporter=list,github,html
+
+      - name: Upload performance measurements
+        if: ${{ !cancelled() && matrix.shard == 2 }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-performance-${{ matrix.chrome_version }}-${{ github.run_attempt }}
+          path: playwright-report/performance/
+          retention-days: 7
 
       - name: Upload Playwright artifacts (failure)
         if: failure()

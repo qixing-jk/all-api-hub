@@ -1340,7 +1340,10 @@ describe("ManagedResourceEditorBody", () => {
         screen.queryByDisplayValue(/masked|unavailable|permission/i),
       ).toBeNull()
 
-      await user.type(input, "replacement-secret")
+      // This checks the final secret intent; per-character input is covered by
+      // the field interaction tests above. Paste avoids 18 full editor renders.
+      await user.click(input)
+      await user.paste("replacement-secret")
       expect(onValueChange).toHaveBeenLastCalledWith(
         AXON_HUB_CHANNEL_FIELD_IDS.KEY,
         { kind: "replace", value: "replacement-secret" },
@@ -1372,7 +1375,8 @@ describe("ManagedResourceEditorBody", () => {
       "A masked API key is saved. Leave this field blank to keep the saved API key unchanged.",
     )
 
-    await user.type(input, "replacement-secret")
+    await user.click(input)
+    await user.paste("replacement-secret")
     await user.clear(input)
 
     expect(onValueChange).toHaveBeenLastCalledWith(

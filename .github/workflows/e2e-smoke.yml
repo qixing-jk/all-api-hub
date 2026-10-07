@@ -13,6 +13,8 @@ on:
       - ".github/workflows/release-pr-check.yml"
       - "scripts/release-pr-check.mjs"
       - "tests/scripts/release-pr-check.test.mjs"
+      - ".nvmrc"
+      - ".env*"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -22,6 +24,8 @@ on:
       - "tailwind.config.js"
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
+      - ".github/workflows/e2e-build.yml"
+      - "scripts/e2e-ci-build-cache.mjs"
   pull_request:
     paths:
       - "src/**"
@@ -31,6 +35,8 @@ on:
       - ".github/workflows/release-pr-check.yml"
       - "scripts/release-pr-check.mjs"
       - "tests/scripts/release-pr-check.test.mjs"
+      - ".nvmrc"
+      - ".env*"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -40,6 +46,8 @@ on:
       - "tailwind.config.js"
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
+      - ".github/workflows/e2e-build.yml"
+      - "scripts/e2e-ci-build-cache.mjs"
   workflow_dispatch: {}
 
 permissions:
@@ -51,15 +59,13 @@ concurrency:
 
 jobs:
   release-changes:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
   e2e-build:
     needs: release-changes
     name: E2E build (${{ matrix.name }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: ${{ needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
-    continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,60 +73,29 @@ jobs:
         include:
           - name: default
             build_variant: default
-            extension_dir: chrome-mv3-test
           - name: dnr-required
             build_variant: dnr-required
-            extension_dir: chrome-mv3-test-dnr-required
           - name: bookmarks-required
             build_variant: bookmarks-required
-            extension_dir: chrome-mv3-test-bookmarks-required
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Build E2E extension
-        env:
-          AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
-        run: pnpm build:e2e
-
-      - name: Upload E2E extension
-        uses: actions/upload-artifact@v7
-        with:
-          name: e2e-extension-${{ matrix.build_variant }}
-          path: .output/${{ matrix.extension_dir }}
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
+    uses: ./.github/workflows/e2e-build.yml
+    with:
+      build_variant: ${{ matrix.build_variant }}
+      optional: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
 
   e2e-smoke:
     name: E2E (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: e2e-build
     timeout-minutes: 20
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
+    if: ${{ !cancelled() && needs.e2e-build.result == 'success' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
     strategy:
       fail-fast: false
       matrix:
         # The default suite is sharded across runners with Playwright's native
-        # --shard flag to cut wall-clock time; each shard builds nothing extra
-        # because the extension is built in this job's own step.
+        # --shard flag to cut wall-clock time; all shards reuse the
+        # default extension artifact from e2e-build.
         include:
           - name: default-shard-1
             e2e_type: default

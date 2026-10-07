@@ -53,9 +53,12 @@ jobs:
           REAL_SITE_TARGET: ${{ github.event.inputs.target || 'all' }}
         run: node scripts/github-real-site-e2e-matrix.mjs "$REAL_SITE_CATEGORY" "$REAL_SITE_TARGET"
 
+  e2e-build:
+    uses: ./.github/workflows/e2e-build.yml
+
   real-site-e2e:
     name: ${{ matrix.label }}
-    needs: real-site-matrix
+    needs: [real-site-matrix, e2e-build]
     if: needs.real-site-matrix.outputs.has_parallel == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -85,8 +88,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build extension
-        run: pnpm build:e2e
+      - name: Download E2E extension
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
 
       - name: Get Playwright version
         id: playwright_version
@@ -275,7 +281,7 @@ jobs:
 
   real-site-e2e-new-api:
     name: ${{ matrix.label }}
-    needs: real-site-matrix
+    needs: [real-site-matrix, e2e-build]
     if: needs.real-site-matrix.outputs.has_new_api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -289,7 +295,7 @@ jobs:
 
   real-site-e2e-sub2api:
     name: ${{ matrix.label }}
-    needs: real-site-matrix
+    needs: [real-site-matrix, e2e-build]
     if: needs.real-site-matrix.outputs.has_sub2api == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30

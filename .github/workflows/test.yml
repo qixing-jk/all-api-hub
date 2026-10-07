@@ -66,11 +66,13 @@ concurrency:
 
 jobs:
   release-changes:
+    # Ordinary changes need no diff exemption, so avoid a serial runner allocation.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
   unit-tests:
     needs: release-changes
-    if: needs.release-changes.outputs.release-only != 'true'
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     runs-on: ubuntu-latest
     env:
       UNIT_TEST_SHARD_TOTAL: 6
@@ -91,6 +93,12 @@ jobs:
 
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
+
+      - name: Test release change detection
+        # Keep guard regressions covered on ordinary changes without four
+        # preflight runners; only one shard needs these dependency-free tests.
+        if: matrix.shard == 1
+        run: node --test tests/scripts/release-pr-check.test.mjs
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -130,7 +138,7 @@ jobs:
   unit-tests-merge:
     runs-on: ubuntu-latest
     needs: [release-changes, unit-tests]
-    if: ${{ !cancelled() && needs.release-changes.result == 'success' && needs.release-changes.outputs.release-only != 'true' }}
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'failure') }}
 
     steps:
       - name: Checkout code
@@ -163,7 +171,9 @@ jobs:
 
       - name: Generate unit test durations
         # Per-file timings for the next run's shard sequencer, derived from the blob
-        # reports every shard already uploads.
+        # reports every shard already uploads. PRs only consume the base cache;
+        # avoid decoding all blob reports for timings that would never be saved.
+        if: github.event_name != 'pull_request'
         run: node scripts/write-unit-test-durations.mjs
 
       - name: Save unit test durations

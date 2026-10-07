@@ -1,16 +1,18 @@
 import { execFile } from "node:child_process"
-import crypto from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 
 import { readE2eBuildVariant } from "~~/e2e/utils/e2eBuildVariants"
 
+import {
+  createE2eBuildInputHash,
+  readE2eBuildInputPaths,
+} from "./e2eBuildInputs.shared.js"
+
 const execFileAsync = promisify(execFile)
 
 const E2E_BUILD_METADATA_FILE = ".aah-e2e-build.json"
-
-const IGNORED_DIRECTORY_NAMES = new Set(["node_modules", ".git", ".output"])
 
 type E2eBuildMetadata = {
   version: 1
@@ -23,8 +25,8 @@ type E2eBuildMetadata = {
 
 type E2eBuildMetadataSnapshot = Pick<
   E2eBuildMetadata,
-  "buildVariant" | "gitHead" | "inputHash" | "inputPaths"
->
+  "buildVariant" | "inputHash" | "inputPaths"
+> & { gitHead?: string }
 
 type E2eBuildMetadataOptions = {
   cwd?: string
@@ -34,11 +36,15 @@ type E2eBuildMetadataOptions = {
 export async function createE2eBuildMetadata(
   options: E2eBuildMetadataOptions = {},
 ): Promise<E2eBuildMetadata> {
-  const snapshot = await createE2eBuildMetadataSnapshot(options)
+  const [snapshot, gitHead] = await Promise.all([
+    createE2eBuildMetadataSnapshot(options),
+    getGitHead(options.cwd ?? process.cwd()),
+  ])
 
   return {
     version: 1,
     ...snapshot,
+    gitHead,
     builtAt: new Date().toISOString(),
   }
 }
@@ -48,16 +54,12 @@ async function createE2eBuildMetadataSnapshot(
 ): Promise<E2eBuildMetadataSnapshot> {
   const cwd = options.cwd ?? process.cwd()
   const inputPaths = [
-    ...(options.inputPaths ?? (await readDefaultInputPaths(cwd))),
+    ...(options.inputPaths ?? (await readE2eBuildInputPaths(cwd))),
   ]
-  const [gitHead, inputHash] = await Promise.all([
-    getGitHead(cwd),
-    createInputHash(cwd, inputPaths),
-  ])
+  const inputHash = await createE2eBuildInputHash(cwd, inputPaths)
 
   return {
     buildVariant: readE2eBuildVariant(),
-    gitHead,
     inputHash,
     inputPaths,
   }
@@ -83,7 +85,7 @@ export async function assertE2eBuildMetadataCurrent(
   const metadata = await readE2eBuildMetadata(metadataPath)
   const current = await createE2eBuildMetadataSnapshot({
     cwd: options.cwd,
-    inputPaths: metadata.inputPaths,
+    inputPaths: options.inputPaths,
   })
 
   const mismatches = getE2eBuildMetadataMismatches(metadata, current)
@@ -119,7 +121,7 @@ export async function isE2eBuildMetadataCurrent(
     const metadata = await readE2eBuildMetadata(metadataPath)
     const current = await createE2eBuildMetadataSnapshot({
       cwd: options.cwd,
-      inputPaths: metadata.inputPaths,
+      inputPaths: options.inputPaths,
     })
 
     return getE2eBuildMetadataMismatches(metadata, current).length === 0
@@ -134,12 +136,7 @@ export function getE2eBuildMetadataMismatches(
 ) {
   const mismatches: string[] = []
 
-  if (metadata.gitHead !== current.gitHead) {
-    mismatches.push(
-      `Built from git HEAD ${metadata.gitHead}, current HEAD is ${current.gitHead}.`,
-    )
-  }
-
+  // gitHead records provenance; content and build configuration determine freshness.
   if ((metadata.buildVariant ?? "default") !== current.buildVariant) {
     mismatches.push(
       `Built for E2E variant ${metadata.buildVariant ?? "default"}, current variant is ${current.buildVariant}.`,
@@ -205,83 +202,4 @@ async function getGitHead(cwd: string) {
   } catch {
     return "unknown"
   }
-}
-
-async function readDefaultInputPaths(cwd: string) {
-  const raw = await fs.readFile(
-    path.resolve(cwd, "e2e", "e2e-build-inputs.json"),
-    "utf8",
-  )
-  const parsed = JSON.parse(raw) as unknown
-
-  if (
-    !Array.isArray(parsed) ||
-    parsed.some((item) => typeof item !== "string")
-  ) {
-    throw new Error("e2e/e2e-build-inputs.json must be an array of strings")
-  }
-
-  return parsed as string[]
-}
-
-async function createInputHash(cwd: string, inputPaths: readonly string[]) {
-  const hash = crypto.createHash("sha256")
-  const files = await collectExistingFiles(cwd, inputPaths)
-
-  for (const filePath of files) {
-    const relativePath = path.relative(cwd, filePath).replaceAll(path.sep, "/")
-    const fileContents = await fs.readFile(filePath)
-    hash.update(relativePath)
-    hash.update("\0")
-    hash.update(fileContents)
-    hash.update("\0")
-  }
-
-  return hash.digest("hex")
-}
-
-async function collectExistingFiles(
-  cwd: string,
-  inputPaths: readonly string[],
-) {
-  const files: string[] = []
-
-  for (const inputPath of inputPaths) {
-    const absolutePath = path.resolve(cwd, inputPath)
-    let stat
-
-    try {
-      stat = await fs.stat(absolutePath)
-    } catch {
-      continue
-    }
-
-    if (stat.isDirectory()) {
-      files.push(...(await collectDirectoryFiles(absolutePath)))
-    } else if (stat.isFile()) {
-      files.push(absolutePath)
-    }
-  }
-
-  return files.sort()
-}
-
-async function collectDirectoryFiles(directoryPath: string): Promise<string[]> {
-  const entries = await fs.readdir(directoryPath, { withFileTypes: true })
-  const files: string[] = []
-
-  for (const entry of entries) {
-    if (entry.name.startsWith(".") || IGNORED_DIRECTORY_NAMES.has(entry.name)) {
-      continue
-    }
-
-    const entryPath = path.join(directoryPath, entry.name)
-    if (entry.isDirectory()) {
-      files.push(...(await collectDirectoryFiles(entryPath)))
-    } else if (entry.isFile()) {
-      files.push(entryPath)
-    }
-  }
-
-  return files
 }

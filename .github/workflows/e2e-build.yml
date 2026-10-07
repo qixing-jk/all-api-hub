@@ -1,0 +1,99 @@
+name: Reusable E2E extension build
+
+on:
+  workflow_call:
+    inputs:
+      build_variant:
+        description: E2E manifest variant
+        type: string
+        default: default
+      optional:
+        description: Allow build failure for e2e-optional pull requests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: ${{ inputs.optional }}
+    env:
+      AAH_E2E_BUILD_VARIANT: ${{ inputs.build_variant }}
+    # Serialize producers per cache scope and variant without another hash-only
+    # runner. The first caller populates the cache; later callers restore it. Keep all
+    # waiting callers instead of cancelling a third workflow's pending build.
+    concurrency:
+      group: e2e-extension-${{ github.ref }}-${{ inputs.build_variant }}
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        id: node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Resolve extension directory
+        id: variant
+        run: node scripts/e2e-ci-build-cache.mjs
+
+      # Reuse only matching build content/configuration, regardless of commit.
+      # Never restore a prefix match with another fingerprint or variant.
+      - name: Restore E2E build
+        id: cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .output/${{ steps.variant.outputs.extension_dir }}
+          key: e2e-extension-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.variant.outputs.input_hash }}-${{ inputs.build_variant }}
+
+      - name: Validate cached E2E build
+        id: cached_build
+        run: node scripts/e2e-ci-build-cache.mjs
+
+      - name: Setup pnpm
+        if: steps.cached_build.outputs.usable != 'true'
+        uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+
+      - name: Restore pnpm dependency cache
+        if: steps.cached_build.outputs.usable != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.node.outputs.node-version }}
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: steps.cached_build.outputs.usable != 'true'
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build E2E extension
+        if: steps.cached_build.outputs.usable != 'true'
+        run: pnpm build:e2e
+
+      - name: Save E2E build
+        if: steps.cached_build.outputs.usable != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .output/${{ steps.variant.outputs.extension_dir }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      # Test jobs consume their own run's artifact without cross-run lookup or
+      # extra token permissions. Only the producer accesses the shared cache.
+      - name: Upload E2E extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-extension-${{ inputs.build_variant }}
+          path: .output/${{ steps.variant.outputs.extension_dir }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1

@@ -62,11 +62,12 @@ concurrency:
 
 jobs:
   release-changes:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
   quality:
     needs: release-changes
-    if: needs.release-changes.outputs.release-only != 'true'
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
