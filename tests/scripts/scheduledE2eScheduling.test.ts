@@ -17,7 +17,10 @@ describe("scheduled E2E build reuse", () => {
   it("bounds compatibility file concurrency while retaining every version and shard", () => {
     const source = workflow("e2e-browser-compat")
     const tests = job(source, "chrome-compat")
-    expect(tests).toContain('AAH_E2E_WORKERS: "2"')
+    expect(tests).toContain("AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}")
+    expect(source).toContain('default: "2"')
+    expect(source).toContain("type: choice")
+    expect(source).toMatch(/options:\s*\n\s*- "2"\s*\n\s*- "4"/)
     expect(tests).toContain("shard: [1, 2, 3]")
     for (const version of [
       "114",

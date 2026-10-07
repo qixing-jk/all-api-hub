@@ -1,7 +1,16 @@
 name: E2E Browser Compatibility
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: Workers per browser compatibility shard
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "2"
+          - "4"
   schedule:
     - cron: "23 18 * * *"
 
@@ -83,9 +92,9 @@ jobs:
           AAH_SKIP_E2E_BUILD: "1"
           AAH_E2E_SMOKE_ONLY: "1"
           # Retain each file's configured execution mode without fullyParallel.
-          # Four workers produced retries in Chrome 116/122 on hosted runners.
-          # Keep two persistent contexts until higher concurrency is stable.
-          AAH_E2E_WORKERS: "2"
+          # Scheduled runs use two contexts; manual trials can compare four
+          # without changing the scheduled default or shard assignments.
+          AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
         # Retain the budget for slow versions and retries until the new
