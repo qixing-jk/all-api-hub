@@ -113,6 +113,29 @@ export async function hasCookieReadPermissionForUrl(
 }
 
 /**
+ * Includes partitioned cookies where supported. Older browsers reject the
+ * partitionKey filter, so retry only that schema error with the same URL/store.
+ */
+async function readCookiesForUrl(url: string, options: { storeId?: string }) {
+  const details = {
+    url,
+    ...(options.storeId ? { storeId: options.storeId } : {}),
+  }
+  try {
+    return await browser.cookies.getAll({ ...details, partitionKey: {} })
+  } catch (error) {
+    if (
+      !/Unexpected property:\s*['"]partitionKey['"]/i.test(
+        getErrorMessage(error),
+      )
+    ) {
+      throw error
+    }
+    return await browser.cookies.getAll(details)
+  }
+}
+
+/**
  * Checks whether any non-expired cookie exists for the target URL.
  *
  * This is a cheap "has a usable session" proxy: a cookie-authenticated direct
@@ -130,11 +153,7 @@ export async function hasCookiesForUrl(
   }
 
   try {
-    const cookies = await browser.cookies.getAll({
-      url,
-      partitionKey: {},
-      ...(options.storeId ? { storeId: options.storeId } : {}),
-    })
+    const cookies = await readCookiesForUrl(url, options)
     const now = Date.now() / 1000
     return cookies.some(
       (cookie) => !(cookie.expirationDate && cookie.expirationDate < now),
@@ -195,11 +214,7 @@ export async function getCookieHeaderForUrlResult(
 
   try {
     // 读取 cookies
-    const cookies = await browser.cookies.getAll({
-      url,
-      partitionKey: {},
-      ...(options.storeId ? { storeId: options.storeId } : {}),
-    })
+    const cookies = await readCookiesForUrl(url, options)
 
     // 过滤并格式化
     const validCookies = cookies.filter((cookie) => {
