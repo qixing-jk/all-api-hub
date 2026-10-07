@@ -156,6 +156,19 @@ describe("browserApi callback-only Chromium compatibility", () => {
     await expect(clearNotification("test")).resolves.toBe(true)
   })
 
+  it("returns false when callback-only clearing finds no notification", async () => {
+    const clear = vi.fn((_id, callback) => {
+      queueMicrotask(() => callback(false))
+    })
+    installNativeChrome({ notifications: { clear } })
+
+    await expect(clearNotification("missing")).resolves.toBe(false)
+    expect(clear).toHaveBeenCalledExactlyOnceWith(
+      "missing",
+      expect.any(Function),
+    )
+  })
+
   it("accepts Promise-returning adapters in the native Chrome namespace", async () => {
     installNativeChrome({
       notifications: {
