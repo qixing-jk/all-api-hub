@@ -90,6 +90,62 @@ function needs(result: string, releaseOnly = "") {
   }
 }
 
+describe("smoke tests after an ordinary skipped release ancestor", () => {
+  it.each(["push", "workflow_dispatch", "pull_request"])(
+    "runs on %s when the reusable builds succeeded",
+    (eventName) => {
+      expect(
+        shouldRun(
+          "e2e-smoke.yml",
+          "e2e-smoke",
+          {
+            github: github(eventName),
+            needs: { "e2e-build": { result: "success" } },
+          },
+          false,
+        ),
+      ).toBe(true)
+    },
+  )
+
+  it.each(["failure", "skipped", "cancelled"])(
+    "does not download absent artifacts after %s builds",
+    (result) => {
+      expect(
+        shouldRun(
+          "e2e-smoke.yml",
+          "e2e-smoke",
+          {
+            github: github("pull_request"),
+            needs: { "e2e-build": { result } },
+          },
+          false,
+        ),
+      ).toBe(false)
+    },
+  )
+
+  it("still honors cancellation and skip-e2e", () => {
+    for (const overrides of [
+      { cancelled: () => true },
+      { labels: ["skip-e2e"] },
+    ]) {
+      expect(
+        shouldRun(
+          "e2e-smoke.yml",
+          "e2e-smoke",
+          {
+            github: github("pull_request"),
+            needs: { "e2e-build": { result: "success" } },
+            ...overrides,
+          },
+          false,
+        ),
+      ).toBe(false)
+    }
+  })
+})
+
 describe.each(workflows)("CI scheduling: %s", (file) => {
   it.each(["push", "workflow_dispatch", "pull_request"])(
     "starts ordinary %s checks without a release runner",

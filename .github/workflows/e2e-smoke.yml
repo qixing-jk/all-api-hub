@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: e2e-build
     timeout-minutes: 20
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
+    if: ${{ !cancelled() && needs.e2e-build.result == 'success' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
     strategy:
       fail-fast: false
