@@ -143,6 +143,16 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
     },
   })
 
+  // A fresh worker schedules the daily alarm, then clears an empty retry
+  // queue. Wait for that final startup write before installing a persisted
+  // retry: the storage lock cannot prevent a later scheduling decision made
+  // from the pre-seed empty queue from clearing our new retry state.
+  await expect
+    .poll(
+      async () => (await readAutoCheckinStatus(serviceWorker))?.pendingRetry,
+    )
+    .toBe(false)
+
   await seedAutoCheckinStatus(serviceWorker, {
     lastDailyRunDay: today,
     lastRunAt: new Date(Date.now() - 60_000).toISOString(),

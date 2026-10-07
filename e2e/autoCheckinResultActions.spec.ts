@@ -8,21 +8,22 @@ import zhFeedback from "~/locales/zh-CN/accountDialog.json" with { type: "json" 
 import zhCheckin from "~/locales/zh-CN/autoCheckin.json" with { type: "json" }
 import zhCommon from "~/locales/zh-CN/common.json" with { type: "json" }
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import type { CheckinAccountResult } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
+  type AutoCheckinAccountResultFixture,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   getPlasmoStorageJsonValue,
   getServiceWorker,
-  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -38,10 +39,7 @@ for (const language of ["zh-CN", "en"] as const) {
     const common = language === "en" ? enCommon : zhCommon
     const cases: {
       name: string
-      result: Pick<
-        CheckinAccountResult,
-        "status" | "reasonCode" | "reconciliation"
-      >
+      result: AutoCheckinAccountResultFixture
       primary?: string
       external?: boolean
     }[] = [
@@ -125,7 +123,26 @@ for (const language of ["zh-CN", "en"] as const) {
         getPlasmoStorageJsonValue(serviceWorker, "autoCheckin_status"),
       )
       .toBeTruthy()
-    await setPlasmoStorageValue(serviceWorker, "autoCheckin_status", {
+    // Reproduce a scheduler cycle that has already read the old status. It
+    // must finish before the fixture writes historical results under its lock.
+    await serviceWorker.evaluate(async (lockName) => {
+      const state = globalThis as typeof globalThis & {
+        fixtureStatusUpdate?: Promise<unknown>
+      }
+      await new Promise<void>((resolve) => {
+        state.fixtureStatusUpdate = navigator.locks.request(
+          lockName,
+          async () => {
+            const previous =
+              await chrome.storage.local.get("autoCheckin_status")
+            resolve()
+            await new Promise((finish) => setTimeout(finish, 300))
+            await chrome.storage.local.set(previous)
+          },
+        )
+      })
+    }, STORAGE_LOCKS.AUTO_CHECKIN_STATUS)
+    await seedAutoCheckinStatus(serviceWorker, {
       lastRunAt: new Date().toISOString(),
       lastRunResult: "failed",
       perAccount: Object.fromEntries(
@@ -140,6 +157,13 @@ for (const language of ["zh-CN", "en"] as const) {
         ]),
       ),
       accountsSnapshot: [],
+    })
+    await serviceWorker.evaluate(async () => {
+      const state = globalThis as typeof globalThis & {
+        fixtureStatusUpdate?: Promise<unknown>
+      }
+      await state.fixtureStatusUpdate
+      delete state.fixtureStatusUpdate
     })
     installExtensionPageGuards(page)
     await forceExtensionLanguage(page, language)

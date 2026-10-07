@@ -39,7 +39,10 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfile,
 } from "~/types/apiCredentialProfiles"
-import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import type {
+  AutoCheckinStatus,
+  CheckinAccountResult,
+} from "~/types/autoCheckin"
 import {
   DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
   type DailyBalanceHistoryStore,
@@ -447,6 +450,12 @@ export async function seedUserPreferences(
     createStoredUserPreferences(overrides),
   )
 }
+
+/** Preserve result-status discriminants when fixture identity is added later. */
+export type AutoCheckinAccountResultFixture<T = CheckinAccountResult> =
+  T extends CheckinAccountResult
+    ? Omit<T, "accountId" | "accountName" | "timestamp">
+    : never
 
 /**
  * Persist the auto check-in status through the service worker.
