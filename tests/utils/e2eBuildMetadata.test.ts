@@ -16,6 +16,11 @@ const tempDirs: string[] = []
 async function createTempDir() {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "aah-e2e-build-"))
   tempDirs.push(tempDir)
+  await fs.mkdir(path.join(tempDir, "e2e"))
+  await fs.writeFile(
+    path.join(tempDir, "e2e", "e2e-build-inputs.json"),
+    JSON.stringify(["source.txt"]),
+  )
   return tempDir
 }
 
@@ -53,6 +58,42 @@ describe("E2E build metadata", () => {
     await expect(
       assertE2eBuildMetadataCurrent(extensionDir, { cwd }),
     ).rejects.toThrow("Missing E2E build metadata")
+  })
+
+  it("checks the current input policy instead of trusting the cached path list", async () => {
+    const cwd = await createTempDir()
+    const extensionDir = path.join(cwd, ".output", "chrome-mv3-test")
+    await fs.writeFile(path.join(cwd, "source.txt"), "initial")
+    const metadata = await createE2eBuildMetadata({ cwd })
+    await writeE2eBuildMetadata(extensionDir, metadata)
+    await fs.writeFile(path.join(cwd, "plugin.txt"), "new dependency")
+    await fs.writeFile(
+      path.join(cwd, "e2e", "e2e-build-inputs.json"),
+      JSON.stringify(["source.txt", "plugin.txt"]),
+    )
+    await expect(
+      assertE2eBuildMetadataCurrent(extensionDir, { cwd }),
+    ).rejects.toThrow("Build inputs have changed")
+  })
+
+  it("retains original provenance when accepting an unchanged build from another commit", async () => {
+    const cwd = await createTempDir()
+    const extensionDir = path.join(cwd, ".output", "chrome-mv3-test")
+    await fs.writeFile(path.join(cwd, "source.txt"), "initial")
+    const metadata = await createE2eBuildMetadata({ cwd })
+    metadata.gitHead = "original-build-commit"
+    await writeE2eBuildMetadata(extensionDir, metadata)
+    await expect(
+      assertE2eBuildMetadataCurrent(extensionDir, { cwd }),
+    ).resolves.toBeUndefined()
+    expect(
+      JSON.parse(
+        await fs.readFile(
+          path.join(extensionDir, ".aah-e2e-build.json"),
+          "utf8",
+        ),
+      ).gitHead,
+    ).toBe("original-build-commit")
   })
 
   it("rejects metadata when tracked build inputs changed", async () => {
@@ -111,7 +152,7 @@ describe("E2E build metadata", () => {
     ).resolves.toBe(false)
   })
 
-  it("reports commit mismatches separately from input hash mismatches", () => {
+  it("accepts unchanged inputs from a different commit", () => {
     expect(
       getE2eBuildMetadataMismatches(
         {
@@ -128,7 +169,7 @@ describe("E2E build metadata", () => {
           inputPaths: ["src"],
         },
       ),
-    ).toEqual(["Built from git HEAD old-head, current HEAD is new-head."])
+    ).toEqual([])
   })
 
   it("reports input hash mismatches with matching commit metadata", () => {
@@ -151,7 +192,7 @@ describe("E2E build metadata", () => {
     ).toEqual(["Build inputs have changed since the extension was built."])
   })
 
-  it("reports commit and input hash mismatches together", () => {
+  it("rejects changed inputs even across commits", () => {
     expect(
       getE2eBuildMetadataMismatches(
         {
@@ -168,10 +209,7 @@ describe("E2E build metadata", () => {
           inputPaths: ["src"],
         },
       ),
-    ).toEqual([
-      "Built from git HEAD old-head, current HEAD is new-head.",
-      "Build inputs have changed since the extension was built.",
-    ])
+    ).toEqual(["Build inputs have changed since the extension was built."])
   })
 
   it("returns no mismatches for current metadata", () => {
