@@ -56,7 +56,7 @@ vi.mock("~/services/popupInterruptionHint", () => ({
   markPopupClosedDuringCriticalFlow: markPopupClosedDuringCriticalFlowMock,
 }))
 
-vi.mock("~/hooks/useProductAnalyticsPageView", () => ({
+vi.mock("~/hooks/analytics/useProductAnalyticsPageView", () => ({
   useProductAnalyticsPageView: vi.fn(),
 }))
 

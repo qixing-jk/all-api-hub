@@ -135,13 +135,13 @@ vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
 }))
 
-vi.mock("~/components/ManagedSiteTypeSwitcher", () => ({
+vi.mock("~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher", () => ({
   default: ({ ariaLabel }: { ariaLabel: string }) => (
     <div data-testid="managed-site-switcher">{ariaLabel}</div>
   ),
 }))
 
-vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
+vi.mock("~/features/ManagedSiteWidgets/ManagedSiteChannelLinkButton", () => ({
   default: ({
     resourceRef,
     channelName,

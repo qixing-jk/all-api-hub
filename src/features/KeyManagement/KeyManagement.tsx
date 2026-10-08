@@ -9,6 +9,19 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
+import { AssociateApiCredentialProfileDialog } from "~/features/KeyManagement/associations/AssociateApiCredentialProfileDialog"
+import { AccountSelectorPanel } from "~/features/KeyManagement/inventory/AccountSelectorPanel"
+import { AccountSummaryBar } from "~/features/KeyManagement/inventory/AccountSummaryBar"
+import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
+import { TokenSearchBar } from "~/features/KeyManagement/inventory/TokenSearchBar"
+import { LinkedChannelCleanupPending } from "~/features/KeyManagement/managedSite/LinkedChannelCleanup"
+import { RepairMissingKeysDialog } from "~/features/KeyManagement/repair"
+import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
+import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
+import { AccountKeyScopeSelector } from "~/features/KeyManagement/resources/AccountKeyScopeSelector"
+import { Footer } from "~/features/KeyManagement/workspace/Footer"
+import { Header } from "~/features/KeyManagement/workspace/Header"
+import { useKeyManagementViewModel } from "~/features/KeyManagement/workspace/useKeyManagementViewModel"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
@@ -18,23 +31,10 @@ import {
   openSettingsTab,
 } from "~/utils/navigation"
 
-import { AccountKeyResourceDeleteDialog } from "./components/AccountKeyResource/AccountKeyResourceDeleteDialog"
-import { AccountKeyResourceEditorDialog } from "./components/AccountKeyResource/AccountKeyResourceEditorDialog"
-import { AccountKeyScopeSelector } from "./components/AccountKeyResource/AccountKeyScopeSelector"
-import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
-import { AccountSummaryBar } from "./components/AccountSummaryBar"
-import { AssociateApiCredentialProfileDialog } from "./components/AssociateApiCredentialProfileDialog"
-import { Footer } from "./components/Footer"
-import { Header } from "./components/Header"
-import { LinkedChannelCleanupPending } from "./components/LinkedChannelCleanup"
-import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
-import { TokenList } from "./components/TokenList"
-import { TokenSearchBar } from "./components/TokenSearchBar"
 import {
   ACCOUNT_KEY_STATUS_FILTERS,
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
 } from "./constants"
-import { useKeyManagementViewModel } from "./hooks/useKeyManagementViewModel"
 import { getAccountKeyScopeMessages } from "./presentation/accountKeyResourcePresentation"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
 

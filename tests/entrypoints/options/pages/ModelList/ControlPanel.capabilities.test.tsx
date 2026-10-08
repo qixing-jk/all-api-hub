@@ -3,7 +3,7 @@ import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createProfileSource } from "~/features/ModelList/catalog/modelManagementSources"
-import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
+import { ControlPanel } from "~/features/ModelList/filtering/ControlPanel"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import {

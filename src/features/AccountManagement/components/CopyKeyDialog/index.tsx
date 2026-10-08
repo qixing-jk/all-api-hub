@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Alert, Modal, Spinner } from "~/components/ui"
+import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { useApiCredentialProfileLinks } from "~/features/ApiCredentialProfiles/associations/useApiCredentialProfileLinks"
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import {
   DeeplinkExportDialog,
   type DeeplinkExportRequest,
   type DeeplinkExportTarget,
-} from "~/components/DeeplinkExportDialog"
-import { Alert, Modal, Spinner } from "~/components/ui"
-import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
-import { getCredentialProfileForLocator } from "~/features/KeyManagement/credentialAssociations"
+} from "~/features/CredentialExport/DeeplinkExportDialog"
+import { getCredentialProfileForLocator } from "~/features/KeyManagement/associations/credentialAssociations"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { DefaultTokenGroupSelectionDialog } from "~/features/TokenProvisioning/components/DefaultTokenGroupSelectionDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"

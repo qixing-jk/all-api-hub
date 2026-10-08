@@ -1,0 +1,1063 @@
+import { createInstance, type TFunction } from "i18next"
+import { describe, expect, it } from "vitest"
+
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import {
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelType,
+} from "~/constants/doneHub"
+import { GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/gptLoad"
+import {
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+  type ChannelType,
+} from "~/constants/newApi"
+import { MANAGED_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import {
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelType,
+} from "~/constants/veloera"
+import {
+  getManagedResourceFieldOptionLabel,
+  getManagedResourceFieldPolicy,
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
+import {
+  mapManagedResourceMigrationExecutionResult,
+  mapManagedResourceMigrationPreview,
+  projectManagedResourceMigrationExecutionResult,
+  projectManagedResourceMigrationPreview,
+} from "~/features/ManagedSiteChannels/migration/managedResourceMigrationPresentation"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
+import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"
+import jaManagedSiteChannels from "~/locales/ja/managedSiteChannels.json"
+import viManagedSiteChannels from "~/locales/vi/managedSiteChannels.json"
+import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
+import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import {
+  MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
+  MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
+  MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
+} from "~/types/managedSiteMigration"
+import {
+  MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
+  type ManagedSiteMigrationCanonicalExecutionResult,
+  type ManagedSiteMigrationCanonicalPreview,
+  type ManagedSiteMigrationSource,
+} from "~/types/managedSiteMigrationCapability"
+import { OctopusOutboundType } from "~/types/octopus"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+const translations: Record<string, string> = {
+  "channelDialog:fields.baseUrl.label": "Base URL",
+  "channelDialog:fields.type.label": "Type",
+  "channelDialog:fields.models.label": "Models",
+  "channelDialog:fields.groups.label": "Groups",
+  "channelDialog:fields.priority.label": "Priority",
+  "channelDialog:fields.weight.label": "Weight",
+  "channelDialog:fields.status.label": "Status",
+  "managedSiteChannels:statusLabels.enabled": "Enabled",
+  "managedSiteChannels:statusLabels.manualPause": "Disabled",
+  "managedSiteChannels:statusLabels.unknown": "Unknown",
+  "managedSiteChannels:editor.options.channelType.unsupported":
+    "Unsupported type",
+  "managedSiteChannels:editor.options.channelType.openai": "OpenAI",
+  "managedSiteChannels:editor.options.channelType.anthropic": "Anthropic",
+  "managedSiteChannels:editor.options.channelType.openaiResponses":
+    "OpenAI Responses",
+  "managedSiteChannels:migration.generalWarnings.createOnly": "Create only",
+  "managedSiteChannels:migration.generalWarnings.targetRoutingDefaults":
+    "Target routing defaults",
+  "managedSiteChannels:migration.generalWarnings.noDedupeOrSync":
+    "No dedupe or sync",
+  "managedSiteChannels:migration.generalWarnings.noRollback": "No rollback",
+  "managedSiteChannels:migration.itemWarnings.dropsAdvancedSettings":
+    "Drops advanced settings",
+  "managedSiteChannels:migration.itemWarnings.dropsModelMapping":
+    "Drops model mapping",
+  "managedSiteChannels:migration.itemWarnings.dropsStatusCodeMapping":
+    "Drops status mapping",
+  "managedSiteChannels:migration.itemWarnings.dropsMultiKeyState":
+    "Drops multiple keys",
+  "managedSiteChannels:migration.itemWarnings.targetRemapsChannelType":
+    "Target remaps type",
+  "managedSiteChannels:migration.itemWarnings.targetNormalizesBaseUrl":
+    "Target normalizes Base URL",
+  "managedSiteChannels:migration.itemWarnings.targetForcesDefaultGroup":
+    "Target forces default group",
+  "managedSiteChannels:migration.sub2apiDefaultGroup":
+    "Platform default group (if available)",
+  "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup":
+    "Source groups are not copied. Check the target platform's default group after migration.",
+  "managedSiteChannels:migration.itemWarnings.targetSimplifiesStatus":
+    "Target simplifies status",
+  "managedSiteChannels:migration.blockedReasons.sourceKeyMissing":
+    "Source credential unavailable",
+  "managedSiteChannels:migration.blockedReasons.sourceKeyResolutionFailed":
+    "Source access could not be verified",
+  "managedSiteChannels:migration.blockedReasons.sourceKeyExportRestricted":
+    "Retrieve the key from the source dashboard and migrate this channel manually.",
+  "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported":
+    "Source type unsupported",
+  "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed":
+    "Target preparation failed",
+  "managedSiteChannels:migration.results.status.success": "Created",
+  "managedSiteChannels:migration.results.status.failed": "Failed",
+  "managedSiteChannels:migration.results.status.skipped": "Skipped",
+  "managedSiteChannels:migration.results.status.uncertain": "Uncertain",
+  "managedSiteChannels:migration.results.refreshRequired":
+    "Verify the target and refresh before continuing.",
+}
+
+const t = ((key: string | string[], options?: Record<string, unknown>) => {
+  const normalizedKey = Array.isArray(key) ? atIndex(key, 0) : key
+  const summaryMetric = normalizedKey.match(
+    /^managedSiteChannels:migration\.results\.summaryMetrics\.(created|failed|skipped|uncertain|total)$/,
+  )?.[1]
+  if (summaryMetric) return `${options?.count} ${summaryMetric}`
+  if (normalizedKey === "managedSiteChannels:migration.results.summary") {
+    return `${options?.created}/${options?.failed}/${options?.skipped}/${options?.uncertain}/${options?.total}`
+  }
+  return translations[normalizedKey] ?? `missing:${normalizedKey}`
+}) as TFunction
+
+const buildSource = (
+  overrides: Partial<ManagedSiteMigrationSource> = {},
+): ManagedSiteMigrationSource => ({
+  sourceSiteType: SITE_TYPES.AXON_HUB,
+  resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+  baseUrl: "https://source.example.invalid/v1",
+  models: ["model-b", "model-a"],
+  groups: ["source-group"],
+  status: "enabled",
+  lossSignals: {
+    hasModelMapping: false,
+    hasStatusCodeMapping: false,
+    hasAdvancedSettings: true,
+    hasMultiKeyState: false,
+  },
+  ...overrides,
+})
+
+const preview: ManagedSiteMigrationCanonicalPreview = {
+  sourceSiteType: SITE_TYPES.AXON_HUB,
+  targetSiteType: SITE_TYPES.AXON_HUB,
+  generalWarningCodes: [
+    MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.TARGET_ROUTING_DEFAULTS,
+    MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_ROLLBACK,
+    MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
+  ],
+  items: [
+    {
+      selection: {
+        selectionId: "opaque:row/beta",
+        displayName: "Ready example",
+        ref: {
+          siteType: SITE_TYPES.AXON_HUB,
+          kind: "channel",
+          scopeKey: "https://private-scope.example.invalid",
+          resourceId: "native-private-ref",
+        },
+      },
+      status: "ready",
+      source: buildSource(),
+      target: {
+        projection: {
+          name: "Ready example",
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          baseUrl: "https://target.example.invalid/v2",
+          models: ["model-a"],
+          groups: ["default", "fallback"],
+          enabled: false,
+        },
+        adjustments: {
+          remappedType: true,
+          normalizedBaseUrl: true,
+          forcedDefaultGroup: true,
+          simplifiedStatus: true,
+        },
+      },
+      warningCodes: [
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+      ],
+    },
+    {
+      selection: {
+        selectionId: "opaque:row/alpha",
+        displayName: "Blocked example",
+        ref: {
+          siteType: SITE_TYPES.AXON_HUB,
+          kind: "channel",
+          scopeKey: "https://other-private-scope.example.invalid",
+          resourceId: "other-native-private-ref",
+        },
+      },
+      status: "blocked",
+      warningCodes: [],
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED,
+    },
+  ],
+  totalCount: 2,
+  readyCount: 1,
+  blockedCount: 1,
+}
+
+const typeVocabularyCases = [
+  [SITE_TYPES.NEW_API, NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type, 1],
+  [
+    SITE_TYPES.VELOERA,
+    VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+    VeloeraChannelType.GitHubModels,
+  ],
+  [
+    SITE_TYPES.DONE_HUB,
+    DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    DoneHubChannelType.GitHubModels,
+  ],
+  [SITE_TYPES.OCTOPUS, "type", OctopusOutboundType.Anthropic],
+  [SITE_TYPES.AXON_HUB, "type", AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES],
+  [SITE_TYPES.CLAUDE_CODE_HUB, "type", CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX],
+  [SITE_TYPES.SUB2API, "platform", "anthropic"],
+  [SITE_TYPES.CLI_PROXY_API, "type", "vertex-api-key"],
+  [SITE_TYPES.OMNIROUTE, "provider", "openai"],
+  [
+    SITE_TYPES.GPT_LOAD,
+    GPT_LOAD_MANAGED_RESOURCE_FIELD_IDS.Provider,
+    "openai_compatible",
+  ],
+] as const
+
+describe("managedResourceMigrationPresentation", () => {
+  it("covers every registered Managed Site Type's native vocabulary", () => {
+    expect(typeVocabularyCases.map(([siteType]) => siteType).sort()).toEqual(
+      [...MANAGED_SITE_TYPES].sort(),
+    )
+  })
+
+  it.each(typeVocabularyCases)(
+    "shares the %s editor vocabulary for source and target types in the current locale",
+    async (siteType, fieldId, type) => {
+      const i18n = createInstance()
+      await i18n.init({
+        lng: "zh-CN",
+        fallbackLng: false,
+        resources: {
+          "zh-CN": { managedSiteChannels: zhCnManagedSiteChannels },
+        },
+      })
+      const localT = i18n.getFixedT("zh-CN", "managedSiteChannels")
+      const field = getManagedResourceFieldPolicy(
+        siteType,
+        MANAGED_RESOURCE_KINDS.Channel,
+        "create",
+      )!.fields.find((candidate) => candidate.fieldId === fieldId)!
+      const expected = getManagedResourceFieldOptionLabel(
+        field,
+        String(type),
+        localT,
+      )
+      const ready = atIndex(preview.items, 0)
+      if (ready.status !== "ready") throw new Error("fixture")
+      const mapped = mapManagedResourceMigrationPreview(
+        projectManagedResourceMigrationPreview({
+          ...preview,
+          sourceSiteType: siteType,
+          targetSiteType: siteType,
+          items: [
+            {
+              ...ready,
+              source: buildSource({
+                sourceSiteType: siteType,
+                resourceType: type,
+              }),
+              target: {
+                ...ready.target,
+                projection: { ...ready.target.projection, type },
+              },
+            },
+          ],
+        }),
+        { t: localT, getSiteLabel: String },
+      )
+      expect(
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+      ).toMatchObject({ source: expected, target: expected })
+    },
+  )
+
+  it.each([SITE_TYPES.AXON_HUB, SITE_TYPES.SUB2API] as const)(
+    "uses the declared platform-default group policy for %s without inferring it from Site Type",
+    (targetSiteType) => {
+      const ready = atIndex(preview.items, 0)
+      if (ready.status !== "ready") throw new Error("fixture")
+      const mapped = mapManagedResourceMigrationPreview(
+        projectManagedResourceMigrationPreview({
+          ...preview,
+          targetSiteType,
+          items: [
+            {
+              ...ready,
+              target: {
+                ...ready.target,
+                projection: {
+                  ...ready.target.projection,
+                  groups: [],
+                  groupAssignment: "platform-default-if-available",
+                },
+              },
+              warningCodes: [
+                MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+              ],
+            },
+          ],
+        }),
+        { t, getSiteLabel: String },
+      )
+      expect(
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+          ?.target,
+      ).toBe("Platform default group (if available)")
+      expect(atIndex(mapped.rows, 0).warningText).toEqual([
+        "Source groups are not copied. Check the target platform's default group after migration.",
+      ])
+    },
+  )
+
+  it("shows declared groups when no platform-default policy is supplied, even for Sub2API", () => {
+    const mapped = mapManagedResourceMigrationPreview(
+      projectManagedResourceMigrationPreview({
+        ...preview,
+        targetSiteType: SITE_TYPES.SUB2API,
+      }),
+      { t, getSiteLabel: String },
+    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+        ?.target,
+    ).toBe("default, fallback")
+  })
+
+  it("explains split keys, unknown counts, and key-change blockers", () => {
+    const ready = atIndex(preview.items, 0)
+    if (ready.status !== "ready") throw new Error("fixture")
+    const localT = ((key: string) => key) as TFunction
+    const mapped = mapManagedResourceMigrationPreview(
+      projectManagedResourceMigrationPreview({
+        ...preview,
+        items: [
+          {
+            ...ready,
+            source: {
+              ...ready.source,
+              lossSignals: {
+                ...ready.source.lossSignals,
+                hasMultiKeyState: true,
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.SPLITS_KEYS,
+            ],
+          },
+          ...[
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEYS_CHANGED,
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_MULTI_KEY_UNSUPPORTED,
+          ].map((blockingReasonCode) => ({
+            selection: ready.selection,
+            status: "blocked" as const,
+            warningCodes: [],
+            blockingReasonCode,
+          })),
+        ],
+      }),
+      { t: localT, getSiteLabel: String },
+    )
+    expect(atIndex(mapped.rows, 0).warningText).toContain(
+      "managedSiteChannels:migration.itemWarnings.splitsKeys",
+    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "keyCount")
+        ?.source,
+    ).toBe("common:labels.unknown")
+    expect(JSON.stringify(mapped.rows[1])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceKeysChanged",
+    )
+    expect(JSON.stringify(mapped.rows[2])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceMultiKeyUnsupported",
+    )
+  })
+
+  it("retains safe comparison and outcome data without native refs or extra execution fields", () => {
+    const unsafePreview = {
+      ...preview,
+      command: { credential: "private-command" },
+      items: preview.items.map((item) => ({
+        ...item,
+        backendMessage: "private-backend-message",
+        ...(item.source
+          ? {
+              source: {
+                ...item.source,
+                credential: "private-source-credential",
+              },
+            }
+          : {}),
+      })),
+    }
+    const data = projectManagedResourceMigrationPreview(unsafePreview)
+    expect(data.items.map((item) => item.selection.selectionId)).toEqual(
+      preview.items.map((item) => item.selection.selectionId),
+    )
+    expect(data.items.map((item) => item.status)).toEqual(["ready", "blocked"])
+    expect(data.readyCount).toBe(1)
+    expect(data.blockedCount).toBe(1)
+    expect(JSON.stringify(data)).not.toMatch(
+      /private|scopeKey|resourceId|credential|command|backendMessage/,
+    )
+
+    const unsafeResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      credential: "private-result-credential",
+      items: [
+        {
+          selectionId: "opaque:row/outcome",
+          displayName: "Uncertain example",
+          status: "uncertain" as const,
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          rawError: "private-upstream-error",
+        },
+      ],
+    }
+    const outcome = projectManagedResourceMigrationExecutionResult(unsafeResult)
+    expect(outcome.items).toEqual([
+      {
+        selectionId: "opaque:row/outcome",
+        displayName: "Uncertain example",
+        status: "uncertain",
+      },
+    ])
+    expect(outcome.uncertainCount).toBe(1)
+    expect(JSON.stringify(outcome)).not.toMatch(/private|credential|rawError/)
+    expect(
+      mapManagedResourceMigrationExecutionResult(outcome, { t })
+        .refreshRequired,
+    ).toBe(true)
+  })
+
+  it.each([
+    ["0", "OpenAI Chat"],
+    ["2", "Anthropic"],
+    [" ", "Unsupported type"],
+    ["999", "Unsupported type"],
+    ["invalid", "Unsupported type"],
+    ["2.5", "Unsupported type"],
+  ])("shows the Octopus target vocabulary for %s", (type, expected) => {
+    const item = preview.items[0]!
+    if (item.status !== "ready") throw new Error("expected ready item")
+    const mapped = mapManagedResourceMigrationPreview(
+      {
+        ...preview,
+        targetSiteType: SITE_TYPES.OCTOPUS,
+        items: [
+          {
+            ...item,
+            target: {
+              ...item.target,
+              projection: { ...item.target.projection, type },
+            },
+          },
+        ],
+      },
+      { t, getSiteLabel: String },
+    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+        ?.target,
+    ).toBe(expected)
+  })
+  it("uses DoneHub's provider-owned vocabulary for numeric string targets", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const doneHubPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...preview,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      items: [
+        {
+          ...readyItem,
+          target: {
+            ...readyItem.target,
+            projection: {
+              ...readyItem.target.projection,
+              type: String(DoneHubChannelType.GitHubModels),
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+      readyCount: 1,
+      blockedCount: 0,
+    }
+
+    const mapped = mapManagedResourceMigrationPreview(doneHubPreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(expect.objectContaining({ target: "GitHub Models" }))
+  })
+
+  it("uses DoneHub's provider-owned vocabulary for numeric target types", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const doneHubPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...preview,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      items: [
+        {
+          ...readyItem,
+          target: {
+            ...readyItem.target,
+            projection: {
+              ...readyItem.target.projection,
+              type: DoneHubChannelType.GitHubModels,
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+      readyCount: 1,
+      blockedCount: 0,
+    }
+
+    const mapped = mapManagedResourceMigrationPreview(doneHubPreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(expect.objectContaining({ target: "GitHub Models" }))
+  })
+
+  it("shows Veloera's native source and target vocabulary for colliding numeric types", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const veloeraPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...preview,
+      sourceSiteType: SITE_TYPES.VELOERA,
+      targetSiteType: SITE_TYPES.VELOERA,
+      items: [
+        {
+          ...readyItem,
+          source: buildSource({
+            sourceSiteType: SITE_TYPES.VELOERA,
+            resourceType: VeloeraChannelType.GitHubModels,
+          }),
+          target: {
+            ...readyItem.target,
+            projection: {
+              ...readyItem.target.projection,
+              type: VeloeraChannelType.GitHubModels,
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+      readyCount: 1,
+      blockedCount: 0,
+    }
+
+    const mapped = mapManagedResourceMigrationPreview(veloeraPreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type"),
+    ).toEqual(
+      expect.objectContaining({
+        source: "GitHub Models",
+        target: "GitHub Models",
+      }),
+    )
+  })
+
+  it.each([
+    [SITE_TYPES.SUB2API, "openai", "OpenAI"],
+    [SITE_TYPES.SUB2API, "anthropic", "Anthropic"],
+    [SITE_TYPES.OMNIROUTE, " openai ", "openai"],
+    [SITE_TYPES.OMNIROUTE, "", "Unsupported type"],
+    [SITE_TYPES.OMNIROUTE, 14, "Unsupported type"],
+    [SITE_TYPES.SUB2API, "gemini", "Gemini"],
+    [SITE_TYPES.SUB2API, "grok", "Grok"],
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, "DeepSeek"],
+    [SITE_TYPES.OCTOPUS, OctopusOutboundType.Anthropic, "Anthropic"],
+    [
+      SITE_TYPES.AXON_HUB,
+      AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      "OpenAI Responses",
+    ],
+    [
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
+      "Codex (Responses API)",
+    ],
+    [SITE_TYPES.AXON_HUB, 14, "Unsupported type"],
+    [SITE_TYPES.GPT_LOAD, " openai_compatible ", "openai_compatible"],
+    [SITE_TYPES.GPT_LOAD, "", "Unsupported type"],
+    [SITE_TYPES.GPT_LOAD, 14, "Unsupported type"],
+    [SITE_TYPES.CLI_PROXY_API, "unknown-provider", "Unsupported type"],
+    [SITE_TYPES.SUB2API, "unknown-platform", "Unsupported type"],
+    [SITE_TYPES.CLAUDE_CODE_HUB, 14, "Unsupported type"],
+  ] as const)(
+    "shows the native %s source type %s without New API label fallback",
+    (sourceSiteType, resourceType, expected) => {
+      const readyItem = preview.items[0]!
+      if (readyItem.status !== "ready") throw new Error("expected ready item")
+      const mapped = mapManagedResourceMigrationPreview(
+        {
+          ...preview,
+          sourceSiteType,
+          items: [
+            {
+              ...readyItem,
+              source: buildSource({ sourceSiteType, resourceType }),
+            },
+          ],
+        },
+        { t, getSiteLabel: String },
+      )
+
+      expect(
+        atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+          ?.source,
+      ).toBe(expected)
+    },
+  )
+
+  it("shows the Sub2API destination platform and its default-group policy", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const mapped = mapManagedResourceMigrationPreview(
+      {
+        ...preview,
+        targetSiteType: SITE_TYPES.SUB2API,
+        items: [
+          {
+            ...readyItem,
+            target: {
+              ...readyItem.target,
+              projection: {
+                ...readyItem.target.projection,
+                type: "anthropic",
+                groups: [],
+                groupAssignment: "platform-default-if-available",
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+            ],
+          },
+        ],
+      },
+      { t, getSiteLabel: String },
+    )
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "type")
+        ?.target,
+    ).toBe("Anthropic")
+    expect(
+      atIndex(mapped.rows, 0).comparisons.find(({ id }) => id === "groups")
+        ?.target,
+    ).toBe("Platform default group (if available)")
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
+      "Source groups are not copied. Check the target platform's default group after migration.",
+    ])
+  })
+
+  it("explains how to recover when source key export requires web verification", () => {
+    const mapped = mapManagedResourceMigrationExecutionResult(
+      {
+        totalSelected: 1,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 1,
+        uncertainCount: 0,
+        items: [
+          {
+            selectionId: "restricted",
+            displayName: "Restricted upstream",
+            status: "skipped",
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED,
+          },
+        ],
+      },
+      { t },
+    )
+    expect(atIndex(mapped.items, 0).message).toBe(
+      "Retrieve the key from the source dashboard and migrate this channel manually.",
+    )
+  })
+
+  it("preserves opaque row order and common-field comparisons without routing values", () => {
+    const mapped = mapManagedResourceMigrationPreview(preview, {
+      t,
+      getSiteLabel: (siteType) => `Site ${siteType}`,
+    })
+
+    expect(mapped.rows.map((row) => row.rowKey)).toEqual([
+      "opaque:row/beta",
+      "opaque:row/alpha",
+    ])
+    expect(mapped.rows.map((row) => row.displayIdentifier)).toEqual([
+      "opaque:row/beta",
+      "opaque:row/alpha",
+    ])
+    expect(
+      atIndex(mapped.rows, 0).comparisons.map((field) => field.id),
+    ).toEqual(["keyCount", "baseUrl", "type", "models", "groups", "status"])
+    expect(
+      atIndex(mapped.rows, 0).comparisons.map(({ source, target }) => [
+        source,
+        target,
+      ]),
+    ).toEqual([
+      ["1", "1"],
+      [
+        "https://source.example.invalid/v1",
+        "https://target.example.invalid/v2",
+      ],
+      ["Anthropic", "OpenAI"],
+      ["model-b, model-a", "model-a"],
+      ["source-group", "default, fallback"],
+      ["Enabled", "Disabled"],
+    ])
+    expect(mapped).toMatchObject({
+      sourceLabel: `Site ${SITE_TYPES.AXON_HUB}`,
+      targetLabel: `Site ${SITE_TYPES.AXON_HUB}`,
+      readyCount: 1,
+      blockedCount: 1,
+      totalCount: 2,
+      isLoading: false,
+      isManualLoading: false,
+      error: null,
+    })
+  })
+
+  it("preserves warning order and maps blocked rows to controlled fallback copy", () => {
+    const mapped = mapManagedResourceMigrationPreview(preview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(mapped.generalWarnings).toEqual([
+      "Target routing defaults",
+      "No rollback",
+      "Create only",
+    ])
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
+      "Drops advanced settings",
+      "Target remaps type",
+    ])
+    expect(mapped.rows[1]).toMatchObject({
+      status: "blocked",
+      blockedReason: "Source type unsupported",
+      blockedMessage: undefined,
+    })
+    expect(atIndex(mapped.rows, 1).comparisons).toHaveLength(6)
+    expect(
+      atIndex(mapped.rows, 1).comparisons.every(
+        ({ source, target, status }) =>
+          source === "" && target === "" && status === "unsupported",
+      ),
+    ).toBe(true)
+
+    const serialized = JSON.stringify(mapped)
+    expect(serialized).not.toMatch(
+      /native-private-ref|private-scope|credential|command|future-provider/i,
+    )
+  })
+
+  it("maps every controlled warning, blocker, type, and status fallback without leaking malformed codes", () => {
+    const malformedWarning = "backend-warning-secret"
+    const allWarnings = [
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MODEL_MAPPING,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_STATUS_CODE_MAPPING,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MULTI_KEY_STATE,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_NORMALIZES_BASE_URL,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+      malformedWarning,
+    ]
+    const readyItem = atIndex(preview.items, 0)
+    const matrix = {
+      ...preview,
+      generalWarningCodes: [
+        ...preview.generalWarningCodes,
+        "backend-general-warning-secret",
+      ],
+      items: [
+        {
+          ...readyItem,
+          source: buildSource({
+            resourceType: "future-provider" as unknown as ChannelType,
+            status: "disabled",
+          }),
+          warningCodes: allWarnings,
+        },
+        {
+          ...readyItem,
+          selection: {
+            ...readyItem.selection,
+            selectionId: "opaque:unknown-status",
+            displayName: "Unknown status",
+          },
+          source: buildSource({ status: "other" }),
+          warningCodes: [],
+        },
+        {
+          ...atIndex(preview.items, 1),
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+        },
+        {
+          ...atIndex(preview.items, 1),
+          selection: {
+            ...atIndex(preview.items, 1).selection,
+            selectionId: "opaque:source-resolution",
+            displayName: "Source resolution",
+          },
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        },
+      ],
+      totalCount: 4,
+      readyCount: 2,
+      blockedCount: 2,
+    } as unknown as ManagedSiteMigrationCanonicalPreview
+
+    const mapped = mapManagedResourceMigrationPreview(matrix, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(mapped.generalWarnings).toEqual([
+      "Target routing defaults",
+      "No rollback",
+      "Create only",
+    ])
+    expect(atIndex(mapped.rows, 0).warningText).toEqual([
+      "Drops model mapping",
+      "Drops status mapping",
+      "Drops advanced settings",
+      "Drops multiple keys",
+      "Target remaps type",
+      "Target normalizes Base URL",
+      "Target forces default group",
+      "Target simplifies status",
+    ])
+    expect(
+      mapped.rows
+        .slice(0, 2)
+        .map((row) =>
+          Object.fromEntries(
+            row.comparisons
+              .filter(({ id }) => id === "type" || id === "status")
+              .map(({ id, source }) => [id, source]),
+          ),
+        ),
+    ).toEqual([
+      { type: "Unsupported type", status: "Disabled" },
+      { type: "Anthropic", status: "Unknown" },
+    ])
+    expect(mapped.rows.slice(2).map((row) => row.blockedReason)).toEqual([
+      "Target preparation failed",
+      "Source access could not be verified",
+    ])
+    expect(JSON.stringify(mapped)).not.toMatch(/backend-.*-secret/)
+  })
+
+  it("uses a controlled blocked fallback for malformed runtime reason codes", () => {
+    const unsafePreview = {
+      ...preview,
+      items: [
+        {
+          ...atIndex(preview.items, 1),
+          blockingReasonCode: "backend-stack-secret",
+        },
+      ],
+      totalCount: 1,
+      readyCount: 0,
+      blockedCount: 1,
+    } as unknown as ManagedSiteMigrationCanonicalPreview
+
+    const mapped = mapManagedResourceMigrationPreview(unsafePreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(atIndex(mapped.rows, 0).blockedReason).toBe(
+      "Source access could not be verified",
+    )
+    expect(JSON.stringify(mapped)).not.toContain("backend-stack-secret")
+  })
+
+  it("maps partial created, failed, skipped, and uncertain outcomes without replay", () => {
+    const result: ManagedSiteMigrationCanonicalExecutionResult = {
+      totalSelected: 4,
+      attemptedCount: 3,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 1,
+      uncertainCount: 1,
+      items: [
+        {
+          selectionId: "opaque:created",
+          displayName: "Created example",
+          status: "created",
+        },
+        {
+          selectionId: "opaque:failed",
+          displayName: "Failed example",
+          status: "failed",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+        },
+        {
+          selectionId: "opaque:skipped",
+          displayName: "Skipped example",
+          status: "skipped",
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED,
+        },
+        {
+          selectionId: "opaque:uncertain",
+          displayName: "Uncertain example",
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ],
+    }
+
+    const mapped = mapManagedResourceMigrationExecutionResult(result, { t })
+
+    expect(mapped.summary).toBe(
+      "1 created/1 failed/1 skipped/1 uncertain/4 total",
+    )
+    expect(
+      mapped.items.map(({ rowKey, displayIdentifier, status }) => [
+        rowKey,
+        displayIdentifier,
+        status,
+      ]),
+    ).toEqual([
+      ["opaque:created", "opaque:created", "success"],
+      ["opaque:failed", "opaque:failed", "failed"],
+      ["opaque:skipped", "opaque:skipped", "skipped"],
+      ["opaque:uncertain", "opaque:uncertain", "uncertain"],
+    ])
+    expect(mapped.items.map((item) => item.statusLabel)).toEqual([
+      "Created",
+      "Failed",
+      "Skipped",
+      "Uncertain",
+    ])
+    expect(atIndex(mapped.items, 2).message).toBe("Source type unsupported")
+    expect(atIndex(mapped.items, 3).message).toBe(
+      "Verify the target and refresh before continuing.",
+    )
+    expect(mapped.refreshRequired).toBe(true)
+    expect(mapped.canReplay).toBe(false)
+    expect(JSON.stringify(mapped)).not.toMatch(
+      /target_rejected|mutation_state_uncertain|credential|command|native ref/i,
+    )
+  })
+
+  it("uses independently pluralized Spanish metrics for mixed result counts", async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: "es-419",
+      fallbackLng: false,
+      resources: {
+        "es-419": { managedSiteChannels: es419ManagedSiteChannels },
+      },
+    })
+    const baseResult: ManagedSiteMigrationCanonicalExecutionResult = {
+      totalSelected: 6,
+      attemptedCount: 6,
+      createdCount: 1,
+      failedCount: 2,
+      skippedCount: 1,
+      uncertainCount: 2,
+      items: [],
+    }
+
+    expect(
+      mapManagedResourceMigrationExecutionResult(baseResult, {
+        t: i18n.getFixedT("es-419", "managedSiteChannels"),
+      }).summary,
+    ).toBe(
+      "Resultados: 1 creado, 2 fallidos, 1 omitido, 2 inciertos, 6 en total.",
+    )
+    expect(
+      mapManagedResourceMigrationExecutionResult(
+        {
+          ...baseResult,
+          createdCount: 2,
+          failedCount: 1,
+          skippedCount: 2,
+          uncertainCount: 1,
+        },
+        { t: i18n.getFixedT("es-419", "managedSiteChannels") },
+      ).summary,
+    ).toBe(
+      "Resultados: 2 creados, 1 fallido, 2 omitidos, 1 incierto, 6 en total.",
+    )
+  })
+
+  it.each([
+    ["en", enManagedSiteChannels],
+    ["es-419", es419ManagedSiteChannels],
+    ["ja", jaManagedSiteChannels],
+    ["vi", viManagedSiteChannels],
+    ["zh-CN", zhCnManagedSiteChannels],
+    ["zh-TW", zhTwManagedSiteChannels],
+  ])("resolves plural summary metrics in %s", async (language, resource) => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: language,
+      fallbackLng: false,
+      resources: { [language]: { managedSiteChannels: resource } },
+    })
+
+    const summary = mapManagedResourceMigrationExecutionResult(
+      {
+        totalSelected: 6,
+        createdCount: 1,
+        failedCount: 2,
+        skippedCount: 1,
+        uncertainCount: 2,
+        items: [],
+      },
+      { t: i18n.getFixedT(language, "managedSiteChannels") },
+    ).summary
+
+    expect(summary).toContain("1")
+    expect(summary).toContain("2")
+    expect(summary).toContain("6")
+    expect(summary).not.toContain("summaryMetrics")
+  })
+})

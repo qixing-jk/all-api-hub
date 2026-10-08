@@ -17,7 +17,7 @@ import {
 } from "~/components/ui"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
+import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,

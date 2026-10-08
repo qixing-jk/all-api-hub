@@ -16,7 +16,7 @@ const {
   openAddDialogMock: vi.fn(),
 }))
 
-vi.mock("~/hooks/useAddAccountHandler", () => ({
+vi.mock("~/features/AccountManagement/opening/useAddAccountHandler", () => ({
   useAddAccountHandler: () => ({
     handleAddAccountClick: handleAddAccountClickMock,
   }),
@@ -59,7 +59,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView",
+  "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView",
   () => ({
     default: forwardRef(function ApiCredentialProfilesPopupView(_props, ref) {
       useImperativeHandle(ref, () => ({

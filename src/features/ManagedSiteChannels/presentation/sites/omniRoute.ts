@@ -3,9 +3,6 @@ import {
   OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/omniroute"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
-import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 import {
   defineManagedResourceFieldPolicy,
   MANAGED_RESOURCE_CHANNEL_FIELD_ROLES,
@@ -16,11 +13,14 @@ import {
   nativeChannelStatusOptionLabelResolvers,
   resolveNativeTypeSlug,
   type ManagedResourceFieldPresentation,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+
+import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 
 const omniRouteProviderField = {
   fieldId: OMNIROUTE_MANAGED_RESOURCE_FIELD_IDS.Provider,

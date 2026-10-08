@@ -1,0 +1,306 @@
+import { createEvent, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import RowActions from "~/features/ManagedSiteChannels/table/RowActions"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = () => {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
+
+vi.mock("~/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => (
+    <div role="menu">{children}</div>
+  ),
+  DropdownMenuItem: ({
+    children,
+    disabled,
+    onClick,
+    onSelect,
+    ...props
+  }: {
+    children: ReactNode
+    disabled?: boolean
+    onClick?: () => void
+    onSelect?: (event: { preventDefault: () => void }) => void
+    "aria-disabled"?: boolean | "true" | "false"
+  }) => (
+    <button
+      disabled={disabled}
+      onClick={(event) => {
+        onSelect?.(event)
+        if (!event.defaultPrevented) onClick?.()
+      }}
+      role="menuitem"
+      {...props}
+    >
+      {children}
+    </button>
+  ),
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuTrigger: ({ children }: { children: ReactNode }) => (
+    <>{children}</>
+  ),
+}))
+
+const labels = {
+  trigger: "open actions",
+  edit: "Edit",
+  view: "View",
+  migrate: "Migrate",
+  sync: "Sync",
+  syncing: "Syncing",
+  openSync: "Open sync",
+  filters: "Filters",
+  delete: "Delete",
+}
+
+const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
+  const defaultProps = {
+    rowKey: "opaque:channel:42",
+    capabilities: {
+      canEdit: true,
+      canView: true,
+      canMigrate: true,
+      canDelete: true,
+      canSync: true,
+      canOpenSync: true,
+      canFilter: true,
+    },
+    onEdit: vi.fn(),
+    onView: vi.fn(),
+    onMigrate: vi.fn(),
+    onDelete: vi.fn(),
+    onSync: vi.fn().mockResolvedValue(undefined),
+    onOpenSync: vi.fn(),
+    onFilters: vi.fn(),
+    showMigrationAction: false,
+    isSyncing: false,
+    labels,
+    testIds: {
+      trigger: "row-actions-trigger",
+      edit: "row-actions-edit",
+      delete: "row-actions-delete",
+    },
+  }
+
+  const mergedProps = { ...defaultProps, ...props }
+  render(<RowActions {...mergedProps} />, {
+    withReleaseUpdateStatusProvider: false,
+    withThemeProvider: false,
+    withUserPreferencesProvider: false,
+  })
+
+  return mergedProps
+}
+
+describe("ManagedSiteChannels RowActions", () => {
+  it("shows no action separator for a view-only channel", () => {
+    setup({ capabilities: { canView: true } })
+    expect(screen.getByRole("menuitem", { name: labels.view })).toBeVisible()
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("keeps the menu trigger accessible without a competing tooltip", () => {
+    setup()
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(trigger).toHaveAccessibleName(labels.trigger)
+    expect(trigger).not.toHaveAttribute("title")
+    expect(trigger).not.toHaveAttribute("aria-describedby")
+  })
+
+  it("renders standard row actions and routes callbacks", async () => {
+    const user = userEvent.setup()
+    const props = setup()
+
+    await user.click(screen.getByRole("menuitem", { name: labels.view }))
+    await user.click(screen.getByRole("menuitem", { name: labels.edit }))
+    await user.click(screen.getByRole("menuitem", { name: labels.filters }))
+    await user.click(screen.getByRole("menuitem", { name: labels.openSync }))
+    await user.click(screen.getByRole("menuitem", { name: labels.sync }))
+    await user.click(screen.getByRole("menuitem", { name: labels.delete }))
+
+    expect(props.onView).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onEdit).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onFilters).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onOpenSync).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onSync).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onDelete).toHaveBeenCalledWith("opaque:channel:42")
+    // Migration only exists while the workspace is in migration mode.
+    expect(screen.queryByRole("menuitem", { name: labels.migrate })).toBeNull()
+  })
+
+  it("keeps the detail view reachable outside migration mode", () => {
+    setup()
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.view }),
+    ).toBeInTheDocument()
+  })
+
+  it("hides the detail view when the row cannot be read", () => {
+    setup({ capabilities: { canEdit: true, canDelete: true } })
+
+    expect(screen.queryByRole("menuitem", { name: labels.view })).toBeNull()
+  })
+
+  it("hides channel actions that the row does not support", () => {
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+    })
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.edit }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: labels.delete }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("menuitem", { name: labels.filters })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.openSync })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
+  })
+
+  it("keeps unsupported model sync visible with a keyboard-readable reason", () => {
+    const onSync = vi.fn()
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+      onSync,
+      modelSyncUnavailableReason:
+        "This site type does not support channel model sync.",
+    })
+
+    const syncItem = screen.getByRole("menuitem", {
+      name: /Sync.*This site type does not support channel model sync/,
+    })
+    expect(syncItem).toHaveAttribute("aria-disabled", "true")
+
+    const selectEvent = createEvent.click(syncItem)
+    fireEvent(syncItem, selectEvent)
+
+    expect(selectEvent.defaultPrevented).toBe(true)
+    expect(onSync).not.toHaveBeenCalled()
+  })
+
+  it("passes opaque native row keys through without coercion", async () => {
+    const user = userEvent.setup()
+    const props = setup({
+      rowKey: "gid://example.invalid/Channel/native-string-id",
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+    })
+
+    await user.click(screen.getByRole("menuitem", { name: labels.edit }))
+    await user.click(screen.getByRole("menuitem", { name: labels.delete }))
+
+    expect(props.onEdit).toHaveBeenCalledWith(
+      "gid://example.invalid/Channel/native-string-id",
+    )
+    expect(props.onDelete).toHaveBeenCalledWith(
+      "gid://example.invalid/Channel/native-string-id",
+    )
+  })
+
+  it("renders only capable migration actions", async () => {
+    const user = userEvent.setup()
+    const props = setup({
+      capabilities: {
+        canEdit: true,
+        canView: true,
+        canMigrate: false,
+        canDelete: true,
+      },
+      showMigrationAction: true,
+    })
+
+    await user.click(screen.getByRole("menuitem", { name: labels.view }))
+
+    expect(screen.queryByRole("menuitem", { name: labels.migrate })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.edit })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.delete })).toBeNull()
+    expect(props.onView).toHaveBeenCalledWith("opaque:channel:42")
+    expect(props.onMigrate).not.toHaveBeenCalled()
+  })
+
+  it("renders an action only when both capability and callback are present", () => {
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+        canFilter: true,
+        canOpenSync: true,
+        canSync: true,
+      },
+      onEdit: undefined,
+      onFilters: undefined,
+      onOpenSync: undefined,
+      onSync: undefined,
+    })
+
+    expect(screen.queryByRole("menuitem", { name: labels.edit })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.filters })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.openSync })).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
+    expect(
+      screen.getByRole("menuitem", { name: labels.delete }),
+    ).toBeInTheDocument()
+  })
+
+  it("announces externally initiated sync and keeps the row busy", () => {
+    setup({ isSyncing: true })
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(trigger).toBeDisabled()
+    expect(trigger).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(labels.syncing)
+  })
+
+  it("keeps local sync visible after selection and suppresses duplicate syncs", async () => {
+    const deferredSync = createDeferred()
+    const onSync = vi.fn(() => deferredSync.promise)
+    setup({ onSync })
+
+    const syncItem = screen.getByRole("menuitem", { name: labels.sync })
+    fireEvent.click(syncItem)
+    fireEvent.click(syncItem)
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(onSync).toHaveBeenCalledTimes(1)
+    expect(trigger).toBeDisabled()
+    expect(trigger).toHaveAttribute("aria-busy", "true")
+    expect(trigger).toHaveAccessibleName(labels.trigger)
+    expect(screen.getByRole("status")).toHaveTextContent(labels.syncing)
+    expect(
+      screen.getByRole("menuitem", { name: labels.syncing }),
+    ).toBeDisabled()
+
+    deferredSync.resolve()
+
+    await waitFor(() => {
+      expect(trigger).toBeEnabled()
+    })
+    expect(trigger).not.toHaveAttribute("aria-busy")
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+})

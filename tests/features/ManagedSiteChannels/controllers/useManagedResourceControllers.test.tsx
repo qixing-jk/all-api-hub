@@ -3,9 +3,9 @@ import { startTransition, Suspense, useState } from "react"
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
-import { useManagedResourceListController as useManagedResourceListControllerBase } from "~/features/ManagedSiteChannels/controllers/useManagedResourceListController"
-import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController"
+import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/editor/useManagedResourceMutationController"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/table/managedResourceRowMapper"
+import { useManagedResourceListController as useManagedResourceListControllerBase } from "~/features/ManagedSiteChannels/table/useManagedResourceListController"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,

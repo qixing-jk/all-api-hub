@@ -8,7 +8,7 @@ import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
   MANAGED_RESOURCE_SECTION_ORDER,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {

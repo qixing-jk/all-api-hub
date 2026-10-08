@@ -7,10 +7,6 @@ import {
   isAxonHubModelAutoSyncSupported,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import { MANAGED_RESOURCE_STATUSES } from "~/services/apiAdapters/contracts/managedResourceNative"
-
-import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 import {
   defineManagedResourceFieldPolicy,
   MANAGED_RESOURCE_CHANNEL_FIELD_ROLES,
@@ -21,11 +17,15 @@ import {
   requireFieldValuePresentation,
   resolveUnsupportedResourceType,
   type ManagedResourceFieldPresentation,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_STATUSES } from "~/services/apiAdapters/contracts/managedResourceNative"
+
+import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 
 const axonHubChannelTypeOptionLabelResolvers = {
   [AXON_HUB_CHANNEL_TYPE.OPENAI]: (t: TFunction) =>

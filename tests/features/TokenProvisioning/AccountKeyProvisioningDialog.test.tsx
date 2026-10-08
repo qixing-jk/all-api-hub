@@ -28,7 +28,7 @@ vi.mock(
   () => ({ buildOneTimeApiKeyProfileSaveAction: vi.fn() }),
 )
 vi.mock(
-  "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog",
+  "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog",
   () => ({
     AccountKeyResourceEditorDialog: ({
       editor,

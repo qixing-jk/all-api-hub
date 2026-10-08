@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Button,
   Card,
@@ -18,7 +17,8 @@ import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "~/features/BasicSettings/comp
 import { useManagedSiteConfigDraft } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/useManagedSiteConfigDraft"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
+import { ManagedSiteDeploymentLink } from "~/features/ManagedSiteWidgets/ManagedSiteDeploymentLink"
+import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,

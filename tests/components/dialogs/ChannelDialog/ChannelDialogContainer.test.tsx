@@ -20,7 +20,7 @@ const { addTokenDialogPropsMock, nativeDialogPropsMock } = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog",
+  "~/features/ManagedSiteChannels/editor/ManagedResourceCreateDialog",
   () => ({
     ManagedResourceCreateDialog: (props: {
       isOpen: boolean

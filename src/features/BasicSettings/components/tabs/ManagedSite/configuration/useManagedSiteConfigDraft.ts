@@ -4,7 +4,7 @@ import {
   MANAGED_SITE_CONFIG_TEXT_POLICIES,
   type ManagedSiteConfigTextPolicy,
 } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/managedSiteConfigFields"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import { usePreferenceDraft } from "~/hooks/preferences/usePreferenceDraft"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 

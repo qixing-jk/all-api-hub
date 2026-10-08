@@ -14,7 +14,7 @@ import {
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
+import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

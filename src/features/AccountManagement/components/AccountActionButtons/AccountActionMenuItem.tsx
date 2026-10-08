@@ -2,7 +2,7 @@ import React from "react"
 
 import { DropdownMenuItem } from "~/components/ui/dropdown-menu"
 import { Spinner } from "~/components/ui/spinner"
-import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
+import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 
 interface AccountActionMenuItemProps {

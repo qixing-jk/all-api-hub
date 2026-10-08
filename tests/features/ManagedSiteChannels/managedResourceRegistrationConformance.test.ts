@@ -10,12 +10,12 @@ import {
 import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
+import { managedSitePresentationDefinitions } from "~/features/ManagedSiteChannels/presentation/managedSitePresentationRegistry"
 import {
   createManagedResourceColumns,
   getManagedResourcePresentationSemantics,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
-import { managedSitePresentationDefinitions } from "~/features/ManagedSiteChannels/presentation/managedSitePresentationRegistry"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePolicy"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import {
   getManagedResourceRegistration,

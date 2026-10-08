@@ -11,7 +11,7 @@ import {
   getFieldValuePresentationFromDefinition,
   getManagedResourceFieldOptionLabel,
   requireFieldValuePresentation,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import { newApiPresentation } from "~/features/ManagedSiteChannels/presentation/sites/newApi"
 import { omniRoutePresentation } from "~/features/ManagedSiteChannels/presentation/sites/omniRoute"
 import { CHANNEL_STATUS } from "~/types/newApi"

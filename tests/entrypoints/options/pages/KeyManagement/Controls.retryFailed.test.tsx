@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { AccountSelectorPanel } from "~/features/KeyManagement/components/AccountSelectorPanel"
-import { AccountSummaryBar } from "~/features/KeyManagement/components/AccountSummaryBar"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import { AccountSelectorPanel } from "~/features/KeyManagement/inventory/AccountSelectorPanel"
+import { AccountSummaryBar } from "~/features/KeyManagement/inventory/AccountSummaryBar"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 

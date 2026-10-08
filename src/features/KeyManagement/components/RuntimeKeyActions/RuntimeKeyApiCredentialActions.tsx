@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
+import { KEY_CREDENTIAL_ASSOCIATION_STATES } from "~/features/KeyManagement/associations/credentialAssociations"
 import {
   KeyResourceCredentialAssociationControl,
   type KeyResourceCredentialAssociation,
-} from "~/features/KeyManagement/components/KeyResourceCard"
-import { KEY_CREDENTIAL_ASSOCIATION_STATES } from "~/features/KeyManagement/credentialAssociations"
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import toast from "~/lib/notify"

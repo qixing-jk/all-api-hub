@@ -4,8 +4,6 @@ import {
   VeloeraChannelStatus,
   VeloeraChannelTypeNames,
 } from "~/constants/veloera"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
 import {
   createNewApiFamilyFields,
   createStatusOptionLabelResolvers,
@@ -13,11 +11,12 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   requireFieldValuePresentation,
   type ManagedResourceTextResolver,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 
 const veloeraTypeOptionLabelResolvers = Object.fromEntries(
   Object.entries(VeloeraChannelTypeNames).map(([value, label]) => [

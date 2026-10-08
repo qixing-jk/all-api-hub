@@ -1,8 +1,6 @@
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { type KiloCodeAccountExportSelection } from "~/components/kiloCodeAccountExport"
-import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import {
   Badge,
   Button,
@@ -17,10 +15,12 @@ import {
   SelectValue,
 } from "~/components/ui"
 import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
+import { type KiloCodeAccountExportSelection } from "~/features/KiloCodeExport/kiloCodeAccountExport"
+import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   type useKiloCodeAccountModelDiscovery,
-} from "~/components/useKiloCodeAccountModelDiscovery"
+} from "~/features/KiloCodeExport/useKiloCodeAccountModelDiscovery"
 import { getAccountRuntimeKeyExportId } from "~/services/accounts/accountRuntimeKeys"
 import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
 import type { DisplaySiteData } from "~/types"

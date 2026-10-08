@@ -1,8 +1,6 @@
 import { RefreshCcw } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
-import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { EmptyState } from "~/components/ui"
@@ -12,6 +10,8 @@ import LoadingSkeleton from "~/features/ManagedSiteModelSync/components/LoadingS
 import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCard"
 import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
+import ManagedSiteConfigRequiredState from "~/features/ManagedSiteWidgets/ManagedSiteConfigRequiredState"
+import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,

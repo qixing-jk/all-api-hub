@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Card } from "~/components/ui"
-import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
+import ManagedSiteChannelLinkButton from "~/features/ManagedSiteWidgets/ManagedSiteChannelLinkButton"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ExecutionHistoryItemResult } from "~/types/managedSiteModelSync"
 

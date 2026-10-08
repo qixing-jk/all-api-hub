@@ -11,8 +11,14 @@ import {
   Modal,
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
-import { useNativeManagedSiteChannelsViewModel } from "~/features/ManagedSiteChannels/hooks/useNativeManagedSiteChannelsViewModel"
+import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/detail/ManagedSiteChannelDetailView"
+import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
+import { MANAGED_RESOURCE_EDITOR_MODES } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
+import ChannelFilterDialog from "~/features/ManagedSiteChannels/filters/ChannelFilterDialog"
 import type { ManagedSiteChannelsRouteProps } from "~/features/ManagedSiteChannels/managedSiteChannelsRouteContracts"
+import { ManagedSiteMigrationDialogView } from "~/features/ManagedSiteChannels/migration/ManagedSiteMigrationDialogView"
+import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/workspace/ManagedSiteChannelsView"
+import { useNativeManagedSiteChannelsViewModel } from "~/features/ManagedSiteChannels/workspace/useNativeManagedSiteChannelsViewModel"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { type ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
@@ -21,13 +27,6 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
-
-import ChannelFilterDialog from "./components/ChannelFilterDialog"
-import { ManagedResourceEditorBody } from "./presentation/ManagedResourceEditorBody"
-import { MANAGED_RESOURCE_EDITOR_MODES } from "./presentation/managedResourceFieldPolicy"
-import { ManagedSiteChannelDetailView } from "./presentation/ManagedSiteChannelDetailView"
-import { ManagedSiteChannelsView } from "./presentation/ManagedSiteChannelsView"
-import { ManagedSiteMigrationDialogView } from "./presentation/ManagedSiteMigrationDialogView"
 
 const resolvePolicy = (
   siteType: ManagedSiteType,

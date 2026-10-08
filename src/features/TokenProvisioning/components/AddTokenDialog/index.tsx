@@ -8,11 +8,11 @@ import {
   Modal,
   SearchableSelect,
 } from "~/components/ui"
-import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
 import {
   useAccountKeyResourceController,
   type AccountKeyResourceRouteTransition,
-} from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
+} from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import { canListAccountKeyResources } from "~/services/accounts/keyProductCapabilities"

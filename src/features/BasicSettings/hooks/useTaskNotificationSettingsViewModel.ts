@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { useDeferredPreferenceDraft } from "~/hooks/useDeferredPreferenceDraft"
+import { useDeferredPreferenceDraft } from "~/hooks/preferences/useDeferredPreferenceDraft"
 import {
   sendTaskNotificationMessage,
   TaskNotificationMessageTypes,

@@ -6,7 +6,7 @@ import {
   createAccountSource,
   createProfileSource,
 } from "~/features/ModelList/catalog/modelManagementSources"
-import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
+import { StatusIndicator } from "~/features/ModelList/presentation/StatusIndicator"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"

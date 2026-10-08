@@ -1,8 +1,8 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { TokenEmptyState } from "~/features/KeyManagement/components/TokenEmptyState"
-import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { TokenEmptyState } from "~/features/KeyManagement/inventory/TokenEmptyState"
+import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
 import { createTab } from "~/utils/browser/tabs"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen } from "~~/tests/test-utils/render"

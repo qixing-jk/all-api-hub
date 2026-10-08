@@ -1,0 +1,2425 @@
+import { act } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import type React from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  getBatchVerifyModelCheckboxTestId,
+  getBatchVerifyRowTestId,
+} from "~/features/ModelList/testIds"
+import {
+  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
+} from "~/features/ModelList/verification/batchVerification"
+import {
+  deriveBatchVerifyRowStatus,
+  getBatchVerifyFailureLogIds,
+} from "~/features/ModelList/verification/batchVerificationState"
+import { BatchVerifyModelsDialog } from "~/features/ModelList/verification/BatchVerifyModelsDialog"
+import {
+  buildAccountRuntimeKeyAccount,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+import { buildNewApiToken } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const {
+  mockFetchDisplayAccountRuntimeKeys,
+  mockNewApiInventory,
+  mockGetApiVerificationProbeDefinitions,
+  mockResolveDisplayAccountRuntimeKeySecret,
+  mockNewApiSecret,
+  mockRunApiVerificationProbe,
+  mockStartProductAnalyticsAction,
+  mockCompleteStartProductAnalyticsAction,
+  mockCompleteTrackedProductAnalyticsAction,
+  mockTotalListHeightChanged,
+  mockTrackProductAnalyticsActionStarted,
+  mockUpsertLatestSummaries,
+  mockUpsertLatestSummary,
+} = vi.hoisted(() => ({
+  mockFetchDisplayAccountRuntimeKeys: vi.fn(),
+  mockNewApiInventory: vi.fn(),
+  mockGetApiVerificationProbeDefinitions: vi.fn(),
+  mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
+  mockNewApiSecret: vi.fn(),
+  mockRunApiVerificationProbe: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteStartProductAnalyticsAction: vi.fn(),
+  mockCompleteTrackedProductAnalyticsAction: vi.fn(),
+  mockTotalListHeightChanged: {
+    current: undefined as undefined | ((height: number) => void),
+  },
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockUpsertLatestSummaries: vi.fn(),
+  mockUpsertLatestSummary: vi.fn(),
+}))
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    const { buildNewApiRuntimeKey } = await import(
+      "~~/tests/test-utils/accountKeyFixtures"
+    )
+
+    return {
+      ...actual,
+      fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
+        const [account] = args
+        const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
+        if (runtimeKeys !== undefined) {
+          return runtimeKeys.map((runtimeKey: any) =>
+            runtimeKey?.source && runtimeKey?.accountId
+              ? runtimeKey
+              : buildNewApiRuntimeKey(account, runtimeKey),
+          )
+        }
+
+        const tokens = await mockNewApiInventory(...args)
+        return tokens.map((token: any) => buildNewApiRuntimeKey(account, token))
+      },
+      resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
+        const [account, runtimeKey, options] = args
+        const resolvedRuntimeKey =
+          await mockResolveDisplayAccountRuntimeKeySecret(...args)
+        if (resolvedRuntimeKey !== undefined) return resolvedRuntimeKey
+
+        if (runtimeKey?.source === "account_key_resource") {
+          const resolvedToken = await mockNewApiSecret(
+            account,
+            { id: runtimeKey.legacyTokenId, key: runtimeKey.secret },
+            options,
+          )
+          return {
+            ...runtimeKey,
+            secret: resolvedToken.key,
+          }
+        }
+
+        return runtimeKey
+      },
+    }
+  },
+)
+
+vi.mock("react-virtuoso", () => {
+  return {
+    Virtuoso: ({
+      data,
+      itemContent,
+      computeItemKey,
+      components,
+      totalListHeightChanged,
+    }: {
+      data: any[]
+      itemContent: (index: number, item: any) => React.ReactNode
+      computeItemKey?: (index: number, item: any) => React.Key
+      totalListHeightChanged?: (height: number) => void
+      components?: {
+        Item?: React.ComponentType<any>
+        List?: React.ComponentType<any>
+      }
+    }) => {
+      const Item = components?.Item ?? ((props: any) => <div {...props} />)
+      const List = components?.List ?? ((props: any) => <div {...props} />)
+      mockTotalListHeightChanged.current = totalListHeightChanged
+
+      return (
+        <div data-testid="batch-verify-virtual-list">
+          <List>
+            {data.map((item, index) => (
+              <Item key={computeItemKey?.(index, item) ?? index}>
+                {itemContent(index, item)}
+              </Item>
+            ))}
+          </List>
+        </div>
+      )
+    },
+  }
+})
+
+vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/verification/aiApiVerification")
+    >()
+  return {
+    ...actual,
+    getApiVerificationProbeDefinitions: (
+      apiType: Parameters<typeof actual.getApiVerificationProbeDefinitions>[0],
+    ) =>
+      mockGetApiVerificationProbeDefinitions(apiType) ??
+      actual.getApiVerificationProbeDefinitions(apiType),
+    runApiVerificationProbe: (...args: any[]) =>
+      mockRunApiVerificationProbe(...args),
+  }
+})
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+  startProductAnalyticsAction: (...args: any[]) =>
+    mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
+}))
+
+vi.mock(
+  "~/services/verification/verificationResultHistory",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/verificationResultHistory")
+      >()
+    return {
+      ...actual,
+      verificationResultHistoryStorage: {
+        ...actual.verificationResultHistoryStorage,
+        // Records one entry per persisted summary so assertions describe what
+        // was stored, and exposes the batch call itself so the flush cadence can
+        // be asserted separately.
+        upsertLatestSummaries: async (summaries: any[]) => {
+          mockUpsertLatestSummaries(summaries)
+          const stored = []
+          for (const summary of summaries) {
+            stored.push(await mockUpsertLatestSummary(summary))
+          }
+          return stored
+        },
+      },
+    }
+  },
+)
+
+const account = {
+  id: "acc-1",
+  name: "Account One",
+  baseUrl: "https://api.example.com",
+  siteType: SITE_TYPES.NEW_API,
+  token: "account-token",
+  cookieAuthSessionCookie: "",
+  authType: "access_token",
+  userId: "1",
+} as any
+
+function renderDialog(items: any[]) {
+  return render(
+    <BatchVerifyModelsDialog isOpen={true} onClose={() => {}} items={items} />,
+  )
+}
+
+describe("BatchVerifyModelsDialog", () => {
+  beforeEach(() => {
+    mockFetchDisplayAccountRuntimeKeys.mockReset()
+    mockNewApiInventory.mockReset()
+    mockGetApiVerificationProbeDefinitions.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret.mockReset()
+    mockNewApiSecret.mockReset()
+    mockRunApiVerificationProbe.mockReset()
+    mockStartProductAnalyticsAction.mockReset()
+    mockCompleteStartProductAnalyticsAction.mockReset()
+    mockCompleteTrackedProductAnalyticsAction.mockReset()
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteStartProductAnalyticsAction,
+    })
+    mockTotalListHeightChanged.current = undefined
+    mockTrackProductAnalyticsActionStarted.mockReset()
+    mockTrackProductAnalyticsActionStarted.mockReturnValue({
+      complete: mockCompleteTrackedProductAnalyticsAction,
+    })
+    mockUpsertLatestSummary.mockReset()
+    mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
+    mockUpsertLatestSummaries.mockReset()
+  })
+
+  it("applies the selected mode to every model and labels the batch results", async () => {
+    const user = userEvent.setup()
+    const profile = {
+      id: "profile-mode",
+      requestHeaders: { "x-client": "batch-profile" },
+      name: "Profile",
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-synthetic",
+      apiType: API_TYPES.OPENAI,
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Text generation succeeded",
+      mode: "non-streaming",
+    })
+    renderDialog(
+      ["gpt-a", "gpt-b"].map((modelId) => ({
+        key: "profile:profile-mode:model:" + modelId,
+        modelId,
+        enableGroups: [],
+        source: { kind: "profile", profile },
+      })),
+    )
+
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    expect(modeSelect).toHaveTextContent(
+      "aiApiVerification:verifyDialog.modes.streaming",
+    )
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+    )
+    for (const modelId of ["gpt-a", "gpt-b"]) {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          modelId,
+          mode: "non-streaming",
+          requestHeaders: { "x-client": "batch-profile" },
+        }),
+      )
+      expect(
+        await screen.findByTestId(
+          getBatchVerifyRowTestId("profile:profile-mode:model:" + modelId),
+        ),
+      ).toHaveTextContent("aiApiVerification:verifyDialog.modes.nonStreaming")
+    }
+  })
+
+  it("derives skipped status for empty probe results", () => {
+    expect(deriveBatchVerifyRowStatus([])).toBe("skipped")
+  })
+
+  it("extracts account and profile ids for failure logs", () => {
+    expect(
+      getBatchVerifyFailureLogIds({
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      } as any),
+    ).toEqual({ accountId: "acc-1", profileId: undefined })
+
+    expect(
+      getBatchVerifyFailureLogIds({
+        key: "profile:profile-1:model:claude-3-5-sonnet",
+        modelId: "claude-3-5-sonnet",
+        enableGroups: [],
+        source: {
+          kind: "profile",
+          profile: {
+            id: "profile-1",
+            name: "Profile One",
+            baseUrl: "https://anthropic.example.com",
+            apiKey: "profile-secret",
+            apiType: API_TYPES.ANTHROPIC,
+          },
+        },
+      } as any),
+    ).toEqual({ accountId: undefined, profileId: "profile-1" })
+  })
+
+  it("uses the virtual row list for every batch size", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId("batch-verify-virtual-list"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByTestId(
+        getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("shows each row source account and site host before running", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+    )
+
+    expect(row).toHaveTextContent("Account One · api.example.com")
+    const sourceBadge = row.querySelector(
+      '[data-slot="badge"][title="https://api.example.com"]',
+    )
+    expect(sourceBadge).toHaveTextContent("Account One · api.example.com")
+  })
+
+  it("shrinks the virtual row container to the measured content height", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    const virtualList = await screen.findByTestId("batch-verify-virtual-list")
+    const listContainer = virtualList.parentElement
+
+    act(() => {
+      mockTotalListHeightChanged.current?.(48)
+    })
+
+    expect(listContainer).toHaveStyle({ height: "48px" })
+  })
+
+  it("uses the first compatible account token and runs text-generation for the model", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("combobox", {
+        name: "modelList:batchVerify.apiType.label",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.apiTypes.openai",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://api.example.com",
+          apiKey: "sk-real",
+          apiType: API_TYPES.OPENAI,
+          modelId: "gpt-4o",
+          probeId: "text-generation",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
+    })
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.probeSummary"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText(
+        "aiApiVerification:verifyDialog.probes.text-generation",
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(
+      await screen.findByText("modelList:batchVerify.runtimeKeyUsed"),
+    ).toBeInTheDocument()
+    expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the account-token runtime key identified by the row source identity", async () => {
+    const firstRuntimeKey = {
+      ...buildNewApiRuntimeKey(
+        account,
+        buildNewApiToken({
+          id: 1,
+          name: "First runtime key",
+          key: "sk-***first",
+          status: 1,
+          group: "default",
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        }),
+      ),
+      baseUrl: "https://first.example.invalid",
+    }
+    const secondRuntimeKey = {
+      ...firstRuntimeKey,
+      id: "account_token:acc-1:2",
+      label: "Second runtime key",
+      secret: "masked-second",
+      baseUrl: "https://second.example.invalid",
+      legacyTokenId: 2,
+      resourceRef: { ...firstRuntimeKey.resourceRef, resourceId: "2" },
+    }
+    const resolvedSecondRuntimeKey = {
+      ...secondRuntimeKey,
+      secret: "sk-second-real",
+    }
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
+      firstRuntimeKey,
+      secondRuntimeKey,
+    ])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce(
+      resolvedSecondRuntimeKey,
+    )
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:runtime-key:2:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "account-runtime-key",
+          id: "acc-1:runtime-key:account_token:acc-1:2",
+          runtimeKeyId: "account_token:acc-1:2",
+          runtimeKeyName: "Second runtime key",
+        },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://second.example.invalid",
+          apiKey: "sk-second-real",
+          modelId: "gpt-4o",
+        }),
+      )
+    })
+    expect(mockNewApiInventory).not.toHaveBeenCalled()
+    expect(mockNewApiSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      secondRuntimeKey,
+      { abortSignal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("uses service-credential runtime keys without fake numeric token ids", async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      buildAccountRuntimeKeyAccount(account),
+      {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "sk-service",
+        isAuthenticated: true,
+        baseUrl: "https://service.example.invalid",
+      },
+    )
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([runtimeKey])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce({
+      ...runtimeKey,
+      secret: "sk-service-real",
+      credential: {
+        ...runtimeKey.credential,
+        key: "sk-service-real",
+      },
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:runtime-key:codex:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "account-runtime-key",
+          id: "acc-1:runtime-key:service_credential:acc-1:codex",
+          runtimeKeyId: "service_credential:acc-1:codex",
+          runtimeKeyName: "Codex",
+        },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://service.example.invalid",
+          apiKey: "sk-service-real",
+          modelId: "gpt-4o",
+        }),
+      )
+    })
+    expect(mockNewApiInventory).not.toHaveBeenCalled()
+    expect(mockNewApiSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      runtimeKey,
+      { abortSignal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("runs the selected probe set for each model and persists combined results", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 12,
+        summary: "Text generation succeeded",
+      })
+      .mockResolvedValueOnce({
+        id: "tool-calling",
+        status: "pass",
+        latencyMs: 18,
+        summary: "Tool calling succeeded",
+      })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.tool-calling",
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2)
+    })
+    expect(mockRunApiVerificationProbe).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ probeId: "text-generation" }),
+    )
+    expect(mockRunApiVerificationProbe).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ probeId: "tool-calling" }),
+    )
+    expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+    expect(atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes).toEqual([
+      expect.objectContaining({ id: "text-generation", status: "pass" }),
+      expect.objectContaining({ id: "tool-calling", status: "pass" }),
+    ])
+  })
+
+  it("writes one storage batch per flush window instead of once per model", async () => {
+    const modelCount = MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE + 1
+    mockNewApiInventory.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 5,
+      summary: "Available",
+    })
+
+    renderDialog(
+      Array.from({ length: modelCount }, (_, index) => ({
+        key: `account:acc-1:model:bulk-${index}`,
+        modelId: `bulk-${index}`,
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      })),
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(modelCount)
+    })
+
+    // One write per full flush window plus the trailing partial batch, instead of
+    // one whole-store rewrite per model.
+    expect(
+      mockUpsertLatestSummaries.mock.calls.map(([batch]) => batch.length),
+    ).toEqual([MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE, 1])
+  })
+
+  it("stops before the next probe and skips persisting partial model results", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let resolveProbe: (result: any) => void = () => {}
+    mockRunApiVerificationProbe.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveProbe = resolve
+      }),
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.tool-calling",
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const stopButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(stopButton)
+    resolveProbe({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Finished before stop",
+    })
+
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.stopped"),
+    ).toBeInTheDocument()
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(testI18n.t("modelList:batchVerify.messages.stopped")),
+      ).toBeVisible()
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+      expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
+  })
+
+  it("aborts the running probe request when the batch is stopped", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let receivedSignal: AbortSignal | undefined
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise((_, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StartBatchModelVerify,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    const stopButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(stopButton)
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StopBatchModelVerify,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    })
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.stopped"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.rerun",
+      }),
+    ).toBeEnabled()
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("aborts token secret resolution when the batch is stopped before probes start", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+
+    let receivedSignal: AbortSignal | undefined
+    mockNewApiSecret.mockImplementationOnce(
+      (_account, _token, options?: { abortSignal?: AbortSignal }) => {
+        receivedSignal = options?.abortSignal
+        if (!receivedSignal) {
+          return Promise.reject(new Error("missing abort signal"))
+        }
+
+        return new Promise((_resolve, reject) => {
+          receivedSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockNewApiSecret).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.stop",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("completes batch verification analytics as success when selected probes pass", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes batch verification analytics as failure when a probe fails", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 12,
+      summary: "Request failed",
+      output: { inferredHttpStatus: 401 },
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
+  it("uses the first known failed probe category for batch analytics", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: false },
+    ])
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "fail",
+        latencyMs: 12,
+        summary: "Unknown failure",
+      })
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "fail",
+        latencyMs: 13,
+        summary: "Unauthorized",
+        output: { inferredHttpStatus: 401 },
+      })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByLabelText(
+        "aiApiVerification:verifyDialog.probes.models",
+      ),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
+  it("maps structured thrown probe status to an auth batch analytics failure", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockRejectedValueOnce({
+      statusCode: 401,
+      message: "Unauthorized",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes batch verification analytics as skipped when no compatible runtime key exists", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "vip-token",
+        key: "masked",
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+  })
+
+  it("records probe errors and continues when history persistence fails", async () => {
+    const user = userEvent.setup()
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockRejectedValue(new Error("probe failed"))
+    mockUpsertLatestSummary.mockRejectedValueOnce(new Error("storage failed"))
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
+    await user.click(
+      screen.getByLabelText("aiApiVerification:verifyDialog.probes.models"),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [
+            expect.objectContaining({ id: "models", status: "fail" }),
+            expect.objectContaining({
+              id: "text-generation",
+              status: "fail",
+              mode: "non-streaming",
+            }),
+          ],
+        }),
+      )
+    })
+    expect(
+      atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes[0].mode,
+    ).toBeUndefined()
+    expect(
+      await screen.findByTestId(
+        getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+      ),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.modes.nonStreaming")
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.probeSummary"),
+    ).toBeInTheDocument()
+  })
+
+  it("shows the failed probe response summary in the final row feedback", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 22,
+      summary: "model not available to token group",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+    )
+    await waitFor(() => {
+      expect(row).toHaveTextContent("model not available to token group")
+    })
+  })
+
+  it.each([
+    ["probe", undefined],
+    ["setup", undefined],
+    ["probe", 401],
+  ] as const)(
+    "preserves a translatable persisted fallback after an empty %s error (HTTP %s)",
+    async (phase, statusCode) => {
+      testI18n.addResourceBundle(
+        "en",
+        "aiApiVerification",
+        (await import("~/locales/en/aiApiVerification.json")).default,
+      )
+      testI18n.addResourceBundle(
+        "zh-CN",
+        "aiApiVerification",
+        (await import("~/locales/zh-CN/aiApiVerification.json")).default,
+      )
+      mockNewApiInventory.mockResolvedValue([
+        buildNewApiToken({
+          key: "masked",
+          group: "default",
+          model_limits_enabled: false,
+        }),
+      ])
+      mockNewApiSecret.mockResolvedValue(
+        buildNewApiToken({
+          key: "sk-real",
+          group: "default",
+          model_limits_enabled: false,
+        }),
+      )
+      const error = Object.assign(new Error(""), { statusCode })
+      if (phase === "setup") {
+        mockNewApiInventory.mockRejectedValue(error)
+      } else {
+        mockRunApiVerificationProbe.mockRejectedValue(error)
+      }
+
+      try {
+        const itemKey = "account:acc-1:model:gpt-4o"
+        renderDialog([
+          {
+            key: itemKey,
+            modelId: "gpt-4o",
+            enableGroups: ["default"],
+            source: { kind: "account", account },
+          },
+        ])
+        fireEvent.click(
+          await screen.findByRole("button", {
+            name: "modelList:batchVerify.actions.start",
+          }),
+        )
+        await waitFor(() =>
+          expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1),
+        )
+        const summaryKey =
+          statusCode === 401
+            ? "verifyDialog.summaries.unauthorized"
+            : "verifyDialog.errors.unexpected"
+        expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+          expect.objectContaining({
+            probes: [
+              expect.objectContaining({
+                status: "fail",
+                summary: "Unexpected error",
+                summaryKey,
+              }),
+            ],
+          }),
+        )
+        const row = screen.getByTestId(getBatchVerifyRowTestId(itemKey))
+        expect(row).toHaveTextContent(
+          testI18n.t(`aiApiVerification:${summaryKey}`),
+        )
+        await act(async () => {
+          await testI18n.changeLanguage("zh-CN")
+        })
+        expect(row).toHaveTextContent(
+          testI18n.t(`aiApiVerification:${summaryKey}`),
+        )
+        expect(mockNewApiInventory).toHaveBeenCalledTimes(1)
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(
+          phase === "probe" ? 1 : 0,
+        )
+        expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+      } finally {
+        await act(async () => {
+          await testI18n.changeLanguage("en")
+        })
+        testI18n.removeResourceBundle("en", "aiApiVerification")
+        testI18n.removeResourceBundle("zh-CN", "aiApiVerification")
+      }
+    },
+  )
+
+  it("renders localized failed probe summaries with a local fallback", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 22,
+      summary: "",
+      summaryKey: "verifyDialog.noCompatibleRuntimeKeyHint",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const row = await screen.findByTestId(
+      getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+    )
+    await waitFor(() => {
+      expect(row).toHaveTextContent(
+        "aiApiVerification:verifyDialog.noCompatibleRuntimeKeyHint",
+      )
+    })
+    expect(row).not.toHaveTextContent(
+      "modelList:batchVerify.messages.unexpected",
+    )
+  })
+
+  it("requires at least one selected probe before starting", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.text-generation",
+      ),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText("modelList:batchVerify.probes.noneSelected"),
+    ).toBeInTheDocument()
+  })
+
+  it("defaults to all models selected and only runs checked models", async () => {
+    mockNewApiInventory.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Selected model ok",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+      {
+        key: "account:acc-1:model:gpt-4o-mini",
+        modelId: "gpt-4o-mini",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(
+        getBatchVerifyModelCheckboxTestId("account:acc-1:model:gpt-4o"),
+      ),
+    ).toBeChecked()
+    expect(
+      screen.getByTestId(
+        getBatchVerifyModelCheckboxTestId("account:acc-1:model:gpt-4o-mini"),
+      ),
+    ).toBeChecked()
+
+    fireEvent.click(
+      screen.getByTestId(
+        getBatchVerifyModelCheckboxTestId("account:acc-1:model:gpt-4o"),
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "gpt-4o-mini",
+        probeId: "text-generation",
+      }),
+    )
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.notSelected"),
+    ).toBeInTheDocument()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("modelList:batchVerify.messages.notSelected"),
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByText(
+          testI18n.t("modelList:batchVerify.messages.probeSummary", {
+            count: 1,
+            pass: 1,
+            fail: 0,
+            unsupported: 0,
+          }),
+        ),
+      ).toBeVisible()
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+      expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
+  })
+
+  it("requires at least one selected model before starting", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.modelSelection.clearAll",
+      }),
+    )
+
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenNthCalledWith(1, {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText("modelList:batchVerify.modelSelection.noneSelected"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.modelSelection.selectAll",
+      }),
+    )
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenNthCalledWith(2, {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledTimes(2)
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("marks unsupported-only probe results as skipped", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "unsupported",
+      latencyMs: 0,
+      summary: "Not supported",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [
+            expect.objectContaining({
+              id: "text-generation",
+              status: "unsupported",
+            }),
+          ],
+        }),
+      )
+    })
+    expect(
+      await screen.findByText("modelList:batchVerify.status.skipped"),
+    ).toBeInTheDocument()
+  })
+
+  it("skips an account model when no compatible runtime key exists", async () => {
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "vip-token",
+        key: "masked",
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:batchVerify.messages.noCompatibleRuntimeKey",
+      ),
+    ).toBeInTheDocument()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("skips a model when selected probes do not apply", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+    ])
+    mockNewApiInventory.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:batchVerify.messages.noApplicableProbes",
+      ),
+    ).toBeInTheDocument()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("persists setup failures with a probe id from the resolved API definitions", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+    ])
+    mockNewApiInventory.mockRejectedValueOnce(
+      new Error("temporary token failure"),
+    )
+    mockUpsertLatestSummary.mockRejectedValueOnce(new Error("storage failed"))
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("combobox", {
+        name: "modelList:batchVerify.apiType.label",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.apiTypes.openai",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [expect.objectContaining({ id: "models", status: "fail" })],
+        }),
+      )
+    })
+    expect(
+      atIndex(mockUpsertLatestSummary.mock.calls, 0)[0].probes[0].mode,
+    ).toBeUndefined()
+  })
+
+  it("uses text generation for setup failures when no probe definition is available", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([])
+    mockNewApiInventory.mockRejectedValueOnce(
+      new Error("temporary token failure"),
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [
+            expect.objectContaining({
+              id: "text-generation",
+              status: "fail",
+              mode: "streaming",
+            }),
+          ],
+        }),
+      )
+    })
+  })
+
+  it("refetches runtime keys after a failed run when rerunning the batch", async () => {
+    mockNewApiInventory
+      .mockRejectedValueOnce(new Error("temporary token failure"))
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          name: "default-token",
+          key: "masked",
+          status: 1,
+          group: "default",
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        },
+      ])
+    mockNewApiSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Recovered",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockNewApiInventory).toHaveBeenCalledTimes(1)
+    })
+
+    const rerunButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.rerun",
+    })
+    await waitFor(() => {
+      expect(rerunButton).toBeEnabled()
+    })
+    fireEvent.click(rerunButton)
+
+    await waitFor(() => {
+      expect(mockNewApiInventory).toHaveBeenCalledTimes(2)
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: "sk-real",
+          modelId: "gpt-4o",
+          probeId: "text-generation",
+        }),
+      )
+    })
+  })
+
+  it("does not reset an active batch when the item snapshot changes", async () => {
+    mockNewApiInventory.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let resolveProbe: (result: any) => void = () => {}
+    mockRunApiVerificationProbe.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProbe = resolve
+      }),
+    )
+
+    const initialItems: any[] = [
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ]
+    const { rerender } = render(
+      <BatchVerifyModelsDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={initialItems}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    rerender(
+      <BatchVerifyModelsDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[
+          ...initialItems,
+          {
+            key: "account:acc-1:model:gpt-4o-mini",
+            modelId: "gpt-4o-mini",
+            enableGroups: ["default"],
+            source: { kind: "account", account },
+          },
+        ]}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "modelList:batchVerify.actions.stop",
+        }),
+      ).toBeInTheDocument()
+    })
+
+    resolveProbe({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Finished before stop",
+    })
+
+    expect(
+      await screen.findByTestId(
+        getBatchVerifyModelCheckboxTestId("account:acc-1:model:gpt-4o-mini"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("marks queued models as stopped when the running batch is stopped", async () => {
+    mockNewApiInventory.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockNewApiSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let resolveProbe: (result: any) => void = () => {}
+    const blockedProbe = new Promise((resolve) => {
+      resolveProbe = resolve
+    })
+    mockRunApiVerificationProbe.mockReturnValue(blockedProbe)
+
+    renderDialog(
+      Array.from(
+        { length: MODEL_LIST_BATCH_VERIFY_CONCURRENCY + 1 },
+        (_, index) => ({
+          key: `account:acc-1:model:gpt-4o-${index}`,
+          modelId: `gpt-4o-${index}`,
+          enableGroups: ["default"],
+          source: { kind: "account", account },
+        }),
+      ),
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const stopButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(
+        MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+      )
+    })
+
+    fireEvent.click(stopButton)
+    resolveProbe({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Finished before stop",
+    })
+
+    expect(
+      (await screen.findAllByText("modelList:batchVerify.messages.stopped"))
+        .length,
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(["none", "probe", "setup"])(
+    "keeps the profile protocol independent of the row's resolved vendor and redacts thrown header values (failure=%s)",
+    async (failure) => {
+      if (failure === "probe")
+        mockRunApiVerificationProbe.mockRejectedValueOnce(
+          new Error("Upstream rejected header-sensitive-value"),
+        )
+      else
+        mockRunApiVerificationProbe.mockResolvedValueOnce({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 8,
+          summary: "Profile model ok",
+        })
+
+      renderDialog([
+        {
+          key: "profile:profile-1:model:gpt-4o",
+          modelId: "gpt-4o",
+          enableGroups: [],
+          resolvedVendor: {
+            state: "resolved",
+            kind: "known",
+            key: "known:openai",
+            knownId: "openai",
+            label: "OpenAI",
+            source: "curated-rule",
+          },
+          source: {
+            kind: "profile",
+            profile: {
+              id: "profile-1",
+              name: "Profile One",
+              baseUrl: "https://anthropic.example.com",
+              apiKey: "profile-secret",
+              apiType: API_TYPES.ANTHROPIC,
+              requestHeaders: { "x-client": "header-sensitive-value" },
+            },
+          },
+        },
+      ])
+
+      const row = await screen.findByTestId(
+        getBatchVerifyRowTestId("profile:profile-1:model:gpt-4o"),
+      )
+      const sourceBadge = row.querySelector(
+        '[data-slot="badge"][title="https://anthropic.example.com"]',
+      )
+      expect(sourceBadge).toHaveTextContent(
+        "modelList:sourceLabels.profileBadge",
+      )
+      expect(sourceBadge).toHaveAttribute(
+        "title",
+        "https://anthropic.example.com",
+      )
+
+      if (failure === "setup") {
+        mockGetApiVerificationProbeDefinitions.mockImplementationOnce(() => {
+          throw new Error("Setup rejected header-sensitive-value")
+        })
+      }
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "modelList:batchVerify.actions.start",
+        }),
+      )
+
+      if (failure !== "setup") {
+        await waitFor(() => {
+          expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+            expect.objectContaining({
+              baseUrl: "https://anthropic.example.com",
+              apiKey: "profile-secret",
+              apiType: API_TYPES.ANTHROPIC,
+              requestHeaders: { "x-client": "header-sensitive-value" },
+              modelId: "gpt-4o",
+              probeId: "text-generation",
+              abortSignal: expect.any(AbortSignal),
+            }),
+          )
+        })
+      } else expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+      expect(mockNewApiInventory).not.toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+          expect.objectContaining({
+            target: {
+              kind: "profile-model",
+              profileId: "profile-1",
+              modelId: "gpt-4o",
+            },
+          }),
+        )
+      })
+      if (failure !== "none") {
+        const summary = mockUpsertLatestSummary.mock.calls[0]![0]
+        expect(JSON.stringify(summary)).not.toContain("header-sensitive-value")
+        expect(JSON.stringify(summary)).toContain("[REDACTED]")
+      }
+    },
+  )
+
+  it("renders a provider-catalog source label from the source identity", async () => {
+    const itemKey = "account:acc-1:provider-catalog:model:example-model"
+    renderDialog([
+      {
+        key: itemKey,
+        modelId: "example-model",
+        enableGroups: [],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "provider-catalog",
+          id: "provider-catalog:example-public",
+          provider: SITE_TYPES.OPENROUTER,
+          providerName: "Example Provider",
+        },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(getBatchVerifyRowTestId(itemKey)),
+    ).toHaveTextContent("modelList:sourceLabels.providerCatalogBadge")
+  })
+
+  it("renders a personalized-catalog source label from the saved account", async () => {
+    const itemKey = "account:acc-1:personalized-catalog:model:example-model"
+    renderDialog([
+      {
+        key: itemKey,
+        modelId: "example-model",
+        enableGroups: [],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "personalized-catalog",
+          id: "personalized-catalog:acc-1",
+          accountId: "acc-1",
+        },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(getBatchVerifyRowTestId(itemKey)),
+    ).toHaveTextContent("modelList:sourceLabels.personalizedCatalogBadge")
+  })
+})

@@ -16,7 +16,7 @@ import {
   SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { MANAGED_RESOURCE_CHANNEL_FIELD_ROLES } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+import { MANAGED_RESOURCE_CHANNEL_FIELD_ROLES } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/ManagedSiteChannelsRoute"
 import type { ManagedChannelsRowViewModel } from "~/features/ManagedSiteChannels/presentation/contracts"
 import {
@@ -87,7 +87,7 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 vi.mock(
-  "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync",
+  "~/features/ManagedSiteChannels/modelSync/useManagedSiteChannelModelSync",
   () => ({
     useManagedSiteChannelModelSync: () => ({
       syncingResourceKeys: new Set<string>(),
@@ -96,7 +96,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/ManagedSiteChannels/components/ChannelFilterDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/filters/ChannelFilterDialog", () => ({
   default: ({
     channel,
     open,
@@ -127,22 +127,22 @@ vi.mock("~/contexts/UserPreferencesContext", async (importActual) => ({
 }))
 
 vi.mock(
-  "~/features/ManagedSiteChannels/controllers/useManagedResourceListController",
+  "~/features/ManagedSiteChannels/table/useManagedResourceListController",
   () => ({ useManagedResourceListController: useListController }),
 )
 vi.mock(
-  "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy",
+  "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy",
   async (importActual) => ({
     ...(await importActual()),
     getManagedResourceFieldPolicy: getFieldPolicy,
   }),
 )
 vi.mock(
-  "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController",
+  "~/features/ManagedSiteChannels/editor/useManagedResourceMutationController",
   () => ({ useManagedResourceMutationController: useMutationController }),
 )
 vi.mock(
-  "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController",
+  "~/features/ManagedSiteChannels/migration/useManagedResourceMigrationController",
   () => ({ useManagedResourceMigrationController: useMigrationController }),
 )
 vi.mock("~/services/managedSites/channelMigrationTargets", () => ({
@@ -1696,18 +1696,18 @@ describe("ManagedSiteChannelsRoute", () => {
     })
     const [listModule, mutationModule, fieldPolicyModule] = await Promise.all([
       vi.importActual<
-        typeof import("~/features/ManagedSiteChannels/controllers/useManagedResourceListController")
+        typeof import("~/features/ManagedSiteChannels/table/useManagedResourceListController")
       >(
-        "~/features/ManagedSiteChannels/controllers/useManagedResourceListController",
+        "~/features/ManagedSiteChannels/table/useManagedResourceListController",
       ),
       vi.importActual<
-        typeof import("~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController")
+        typeof import("~/features/ManagedSiteChannels/editor/useManagedResourceMutationController")
       >(
-        "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController",
+        "~/features/ManagedSiteChannels/editor/useManagedResourceMutationController",
       ),
       vi.importActual<
-        typeof import("~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy")
-      >("~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"),
+        typeof import("~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy")
+      >("~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"),
     ])
     const facts = Array.from({ length: 12 }, (_, index) => ({
       ...createManagedResourceFacts(

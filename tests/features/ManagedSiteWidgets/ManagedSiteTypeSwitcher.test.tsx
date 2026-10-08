@@ -1,0 +1,250 @@
+import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
+import { render, screen } from "~~/tests/test-utils/render"
+
+const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
+  () => ({
+    mockedUseUserPreferencesContext: vi.fn(),
+    showUpdateToastMock: vi.fn(),
+  }),
+)
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("~/contexts/UserPreferencesContext")
+
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
+  }
+})
+
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
+  showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
+}))
+
+const createPreferences = (
+  managedSiteType: ManagedSiteType = SITE_TYPES.NEW_API,
+) => ({
+  managedSiteType,
+  newApi: {
+    baseUrl: "https://new-api.example",
+    adminToken: "new-api-token",
+    userId: "1",
+    username: "admin",
+    password: "secret",
+    totpSecret: "JBSWY3DPEHPK3PXP",
+  },
+  doneHub: {
+    baseUrl: "https://donehub.example",
+    adminToken: "donehub-token",
+    userId: "2",
+  },
+  veloera: {
+    baseUrl: "",
+    adminToken: "",
+    userId: "",
+  },
+  octopus: {
+    baseUrl: "",
+    username: "",
+    password: "",
+  },
+  axonHub: {
+    baseUrl: "",
+    email: "",
+    password: "",
+  },
+  claudeCodeHub: {
+    baseUrl: "",
+    adminToken: "",
+  },
+})
+
+const createContextValue = (overrides: Record<string, unknown> = {}) => ({
+  managedSiteType: SITE_TYPES.NEW_API,
+  preferences: createPreferences(),
+  updateManagedSiteType: vi.fn().mockResolvedValue(true),
+  ...overrides,
+})
+
+describe("ManagedSiteTypeSwitcher", () => {
+  it("shows the OmniRoute brand for the selected configured gateway", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.OMNIROUTE,
+        preferences: {
+          ...createPreferences(SITE_TYPES.OMNIROUTE),
+          omniroute: { baseUrl: "https://gateway.invalid", token: "oma_test" },
+        },
+      }),
+    )
+    render(
+      <>
+        <ManagedSiteTypeSwitcher configuredOnly />
+        <ManagedSiteIcon siteType={SITE_TYPES.OMNIROUTE} />
+      </>,
+    )
+    expect(
+      await screen.findByRole("img", { name: "OmniRoute logo" }),
+    ).toBeVisible()
+  })
+  beforeEach(() => {
+    mockedUseUserPreferencesContext.mockReset()
+    showUpdateToastMock.mockReset()
+    mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
+  })
+
+  it("shows configured targets plus the current unconfigured site in quick-switch mode", async () => {
+    const user = userEvent.setup()
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.VELOERA,
+        preferences: {
+          ...createPreferences(SITE_TYPES.VELOERA),
+          managedSiteType: SITE_TYPES.VELOERA,
+        },
+      }),
+    )
+
+    render(<ManagedSiteTypeSwitcher configuredOnly />)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.veloera",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.doneHub",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.newApi",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "settings:managedSite.octopus" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "settings:managedSite.axonHub" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows AxonHub and Claude Code Hub as selectable managed-site types in settings mode", async () => {
+    const user = userEvent.setup()
+
+    render(<ManagedSiteTypeSwitcher />)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.axonHub",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.claudeCodeHub",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("lists managed sites in the shared popularity order", async () => {
+    const user = userEvent.setup()
+    render(<ManagedSiteTypeSwitcher />)
+    await user.click(await screen.findByRole("combobox"))
+    expect(
+      (await screen.findAllByRole("option")).map(
+        (option) => option.textContent,
+      ),
+    ).toEqual([
+      "settings:managedSite.omniroute",
+      "settings:managedSite.cliProxyApi",
+      "settings:managedSite.newApi",
+      "settings:managedSite.sub2api",
+      "settings:managedSite.gptLoad",
+      "settings:managedSite.axonHub",
+      "settings:managedSite.claudeCodeHub",
+      "settings:managedSite.octopus",
+      "settings:managedSite.veloera",
+      "settings:managedSite.doneHub",
+    ])
+  })
+
+  it("updates the managed site type and shows the shared update toast", async () => {
+    const user = userEvent.setup()
+    const updateManagedSiteType = vi.fn().mockResolvedValue(true)
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({ updateManagedSiteType }),
+    )
+
+    render(<ManagedSiteTypeSwitcher />)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+    await user.click(await screen.findByText("settings:managedSite.doneHub"))
+
+    expect(updateManagedSiteType).toHaveBeenCalledWith(SITE_TYPES.DONE_HUB)
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:managedSite.siteTypeLabel",
+    )
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+    await user.click(await screen.findByText("settings:managedSite.axonHub"))
+
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(SITE_TYPES.AXON_HUB)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByText("settings:managedSite.claudeCodeHub"),
+    )
+
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    )
+  })
+
+  it("supports a stable selector and a disabled workflow state", async () => {
+    render(
+      <ManagedSiteTypeSwitcher
+        disabled
+        triggerTestId="managed-site-target-switcher"
+      />,
+    )
+
+    const switcher = await screen.findByTestId("managed-site-target-switcher")
+    expect(switcher).toHaveAttribute("role", "combobox")
+    expect(switcher).toBeDisabled()
+  })
+})

@@ -49,9 +49,12 @@ const {
   useApiCredentialProfileLinksMock: vi.fn(),
 }))
 
-vi.mock("~/hooks/useApiCredentialProfileLinks", () => ({
-  useApiCredentialProfileLinks: () => useApiCredentialProfileLinksMock(),
-}))
+vi.mock(
+  "~/features/ApiCredentialProfiles/associations/useApiCredentialProfileLinks",
+  () => ({
+    useApiCredentialProfileLinks: () => useApiCredentialProfileLinksMock(),
+  }),
+)
 
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
@@ -80,23 +83,26 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
+vi.mock("~/features/KeyManagement/inventory/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
 }))
 
-vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
-  useManagedSiteKeyStatuses: () => {
-    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
-    return {
-      states: fixture.managedSiteTokenStatuses ?? {},
-      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
-      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
-      refresh: fixture.refreshManagedSiteTokenStatuses,
-      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
-      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
-    }
-  },
-}))
+vi.mock(
+  "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses",
+  () => ({
+    useManagedSiteKeyStatuses: () => {
+      const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+      return {
+        states: fixture.managedSiteTokenStatuses ?? {},
+        supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+        refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+        refresh: fixture.refreshManagedSiteTokenStatuses,
+        refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+        confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+      }
+    },
+  }),
+)
 
 vi.mock(
   "~/features/ManagedSiteVerification/useNewApiManagedVerification",
@@ -146,7 +152,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => {
+vi.mock("~/features/KeyManagement/inventory/AccountSelectorPanel", () => {
   function MockAccountSelectorPanel(props: {
     selectorOpen?: boolean
     setSelectedAccount: (value: string) => void
@@ -182,7 +188,7 @@ vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => {
   }
 })
 
-vi.mock("~/features/KeyManagement/components/TokenList", () => ({
+vi.mock("~/features/KeyManagement/inventory/TokenList", () => ({
   TokenList: (props: any) => {
     tokenListPropsSpy(props)
 
@@ -208,11 +214,11 @@ vi.mock("~/features/KeyManagement/components/TokenList", () => ({
   },
 }))
 
-vi.mock("~/features/KeyManagement/components/Footer", () => ({
+vi.mock("~/features/KeyManagement/workspace/Footer", () => ({
   Footer: () => null,
 }))
 
-vi.mock("~/features/KeyManagement/components/AccountSummaryBar", () => ({
+vi.mock("~/features/KeyManagement/inventory/AccountSummaryBar", () => ({
   AccountSummaryBar: (props: any) => {
     accountSummaryBarPropsSpy(props)
 
@@ -243,7 +249,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
 }))
 
-vi.mock("~/features/KeyManagement/components/RepairMissingKeysDialog", () => ({
+vi.mock("~/features/KeyManagement/repair", () => ({
   RepairMissingKeysDialog: () => null,
 }))
 

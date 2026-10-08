@@ -26,7 +26,7 @@ import {
   PRODUCT_TOUR_TARGETS,
 } from "~/features/ProductTour/constants"
 import { StarPromotionCard } from "~/features/StarPromotion"
-import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
+import { useProductAnalyticsPageView } from "~/hooks/analytics/useProductAnalyticsPageView"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,

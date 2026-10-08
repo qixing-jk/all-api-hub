@@ -36,7 +36,7 @@ const mockAccountSelector = vi.fn()
 const mockTrackProductAnalyticsActionStarted = vi.fn()
 const mockTrackProductAnalyticsActionCompleted = vi.fn()
 
-vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
+vi.mock("~/features/ModelList/catalog/useModelListData", () => ({
   useModelListData: (...args: any[]) => mockUseModelListData(...args),
 }))
 
@@ -148,14 +148,14 @@ function withGroupContexts<T extends ModelItemFixture>(
   }
 }
 
-vi.mock("~/features/ModelList/components/AccountSelector", () => ({
+vi.mock("~/features/ModelList/catalog/AccountSelector", () => ({
   AccountSelector: (props: any) => {
     mockAccountSelector(props)
     return <div>Account Selector</div>
   },
 }))
 
-vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
+vi.mock("~/features/ModelList/presentation/StatusIndicator", () => ({
   StatusIndicator: ({ selectedSource, loadPricingData }: any) => (
     <div>
       <div>Status Indicator: {selectedSource?.kind ?? "none"}</div>
@@ -166,7 +166,7 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
+vi.mock("~/features/ModelList/catalog/AccountSummaryBar", () => ({
   AccountSummaryBar: ({ items, activeAccountIds, onAccountClick }: any) => (
     <div>
       <div>
@@ -195,7 +195,7 @@ vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
+vi.mock("~/features/ModelList/verification/BatchVerifyModelsDialog", () => ({
   BatchVerifyModelsDialog: ({ items, onClose }: any) => (
     <div>
       <div>Batch Verify Dialog {items.length}</div>
@@ -206,7 +206,7 @@ vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/ControlPanel", () => ({
+vi.mock("~/features/ModelList/filtering/ControlPanel", () => ({
   ControlPanel: ({ totalModels, filteredModels, onBatchVerifyModels }: any) => (
     <div>
       Control Panel total:{totalModels} filtered:{filteredModels.length}
@@ -219,19 +219,19 @@ vi.mock("~/features/ModelList/components/ControlPanel", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/Footer", () => ({
+vi.mock("~/features/ModelList/presentation/Footer", () => ({
   Footer: ({ showPricingNote }: any) => (
     <div>Footer pricing:{String(showPricingNote)}</div>
   ),
 }))
 
-vi.mock("~/features/ModelList/components/ProviderTabs", () => ({
+vi.mock("~/features/ModelList/catalog/ProviderTabs", () => ({
   ProviderTabs: ({ children, effectiveSelectedVendor }: any) => (
     <Tabs value={effectiveSelectedVendor}>{children}</Tabs>
   ),
 }))
 
-vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
+vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ModelDisplay: ({
     models,
     onVerifyModel,
@@ -317,7 +317,7 @@ vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog",
+  "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog",
   () => ({
     VerifyApiCredentialProfileDialog: ({
       profile,
@@ -336,7 +336,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
+vi.mock("~/features/ModelList/keySelection", () => ({
   default: ({ account, modelId, modelEnableGroups, onClose }: any) => (
     <div>
       <div>

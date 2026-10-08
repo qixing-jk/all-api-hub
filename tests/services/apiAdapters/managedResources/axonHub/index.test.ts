@@ -11,11 +11,11 @@ import {
 } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
   getManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/table/managedResourceRowMapper"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {

@@ -5,7 +5,7 @@ import { TabsContent } from "~/components/ui"
 import {
   getProviderFilterAnalyticsResultCount,
   ProviderTabs,
-} from "~/features/ModelList/components/ProviderTabs"
+} from "~/features/ModelList/catalog/ProviderTabs"
 import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
 import {
   MODEL_VENDOR_FILTER_VALUES,

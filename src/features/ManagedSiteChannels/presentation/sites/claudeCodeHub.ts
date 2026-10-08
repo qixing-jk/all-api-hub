@@ -3,9 +3,6 @@ import {
   ClaudeCodeHubProviderTypeNames,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
-import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 import {
   createNativeChannelFields,
   defineManagedResourceFieldPolicy,
@@ -15,11 +12,14 @@ import {
   requireFieldValuePresentation,
   type ManagedResourceFieldPresentation,
   type ManagedResourceTextResolver,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+
+import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 
 const claudeCodeHubTypeOptionLabelResolvers = Object.fromEntries(
   Object.entries(ClaudeCodeHubProviderTypeNames).map(([value, label]) => [

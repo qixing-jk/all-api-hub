@@ -9,10 +9,10 @@ import {
 import { useTranslation } from "react-i18next"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
+import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
-import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -28,9 +28,7 @@ import { POPUP_TEST_IDS } from "./testIds"
 const loadBookmarksList = () =>
   import("~/features/SiteBookmarks/components/BookmarksList")
 const loadApiCredentialProfilesPopupView = () =>
-  import(
-    "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
-  )
+  import("~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView")
 
 const LazyBookmarksList = lazy(loadBookmarksList)
 const LazyApiCredentialProfilesPopupView = lazy(

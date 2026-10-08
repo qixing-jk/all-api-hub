@@ -1,0 +1,175 @@
+import type { Ref } from "react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+
+import { Heading3, SearchableSelect } from "~/components/ui"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  toAccountSourceValue,
+  toProfileSourceValue,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { AllAccountsGroupFilterMenu } from "~/features/ModelList/groups/AllAccountsGroupFilterMenu"
+import type { AccountGroupOption } from "~/features/ModelList/presentation/modelListItems"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+} from "~/services/productAnalytics/contracts"
+import type { DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { tryParseUrl } from "~/utils/core/urlParsing"
+
+interface AccountSelectorProps {
+  selectedSourceValue: string
+  setSelectedSourceValue: (sourceValue: string) => void
+  accounts: DisplaySiteData[]
+  profiles: ApiCredentialProfile[]
+  showAllAccountsGroupFilter?: boolean
+  availableAccountGroupsByAccountId?: Record<string, string[]>
+  availableAccountGroupOptionsByAccountId?: Record<string, AccountGroupOption[]>
+  allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
+  setAllAccountsExcludedGroupsByAccountId?: (
+    next: Record<string, string[]>,
+  ) => void
+  selectorOpen?: boolean
+  onSelectorOpenChange?: (open: boolean) => void
+  selectorTriggerRef?: Ref<HTMLButtonElement>
+}
+
+/**
+ * Maps a source selector value to the coarse analytics source kind.
+ */
+function resolveAnalyticsSourceKind(sourceValue: string) {
+  if (sourceValue === ALL_ACCOUNTS_SOURCE_VALUE) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts
+  }
+
+  if (sourceValue.startsWith("account:")) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount
+  }
+
+  if (sourceValue.startsWith("profile:")) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile
+  }
+
+  return PRODUCT_ANALYTICS_SOURCE_KINDS.Unknown
+}
+
+/**
+ * Dropdown selector for choosing which source's models to view.
+ * @param props Component props.
+ * @param props.selectedSourceValue Currently selected source value.
+ * @param props.setSelectedSourceValue Setter to update the selected source.
+ * @param props.accounts Available accounts to display.
+ * @param props.profiles Available API credential profiles to display.
+ * @param props.showAllAccountsGroupFilter Whether to show the all-accounts group filter menu.
+ * @param props.availableAccountGroupsByAccountId Available group names keyed by account id for all-accounts mode.
+ * @param props.availableAccountGroupOptionsByAccountId Available group metadata keyed by account id for all-accounts mode.
+ * @param props.allAccountsExcludedGroupsByAccountId Currently excluded group names keyed by account id.
+ * @param props.setAllAccountsExcludedGroupsByAccountId Setter for all-accounts excluded group names.
+ * @param props.selectorOpen Controlled open state for the selector popover.
+ * @param props.onSelectorOpenChange Callback fired when the selector open state changes.
+ * @param props.selectorTriggerRef Ref forwarded to the selector trigger button.
+ * @returns Searchable select control wrapped with heading.
+ */
+export function AccountSelector({
+  selectedSourceValue,
+  setSelectedSourceValue,
+  accounts,
+  profiles,
+  showAllAccountsGroupFilter = false,
+  availableAccountGroupsByAccountId = {},
+  availableAccountGroupOptionsByAccountId = {},
+  allAccountsExcludedGroupsByAccountId = {},
+  setAllAccountsExcludedGroupsByAccountId,
+  selectorOpen,
+  onSelectorOpenChange,
+  selectorTriggerRef,
+}: AccountSelectorProps) {
+  const { t } = useTranslation("modelList")
+  const [isAccountGroupFilterOpen, setIsAccountGroupFilterOpen] =
+    useState(false)
+  const handleSourceChange = (sourceValue: string) => {
+    setSelectedSourceValue(sourceValue)
+    void trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelSource,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.AccountFilter,
+        sourceKind: resolveAnalyticsSourceKind(sourceValue),
+      },
+    })
+  }
+
+  return (
+    <div className="mb-density-6">
+      <div className="mb-density-3 gap-y-density-2 flex flex-wrap items-center gap-x-2">
+        <Heading3 className="mb-0">{t("selectSource")}</Heading3>
+      </div>
+
+      <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-stretch">
+        <div className="min-w-0 flex-1">
+          <SearchableSelect
+            ref={selectorTriggerRef}
+            data-testid={MODEL_LIST_TEST_IDS.sourceSelector}
+            options={[
+              ...(accounts.length > 0
+                ? [
+                    {
+                      value: ALL_ACCOUNTS_SOURCE_VALUE,
+                      label: t("allAccounts"),
+                    },
+                  ]
+                : []),
+              ...accounts.map((account) => ({
+                value: toAccountSourceValue(account.id),
+                label: account.name,
+              })),
+              ...profiles.map((profile) => ({
+                value: toProfileSourceValue(profile.id),
+                label: t("sourceLabels.profileOption", {
+                  name: profile.name,
+                  host:
+                    tryParseUrl(profile.baseUrl)?.hostname ?? profile.baseUrl,
+                }),
+              })),
+            ]}
+            value={selectedSourceValue ?? ""}
+            onChange={handleSourceChange}
+            open={selectorOpen}
+            onOpenChange={onSelectorOpenChange}
+            placeholder={t("pleaseSelectSource")}
+          />
+        </div>
+
+        {showAllAccountsGroupFilter &&
+          setAllAccountsExcludedGroupsByAccountId && (
+            <AllAccountsGroupFilterMenu
+              accounts={accounts}
+              availableAccountGroupsByAccountId={
+                availableAccountGroupsByAccountId
+              }
+              availableAccountGroupOptionsByAccountId={
+                availableAccountGroupOptionsByAccountId
+              }
+              excludedGroupsByAccountId={allAccountsExcludedGroupsByAccountId}
+              onExcludedGroupsChange={setAllAccountsExcludedGroupsByAccountId}
+              open={isAccountGroupFilterOpen}
+              onOpenChange={setIsAccountGroupFilterOpen}
+            />
+          )}
+      </div>
+    </div>
+  )
+}

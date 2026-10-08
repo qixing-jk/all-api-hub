@@ -8,12 +8,12 @@ import {
   deriveModelListSourceCapabilities,
   toCatalogOnlyCapabilities,
 } from "~/features/ModelList/catalog/modelManagementSources"
-import ModelItem from "~/features/ModelList/components/ModelItem"
 import {
   MODEL_GROUP_ACCESS_STATES,
   type ActiveModelGroupContext,
   type ModelGroupContext,
 } from "~/features/ModelList/groups/groupContext"
+import ModelItem from "~/features/ModelList/presentation/ModelItem"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,

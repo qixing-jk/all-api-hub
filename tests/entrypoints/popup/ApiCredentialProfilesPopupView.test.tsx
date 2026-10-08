@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ApiCredentialProfilesPopupView from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
+import ApiCredentialProfilesPopupView from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"

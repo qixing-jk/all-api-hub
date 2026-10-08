@@ -1,8 +1,8 @@
 import { KeyRound, Plus, SquarePen } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { Alert, EmptyState } from "~/components/ui"
+import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"

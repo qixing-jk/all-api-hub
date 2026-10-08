@@ -1,6 +1,6 @@
 import { useMemo, type ComponentProps } from "react"
 
-import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
 import type {
   NativeKeyManagementRow,
   ServiceCredentialState,

@@ -1,0 +1,4820 @@
+import type { FormEvent, ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { SITE_TYPES } from "~/constants/siteType"
+import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
+import toast from "~/lib/notify"
+import type { EnsureAccountKeyResult } from "~/services/accounts/accountKeyCreation"
+import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
+import {
+  createAccountKeyResourceCreatedRuntimeSecret,
+  createUnattributedAccountCreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import type {
+  ProtectionBypassSurface,
+  ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+  type SiteAccount,
+} from "~/types"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  buildNewApiKeyCreationResult,
+  buildNewApiRuntimeKey,
+} from "~~/tests/test-utils/accountKeyFixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+const {
+  mockToast,
+  mockValidateAndSaveAccount,
+  mockValidateAndUpdateAccount,
+  mockFetchRuntimeKeys,
+  mockEnsureAccountKey,
+  mockOpenWithAccount,
+  mockOpenWithCredentials,
+  mockOpenDefaultTokenQuickCreateDialogForAccount,
+  mockGetManagedSiteConfig,
+  mockOpenSettingsTab,
+  mockOpenSettingsTabInNewTab,
+  mockSendRuntimeMessage,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
+  mockGetCurrentTempWindowRequestSource,
+  mockWithProtectionBypassUserCommand,
+} = vi.hoisted(() => ({
+  mockToast: vi.fn(),
+  mockValidateAndSaveAccount: vi.fn(),
+  mockValidateAndUpdateAccount: vi.fn(),
+  mockFetchRuntimeKeys: vi.fn(),
+  mockEnsureAccountKey: vi.fn(),
+  mockOpenWithAccount: vi.fn(),
+  mockOpenWithCredentials: vi.fn(),
+  mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
+  mockGetManagedSiteConfig: vi.fn(),
+  mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockOpenSettingsTabInNewTab: vi.fn().mockResolvedValue(undefined),
+  mockSendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
+}))
+
+vi.mock("~/lib/notify", () => {
+  const toastMock = Object.assign(mockToast, {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    dismiss: vi.fn(),
+  })
+
+  return {
+    default: toastMock,
+  }
+})
+
+vi.mock("~/components/dialogs/ChannelDialog", () => ({
+  ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
+  useChannelDialog: () => ({
+    openWithAccount: mockOpenWithAccount,
+    openWithCredentials: mockOpenWithCredentials,
+    openDefaultTokenQuickCreateDialogForAccount:
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+  }),
+}))
+
+vi.mock("~/services/accounts/accountCreation", () => ({
+  validateAndSaveAccount: mockValidateAndSaveAccount,
+}))
+
+vi.mock("~/services/accounts/accountUpdate", () => ({
+  validateAndUpdateAccount: mockValidateAndUpdateAccount,
+}))
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/utils/apiServiceRequest")
+    >()),
+    fetchDisplayAccountRuntimeKeys: mockFetchRuntimeKeys,
+  }),
+)
+vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/accounts/accountKeyCreation")
+  >()),
+  ensureAccountKey: mockEnsureAccountKey,
+}))
+
+function nativeEnsureResult(
+  account: DisplaySiteData,
+  token: NewApiToken,
+  created = false,
+): EnsureAccountKeyResult {
+  const runtimeKey = buildNewApiRuntimeKey(account, token)
+  if (!created) return { kind: "ready", runtimeKey }
+  const creation = buildNewApiKeyCreationResult(account, token)
+  return {
+    kind: "created",
+    runtimeKey,
+    creation: {
+      ...creation,
+      createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
+        ref: creation.ref!,
+        displayName: token.name,
+        secret: token.key,
+        credential: {
+          accountName: account.name,
+          fallbackAccountName: account.baseName,
+          baseUrl: account.baseUrl,
+          siteType: account.siteType,
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          tagIds: account.tagIds ?? [],
+        },
+      }),
+    },
+  }
+}
+
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiAdapters/registry")>()
+
+  return {
+    ...actual,
+    getManagedSiteCapabilities: vi.fn(() => ({
+      siteType: SITE_TYPES.NEW_API,
+      config: { get: mockGetManagedSiteConfig },
+    })),
+  }
+})
+
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return {
+    ...actual,
+    getActiveTabs: vi.fn(async () => []),
+    getAllTabs: vi.fn(async () => []),
+    onTabActivated: vi.fn(() => () => {}),
+    onTabUpdated: vi.fn(() => () => {}),
+  }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: mockSendRuntimeMessage }
+})
+
+vi.mock("~/utils/navigation", () => ({
+  openSettingsTab: mockOpenSettingsTab,
+  openSettingsTabInNewTab: mockOpenSettingsTabInNewTab,
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: mockStartProductAnalyticsAction,
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+  }
+})
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+  }
+})
+
+describe("useAccountDialog save and auto-config flows", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
+    mockWithProtectionBypassUserCommand.mockImplementation(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work(userCommandExecution(command, surface)),
+    )
+    await accountStorage.clearAllData()
+    mockValidateAndSaveAccount.mockResolvedValue({
+      success: true,
+      accountId: "saved-account-id",
+      message: "Saved successfully",
+      feedbackLevel: "success",
+    })
+    mockGetManagedSiteConfig.mockResolvedValue({
+      baseUrl: "https://managed.example.com",
+      token: "admin-token",
+      userId: "1",
+    })
+    mockValidateAndUpdateAccount.mockResolvedValue({
+      success: true,
+      feedbackLevel: "success",
+    })
+    mockFetchRuntimeKeys.mockResolvedValue([])
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(
+        account,
+        buildToken({ id: 99, key: "sk-default-ensured" }),
+        false,
+      ),
+    )
+    mockOpenWithAccount.mockResolvedValue({ opened: true })
+    mockOpenWithCredentials.mockResolvedValue({ opened: true })
+    vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: true,
+    })
+    mockAutoProvisionKeyOnAccountAdd(false)
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
+  })
+
+  const renderAddHook = (options?: {
+    onPostSaveAccountRefresh?: ReturnType<typeof vi.fn>
+    onSuccess?: ReturnType<typeof vi.fn>
+  }) =>
+    renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onPostSaveAccountRefresh: options?.onPostSaveAccountRefresh,
+        onSuccess: options?.onSuccess ?? vi.fn(),
+      }),
+    )
+
+  it("keeps origin-scoped check-in selection in the account draft", async () => {
+    const { result } = renderAddHook()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => {
+      result.current.setters.setUrl("https://agentrouter.org")
+    })
+    await act(async () => {
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+    const checkIn = buildSiteAccount().checkIn
+    await act(async () => {
+      result.current.setters.setCheckInSelection(checkIn)
+    })
+    expect(result.current.state.checkIn).toEqual(checkIn)
+  })
+
+  const fillAihubmixAccountDraft = async (
+    result: ReturnType<typeof renderAddHook>["result"],
+  ) => {
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+  }
+
+  const mockAutoProvisionKeyOnAccountAdd = (
+    enabled: boolean,
+    mode: AccountKeyAutoProvisionMode = ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+  ) =>
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      autoProvisionKeyOnAccountAdd: enabled,
+      autoProvisionKeyOnAccountAddMode: mode,
+    })
+
+  const renderEditHook = (options?: {
+    account?: any
+    onSuccess?: ReturnType<typeof vi.fn>
+  }) => {
+    const accountValue =
+      options?.account ??
+      ({
+        id: "existing-account-id",
+        siteUrl: "https://edit.example.com",
+        siteName: "Edit Example",
+      } as any)
+
+    return renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account: accountValue,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: options?.onSuccess ?? vi.fn(),
+      }),
+    )
+  }
+
+  it("passes the loaded Kimi pair to the edit transaction", async () => {
+    const savedAccount = buildSiteAccount({
+      id: "kimi-edit",
+      site_type: SITE_TYPES.KIMI_GLOBAL,
+      site_url: "https://platform.kimi.ai",
+      kimiOpenPlatformAuth: {
+        refreshToken: "loaded-refresh",
+        organizationId: "org",
+      },
+    })
+    const display = accountStorage.convertToDisplayData(savedAccount)
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+    const { result } = renderEditHook({ account: display })
+    await waitFor(() =>
+      expect(result.current.state.siteType).toBe(SITE_TYPES.KIMI_GLOBAL),
+    )
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+    expect(
+      mockValidateAndUpdateAccount.mock.calls[0]?.[0]?.options,
+    ).toMatchObject({
+      loadedKimiAuth: {
+        accessToken: savedAccount.account_info.access_token,
+        refreshToken: "loaded-refresh",
+        organizationId: "org",
+      },
+    })
+  })
+
+  const buildDisplayAccount = (
+    overrides: Partial<DisplaySiteData> = {},
+  ): DisplaySiteData =>
+    ({
+      id: "saved-account-id",
+      name: "Saved Example",
+      username: "saved-user",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: SiteHealthStatus.Healthy },
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.com",
+      token: "saved-token",
+      userId: "12",
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: buildCheckInConfig(),
+      cookieAuthSessionCookie: "",
+      ...overrides,
+    }) as DisplaySiteData
+
+  const buildToken = (overrides: Partial<NewApiToken> = {}): NewApiToken => ({
+    id: 1,
+    user_id: 12,
+    key: "sk-ensured",
+    status: 1,
+    name: "ensured",
+    created_time: 1,
+    accessed_time: 1,
+    expired_time: -1,
+    remain_quota: -1,
+    unlimited_quota: true,
+    used_quota: 0,
+    ...overrides,
+  })
+
+  const fillStandardAddAccountDraft = async (
+    result: ReturnType<typeof renderAddHook>["result"],
+  ) => {
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com/private")
+      result.current.setters.setSiteName("Sensitive Site")
+      result.current.setters.setUsername("private-user")
+      result.current.setters.setAccessToken("sk-private-token")
+      result.current.setters.setUserId("12345")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setNotes("private notes")
+      result.current.setters.setTagIds(["secret-tag-id"])
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+  }
+
+  it("preserves the save surface for the scheduled post-save refresh", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "saved-account-id",
+        true,
+        {
+          discoverCheckInAfterSave: true,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: userCommandExecution(
+            "add_account",
+            "popup",
+          ),
+        },
+      )
+    })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "add_account",
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      expect.any(Function),
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(
+      vi.mocked(accountStorage.refreshAccount).mock.calls[0]?.[2]
+        ?.protectionBypassExecution,
+    ).toEqual(userCommandExecution("add_account", "popup"))
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not keep the save command pending while post-save refresh is running", async () => {
+    let resolveRefresh!: (value: {
+      account: SiteAccount
+      refreshed: boolean
+    }) => void
+    const refreshPromise = new Promise<{
+      account: SiteAccount
+      refreshed: boolean
+    }>((resolve) => {
+      resolveRefresh = resolve
+    })
+    vi.spyOn(accountStorage, "refreshAccount").mockReturnValueOnce(
+      refreshPromise as ReturnType<typeof accountStorage.refreshAccount>,
+    )
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+    await fillStandardAddAccountDraft(result)
+
+    let savePromise!: ReturnType<
+      typeof result.current.handlers.handleSaveAccount
+    >
+    await act(async () => {
+      savePromise = result.current.handlers.handleSaveAccount()
+      await Promise.resolve()
+    })
+    await waitFor(() => {
+      expect(accountStorage.refreshAccount).toHaveBeenCalled()
+    })
+
+    const saveCompletedBeforeRefresh = await Promise.race([
+      savePromise.then(() => true),
+      new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), 0)
+      }),
+    ])
+    expect(saveCompletedBeforeRefresh).toBe(true)
+
+    resolveRefresh({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: true,
+    })
+    await act(async () => {
+      await savePromise
+    })
+    expect(onPostSaveAccountRefresh).toHaveBeenCalledWith(["saved-account-id"])
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      {
+        action: RuntimeActionIds.AccountRefreshCompleted,
+        updatedAccountIds: ["saved-account-id"],
+      },
+      { maxAttempts: 1 },
+    )
+  })
+
+  it("captures the current surface again when the warning refresh action is clicked", async () => {
+    const initialExecution = userCommandExecution("add_account", "options")
+    const retryExecution = userCommandExecution("add_account", "popup")
+    mockWithProtectionBypassUserCommand
+      .mockImplementationOnce(
+        async (
+          _command: unknown,
+          _surface: unknown,
+          work: (execution: unknown) => Promise<unknown>,
+        ) => work(initialExecution),
+      )
+      .mockImplementationOnce(
+        async (
+          _command: unknown,
+          _surface: unknown,
+          work: (execution: unknown) => Promise<unknown>,
+        ) => work(retryExecution),
+      )
+    mockGetCurrentTempWindowRequestSource
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Options)
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "Account saved, but latest metrics are placeholders.",
+      feedbackLevel: "warning",
+    })
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    const warningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]?.action
+
+    await act(async () => {
+      await warningAction?.onClick()
+    })
+
+    expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
+      1,
+      "saved-account-id",
+      true,
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+        discoverCheckInAfterSave: true,
+        protectionBypassExecution: initialExecution,
+      },
+    )
+    expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
+      2,
+      "saved-account-id",
+      true,
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: retryExecution,
+      },
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(2)
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(2)
+  })
+
+  it("retranslates managed-site setup guidance without checking configuration or saving again", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+      isOpen: true,
+      managedSiteType: SITE_TYPES.NEW_API,
+      managedSiteLabel: "settings:managedSite.newApi",
+      missingMessage: "messages:newapi.configMissing",
+    })
+    const configurationReads = mockGetManagedSiteConfig.mock.calls.length
+    const draftUrl = result.current.state.url
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "messages",
+      (await import("~/locales/zh-CN/messages.json")).default,
+    )
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "settings",
+      (await import("~/locales/zh-CN/settings.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+        isOpen: true,
+        managedSiteLabel: testI18n.t("settings:managedSite.newApi"),
+        missingMessage: testI18n.t("messages:newapi.configMissing"),
+      })
+      expect(result.current.state.url).toBe(draftUrl)
+      expect(mockGetManagedSiteConfig).toHaveBeenCalledTimes(configurationReads)
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "messages")
+      testI18n.removeResourceBundle("zh-CN", "settings")
+    }
+  })
+
+  it("opens managed-site settings in a new tab from the setup guidance dialog", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+    })
+
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      keepCurrentWindow: true,
+    })
+    expect(mockOpenSettingsTab).not.toHaveBeenCalled()
+    expect(result.current.state.managedSiteConfigPrompt.isOpen).toBe(false)
+  })
+
+  it("points the user at the background settings tab it opened", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
+        expect.stringContaining("managedSiteSettingsOpened"),
+      )
+    })
+  })
+
+  it("opens the prompted provider's settings section in a new tab", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      managedSiteType: SITE_TYPES.AXON_HUB,
+    })
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+      isOpen: true,
+      managedSiteType: SITE_TYPES.AXON_HUB,
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+    })
+
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      anchor: SETTINGS_ANCHORS.AXON_HUB,
+      keepCurrentWindow: true,
+    })
+  })
+
+  it("falls back to the preferred managed site when no prompt is showing", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+    })
+
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      keepCurrentWindow: true,
+    })
+  })
+
+  it("reports a failed settings jump instead of leaving the dialog silent", async () => {
+    mockGetManagedSiteConfig.mockResolvedValue(null)
+    mockOpenSettingsTabInNewTab.mockRejectedValueOnce(new Error("no tab"))
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleOpenManagedSiteSettings()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
+        expect.stringContaining("operationFailed"),
+      )
+    })
+    expect(result.current.state.managedSiteConfigPrompt.isOpen).toBe(false)
+  })
+
+  it("passes trimmed Sub2API refresh-token auth into save and opens the post-save token dialog when display data is available", async () => {
+    const savedDisplayData = {
+      id: "saved-account-id",
+      siteUrl: "https://sub2.example.com",
+      siteName: "Sub2API",
+    } as any
+
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("42")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      result.current.handlers.handleSub2apiUseRefreshTokenChange(true)
+      result.current.setters.setSub2apiRefreshToken(" refresh-token ")
+      result.current.setters.setSub2apiTokenExpiresAt(123456789)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://sub2.example.com",
+      siteName: "Sub2API",
+      username: "sub-user",
+      accessToken: "jwt-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: {
+        refreshToken: "refresh-token",
+        tokenExpiresAt: 123456789,
+      },
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
+    })
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledWith(savedDisplayData)
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+  })
+
+  it.each([
+    {
+      scenario: "all-group automatic creation owns a new account",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: false,
+    },
+    {
+      scenario: "all-group automatic creation is disabled",
+      enabled: false,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+    {
+      scenario: "default-key mode still needs a group selection",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: false,
+    },
+    {
+      scenario: "automatic creation is skipped for this save",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: true,
+      expectPrompt: true,
+    },
+    {
+      scenario: "an existing account is edited",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.EDIT,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+  ])(
+    "coordinates the Sub2API post-save key prompt when $scenario",
+    async ({
+      enabled,
+      provisioningMode,
+      dialogMode,
+      skipAutoProvision,
+      expectPrompt,
+    }) => {
+      mockAutoProvisionKeyOnAccountAdd(enabled, provisioningMode)
+      const savedAccount = buildSiteAccount({
+        id: "saved-account-id",
+        site_type: SITE_TYPES.SUB2API,
+      })
+      const savedDisplayData = accountStorage.convertToDisplayData(savedAccount)
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+      vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+        savedDisplayData,
+      )
+      mockValidateAndUpdateAccount.mockResolvedValue({
+        success: true,
+        accountId: savedAccount.id,
+      })
+
+      const { result } =
+        dialogMode === DIALOG_MODES.ADD
+          ? renderAddHook()
+          : renderEditHook({ account: savedDisplayData })
+
+      await waitFor(() => {
+        expect(result.current).toBeTruthy()
+      })
+      if (dialogMode === DIALOG_MODES.ADD) {
+        await fillStandardAddAccountDraft(result)
+        await act(async () => {
+          result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        })
+      }
+      await waitFor(() => {
+        expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+      })
+
+      await act(async () => {
+        const saved = await result.current.handlers.handleSaveAccount({
+          skipAutoProvisionKeyOnAccountAdd: skipAutoProvision,
+        })
+        expect(saved?.success).toBe(true)
+      })
+
+      expect(result.current.state.isSaving).toBe(false)
+      if (expectPrompt) {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).toHaveBeenCalledWith(savedDisplayData)
+      } else {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).not.toHaveBeenCalled()
+        expect(result.current.state.postSaveKeyProvisioning).toMatchObject({
+          account: savedDisplayData,
+          mode: provisioningMode,
+        })
+        expect(
+          mockValidateAndSaveAccount.mock.calls.at(-1)?.[0]?.options,
+        ).toMatchObject({ skipAutoProvisionKeyOnAccountAdd: true })
+      }
+    },
+  )
+
+  it.each(["display", "stored", "missing", "failed"])(
+    "finishes the saved account workflow with a %s provisioning owner",
+    async (ownerSource) => {
+      mockAutoProvisionKeyOnAccountAdd(
+        true,
+        ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      )
+      const account = buildSiteAccount({
+        id: "saved-account-id",
+        site_type: SITE_TYPES.NEW_API,
+      })
+      const display = accountStorage.convertToDisplayData(account)
+      const read = vi.spyOn(accountStorage, "getDisplayDataById")
+      if (ownerSource === "failed")
+        read.mockRejectedValue(new Error("Read failed"))
+      else read.mockResolvedValue(ownerSource === "display" ? display : null)
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+        ownerSource === "stored" ? account : null,
+      )
+      const onSuccess = vi.fn()
+      const { result } = renderAddHook({ onSuccess })
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await fillStandardAddAccountDraft(result)
+      await act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      })
+      if (ownerSource === "display" || ownerSource === "stored") {
+        expect(result.current.state.postSaveKeyProvisioning).toMatchObject({
+          account: display,
+          mode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+        })
+        expect(onSuccess).not.toHaveBeenCalled()
+        await act(async () => {
+          result.current.handlers.handlePostSaveKeyProvisioningClose()
+        })
+      }
+      expect(result.current.state.postSaveKeyProvisioning).toBeNull()
+      expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+    },
+  )
+
+  it("ignores a provisioning owner lookup that finishes after the account view closes", async () => {
+    mockAutoProvisionKeyOnAccountAdd(
+      true,
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+    )
+    const account = buildSiteAccount({
+      id: "saved-account-id",
+      site_type: SITE_TYPES.NEW_API,
+    })
+    let resolve!: (value: DisplaySiteData) => void
+    const read = vi.spyOn(accountStorage, "getDisplayDataById").mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    const onSuccess = vi.fn()
+    const { result } = renderAddHook({ onSuccess })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await fillStandardAddAccountDraft(result)
+    let save!: ReturnType<typeof result.current.handlers.handleSaveAccount>
+    await act(async () => {
+      save = result.current.handlers.handleSaveAccount()
+    })
+    await waitFor(() => expect(read).toHaveBeenCalled())
+    await act(async () => {
+      await result.current.handlers.handleClose()
+    })
+    await act(async () => {
+      resolve(accountStorage.convertToDisplayData(account))
+      await save
+    })
+    expect(result.current.state.postSaveKeyProvisioning).toBeNull()
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+  })
+
+  it("defers account data refresh after a successful manual save", async () => {
+    const refreshSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValue({
+        account: buildSiteAccount({ id: "saved-account-id" }),
+        refreshed: true,
+      })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://api.example.com/private",
+      siteName: "Sensitive Site",
+      username: "private-user",
+      accessToken: "sk-private-token",
+      userId: "12345",
+      exchangeRate: "7",
+      notes: "private notes",
+      tagIds: ["secret-tag-id"],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
+    })
+    await waitFor(() => {
+      expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true, {
+        discoverCheckInAfterSave: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+        }),
+      })
+    })
+  })
+
+  it("notifies open account-management surfaces after a deferred post-save refresh updates data", async () => {
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+    vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: true,
+    })
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(onPostSaveAccountRefresh).toHaveBeenCalledWith([
+        "saved-account-id",
+      ])
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        {
+          action: RuntimeActionIds.AccountRefreshCompleted,
+          updatedAccountIds: ["saved-account-id"],
+        },
+        { maxAttempts: 1 },
+      )
+    })
+  })
+
+  it("skips post-save refresh notification when saved data is unchanged", async () => {
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+    vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
+      account: buildSiteAccount({ id: "saved-account-id" }),
+      refreshed: false,
+    })
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "saved-account-id",
+        true,
+        {
+          discoverCheckInAfterSave: true,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: expect.objectContaining({
+            kind: "user_command",
+          }),
+        },
+      )
+    })
+    expect(onPostSaveAccountRefresh).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("ignores unavailable receivers during post-save refresh notification", async () => {
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+    const receiverUnavailableError = new Error(
+      "Could not establish connection. Receiving end does not exist.",
+    )
+    mockSendRuntimeMessage.mockRejectedValueOnce(receiverUnavailableError)
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(onPostSaveAccountRefresh).toHaveBeenCalledWith([
+        "saved-account-id",
+      ])
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        {
+          action: RuntimeActionIds.AccountRefreshCompleted,
+          updatedAccountIds: ["saved-account-id"],
+        },
+        { maxAttempts: 1 },
+      )
+    })
+  })
+
+  it("continues after post-save refresh notification failures", async () => {
+    const onPostSaveAccountRefresh = vi.fn().mockResolvedValue(undefined)
+    mockSendRuntimeMessage.mockRejectedValueOnce(new Error("runtime failed"))
+
+    const { result } = renderAddHook({ onPostSaveAccountRefresh })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(onPostSaveAccountRefresh).toHaveBeenCalledWith([
+        "saved-account-id",
+      ])
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        {
+          action: RuntimeActionIds.AccountRefreshCompleted,
+          updatedAccountIds: ["saved-account-id"],
+        },
+        { maxAttempts: 1 },
+      )
+    })
+  })
+
+  it("logs post-save refresh failures without reopening the save flow", async () => {
+    const refreshError = new Error("refresh failed")
+    vi.spyOn(accountStorage, "refreshAccount").mockRejectedValueOnce(
+      refreshError,
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "saved-account-id",
+        true,
+        {
+          discoverCheckInAfterSave: true,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: expect.objectContaining({
+            kind: "user_command",
+          }),
+        },
+      )
+    })
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("does not persist Sub2API refresh-token auth until the mode is explicitly enabled", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("42")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      result.current.setters.setSub2apiRefreshToken(" refresh-token ")
+      result.current.setters.setSub2apiTokenExpiresAt(123456789)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://sub2.example.com",
+      siteName: "Sub2API",
+      username: "sub-user",
+      accessToken: "jwt-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
+    })
+  })
+
+  it("updates an existing account with trimmed values and uses the default update success toast", async () => {
+    mockValidateAndUpdateAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "existing-account-id",
+      feedbackLevel: "success",
+    })
+    const { result } = renderEditHook({
+      account: {
+        id: "existing-account-id",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl(" https://edit.example.com/path ")
+      result.current.setters.setSiteName(" Example Account ")
+      result.current.setters.setUsername(" updated-user ")
+      result.current.setters.setAccessToken(" updated-token ")
+      result.current.setters.setUserId(" 42 ")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setNotes("  updated notes  ")
+      result.current.setters.setTagIds(["tag-a"])
+      result.current.setters.setExcludeFromTotalBalance(true)
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndUpdateAccount).toHaveBeenCalledWith({
+      accountId: "existing-account-id",
+      url: "https://edit.example.com/path",
+      siteName: "Example Account",
+      username: "updated-user",
+      accessToken: "updated-token",
+      userId: "42",
+      exchangeRate: "7",
+      notes: "updated notes",
+      tagIds: ["tag-a"],
+      checkInConfig: expect.any(Object),
+      siteType: "one-api",
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: true,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: { deferDataRefresh: true, selectionChanged: false },
+    })
+    expect(toast.success).toHaveBeenCalledWith(
+      "accountDialog:messages.updateSuccess",
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "reauthenticate_account",
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      expect.any(Function),
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+      "existing-account-id",
+      true,
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        discoverCheckInAfterSave: true,
+        protectionBypassExecution: userCommandExecution(
+          "reauthenticate_account",
+          "background",
+        ),
+      },
+    )
+  })
+
+  it("uses a warning toast for partial-success saves when account data refresh fails", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "Account saved, but latest metrics are placeholders.",
+      feedbackLevel: "warning",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        action: expect.any(Object),
+      }),
+    )
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningAction).toEqual(
+      expect.objectContaining({
+        label: "common:actions.refresh",
+      }),
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it.each(["rejected", "thrown"])(
+    "reports a %s refresh from a partial-success update warning",
+    async (failure) => {
+      mockValidateAndUpdateAccount.mockResolvedValueOnce({
+        success: true,
+        accountId: "existing-account-id",
+        message: "Account settings saved, but latest metrics are still stale.",
+        feedbackLevel: "warning",
+      })
+
+      const { result } = renderEditHook({
+        account: {
+          id: "existing-account-id",
+        },
+      })
+
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+
+      await act(async () => {
+        result.current.setters.setUrl("https://edit.example.com")
+        result.current.setters.setSiteName("Edit Example")
+        result.current.setters.setUsername("user")
+        result.current.setters.setAccessToken("token")
+        result.current.setters.setUserId("1")
+        result.current.setters.setExchangeRate("7")
+        result.current.setters.setSiteType("one-api")
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      })
+
+      expect(toast.warning).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          action: expect.any(Object),
+        }),
+      )
+      const updateWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+        ?.action
+      expect(updateWarningAction).toEqual(
+        expect.objectContaining({
+          label: "common:actions.refresh",
+        }),
+      )
+      expect(toast.success).not.toHaveBeenCalled()
+      if (failure === "thrown") {
+        vi.mocked(accountStorage.refreshAccount).mockRejectedValueOnce(
+          new Error("Refresh unavailable"),
+        )
+      } else {
+        vi.mocked(accountStorage.refreshAccount).mockResolvedValueOnce({
+          refreshed: false,
+        } as Awaited<ReturnType<typeof accountStorage.refreshAccount>>)
+      }
+
+      vi.mocked(toast.loading).mockReturnValueOnce("refresh-toast")
+      await act(async () => {
+        await updateWarningAction!.onClick()
+      })
+
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "existing-account-id",
+        true,
+        expect.anything(),
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.refreshAccount",
+        expect.objectContaining({ id: expect.anything() }),
+      )
+    },
+  )
+
+  it("falls back to the local warning copy when a partial-success save returns an empty message", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "",
+      feedbackLevel: "warning",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        action: expect.any(Object),
+      }),
+    )
+    const saveWarningMessage = vi.mocked(toast.warning).mock.calls[0]?.[0]
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningMessage).toBe("accountDialog:messages.addSuccess")
+    expect(saveWarningAction).toEqual(
+      expect.objectContaining({
+        label: "common:actions.refresh",
+      }),
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("prevents the native form submit and delegates to the normal save flow", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    const preventDefault = vi.fn()
+
+    await act(async () => {
+      result.current.handlers.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps Sub2API saves successful even when the post-save token dialog fails", async () => {
+    const savedDisplayData = {
+      id: "saved-account-id",
+      siteUrl: "https://sub2.example.com",
+      siteName: "Sub2API",
+    } as any
+
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockOpenDefaultTokenQuickCreateDialogForAccount.mockRejectedValueOnce(
+      new Error("dialog boot failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("42")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    let saveResult: any
+    await act(async () => {
+      saveResult = await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(saveResult).toEqual(
+      expect.objectContaining({
+        success: true,
+        accountId: "saved-account-id",
+      }),
+    )
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).toHaveBeenCalledWith(savedDisplayData)
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("tracks successful account creation without exposing account-sensitive fields", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledTimes(1)
+    expect(mockCompleteProductAnalyticsAction.mock.calls[0]).toHaveLength(1)
+    expect(mockStartProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.anything(),
+        baseUrl: expect.anything(),
+        accessToken: expect.anything(),
+        userId: expect.anything(),
+        username: expect.anything(),
+        notes: expect.anything(),
+        tagIds: expect.anything(),
+      }),
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.anything(),
+        message: expect.anything(),
+      }),
+    )
+  })
+
+  it("tracks successful account updates without exposing account-sensitive fields", async () => {
+    const { result } = renderEditHook({
+      account: {
+        id: "existing-account-id",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://edit.example.com/private")
+      result.current.setters.setSiteName("Sensitive Edit Site")
+      result.current.setters.setUsername("edited-private-user")
+      result.current.setters.setAccessToken("edited-private-token")
+      result.current.setters.setUserId("98765")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setNotes("edited private notes")
+      result.current.setters.setTagIds(["secret-edit-tag-id"])
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("tracks failed account saves with controlled diagnostics and no backend message", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: false,
+      message: "backend leaked details",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "backend leaked details",
+      )
+    })
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          diagnostics: {
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
+          },
+        },
+      )
+    })
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.anything(),
+        message: "backend leaked details",
+      }),
+    )
+  })
+
+  it("does not let analytics completion failures change account save behavior", async () => {
+    mockCompleteProductAnalyticsAction.mockRejectedValueOnce(
+      new Error("analytics unavailable"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("opens the AIHubMix foreground key prompt after a normal save when auto-provision is enabled", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://aihubmix.com",
+      siteName: "AIHubMix",
+      username: "aihubmix-user",
+      accessToken: "aihubmix-access-token",
+      userId: "13",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: true,
+      },
+    })
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(true)
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
+  })
+
+  it("does not open the AIHubMix foreground key prompt when the saved account already has a token", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    const existingToken = buildToken({
+      id: 502,
+      key: "sk-***masked***",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockResolvedValueOnce([
+      buildNewApiRuntimeKey(savedDisplayData, existingToken),
+    ])
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+  })
+
+  it("ignores stale AIHubMix foreground key prompt completions after close", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    let resolveInventory:
+      | ((value: Awaited<ReturnType<typeof mockFetchRuntimeKeys>>) => void)
+      | undefined
+    const pendingInventory = new Promise<
+      Awaited<ReturnType<typeof mockFetchRuntimeKeys>>
+    >((resolve) => {
+      resolveInventory = resolve
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockReturnValueOnce(pendingInventory)
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    let savePromise: ReturnType<
+      typeof result.current.handlers.handleSaveAccount
+    >
+    act(() => {
+      savePromise = result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
+    })
+
+    act(() => {
+      result.current.handlers.handleClose()
+    })
+
+    await act(async () => {
+      resolveInventory?.([])
+      await savePromise
+    })
+
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it("opens the AIHubMix foreground key prompt when token inventory lookup fails", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockRejectedValueOnce(
+      new Error("inventory unavailable"),
+    )
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
+    expect(result.current.state.aihubmixPostSaveKeyPrompt).toMatchObject({
+      isOpen: true,
+      accountId: "saved-account-id",
+      accountName: "AIHubMix",
+      isCreating: false,
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it("does not open the AIHubMix foreground key prompt when auto-provision is disabled", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: expect.any(String),
+      siteName: expect.any(String),
+      username: expect.any(String),
+      accessToken: expect.any(String),
+      userId: expect.any(String),
+      exchangeRate: expect.any(String),
+      notes: expect.any(String),
+      tagIds: expect.any(Array),
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: expect.any(String),
+      manualBalanceUsd: expect.any(String),
+      excludeFromTotalBalance: expect.any(Boolean),
+      excludeFromTodayIncome: expect.any(Boolean),
+      sub2apiAuth: undefined,
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      },
+    })
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(
+      result.current.handlers.shouldDeferAccountSaveSuccess({
+        success: true,
+        message: "Saved successfully",
+        accountId: "saved-account-id",
+      }),
+    ).toBe(false)
+  })
+
+  it("completes account saving when foreground AIHubMix creation returns no new secret", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const account = buildSiteAccount({
+      id: "saved-account-id",
+      site_type: SITE_TYPES.AIHUBMIX,
+    })
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(account)
+    const onSuccess = vi.fn()
+    const { result } = renderAddHook({ onSuccess })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await fillAihubmixAccountDraft(result)
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
+    )
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(account.id)
+  })
+
+  it("shows the AIHubMix one-time key after the user confirms foreground creation", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    const oneTimeToken = buildToken({
+      id: 501,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementationOnce(
+      async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, oneTimeToken, true),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(
+      result.current.handlers.shouldDeferAccountSaveSuccess({
+        success: true,
+        message: "Saved successfully",
+        accountId: "saved-account-id",
+      }),
+    ).toBe(true)
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    await act(async () => {
+      await result.current.handlers.handlePostSaveOneTimeSecretClose()
+    })
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+  })
+
+  it("uses converted AIHubMix display data when saved display data is unavailable during foreground key creation", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const oneTimeToken = buildToken({
+      id: 503,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(null)
+    mockEnsureAccountKey.mockImplementationOnce(
+      async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, oneTimeToken, true),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "saved-account-id",
+        name: "AIHubMix",
+        siteType: SITE_TYPES.AIHUBMIX,
+      }),
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
+  })
+
+  it("shows a fallback error instead of a fake AIHubMix key when creation cannot return a full secret", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockEnsureAccountKey.mockRejectedValueOnce(
+      new AccountKeyResourceError({ code: "unavailable" }),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
+    )
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+  })
+
+  it("completes deferred AIHubMix save success when the saved account cannot be reloaded for key creation", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(null)
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:toast.error.findAccountDetailsFailed",
+    )
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+  })
+
+  it("does not create an AIHubMix key when the user cancels the foreground prompt", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleAihubmixPostSaveKeyPromptCancel()
+    })
+
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+    expect(toast.info).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyPromptCancelled",
+    )
+  })
+
+  it("completes deferred AIHubMix save success when the dialog is closed while the key prompt is pending", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("ignores late AIHubMix key creation results after the dialog is closed", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const oneTimeToken = buildToken({
+      id: 502,
+      key: "sk-aihubmix-late",
+    })
+    let resolveEnsure:
+      | ((value: Awaited<ReturnType<typeof mockEnsureAccountKey>>) => void)
+      | undefined
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockEnsureAccountKey.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveEnsure = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      void result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    await waitFor(() => {
+      expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    await act(async () => {
+      resolveEnsure?.(
+        nativeEnsureResult(
+          accountStorage.convertToDisplayData(savedSiteAccount),
+          oneTimeToken,
+          true,
+        ),
+      )
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("completes deferred AIHubMix save success when foreground key creation throws", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockEnsureAccountKey.mockRejectedValueOnce(new Error("create failed"))
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
+    )
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+  })
+
+  it.each([
+    {
+      duplicate: "the same site and user ID",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://api.example.com",
+      savedUserId: "12345",
+      savedToken: "existing-token",
+    },
+    {
+      duplicate: "an exact OpenRouter management key",
+      siteType: SITE_TYPES.OPENROUTER,
+      siteUrl: "https://openrouter.ai",
+      savedUserId: "different-user-id",
+      savedToken: "sk-private-token",
+    },
+  ])(
+    "stops auto-config quietly when the user cancels adding $duplicate",
+    async ({ siteType, siteUrl, savedUserId, savedToken }) => {
+      await accountStorage.addAccount(
+        buildSiteAccount({
+          site_type: siteType,
+          site_url: siteUrl,
+          account_info: {
+            ...buildSiteAccount().account_info,
+            id: savedUserId,
+            access_token: savedToken,
+          },
+        }),
+      )
+      const onSuccess = vi.fn()
+      const { result } = renderAddHook({ onSuccess })
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+      await fillStandardAddAccountDraft(result)
+      await act(async () => {
+        result.current.setters.setUrl(siteUrl)
+        result.current.setters.setSiteType(siteType)
+      })
+
+      let autoConfigPromise: ReturnType<
+        typeof result.current.handlers.handleAutoConfig
+      >
+      act(() => {
+        autoConfigPromise = result.current.handlers.handleAutoConfig()
+      })
+      await waitFor(() => {
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      })
+
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningCancel()
+        await autoConfigPromise
+      })
+
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockEnsureAccountKey).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(result.current.state).toMatchObject({
+        url: siteUrl,
+        isSaving: false,
+        isAutoConfiguring: false,
+        accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+        duplicateAccountWarning: { isOpen: false },
+      })
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    },
+  )
+
+  it("stops auto-config after save when the saved account id is missing", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      message: "Saved without id",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(1)
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "accountDialog:messages.saveAccountFailed",
+    )
+  })
+
+  it("new-account quick-config saves without background key provisioning and opens with the ensured token", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Example",
+      site_url: "https://api.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.NEW_API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "12",
+        username: "saved-user",
+        access_token: "saved-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount()
+    const ensuredToken = buildToken({ id: 101, key: "sk-ready" })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("saved-user")
+      result.current.setters.setAccessToken("saved-token")
+      result.current.setters.setUserId("12")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith({
+      url: "https://api.example.com",
+      siteName: "Example",
+      username: "saved-user",
+      accessToken: "saved-token",
+      userId: "12",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: expect.any(Object),
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      manualBalanceUsd: "",
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      sub2apiAuth: undefined,
+      options: {
+        deferDataRefresh: true,
+        skipAutoProvisionKeyOnAccountAdd: true,
+      },
+    })
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      savedDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
+  it("waits for AIHubMix one-time token acknowledgement before opening quick-config", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: "13",
+    })
+    const oneTimeToken = buildToken({
+      id: 102,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+    )
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.handlers.handlePostSaveOneTimeSecretClose()
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      savedDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: oneTimeToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
+  it("clears AIHubMix post-save workflow state when the dialog closes during one-time token acknowledgement", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: "13",
+    })
+    const oneTimeToken = buildToken({
+      id: 102,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+    )
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+    )
+  })
+
+  it("does not restore AIHubMix paused post-save state when a pending token check resolves after close and reopen", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: "13",
+    })
+    const oneTimeToken = buildToken({
+      id: 108,
+      key: "sk-aihubmix-stale-one-time",
+    })
+
+    let resolveEnsureAccountToken:
+      | ((value: Awaited<ReturnType<typeof mockEnsureAccountKey>>) => void)
+      | null = null
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveEnsureAccountToken = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    let autoConfigPromise: Promise<void> | undefined
+
+    await act(async () => {
+      autoConfigPromise = result.current.handlers.handleAutoConfig()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
+      )
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    })
+
+    await act(async () => {
+      resolveEnsureAccountToken?.(
+        nativeEnsureResult(
+          accountStorage.convertToDisplayData(savedSiteAccount),
+          oneTimeToken,
+          true,
+        ),
+      )
+      await autoConfigPromise
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+    })
+  })
+
+  it("marks the AIHubMix paused workflow as failed when opening quick-config rejects after token acknowledgement", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: "13",
+    })
+    const oneTimeToken = buildToken({
+      id: 102,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
+    mockOpenWithAccount.mockRejectedValueOnce(
+      new Error("channel dialog failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+    )
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handlePostSaveOneTimeSecretClose()
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() => {
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "accountDialog:messages.newApiConfigFailed",
+      )
+    })
+  })
+
+  it.each(
+    [SITE_TYPES.SUB2API, SITE_TYPES.NEW_API].flatMap((siteType) =>
+      ["inventory", "one-time", "unattributed"].map((kind) => ({
+        siteType,
+        kind,
+      })),
+    ),
+  )(
+    "waits for $siteType $kind creation and acknowledgement before quick-config",
+    async ({ siteType, kind }) => {
+      const savedSiteAccount = buildSiteAccount({
+        id: "saved-account-id",
+        site_name: "Sub2API",
+        site_url: "https://sub2.example.com",
+        health: { status: SiteHealthStatus.Healthy },
+        site_type: siteType,
+        exchange_rate: 7,
+        authType: AuthTypeEnum.AccessToken,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "14",
+          username: "sub-user",
+          access_token: "sub-token",
+        },
+      }) as SiteAccount
+      const savedDisplayData = buildDisplayAccount({
+        name: "Sub2API",
+        siteType: siteType,
+        baseUrl: "https://sub2.example.com",
+        token: "sub-token",
+        userId: "14",
+      })
+      const createdToken = buildToken({
+        id: 103,
+        key: "sk-sub2-created",
+        group: "vip",
+      })
+
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+        savedSiteAccount,
+      )
+      vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+        savedDisplayData,
+      )
+      mockEnsureAccountKey.mockResolvedValue({
+        kind: "input-required",
+        reason: "editor",
+      })
+
+      const { result } = renderAddHook()
+
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+
+      await act(async () => {
+        result.current.setters.setUrl("https://sub2.example.com")
+        result.current.setters.setSiteName("Sub2API")
+        result.current.setters.setUsername("sub-user")
+        result.current.setters.setAccessToken("sub-token")
+        result.current.setters.setUserId("14")
+        result.current.setters.setExchangeRate("7")
+        result.current.setters.setSiteType(siteType)
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleAutoConfig()
+      })
+
+      expect(result.current.state.postSaveKeyInputAccount).toEqual(
+        savedDisplayData,
+      )
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+      )
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await result.current.handlers.handlePostSaveKeyInputTokenCreated(
+          kind === "inventory"
+            ? buildNewApiKeyCreationResult(savedDisplayData, createdToken)
+            : {
+                ref:
+                  kind === "unattributed"
+                    ? null
+                    : buildNewApiKeyCreationResult(
+                        savedDisplayData,
+                        createdToken,
+                      ).ref,
+                facts:
+                  kind === "unattributed"
+                    ? null
+                    : buildNewApiKeyCreationResult(
+                        savedDisplayData,
+                        createdToken,
+                      ).facts,
+                createdSecret: createUnattributedAccountCreatedRuntimeSecret({
+                  accountId: savedDisplayData.id,
+                  displayName: createdToken.name,
+                  secret: createdToken.key,
+                  credential: {
+                    accountName: savedDisplayData.name,
+                    baseUrl: savedDisplayData.baseUrl,
+                    apiType: API_TYPES.OPENAI_COMPATIBLE,
+                    tagIds: [],
+                  },
+                }),
+              },
+        )
+      })
+
+      if (kind !== "inventory") {
+        expect(result.current.state.postSaveOneTimeSecret?.secret).toBe(
+          createdToken.key,
+        )
+        expect(mockOpenWithAccount).not.toHaveBeenCalled()
+        expect(mockOpenWithCredentials).not.toHaveBeenCalled()
+        await act(async () =>
+          result.current.handlers.handlePostSaveOneTimeSecretClose(),
+        )
+      }
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+      if (kind === "unattributed") {
+        expect(mockOpenWithCredentials).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apiKey: createdToken.key,
+            baseUrl: savedDisplayData.baseUrl,
+          }),
+          expect.any(Function),
+        )
+        expect(mockOpenWithAccount).not.toHaveBeenCalled()
+      } else
+        expect(mockOpenWithAccount).toHaveBeenCalledWith(
+          savedDisplayData,
+          expect.objectContaining({
+            source: "account_key_resource",
+            legacyTokenId: createdToken.id,
+          }),
+          expect.any(Function),
+          expect.objectContaining({
+            shouldContinue: expect.any(Function),
+          }),
+        )
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+      )
+    },
+  )
+
+  it("resumes paused Sub2API quick-config after reference-only creation by selecting its exact native ID", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+    const createdToken = buildToken({
+      id: 104,
+      key: "sk-sub2-refetched",
+      group: "vip",
+    })
+    const fetchAccountTokens = vi
+      .fn()
+      .mockResolvedValue([createdToken, existingToken])
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+    )
+
+    await act(async () => {
+      await result.current.handlers.handlePostSaveKeyInputTokenCreated({
+        ref: buildNewApiKeyCreationResult(
+          savedDisplayData,
+          buildToken({ id: 104 }),
+        ).ref,
+        facts: null,
+      })
+    })
+
+    expect(fetchAccountTokens).toHaveBeenCalledWith({
+      accountId: savedDisplayData.id,
+    })
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      savedDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: createdToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
+  it("fails closed when native creation recovery cannot find its returned resource ID", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+    const fetchAccountTokens = vi
+      .fn()
+      .mockResolvedValueOnce([existingToken])
+      .mockResolvedValueOnce([existingToken])
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handlePostSaveKeyInputTokenCreated({
+        ref: buildNewApiKeyCreationResult(
+          savedDisplayData,
+          buildToken({ id: 104 }),
+        ).ref,
+        facts: null,
+      })
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:accountOperations.tokenNotFound",
+    )
+  })
+
+  it("ignores stale native key recovery results after the dialog closes", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+
+    let resolveFetchAccountTokens: ((value: NewApiToken[]) => void) | null =
+      null
+    const fetchAccountTokens = vi.fn(
+      (_request: unknown) =>
+        new Promise<NewApiToken[]>((resolve) => {
+          resolveFetchAccountTokens = resolve
+        }),
+    )
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+    )
+
+    let recoverPromise: Promise<void> | undefined
+    await act(async () => {
+      recoverPromise =
+        result.current.handlers.handlePostSaveKeyInputTokenCreated({
+          ref: buildNewApiKeyCreationResult(
+            savedDisplayData,
+            buildToken({ id: 104 }),
+          ).ref,
+          facts: null,
+        })
+    })
+
+    await waitFor(() => {
+      expect(fetchAccountTokens).toHaveBeenCalledWith({
+        accountId: savedDisplayData.id,
+      })
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+    })
+
+    await act(async () => {
+      resolveFetchAccountTokens?.([existingToken])
+      await recoverPromise
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "messages:accountOperations.tokenNotFound",
+    )
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "accountDialog:messages.newApiConfigFailed",
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+    )
+  })
+
+  it("marks the Sub2API paused workflow as failed when opening quick-config rejects after token creation", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+    const createdToken = buildToken({
+      id: 103,
+      key: "sk-sub2-created",
+      group: "vip",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+    mockOpenWithAccount.mockRejectedValueOnce(
+      new Error("channel dialog failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+    )
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handlePostSaveKeyInputTokenCreated(
+          buildNewApiKeyCreationResult(savedDisplayData, createdToken),
+        )
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() => {
+      expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "accountDialog:messages.newApiConfigFailed",
+      )
+    })
+  })
+
+  it("clears Sub2API post-save workflow state when the dialog closes during group selection", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.postSaveKeyInputAccount).toEqual(
+      savedDisplayData,
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+    )
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+    )
+  })
+
+  it("returns Sub2API group selection to idle when the token dialog closes without creating a token", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "14",
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: "14",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForKeyInput,
+    )
+
+    await act(async () => {
+      await result.current.handlers.handlePostSaveKeyInputTokenDialogClose()
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(result.current.state.postSaveKeyInputAccount).toBeNull()
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+    )
+  })
+
+  it("ignores stale AccountDialog-owned Sub2API dialog success after close and reopen", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "first-account-id",
+      site_name: "First Sub2API",
+      site_url: "https://first-sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "21",
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Sub2API",
+      site_url: "https://second-sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "22",
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+    const firstDisplayData = buildDisplayAccount({
+      id: "first-account-id",
+      name: "First Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://first-sub2.example.com",
+      token: "first-token",
+      userId: "21",
+    })
+    const secondDisplayData = buildDisplayAccount({
+      id: "second-account-id",
+      name: "Second Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://second-sub2.example.com",
+      token: "second-token",
+      userId: "22",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return firstSavedSiteAccount
+        }
+        if (accountId === "second-account-id") {
+          return secondSavedSiteAccount
+        }
+        return null
+      },
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return firstDisplayData
+        }
+        if (accountId === "second-account-id") {
+          return secondDisplayData
+        }
+        return null
+      },
+    )
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "first-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+    mockEnsureAccountKey
+      .mockResolvedValueOnce({ kind: "input-required", reason: "editor" })
+      .mockResolvedValueOnce({ kind: "input-required", reason: "editor" })
+
+    let resolveOpenWithAccount:
+      | ((value: Awaited<ReturnType<typeof mockOpenWithAccount>>) => void)
+      | null = null
+    mockOpenWithAccount.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveOpenWithAccount = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first-sub2.example.com")
+      result.current.setters.setSiteName("First Sub2API")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("21")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    const firstSessionId = result.current.state.postSaveKeyInputSessionId
+    expect(firstSessionId).not.toBeNull()
+    const firstDialogHandlers =
+      result.current.handlers.getPostSaveKeyInputDialogHandlers(firstSessionId)
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second-sub2.example.com")
+      result.current.setters.setSiteName("Second Sub2API")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("22")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    const secondSessionId = result.current.state.postSaveKeyInputSessionId
+    expect(secondSessionId).not.toBeNull()
+    expect(secondSessionId).not.toBe(firstSessionId)
+    const secondDialogHandlers =
+      result.current.handlers.getPostSaveKeyInputDialogHandlers(secondSessionId)
+
+    const staleToken = buildToken({
+      id: 201,
+      key: "sk-stale-sub2",
+      group: "default",
+    })
+    await act(async () => {
+      await firstDialogHandlers.onSuccess(
+        buildNewApiKeyCreationResult(firstDisplayData, staleToken),
+      )
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+
+    const currentToken = buildToken({
+      id: 202,
+      key: "sk-current-sub2",
+      group: "vip",
+    })
+    let resumePromise: Promise<void> | undefined
+    await act(async () => {
+      resumePromise = secondDialogHandlers.onSuccess(
+        buildNewApiKeyCreationResult(secondDisplayData, currentToken),
+      )
+      secondDialogHandlers.onClose()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      secondDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: currentToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+
+    await act(async () => {
+      resolveOpenWithAccount?.({ opened: true })
+      await resumePromise
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
+  it("opens channel auto-config directly for an existing edit-mode account without saving again", async () => {
+    const onSuccess = vi.fn()
+    const existingAccount = {
+      id: "existing-display-id",
+      siteUrl: "https://edit.example.com",
+      siteName: "Edit Example",
+    } as any
+
+    mockOpenWithAccount.mockImplementationOnce(
+      async (
+        _displaySiteData: any,
+        _channelId: any,
+        onCompleted?: () => void,
+      ) => {
+        onCompleted?.()
+        return { opened: true }
+      },
+    )
+
+    const { result } = renderEditHook({
+      account: existingAccount,
+      onSuccess,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      existingAccount,
+      null,
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(onSuccess).toHaveBeenCalledWith(existingAccount)
+  })
+
+  it("does not mark direct auto-config complete when the channel dialog does not open", async () => {
+    const onSuccess = vi.fn()
+    const existingAccount = {
+      id: "existing-display-id",
+      siteUrl: "https://edit.example.com",
+      siteName: "Edit Example",
+    } as any
+
+    mockOpenWithAccount.mockResolvedValueOnce({ opened: false })
+
+    const { result } = renderEditHook({
+      account: existingAccount,
+      onSuccess,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+    )
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("keeps direct auto-config waiting when channel opening is deferred by a prerequisite dialog", async () => {
+    const onSuccess = vi.fn()
+    const existingAccount = {
+      id: "existing-display-id",
+      siteUrl: "https://edit.example.com",
+      siteName: "Edit Example",
+    } as any
+
+    mockOpenWithAccount.mockResolvedValueOnce({
+      opened: false,
+      deferred: true,
+    })
+
+    const { result } = renderEditHook({
+      account: existingAccount,
+      onSuccess,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
+    )
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("falls back to converted display data during auto-config when persisted display data is unavailable", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Fallback Example",
+      site_url: "https://api.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "9",
+        username: "saved-user",
+        access_token: "saved-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(null)
+
+    const fallbackDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    const ensuredToken = buildToken({ id: 104, key: "sk-fallback-ensured" })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Fallback Example")
+      result.current.setters.setUsername("saved-user")
+      result.current.setters.setAccessToken("saved-token")
+      result.current.setters.setUserId("9")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      fallbackDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "messages:toast.error.findAccountDetailsFailed",
+    )
+  })
+
+  it("uses the saveFailed fallback when save returns unsuccessful without a message", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: false,
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "accountDialog:messages.saveFailed",
+      )
+    })
+
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("tracks create-account failures with a sanitized failure reason", async () => {
+    mockValidateAndSaveAccount.mockRejectedValueOnce(
+      Object.assign(new Error("private backend https://private.example.com"), {
+        code: "HTTP_401",
+      }),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("private-user")
+      result.current.setters.setAccessToken("private-token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "private backend",
+      )
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          diagnostics: {
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+            },
+          },
+        },
+      )
+    })
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain("private backend")
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain("private.example.com")
+  })
+
+  it("uses the saveFailed fallback when edit-mode updates return unsuccessful without a message", async () => {
+    mockValidateAndUpdateAccount.mockResolvedValueOnce({
+      success: false,
+    })
+
+    const { result } = renderEditHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://edit.example.com")
+      result.current.setters.setSiteName("Edit Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "accountDialog:messages.saveFailed",
+      )
+    })
+
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("skips the Sub2API post-save prompt during auto-config even when the saved display data is available", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "11",
+        username: "sub-user",
+        access_token: "jwt-token",
+      },
+    }) as SiteAccount
+
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    const ensuredToken = buildToken({ id: 105, key: "sk-sub2-ensured" })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("11")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      savedDisplayData,
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("reports a missing saved account during auto-config instead of opening the channel dialog", async () => {
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(null)
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:toast.error.findAccountDetailsFailed",
+    )
+  })
+
+  it("surfaces channel dialog failures through the auto-config error toast", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Example",
+      site_url: "https://api.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "12",
+        username: "saved-user",
+        access_token: "saved-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockOpenWithAccount.mockRejectedValueOnce(
+      new Error("channel dialog failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("saved-user")
+      result.current.setters.setAccessToken("saved-token")
+      result.current.setters.setUserId("12")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "accountDialog:messages.newApiConfigFailed",
+    )
+    expect(result.current.state.isAutoConfiguring).toBe(false)
+  })
+
+  it("forwards the saved account id through the auto-config completion callback", async () => {
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Example",
+      site_url: "https://api.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "18",
+        username: "saved-user",
+        access_token: "saved-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockOpenWithAccount.mockImplementationOnce(
+      async (
+        _displaySiteData: any,
+        _channelId: any,
+        onCompleted?: () => void,
+      ) => {
+        onCompleted?.()
+        return { opened: true }
+      },
+    )
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("saved-user")
+      result.current.setters.setAccessToken("saved-token")
+      result.current.setters.setUserId("18")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+    expect(result.current.state.isAutoConfiguring).toBe(false)
+  })
+
+  it("does not reuse a previously auto-configured saved id after the dialog closes and reopens", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "First Example",
+      site_url: "https://first.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "18",
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Example",
+      site_url: "https://second.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "19",
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+
+    const getAccountByIdSpy = vi
+      .spyOn(accountStorage, "getAccountById")
+      .mockImplementation(async (accountId) => {
+        if (accountId === "saved-account-id") return firstSavedSiteAccount
+        if (accountId === "second-account-id") return secondSavedSiteAccount
+        return null
+      })
+    const getDisplayDataByIdSpy = vi
+      .spyOn(accountStorage, "getDisplayDataById")
+      .mockImplementation(async (accountId) => {
+        if (accountId === "saved-account-id") {
+          return accountStorage.convertToDisplayData(firstSavedSiteAccount)
+        }
+        if (accountId === "second-account-id") {
+          return accountStorage.convertToDisplayData(secondSavedSiteAccount)
+        }
+        return null
+      })
+
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "saved-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+    const firstEnsuredToken = buildToken({ id: 106, key: "sk-first-ensured" })
+    const secondEnsuredToken = buildToken({ id: 107, key: "sk-second-ensured" })
+    mockEnsureAccountKey
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, firstEnsuredToken, false),
+      )
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, secondEnsuredToken, false),
+      )
+    mockOpenWithAccount.mockImplementation(
+      async (
+        _displaySiteData: any,
+        _channelId: any,
+        onCompleted?: () => void,
+      ) => {
+        onCompleted?.()
+        return { opened: true }
+      },
+    )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess,
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.com")
+      result.current.setters.setSiteName("First Example")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("18")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(1)
+    expect(getAccountByIdSpy).toHaveBeenCalledWith("saved-account-id")
+    expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("saved-account-id")
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second.example.com")
+      result.current.setters.setSiteName("Second Example")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("19")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(2)
+    expect(getAccountByIdSpy).toHaveBeenCalledWith("second-account-id")
+    expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("second-account-id")
+    expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
+      accountStorage.convertToDisplayData(secondSavedSiteAccount),
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: secondEnsuredToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+  })
+
+  it("cancels a stale channel-open continuation after close and does not retarget success to a reopened account", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "first-account-id",
+      site_name: "First Example",
+      site_url: "https://first.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "31",
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Example",
+      site_url: "https://second.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "32",
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") return firstSavedSiteAccount
+        if (accountId === "second-account-id") return secondSavedSiteAccount
+        return null
+      },
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return accountStorage.convertToDisplayData(firstSavedSiteAccount)
+        }
+        if (accountId === "second-account-id") {
+          return accountStorage.convertToDisplayData(secondSavedSiteAccount)
+        }
+        return null
+      },
+    )
+
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "first-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+
+    const firstEnsuredToken = buildToken({ id: 301, key: "sk-first-ensured" })
+    const secondEnsuredToken = buildToken({
+      id: 302,
+      key: "sk-second-ensured",
+    })
+    mockEnsureAccountKey
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, firstEnsuredToken, false),
+      )
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, secondEnsuredToken, false),
+      )
+
+    let firstShouldContinue: (() => boolean) | undefined
+    let firstOnCompleted: (() => void) | undefined
+    mockOpenWithAccount
+      .mockImplementationOnce(
+        async (
+          _displaySiteData: any,
+          _channelId: any,
+          onCompleted?: () => void,
+          options?: { shouldContinue?: () => boolean },
+        ) => {
+          firstOnCompleted = onCompleted
+          firstShouldContinue = options?.shouldContinue
+          return new Promise(() => {})
+        },
+      )
+      .mockImplementationOnce(
+        async (
+          _displaySiteData: any,
+          _channelId: any,
+          onCompleted?: () => void,
+        ) => {
+          onCompleted?.()
+          return { opened: true }
+        },
+      )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess,
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.com")
+      result.current.setters.setSiteName("First Example")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("31")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      void result.current.handlers.handleAutoConfig()
+    })
+
+    await waitFor(() => {
+      expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
+    })
+
+    expect(firstShouldContinue?.()).toBe(true)
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(firstShouldContinue?.()).toBe(false)
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second.example.com")
+      result.current.setters.setSiteName("Second Example")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("32")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledTimes(2)
+    expect(mockOpenWithAccount).toHaveBeenNthCalledWith(
+      2,
+      accountStorage.convertToDisplayData(secondSavedSiteAccount),
+      expect.objectContaining({
+        source: "account_key_resource",
+        legacyTokenId: secondEnsuredToken.id,
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledWith("second-account-id")
+
+    await act(async () => {
+      firstOnCompleted?.()
+    })
+
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onSuccess).not.toHaveBeenCalledWith("first-account-id")
+  })
+})

@@ -9,8 +9,8 @@ import {
   toAccountSourceValue,
   toProfileSourceValue,
 } from "~/features/ModelList/catalog/modelManagementSources"
+import { useModelListData } from "~/features/ModelList/catalog/useModelListData"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
-import { useModelListData } from "~/features/ModelList/hooks/useModelListData"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
@@ -28,23 +28,23 @@ const { mockModelMetadataService } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("~/hooks/useAccountData", () => ({
+vi.mock("~/features/AccountManagement/data/useAccountData", () => ({
   useAccountData: (...args: unknown[]) => mockUseAccountData(...args),
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles",
+  "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles",
   () => ({
     useApiCredentialProfiles: (...args: unknown[]) =>
       mockUseApiCredentialProfiles(...args),
   }),
 )
 
-vi.mock("~/features/ModelList/hooks/useModelData", () => ({
+vi.mock("~/features/ModelList/catalog/useModelData", () => ({
   useModelData: (...args: unknown[]) => mockUseModelData(...args),
 }))
 
-vi.mock("~/features/ModelList/hooks/useFilteredModels", () => ({
+vi.mock("~/features/ModelList/filtering/useFilteredModels", () => ({
   useFilteredModels: (...args: unknown[]) => mockUseFilteredModels(...args),
 }))
 

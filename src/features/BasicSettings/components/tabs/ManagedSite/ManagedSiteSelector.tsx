@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next"
 
-import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 /**

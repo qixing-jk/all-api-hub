@@ -367,7 +367,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => mockUseAccountDataContext(),
 }))
 
-vi.mock("~/hooks/useAddAccountHandler", () => ({
+vi.mock("~/features/AccountManagement/opening/useAddAccountHandler", () => ({
   useAddAccountHandler: () => ({
     handleAddAccountClick: handleAddAccountClickMock,
   }),

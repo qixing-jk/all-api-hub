@@ -3,6 +3,13 @@ import { RefreshCw } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Badge, Button, WorkflowTransitionButton } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  KeyResourceCardHeader,
+  type KeyResourceCardHeaderRenderProps,
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
+import { ManagedSiteStatusDisclosure } from "~/features/KeyManagement/managedSite/ManagedSiteStatusDisclosure"
 import {
   getKeySignalLabel,
   getKeySignalTooltip,
@@ -12,14 +19,8 @@ import {
   getUrlSignalLabel,
   getUrlSignalTooltip,
   SignalBadge,
-} from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
-import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
-import { Badge, Button, WorkflowTransitionButton } from "~/components/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  KeyResourceCardHeader,
-  type KeyResourceCardHeaderRenderProps,
-} from "~/features/KeyManagement/components/KeyResourceCard"
+} from "~/features/ManagedSiteWidgets/ManagedSiteChannelAssessmentSignalHelpers"
+import ManagedSiteChannelLinkButton from "~/features/ManagedSiteWidgets/ManagedSiteChannelLinkButton"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -40,7 +41,6 @@ import { createLogger } from "~/utils/core/logger"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
-import { ManagedSiteStatusDisclosure } from "../ManagedSiteStatusDisclosure"
 import {
   RuntimeKeyActionButtons,
   type RuntimeKeyActionButtonsProps,

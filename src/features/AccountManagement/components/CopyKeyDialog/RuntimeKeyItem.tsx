@@ -1,9 +1,9 @@
 import { ChevronDown, ChevronRight, UsersRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import { getCopyKeyDialogRuntimeKeyItemTestId } from "~/features/AccountManagement/testIds"
+import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   type AccountRuntimeKey,

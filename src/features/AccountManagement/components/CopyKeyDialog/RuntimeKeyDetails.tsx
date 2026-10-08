@@ -1,4 +1,4 @@
-import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
+import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"

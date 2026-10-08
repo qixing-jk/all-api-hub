@@ -98,7 +98,7 @@ vi.mock("~/entrypoints/options/hooks/useHashNavigation", () => ({
   }),
 }))
 
-vi.mock("~/hooks/useProductAnalyticsPageView", () => ({
+vi.mock("~/hooks/analytics/useProductAnalyticsPageView", () => ({
   useProductAnalyticsPageView: mockedUseProductAnalyticsPageView,
 }))
 
