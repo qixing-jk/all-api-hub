@@ -1,4 +1,4 @@
-import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   RESOURCE_FIELD_TYPES as types,
   type ResourceFieldDescriptor,

@@ -1,6 +1,6 @@
 import { QUOTA_PER_USD } from "~/constants/money"
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
-import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,

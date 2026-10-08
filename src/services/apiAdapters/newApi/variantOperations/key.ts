@@ -1,4 +1,4 @@
-import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyDefaultCreationPolicy } from "~/services/apiAdapters/contracts/accountKeyResource"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"

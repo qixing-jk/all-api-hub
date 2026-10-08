@@ -57,7 +57,6 @@ export {
 } from "./MultiSelect"
 export {
   CompactMultiSelect,
-  type CompactMultiSelectOption,
   type CompactMultiSelectProps,
 } from "./CompactMultiSelect"
 export {

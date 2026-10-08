@@ -1,5 +1,5 @@
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
-import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,

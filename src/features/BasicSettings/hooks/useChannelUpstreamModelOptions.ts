@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { type CompactMultiSelectOption } from "~/components/ui"
+import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"

@@ -2,10 +2,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
-import {
-  defineAccountKeyResourceCapability,
-  type AccountKeyResourcePage,
-} from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
+import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   type AccountKeyResourceFacts,

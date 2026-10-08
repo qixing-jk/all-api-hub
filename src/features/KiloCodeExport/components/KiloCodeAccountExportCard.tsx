@@ -15,8 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  type CompactMultiSelectOption,
 } from "~/components/ui"
+import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   type useKiloCodeAccountModelDiscovery,

@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  defineAccountKeyResourceCapability,
-  type AccountKeyResourceDefinition,
-} from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
+import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,

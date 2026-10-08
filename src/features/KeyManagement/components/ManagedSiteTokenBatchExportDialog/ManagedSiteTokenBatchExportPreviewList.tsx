@@ -2,11 +2,8 @@ import type { TFunction } from "i18next"
 import { RefreshCcw } from "lucide-react"
 import { useId, useMemo } from "react"
 
-import {
-  Button,
-  Checkbox,
-  type CompactMultiSelectOption,
-} from "~/components/ui"
+import { Button, Checkbox } from "~/components/ui"
+import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportMatchedChannel,

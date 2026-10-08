@@ -4,11 +4,9 @@ import {
   isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
-import {
-  defineAccountKeyResourceCapability,
-  type AccountKeyResourcePage,
-} from "~/services/apiAdapters/accountKeyResources/factory"
+import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
