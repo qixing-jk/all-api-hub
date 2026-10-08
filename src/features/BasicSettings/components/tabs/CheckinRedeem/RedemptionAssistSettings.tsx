@@ -11,7 +11,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import { usePreferenceDraft } from "~/hooks/preferences/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"

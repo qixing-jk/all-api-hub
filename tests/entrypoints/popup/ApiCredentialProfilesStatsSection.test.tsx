@@ -30,7 +30,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles",
+  "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles",
   () => ({
     useApiCredentialProfiles: () => mockUseApiCredentialProfiles(),
   }),

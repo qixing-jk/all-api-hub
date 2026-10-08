@@ -8,8 +8,8 @@ import {
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS as fields,
 } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody"
-import { getManagedResourceFieldPolicy } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
+import { getManagedResourceFieldPolicy } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import enChannelDialog from "~/locales/en/channelDialog.json"
 import enCommon from "~/locales/en/common.json"
 import enManaged from "~/locales/en/managedSiteChannels.json"

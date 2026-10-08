@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import { usePreferenceDraft } from "~/hooks/preferences/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

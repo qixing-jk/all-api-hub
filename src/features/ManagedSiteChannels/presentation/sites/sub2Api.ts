@@ -6,8 +6,6 @@ import {
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
 import {
   defineManagedResourceFieldPolicy,
   MANAGED_RESOURCE_CHANNEL_FIELD_ROLES,
@@ -18,11 +16,12 @@ import {
   resolveUnsupportedResourceType,
   type ManagedResourceFieldPresentation,
   type ManagedResourceTextResolver,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 
 const sub2ApiPlatformOptionLabelResolvers = Object.fromEntries(
   Object.entries(SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS).map(

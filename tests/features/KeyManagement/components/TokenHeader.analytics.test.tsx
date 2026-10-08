@@ -89,14 +89,14 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   }),
 }))
 
-vi.mock("~/components/KiloCodeExportDialog", () => ({
+vi.mock("~/features/KiloCodeExport/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)
     return null
   },
 }))
 
-vi.mock("~/components/KelivoExportDialog", () => ({
+vi.mock("~/features/CredentialExport/KelivoExportDialog", () => ({
   KelivoExportDialog: (props: unknown) => {
     kelivoExportDialogRenderMock(props)
     const { isOpen, onClose } = props as {
@@ -111,7 +111,7 @@ vi.mock("~/components/KelivoExportDialog", () => ({
   },
 }))
 
-vi.mock("~/components/CursorPlusExportDialog", () => ({
+vi.mock("~/features/CredentialExport/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: (props: unknown) => {
     cursorPlusDialogRenderMock(props)
     const { isOpen, onClose } = props as {
@@ -128,7 +128,7 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
   },
 }))
 
-vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
+vi.mock("~/features/CredentialExport/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: (props: unknown) => {
     claudeCodeRouterDialogRenderMock(props)
     return null
@@ -153,7 +153,7 @@ vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog",
+  "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog",
   () => ({
     VerifyApiCredentialProfileDialog: (props: unknown) => {
       verifyDialogRenderMock(props)

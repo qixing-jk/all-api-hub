@@ -3,7 +3,7 @@ import { Slot } from "radix-ui"
 import * as React from "react"
 
 import { Spinner } from "~/components/ui/spinner"
-import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
+import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
 import { cn } from "~/lib/utils"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 

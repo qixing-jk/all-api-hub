@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { SettingsResetButton } from "~/components/SettingsResetButton"
 import { CardItem, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPreferenceField"
 import {
   DEFAULT_TEMP_WINDOW_SIZE,
   isValidTempWindowDimension,

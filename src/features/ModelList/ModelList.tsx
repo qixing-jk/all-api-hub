@@ -16,16 +16,28 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
+import { AccountSelector } from "~/features/ModelList/catalog/AccountSelector"
+import { AccountSummaryBar } from "~/features/ModelList/catalog/AccountSummaryBar"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
-import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
+import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/catalog/PersonalizedCatalogFallbackNotice"
+import { ProviderTabs } from "~/features/ModelList/catalog/ProviderTabs"
+import { useModelListData } from "~/features/ModelList/catalog/useModelListData"
+import { ControlPanel } from "~/features/ModelList/filtering/ControlPanel"
 import {
   isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
 } from "~/features/ModelList/filtering/sortModes"
-import { useModelListVerificationResults } from "~/features/ModelList/hooks/useModelListVerificationResults"
-import { useModelListVerificationWorkflow } from "~/features/ModelList/hooks/useModelListVerificationWorkflow"
+import ModelKeyDialog from "~/features/ModelList/keySelection"
+import { Footer } from "~/features/ModelList/presentation/Footer"
+import { ModelDisplay } from "~/features/ModelList/presentation/ModelDisplay"
+import { StatusIndicator } from "~/features/ModelList/presentation/StatusIndicator"
+import { useModelListSourcePresentation } from "~/features/ModelList/presentation/useModelListSourcePresentation"
+import { PricingDiagnostics } from "~/features/ModelList/pricing/PricingDiagnosticsPanel"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
+import { BatchVerifyModelsDialog } from "~/features/ModelList/verification/BatchVerifyModelsDialog"
+import { useModelListVerificationResults } from "~/features/ModelList/verification/useModelListVerificationResults"
+import { useModelListVerificationWorkflow } from "~/features/ModelList/verification/useModelListVerificationWorkflow"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -36,18 +48,6 @@ import {
 import { openKeysPage } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-import { AccountSelector } from "./components/AccountSelector"
-import { AccountSummaryBar } from "./components/AccountSummaryBar"
-import { BatchVerifyModelsDialog } from "./components/BatchVerifyModelsDialog"
-import { ControlPanel } from "./components/ControlPanel"
-import { Footer } from "./components/Footer"
-import { ModelDisplay } from "./components/ModelDisplay"
-import ModelKeyDialog from "./components/ModelKeyDialog"
-import { PricingDiagnostics } from "./components/PricingDiagnostics"
-import { ProviderTabs } from "./components/ProviderTabs"
-import { StatusIndicator } from "./components/StatusIndicator"
-import { useModelListData } from "./hooks/useModelListData"
-import { useModelListSourcePresentation } from "./hooks/useModelListSourcePresentation"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
 
 /**

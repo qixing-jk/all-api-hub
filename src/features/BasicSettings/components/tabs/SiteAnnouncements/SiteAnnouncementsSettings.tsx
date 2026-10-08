@@ -14,7 +14,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {

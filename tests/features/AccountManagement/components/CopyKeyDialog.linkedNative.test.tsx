@@ -26,12 +26,15 @@ const { profilesState, linksState } = vi.hoisted(() => ({
   },
 }))
 vi.mock(
-  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles",
+  "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles",
   () => ({ useApiCredentialProfiles: () => profilesState }),
 )
-vi.mock("~/hooks/useApiCredentialProfileLinks", () => ({
-  useApiCredentialProfileLinks: () => linksState,
-}))
+vi.mock(
+  "~/features/ApiCredentialProfiles/associations/useApiCredentialProfileLinks",
+  () => ({
+    useApiCredentialProfileLinks: () => linksState,
+  }),
+)
 
 const account = {
   ...ACCOUNT,

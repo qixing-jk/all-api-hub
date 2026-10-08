@@ -8,7 +8,7 @@ import {
   createCheckInRedetectionFeedback,
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
-} from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
+} from "~/features/AccountManagement/components/AccountDialog/checkin/checkInPresentation"
 import toast from "~/lib/notify"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"

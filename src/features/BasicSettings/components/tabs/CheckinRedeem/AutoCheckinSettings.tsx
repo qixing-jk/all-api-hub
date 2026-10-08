@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
 
-import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
 import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   Card,
@@ -10,6 +9,7 @@ import {
   Switch,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { AutoCheckinRiskHint } from "~/features/AutoCheckin/pretrigger/AutoCheckinRiskHint"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"

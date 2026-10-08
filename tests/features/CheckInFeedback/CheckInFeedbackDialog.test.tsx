@@ -13,7 +13,7 @@ import {
 } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/AccountCheckInSection"
+import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
 import AccountSnapshotTableRow from "~/features/AutoCheckin/components/AccountSnapshotTableRow"
 import ResultsTableRow from "~/features/AutoCheckin/components/ResultsTableRow"
 import ResultsTableRowActions from "~/features/AutoCheckin/components/ResultsTableRowActions"

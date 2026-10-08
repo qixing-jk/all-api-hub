@@ -9,25 +9,25 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
-import {
-  createDeeplinkExportMenuActions,
-  DEEPLINK_EXPORT_TARGETS,
-  type DeeplinkExportTarget,
-} from "~/components/DeeplinkExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
-import {
-  EXPORT_ACTION_TARGETS,
-  ExportActionsMenu,
-} from "~/components/ExportActionsMenu"
-import { KelivoExportDialog } from "~/components/KelivoExportDialog"
-import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import { IconButton } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { ClaudeCodeRouterImportDialog } from "~/features/CredentialExport/ClaudeCodeRouterImportDialog"
+import { CursorPlusExportDialog } from "~/features/CredentialExport/CursorPlusExportDialog"
+import {
+  createDeeplinkExportMenuActions,
+  DEEPLINK_EXPORT_TARGETS,
+  type DeeplinkExportTarget,
+} from "~/features/CredentialExport/DeeplinkExportDialog"
+import {
+  EXPORT_ACTION_TARGETS,
+  ExportActionsMenu,
+} from "~/features/CredentialExport/ExportActionsMenu"
+import { KelivoExportDialog } from "~/features/CredentialExport/KelivoExportDialog"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
 import {
   collectAccountRuntimeKeySecrets,
   getAccountRuntimeKeyExportId,
@@ -83,13 +83,13 @@ interface RuntimeKeyActionControlsProps {
 // after the user picks those export targets; keep their bundles out of the
 // popup's first-paint import graph.
 const LazyKiloCodeExportDialog = lazy(() =>
-  import("~/components/KiloCodeExportDialog").then((m) => ({
+  import("~/features/KiloCodeExport/KiloCodeExportDialog").then((m) => ({
     default: m.KiloCodeExportDialog,
   })),
 )
 const LazyKiloCodeProfileExportDialog = lazy(() =>
   import(
-    "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
+    "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog"
   ).then((m) => ({ default: m.KiloCodeProfileExportDialog })),
 )
 

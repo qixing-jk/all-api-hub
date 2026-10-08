@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Modal } from "~/components/ui"
+import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import {
   AccountKeyResourceEditorDialog,
   type AccountKeyResourceEditorDialogState,
-} from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
-import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
+} from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
 import { useNativeResourceEditorLoadingVisibility } from "~/features/ResourceEditor"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import toast from "~/lib/notify"

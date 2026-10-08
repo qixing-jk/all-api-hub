@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Button,
   Card,
@@ -16,7 +15,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/managedSiteConfigFields"
 import { useManagedSiteConfigDraft } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/useManagedSiteConfigDraft"
-import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
+import { ManagedSiteDeploymentLink } from "~/features/ManagedSiteWidgets/ManagedSiteDeploymentLink"
+import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"

@@ -2,7 +2,6 @@ import { type ReactNode } from "react"
 
 import "~/styles/style.css"
 
-import { AutoCheckinUiOpenPretrigger } from "~/components/AutoCheckinUiOpenPretrigger"
 import { ChangelogOnUpdateUiOpenHandler } from "~/components/ChangelogOnUpdateUiOpenHandler"
 import {
   ChannelDialogContainer,
@@ -20,6 +19,7 @@ import { FeatureGuidanceProvider } from "~/contexts/FeatureGuidanceContext"
 import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
+import { AutoCheckinUiOpenPretrigger } from "~/features/AutoCheckin/pretrigger/AutoCheckinUiOpenPretrigger"
 
 interface AppLayoutProps {
   children: ReactNode

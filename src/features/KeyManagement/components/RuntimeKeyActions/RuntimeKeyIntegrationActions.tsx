@@ -1,25 +1,25 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
+import { ClaudeCodeRouterImportDialog } from "~/features/CredentialExport/ClaudeCodeRouterImportDialog"
+import { CursorPlusExportDialog } from "~/features/CredentialExport/CursorPlusExportDialog"
 import {
   createDeeplinkExportMenuActions,
   DEEPLINK_EXPORT_TARGETS,
   type DeeplinkExportTarget,
-} from "~/components/DeeplinkExportDialog"
+} from "~/features/CredentialExport/DeeplinkExportDialog"
 import {
   EXPORT_ACTION_TARGETS,
   ExportActionsMenu,
-} from "~/components/ExportActionsMenu"
-import { KelivoExportDialog } from "~/components/KelivoExportDialog"
-import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
-import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
+} from "~/features/CredentialExport/ExportActionsMenu"
+import { KelivoExportDialog } from "~/features/CredentialExport/KelivoExportDialog"
 import {
   KeyResourceActionGroup,
   type KeyResourceCredentialAssociation,
-} from "~/features/KeyManagement/components/KeyResourceCard"
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { KiloCodeExportDialog } from "~/features/KiloCodeExport/KiloCodeExportDialog"
+import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
 import { getAccountRuntimeKeyExportId } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"

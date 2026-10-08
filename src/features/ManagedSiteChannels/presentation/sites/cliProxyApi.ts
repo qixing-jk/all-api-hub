@@ -1,20 +1,20 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
 import {
   cliProxyApiFields,
   cliProxyApiSections,
-} from "../cliProxyApiFieldPolicy"
-import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
+} from "~/features/ManagedSiteChannels/editor/cliProxyApiFieldPolicy"
 import {
   defineManagedResourceFieldPolicy,
   requireFieldValuePresentation,
-} from "../managedResourceFieldPresentation"
-import { DEFAULT_MANAGED_RESOURCE_PRESENTATION_SEMANTICS } from "../managedResourcePresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+
+import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
+import { DEFAULT_MANAGED_RESOURCE_PRESENTATION_SEMANTICS } from "../managedResourcePresentation"
 
 const cliProxyApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   siteType: SITE_TYPES.CLI_PROXY_API,

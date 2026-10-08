@@ -6,12 +6,12 @@ import {
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/table/managedResourceRowMapper"
 import {
   createManagedResourceColumns,
   getManagedResourcePresentationSemantics,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePolicy"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { newApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"

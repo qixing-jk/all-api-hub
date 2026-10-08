@@ -11,7 +11,7 @@ import {
   createProfileSource,
   type ModelManagementSource,
 } from "~/features/ModelList/catalog/modelManagementSources"
-import { useModelData } from "~/features/ModelList/hooks/useModelData"
+import { useModelData } from "~/features/ModelList/catalog/useModelData"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"

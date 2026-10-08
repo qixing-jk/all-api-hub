@@ -7,9 +7,6 @@ import {
   isDoneHubAdvancedFieldApplicable,
 } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import { type EditableResourceProjection } from "~/services/apiAdapters/contracts/managedResourceNative"
-
 import {
   createNewApiFamilyFields,
   createStatusOptionLabelResolvers,
@@ -22,11 +19,13 @@ import {
   type ManagedResourceFieldPresentation,
   type ManagedResourceSection,
   type ManagedResourceTextResolver,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { type EditableResourceProjection } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 const doneHubTypeOptionLabelResolvers = Object.fromEntries(
   Object.entries(DoneHubChannelTypeNames).map(([value, label]) => [

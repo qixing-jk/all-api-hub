@@ -67,7 +67,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem",
+  "~/features/KeyManagement/resources/AccountKeyResourceListItem",
   () => ({
     AccountKeyResourceListItem: ({
       row,
@@ -110,11 +110,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/components/DeeplinkExportDialog",
+  "~/features/CredentialExport/DeeplinkExportDialog",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/components/DeeplinkExportDialog")
+        typeof import("~/features/CredentialExport/DeeplinkExportDialog")
       >()
     return {
       ...actual,

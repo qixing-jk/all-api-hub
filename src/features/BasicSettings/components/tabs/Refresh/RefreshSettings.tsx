@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,

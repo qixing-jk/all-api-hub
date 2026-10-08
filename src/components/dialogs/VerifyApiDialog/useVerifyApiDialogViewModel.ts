@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useVerificationRunLifecycle } from "~/hooks/useVerificationRunLifecycle"
+import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,

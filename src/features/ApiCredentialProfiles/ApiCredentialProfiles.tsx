@@ -11,6 +11,11 @@ import type { ManagedSiteType } from "~/constants/siteType"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountData } from "~/features/AccountManagement/data/useAccountData"
+import { buildApiCredentialProfileAssociatedKeyStates } from "~/features/ApiCredentialProfiles/associations/apiCredentialProfileAssociatedKeyStates"
+import { useApiCredentialProfileLinks } from "~/features/ApiCredentialProfiles/associations/useApiCredentialProfileLinks"
+import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesListView"
+import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfilesController"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
@@ -30,8 +35,6 @@ import {
   GuidanceCardLayout,
   GuidanceCardNote,
 } from "~/features/UnifiedApiGuidance/components/GuidanceCardLayout"
-import { useAccountData } from "~/hooks/useAccountData"
-import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import toast from "~/lib/notify"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import {
@@ -55,14 +58,11 @@ import {
   replaceWithinOptionsPage,
 } from "~/utils/navigation/optionsPage"
 
-import { ApiCredentialProfilesListView } from "./components/ApiCredentialProfilesListView"
 import {
   API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
   type ApiCredentialProfileAssociatedKeyStateByProfileId,
 } from "./contracts"
-import { useApiCredentialProfilesController } from "./hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "./testIds"
-import { buildApiCredentialProfileAssociatedKeyStates } from "./utils/apiCredentialProfileAssociatedKeyStates"
 
 /**
  * Options page for managing API credential profiles.

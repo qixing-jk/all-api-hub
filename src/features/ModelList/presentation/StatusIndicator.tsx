@@ -1,0 +1,373 @@
+import { Cpu, RefreshCw } from "lucide-react"
+import { useId } from "react"
+import { useTranslation } from "react-i18next"
+
+import {
+  Alert,
+  Button,
+  EmptyState,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+  WorkflowTransitionButton,
+} from "~/components/ui"
+import {
+  MODEL_LIST_FALLBACK_STATUS_SCOPES,
+  type AccountFallbackControls,
+} from "~/features/ModelList/catalog/modelDataTypes"
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementSource,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
+import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
+import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
+import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"
+
+const logger = createLogger("ModelListStatusIndicator")
+
+interface StatusIndicatorProps {
+  selectedSource: ModelManagementSource | null
+  isLoading: boolean
+  dataFormatError: boolean
+  loadErrorMessage: string | null
+  currentAccount: DisplaySiteData | undefined
+  loadPricingData: () => void
+  accountFallback: AccountFallbackControls | null
+  unsupportedSource: boolean
+}
+
+/**
+ * Displays loading or error feedback for model pricing fetch status.
+ * @param props Component props.
+ * @param props.selectedSource Currently selected source.
+ * @param props.isLoading Whether pricing data is loading.
+ * @param props.dataFormatError Flag indicating invalid data format.
+ * @param props.loadErrorMessage Current load error message, if any.
+ * @param props.currentAccount Account details for navigation links.
+ * @param props.loadPricingData Retry handler.
+ * @param props.accountFallback Transient account-key fallback controls for the current account.
+ * @param props.unsupportedSource Whether the selected source has no model-list route.
+ * @returns Status UI for loading/error or null when idle.
+ */
+export function StatusIndicator({
+  selectedSource,
+  isLoading,
+  dataFormatError,
+  loadErrorMessage,
+  currentAccount,
+  loadPricingData,
+  accountFallback,
+  unsupportedSource,
+}: StatusIndicatorProps) {
+  const { t } = useTranslation("modelList")
+  const fallbackRuntimeKeySelectId = `model-list-fallback-runtime-key-${useId()}`
+  if (!selectedSource) {
+    return (
+      <EmptyState
+        icon={<Cpu className="h-12 w-12" />}
+        title={t("pleaseSelectFirst")}
+      />
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="py-density-12 text-center">
+        <Spinner size="lg" className="mb-density-4 mx-auto" />
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+          {t("status.loading")}
+        </p>
+      </div>
+    )
+  }
+
+  if (
+    unsupportedSource &&
+    selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    currentAccount
+  ) {
+    const handleRequestSiteSupport = () => {
+      const baseUrl = currentAccount.baseUrl?.trim()
+      if (!baseUrl) return
+
+      void openSiteSupportRequestPage({
+        siteUrl: baseUrl,
+        errorType: SITE_SUPPORT_ERROR_TYPES.ModelListUnsupported,
+        errorMessage: t("status.unsupportedSourceSupportRequestErrorMessage", {
+          siteType: currentAccount.siteType,
+        }),
+      }).catch((error) => {
+        logger.error("Failed to open model-list site-support request", error)
+      })
+    }
+
+    return (
+      <EmptyState
+        icon={<Cpu className="h-12 w-12" />}
+        title={t("status.unsupportedSourceTitle")}
+        description={t("status.unsupportedSourceDescription")}
+        action={{
+          label: t("status.requestSiteSupport"),
+          onClick: handleRequestSiteSupport,
+          disabled: !currentAccount.baseUrl?.trim(),
+        }}
+      />
+    )
+  }
+
+  const isKeyScopedStatus =
+    selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    accountFallback?.statusScope ===
+      MODEL_LIST_FALLBACK_STATUS_SCOPES.RuntimeKey &&
+    accountFallback?.isAvailable === true &&
+    !accountFallback.isActive
+
+  const renderAccountFallbackSection = () => {
+    if (!currentAccount || !accountFallback?.isAvailable) {
+      return null
+    }
+
+    const requiresExplicitSelection = accountFallback.runtimeKeys.length > 1
+    const canLoadWithSelectedKey =
+      !accountFallback.isLoadingRuntimeKeys &&
+      !accountFallback.isLoadingCatalog &&
+      (!requiresExplicitSelection ||
+        accountFallback.selectedRuntimeKeyId !== null)
+
+    return (
+      <div className="border-border mt-density-4 space-y-density-4 pt-density-4 border-t">
+        <div>
+          <h4 className="text-foreground text-sm font-semibold">
+            {isKeyScopedStatus
+              ? t("status.runtimeKeyScopedCatalogFallbackTitle")
+              : t("status.fallback.title")}
+          </h4>
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
+            {isKeyScopedStatus
+              ? t("status.runtimeKeyScopedCatalogFallbackDescription")
+              : t("status.fallback.description")}
+          </p>
+        </div>
+
+        {accountFallback.runtimeKeyLoadErrorMessage ? (
+          <Alert
+            variant="destructive"
+            title={t("status.fallback.runtimeKeysLoadFailedTitle")}
+            description={accountFallback.runtimeKeyLoadErrorMessage}
+          >
+            <div className="mt-density-3">
+              <Button
+                variant="secondary"
+                onClick={accountFallback.loadRuntimeKeys}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+              >
+                {t("status.fallback.reloadKeys")}
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+
+        {!accountFallback.hasLoadedRuntimeKeys &&
+        !accountFallback.runtimeKeyLoadErrorMessage ? (
+          <div className="gap-y-density-3 py-density-1 flex items-center gap-x-3">
+            <Spinner size="sm" />
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+              {t("status.fallback.loadingKeys")}
+            </p>
+          </div>
+        ) : null}
+
+        {accountFallback.hasLoadedRuntimeKeys &&
+        accountFallback.runtimeKeys.length === 0 ? (
+          <Alert
+            variant="default"
+            title={t("status.fallback.noKeysTitle")}
+            description={t("status.fallback.noKeysDescription")}
+          >
+            <div className="mt-density-3">
+              <Button
+                variant="secondary"
+                onClick={accountFallback.loadRuntimeKeys}
+                loading={accountFallback.isLoadingRuntimeKeys}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+              >
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+
+        {accountFallback.runtimeKeys.length > 0 ? (
+          <div className="space-y-density-3">
+            <div>
+              <label
+                htmlFor={fallbackRuntimeKeySelectId}
+                className="text-secondary-foreground text-sm font-medium"
+              >
+                {t("status.fallback.selectLabel")}
+              </label>
+              <div className="mt-density-2">
+                <Select
+                  value={
+                    accountFallback.selectedRuntimeKeyId === null
+                      ? ""
+                      : accountFallback.selectedRuntimeKeyId
+                  }
+                  onValueChange={(value) =>
+                    accountFallback.setSelectedRuntimeKeyId(value || null)
+                  }
+                  disabled={
+                    accountFallback.isLoadingRuntimeKeys ||
+                    accountFallback.isLoadingCatalog
+                  }
+                >
+                  <SelectTrigger
+                    id={fallbackRuntimeKeySelectId}
+                    aria-label={t("status.fallback.selectLabel")}
+                  >
+                    <SelectValue
+                      placeholder={t("status.fallback.selectPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accountFallback.runtimeKeys.map((runtimeKey) => (
+                      <SelectItem key={runtimeKey.id} value={runtimeKey.id}>
+                        {runtimeKey.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {requiresExplicitSelection &&
+              accountFallback.selectedRuntimeKeyId === null ? (
+                <p className="text-muted-foreground mt-density-2 text-sm">
+                  {t("status.fallback.selectHint")}
+                </p>
+              ) : null}
+            </div>
+
+            {accountFallback.catalogLoadErrorMessage ? (
+              <Alert
+                variant="destructive"
+                title={t("status.fallback.catalogLoadFailedTitle")}
+                description={accountFallback.catalogLoadErrorMessage}
+              />
+            ) : null}
+
+            <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
+              <Button
+                onClick={accountFallback.loadCatalog}
+                loading={accountFallback.isLoadingCatalog}
+                disabled={!canLoadWithSelectedKey}
+              >
+                {accountFallback.isLoadingCatalog
+                  ? t("status.loading")
+                  : accountFallback.catalogLoadErrorMessage
+                    ? t("status.fallback.retryLoadWithKey")
+                    : t("status.fallback.loadWithKey")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={accountFallback.loadRuntimeKeys}
+                loading={accountFallback.isLoadingRuntimeKeys}
+                disabled={accountFallback.isLoadingCatalog}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+              >
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (isKeyScopedStatus) {
+    return (
+      <Alert
+        variant="info"
+        className="mb-density-6"
+        title={t("status.runtimeKeyScopedCatalogTitle")}
+        description={t("status.runtimeKeyScopedCatalogDescription")}
+        aria-live="polite"
+      >
+        {renderAccountFallbackSection()}
+      </Alert>
+    )
+  }
+
+  if (loadErrorMessage) {
+    return (
+      <Alert
+        variant="destructive"
+        className="mb-density-6"
+        title={
+          selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+            ? t("status.profileLoadFailedTitle")
+            : t("status.genericLoadFailedTitle")
+        }
+        description={loadErrorMessage}
+      >
+        <div className="mt-density-4 gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
+          <Button
+            variant="secondary"
+            onClick={loadPricingData}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+          >
+            {t("status.retryLoad")}
+          </Button>
+        </div>
+        {selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+          ? renderAccountFallbackSection()
+          : null}
+      </Alert>
+    )
+  }
+
+  if (dataFormatError && currentAccount) {
+    const pricingUrl = resolveAccountSitePricingUrl({
+      siteType: currentAccount.siteType,
+      baseUrl: currentAccount.baseUrl,
+    })
+    return (
+      <Alert variant="warning" className="mb-density-6">
+        <div>
+          <h3 className="mb-density-2 text-lg font-medium">
+            {t("status.incompatibleFormat")}
+          </h3>
+          <p className="mb-density-4 text-sm">{t("status.incompatibleDesc")}</p>
+          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
+            {pricingUrl && (
+              <WorkflowTransitionButton
+                variant="default"
+                onClick={() =>
+                  window.open(pricingUrl, "_blank", "noopener,noreferrer")
+                }
+              >
+                {t("status.goToSitePricing")}
+              </WorkflowTransitionButton>
+            )}
+            <Button
+              variant="secondary"
+              onClick={loadPricingData}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
+            >
+              {t("status.retryLoad")}
+            </Button>
+          </div>
+        </div>
+      </Alert>
+    )
+  }
+
+  return null
+}

@@ -6,7 +6,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
-import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
+import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { getAccountSortGroup } from "~/services/preferences/utils/sortingPriority"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {

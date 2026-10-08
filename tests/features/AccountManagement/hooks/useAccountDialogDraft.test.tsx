@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { expect, it } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
-import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDraft"
+import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
 
 it("keeps manually edited balance independent from other account fields", () => {
   const { result } = renderHook(() =>

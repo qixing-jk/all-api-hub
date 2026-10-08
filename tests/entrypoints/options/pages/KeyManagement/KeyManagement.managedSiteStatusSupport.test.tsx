@@ -49,23 +49,26 @@ vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   return { ...actual, sendRuntimeActionMessage: sendRuntimeActionMessageMock }
 })
 
-vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
+vi.mock("~/features/KeyManagement/inventory/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
 }))
 
-vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
-  useManagedSiteKeyStatuses: () => {
-    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
-    return {
-      states: fixture.managedSiteTokenStatuses ?? {},
-      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
-      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
-      refresh: fixture.refreshManagedSiteTokenStatuses,
-      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
-      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
-    }
-  },
-}))
+vi.mock(
+  "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses",
+  () => ({
+    useManagedSiteKeyStatuses: () => {
+      const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+      return {
+        states: fixture.managedSiteTokenStatuses ?? {},
+        supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+        refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+        refresh: fixture.refreshManagedSiteTokenStatuses,
+        refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+        confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+      }
+    },
+  }),
+)
 
 vi.mock(
   "~/features/ManagedSiteVerification/useNewApiManagedVerification",
@@ -122,18 +125,18 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => ({
+vi.mock("~/features/KeyManagement/inventory/AccountSelectorPanel", () => ({
   AccountSelectorPanel: () => <div data-testid="controls" />,
 }))
 
-vi.mock("~/features/KeyManagement/components/TokenList", () => ({
+vi.mock("~/features/KeyManagement/inventory/TokenList", () => ({
   TokenList: (props: any) => {
     tokenListPropsSpy(props)
     return <div data-testid="token-list" />
   },
 }))
 
-vi.mock("~/features/KeyManagement/components/Footer", () => ({
+vi.mock("~/features/KeyManagement/workspace/Footer", () => ({
   Footer: () => <div data-testid="footer" />,
 }))
 
@@ -141,7 +144,7 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: () => null,
 }))
 
-vi.mock("~/features/KeyManagement/components/RepairMissingKeysDialog", () => ({
+vi.mock("~/features/KeyManagement/repair", () => ({
   RepairMissingKeysDialog: () => null,
 }))
 

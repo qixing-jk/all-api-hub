@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
 import Tooltip, { TooltipContext } from "~/components/Tooltip"
-import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
+import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
 import { cn } from "~/lib/utils"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 

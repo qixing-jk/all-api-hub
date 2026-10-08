@@ -28,7 +28,7 @@ const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
     replaceWithinOptionsPageMock: vi.fn(),
   }))
 
-vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
+vi.mock("~/features/ModelList/catalog/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
 }))
 
@@ -59,7 +59,7 @@ vi.mock(
   },
 )
 
-vi.mock("~/features/ModelList/components/AccountSelector", () => ({
+vi.mock("~/features/ModelList/catalog/AccountSelector", () => ({
   AccountSelector: ({
     setSelectedSourceValue,
   }: {
@@ -91,15 +91,15 @@ vi.mock("~/features/ModelList/components/AccountSelector", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
+vi.mock("~/features/ModelList/catalog/AccountSummaryBar", () => ({
   AccountSummaryBar: () => <div data-testid="account-summary-bar" />,
 }))
 
-vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
+vi.mock("~/features/ModelList/verification/BatchVerifyModelsDialog", () => ({
   BatchVerifyModelsDialog: () => <div data-testid="batch-verify-dialog" />,
 }))
 
-vi.mock("~/features/ModelList/components/ControlPanel", () => ({
+vi.mock("~/features/ModelList/filtering/ControlPanel", () => ({
   ControlPanel: ({
     getFilteredResultCount,
   }: {
@@ -136,11 +136,11 @@ vi.mock("~/features/ModelList/components/ControlPanel", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/Footer", () => ({
+vi.mock("~/features/ModelList/presentation/Footer", () => ({
   Footer: () => <div data-testid="model-list-footer" />,
 }))
 
-vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
+vi.mock("~/features/ModelList/catalog/ProviderTabs", async () => {
   const { Tabs } = await import("~/components/ui")
 
   return {
@@ -158,11 +158,11 @@ vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
   }
 })
 
-vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
+vi.mock("~/features/ModelList/presentation/StatusIndicator", () => ({
   StatusIndicator: () => <div data-testid="status-indicator" />,
 }))
 
-vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
+vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ModelDisplay: ({
     models,
     onVerifyModel,
@@ -207,7 +207,7 @@ vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog",
+  "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog",
   () => ({
     VerifyApiCredentialProfileDialog: () => (
       <div data-testid="verify-profile-dialog" />
@@ -215,7 +215,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
+vi.mock("~/features/ModelList/keySelection", () => ({
   default: ({
     modelId,
     modelEnableGroups,

@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ManagedSiteDeploymentLink } from "~/components/ManagedSiteDeploymentLink"
 import {
   Card,
   CardItem,
@@ -14,7 +13,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/managedSiteConfigFields"
 import { useManagedSiteConfigDraft } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/useManagedSiteConfigDraft"
-import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
+import { ManagedSiteDeploymentLink } from "~/features/ManagedSiteWidgets/ManagedSiteDeploymentLink"
+import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { createTab } from "~/utils/browser/tabs"

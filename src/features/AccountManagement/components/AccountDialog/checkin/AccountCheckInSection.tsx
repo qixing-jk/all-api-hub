@@ -1,0 +1,490 @@
+import {
+  CalendarDays,
+  MessageSquarePlus,
+  RefreshCw,
+  Ticket,
+} from "lucide-react"
+import { useTranslation } from "react-i18next"
+
+import {
+  Button,
+  FormField,
+  Input,
+  Notice,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from "~/components/ui"
+import {
+  ACCOUNT_LOGIN_PROVIDER_LABELS,
+  ACCOUNT_LOGIN_PROVIDERS,
+  isAccountLoginProvider,
+  type AccountLoginProvider,
+} from "~/constants/accountLogin"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_SELECTION_MODES,
+  CHECK_IN_SELECTION_STATUSES,
+} from "~/constants/checkIn"
+import type { AccountSiteType } from "~/constants/siteType"
+import {
+  getCheckInMethodPresentation,
+  getCheckInRedetectionFeedbackPresentation,
+  getCheckInSelectionPresentation,
+} from "~/features/AccountManagement/components/AccountDialog/checkin/checkInPresentation"
+import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
+import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { AutoCheckinRiskHint } from "~/features/AutoCheckin/pretrigger/AutoCheckinRiskHint"
+import {
+  useCheckInFeedback,
+  type CheckInFeedbackSource,
+} from "~/features/CheckInFeedback/useCheckInFeedback"
+import {
+  resolveLoginCheckInProvider,
+  setLoginProviderSelection,
+  type LoginProviderClaimConflict,
+} from "~/services/accountLogin/providerClaims"
+import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery/discovery"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
+import type { CheckInConfig } from "~/types"
+
+const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
+/** Clears the stored login method so the user can free up a claimed provider. */
+const UNSET_LOGIN_PROVIDER_VALUE = "unset"
+const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
+const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
+
+const ACCOUNT_CHECK_IN_TARGET_IDS = {
+  section: "account-check-in-config",
+  feedback: "account-check-in-feedback",
+  method: "account-check-in-method",
+  automaticExecution: "account-check-in-automatic-execution",
+  redetect: "account-check-in-redetect",
+  customUrl: "account-custom-check-in-url",
+  redeemUrl: "account-custom-redeem-url",
+} as const
+
+interface AccountCheckInSectionProps {
+  feedbackSource?: CheckInFeedbackSource
+  checkIn: CheckInConfig
+  siteType: AccountSiteType
+  siteUrl?: string
+  /** Login providers already claimed by another enabled AgentRouter account. */
+  claimedLoginProviders?: readonly LoginProviderClaimConflict[]
+  onCheckInChange: (value: CheckInConfig) => void
+  onCheckInSelectionChange: (value: CheckInConfig) => void
+  onRedetectCheckInMethods: () => void
+  isRedetectingCheckInMethods: boolean
+  checkInRedetectionFeedback: AccountCheckInRedetectionFeedback | null
+}
+
+/** Renders method discovery, automatic intent, and custom check-in settings. */
+export function AccountCheckInSection({
+  feedbackSource,
+  checkIn,
+  siteType,
+  siteUrl,
+  claimedLoginProviders = [],
+  onCheckInChange,
+  onCheckInSelectionChange,
+  onRedetectCheckInMethods,
+  isRedetectingCheckInMethods,
+  checkInRedetectionFeedback,
+}: AccountCheckInSectionProps) {
+  const { t } = useTranslation(["accountDialog", "messages"])
+  const { openFeedback, feedbackDialog } = useCheckInFeedback()
+  const inspection = inspectAccountCheckIn({
+    config: checkIn,
+    siteType,
+    siteUrl,
+  })
+  const candidateMethodIds = inspection.choices.map((choice) => choice.methodId)
+  const hasCandidates = candidateMethodIds.length > 0
+  const shouldOfferRedetect =
+    hasCandidates ||
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale ||
+    inspection.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
+  const selectionPresentation = getCheckInSelectionPresentation(
+    t,
+    inspection,
+    checkIn.selection,
+  )
+  const hasSelectedMethod =
+    hasCandidates &&
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+  const selectedStatus =
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+      ? checkIn.methodKnowledge.methods[inspection.selectionState.methodId]
+          ?.status
+      : null
+  const isSelectedMethodDisabled =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+  const hasUnknownDetection =
+    inspection.decision.outcome ===
+      CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown &&
+    inspection.choices.some(
+      (choice) =>
+        choice.detectionOutcome ===
+          CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown &&
+        checkIn.methodKnowledge.methods[choice.methodId]?.detection,
+    )
+  const isSelectedStatusUnavailable =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
+  const redetectionFeedbackPresentation =
+    getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
+
+  const selectedLoginProvider = resolveLoginCheckInProvider(checkIn)
+  // The currently stored value stays selectable even when another account owns
+  // it, so an account with pre-existing duplicate data can still change or
+  // clear its own selection instead of being locked out of the control.
+  const isLoginProviderClaimed = (provider: AccountLoginProvider) =>
+    provider !== selectedLoginProvider &&
+    claimedLoginProviders.some((claim) => claim.provider === provider)
+
+  const setAutomaticSelection = () => {
+    onCheckInSelectionChange(
+      setCheckInSelection({
+        config: checkIn,
+        siteType,
+        siteUrl,
+        mode: CHECK_IN_SELECTION_MODES.Automatic,
+      }),
+    )
+  }
+
+  return (
+    <AccountFormSection
+      title={t("sections.checkInConfig.title")}
+      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
+      testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
+      id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
+    >
+      <div className="gap-y-density-2 grid grid-cols-1 items-center gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <p className="text-secondary-foreground text-sm font-medium">
+          {t("form.checkInStatus")}
+        </p>
+        <p className="text-muted-foreground text-xs sm:col-span-2 sm:row-start-2">
+          {isSelectedMethodDisabled
+            ? t("form.checkInStatusDisabled")
+            : isSelectedStatusUnavailable
+              ? t("form.checkInStatusUnavailable")
+              : hasUnknownDetection
+                ? t("form.checkInStatusUnknown")
+                : hasSelectedMethod
+                  ? t("form.checkInStatusDesc")
+                  : hasCandidates &&
+                      inspection.decision.outcome !==
+                        CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+                    ? t("form.checkInStatusPending")
+                    : t("form.checkInStatusUnsupported")}
+        </p>
+        <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5 sm:col-start-2 sm:row-start-1 sm:justify-end">
+          {shouldOfferRedetect && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRedetectCheckInMethods}
+              loading={isRedetectingCheckInMethods}
+              id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
+              className="text-xs sm:text-sm"
+            >
+              {isRedetectingCheckInMethods
+                ? t("form.redetectingCheckInMethods")
+                : t("form.redetectCheckInMethods")}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            id={ACCOUNT_CHECK_IN_TARGET_IDS.feedback}
+            onClick={() =>
+              openFeedback(
+                feedbackSource ?? {
+                  snapshot: { baseUrl: siteUrl ?? "", siteType, checkIn },
+                },
+              )
+            }
+            leftIcon={<MessageSquarePlus className="h-4 w-4" />}
+            className="text-xs sm:text-sm"
+          >
+            {inspection.decision.outcome ===
+            CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+              ? t("checkInFeedback.request")
+              : t("checkInFeedback.feedback")}
+          </Button>
+        </div>
+      </div>
+      {feedbackDialog}
+
+      {redetectionFeedbackPresentation && (
+        <Notice
+          tone={redetectionFeedbackPresentation.tone}
+          title={redetectionFeedbackPresentation.title}
+          description={redetectionFeedbackPresentation.description}
+          role={
+            checkInRedetectionFeedback?.kind === "failed" ? "alert" : "status"
+          }
+          aria-live={
+            checkInRedetectionFeedback?.kind === "failed"
+              ? "assertive"
+              : "polite"
+          }
+        />
+      )}
+
+      {hasCandidates && (
+        <div className="space-y-density-2">
+          <FormField label={t("form.checkInMethod")}>
+            <Select
+              value={
+                checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Automatic
+                  ? AUTOMATIC_CHECK_IN_SELECTION_VALUE
+                  : checkIn.selection.methodId
+              }
+              onValueChange={(methodId) => {
+                if (methodId === AUTOMATIC_CHECK_IN_SELECTION_VALUE) {
+                  setAutomaticSelection()
+                  return
+                }
+                const candidateMethodId = candidateMethodIds.find(
+                  (candidate) => candidate === methodId,
+                )
+                if (!candidateMethodId) return
+                onCheckInSelectionChange(
+                  setCheckInSelection({
+                    config: checkIn,
+                    siteType,
+                    siteUrl,
+                    mode: CHECK_IN_SELECTION_MODES.Manual,
+                    methodId: candidateMethodId,
+                  }),
+                )
+              }}
+            >
+              <SelectTrigger
+                className="w-full"
+                id={ACCOUNT_CHECK_IN_TARGET_IDS.method}
+                aria-label={t("form.checkInMethod")}
+                aria-describedby={CHECK_IN_METHOD_HELPER_ID}
+                title={selectionPresentation.triggerLabel}
+              >
+                <SelectValue placeholder={t("form.checkInMethodNotSelected")}>
+                  {selectionPresentation.triggerLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTOMATIC_CHECK_IN_SELECTION_VALUE}>
+                  {t("form.automaticCheckInSelection")}
+                </SelectItem>
+                {candidateMethodIds.map((methodId) => (
+                  <SelectItem key={methodId} value={methodId}>
+                    {getCheckInMethodPresentation(t, methodId).label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <p
+            id={CHECK_IN_METHOD_HELPER_ID}
+            className="text-muted-foreground text-xs"
+          >
+            <span>{selectionPresentation.helperText}</span>
+            {selectionPresentation.selectedMethodDisclosure && (
+              <span className="mt-density-1 block">
+                {selectionPresentation.selectedMethodDisclosure}
+              </span>
+            )}
+          </p>
+          {checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={setAutomaticSelection}
+            >
+              {t("form.restoreAutomaticCheckInSelection")}
+            </Button>
+          )}
+          {inspection.selectionState.status ===
+            CHECK_IN_SELECTION_STATUSES.Selected &&
+            inspection.selectionState.methodId ===
+              AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn && (
+              <FormField
+                label={t("form.loginCheckInProvider")}
+                description={t("form.loginCheckInProviderDesc")}
+              >
+                <Select
+                  // A stored method must stay selectable even when another
+                  // account owns it, otherwise an account with pre-existing
+                  // duplicate data could not change or clear its own value.
+                  value={selectedLoginProvider ?? UNSET_LOGIN_PROVIDER_VALUE}
+                  onValueChange={(provider) => {
+                    if (provider === UNSET_LOGIN_PROVIDER_VALUE) {
+                      onCheckInChange(setLoginProviderSelection(checkIn, null))
+                      return
+                    }
+                    if (!isAccountLoginProvider(provider)) return
+                    onCheckInChange(
+                      setLoginProviderSelection(checkIn, provider),
+                    )
+                  }}
+                >
+                  <SelectTrigger aria-label={t("form.loginCheckInProvider")}>
+                    <SelectValue
+                      placeholder={t("form.loginCheckInProviderNotSelected")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNSET_LOGIN_PROVIDER_VALUE}>
+                      {t("form.loginCheckInProviderNotSelected")}
+                    </SelectItem>
+                    {(
+                      [
+                        ACCOUNT_LOGIN_PROVIDERS.Github,
+                        ACCOUNT_LOGIN_PROVIDERS.LinuxDo,
+                      ] as const
+                    ).map((provider) => (
+                      <SelectItem
+                        key={provider}
+                        value={provider}
+                        disabled={isLoginProviderClaimed(provider)}
+                      >
+                        {ACCOUNT_LOGIN_PROVIDER_LABELS[provider]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {claimedLoginProviders.length > 0 && (
+                  <p className="text-muted-foreground mt-density-1 text-xs">
+                    {t("messages:errors.validation.loginProviderInUse", {
+                      provider: claimedLoginProviders
+                        .map(
+                          (claim) =>
+                            ACCOUNT_LOGIN_PROVIDER_LABELS[claim.provider],
+                        )
+                        .join(" / "),
+                      account: claimedLoginProviders
+                        .map((claim) => claim.owner.site_name)
+                        .join(" / "),
+                    })}
+                  </p>
+                )}
+              </FormField>
+            )}
+        </div>
+      )}
+
+      {hasCandidates && (
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+          <div className="flex-1">
+            <div className="gap-y-density-1 flex items-center gap-x-1">
+              <label
+                htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
+                className="text-secondary-foreground text-sm font-medium"
+              >
+                {t("form.autoCheckInEnabled")}
+              </label>
+              <AutoCheckinRiskHint />
+            </div>
+            <p className="text-muted-foreground mt-density-1 text-xs">
+              {isSelectedMethodDisabled
+                ? t("form.autoCheckInPausedBySiteDesc")
+                : hasSelectedMethod
+                  ? t("form.autoCheckInEnabledDesc")
+                  : t("form.autoCheckInPendingDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={checkIn.automaticExecutionEnabled}
+            onChange={(automaticExecutionEnabled) =>
+              onCheckInChange({ ...checkIn, automaticExecutionEnabled })
+            }
+            id={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
+          />
+        </div>
+      )}
+
+      <FormField
+        label={t("form.customCheckInUrl")}
+        description={t("form.customCheckInDesc")}
+      >
+        <Input
+          type="url"
+          id={ACCOUNT_CHECK_IN_TARGET_IDS.customUrl}
+          value={checkIn.customCheckIn?.url ?? ""}
+          onChange={(event) =>
+            onCheckInChange({
+              ...checkIn,
+              customCheckIn: {
+                ...(checkIn.customCheckIn ?? {
+                  openRedeemWithCheckIn: true,
+                }),
+                url: event.target.value,
+              },
+            })
+          }
+          placeholder="https://cdk.example.com/"
+          leftIcon={<CalendarDays className="h-5 w-5" />}
+        />
+      </FormField>
+
+      {checkIn.customCheckIn?.url && (
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
+          <label
+            htmlFor={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
+            className="text-secondary-foreground text-sm font-medium"
+          >
+            {t("form.openRedeemWithCheckIn")}
+          </label>
+          <Switch
+            checked={checkIn.customCheckIn?.openRedeemWithCheckIn ?? true}
+            onChange={(openRedeemWithCheckIn) =>
+              onCheckInChange({
+                ...checkIn,
+                customCheckIn: {
+                  ...(checkIn.customCheckIn ?? { url: "" }),
+                  openRedeemWithCheckIn,
+                },
+              })
+            }
+            id={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
+          />
+        </div>
+      )}
+
+      <FormField
+        label={t("form.customRedeemUrl")}
+        description={t("form.customRedeemUrlDesc")}
+      >
+        <Input
+          type="text"
+          id={ACCOUNT_CHECK_IN_TARGET_IDS.redeemUrl}
+          value={checkIn.customCheckIn?.redeemUrl ?? ""}
+          onChange={(event) =>
+            onCheckInChange({
+              ...checkIn,
+              customCheckIn: {
+                ...(checkIn.customCheckIn ?? { url: "" }),
+                redeemUrl: event.target.value,
+              },
+            })
+          }
+          placeholder="https://example.com/console/topup"
+          leftIcon={<Ticket className="h-5 w-5" />}
+        />
+      </FormField>
+    </AccountFormSection>
+  )
+}

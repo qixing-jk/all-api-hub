@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
-import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/components/AccountKeyResource/useAccountKeySecretDisclosure"
-import { LinkedCredentialProfileActions } from "~/features/KeyManagement/components/LinkedCredentialProfileActions"
+import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
+import { LinkedCredentialProfileActions } from "~/features/KeyManagement/associations/LinkedCredentialProfileActions"
 import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/resources/useAccountKeySecretDisclosure"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import {
   buildAccountKeyResourceRuntimeKeyFromFacts,

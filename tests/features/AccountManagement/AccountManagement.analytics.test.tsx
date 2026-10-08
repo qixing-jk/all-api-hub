@@ -135,7 +135,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles",
+  "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles",
   () => ({
     useApiCredentialProfiles: () => ({
       ...apiCredentialProfilesState.current,

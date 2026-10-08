@@ -1,0 +1,550 @@
+import {
+  ArrowRightLeft,
+  Columns3,
+  Filter,
+  Layers,
+  ListFilter,
+  Plus,
+  RefreshCcw,
+  Settings,
+  Trash2,
+} from "lucide-react"
+import { useRef, type ReactNode } from "react"
+
+import { PageHeader } from "~/components/PageHeader"
+import Tooltip from "~/components/Tooltip"
+import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
+import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
+import { ClearableFieldButton } from "~/components/ui/clearableField"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import { Label } from "~/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select"
+import { ManagedSiteChannelsDeleteFeedback } from "~/features/ManagedSiteChannels/deletion/ManagedSiteChannelsDeleteFeedback"
+import type {
+  ManagedChannelsCallbacks,
+  ManagedChannelsCapabilities,
+  ManagedChannelsLabels,
+  ManagedChannelsPresentationState,
+} from "~/features/ManagedSiteChannels/presentation/contracts"
+import { ManagedSiteChannelsPagination } from "~/features/ManagedSiteChannels/table/ManagedSiteChannelsPagination"
+import { ManagedSiteChannelsTable } from "~/features/ManagedSiteChannels/table/ManagedSiteChannelsTable"
+import { useManagedSiteChannelsTable } from "~/features/ManagedSiteChannels/table/useManagedSiteChannelsTable"
+import {
+  MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+  MANAGED_SITE_CHANNELS_REFRESH_STATES,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
+import ManagedSiteConfigRequiredState from "~/features/ManagedSiteWidgets/ManagedSiteConfigRequiredState"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
+import { openSettingsTab } from "~/utils/navigation"
+
+type ManagedSiteChannelsViewProps = {
+  state: ManagedChannelsPresentationState
+  capabilities: ManagedChannelsCapabilities
+  callbacks: ManagedChannelsCallbacks
+  labels: ManagedChannelsLabels
+  title: string
+  titleActions?: ReactNode
+  description: ReactNode
+  configurationMissingDescription: string
+  emptyContent?: ReactNode
+  guidanceContent?: ReactNode
+  configurationSettingsTarget?: {
+    tabId: "managedSite"
+    anchor?: string
+  }
+  siteTypeLabel: string
+  filterDialog?: ReactNode
+}
+
+/** Renders the shared managed-channel page from native resource controllers. */
+export function ManagedSiteChannelsView({
+  state,
+  capabilities,
+  callbacks,
+  labels,
+  title,
+  titleActions,
+  description,
+  configurationMissingDescription,
+  emptyContent,
+  guidanceContent,
+  configurationSettingsTarget,
+  siteTypeLabel,
+  filterDialog,
+}: ManagedSiteChannelsViewProps) {
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const isDeleteReplayBlocked = state.deleteState.requiresRefresh
+  const isResourceInteractionBlocked =
+    state.isResourceInteractionBlocked ?? false
+  const {
+    table,
+    columnCount,
+    statusCounts,
+    uniqueStatusValues,
+    selectedRows,
+    filteredRows,
+    selectedCount,
+    filteredCount,
+  } = useManagedSiteChannelsTable({
+    state,
+    callbacks,
+    labels,
+    isDeleteReplayBlocked,
+    isResourceInteractionBlocked,
+    modelSyncUnavailableReason: capabilities.modelSyncUnavailableReason,
+  })
+  const emptyTableMessage =
+    state.searchValue.trim() ||
+    state.channelIdFilterValue.trim() ||
+    state.statusFilterValues.length
+      ? labels.emptyFiltered
+      : labels.emptyNoChannels
+  const isSelectedSyncing = selectedRows.some((row) => row.original.isSyncing)
+  const isInitialLoading =
+    state.isLoading &&
+    state.rows.length === 0 &&
+    !state.failure &&
+    !state.isConfigurationMissing
+
+  const handleStatusChange = (
+    checked: boolean | "indeterminate",
+    value: string,
+  ) => {
+    const next =
+      checked === true
+        ? [...state.statusFilterValues, value]
+        : state.statusFilterValues.filter((status) => status !== value)
+    callbacks.onStatusFilterChange(Array.from(new Set(next)))
+  }
+
+  const handleClearSearch = () => {
+    callbacks.onSearchChange("")
+    callbacks.onReplaceRouteQuery({
+      ...state.routeQuery,
+      channelId: undefined,
+      resourceRef: undefined,
+      search: undefined,
+    })
+    searchInputRef.current?.focus()
+  }
+
+  return (
+    <div
+      className="space-y-density-4 py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-options-page-pending={isInitialLoading ? "" : undefined}
+    >
+      <PageHeader
+        spacing="compact"
+        className="mb-density-4"
+        icon={Layers}
+        title={title}
+        titleActions={
+          <>
+            <Tooltip content={labels.settings}>
+              <IconButton
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-label={labels.settings}
+                onClick={callbacks.onSettings}
+              >
+                <Settings className="h-4 w-4" />
+              </IconButton>
+            </Tooltip>
+            {titleActions}
+          </>
+        }
+        description={description}
+        actions={
+          <>
+            {!state.isConfigurationMissing && capabilities.canRefresh ? (
+              <Button
+                variant="outline"
+                size="sm"
+                loading={state.isRefreshing}
+                loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
+                data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
+                {...{
+                  [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]:
+                    state.isRefreshing
+                      ? MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
+                      : MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+                }}
+                onClick={callbacks.onRefresh}
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+              >
+                {state.isRefreshing ? labels.cancelRefresh : labels.refresh}
+              </Button>
+            ) : null}
+            {!state.isConfigurationMissing &&
+            capabilities.canToggleMigration ? (
+              <Button
+                variant={state.migrationMode ? "default" : "outline"}
+                size="sm"
+                onClick={callbacks.onToggleMigrationMode}
+                data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton}
+                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+              >
+                <span>
+                  {state.migrationMode
+                    ? labels.exitMigrationMode
+                    : labels.enterMigrationMode}
+                </span>
+                <Badge variant="warning" size="sm" className="shrink-0">
+                  {labels.migrationBeta}
+                </Badge>
+              </Button>
+            ) : null}
+            {state.siteTypeOptions.length > 1 ? (
+              <Select
+                value={state.siteTypeValue}
+                onValueChange={callbacks.onSiteTypeChange}
+              >
+                <SelectTrigger
+                  className="w-auto min-w-[172px]"
+                  size="sm"
+                  aria-label={siteTypeLabel}
+                >
+                  <SelectValue placeholder={siteTypeLabel} />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.siteTypeOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.disabled}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </>
+        }
+      />
+
+      {state.isConfigurationMissing ? (
+        <div className="space-y-density-4">
+          <ManagedSiteConfigRequiredState
+            description={configurationMissingDescription}
+            settingsTarget={configurationSettingsTarget}
+            onConfigure={() => {
+              void runGatewayGuidanceAction(() => {
+                void openSettingsTab(
+                  configurationSettingsTarget?.tabId ?? "managedSite",
+                  {
+                    ...(configurationSettingsTarget?.anchor
+                      ? { anchor: configurationSettingsTarget.anchor }
+                      : {}),
+                    preserveHistory: true,
+                  },
+                )
+              })
+            }}
+          />
+          {guidanceContent}
+        </div>
+      ) : (
+        <>
+          {state.failure ? (
+            <Alert variant={state.failure.variant ?? "destructive"}>
+              <AlertTitle>{state.failure.category}</AlertTitle>
+              <AlertDescription className="whitespace-pre-line">
+                {state.failure.message}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <ManagedSiteChannelsDeleteFeedback
+            deleteState={state.deleteState}
+            labels={labels}
+            canRefresh={capabilities.canRefresh}
+            isRefreshing={state.isRefreshing}
+            onRefresh={callbacks.onRefresh}
+          />
+
+          <div className="border-border overflow-hidden rounded-lg border">
+            <div className="border-border bg-surface-subtle dark:bg-background/30 gap-y-density-3 py-density-3 flex flex-col gap-x-3 border-b px-3 md:flex-row md:flex-wrap md:items-center">
+              <div className="relative w-full md:max-w-xs">
+                <Input
+                  ref={searchInputRef}
+                  value={state.searchValue}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    callbacks.onSearchChange(value)
+                    callbacks.onReplaceRouteQuery({
+                      ...state.routeQuery,
+                      channelId: undefined,
+                      resourceRef: undefined,
+                      search: value || undefined,
+                    })
+                  }}
+                  onClear={handleClearSearch}
+                  clearButtonLabel={labels.clearSearch}
+                  rightIcon={
+                    state.channelIdFilterValue && !state.searchValue ? (
+                      <ClearableFieldButton
+                        label={labels.clearSearch}
+                        onClick={handleClearSearch}
+                      />
+                    ) : undefined
+                  }
+                  placeholder={labels.searchPlaceholder}
+                  className="ps-9"
+                  data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
+                />
+                <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              </div>
+
+              <div className="gap-y-density-2 md:gap-y-density-2 grid grid-cols-2 gap-x-2 md:flex md:flex-1 md:items-center md:gap-x-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      leftIcon={<Filter className="h-4 w-4" />}
+                      data-testid={
+                        MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger
+                      }
+                    >
+                      {labels.status}
+                      {state.statusFilterValues.length > 0 ? (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          ({state.statusFilterValues.length})
+                        </span>
+                      ) : null}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64" align="start">
+                    <div className="space-y-density-2">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {labels.statusLabel}
+                      </p>
+                      <div className="space-y-density-2">
+                        {uniqueStatusValues.map((value) => (
+                          <div
+                            key={value}
+                            className="gap-y-density-2 flex items-center justify-between gap-x-2"
+                          >
+                            <div className="gap-y-density-2 flex items-center gap-x-2">
+                              <Checkbox
+                                id={`status-${value}`}
+                                checked={state.statusFilterValues.includes(
+                                  value,
+                                )}
+                                onCheckedChange={(checked) =>
+                                  handleStatusChange(checked, value)
+                                }
+                              />
+                              <Label
+                                htmlFor={`status-${value}`}
+                                className="text-sm font-normal"
+                              >
+                                {labels.statusLabels[value] ?? value}
+                              </Label>
+                            </div>
+                            <span className="text-muted-foreground text-xs">
+                              {statusCounts?.get(value) ?? 0}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      leftIcon={<Columns3 className="h-4 w-4" />}
+                    >
+                      {labels.columns}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>
+                      {labels.toggleColumns}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {table
+                      .getAllLeafColumns()
+                      .filter((column) => column.getCanHide())
+                      .map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.id}
+                          className="capitalize"
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) =>
+                            column.toggleVisibility(!!value)
+                          }
+                          onSelect={(event) => event.preventDefault()}
+                        >
+                          {state.columns.find(
+                            (registryColumn) => registryColumn.id === column.id,
+                          )?.label ?? column.id}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="gap-y-density-2 md:gap-y-density-2 col-span-2 grid grid-cols-2 gap-x-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-x-2">
+                  {state.migrationMode && capabilities.canMigrateSelected ? (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount}
+                      onClick={() =>
+                        callbacks.onMigrateSelected(
+                          selectedRows.map((row) => row.original.rowKey),
+                        )
+                      }
+                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                    >
+                      {labels.migrateSelected}
+                    </Button>
+                  ) : null}
+                  {state.migrationMode && capabilities.canMigrateFiltered ? (
+                    <Button
+                      variant="outline"
+                      disabled={!filteredCount}
+                      onClick={() =>
+                        callbacks.onMigrateFiltered(
+                          filteredRows.map((row) => row.original.rowKey),
+                        )
+                      }
+                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                    >
+                      {labels.migrateFiltered}
+                    </Button>
+                  ) : null}
+                  {!state.migrationMode && capabilities.canDeleteSelected ? (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount || isDeleteReplayBlocked}
+                      data-testid={
+                        MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton
+                      }
+                      onClick={callbacks.onDeleteSelected}
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                    >
+                      {labels.deleteSelected}
+                    </Button>
+                  ) : null}
+                  {!state.migrationMode && capabilities.canSyncSelected ? (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount || isSelectedSyncing}
+                      loading={isSelectedSyncing}
+                      onClick={() =>
+                        void callbacks.onSyncSelected(
+                          selectedRows.map((row) => row.original.rowKey),
+                        )
+                      }
+                      leftIcon={<RefreshCcw className="h-4 w-4" />}
+                    >
+                      {isSelectedSyncing
+                        ? labels.rowActions.syncing
+                        : labels.syncSelected}
+                    </Button>
+                  ) : !state.migrationMode &&
+                    capabilities.modelSyncUnavailableReason ? (
+                    <Tooltip
+                      content={capabilities.modelSyncUnavailableReason}
+                      anchorAsChild
+                    >
+                      <span className="inline-flex" tabIndex={0}>
+                        <Button
+                          variant="outline"
+                          disabled
+                          tabIndex={-1}
+                          leftIcon={<RefreshCcw className="h-4 w-4" />}
+                        >
+                          {labels.syncSelected}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                  {!state.migrationMode && capabilities.canCreate ? (
+                    <Button
+                      onClick={callbacks.onCreate}
+                      disabled={isResourceInteractionBlocked}
+                      leftIcon={<Plus className="h-4 w-4" />}
+                      data-testid={
+                        MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton
+                      }
+                    >
+                      {labels.addChannel}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <ManagedSiteChannelsTable
+              table={table}
+              columnCount={columnCount}
+              isInitialLoading={isInitialLoading}
+              loadingLabel={labels.loading}
+              emptyMessage={emptyTableMessage}
+              emptyContent={emptyContent}
+            />
+
+            <ManagedSiteChannelsPagination
+              table={table}
+              pagination={state.pagination}
+              total={state.total}
+              labels={labels}
+              onPaginationChange={callbacks.onPaginationChange}
+            />
+          </div>
+        </>
+      )}
+
+      <ConfirmDialog
+        intent="destructive"
+        isOpen={state.deleteState.isOpen && !isDeleteReplayBlocked}
+        onClose={callbacks.onDeleteCancel}
+        title={
+          state.deleteState.rowKeys.length > 1
+            ? labels.deleteTitlePlural
+            : labels.deleteTitle
+        }
+        description={labels.deleteDescription}
+        cancelLabel={labels.deleteCancel}
+        confirmLabel={labels.deleteConfirm}
+        workingLabel={labels.deleting}
+        confirmButtonTestId={
+          MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton
+        }
+        cancelButtonTestId={
+          MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelCancelButton
+        }
+        onConfirm={callbacks.onDeleteConfirm}
+        isWorking={state.deleteState.isWorking}
+      />
+
+      {filterDialog}
+    </div>
+  )
+}

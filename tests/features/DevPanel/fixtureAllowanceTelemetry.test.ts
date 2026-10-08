@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   API_CREDENTIAL_ALLOWANCE_LEVELS,
   getPrimaryAllowanceSignal,
-} from "~/features/ApiCredentialProfiles/utils/apiCredentialAllowance"
+} from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
 import { DEV_ALLOWANCE_FIXTURES } from "~/features/DevPanel/fixtureAllowanceTelemetry"
 import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 

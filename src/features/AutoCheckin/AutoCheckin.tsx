@@ -1,8 +1,6 @@
 import { CalendarCheck2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
-import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
@@ -10,6 +8,8 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
+import { AutoCheckinPretriggerCompletionDialog } from "~/features/AutoCheckin/pretrigger/AutoCheckinPretriggerCompletionDialog"
+import { AutoCheckinRiskHint } from "~/features/AutoCheckin/pretrigger/AutoCheckinRiskHint"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"

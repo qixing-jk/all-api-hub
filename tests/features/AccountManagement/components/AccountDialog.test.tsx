@@ -399,7 +399,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog",
+  "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog",
   () => ({
     useAccountDialog: () => ({
       state: mockState,

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test"
 
-import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
+import { CC_SWITCH_EXPORT_TEST_IDS } from "~/features/CredentialExport/CCSwitchExportDialog.testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

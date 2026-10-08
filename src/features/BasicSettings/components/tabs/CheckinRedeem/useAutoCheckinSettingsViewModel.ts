@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"

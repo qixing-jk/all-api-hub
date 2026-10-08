@@ -2,8 +2,8 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
-import { useModelKeyDialog } from "~/features/ModelList/components/ModelKeyDialog/hooks/useModelKeyDialog"
+import ModelKeyDialog from "~/features/ModelList/keySelection"
+import { useModelKeyDialog } from "~/features/ModelList/keySelection/hooks/useModelKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import {

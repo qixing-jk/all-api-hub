@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
+import ModelKeyDialog from "~/features/ModelList/keySelection"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import {
   buildSub2ApiAccount,

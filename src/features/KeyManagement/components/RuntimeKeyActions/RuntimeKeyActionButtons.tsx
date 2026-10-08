@@ -1,15 +1,15 @@
 import { Copy, Pencil, Terminal, Trash2, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import type { DeeplinkExportTarget } from "~/components/DeeplinkExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { IconButton } from "~/components/ui"
-import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
+import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
 import {
   KeyResourceActionGroup,
   KeyResourceActionToolbar,
   type KeyResourceCredentialAssociation,
-} from "~/features/KeyManagement/components/KeyResourceCard"
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"

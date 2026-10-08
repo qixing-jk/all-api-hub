@@ -95,7 +95,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockTrackProductAnalyticsActionCompleted,
 }))
 
-vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
+vi.mock("~/features/KeyManagement/inventory/useKeyManagement", () => ({
   useKeyManagement: vi.fn(() => ({
     displayData: [
       {
@@ -156,15 +156,15 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
   })),
 }))
 
-vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => ({
+vi.mock("~/features/KeyManagement/inventory/AccountSelectorPanel", () => ({
   AccountSelectorPanel: () => <div data-testid="controls" />,
 }))
 
-vi.mock("~/features/KeyManagement/components/TokenList", () => ({
+vi.mock("~/features/KeyManagement/inventory/TokenList", () => ({
   TokenList: () => <div data-testid="token-list" />,
 }))
 
-vi.mock("~/features/KeyManagement/components/Footer", () => ({
+vi.mock("~/features/KeyManagement/workspace/Footer", () => ({
   Footer: () => <div data-testid="footer" />,
 }))
 

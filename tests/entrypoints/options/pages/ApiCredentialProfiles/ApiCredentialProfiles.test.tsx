@@ -294,7 +294,7 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithCredentials: mockOpenWithCredentials }),
 }))
 
-vi.mock("~/components/CCSwitchExportDialog", () => ({
+vi.mock("~/features/CredentialExport/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: ({ onClose }: { onClose: () => void }) => (
     <div role="dialog" aria-label={CC_SWITCH_EXPORT_DIALOG_NAME}>
       <button type="button" onClick={onClose}>
@@ -305,7 +305,7 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
+  "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog",
   () => ({
     KiloCodeProfileExportDialog: () => (
       <div role="dialog" aria-label={KILO_CODE_EXPORT_DIALOG_NAME} />
@@ -313,7 +313,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/hooks/useAccountData", () => ({
+vi.mock("~/features/AccountManagement/data/useAccountData", () => ({
   useAccountData: () => ({
     displayData: [
       { id: "account-example", name: "Example account" },

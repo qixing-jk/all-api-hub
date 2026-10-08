@@ -3,7 +3,7 @@ import type { ComponentProps } from "react"
 import { beforeEach, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceDeleteDialog"
+import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 

@@ -5,9 +5,6 @@ import {
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import { CHANNEL_STATUS } from "~/types/newApi"
-
 import {
   createNewApiFamilyFields,
   createStatusOptionLabelResolvers,
@@ -15,15 +12,17 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   requireFieldValuePresentation,
   type ManagedResourceTextResolver,
-} from "../managedResourceFieldPresentation"
-import {
-  NATIVE_TABLE_COLUMN_LAYOUTS,
-  type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   newApiAdvancedFields,
   newApiSections,
-} from "../newApiAdvancedFieldPolicy"
+} from "~/features/ManagedSiteChannels/editor/newApiAdvancedFieldPolicy"
+import {
+  NATIVE_TABLE_COLUMN_LAYOUTS,
+  type ManagedSitePresentationDefinition,
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { CHANNEL_STATUS } from "~/types/newApi"
 
 const newApiTypeOptionLabelResolvers = Object.fromEntries(
   Object.entries(ChannelTypeNames).map(([value, label]) => [

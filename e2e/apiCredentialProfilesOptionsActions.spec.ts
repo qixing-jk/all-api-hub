@@ -1,10 +1,10 @@
 import fs from "node:fs/promises"
 import type { BrowserContext, Page } from "@playwright/test"
 
-import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import {
   getManagedSiteChannelRowDeleteActionTestId,
   getManagedSiteChannelRowEditActionTestId,

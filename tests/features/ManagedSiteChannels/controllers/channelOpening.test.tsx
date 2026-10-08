@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
-import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController"
+import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/editor/useManagedResourceMutationController"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/table/managedResourceRowMapper"
 import { ManagedResourceError } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   createManagedResourceEditor,

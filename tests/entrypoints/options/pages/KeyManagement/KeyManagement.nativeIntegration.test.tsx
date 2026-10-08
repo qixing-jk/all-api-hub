@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
-import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
+import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enKeyManagement from "~/locales/en/keyManagement.json"
@@ -111,11 +111,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/KeyManagement/controllers/useAccountKeyResourceController",
+  "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/KeyManagement/controllers/useAccountKeyResourceController")
+        typeof import("~/features/KeyManagement/resources/workflows/useAccountKeyResourceController")
       >()
 
     return {
@@ -138,11 +138,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/KeyManagement/components/AccountSummaryBar",
+  "~/features/KeyManagement/inventory/AccountSummaryBar",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/KeyManagement/components/AccountSummaryBar")
+        typeof import("~/features/KeyManagement/inventory/AccountSummaryBar")
       >()
     const React = await import("react")
     return {
@@ -156,11 +156,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/KeyManagement/components/AccountSelectorPanel",
+  "~/features/KeyManagement/inventory/AccountSelectorPanel",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/KeyManagement/components/AccountSelectorPanel")
+        typeof import("~/features/KeyManagement/inventory/AccountSelectorPanel")
       >()
     const React = await import("react")
     return {
@@ -192,11 +192,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog",
+  "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog")
+        typeof import("~/features/KeyManagement/resources/AccountKeyResourceEditorDialog")
       >()
     const React = await import("react")
 
@@ -259,23 +259,26 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
-vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
+vi.mock("~/features/KeyManagement/inventory/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
 }))
 
-vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
-  useManagedSiteKeyStatuses: () => {
-    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
-    return {
-      states: fixture.managedSiteTokenStatuses ?? {},
-      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
-      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
-      refresh: fixture.refreshManagedSiteTokenStatuses,
-      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
-      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
-    }
-  },
-}))
+vi.mock(
+  "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses",
+  () => ({
+    useManagedSiteKeyStatuses: () => {
+      const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+      return {
+        states: fixture.managedSiteTokenStatuses ?? {},
+        supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+        refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+        refresh: fixture.refreshManagedSiteTokenStatuses,
+        refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+        confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+      }
+    },
+  }),
+)
 
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =

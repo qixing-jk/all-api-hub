@@ -7,7 +7,7 @@ import {
   KEY_RESOURCE_CONTENT_LAYOUTS,
   KeyResourceFactList,
   KeyResourceSecretDisplay,
-} from "~/features/KeyManagement/components/KeyResourceCard"
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
 
 type QuickKeyResourceCardProps = {

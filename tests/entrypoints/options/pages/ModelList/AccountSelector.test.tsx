@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AccountSelector } from "~/features/ModelList/components/AccountSelector"
+import { AccountSelector } from "~/features/ModelList/catalog/AccountSelector"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

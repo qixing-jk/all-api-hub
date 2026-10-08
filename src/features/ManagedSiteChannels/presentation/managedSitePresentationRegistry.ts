@@ -1,4 +1,5 @@
-import type { ManagedSitePresentationDefinition } from "./managedResourceTablePresentation"
+import type { ManagedSitePresentationDefinition } from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+
 import { axonHubPresentation } from "./sites/axonHub"
 import { claudeCodeHubPresentation } from "./sites/claudeCodeHub"
 import { cliProxyApiPresentation } from "./sites/cliProxyApi"

@@ -13,8 +13,8 @@ import {
   MODEL_CAPABILITY_FILTER_VALUES,
 } from "~/features/ModelList/filtering/modelCapabilityFilters"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { useFilteredModels } from "~/features/ModelList/filtering/useFilteredModels"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
-import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import type { ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"

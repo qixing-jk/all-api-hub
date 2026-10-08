@@ -115,7 +115,7 @@ vi.mock("~/components/SettingSection", () => ({
   ),
 }))
 
-vi.mock("~/components/ChannelFiltersEditor", () => ({
+vi.mock("~/features/ManagedSiteModelSync/filters/ChannelFiltersEditor", () => ({
   default: ({
     filters,
     viewMode,

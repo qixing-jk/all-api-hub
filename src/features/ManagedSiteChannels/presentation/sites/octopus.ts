@@ -3,19 +3,19 @@ import {
   OctopusOutboundTypeNames,
 } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-
-import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 import {
   createNativeChannelFields,
   defineManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
   requireFieldValuePresentation,
-} from "../managedResourceFieldPresentation"
+} from "~/features/ManagedSiteChannels/editor/managedResourceFieldPresentation"
 import {
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type ManagedSitePresentationDefinition,
-} from "../managedResourceTablePresentation"
+} from "~/features/ManagedSiteChannels/table/managedResourceTablePresentation"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+
+import { MANAGED_CHANNELS_COLUMN_IDS } from "../contracts"
 
 const octopusFields = createNativeChannelFields(
   OCTOPUS_MANAGED_RESOURCE_FIELD_IDS,

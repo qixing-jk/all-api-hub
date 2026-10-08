@@ -36,7 +36,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackStartedMock,
 }))
 
-vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
+vi.mock("~/features/ManagedSiteWidgets/ManagedSiteChannelLinkButton", () => ({
   default: ({
     resourceRef,
     channelName,

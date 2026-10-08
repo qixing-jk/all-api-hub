@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
+import ModelItem from "~/features/ModelList/presentation/ModelItem"
 import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import {
@@ -83,7 +83,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
+vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemHeader", () => ({
   ModelItemHeader: ({
     model,
     resolvedVendor,
@@ -148,13 +148,13 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
 }))
 
 vi.mock(
-  "~/features/ModelList/components/ModelItem/ModelItemDescription",
+  "~/features/ModelList/presentation/ModelItem/ModelItemDescription",
   () => ({
     ModelItemDescription: () => <div data-testid="model-description" />,
   }),
 )
 
-vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
+vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemPricing", () => ({
   ModelItemPricing: ({
     showPricing,
     onShowDetails,
@@ -170,12 +170,12 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
   ),
 }))
 
-vi.mock("~/features/ModelList/components/ModelItem/ModelItemDetails", () => ({
+vi.mock("~/features/ModelList/presentation/ModelItem/ModelItemDetails", () => ({
   ModelItemDetails: () => <div data-testid="model-details" />,
 }))
 
 vi.mock(
-  "~/features/ModelList/components/ModelItem/ModelItemExpandButton",
+  "~/features/ModelList/presentation/ModelItem/ModelItemExpandButton",
   () => ({
     ModelItemExpandButton: ({
       isExpanded,
