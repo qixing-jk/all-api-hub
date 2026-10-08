@@ -44,6 +44,27 @@ type DeleteDialogInput = {
 /** Own deletion confirmation policy while the controller retains mutation ordering. */
 export function AccountKeyResourceDeleteDialog({
   nativeKeys,
+  ...props
+}: DeleteDialogInput) {
+  const ref = nativeKeys.deleteState.ref
+  if (!nativeKeys.deleteState.isOpen || !ref) return null
+  return (
+    <AccountKeyResourceDeleteSession
+      key={JSON.stringify([
+        ref.accountId,
+        ref.siteType,
+        ref.scopeKey,
+        ref.resourceId,
+      ])}
+      nativeKeys={nativeKeys}
+      {...props}
+    />
+  )
+}
+
+/** Keeps cleanup selection local to one open deletion target. */
+function AccountKeyResourceDeleteSession({
+  nativeKeys,
   accounts: displayData,
   getProfileForLocator,
 }: DeleteDialogInput) {
