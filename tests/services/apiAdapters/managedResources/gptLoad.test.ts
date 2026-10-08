@@ -111,6 +111,36 @@ describe("gpt-load native workspace", () => {
     ).rejects.toMatchObject({ name: "AbortError" })
   })
 
+  it("contains preferences storage failures at the registered workspace boundary", async () => {
+    mocks.getPreferences.mockRejectedValueOnce(new Error("storage unavailable"))
+    await expect(registration().open()).rejects.toMatchObject({
+      failure: { code: "unexpected" },
+    })
+  })
+
+  it("maps pre-dispatch cancellation at the registered workspace boundary", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      registration().open({ signal: controller.signal }),
+    ).rejects.toMatchObject({ failure: { code: "aborted" } })
+  })
+
+  it("maps upstream HTTP failures without requiring a provider code", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/modern/groups`, () =>
+        HttpResponse.json(
+          { message: "temporarily unavailable" },
+          { status: 500 },
+        ),
+      ),
+    )
+    const workspace = await registration().open()
+    await expect(workspace.list()).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+  })
+
   it("filters secret-free inventory by endpoint, name and model", async () => {
     server.use(
       http.get(`${BASE_URL}/api/modern/groups`, () =>

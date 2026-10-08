@@ -554,6 +554,16 @@ describe("apiService sub2api refreshAccountData", () => {
       ...overrides,
     }) as Sub2ApiAuthSessionRequest<ApiServiceAccountRequest>
 
+  it("returns failed refresh health for a non-authentication request failure", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(new Error("upstream unavailable"))
+    const result = await refreshAccountData(createRequest())
+    expect(result.success).toBe(false)
+    expect(result.healthStatus).toBeDefined()
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
+  })
+
   it("returns success with today usage when /api/v1/auth/me and /api/v1/usage/stats succeed", async () => {
     vi.mocked(fetchApi)
       .mockResolvedValueOnce({
