@@ -1,5 +1,9 @@
-import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import {
+  getModelItemKey,
+  type CalculatedModelItem,
+} from "~/features/ModelList/modelListItems"
 import {
   isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
@@ -14,8 +18,6 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
-
-import { getModelItemKey, type CalculatedModelItem } from "./modelListItems"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
 

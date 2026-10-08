@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
-import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
-import { useAccountData } from "~/hooks/useAccountData"
-import { modelMetadataService } from "~/services/models/modelMetadata"
-import type { ModelMetadata } from "~/services/models/modelMetadata/types"
-
-import { isProviderCatalogFallback } from "../catalogFallback"
-import {
-  repairAllAccountGroupExclusions,
-  repairSelectedGroups,
-} from "../groupSelectionState"
+import { isProviderCatalogFallback } from "~/features/ModelList/catalogFallback"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   deriveAllAccountsModelListCapabilities,
@@ -24,8 +15,20 @@ import {
   toCatalogOnlyCapabilities,
   toProfileSourceValue,
   type ModelManagementSource,
-} from "../modelManagementSources"
-import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "../sortModes"
+} from "~/features/ModelList/modelManagementSources"
+import {
+  isModelListPriceSortMode,
+  MODEL_LIST_SORT_MODES,
+} from "~/features/ModelList/sortModes"
+import {
+  repairAllAccountGroupExclusions,
+  repairSelectedGroups,
+} from "~/features/ModelList/groupSelectionState"
+import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
+import { useAccountData } from "~/hooks/useAccountData"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+
 import { useFilteredModels } from "./useFilteredModels"
 import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"

@@ -13,11 +13,11 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   type AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
-import { NativeResourceEditorBody } from "~/features/ResourceEditor/NativeResourceEditorBody"
 import {
+  NativeResourceEditorBody,
   NativeResourceEditorLoadingSkeleton,
   useNativeResourceEditorLoadingVisibility,
-} from "~/features/ResourceEditor/NativeResourceEditorLoading"
+} from "~/features/ResourceEditor"
 import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import type {
   EditableResourceProjection,

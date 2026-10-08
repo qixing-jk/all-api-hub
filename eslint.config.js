@@ -98,12 +98,12 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 const dynamicImportAllowlist = [
   // Development-only discovery fixtures stay outside production detection and UI loading.
   {
-    file: "src/services/checkin/autoCheckin/accountDiscovery.ts",
-    imports: ["./devDiscoveryFixtures"],
+    file: "src/services/checkin/autoCheckin/discovery/accountDiscovery.ts",
+    imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   {
     file: "src/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace.ts",
-    imports: ["~/services/checkin/autoCheckin/devDiscoveryFixtures"],
+    imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
   {
@@ -171,7 +171,7 @@ const dynamicImportAllowlist = [
     imports: ["~/services/apiAdapters/registry"],
   },
   {
-    file: "src/services/checkin/autoCheckin/refresh.ts",
+    file: "src/services/checkin/autoCheckin/scheduling/refresh.ts",
     imports: ["~/services/checkin/autoCheckin/providers"],
   },
   {
@@ -240,8 +240,8 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
   "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx", // OpenRouter management-key onboarding UI.
   "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
-  "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search.ts", // CLIProxyAPI settings search.
-  "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSite*.search.ts", // Search entries for provider-specific settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/search/CliProxyApi.search.ts", // CLIProxyAPI settings search.
+  "src/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSite*.search.ts", // Search entries for provider-specific settings.
   "src/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
   "src/features/ModelList/aihubmixModelList.ts", // Provider catalog presentation.
   "src/constants/siteType.ts", // Public compatibility re-export.
@@ -259,18 +259,18 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
   "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
   "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.
-  "src/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/DoneHubSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab.tsx", // Provider settings dispatch.
-  "src/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings.tsx", // Default provider selection.
-  "src/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/OmniRouteSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/GptLoadSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings.tsx", // Provider settings.
-  "src/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/modelSync/ModelRedirectSettings.tsx", // Default provider selection.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/AxonHubSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/ClaudeCodeHubSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/CliProxyApiSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/OmniRouteSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/NewApiSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/Sub2ApiSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/VeloeraSettings.tsx", // Provider settings.
   "src/features/ManagedSiteChannels/presentation/sites/**", // Provider field and table presentation definitions.
   "src/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview.tsx", // Development fixture.
   "src/services/accountSiteOnboarding/metadata.ts", // Unknown-site metadata fallback.

@@ -5,7 +5,7 @@ import { presentManagedResourceFailure } from "~/features/ManagedSiteChannels/pr
 import {
   NativeResourceEditorLoadingSkeleton,
   useNativeResourceEditorLoadingVisibility,
-} from "~/features/ResourceEditor/NativeResourceEditorLoading"
+} from "~/features/ResourceEditor"
 import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import type { ResourceFailure } from "~/services/apiAdapters/contracts/managedResourceNative"
 

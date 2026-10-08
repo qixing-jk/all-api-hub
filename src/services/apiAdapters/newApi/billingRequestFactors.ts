@@ -1,4 +1,14 @@
 import {
+  calendarConditions,
+  parseBillingConditions,
+} from "~/services/apiAdapters/newApi/billingConditions"
+import { BILLING_EXPRESSION_LIMITS } from "~/services/apiAdapters/newApi/billingLimits"
+import {
+  parseBooleanConditions,
+  splitTopLevel,
+  unwrap,
+} from "~/services/apiAdapters/newApi/billingSyntax"
+import {
   PRICING_CONDITION_KINDS,
   PRICING_SELECTION_AXES,
 } from "~/services/modelPricing/pricingConstants"
@@ -6,10 +16,6 @@ import {
   SERVICE_TIERS,
   type PricingPlan,
 } from "~/services/modelPricing/pricingPlan"
-
-import { calendarConditions, parseBillingConditions } from "./billingConditions"
-import { BILLING_EXPRESSION_LIMITS } from "./billingLimits"
-import { parseBooleanConditions, splitTopLevel, unwrap } from "./billingSyntax"
 
 type Conditions = PricingPlan["rules"][number]["conditions"]
 

@@ -2,15 +2,14 @@ import type { TFunction } from "i18next"
 import type { ReactNode } from "react"
 
 import { Button, Input } from "~/components/ui"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
 import {
-  type RESOURCE_FIELD_TYPES,
   RESOURCE_SECRET_EDIT_INTENT_KINDS,
   RESOURCE_SECRET_STATES,
+  type RESOURCE_FIELD_TYPES,
   type ResourceFieldDescriptor,
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/resourceNative"
-
-import { ResourceFieldLabel } from "./ResourceFieldLabel"
 
 type Props = {
   t: TFunction
