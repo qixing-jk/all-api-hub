@@ -1,15 +1,17 @@
-import { useCallback, useRef, useState } from "react"
 import type { RefObject } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import type {
   ActiveResourceBoundary,
+  EditorMode,
   EditorOpeningState,
   EditorOpenRequest,
   EditorState,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import { mergeEditorValuesForScopeChange } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
 import { useAccountKeyResourceEditorOptionsWorkflow } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorOptionsWorkflow"
+import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { type AccountKeyResourceEditor } from "~/services/apiAdapters/contracts/accountKeyResource"
 
@@ -168,8 +170,171 @@ export function useAccountKeyResourceEditorState(
     },
     [transitionEditor],
   )
+  const beginOpening = useCallback(
+    (
+      request: EditorOpenRequest,
+      cancelAction: () => void,
+      retryAttemptId?: number,
+    ) => {
+      const previous = editorOpeningRef.current
+      if (
+        retryAttemptId !== undefined
+          ? previous.status !== "failure" ||
+            previous.attemptId !== retryAttemptId
+          : previous.status === "loading"
+      )
+        return null
+      abortEditorFieldLoads()
+      cancelAction()
+      clearNativeOwner()
+      transitionEditor(() => null)
+      if (retryAttemptId === undefined)
+        setFocusWorkflowId(
+          `account-key-resource-editor-${++editorWorkflowSequence.current}`,
+        )
+      const attemptId = ++editorOpeningAttemptId.current
+      editorOpeningRequestRef.current = request
+      transitionEditorOpening({
+        attemptId,
+        status: "loading",
+        mode: request.mode,
+        reveal:
+          retryAttemptId === undefined
+            ? NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed
+            : NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+      })
+      return attemptId
+    },
+    [
+      abortEditorFieldLoads,
+      clearNativeOwner,
+      transitionEditor,
+      transitionEditorOpening,
+    ],
+  )
+  const isOpeningCurrent = useCallback(
+    (attemptId: number) =>
+      editorOpeningRef.current.status === "loading" &&
+      editorOpeningRef.current.attemptId === attemptId,
+    [],
+  )
+  const acceptOpening = useCallback(
+    (
+      attemptId: number,
+      nativeEditor: AccountKeyResourceEditor,
+      boundary: ActiveResourceBoundary,
+      mode: EditorMode,
+    ) => {
+      if (!isOpeningCurrent(attemptId)) return
+      editorRef.current = nativeEditor
+      editorBoundaryRef.current = boundary
+      transitionEditor(() => ({
+        editorId: ++editorInstanceId.current,
+        siteType: boundary.siteType,
+        mode,
+        fields: nativeEditor.fields,
+        initialValues: nativeEditor.initialValues,
+        values: nativeEditor.initialValues,
+        optionsByField: {},
+        optionFailuresByField: {},
+        loadingFieldIds: [],
+        feedback: null,
+      }))
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({ attemptId, status: "idle" })
+    },
+    [isOpeningCurrent, transitionEditor, transitionEditorOpening],
+  )
+  const readRetryRequest = useCallback(
+    (attemptId: number) =>
+      editorOpeningRef.current.status === "failure" &&
+      editorOpeningRef.current.attemptId === attemptId
+        ? editorOpeningRequestRef.current
+        : null,
+    [],
+  )
+  const cancelOpening = useCallback(
+    (attemptId: number, cancelAction: () => void) => {
+      const opening = editorOpeningRef.current
+      if (
+        opening.attemptId !== attemptId ||
+        (opening.status !== "loading" && opening.status !== "failure")
+      )
+        return false
+      const nextAttemptId = ++editorOpeningAttemptId.current
+      cancelAction()
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({ attemptId: nextAttemptId, status: "idle" })
+      setFocusWorkflowId(null)
+      return true
+    },
+    [transitionEditorOpening],
+  )
+  const close = useCallback(
+    (editorId: number) => {
+      const current = editorStateRef.current
+      if (current?.editorId !== editorId) return
+      abortEditorFieldLoads()
+      clearNativeOwner()
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({
+        attemptId: editorOpeningAttemptId.current,
+        status: "idle",
+      })
+      transitionEditor(() => null)
+      if (!current.terminalRetainsFocusWorkflow) setFocusWorkflowId(null)
+    },
+    [
+      abortEditorFieldLoads,
+      clearNativeOwner,
+      transitionEditorOpening,
+      transitionEditor,
+    ],
+  )
+  const captureSubmission = useCallback(() => {
+    const version = editorGeneration.current
+    const state = editorStateRef.current
+    return {
+      nativeEditor: editorRef.current,
+      state,
+      boundary: editorBoundaryRef.current,
+      isCurrent: () =>
+        editorGeneration.current === version &&
+        editorStateRef.current?.editorId === state?.editorId,
+    }
+  }, [])
+  const completeSubmission = useCallback(
+    (editorId: number, retainsFocus: boolean) => {
+      const current = editorStateRef.current
+      if (current?.editorId !== editorId) return
+      transitionTerminalCloseEditor({
+        ...current,
+        terminalClose: true,
+        terminalRetainsFocusWorkflow: retainsFocus,
+      })
+      clearNativeOwner()
+      transitionEditor(() => null)
+    },
+    [transitionTerminalCloseEditor, clearNativeOwner, transitionEditor],
+  )
+  const settleTerminalClose = useCallback(
+    (editorId: number) => {
+      if (terminalCloseEditorRef.current?.editorId === editorId)
+        transitionTerminalCloseEditor(null)
+    },
+    [transitionTerminalCloseEditor],
+  )
   return {
     readEditor,
+    beginOpening,
+    isOpeningCurrent,
+    acceptOpening,
+    readRetryRequest,
+    cancelOpening,
+    close,
+    captureSubmission,
+    completeSubmission,
+    settleTerminalClose,
     captureReloadState,
     resetForSecretRefresh,
     projectRehydration,
@@ -181,20 +346,9 @@ export function useAccountKeyResourceEditorState(
     dispose,
     loadEditorOptions,
     editor,
-    editorStateRef,
     terminalCloseEditor,
-    terminalCloseEditorRef,
     editorOpening,
-    editorRef,
-    editorBoundaryRef,
-    editorGeneration,
-    editorInstanceId,
-    editorOpeningAttemptId,
-    editorWorkflowSequence,
-    editorOpeningRef,
-    editorOpeningRequestRef,
     transitionEditor,
-    transitionTerminalCloseEditor,
     transitionEditorOpening,
     abortEditorFieldLoads,
   }
