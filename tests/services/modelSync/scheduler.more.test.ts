@@ -124,8 +124,10 @@ vi.mock("~/services/models/modelSync/modelCollection", () => ({
   collectModelsFromExecution: mocks.collectModelsFromExecution,
 }))
 
-vi.mock("~/services/apiService/octopus", () => ({
+vi.mock("~/services/apiService/octopus/channels", () => ({
   listChannels: mocks.octopusListChannels,
+}))
+vi.mock("~/services/apiService/octopus/models", () => ({
   fetchGroups: mocks.octopusFetchGroups,
   fetchAvailableModels: mocks.octopusFetchAvailableModels,
 }))

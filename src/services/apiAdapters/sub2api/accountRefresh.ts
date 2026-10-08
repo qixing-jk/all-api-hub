@@ -2,7 +2,7 @@ import type { AccountRefreshCapability } from "~/services/apiAdapters/contracts/
 import {
   fetchSupportCheckIn,
   refreshAccountData,
-} from "~/services/apiService/sub2api"
+} from "~/services/apiService/sub2api/accountData"
 
 export const sub2ApiAccountRefresh: AccountRefreshCapability = {
   fetchCheckInSupport: (request) => fetchSupportCheckIn(request),

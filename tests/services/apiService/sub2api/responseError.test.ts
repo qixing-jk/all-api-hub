@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { fetchCurrentUser } from "~/services/apiService/sub2api"
+import { fetchCurrentUser } from "~/services/apiService/sub2api/accountData"
 import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/browserAuth"
 import { decodeSub2ApiResponseError } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"

@@ -1,4 +1,4 @@
-import { OctopusMutationApiError } from "~/services/apiService/octopus"
+import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
 import {
   createManagedSiteMutationSequence,
   type ManagedSiteMutationConfirmedEffect,

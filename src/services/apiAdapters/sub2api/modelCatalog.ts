@@ -1,5 +1,5 @@
 import { isAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { fetchSub2ApiRuntimeModels } from "~/services/apiService/sub2api"
+import { fetchSub2ApiRuntimeModels } from "~/services/apiService/sub2api/runtimeModels"
 import { normalizeModelDescriptors } from "~/services/models/modelDescriptor"
 
 import type { ModelCatalogCapability } from "../contracts/modelCatalog"

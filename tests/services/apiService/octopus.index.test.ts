@@ -6,24 +6,26 @@ import {
   runOctopusMutation,
 } from "~/services/apiAdapters/managedSites/octopusMutation"
 import {
+  OCTOPUS_AUTH_MODES,
+  OCTOPUS_COOKIE_API_VERSIONS,
+} from "~/services/apiService/octopus/auth"
+import {
   createChannel,
   deleteChannel,
-  fetchAvailableModels,
-  fetchGroups,
-  fetchRemoteModels,
   getChannel,
   getChannelKeyManagement,
   listChannels,
-  OctopusMutationApiError,
   searchChannels,
   updateChannel,
   usesChannelProtocolPaths,
   validateOctopusConfig,
-} from "~/services/apiService/octopus"
+} from "~/services/apiService/octopus/channels"
 import {
-  OCTOPUS_AUTH_MODES,
-  OCTOPUS_COOKIE_API_VERSIONS,
-} from "~/services/apiService/octopus/auth"
+  fetchAvailableModels,
+  fetchGroups,
+  fetchRemoteModels,
+} from "~/services/apiService/octopus/models"
+import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {

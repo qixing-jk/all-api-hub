@@ -6,7 +6,7 @@ import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api"
+import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/groups"
 import type {
   Sub2ApiCreateKeyPayload,
   Sub2ApiNativeKey,

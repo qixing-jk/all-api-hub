@@ -7,7 +7,7 @@ import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResource
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
-import * as sub2api from "~/services/apiService/sub2api"
+import * as sub2api from "~/services/apiService/sub2api/groups"
 import * as voapi from "~/services/apiService/voapiV2"
 import { AuthTypeEnum } from "~/types"
 

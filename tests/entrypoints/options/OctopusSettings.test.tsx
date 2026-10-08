@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
 import toast from "~/lib/notify"
-import { validateOctopusConfig } from "~/services/apiService/octopus"
+import { validateOctopusConfig } from "~/services/apiService/octopus/channels"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -38,8 +38,10 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/octopus", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiService/octopus")>()),
+vi.mock("~/services/apiService/octopus/channels", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/octopus/channels")
+  >()),
   validateOctopusConfig: vi.fn(),
 }))
 

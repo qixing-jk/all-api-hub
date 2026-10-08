@@ -9,7 +9,7 @@ import {
   octopusManagedResourceRegistration,
   openOctopusNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/octopus"
-import { OctopusMutationApiError } from "~/services/apiService/octopus"
+import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
@@ -32,10 +32,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
-vi.mock("~/services/apiService/octopus", async (original) => ({
-  ...(await original<typeof import("~/services/apiService/octopus")>()),
+
+vi.mock("~/services/apiService/octopus/channels", async (original) => ({
+  ...(await original<
+    typeof import("~/services/apiService/octopus/channels")
+  >()),
   ...mocks,
 }))
+vi.mock("~/services/apiService/octopus/models", async (original) => ({
+  ...(await original<typeof import("~/services/apiService/octopus/models")>()),
+  ...mocks,
+}))
+
 const channel: OctopusChannel = {
   id: 7,
   name: "Example",

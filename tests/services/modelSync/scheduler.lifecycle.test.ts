@@ -160,8 +160,10 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: mocks.startProductAnalyticsAction,
 }))
 
-vi.mock("~/services/apiService/octopus", () => ({
+vi.mock("~/services/apiService/octopus/channels", () => ({
   listChannels: mocks.octopusListChannels,
+}))
+vi.mock("~/services/apiService/octopus/models", () => ({
   fetchGroups: vi.fn(),
   fetchAvailableModels: vi.fn(),
 }))

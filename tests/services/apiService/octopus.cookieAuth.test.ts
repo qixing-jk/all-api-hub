@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { listChannels } from "~/services/apiService/octopus"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import { listChannels } from "~/services/apiService/octopus/channels"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { mockTempWindowOctopusApiFetch } = vi.hoisted(() => ({

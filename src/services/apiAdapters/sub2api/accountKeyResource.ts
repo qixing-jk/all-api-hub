@@ -38,14 +38,14 @@ import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
+import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/groups"
 import {
   createSub2ApiKey,
   deleteApiToken,
-  fetchSub2ApiGroupDescriptors,
   fetchSub2ApiKey,
   fetchSub2ApiKeys,
   updateSub2ApiKey,
-} from "~/services/apiService/sub2api"
+} from "~/services/apiService/sub2api/keys"
 import type {
   Sub2ApiCreateKeyPayload,
   Sub2ApiNativeKey,

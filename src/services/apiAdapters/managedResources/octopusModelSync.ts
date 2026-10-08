@@ -13,7 +13,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
-import * as octopusApi from "~/services/apiService/octopus"
+import { listChannels } from "~/services/apiService/octopus/channels"
+import { fetchRemoteModels } from "~/services/apiService/octopus/models"
 import { ApiError } from "~/services/apiTransport/errors"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
@@ -57,16 +58,11 @@ const createOctopusModelSyncClient = (
 
   return {
     listChannels: async (signal?: AbortSignal) =>
-      await octopusApi.listChannels(config, requestOptions(signal)),
+      await listChannels(config, requestOptions(signal)),
     fetchRemoteModels: async (
       request: OctopusFetchModelInput,
       signal?: AbortSignal,
-    ) =>
-      await octopusApi.fetchRemoteModels(
-        config,
-        request,
-        requestOptions(signal),
-      ),
+    ) => await fetchRemoteModels(config, request, requestOptions(signal)),
     updateModels: async (
       channelId: number,
       models: string[],

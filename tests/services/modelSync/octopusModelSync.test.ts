@@ -35,11 +35,16 @@ const {
   runApiVerificationProbeMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/octopus", async (original) => ({
-  ...(await original<typeof import("~/services/apiService/octopus")>()),
+vi.mock("~/services/apiService/octopus/channels", async (original) => ({
+  ...(await original<
+    typeof import("~/services/apiService/octopus/channels")
+  >()),
   listChannels: vi.fn((...args) => apiListChannelsMock(...args)),
-  fetchRemoteModels: vi.fn((...args) => fetchRemoteModelsMock(...args)),
   updateChannel: vi.fn((...args) => updateChannelMock(...args)),
+}))
+vi.mock("~/services/apiService/octopus/models", async (original) => ({
+  ...(await original<typeof import("~/services/apiService/octopus/models")>()),
+  fetchRemoteModels: vi.fn((...args) => fetchRemoteModelsMock(...args)),
 }))
 
 vi.mock(

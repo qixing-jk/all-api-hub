@@ -30,13 +30,13 @@ import {
 import {
   createChannel,
   deleteChannel,
-  fetchRemoteModels,
   getChannel,
   getChannelKeyManagement,
   listChannels,
   updateChannel,
   usesChannelProtocolPaths,
-} from "~/services/apiService/octopus"
+} from "~/services/apiService/octopus/channels"
+import { fetchRemoteModels } from "~/services/apiService/octopus/models"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES as outcomes,

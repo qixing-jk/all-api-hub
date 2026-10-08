@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
-  createSub2ApiKey,
   fetchSub2ApiGroupDescriptors,
   fetchSub2ApiGroupRates,
+} from "~/services/apiService/sub2api/groups"
+import {
+  createSub2ApiKey,
   fetchSub2ApiKey,
   fetchSub2ApiKeys,
   updateSub2ApiKey,
-} from "~/services/apiService/sub2api"
-import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/keys"
 import { parseSub2ApiNativeKey } from "~/services/apiService/sub2api/parsing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -587,7 +589,7 @@ describe("apiService sub2api key management service", () => {
       })
       vi.resetModules()
       const otherContext = separateContexts
-        ? (await import("~/services/apiService/sub2api"))
+        ? (await import("~/services/apiService/sub2api/groups"))
             .fetchSub2ApiGroupDescriptors
         : fetchSub2ApiGroupDescriptors
       const [firstGroups, secondGroups] = await Promise.all([

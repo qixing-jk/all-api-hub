@@ -2,11 +2,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
-  fetchSub2ApiPublicSettings,
   fetchSupportCheckIn,
   fetchUserInfo,
   getOrCreateAccessToken,
-} from "~/services/apiService/sub2api"
+} from "~/services/apiService/sub2api/accountData"
+import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/publicSettings"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { createLogger } from "~/utils/core/logger"
 
