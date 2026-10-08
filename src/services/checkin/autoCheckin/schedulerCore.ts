@@ -1,6 +1,23 @@
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { logger } from "~/services/checkin/autoCheckin/diagnostics"
+import { createAutomaticCheckinExecution } from "~/services/checkin/autoCheckin/executionIntent"
+import {
+  retryAccount,
+  verifyAccountStatus,
+} from "~/services/checkin/autoCheckin/runAccountActions"
+import { runCheckins } from "~/services/checkin/autoCheckin/runCheckins"
+import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/runContracts"
+import { runRetryCheckins } from "~/services/checkin/autoCheckin/runRetryCheckins"
+import {
+  computeNextDailyTriggerPlan,
+  computeNextRetryTriggerTime,
+  type AutoCheckinDailyTriggerPlan,
+} from "~/services/checkin/autoCheckin/dailyPlanning"
+import { DailyTriggerWorkflow } from "~/services/checkin/autoCheckin/dailyTriggerWorkflow"
+import { pruneExhaustedPending } from "~/services/checkin/autoCheckin/retryQueue"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -25,21 +42,6 @@ import {
 } from "~/utils/browser/alarms"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { t } from "~/utils/i18n/core"
-
-import {
-  computeNextDailyTriggerPlan,
-  computeNextRetryTriggerTime,
-  type AutoCheckinDailyTriggerPlan,
-} from "./dailyPlanning"
-import { DailyTriggerWorkflow } from "./dailyTriggerWorkflow"
-import { logger } from "./diagnostics"
-import { createAutomaticCheckinExecution } from "./executionIntent"
-import { pruneExhaustedPending } from "./retryQueue"
-import { retryAccount, verifyAccountStatus } from "./runAccountActions"
-import { runCheckins } from "./runCheckins"
-import type { AutoCheckinRetryScheduling } from "./runContracts"
-import { runRetryCheckins } from "./runRetryCheckins"
-import { autoCheckinStorage } from "./storage"
 
 /**
  * Scheduler service for Auto Check-in

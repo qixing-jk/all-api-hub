@@ -17,10 +17,14 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
+import {
+  isModelListPriceSortMode,
+  MODEL_LIST_SORT_MODES,
+} from "~/features/ModelList/sortModes"
 import { useModelListVerificationResults } from "~/features/ModelList/hooks/useModelListVerificationResults"
 import { useModelListVerificationWorkflow } from "~/features/ModelList/hooks/useModelListVerificationWorkflow"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
@@ -44,7 +48,6 @@ import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
 import { useModelListData } from "./hooks/useModelListData"
 import { useModelListSourcePresentation } from "./hooks/useModelListSourcePresentation"
-import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "./sortModes"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
 
 /**

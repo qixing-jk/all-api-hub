@@ -5,10 +5,8 @@ import type {
   EditableResourceProjection,
   ResourceFieldValue,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  octopusManagedResourceRegistration,
-  openOctopusNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/octopus"
+import { octopusManagedResourceRegistration } from "~/services/apiAdapters/managedResources/octopus"
+import { openOctopusNativeResourceOperations } from "~/services/apiAdapters/managedResources/octopusNativeOperations"
 import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import {

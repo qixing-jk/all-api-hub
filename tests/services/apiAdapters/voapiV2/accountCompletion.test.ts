@@ -4,7 +4,7 @@ import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { voApiV2AccountCompletion } from "~/services/apiAdapters/voapiV2/accountCompletion"
-import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
+import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2/accountData"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -13,7 +13,7 @@ import {
   createCheckInConfig,
 } from "../checkInFixtures"
 
-vi.mock("~/services/apiService/voapiV2", () => ({
+vi.mock("~/services/apiService/voapiV2/accountData", () => ({
   fetchVoApiV2UserInfo: vi.fn(),
 }))
 

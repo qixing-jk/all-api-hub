@@ -5,7 +5,7 @@ import {
   cliProxyApiRef,
   cliProxyApiScope,
   getCliProxyApiResource,
-} from "~/services/apiAdapters/managedResources/cliProxyApi"
+} from "~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime"
 import { listAllCliProxyApiProviders } from "~/services/apiService/cliProxyApi"
 import {
   sharePendingConfigRead,

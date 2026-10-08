@@ -11,11 +11,11 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
-import { openOctopusNativeResourceOperations } from "~/services/apiAdapters/managedResources/octopus"
 import {
   isOctopusHttpUrl,
   octopusModels,
 } from "~/services/apiAdapters/managedResources/octopusEditor"
+import { openOctopusNativeResourceOperations } from "~/services/apiAdapters/managedResources/octopusNativeOperations"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"

@@ -7,8 +7,8 @@ import {
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHubNativeOperations"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { AxonHubChannel } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
@@ -26,11 +26,11 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  "~/services/apiAdapters/managedResources/axonHub",
+  "~/services/apiAdapters/managedResources/axonHubNativeOperations",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiAdapters/managedResources/axonHub")
+        typeof import("~/services/apiAdapters/managedResources/axonHubNativeOperations")
       >()
     return {
       ...actual,

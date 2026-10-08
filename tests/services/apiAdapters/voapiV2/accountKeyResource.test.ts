@@ -35,15 +35,22 @@ const {
   mockResolveVoApiV2KeySecretById: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/voapiV2", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiService/voapiV2")>()),
+vi.mock("~/services/apiService/voapiV2/keys", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/voapiV2/keys")
+  >()),
   createVoApiV2Key: mockCreateVoApiV2Key,
   updateVoApiV2Key: mockUpdateVoApiV2Key,
   deleteVoApiV2Token: mockDeleteVoApiV2Token,
   fetchAllVoApiV2RawKeys: mockFetchAllVoApiV2RawKeys,
-  fetchVoApiV2KeyGroupDescriptors: mockFetchVoApiV2KeyGroupDescriptors,
   renameVoApiV2Key: mockRenameVoApiV2Key,
   resolveVoApiV2KeySecretById: mockResolveVoApiV2KeySecretById,
+}))
+vi.mock("~/services/apiService/voapiV2/keyGroups", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/voapiV2/keyGroups")
+  >()),
+  fetchVoApiV2KeyGroupDescriptors: mockFetchVoApiV2KeyGroupDescriptors,
 }))
 
 const request = {

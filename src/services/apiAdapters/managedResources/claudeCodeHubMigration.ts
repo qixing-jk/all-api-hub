@@ -12,11 +12,9 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  ClaudeCodeHubNativeError,
-  normalizeClaudeCodeHubAllowedModels,
-  openClaudeCodeHubNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/claudeCodeHub"
+import { normalizeClaudeCodeHubAllowedModels } from "~/services/apiAdapters/managedResources/claudeCodeHubDisplayFacts"
+import { openClaudeCodeHubNativeResourceOperations } from "~/services/apiAdapters/managedResources/claudeCodeHubNativeOperations"
+import { ClaudeCodeHubNativeError } from "~/services/apiAdapters/managedResources/claudeCodeHubNativeRuntime"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,

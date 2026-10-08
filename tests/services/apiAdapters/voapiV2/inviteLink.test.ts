@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { voApiV2InviteLink } from "~/services/apiAdapters/voapiV2/inviteLink"
-import { fetchInviteLink } from "~/services/apiService/voapiV2"
+import { fetchInviteLink } from "~/services/apiService/voapiV2/inviteLink"
 import { AuthTypeEnum } from "~/types"
 
-vi.mock("~/services/apiService/voapiV2", () => ({
+vi.mock("~/services/apiService/voapiV2/inviteLink", () => ({
   fetchInviteLink: vi.fn(),
 }))
 

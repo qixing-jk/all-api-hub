@@ -1,4 +1,12 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { logger } from "~/services/checkin/autoCheckin/diagnostics"
+import type { runCheckins } from "~/services/checkin/autoCheckin/runCheckins"
+import { recalculateSummaryFromResults } from "~/services/checkin/autoCheckin/runResults"
+import {
+  isMinutesWithinWindow,
+  parseTimeToMinutes,
+} from "~/services/checkin/autoCheckin/dailyPlanning"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -14,12 +22,6 @@ import {
 import { getAlarm, hasAlarmsAPI } from "~/utils/browser/alarms"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
-
-import { isMinutesWithinWindow, parseTimeToMinutes } from "./dailyPlanning"
-import { logger } from "./diagnostics"
-import type { runCheckins } from "./runCheckins"
-import { recalculateSummaryFromResults } from "./runResults"
-import { autoCheckinStorage } from "./storage"
 
 /**
  * Reason codes describing why the UI-open pre-trigger is not eligible to run.

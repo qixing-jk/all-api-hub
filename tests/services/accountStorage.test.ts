@@ -6,7 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
-import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
+import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
 import {

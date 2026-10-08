@@ -7,7 +7,6 @@ import {
   withUnfinishedProbesStopped,
 } from "~/components/dialogs/VerifyApiDialog/probeState"
 import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
-import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
 import { Heading5 } from "~/components/ui"
 import { useVerificationRunLifecycle } from "~/hooks/useVerificationRunLifecycle"
 import {
@@ -17,7 +16,6 @@ import {
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -36,15 +34,13 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import {
-  createProfileModelVerificationHistoryTarget,
-  createProfileVerificationHistoryTarget,
-  verificationResultHistoryStorage,
-} from "~/services/verification/verificationResultHistory"
+import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
+import { resolveProfileProbeSuiteReport } from "../profileProbeSuiteReport"
 import { useProfileModelDiscovery } from "./useProfileModelDiscovery"
+import { useProfileVerificationHistory } from "./useProfileVerificationHistory"
 
 /**
  * Unified logger scoped to API credential profile verification dialog.
@@ -100,31 +96,6 @@ function extractModelsProbeOutput(
 
   return { suggestedModelId, modelIdsPreview }
 }
-
-/**
- * Resolves the persisted history target for the profile and optional model.
- */
-function createCurrentProfileVerificationHistoryTarget(
-  profileId: string,
-  modelId?: string,
-) {
-  const trimmedModelId = modelId?.trim()
-  return trimmedModelId
-    ? createProfileModelVerificationHistoryTarget(profileId, trimmedModelId)
-    : createProfileVerificationHistoryTarget(profileId)
-}
-
-/**
- * Tracks the persisted-history context separately from the storage target so
- * API type switches still force a history refresh.
- */
-function createVerificationHistoryContextKey(
-  profileId: string,
-  apiType: ApiVerificationApiType,
-  modelId?: string,
-) {
-  return `${profileId}::${apiType}::${modelId?.trim() ?? ""}`
-}
 /** Own the feature state and user-command lifecycle consumed by the view. */
 export function useProfileVerification({
   isOpen,
@@ -154,28 +125,6 @@ export function useProfileVerification({
     useState<ApiVerificationProbeId | null>(null)
 
   const apiTypeRef = useRef(apiType)
-  const pendingHistoryContextKeyRef = useRef<string | null>(null)
-  const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
-  const trimmedModelId = modelId.trim()
-  const historyTarget = useMemo(() => {
-    if (!profile) return null
-
-    // API type does not change the storage key, but it does change which
-    // persisted summary should be shown for the active dialog context.
-    void apiType
-    return createCurrentProfileVerificationHistoryTarget(
-      profile.id,
-      trimmedModelId,
-    )
-  }, [apiType, profile, trimmedModelId])
-  const historyContextKey = useMemo(() => {
-    if (!profile) return null
-    return createVerificationHistoryContextKey(
-      profile.id,
-      apiType,
-      trimmedModelId,
-    )
-  }, [apiType, profile, trimmedModelId])
   const {
     probes,
     setProbes: replaceProbes,
@@ -183,8 +132,21 @@ export function useProfileVerification({
     persistedSummary,
     setPersistedSummary,
     persistCurrentResults,
-    loadVerificationHistory,
-  } = useVerificationDialogState(historyTarget)
+    historyTarget,
+    getHistoryTargetForModel,
+    preserveCurrentProbeStateForModel,
+    beginHistoryContext,
+    resetHistoryContext,
+    restoreHistory,
+  } = useProfileVerificationHistory({
+    profile,
+    apiType,
+    modelId,
+    setModelId,
+    isOpen,
+    isRunning,
+    isPersisting,
+  })
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning && !isPersisting
@@ -192,17 +154,6 @@ export function useProfileVerification({
   useEffect(() => {
     apiTypeRef.current = apiType
   }, [apiType])
-
-  const getHistoryTargetForModel = useCallback(
-    (nextModelId?: string) => {
-      if (!profile) return null
-      return createCurrentProfileVerificationHistoryTarget(
-        profile.id,
-        nextModelId,
-      )
-    },
-    [profile],
-  )
 
   const hasAnyResult = probes.some((p) => p.result !== null)
   const hasApiTypeOverride = Boolean(profile && apiType !== profile.apiType)
@@ -225,21 +176,6 @@ export function useProfileVerification({
     )
   }, [profile, t])
 
-  const preserveCurrentProbeStateForModel = useCallback(
-    (nextModelId: string, nextApiType: ApiVerificationApiType) => {
-      if (!profile) return
-
-      pendingHistoryContextKeyRef.current = null
-      lastLoadedHistoryContextKeyRef.current =
-        createVerificationHistoryContextKey(
-          profile.id,
-          nextApiType,
-          nextModelId,
-        )
-    },
-    [profile],
-  )
-
   const {
     modelOptions,
     setModelOptions,
@@ -260,19 +196,13 @@ export function useProfileVerification({
   useEffect(() => {
     if (!isOpen || !profile) {
       cancelModelDiscovery()
-      pendingHistoryContextKeyRef.current = null
-      lastLoadedHistoryContextKeyRef.current = null
+      resetHistoryContext()
       return
     }
 
     const nextApiType = profile.apiType
     const nextModelId = initialModelId?.trim() ?? ""
-    pendingHistoryContextKeyRef.current = createVerificationHistoryContextKey(
-      profile.id,
-      nextApiType,
-      nextModelId,
-    )
-    lastLoadedHistoryContextKeyRef.current = null
+    beginHistoryContext(nextApiType, nextModelId)
 
     setApiType(nextApiType)
     setModelId(nextModelId)
@@ -282,6 +212,8 @@ export function useProfileVerification({
     replaceProbes(buildProbeState(nextApiType))
     void fetchModels(nextApiType)
   }, [
+    beginHistoryContext,
+    resetHistoryContext,
     fetchModels,
     cancelModelDiscovery,
     resetModelDiscovery,
@@ -292,68 +224,8 @@ export function useProfileVerification({
     setPersistedSummary,
   ])
 
-  useEffect(() => {
-    if (
-      !isOpen ||
-      !profile ||
-      !historyTarget ||
-      !historyContextKey ||
-      isRunning ||
-      isAnyProbeRunning ||
-      isPersisting
-    ) {
-      return
-    }
-
-    if (
-      pendingHistoryContextKeyRef.current &&
-      pendingHistoryContextKeyRef.current !== historyContextKey
-    ) {
-      return
-    }
-
-    if (lastLoadedHistoryContextKeyRef.current === historyContextKey) {
-      return
-    }
-
-    pendingHistoryContextKeyRef.current = null
-    lastLoadedHistoryContextKeyRef.current = historyContextKey
-
-    let cancelled = false
-    setPersistedSummary(null)
-    replaceProbes(buildProbeState(apiType))
-
-    void loadVerificationHistory({
-      apiType,
-      isCancelled: () => cancelled,
-      onResolvedModelId: (resolvedModelId) => {
-        setModelId((current) => current.trim() || resolvedModelId)
-      },
-      shouldApplySummaryToProbes: (summary) => summary.apiType === apiType,
-    }).then((summary) => {
-      if (cancelled || !summary || summary.apiType === apiType) {
-        return
-      }
-
-      setPersistedSummary(null, false)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    apiType,
-    historyContextKey,
-    historyTarget,
-    isAnyProbeRunning,
-    isOpen,
-    isPersisting,
-    isRunning,
-    loadVerificationHistory,
-    profile,
-    replaceProbes,
-    setPersistedSummary,
-  ])
+  // Restore after the opening effect has initialized the active context.
+  useEffect(restoreHistory, [restoreHistory])
 
   const persistProbeResults = useCallback(
     async (nextProbes: ProbeItemState[], modelIdOverride?: string) => {
@@ -544,61 +416,12 @@ export function useProfileVerification({
           signal,
         )
 
-        // Both the interrupted and the completed report describe the same run, so
-        // derive its shape once before either outcome is chosen.
-        const successCount = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-        ).length
-        const failureCount = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-        ).length
-        const insights = {
-          itemCount: results.length,
-          successCount,
-          failureCount,
-        }
-
-        if (isStopped(signal)) {
-          // Report the interruption as its own outcome instead of letting the
-          // partial results look like a completed suite.
+        const stopped = isStopped(signal)
+        if (stopped)
           replaceProbes(withUnfinishedProbesStopped(probesRef.current))
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
-          return
-        }
-
-        if (results.length === 0) {
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-          return
-        }
-
-        const hasFailedProbe = failureCount > 0
-        if (hasFailedProbe) {
-          const errorCategory = results
-            .filter(
-              (result) =>
-                result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-            )
-            .map((result) =>
-              resolveProductAnalyticsErrorCategoryFromProbeResult(result),
-            )
-            .find(
-              (category) =>
-                category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            )
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory:
-              errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            insights,
-          })
-          return
-        }
-
-        if (successCount === 0) {
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, { insights })
-          return
-        }
-
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
+        const report = resolveProfileProbeSuiteReport(results, stopped)
+        if (report.details) tracker.complete(report.result, report.details)
+        else tracker.complete(report.result)
       } catch (error) {
         logger.error("Probe suite failed", {
           message: toSanitizedErrorSummary(error, [

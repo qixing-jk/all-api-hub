@@ -10,7 +10,7 @@ import { accountMutations } from "~/services/accounts/accountStorage/accountMuta
 import {
   fetchVoApiV2CheckInStats,
   submitVoApiV2CheckIn,
-} from "~/services/apiService/voapiV2"
+} from "~/services/apiService/voapiV2/checkIn"
 import { isVoApiV2AuthExpiredError } from "~/services/apiService/voapiV2/parsing"
 import { resyncVoApiV2AuthToken } from "~/services/apiService/voapiV2/tokenResync"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"

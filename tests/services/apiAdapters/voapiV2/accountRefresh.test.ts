@@ -7,7 +7,7 @@ const { mockFetchSupportCheckIn, mockRefreshAccountData } = vi.hoisted(() => ({
   mockRefreshAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/voapiV2", () => ({
+vi.mock("~/services/apiService/voapiV2/accountData", () => ({
   fetchSupportCheckIn: mockFetchSupportCheckIn,
   refreshAccountData: mockRefreshAccountData,
 }))

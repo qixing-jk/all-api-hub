@@ -7,7 +7,7 @@ import {
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
 import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
-import { useNativeResourceEditorLoadingVisibility } from "~/features/ResourceEditor/NativeResourceEditorLoading"
+import { useNativeResourceEditorLoadingVisibility } from "~/features/ResourceEditor"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import toast from "~/lib/notify"
 import { accountKeySourceSignature } from "~/services/accounts/accountKeyCreation"

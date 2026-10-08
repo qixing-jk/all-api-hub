@@ -88,7 +88,7 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   getOrCreateAccessToken: mockAihubmixGetOrCreateAccessToken,
 }))
 
-vi.mock("~/services/apiService/voapiV2", () => ({
+vi.mock("~/services/apiService/voapiV2/accountData", () => ({
   fetchSupportCheckIn: mockVoApiV2FetchSupportCheckIn,
   fetchVoApiV2UserInfo: mockVoApiV2FetchUserInfo,
 }))

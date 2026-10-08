@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
+import { NativeResourceEditorBody } from "~/features/ResourceEditor/NativeResourceEditorBody"
+import { type NativeResourceEditorBodyProps } from "~/features/ResourceEditor/nativeResourceEditorContracts"
+import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import { ResourceSecretField } from "~/features/ResourceEditor/ResourceSecretField"
 import {
   createSelectOptionTokenRegistry,
   createSelectOptionTokenSnapshot,
-  NativeResourceEditorBody,
   reconcileSelectOptionTokenRegistry,
-  type NativeResourceEditorBodyProps,
-} from "~/features/ResourceEditor/NativeResourceEditorBody"
-import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
-import { ResourceSecretField } from "~/features/ResourceEditor/ResourceSecretField"
+} from "~/features/ResourceEditor/selectOptionTokenRegistry"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,

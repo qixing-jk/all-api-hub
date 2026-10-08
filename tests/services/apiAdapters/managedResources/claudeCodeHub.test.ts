@@ -17,10 +17,8 @@ import {
   MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  claudeCodeHubManagedResourceRegistration,
-  ClaudeCodeHubNativeError,
-} from "~/services/apiAdapters/managedResources/claudeCodeHub"
+import { claudeCodeHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/claudeCodeHub"
+import { ClaudeCodeHubNativeError } from "~/services/apiAdapters/managedResources/claudeCodeHubNativeRuntime"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { ClaudeCodeHubApiError } from "~/services/apiService/claudeCodeHub"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"

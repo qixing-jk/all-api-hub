@@ -36,15 +36,15 @@ import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
+import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2/keyGroups"
 import {
   createVoApiV2Key,
   deleteVoApiV2Token,
   fetchAllVoApiV2RawKeys,
-  fetchVoApiV2KeyGroupDescriptors,
   renameVoApiV2Key,
   resolveVoApiV2KeySecretById,
   updateVoApiV2Key,
-} from "~/services/apiService/voapiV2"
+} from "~/services/apiService/voapiV2/keys"
 import type { VoApiV2Key } from "~/services/apiService/voapiV2/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { maskSecretForDisplay } from "~/utils/core/formatters"

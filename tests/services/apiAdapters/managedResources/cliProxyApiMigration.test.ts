@@ -19,12 +19,20 @@ const mocks = vi.hoisted(() => ({
   config: vi.fn(),
 }))
 vi.mock(
-  "~/services/apiAdapters/managedResources/cliProxyApi",
+  "~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime",
   async (original) => ({
     ...(await original<
-      typeof import("~/services/apiAdapters/managedResources/cliProxyApi")
+      typeof import("~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime")
     >()),
     getCliProxyApiResource: mocks.get,
+  }),
+)
+vi.mock(
+  "~/services/apiAdapters/managedResources/cliProxyApiNativeMutation",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/apiAdapters/managedResources/cliProxyApiNativeMutation")
+    >()),
     createCliProxyApiResource: mocks.create,
   }),
 )

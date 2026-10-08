@@ -31,10 +31,10 @@ const mocks = vi.hoisted(() => ({
   prepareMigrationBaseUrl: vi.fn(),
 }))
 vi.mock(
-  "~/services/apiAdapters/managedResources/octopus",
+  "~/services/apiAdapters/managedResources/octopusNativeOperations",
   async (original) => ({
     ...(await original<
-      typeof import("~/services/apiAdapters/managedResources/octopus")
+      typeof import("~/services/apiAdapters/managedResources/octopusNativeOperations")
     >()),
     openOctopusNativeResourceOperations: mocks.open,
   }),

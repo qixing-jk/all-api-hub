@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { useMemo } from "react"
 
-import { NativeResourceEditorBody } from "~/features/ResourceEditor/NativeResourceEditorBody"
+import { NativeResourceEditorBody } from "~/features/ResourceEditor"
 import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,

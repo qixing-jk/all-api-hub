@@ -27,9 +27,11 @@ const {
   mockFetchVoApiV2CheckInStats: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/voapiV2", async (importOriginal) => {
+vi.mock("~/services/apiService/voapiV2/checkIn", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/apiService/voapiV2")>()
+    await importOriginal<
+      typeof import("~/services/apiService/voapiV2/checkIn")
+    >()
 
   return {
     ...actual,

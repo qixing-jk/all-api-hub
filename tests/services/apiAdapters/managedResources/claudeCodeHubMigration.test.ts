@@ -11,8 +11,9 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import * as claudeCodeHubNativeResources from "~/services/apiAdapters/managedResources/claudeCodeHub"
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
+import * as claudeCodeHubNativeOperations from "~/services/apiAdapters/managedResources/claudeCodeHubNativeOperations"
+import * as claudeCodeHubNativeRuntime from "~/services/apiAdapters/managedResources/claudeCodeHubNativeRuntime"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
@@ -127,7 +128,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("validates refs against the configured scope without fetching rows", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -148,7 +149,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("projects provider data without secrets and discloses lossy native settings", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -196,7 +197,7 @@ describe("Claude Code Hub native migration capability", () => {
       })),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -242,7 +243,7 @@ describe("Claude Code Hub native migration capability", () => {
         })),
       })
       vi.spyOn(
-        claudeCodeHubNativeResources,
+        claudeCodeHubNativeOperations,
         "openClaudeCodeHubNativeResourceOperations",
       ).mockResolvedValue(operations as never)
 
@@ -263,7 +264,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("blocks an invalid source ref before provider access", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
     const invalidSelection = {
@@ -301,7 +302,7 @@ describe("Claude Code Hub native migration capability", () => {
       })),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -316,13 +317,13 @@ describe("Claude Code Hub native migration capability", () => {
   it("propagates an aborted source lookup", async () => {
     const operations = buildOperations({
       get: vi.fn(async () => {
-        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+        throw new claudeCodeHubNativeRuntime.ClaudeCodeHubNativeError({
           code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
         })
       }),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -339,7 +340,7 @@ describe("Claude Code Hub native migration capability", () => {
       })),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -356,7 +357,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("resolves the credential only during execution", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -376,7 +377,7 @@ describe("Claude Code Hub native migration capability", () => {
       loadSecret: vi.fn(async () => "   "),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -398,7 +399,7 @@ describe("Claude Code Hub native migration capability", () => {
       }),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -416,13 +417,13 @@ describe("Claude Code Hub native migration capability", () => {
   it("propagates a native abort during credential resolution", async () => {
     const operations = buildOperations({
       loadSecret: vi.fn(async () => {
-        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+        throw new claudeCodeHubNativeRuntime.ClaudeCodeHubNativeError({
           code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
         })
       }),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -446,7 +447,7 @@ describe("Claude Code Hub native migration capability", () => {
       ),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -461,7 +462,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("normalizes the target projection and creates through native operations", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
     const source = buildSource()
@@ -525,7 +526,7 @@ describe("Claude Code Hub native migration capability", () => {
   it("uses the default group when the source has no usable group", async () => {
     const operations = buildOperations()
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
     const preparation =
@@ -551,7 +552,7 @@ describe("Claude Code Hub native migration capability", () => {
 
   it("rejects an unsupported target provider type before opening native operations", async () => {
     const openOperations = vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     )
 
@@ -608,7 +609,7 @@ describe("Claude Code Hub native migration capability", () => {
       create: vi.fn(async () => result),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -622,13 +623,13 @@ describe("Claude Code Hub native migration capability", () => {
   it("propagates an aborted target create", async () => {
     const operations = buildOperations({
       create: vi.fn(async () => {
-        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+        throw new claudeCodeHubNativeRuntime.ClaudeCodeHubNativeError({
           code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
         })
       }),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -642,14 +643,14 @@ describe("Claude Code Hub native migration capability", () => {
   it.each([
     [
       "validation failure",
-      new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+      new claudeCodeHubNativeRuntime.ClaudeCodeHubNativeError({
         code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
       }),
       MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
     ],
     [
       "unexpected native failure",
-      new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+      new claudeCodeHubNativeRuntime.ClaudeCodeHubNativeError({
         code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected,
       }),
       MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
@@ -666,7 +667,7 @@ describe("Claude Code Hub native migration capability", () => {
       }),
     })
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockResolvedValue(operations as never)
 
@@ -679,7 +680,7 @@ describe("Claude Code Hub native migration capability", () => {
 
   it("classifies a missing target configuration as unavailable", async () => {
     vi.spyOn(
-      claudeCodeHubNativeResources,
+      claudeCodeHubNativeOperations,
       "openClaudeCodeHubNativeResourceOperations",
     ).mockRejectedValue(
       new ManagedResourceError({
