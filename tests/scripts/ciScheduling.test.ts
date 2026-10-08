@@ -4,6 +4,43 @@ import { describe, expect, it } from "vitest"
 
 const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml", "pr-build.yml"]
 
+it("runs smoke performance cases once in isolation, including after functional failures", () => {
+  const workflow = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
+  const functional = workflow
+    .split("      - name: Run E2E smoke")[1]
+    ?.split("      - name:")[0]
+  expect(functional).toContain('--grep-invert="major pages with"')
+  const performance = workflow
+    .split("      - name: Run isolated performance E2E")[1]
+    ?.split("      - name:")[0]
+  expect(performance).toBeDefined()
+  expect(performance).toContain('AAH_E2E_WORKERS: "1"')
+  expect(performance).toContain("e2e/multiAccountPerformance.spec.ts")
+  expect(performance).not.toContain("--shard=")
+  expect(performance).toContain("--output=test-results/performance")
+  expect(performance).toContain(
+    "PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/performance",
+  )
+  const guard = performance
+    ?.match(/^ {8}if: (.+)$/m)?.[1]
+    ?.trim()
+    .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
+  // An explicit status function also schedules this step after a failed test step.
+  expect(guard).toContain("!cancelled()")
+  for (const e2e_type of ["default", "dnr-required", "bookmarks-required"]) {
+    for (let shard = 1; shard <= 6; shard++) {
+      for (const cancelled of [false, true]) {
+        expect(
+          runInNewContext(guard ?? "false", {
+            matrix: { e2e_type, shard },
+            cancelled: () => cancelled,
+          }),
+        ).toBe(!cancelled && e2e_type === "default" && shard === 2)
+      }
+    }
+  }
+})
+
 it("runs release-diff regression checks once when ordinary preflight jobs are skipped", () => {
   const workflow = readFileSync(".github/workflows/test.yml", "utf8")
   const step = workflow
