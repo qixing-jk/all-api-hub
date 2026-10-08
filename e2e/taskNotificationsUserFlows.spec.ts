@@ -13,6 +13,7 @@ import {
 import {
   expectPermissionOnboardingHidden,
   getServiceWorker,
+  getStoredUserPreferences,
   hasOptionalPermission,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -312,4 +313,70 @@ test("keeps browser task notification disabled when notification permission is d
       message: "Notifications permission should remain denied",
     })
     .toBe(false)
+})
+
+test("saves an edited webhook draft before sending its test notification", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const webhookUrl = "https://notification-test.invalid/updated-draft"
+  const requests: {
+    url: string
+    method: string
+    body: unknown
+    savedUrl: unknown
+  }[] = []
+  await context.route("https://notification-test.invalid/**", async (route) => {
+    const preferences = await getStoredUserPreferences(serviceWorker)
+    const taskNotifications = preferences.taskNotifications as
+      | {
+          channels?: { webhook?: { url?: string } }
+        }
+      | undefined
+    requests.push({
+      url: route.request().url(),
+      method: route.request().method(),
+      body: route.request().postDataJSON(),
+      savedUrl: taskNotifications?.channels?.webhook?.url,
+    })
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "{}",
+    })
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=notifications&anchor=${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  const channel = page.locator(
+    `#${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK}`,
+  )
+  await channel.getByRole("switch").click()
+  const input = channel.locator(
+    `#${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}`,
+  )
+  await expect(input).toBeEnabled()
+  await input.fill(`  ${webhookUrl}  `)
+  await channel
+    .getByRole("button", { name: "Send test notification", exact: true })
+    .click()
+  await expect
+    .poll(() => requests)
+    .toEqual([
+      {
+        url: webhookUrl,
+        method: "POST",
+        body: expect.objectContaining({ source: "all-api-hub" }),
+        savedUrl: webhookUrl,
+      },
+    ])
+  await expect(
+    page.getByText("Test notification sent", { exact: true }),
+  ).toBeVisible()
+  await page.reload()
+  await expect(input).toHaveValue(webhookUrl)
 })

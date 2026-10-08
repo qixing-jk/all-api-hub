@@ -1,69 +1,31 @@
-/* eslint-disable jsdoc/require-jsdoc */
-import { SITE_TYPES } from "~/constants/siteType"
-import {
-  TEMP_CONTEXT_MODES,
-  TEMP_CONTEXT_PREFERENCE_MODES,
-  type TempContextPreferenceMode,
-} from "~/constants/tempContextMode"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import {
-  TOOLBAR_ACTION_CLICK_BEHAVIORS,
-  type RedemptionAssistPreferences,
-  type TempWindowFallbackReminderPreferences,
-  type UserPreferences,
-  type WebAiApiCheckPreferences,
-} from "~/services/preferences/preferencesSchema"
-import {
-  normalizeTempWindowFallbackPreferences,
-  type TempWindowFallbackPreferences,
-} from "~/services/preferences/tempWindowFallbackPreferences"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
-import type { BalanceHistoryPreferences } from "~/types/dailyBalanceHistory"
-import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
-import { normalizeSiteAnnouncementPreferences } from "~/types/siteAnnouncements"
-import type { SortingPriorityConfig } from "~/types/sorting"
-import {
-  normalizeTaskNotificationPreferences,
-  TASK_NOTIFICATION_CHANNELS,
-  TASK_NOTIFICATION_TASKS,
-} from "~/types/taskNotifications"
-import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
-import type { DeepPartial } from "~/types/utils"
-import {
-  CLOUD_SYNC_PROVIDERS,
-  resolveWebdavSyncDataSelection,
-} from "~/types/webdav"
-import { deepOverride } from "~/utils"
-import { normalizeAppLanguage } from "~/utils/i18n/language"
-
-import { buildAutoCheckinConfigSnapshotProperties } from "./autoCheckin"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { buildAutoCheckinConfigSnapshotProperties } from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_EVENTS,
-  PRODUCT_ANALYTICS_MODE_IDS,
-  PRODUCT_ANALYTICS_SETTING_IDS,
-  PRODUCT_ANALYTICS_SORT_FIELDS,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsEventPayload,
-  type ProductAnalyticsModeId,
-} from "./contracts"
-import { trackProductAnalyticsEvent } from "./dispatch"
-import { resolveProductAnalyticsManagedSiteType } from "./managedSite"
-import {
-  SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY,
-  SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
-  type SettingsSnapshotAutomaticFeatureBypassProperty,
-} from "./settingsSnapshot"
-import { getWebdavSyncStrategyMode } from "./webDavSync"
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY } from "~/services/productAnalytics/settingsSnapshot"
+import type { DeepPartial } from "~/types/utils"
+import { deepOverride } from "~/utils"
 
-type SettingChangedPayload = ProductAnalyticsEventPayload<
-  typeof PRODUCT_ANALYTICS_EVENTS.SettingChanged
->
+import { automationSettingsSnapshots } from "./settingsSnapshots/automation"
+import { generalSettingsSnapshots } from "./settingsSnapshots/general"
+import { integrationsSettingsSnapshots } from "./settingsSnapshots/integrations"
+import { managedSiteSettingsSnapshots } from "./settingsSnapshots/managedSite"
+import {
+  buildAutomaticFeatureBypassSnapshot,
+  protectionSettingsSnapshots,
+} from "./settingsSnapshots/protection"
+import type {
+  SettingChangedPayload,
+  SettingsSnapshotProjection,
+} from "./settingsSnapshots/values"
+
 type SettingsSnapshotCapturedPayload = ProductAnalyticsEventPayload<
   typeof PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured
->
-
-type UserManagedSiteModelSyncConfig = NonNullable<
-  UserPreferences["managedSiteModelSync"]
 >
 
 type PreferencePatch = DeepPartial<UserPreferences>
@@ -90,684 +52,43 @@ const ALL_SETTINGS_SNAPSHOT_KEYS = [
 
 type SettingsSnapshotKey = (typeof ALL_SETTINGS_SNAPSHOT_KEYS)[number]
 
-const FALLBACK_LANGUAGE = "en"
-
-function normalizeNonNegativeInteger(value: number): number {
-  return Number.isFinite(value) && Number.isInteger(value) && value >= 0
-    ? value
-    : 0
-}
-
-function normalizeNonNegativeMinutes(value: number): number {
-  return Number.isFinite(value) && value >= 0 ? Math.round(value) : 0
-}
-
-function getUsageHistoryScheduleMode(mode: string | undefined) {
-  if (mode === USAGE_HISTORY_SCHEDULE_MODE.MANUAL) {
-    return PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryManual
-  }
-  if (mode === USAGE_HISTORY_SCHEDULE_MODE.ALARM) {
-    return PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAlarm
-  }
-  return PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAfterRefresh
-}
-
-const TEMP_WINDOW_ANALYTICS_MODE_BY_PREFERENCE = {
-  [TEMP_CONTEXT_PREFERENCE_MODES.Auto]:
-    PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeAuto,
-  [TEMP_CONTEXT_MODES.Tab]: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab,
-  [TEMP_CONTEXT_MODES.Composite]:
-    PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite,
-  [TEMP_CONTEXT_MODES.Window]: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
-} as const satisfies Record<TempContextPreferenceMode, ProductAnalyticsModeId>
-
-function getTempWindowMode(
-  mode: TempWindowFallbackPreferences["tempContextMode"],
-): ProductAnalyticsModeId {
-  return TEMP_WINDOW_ANALYTICS_MODE_BY_PREFERENCE[mode]
-}
-
-function getActionClickBehavior(
-  behavior: UserPreferences["actionClickBehavior"] | undefined,
-) {
-  if (behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.Options) {
-    return TOOLBAR_ACTION_CLICK_BEHAVIORS.Options
-  }
-  return behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
-    ? TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel
-    : TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup
-}
-
-function getSortingPriorityPreferences(
-  preferences: UserPreferences,
-): SortingPriorityConfig | undefined {
-  return preferences.sortingPriorityConfig
-}
-
-function isSortingPriorityCustomized(
-  config: SortingPriorityConfig | undefined,
-): boolean {
-  if (!config) return false
-
-  const defaultById = new Map(
-    DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((criterion) => [
-      criterion.id,
-      criterion,
-    ]),
-  )
-
-  if (
-    config.criteria.length !== DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length
-  ) {
-    return true
-  }
-
-  return config.criteria.some((criterion) => {
-    const defaultCriterion = defaultById.get(criterion.id)
-    return (
-      !defaultCriterion ||
-      defaultCriterion.enabled !== criterion.enabled ||
-      defaultCriterion.priority !== criterion.priority
-    )
-  })
-}
-
-function hasText(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0
-}
-
-function isNewApiConfigured(config: UserPreferences["newApi"]): boolean {
-  return hasText(config.baseUrl) && hasText(config.adminToken)
-}
-
-function isDoneHubConfigured(config: UserPreferences["doneHub"]): boolean {
-  return Boolean(
-    config && hasText(config.baseUrl) && hasText(config.adminToken),
-  )
-}
-
-function isVeloeraConfigured(config: UserPreferences["veloera"]): boolean {
-  return hasText(config.baseUrl) && hasText(config.adminToken)
-}
-
-function isOctopusConfigured(config: UserPreferences["octopus"]): boolean {
-  return Boolean(config && hasText(config.baseUrl) && hasText(config.username))
-}
-
-function isAxonHubConfigured(config: UserPreferences["axonHub"]): boolean {
-  return Boolean(config && hasText(config.baseUrl) && hasText(config.email))
-}
-
-function isClaudeCodeHubConfigured(
-  config: UserPreferences["claudeCodeHub"],
-): boolean {
-  return Boolean(
-    config && hasText(config.baseUrl) && hasText(config.adminToken),
-  )
-}
-
-function isCliProxyApiConfigured(
-  config: UserPreferences["cliProxyApi"],
-): boolean {
-  return Boolean(
-    config && hasText(config.baseUrl) && hasText(config.adminToken),
-  )
-}
-
-function isOmniRouteConfigured(config: UserPreferences["omniroute"]): boolean {
-  return Boolean(config && hasText(config.baseUrl) && hasText(config.token))
-}
-
-function isGptLoadConfigured(config: UserPreferences["gptLoad"]): boolean {
-  return Boolean(
-    config && hasText(config.baseUrl) && hasText(config.managementKey),
-  )
-}
-
-function isClaudeCodeRouterConfigured(
-  config: UserPreferences["claudeCodeRouter"],
-): boolean {
-  return Boolean(config && hasText(config.baseUrl) && hasText(config.apiKey))
-}
-
-function getManagedSiteModelSyncPreferences(
-  preferences: UserPreferences,
-): UserManagedSiteModelSyncConfig {
-  return deepOverride(
-    DEFAULT_PREFERENCES.managedSiteModelSync!,
-    preferences.managedSiteModelSync ??
-      preferences.newApiModelSync ??
-      DEFAULT_PREFERENCES.managedSiteModelSync!,
-  )
-}
-
-function getBalanceHistoryPreferences(
-  preferences: UserPreferences,
-): BalanceHistoryPreferences {
-  return preferences.balanceHistory ?? DEFAULT_PREFERENCES.balanceHistory!
-}
-
-function getTempWindowFallbackReminderPreferences(
-  preferences: UserPreferences,
-): TempWindowFallbackReminderPreferences {
-  return (
-    preferences.tempWindowFallbackReminder ??
-    DEFAULT_PREFERENCES.tempWindowFallbackReminder!
-  )
-}
-
-function buildAppPreferencesSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AppPreferencesSnapshot,
-    entrypoint,
-    theme_mode: preferences.themeMode ?? DEFAULT_PREFERENCES.themeMode,
-    normalized_language:
-      normalizeAppLanguage(preferences.language) ?? FALLBACK_LANGUAGE,
-    toolbar_action_click_behavior: getActionClickBehavior(
-      preferences.actionClickBehavior,
-    ),
-    open_changelog_on_update_enabled:
-      preferences.openChangelogOnUpdate !== false,
-  }
-}
-
-function buildDisplayPreferencesSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const sortingPriorityConfig = getSortingPriorityPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.DisplayPreferencesSnapshot,
-    entrypoint,
-    active_tab: preferences.activeTab,
-    currency_type: preferences.currencyType,
-    show_today_cashflow_enabled: preferences.showTodayCashflow !== false,
-    sort_field: preferences.sortField ?? PRODUCT_ANALYTICS_SORT_FIELDS.None,
-    sort_order: preferences.sortOrder,
-    sorting_priority_configured: Boolean(sortingPriorityConfig),
-    sorting_priority_customized: isSortingPriorityCustomized(
-      sortingPriorityConfig,
-    ),
-    sorting_priority_enabled_criteria_count: normalizeNonNegativeInteger(
-      sortingPriorityConfig?.criteria.filter((criterion) => criterion.enabled)
-        .length ??
-        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
-          (criterion) => criterion.enabled,
-        ).length,
-    ),
-  }
-}
-
-function buildLoggingPreferencesSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = preferences.logging ?? DEFAULT_PREFERENCES.logging
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.LoggingPreferencesSnapshot,
-    entrypoint,
-    console_logging_enabled: config.consoleEnabled === true,
-    log_level: config.level,
-  }
-}
-
-function getModelRedirectPreferences(
-  preferences: UserPreferences,
-): ModelRedirectPreferences {
-  return preferences.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect
-}
-
-function getRedemptionAssistPreferences(
-  preferences: UserPreferences,
-): RedemptionAssistPreferences {
-  return preferences.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
-}
-
-function getWebAiApiCheckPreferences(
-  preferences: UserPreferences,
-): WebAiApiCheckPreferences {
-  return preferences.webAiApiCheck ?? DEFAULT_PREFERENCES.webAiApiCheck!
-}
-
-function getTempWindowFallbackPreferences(
-  preferences: UserPreferences,
-): TempWindowFallbackPreferences {
-  return normalizeTempWindowFallbackPreferences(
-    preferences.tempWindowFallback ?? DEFAULT_PREFERENCES.tempWindowFallback,
-  )
-}
-
-function buildAutomaticFeatureBypassSnapshot(
-  config: TempWindowFallbackPreferences,
-): Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean> {
-  return Object.fromEntries(
-    Object.entries(
-      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
-    ).map(([property, feature]) => [
-      property,
-      config.automaticFeatureBypass[feature],
-    ]),
-  ) as Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>
-}
-
-/** Projects normalized account preferences into controlled analytics flags and modes. */
-function buildAccountBehaviorSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
-    entrypoint,
-    auto_provision_key_on_account_add_enabled:
-      preferences.autoProvisionKeyOnAccountAdd === true,
-    auto_provision_key_on_account_add_mode:
-      preferences.autoProvisionKeyOnAccountAddMode,
-    auto_fill_current_site_url_on_account_add_enabled:
-      preferences.autoFillCurrentSiteUrlOnAccountAdd === true,
-    warn_on_duplicate_account_add_enabled:
-      preferences.warnOnDuplicateAccountAdd !== false,
-    show_today_cashflow_enabled: preferences.showTodayCashflow !== false,
-    show_health_status_enabled: preferences.showHealthStatus === true,
-  }
-}
-
-function buildAutoRefreshSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config =
-    preferences.accountAutoRefresh ?? DEFAULT_PREFERENCES.accountAutoRefresh
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    refresh_on_open_enabled: config.refreshOnOpen === true,
-    refresh_interval_minutes: normalizeNonNegativeMinutes(
-      config.interval / 60_000,
-    ),
-    min_refresh_interval_seconds: normalizeNonNegativeInteger(
-      config.minInterval / 1_000,
-    ),
-  }
-}
-
-function buildUsageHistorySnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = preferences.usageHistory ?? DEFAULT_PREFERENCES.usageHistory!
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.UsageHistoryConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    mode: getUsageHistoryScheduleMode(config.scheduleMode),
-    sync_interval_minutes: normalizeNonNegativeInteger(
-      config.syncIntervalMinutes,
-    ),
-    retention_days: normalizeNonNegativeInteger(config.retentionDays),
-  }
-}
-
-function buildBalanceHistorySnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getBalanceHistoryPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    end_of_day_capture_enabled: config.endOfDayCapture?.enabled === true,
-    estimated_today_income_enabled:
-      config.estimatedTodayIncome?.enabled === true,
-    retention_days: normalizeNonNegativeInteger(config.retentionDays),
-  }
-}
-
-function buildManagedSiteSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
-    entrypoint,
-    managed_site_type:
-      resolveProductAnalyticsManagedSiteType(preferences.managedSiteType) ??
-      SITE_TYPES.NEW_API,
-    new_api_configured: isNewApiConfigured(preferences.newApi),
-    done_hub_configured: isDoneHubConfigured(preferences.doneHub),
-    veloera_configured: isVeloeraConfigured(preferences.veloera),
-    octopus_configured: isOctopusConfigured(preferences.octopus),
-    axon_hub_configured: isAxonHubConfigured(preferences.axonHub),
-    claude_code_hub_configured: isClaudeCodeHubConfigured(
-      preferences.claudeCodeHub,
-    ),
-    cli_proxy_configured: isCliProxyApiConfigured(preferences.cliProxyApi),
-    omniroute_configured: isOmniRouteConfigured(preferences.omniroute),
-    gpt_load_configured: isGptLoadConfigured(preferences.gptLoad),
-    claude_code_router_configured: isClaudeCodeRouterConfigured(
-      preferences.claudeCodeRouter,
-    ),
-  }
-}
-
-function buildManagedSiteModelSyncSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getManagedSiteModelSyncPreferences(preferences)
-  return {
-    setting_id:
-      PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    sync_interval_minutes: normalizeNonNegativeMinutes(
-      config.interval / 60_000,
-    ),
-    concurrency: normalizeNonNegativeInteger(config.concurrency),
-    retry_max_attempts: normalizeNonNegativeInteger(config.maxRetries),
-    channel_timeout_seconds: normalizeNonNegativeInteger(
-      config.channelProcessingTimeout,
-    ),
-    rate_limit_rpm: normalizeNonNegativeInteger(
-      config.rateLimit.requestsPerMinute,
-    ),
-    rate_limit_burst: normalizeNonNegativeInteger(config.rateLimit.burst),
-    allowed_models_configured: (config.allowedModels ?? []).length > 0,
-    global_filters_configured:
-      (config.globalChannelModelFilters ?? []).length > 0,
-  }
-}
-
-function buildModelRedirectSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getModelRedirectPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ModelRedirectConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    standard_models_configured: (config.standardModels ?? []).length > 0,
-    prune_missing_targets_on_model_sync_enabled:
-      config.pruneMissingTargetsOnModelSync === true,
-  }
-}
-
-function buildRedemptionAssistSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getRedemptionAssistPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.RedemptionAssistConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    context_menu_enabled: config.contextMenu?.enabled === true,
-    relaxed_code_validation_enabled: config.relaxedCodeValidation === true,
-    url_whitelist_enabled: config.urlWhitelist?.enabled === true,
-    url_whitelist_patterns_configured:
-      (config.urlWhitelist?.patterns ?? []).length > 0,
-    url_whitelist_account_urls_enabled:
-      config.urlWhitelist?.includeAccountSiteUrls === true,
-    url_whitelist_checkin_redeem_urls_enabled:
-      config.urlWhitelist?.includeCheckInAndRedeemUrls === true,
-  }
-}
-
-function buildWebAiApiCheckSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getWebAiApiCheckPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    context_menu_enabled: config.contextMenu?.enabled === true,
-    auto_detect_enabled: config.autoDetect?.enabled === true,
-    auto_detect_enhanced_enabled: config.autoDetect?.enhanced?.enabled === true,
-    auto_detect_url_patterns_configured:
-      (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
-    api_key_cleanup_patterns_configured:
-      (config.keyCleanup?.removalPatterns ?? []).length > 0,
-  }
-}
-
-function buildTempWindowFallbackSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = getTempWindowFallbackPreferences(preferences)
-  const reminderConfig = getTempWindowFallbackReminderPreferences(preferences)
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    ...buildAutomaticFeatureBypassSnapshot(config),
-    mode: getTempWindowMode(config.tempContextMode),
-    reminder_dismissed: reminderConfig.dismissed === true,
-  }
-}
-
-function buildWebdavSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = preferences.webdav ?? DEFAULT_PREFERENCES.webdav
-  const syncData = resolveWebdavSyncDataSelection(config.syncData)
-  const isGithubGist = config.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
-    entrypoint,
-    configured: isGithubGist
-      ? hasText(config.githubGist?.token) &&
-        hasText(config.githubGist?.gistId) &&
-        hasText(config.backupEncryptionPassword)
-      : hasText(config.url) && hasText(config.username),
-    auto_sync_enabled: config.autoSync === true,
-    backup_encryption_enabled:
-      isGithubGist || config.backupEncryptionEnabled === true,
-    sync_strategy: getWebdavSyncStrategyMode(config.syncStrategy),
-    sync_interval_minutes: normalizeNonNegativeMinutes(
-      config.syncInterval / 60,
-    ),
-    sync_accounts_enabled: syncData.accounts,
-    sync_bookmarks_enabled: syncData.bookmarks,
-    sync_api_profiles_enabled: syncData.apiCredentialProfiles,
-    sync_preferences_enabled: syncData.preferences,
-  }
-}
-
-function buildTaskNotificationsSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = normalizeTaskNotificationPreferences(
-    preferences.taskNotifications,
-  )
-  const thirdPartyChannelCount = [
-    config.channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled,
-    config.channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled,
-    config.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled,
-    config.channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled,
-    config.channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled,
-    config.channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled,
-  ].filter(Boolean).length
-  const taskEnabledCount = Object.values(config.tasks).filter(Boolean).length
-
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    browser_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Browser].enabled === true,
-    telegram_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled === true,
-    feishu_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled === true,
-    dingtalk_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled === true,
-    wecom_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled === true,
-    ntfy_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled === true,
-    webhook_channel_enabled:
-      config.channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled === true,
-    auto_checkin_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.AutoCheckin] === true,
-    webdav_auto_sync_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.WebdavAutoSync] === true,
-    managed_site_model_sync_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.ManagedSiteModelSync] === true,
-    usage_history_sync_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.UsageHistorySync] === true,
-    balance_history_capture_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.BalanceHistoryCapture] === true,
-    site_announcements_task_enabled:
-      config.tasks[TASK_NOTIFICATION_TASKS.SiteAnnouncements] === true,
-    third_party_channel_count: thirdPartyChannelCount,
-    task_enabled_count: taskEnabledCount,
-  }
-}
-
-function buildSiteAnnouncementsSnapshot(
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  const config = normalizeSiteAnnouncementPreferences(
-    preferences.siteAnnouncementNotifications,
-  )
-  return {
-    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.SiteAnnouncementsConfigSnapshot,
-    entrypoint,
-    enabled: config.enabled === true,
-    notification_enabled: config.notificationEnabled === true,
-    polling_interval_minutes: normalizeNonNegativeInteger(
-      config.intervalMinutes,
-    ),
-  }
-}
-
-function buildSnapshotByKey(
-  key: SettingsSnapshotKey,
-  preferences: UserPreferences,
-  entrypoint: ProductAnalyticsEntrypoint,
-): SettingChangedPayload {
-  switch (key) {
-    case "app":
-      return buildAppPreferencesSnapshot(preferences, entrypoint)
-    case "display":
-      return buildDisplayPreferencesSnapshot(preferences, entrypoint)
-    case "account":
-      return buildAccountBehaviorSnapshot(preferences, entrypoint)
-    case "logging":
-      return buildLoggingPreferencesSnapshot(preferences, entrypoint)
-    case "autoRefresh":
-      return buildAutoRefreshSnapshot(preferences, entrypoint)
-    case "usageHistory":
-      return buildUsageHistorySnapshot(preferences, entrypoint)
-    case "balanceHistory":
-      return buildBalanceHistorySnapshot(preferences, entrypoint)
-    case "managedSite":
-      return buildManagedSiteSnapshot(preferences, entrypoint)
-    case "managedSiteModelSync":
-      return buildManagedSiteModelSyncSnapshot(preferences, entrypoint)
-    case "autoCheckin":
-      return buildAutoCheckinConfigSnapshotProperties(
+const SETTINGS_SNAPSHOT_PROJECTIONS: Record<
+  SettingsSnapshotKey,
+  SettingsSnapshotProjection
+> = {
+  ...generalSettingsSnapshots,
+  ...automationSettingsSnapshots,
+  ...managedSiteSettingsSnapshots,
+  ...protectionSettingsSnapshots,
+  ...integrationsSettingsSnapshots,
+  autoCheckin: {
+    keys: ["autoCheckin"],
+    build: (preferences, entrypoint) =>
+      buildAutoCheckinConfigSnapshotProperties(
         deepOverride(
           DEFAULT_PREFERENCES.autoCheckin!,
           preferences.autoCheckin ?? {},
         ),
         entrypoint,
-      )
-    case "modelRedirect":
-      return buildModelRedirectSnapshot(preferences, entrypoint)
-    case "redemptionAssist":
-      return buildRedemptionAssistSnapshot(preferences, entrypoint)
-    case "webAiApiCheck":
-      return buildWebAiApiCheckSnapshot(preferences, entrypoint)
-    case "tempWindowFallback":
-      return buildTempWindowFallbackSnapshot(preferences, entrypoint)
-    case "webdav":
-      return buildWebdavSnapshot(preferences, entrypoint)
-    case "taskNotifications":
-      return buildTaskNotificationsSnapshot(preferences, entrypoint)
-    case "siteAnnouncements":
-      return buildSiteAnnouncementsSnapshot(preferences, entrypoint)
-  }
+      ),
+  },
 }
 
-/**
- * Selects every settings area affected by a patch. Omitting the patch requests
- * all areas so callers can build a complete settings snapshot.
- */
+/** Build the reviewed projection registered for one settings area. */
+function buildSnapshotByKey(
+  key: SettingsSnapshotKey,
+  preferences: UserPreferences,
+  entrypoint: ProductAnalyticsEntrypoint,
+): SettingChangedPayload {
+  return SETTINGS_SNAPSHOT_PROJECTIONS[key].build(preferences, entrypoint)
+}
+
+/** Select settings areas in canonical order; shared preference keys can affect multiple projections. */
 function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if (!patch) return ALL_SETTINGS_SNAPSHOT_KEYS
-
-  const keys = new Set<SettingsSnapshotKey>()
-  const appKeys: Array<keyof UserPreferences> = [
-    "themeMode",
-    "language",
-    "actionClickBehavior",
-    "openChangelogOnUpdate",
-  ]
-  if (appKeys.some((key) => key in patch)) keys.add("app")
-  const displayKeys: Array<keyof UserPreferences> = [
-    "activeTab",
-    "currencyType",
-    "showTodayCashflow",
-    "sortField",
-    "sortOrder",
-    "sortingPriorityConfig",
-  ]
-  if (displayKeys.some((key) => key in patch)) keys.add("display")
-  const accountKeys: Array<keyof UserPreferences> = [
-    "autoProvisionKeyOnAccountAdd",
-    "autoProvisionKeyOnAccountAddMode",
-    "autoFillCurrentSiteUrlOnAccountAdd",
-    "warnOnDuplicateAccountAdd",
-    "showTodayCashflow",
-    "showHealthStatus",
-  ]
-  if (accountKeys.some((key) => key in patch)) keys.add("account")
-  if ("logging" in patch) keys.add("logging")
-  if ("accountAutoRefresh" in patch) keys.add("autoRefresh")
-  if ("usageHistory" in patch) keys.add("usageHistory")
-  if ("balanceHistory" in patch) keys.add("balanceHistory")
-  if (
-    "managedSiteType" in patch ||
-    "newApi" in patch ||
-    "doneHub" in patch ||
-    "veloera" in patch ||
-    "octopus" in patch ||
-    "axonHub" in patch ||
-    "claudeCodeHub" in patch ||
-    "omniroute" in patch ||
-    "gptLoad" in patch ||
-    "cliProxyApi" in patch ||
-    "claudeCodeRouter" in patch
-  ) {
-    keys.add("managedSite")
-  }
-  if ("managedSiteModelSync" in patch || "newApiModelSync" in patch) {
-    keys.add("managedSiteModelSync")
-  }
-  if ("autoCheckin" in patch) keys.add("autoCheckin")
-  if ("modelRedirect" in patch) keys.add("modelRedirect")
-  if ("redemptionAssist" in patch) keys.add("redemptionAssist")
-  if ("webAiApiCheck" in patch) keys.add("webAiApiCheck")
-  if ("tempWindowFallback" in patch || "tempWindowFallbackReminder" in patch) {
-    keys.add("tempWindowFallback")
-  }
-  if ("webdav" in patch) keys.add("webdav")
-  if ("taskNotifications" in patch) keys.add("taskNotifications")
-  if ("siteAnnouncementNotifications" in patch) keys.add("siteAnnouncements")
-
-  return Array.from(keys)
+  return ALL_SETTINGS_SNAPSHOT_KEYS.filter((key) =>
+    SETTINGS_SNAPSHOT_PROJECTIONS[key].keys.some((field) => field in patch),
+  )
 }
 
 /**
@@ -919,9 +240,7 @@ export function buildAggregateSettingsSnapshotEvent(
       webAiApiCheck.auto_detect_url_patterns_configured,
     [SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY]:
       tempWindowFallback.enabled,
-    ...buildAutomaticFeatureBypassSnapshot(
-      getTempWindowFallbackPreferences(preferences),
-    ),
+    ...buildAutomaticFeatureBypassSnapshot(preferences),
     temp_window_fallback_mode: tempWindowFallback.mode,
     temp_window_fallback_reminder_dismissed:
       tempWindowFallback.reminder_dismissed,
