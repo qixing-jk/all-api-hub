@@ -28,11 +28,11 @@ import {
   uploadCloudSyncBackup,
 } from "~/services/webdav/cloudSyncService"
 import { isGithubGistWritableMissingError } from "~/services/webdav/githubGistService"
+import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
 import { mergeWebdavBackupPayloadBySelection } from "~/services/webdav/webdavSelectiveSync"
 import {
   downloadBackup,
   isWebdavFileNotFoundError,
-  parseWebdavBackupJson,
 } from "~/services/webdav/webdavService"
 import {
   CLOUD_SYNC_PROVIDERS,

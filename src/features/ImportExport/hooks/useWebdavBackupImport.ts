@@ -21,11 +21,9 @@ import {
   tryParseEncryptedWebdavBackupEnvelope,
   type EncryptedWebdavBackupEnvelopeV1,
 } from "~/services/webdav/webdavBackupEncryption"
+import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
 import { buildWebdavImportPayloadBySelection } from "~/services/webdav/webdavSelectiveSync"
-import {
-  downloadBackupRaw,
-  parseWebdavBackupJson,
-} from "~/services/webdav/webdavService"
+import { downloadBackupRaw } from "~/services/webdav/webdavService"
 import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"

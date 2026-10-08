@@ -464,8 +464,8 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
   it("aborts download-only before any writes when remote credentials are malformed", async () => {
     const { parseWebdavBackupJson } = await vi.importActual<
-      typeof import("~/services/webdav/webdavService")
-    >("~/services/webdav/webdavService")
+      typeof import("~/services/webdav/webdavBackupValidation")
+    >("~/services/webdav/webdavBackupValidation")
     mockParseWebdavBackupJson.mockImplementation(parseWebdavBackupJson)
     mockGetPreferences.mockResolvedValue({
       webdav: {

@@ -38,11 +38,9 @@ import {
   uploadCloudSyncBackup,
   type CloudSyncRemote,
 } from "./cloudSyncService"
+import { parseWebdavBackupJson } from "./webdavBackupValidation"
 import { mergeWebdavBackupPayloadBySelection } from "./webdavSelectiveSync"
-import {
-  isWebdavFileNotFoundError,
-  parseWebdavBackupJson,
-} from "./webdavService"
+import { isWebdavFileNotFoundError } from "./webdavService"
 import { applyWebdavSyncResult } from "./webdavSyncApply"
 import { buildWebdavSyncPlan } from "./webdavSyncPlan"
 

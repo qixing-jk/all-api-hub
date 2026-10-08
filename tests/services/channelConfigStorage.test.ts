@@ -3,13 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { CHANNEL_CONFIG_STORAGE_KEYS } from "~/services/core/storageKeys"
-import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
 import {
-  channelConfigStorage,
-  coerceChannelConfigSnapshot,
   resolveChannelConfigGetMessage,
   resolveChannelConfigUpsertFiltersMessage,
   setupChannelConfigMessagingListeners,
+} from "~/services/managedSites/channelConfigHandlers"
+import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
+import { coerceChannelConfigSnapshot } from "~/services/managedSites/channelConfigSnapshot"
+import {
+  channelConfigStorage,
   type LegacyChannelConfigMigrationCandidate,
 } from "~/services/managedSites/channelConfigStorage"
 import {

@@ -21,6 +21,7 @@ import {
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/keyCleanup"
+import { createEditorSubmissionLifecycle } from "~/services/apiAdapters/nativeResources/editorSubmissionLifecycle"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
@@ -418,17 +419,16 @@ export function defineNativeResourceKind<
           projectResult: (detail: TDetail) => ResourceDisplayFacts,
           mutationOptions: { idempotent: boolean },
         ): ResourceEditor => {
-          let closed = false
-          let inflight:
-            | Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
-            | undefined
-          const closeForTerminalFailure = (error: ManagedResourceError) => {
+          const closeForTerminalFailure = (
+            error: ManagedResourceError,
+            close: () => void,
+          ) => {
             if (
               error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.NotFound ||
               error.failure.code ===
                 MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
             ) {
-              closed = true
+              close()
             }
           }
 
@@ -440,17 +440,14 @@ export function defineNativeResourceKind<
             }
           }
 
-          const submit = (
-            values: EditableResourceProjection,
-            submitOptions?: ResourceOperationOptions,
-          ) => {
-            if (inflight !== undefined) return inflight
-            if (closed)
-              return Promise.resolve(
-                rejectedPublicInput<ResourceDisplayFacts>(),
-              )
-
-            const run = (async () => {
+          const { submit } = createEditorSubmissionLifecycle<
+            EditableResourceProjection,
+            ResourceOperationOptions,
+            ManagedSiteMutationResult<ResourceDisplayFacts>
+          >({
+            onClosed: () =>
+              Promise.resolve(rejectedPublicInput<ResourceDisplayFacts>()),
+            execute: async (values, submitOptions, close) => {
               const validation = validate(values)
               if (!validation.valid)
                 return rejectedPublicInput<ResourceDisplayFacts>()
@@ -459,7 +456,7 @@ export function defineNativeResourceKind<
                 command = editorDefinition.buildCommand(values)
               } catch (error) {
                 const managedError = toManagedError(error, mapFailure)
-                closeForTerminalFailure(managedError)
+                closeForTerminalFailure(managedError, close)
                 throw managedError
               }
 
@@ -468,9 +465,9 @@ export function defineNativeResourceKind<
                 candidate = await mutate(command, submitOptions)
               } catch (error) {
                 if (error instanceof ManagedResourceError) {
-                  closeForTerminalFailure(error)
+                  closeForTerminalFailure(error, close)
                 } else {
-                  closed = true
+                  close()
                 }
                 throw error
               }
@@ -481,12 +478,12 @@ export function defineNativeResourceKind<
                   mutationOptions,
                 )
               } catch (error) {
-                closed = true
+                close()
                 throw error
               }
               const result = candidate
               if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
-                closed = true
+                close()
               }
 
               switch (result.outcome) {
@@ -503,14 +500,8 @@ export function defineNativeResourceKind<
                 case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
                   return result
               }
-            })()
-
-            const tracked = run.finally(() => {
-              if (inflight === tracked) inflight = undefined
-            })
-            inflight = tracked
-            return tracked
-          }
+            },
+          })
 
           const loadSecretCallback = editorDefinition.loadSecret
           const loadOptionsCallback = editorDefinition.loadOptions

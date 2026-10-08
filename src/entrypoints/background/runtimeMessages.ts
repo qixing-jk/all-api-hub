@@ -26,7 +26,7 @@ import {
   appendLogHistory,
   clearLogHistory,
 } from "~/services/logging/logHistory"
-import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
+import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigHandlers"
 import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
