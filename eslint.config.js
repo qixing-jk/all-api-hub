@@ -287,7 +287,7 @@ const siteTypeImportOwners = [
   "src/services/productAnalytics/contracts.ts", // Fixed event schema.
   "src/services/productAnalytics/siteEcosystem.ts", // Fixed event schema projection.
   "src/services/siteAnnouncements/storage.ts", // Unknown cached identity fallback.
-  "src/services/siteDetection/autoDetectService.ts", // Unknown identity fallback.
+  "src/services/siteDetection/autoDetectSources.ts", // Unknown identity fallback belongs to source result assembly.
 ]
 
 export default defineConfig([

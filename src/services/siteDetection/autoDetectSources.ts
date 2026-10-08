@@ -1,0 +1,852 @@
+import {
+  AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
+  type AutoDetectAnalyticsContext,
+} from "~/constants/autoDetect"
+import {
+  isAccountSiteType,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
+import {
+  ACCOUNT_BROWSER_SESSION_SOURCES,
+  getAccountBrowserSessionTabs,
+  readAccountBrowserSessionFromExistingTabs,
+  readAccountBrowserSessionFromTab,
+  type AccountBrowserSession,
+  type ReadAccountBrowserSessionFromExistingTabsOptions,
+} from "~/services/accountBrowserSession"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  summarizeApiServiceFetchContext,
+} from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import {
+  AuthTypeEnum,
+  type KimiOpenPlatformAuthConfig,
+  type Sub2ApiAuthConfig,
+} from "~/types"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
+import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
+import { hasCookiesForUrl } from "~/utils/browser/cookieHelper"
+import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { t } from "~/utils/i18n/core"
+
+import type {
+  AutoDetectFetchContext,
+  AutoDetectResult,
+} from "./autoDetectContracts"
+import { getAccountSiteType } from "./detectSiteType"
+
+const logger = createLogger("AutoDetectService")
+
+/**
+ * Normalizes optional site type hints received from content scripts.
+ */
+function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
+  return isAccountSiteType(value) ? value : undefined
+}
+
+interface UserDataResult {
+  userId: string
+  user: any
+  accessToken?: string
+  transientAuth?: ContentSessionTransientAuth
+  sub2apiAuth?: Sub2ApiAuthConfig
+  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
+  siteTypeHint?: AccountSiteType
+  fetchContext?: AutoDetectFetchContext
+}
+
+interface CurrentTabUserDataResult {
+  userData: UserDataResult | null
+  contentScriptUnavailable: boolean
+  strategy: AutoDetectAnalyticsContext["strategy"]
+  fetchContext: AutoDetectFetchContext
+}
+
+/** Preserves provider authentication and the selected tab's fetch context. */
+function userDataFromBrowserSession(
+  session: AccountBrowserSession,
+): UserDataResult {
+  return {
+    userId: session.userId,
+    user: session.user,
+    accessToken: session.accessToken,
+    ...(session.transientAuth ? { transientAuth: session.transientAuth } : {}),
+    sub2apiAuth: session.sub2apiAuth,
+    ...(session.kimiOpenPlatformAuth
+      ? { kimiOpenPlatformAuth: session.kimiOpenPlatformAuth }
+      : {}),
+    siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
+    fetchContext: session.fetchContext,
+  }
+}
+
+/**
+ * Converts operational fetch context into a privacy-safe analytics enum.
+ */
+function getSafeFetchContextKind(
+  fetchContext?: AutoDetectFetchContext,
+): AutoDetectAnalyticsContext["fetchContextKind"] {
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
+    return AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab
+  }
+
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT) {
+    return AUTO_DETECT_FETCH_CONTEXT_KINDS.BrowserContext
+  }
+
+  return AUTO_DETECT_FETCH_CONTEXT_KINDS.None
+}
+
+/**
+ * Builds the safe context dimensions shared by auto-detect analytics events.
+ */
+function createAutoDetectContext(params: {
+  strategy: AutoDetectAnalyticsContext["strategy"]
+  siteType?: AccountSiteType
+  fetchContext?: AutoDetectFetchContext
+  currentTabMatched?: boolean
+}): AutoDetectAnalyticsContext {
+  return {
+    strategy: params.strategy,
+    ...(params.siteType ? { siteType: params.siteType } : {}),
+    fetchContextKind: getSafeFetchContextKind(params.fetchContext),
+    incognitoContextUsed: params.fetchContext?.incognito === true,
+    currentTabMatched: params.currentTabMatched === true,
+  }
+}
+
+/**
+ * Attaches privacy-safe analytics metadata to an auto-detect service result.
+ */
+function withAutoDetectContext(
+  result: AutoDetectResult,
+  autoDetectContext: AutoDetectAnalyticsContext,
+): AutoDetectResult {
+  return {
+    ...result,
+    autoDetectContext,
+  }
+}
+
+/**
+ * Merge user data (if any) with detected site type into a unified result.
+ * @param userData User info resolved from upstream source; null when missing.
+ * @param url Current site URL for site type detection.
+ * @returns Successful result with user + siteType, or failure with message.
+ */
+async function combineUserDataAndSiteType(
+  userData: UserDataResult | null,
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<AutoDetectResult> {
+  if (!userData) {
+    diagnostics?.record("session_invalid", { reason: "user_data_missing" })
+    return {
+      success: false,
+      error: t("messages:operations.detection.getUserIdFailed"),
+    }
+  }
+
+  try {
+    const siteType =
+      userData.siteTypeHint ||
+      (await getAccountSiteType(url, protectionBypassExecution))
+    return {
+      success: true,
+      data: {
+        userId: userData.userId,
+        user: userData.user,
+        siteType,
+        accessToken: userData.accessToken,
+        ...(userData.transientAuth
+          ? { transientAuth: userData.transientAuth }
+          : {}),
+        sub2apiAuth: userData.sub2apiAuth,
+        ...(userData.kimiOpenPlatformAuth
+          ? { kimiOpenPlatformAuth: userData.kimiOpenPlatformAuth }
+          : {}),
+        ...(userData.fetchContext
+          ? { fetchContext: userData.fetchContext }
+          : {}),
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: getErrorMessage(error),
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
+    }
+  }
+}
+
+/**
+ * Resolve the account-bootstrap capability used by API fallback.
+ * @param siteType Detected site type used to select an adapter.
+ * @returns Account-bootstrap capability when supported.
+ */
+function getAccountBootstrapForApiFallback(siteType: AccountSiteType) {
+  return getSiteTypeCapabilities(siteType).account?.bootstrap
+}
+
+/**
+ * Fetch user data via upstream API (cookie-based).
+ * @param url Base site URL used for API calls.
+ * @param siteType Detected site type used to select an API implementation.
+ * @returns UserDataResult when ID present; otherwise null.
+ */
+async function getUserDataViaAPI(
+  url: string,
+  siteType: AccountSiteType,
+  fetchContext?: AutoDetectFetchContext,
+  tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<UserDataResult | null> {
+  diagnostics?.record("api_session_started", { siteType })
+  try {
+    if (fetchContext) {
+      logger.debug("API auto-detect using browser fetch context", {
+        url,
+        siteType,
+        fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      })
+    }
+
+    const accountBootstrap = getAccountBootstrapForApiFallback(siteType)
+    if (!accountBootstrap) {
+      diagnostics?.record("source_skipped", {
+        source: "api",
+        reason: "capability_unavailable",
+        siteType,
+      })
+      logger.warn("Account bootstrap capability is unavailable", {
+        siteType,
+        hasFetchContext: Boolean(fetchContext),
+      })
+      return null
+    }
+
+    const userInfo = await accountBootstrap.fetchUserInfo({
+      baseUrl: url,
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+      ...(fetchContext ? { fetchContext } : {}),
+      ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+    })
+    const userId = normalizeAccountIdentity(userInfo?.id)
+    if (!userInfo || !userId) {
+      diagnostics?.record("session_invalid", {
+        source: "api",
+        reason: "user_id_missing",
+        siteType,
+      })
+      logger.debug("API auto-detect returned no user id", {
+        url,
+        siteType,
+        hasFetchContext: Boolean(fetchContext),
+      })
+      return null
+    }
+    diagnostics?.record("api_session_finished", { success: true, siteType })
+    return {
+      userId,
+      user: userInfo,
+      accessToken:
+        typeof userInfo.access_token === "string"
+          ? userInfo.access_token
+          : undefined,
+      siteTypeHint: siteType,
+      ...(fetchContext ? { fetchContext } : {}),
+    }
+  } catch (error) {
+    diagnostics?.record("api_session_failed", {
+      siteType,
+      error: getErrorMessage(error),
+    })
+    logger.warn("API 方式获取用户数据失败", {
+      url,
+      siteType,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
+    return null
+  }
+}
+
+/**
+ * Direct auto-detect: use upstream API to fetch user info (cookie-based).
+ *
+ * Flow:
+ * 1) GET /api/user/self to fetch user profile (requires login cookies)
+ * 2) Extract userId and user payload
+ * 3) Detect site type and return unified result
+ */
+async function autoDetectDirect(
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<AutoDetectResult> {
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+  })
+  logger.info("使用直接方式", { url })
+
+  try {
+    // 检测站点类型，避免在未知站点上下文中使用默认 API
+    const siteType = await getAccountSiteType(url, protectionBypassExecution)
+
+    // 直接方式走 Cookie 认证：目标站点没有任何 Cookie 时不存在可复用的会话，
+    // 请求必然失败。提前跳过，避免空发一条注定失败的请求（手机上它常是最后的
+    // 兜底，不能因为它在桌面端多半失败就直接去掉）。
+    if (!(await hasCookiesForUrl(url))) {
+      diagnostics?.record("source_skipped", {
+        source: AUTO_DETECT_STRATEGIES.DirectApi,
+        reason: "cookies_missing",
+      })
+      logger.info("目标站点无 Cookie，跳过直接方式", { url })
+      return withAutoDetectContext(
+        {
+          success: false,
+          error: t("messages:operations.detection.getUserIdFailed"),
+        },
+        createAutoDetectContext({
+          strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+          siteType,
+        }),
+      )
+    }
+
+    // 通过 API 获取用户数据
+    const userData = await getUserDataViaAPI(
+      url,
+      siteType,
+      undefined,
+      undefined,
+      protectionBypassExecution,
+      diagnostics,
+    )
+
+    // 组合用户数据和站点类型（公共逻辑）
+    return withAutoDetectContext(
+      await combineUserDataAndSiteType(
+        userData,
+        url,
+        protectionBypassExecution,
+        diagnostics,
+      ),
+      createAutoDetectContext({
+        strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+        siteType,
+      }),
+    )
+  } catch (error) {
+    return {
+      success: false,
+      autoDetectContext: createAutoDetectContext({
+        strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+      }),
+      error: getErrorMessage(error),
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
+    }
+  }
+}
+
+/**
+ * Fetch user data through background script flow with fallback to API.
+ *
+ * Sends a runtime request to the background handler, which reads site data from
+ * a temporary browser context. If that path fails, this function falls back to
+ * an API-based cookie-auth request.
+ * @param url Target site URL.
+ * @param siteType Detected site type used to select an API implementation.
+ * @returns User data or null when both methods fail.
+ */
+async function getUserDataViaBackground(
+  url: string,
+  siteType: AccountSiteType,
+  fetchContext?: AutoDetectFetchContext,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<UserDataResult | null> {
+  const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+  diagnostics?.record("session_read_started", {
+    source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    siteType,
+  })
+
+  try {
+    if (!protectionBypassExecution) {
+      diagnostics?.record("source_skipped", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "execution_missing",
+      })
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+        protectionBypassExecution,
+        diagnostics,
+      )
+    }
+    const requestId = `auto-detect-${Date.now()}`
+    logger.debug("Background auto-detect request prepared", {
+      url,
+      siteType,
+      requestId,
+      useIncognito: fetchContext?.incognito === true,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+    })
+
+    const params = {
+      url: url,
+      requestId: requestId,
+      diagnosticId: diagnostics?.requestId,
+      siteType,
+      ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
+      ...(fetchContext?.cookieStoreId
+        ? { cookieStoreId: fetchContext.cookieStoreId }
+        : {}),
+    }
+    const response = await executeProtectionBypassTask({
+      task: { kind: "session_read" as const, params },
+      execution: protectionBypassExecution,
+    })
+
+    diagnostics?.record("temp_session_response", {
+      success: response?.success === true,
+      hasData: Boolean(response?.data),
+      reason: response?.error,
+      code: response?.code,
+    })
+    if (!response || !response.success || !response.data) {
+      diagnostics?.record("source_fallback", {
+        from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        to: "api",
+        reason: response?.error ?? "no_session_data",
+        code: response?.code,
+      })
+      // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
+      logger.info(
+        "Background auto-detect returned no user data; using API fallback",
+        {
+          url,
+          siteType,
+          requestId,
+          responseSuccess: response?.success === true,
+          hasResponseData: Boolean(response?.data),
+          fetchContext: summarizeApiServiceFetchContext(fetchContext),
+        },
+      )
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+        protectionBypassExecution,
+        diagnostics,
+      )
+    }
+
+    logger.debug("Background auto-detect returned user data", {
+      url,
+      siteType,
+      requestId,
+      hasFetchContext: Boolean(fetchContext),
+      siteTypeHint: response.data.siteTypeHint ?? null,
+    })
+
+    const userId = normalizeAccountIdentity(response.data.userId)
+    if (!userId) {
+      diagnostics?.record("session_invalid", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "user_id_missing",
+      })
+      logger.debug("Background auto-detect returned no usable user id", {
+        url,
+        siteType,
+        requestId,
+      })
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+        protectionBypassExecution,
+        diagnostics,
+      )
+    }
+
+    const transientAuth = normalizeContentSessionTransientAuth(
+      response.data.transientAuth,
+      { baseUrl: url, siteType },
+    )
+    if (response.data.transientAuth && !transientAuth) {
+      diagnostics?.record("session_auth_rejected", {
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+        reason: "invalid_transient_auth",
+      })
+    }
+
+    return {
+      userId,
+      user: response.data.user,
+      accessToken: response.data.accessToken,
+      ...(transientAuth ? { transientAuth } : {}),
+      sub2apiAuth: response.data.sub2apiAuth,
+      ...(response.data.kimiOpenPlatformAuth
+        ? { kimiOpenPlatformAuth: response.data.kimiOpenPlatformAuth }
+        : {}),
+      siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
+      ...(fetchContext ? { fetchContext } : {}),
+    }
+  } catch (error) {
+    diagnostics?.record("source_fallback", {
+      from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      to: "api",
+      reason: "exception",
+      error: getErrorMessage(error),
+    })
+    logger.warn("Background 方式获取用户数据失败", {
+      url,
+      siteType,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
+    return await getUserDataViaAPI(
+      url,
+      siteType,
+      fetchContext,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+      diagnostics,
+    )
+  }
+}
+
+/**
+ * Auto-detect via background flow when runtime/background messaging is available.
+ *
+ * 1) Background script acquires a temporary browser context to read localStorage
+ * 2) Falls back to API-based fetch when storage read fails
+ */
+async function autoDetectViaBackground(
+  url: string,
+  fetchContext?: AutoDetectFetchContext,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+  options: { currentTabMatched?: true } = {},
+): Promise<AutoDetectResult> {
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+    ...options,
+  })
+  logger.info(
+    options.currentTabMatched
+      ? "使用带当前标签页上下文的 Background 方式"
+      : "使用 Background 方式",
+    {
+      url,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+    },
+  )
+
+  // 检测站点类型，避免在未知站点上下文中使用默认 API
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
+
+  // 通过 Background 获取用户数据
+  const userData = await getUserDataViaBackground(
+    url,
+    siteType,
+    fetchContext,
+    protectionBypassExecution,
+    diagnostics,
+  )
+
+  // 组合用户数据和站点类型（公共逻辑）
+  return withAutoDetectContext(
+    await combineUserDataAndSiteType(
+      userData,
+      url,
+      protectionBypassExecution,
+      diagnostics,
+    ),
+    createAutoDetectContext({
+      strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      siteType,
+      fetchContext,
+      ...options,
+    }),
+  )
+}
+
+/**
+ * Fetch user data from the active tab using content script, with API fallback.
+ * @param url Target site URL.
+ * @param siteType Detected site type used to select an API implementation.
+ * @param tabId The ID of the tab to query for user data via content script messaging.
+ * @returns User data or null when not available.
+ */
+async function getUserDataFromCurrentTab(
+  url: string,
+  siteType: AccountSiteType,
+  tabId: number,
+  incognito?: boolean,
+  cookieStoreId?: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<CurrentTabUserDataResult> {
+  let contentScriptUnavailable = false
+  const fetchContext: AutoDetectFetchContext = {
+    kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+    tabId,
+    origin: new URL(url).origin,
+    ...(incognito === true ? { incognito: true } : {}),
+    ...(cookieStoreId ? { cookieStoreId } : {}),
+  }
+
+  logger.debug("Current-tab auto-detect fetch context prepared", {
+    url,
+    siteType,
+    fetchContext: summarizeApiServiceFetchContext(fetchContext),
+  })
+
+  try {
+    const session = await readAccountBrowserSessionFromTab({
+      diagnostics,
+      tabId,
+      baseUrl: url,
+      siteType,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      fetchContext,
+      ...(siteType === SITE_TYPES.UNKNOWN
+        ? { allowNewApiAuthProbe: true }
+        : {}),
+      protectionBypassExecution,
+      onError(error) {
+        contentScriptUnavailable = isMessageReceiverUnavailableError(error)
+
+        if (contentScriptUnavailable) {
+          logger.warn("当前标签页 content script 不可用，尝试 API 降级", {
+            url,
+            tabId,
+            fetchContext: summarizeApiServiceFetchContext(fetchContext),
+            error: getErrorMessage(error),
+          })
+        } else {
+          logger.warn("从当前标签页获取用户数据失败", {
+            url,
+            tabId,
+            fetchContext: summarizeApiServiceFetchContext(fetchContext),
+            error: getErrorMessage(error),
+          })
+        }
+      },
+    })
+
+    if (session) {
+      return {
+        userData: { ...userDataFromBrowserSession(session), fetchContext },
+        contentScriptUnavailable,
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        fetchContext,
+      }
+    }
+
+    diagnostics?.record("source_fallback", {
+      from: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      to: "api",
+      reason: contentScriptUnavailable
+        ? "content_script_unavailable"
+        : "no_session",
+    })
+    // fallback
+    const fallbackUserData = await getUserDataViaAPI(
+      url,
+      siteType,
+      fetchContext,
+      undefined,
+      protectionBypassExecution,
+      diagnostics,
+    )
+    if (fallbackUserData) {
+      return {
+        userData: fallbackUserData,
+        contentScriptUnavailable,
+        strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+        fetchContext,
+      }
+    }
+
+    return {
+      userData: null,
+      contentScriptUnavailable,
+      strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+      fetchContext,
+    }
+  } catch (error) {
+    diagnostics?.record("source_failed", {
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      error: getErrorMessage(error),
+    })
+    logger.warn("从当前标签页获取用户数据失败", {
+      url,
+      tabId,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
+    return {
+      userData: null,
+      contentScriptUnavailable,
+      strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+      fetchContext,
+    }
+  }
+}
+
+/**
+ * Auto-detect from the currently active tab (popup scenario).
+ *
+ * 1) Ask content script for user info from localStorage in active tab
+ * 2) Fall back to API call if content script response is missing
+ */
+async function autoDetectFromCurrentTab(
+  url: string,
+  tabId: number,
+  incognito?: boolean,
+  cookieStoreId?: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<AutoDetectResult> {
+  diagnostics?.record("strategy_started", {
+    strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+    tabId,
+  })
+  logger.info("使用当前标签页方式", { url, tabId })
+
+  // 检测站点类型，避免在未知站点上下文中使用默认 API
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
+
+  // 从当前标签页获取用户数据
+  const { userData, contentScriptUnavailable, strategy, fetchContext } =
+    await getUserDataFromCurrentTab(
+      url,
+      siteType,
+      tabId,
+      incognito,
+      cookieStoreId,
+      protectionBypassExecution,
+      diagnostics,
+    )
+
+  // 组合用户数据和站点类型（公共逻辑）
+  const result = await combineUserDataAndSiteType(
+    userData,
+    url,
+    protectionBypassExecution,
+    diagnostics,
+  )
+  const autoDetectContext = createAutoDetectContext({
+    strategy:
+      contentScriptUnavailable && !result.success
+        ? AUTO_DETECT_STRATEGIES.CurrentTab
+        : strategy,
+    siteType,
+    fetchContext,
+    currentTabMatched: true,
+  })
+
+  if (!result.success && contentScriptUnavailable) {
+    return {
+      ...result,
+      autoDetectContext,
+      errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      error: t("messages:autodetect.currentTabNeedsReload"),
+    }
+  }
+
+  return withAutoDetectContext(result, autoDetectContext)
+}
+/** Reads a reusable session without opening a temporary page for site detection. */
+async function autoDetectFromExistingTab(
+  url: string,
+  browserContext: NonNullable<
+    ReadAccountBrowserSessionFromExistingTabsOptions["browserContext"]
+  >,
+  protectionBypassExecution?: ProtectionBypassExecution,
+  diagnostics?: AccountDetectionDiagnostics,
+): Promise<AutoDetectResult | null> {
+  const candidateTabs = await getAccountBrowserSessionTabs(
+    url,
+    browserContext,
+    diagnostics,
+  )
+  const siteType = candidateTabs.length
+    ? await getAccountSiteType(url)
+    : undefined
+  const session = siteType
+    ? await readAccountBrowserSessionFromExistingTabs({
+        baseUrl: url,
+        siteType,
+        browserContext,
+        candidateTabs,
+        protectionBypassExecution,
+        diagnostics,
+      })
+    : null
+  if (session) {
+    const sessionSiteType = normalizeSiteTypeHint(session.siteTypeHint)
+    const result = await combineUserDataAndSiteType(
+      {
+        ...userDataFromBrowserSession(session),
+        siteTypeHint:
+          sessionSiteType && sessionSiteType !== SITE_TYPES.UNKNOWN
+            ? sessionSiteType
+            : siteType !== SITE_TYPES.UNKNOWN
+              ? siteType
+              : undefined,
+      },
+      url,
+      protectionBypassExecution,
+      diagnostics,
+    )
+    if (
+      result.success &&
+      result.data &&
+      result.data.siteType !== SITE_TYPES.UNKNOWN
+    ) {
+      return withAutoDetectContext(
+        result,
+        createAutoDetectContext({
+          strategy: AUTO_DETECT_STRATEGIES.ExistingTab,
+          siteType: result.data?.siteType,
+          fetchContext: session.fetchContext,
+        }),
+      )
+    }
+  }
+  return null
+}
+
+/** Source adapters own authentication reads and canonical detection result assembly. */
+export const accountDetectionSources = {
+  currentTab: autoDetectFromCurrentTab,
+  background: autoDetectViaBackground,
+  direct: autoDetectDirect,
+  existingTab: autoDetectFromExistingTab,
+}

@@ -11,7 +11,6 @@ import {
   DeeplinkExportDialog,
   type DeeplinkExportRequest,
 } from "~/components/DeeplinkExportDialog"
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
   EXPORT_ACTION_TARGETS,
@@ -28,8 +27,6 @@ import {
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
@@ -46,24 +43,16 @@ import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRun
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
-import {
-  createProfileCredentialExportData,
-  createProfileCredentialExportSource,
-} from "~/services/apiCredentialProfiles/credentialExport"
-import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
-import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import {
@@ -72,9 +61,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
@@ -86,6 +73,8 @@ import {
   getManagedSiteStatusDescription,
   getManagedSiteStatusLabel,
 } from "./RuntimeKeyActions/RuntimeKeyHeader"
+import { useRuntimeKeyIntegrationActions } from "./RuntimeKeyActions/useRuntimeKeyIntegrationActions"
+import { useRuntimeKeyVerificationActions } from "./RuntimeKeyActions/useRuntimeKeyVerificationActions"
 
 const logger = createLogger("ServiceCredentialCard")
 
@@ -126,28 +115,11 @@ export function ServiceCredentialCard({
   isNavigationTarget = false,
 }: ServiceCredentialCardProps) {
   const { t } = useTranslation(["keyManagement", "messages"])
-  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
-    useUserPreferencesContext()
-  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
-  const { openWithAccount } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
   const [deeplinkExportRequest, setDeeplinkExportRequest] =
     useState<DeeplinkExportRequest | null>(null)
-  const [kiloCodeProfile, setKiloCodeProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const [kelivoProfile, setKelivoProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
-
-  const [claudeCodeRouterProfile, setClaudeCodeRouterProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const [verifyingProfile, setVerifyingProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const [cliVerifyingProfile, setCliVerifyingProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const credentialBaseUrl = credential.baseUrl || account.baseUrl
   const managedSiteStatusDescription = getManagedSiteStatusDescription(
     t,
@@ -200,6 +172,42 @@ export function ServiceCredentialCard({
     () => createProfileCredentialExportSource(transientProfile),
     [transientProfile],
   )
+  const { dialogs, exportActions, managedSiteImport } =
+    useRuntimeKeyIntegrationActions({
+      account,
+      runtimeKey,
+      enabled: true,
+      managedSiteStatus,
+      credentialProfile: transientProfile,
+    })
+  const {
+    verifyingProfile,
+    cliVerifyingProfile,
+    closeVerification,
+    closeCliVerification,
+    handleVerifyApi,
+    handleVerifyCliSupport,
+  } = useRuntimeKeyVerificationActions({
+    account,
+    runtimeKey,
+    enabled: true,
+    credentialProfile: transientProfile,
+  })
+  const {
+    managedSiteLabel,
+    managedSiteType,
+    onImport: handleImportToManagedSite,
+  } = managedSiteImport
+  const { baseUrl: claudeCodeRouterBaseUrl, apiKey: claudeCodeRouterApiKey } =
+    dialogs.claudeCodeRouter
+  const kiloCodeProfile = dialogs.kiloCode.isOpen
+    ? dialogs.kiloCode.profile
+    : null
+  const kelivoProfile = dialogs.kelivo.input
+  const isCursorPlusDialogOpen = dialogs.cursorPlus.isOpen
+  const claudeCodeRouterProfile = dialogs.claudeCodeRouter.isOpen
+    ? dialogs.claudeCodeRouter.profile
+    : null
   const claudeCodeRouterSource = useMemo(
     () =>
       claudeCodeRouterProfile
@@ -207,7 +215,6 @@ export function ServiceCredentialCard({
         : null,
     [claudeCodeRouterProfile],
   )
-
   const handleSaveToApiCredentialProfiles = async () => {
     try {
       await saveAccountRuntimeKeysToApiCredentialProfiles({
@@ -247,88 +254,6 @@ export function ServiceCredentialCard({
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   } as const
 
-  const handleUseInCherry = () => {
-    const tracker = startProductAnalyticsAction({
-      ...apiCredentialProfileExportContext,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
-    })
-
-    try {
-      OpenInCherryStudio(createProfileCredentialExportData(transientProfile))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      showResultToast({
-        success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error, t("messages:errors.unknown")),
-        }),
-      })
-    }
-  }
-
-  const handleOpenClaudeCodeRouter = () => {
-    if (!claudeCodeRouterBaseUrl?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:claudeCodeRouter.configMissing"),
-      })
-      return
-    }
-
-    setClaudeCodeRouterProfile(transientProfile)
-  }
-
-  const handleImportToManagedSite = async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    try {
-      const result = await openWithAccount(
-        account,
-        runtimeKey,
-        (channelResult) => {
-          showResultToast(channelResult)
-          if (channelResult?.success) {
-            void Promise.resolve(
-              markGatewayGuidanceOnboardingCompleted(),
-            ).catch((error) =>
-              logger.error(
-                "Failed to mark gateway guidance onboarding complete",
-                error,
-              ),
-            )
-          }
-        },
-        {
-          managedSiteStatus,
-        },
-      )
-      tracker.complete(
-        result.opened || result.deferred
-          ? PRODUCT_ANALYTICS_RESULTS.Success
-          : PRODUCT_ANALYTICS_RESULTS.Skipped,
-      )
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      showResultToast({
-        success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error, t("messages:errors.unknown")),
-        }),
-      })
-    }
-  }
-
   const handleOpenManagedSiteSettings = () => {
     void Promise.resolve(
       openSettingsTab("managedSite", {
@@ -350,26 +275,22 @@ export function ServiceCredentialCard({
       {kiloCodeProfile ? (
         <KiloCodeProfileExportDialog
           isOpen={true}
-          onClose={() => setKiloCodeProfile(null)}
+          onClose={dialogs.kiloCode.close}
           profile={kiloCodeProfile}
         />
       ) : null}
       {kelivoProfile ? (
         <KelivoExportDialog
           isOpen={true}
-          onClose={() => setKelivoProfile(null)}
+          onClose={dialogs.kelivo.close}
           initialValue={kelivoProfile}
-          analyticsContext={{
-            ...apiCredentialProfileExportContext,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
-          }}
+          analyticsContext={dialogs.kelivo.analyticsContext}
         />
       ) : null}
       {isCursorPlusDialogOpen ? (
         <CursorPlusExportDialog
           isOpen={true}
-          onClose={() => setIsCursorPlusDialogOpen(false)}
+          onClose={dialogs.cursorPlus.close}
           source={runtimeExportSource}
         />
       ) : null}
@@ -377,7 +298,7 @@ export function ServiceCredentialCard({
       {claudeCodeRouterSource ? (
         <ClaudeCodeRouterImportDialog
           isOpen={true}
-          onClose={() => setClaudeCodeRouterProfile(null)}
+          onClose={dialogs.claudeCodeRouter.close}
           source={claudeCodeRouterSource}
           routerBaseUrl={claudeCodeRouterBaseUrl}
           routerApiKey={claudeCodeRouterApiKey}
@@ -390,13 +311,13 @@ export function ServiceCredentialCard({
       ) : null}
       <VerifyApiCredentialProfileDialog
         isOpen={Boolean(verifyingProfile)}
-        onClose={() => setVerifyingProfile(null)}
+        onClose={closeVerification}
         profile={verifyingProfile}
       />
       {cliVerifyingProfile ? (
         <VerifyCliSupportDialog
           isOpen={true}
-          onClose={() => setCliVerifyingProfile(null)}
+          onClose={closeCliVerification}
           profile={cliVerifyingProfile}
         />
       ) : null}
@@ -511,10 +432,10 @@ export function ServiceCredentialCard({
                     }
                     actions={{
                       [EXPORT_ACTION_TARGETS.CherryStudio]: {
-                        onSelect: handleUseInCherry,
+                        onSelect: exportActions.openCherryStudio,
                       },
                       [EXPORT_ACTION_TARGETS.Kelivo]: {
-                        onSelect: () => setKelivoProfile(transientProfile),
+                        onSelect: exportActions.openKelivo,
                       },
                       ...createDeeplinkExportMenuActions({
                         testIds: {
@@ -533,14 +454,14 @@ export function ServiceCredentialCard({
                           ),
                       }),
                       [EXPORT_ACTION_TARGETS.CursorPlus]: {
-                        onSelect: () => setIsCursorPlusDialogOpen(true),
+                        onSelect: exportActions.openCursorPlus,
                       },
                       [EXPORT_ACTION_TARGETS.KiloCode]: {
-                        onSelect: () => setKiloCodeProfile(transientProfile),
+                        onSelect: exportActions.openKiloCode,
                       },
 
                       [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
-                        onSelect: handleOpenClaudeCodeRouter,
+                        onSelect: exportActions.openClaudeCodeRouter,
                       },
                     }}
                   />
@@ -556,7 +477,7 @@ export function ServiceCredentialCard({
                     aria-label={t("actions.verifyApi")}
                     size="sm"
                     variant="ghost"
-                    onClick={() => setVerifyingProfile(transientProfile)}
+                    onClick={() => void handleVerifyApi()}
                   >
                     <Wrench className="text-link h-4 w-4" />
                   </IconButton>
@@ -564,7 +485,7 @@ export function ServiceCredentialCard({
                     aria-label={t("actions.verifyCliSupport")}
                     size="sm"
                     variant="ghost"
-                    onClick={() => setCliVerifyingProfile(transientProfile)}
+                    onClick={() => void handleVerifyCliSupport()}
                   >
                     <Terminal className="text-link h-4 w-4" />
                   </IconButton>
