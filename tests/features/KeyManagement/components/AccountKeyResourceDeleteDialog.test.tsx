@@ -11,10 +11,10 @@ const mocks = vi.hoisted(() => ({ config: vi.fn() }))
 vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: () => ({ config: { get: mocks.config } }),
 }))
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getCurrentManagedSiteType: async () => "new-api",
 }))
-vi.mock("~/services/accounts/keyProductCapabilities", () => ({
+vi.mock("~/services/accounts/keys/keyProductCapabilities", () => ({
   supportsRecoverableAccountRuntimeKeySecrets: () => true,
 }))
 
