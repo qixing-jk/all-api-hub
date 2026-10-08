@@ -33,7 +33,7 @@ export async function autoDetectFromExistingTab(
     diagnostics,
   )
   const siteType = candidateTabs.length
-    ? await getAccountSiteType(url)
+    ? await getAccountSiteType(url, protectionBypassExecution)
     : undefined
   const session = siteType
     ? await readAccountBrowserSessionFromExistingTabs({

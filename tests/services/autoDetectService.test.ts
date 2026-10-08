@@ -480,6 +480,9 @@ describe("autoDetectSmart", () => {
   })
 
   it("reads the logged-in site tab when Options is active and temporary detection cannot read a user ID", async () => {
+    mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
+      execution === testExecution ? SITE_TYPES.NEW_API : SITE_TYPES.UNKNOWN,
+    )
     mockGetActiveOrAllTabs.mockResolvedValue([
       { id: 10, active: true, url: "chrome-extension://test/options.html" },
     ])
@@ -519,6 +522,10 @@ describe("autoDetectSmart", () => {
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
     expect(mockGetAccountSiteType).toHaveBeenCalledTimes(1)
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+      "https://example.invalid",
+      testExecution,
+    )
   })
 
   it.each([
@@ -589,6 +596,7 @@ describe("autoDetectSmart", () => {
       expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
       expect(mockGetAccountSiteType).toHaveBeenCalledWith(
         "https://example.invalid",
+        testExecution,
       )
     },
   )
