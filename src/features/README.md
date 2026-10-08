@@ -35,6 +35,11 @@ workflow and its shared model-selection UI. `ManagedSiteWidgets` owns reusable
 managed-site configuration, assessment, link, and import UI. Automatic check-in UI
 opening and completion belong to `AutoCheckin/pretrigger`.
 
+`Verification/api` and `Verification/cli` own the shared product verification
+dialogs; `UpdateLog` owns release history UI. The reusable channel-creation dialog
+lives under `ManagedSiteChannels/editor/ChannelDialog`, alongside the channel
+editor workflows that it opens.
+
 Keep generic UI primitives in `src/components/ui`, branding in
 `src/components/icons`, and application-wide layout widgets in `src/components`.
 Shared technical hooks stay in `src/hooks`; preference, analytics, and verification

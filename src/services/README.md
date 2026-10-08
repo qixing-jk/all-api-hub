@@ -27,6 +27,10 @@ follow the same rule under `apiAdapters/managedSites/<site>`: the index owns the
 capability definition and the helper stays next to it. Shared config and request
 adapters remain at the parent level.
 
+Browser action behavior, context menu registration, and preference side-effect
+message handling live together in `preferences/runtime`. Background entrypoints
+compose these operations; services do not import entrypoint implementations.
+
 Keep concrete entrypoints that already implement a public operation, such as the
 OpenRouter capability definition and the cloud-sync provider services. Import
 helpers from their concrete owners; do not introduce forwarding barrels just to
