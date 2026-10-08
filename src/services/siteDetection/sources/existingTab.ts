@@ -1,5 +1,5 @@
 import { AUTO_DETECT_STRATEGIES } from "~/constants/autoDetect"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   getAccountBrowserSessionTabs,
   readAccountBrowserSessionFromExistingTabs,
@@ -32,9 +32,20 @@ export async function autoDetectFromExistingTab(
     browserContext,
     diagnostics,
   )
-  const siteType = candidateTabs.length
-    ? await getAccountSiteType(url, protectionBypassExecution)
-    : undefined
+  let siteType: AccountSiteType | undefined
+  if (candidateTabs.length) {
+    // An authorized title probe opens a temporary page, so keep reusable-tab
+    // detection direct unless the site's protection prevents classification.
+    try {
+      siteType = await getAccountSiteType(url)
+    } catch (error) {
+      if (!protectionBypassExecution) throw error
+      siteType = SITE_TYPES.UNKNOWN
+    }
+    if (siteType === SITE_TYPES.UNKNOWN && protectionBypassExecution) {
+      siteType = await getAccountSiteType(url, protectionBypassExecution)
+    }
+  }
   const session = siteType
     ? await readAccountBrowserSessionFromExistingTabs({
         baseUrl: url,

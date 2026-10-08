@@ -486,54 +486,70 @@ describe("autoDetectSmart", () => {
     expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
   })
 
-  it("reads the logged-in site tab when Options is active and temporary detection cannot read a user ID", async () => {
-    mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
-      execution === testExecution ? SITE_TYPES.NEW_API : SITE_TYPES.UNKNOWN,
-    )
-    mockGetActiveOrAllTabs.mockResolvedValue([
-      { id: 10, active: true, url: "chrome-extension://test/options.html" },
-    ])
-    browserAny.tabs.query.mockResolvedValue([
-      { id: 10, active: true, url: "chrome-extension://test/options.html" },
-      { id: 20, active: false, url: "https://example.invalid/dashboard" },
-    ])
-    browserAny.tabs.sendMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "12",
-        user: { id: 12, username: "alice" },
-      },
-    })
-    mockFetchUserInfo.mockResolvedValue(null)
-
-    const result = await autoDetectSmart(
-      "https://example.invalid",
-      testExecution,
-    )
-
-    expect(result).toMatchObject({
-      success: true,
-      data: {
-        userId: "12",
-        fetchContext: {
-          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
-          tabId: 20,
-          origin: "https://example.invalid",
+  it.each(["direct", "unknown", "reject"])(
+    "reads the logged-in site tab after %s classification while keeping temporary pages optional",
+    async (classification) => {
+      mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
+        execution === testExecution || classification === "direct"
+          ? SITE_TYPES.NEW_API
+          : classification === "reject"
+            ? Promise.reject(new Error("Protected site classification blocked"))
+            : SITE_TYPES.UNKNOWN,
+      )
+      mockGetActiveOrAllTabs.mockResolvedValue([
+        { id: 10, active: true, url: "chrome-extension://test/options.html" },
+      ])
+      browserAny.tabs.query.mockResolvedValue([
+        { id: 10, active: true, url: "chrome-extension://test/options.html" },
+        { id: 20, active: false, url: "https://example.invalid/dashboard" },
+      ])
+      browserAny.tabs.sendMessage.mockResolvedValue({
+        success: true,
+        data: {
+          userId: "12",
+          user: { id: 12, username: "alice" },
         },
-      },
-      autoDetectContext: {
-        strategy: AUTO_DETECT_STRATEGIES.ExistingTab,
-        currentTabMatched: false,
-      },
-    })
-    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
-    expect(mockFetchUserInfo).not.toHaveBeenCalled()
-    expect(mockGetAccountSiteType).toHaveBeenCalledTimes(1)
-    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
-      "https://example.invalid",
-      testExecution,
-    )
-  })
+      })
+      mockFetchUserInfo.mockResolvedValue(null)
+
+      const result = await autoDetectSmart(
+        "https://example.invalid",
+        testExecution,
+      )
+
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          userId: "12",
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 20,
+            origin: "https://example.invalid",
+          },
+        },
+        autoDetectContext: {
+          strategy: AUTO_DETECT_STRATEGIES.ExistingTab,
+          currentTabMatched: false,
+        },
+      })
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+      expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      expect(mockGetAccountSiteType).toHaveBeenCalledTimes(
+        classification === "direct" ? 1 : 2,
+      )
+      expect(mockGetAccountSiteType).toHaveBeenNthCalledWith(
+        1,
+        "https://example.invalid",
+      )
+      if (classification !== "direct") {
+        expect(mockGetAccountSiteType).toHaveBeenNthCalledWith(
+          2,
+          "https://example.invalid",
+          testExecution,
+        )
+      }
+    },
+  )
 
   it.each(["invalid-session", "worker-rejection"])(
     "recovers background session %s through the API without accepting invalid identity",
@@ -643,7 +659,6 @@ describe("autoDetectSmart", () => {
       expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
       expect(mockGetAccountSiteType).toHaveBeenCalledWith(
         "https://example.invalid",
-        testExecution,
       )
     },
   )
@@ -683,9 +698,9 @@ describe("autoDetectSmart", () => {
     browserAny.tabs.query.mockResolvedValue([
       { id: 20, url: "https://example.invalid/dashboard" },
     ])
-    mockGetAccountSiteType.mockRejectedValueOnce(
-      new Error("passive probe failed"),
-    )
+    mockGetAccountSiteType
+      .mockRejectedValueOnce(new Error("passive probe failed"))
+      .mockRejectedValueOnce(new Error("passive probe failed"))
     mockSendRuntimeMessage.mockResolvedValue({
       success: true,
       data: { userId: "88", siteTypeHint: SITE_TYPES.NEW_API },
