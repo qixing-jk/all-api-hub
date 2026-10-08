@@ -1,4 +1,4 @@
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 /** Reset persisted preferences before discarding their local connection draft. */

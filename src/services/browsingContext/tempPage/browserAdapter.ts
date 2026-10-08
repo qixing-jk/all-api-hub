@@ -4,11 +4,9 @@ import { checkTempContextProtectionGuards } from "~/services/browsingContext/tem
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
   normalizeTempWindowFallbackPreferences,
-} from "~/services/preferences/tempWindowFallbackPreferences"
-import {
-  userPreferences,
   type TempWindowFallbackPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import {
   getTab,

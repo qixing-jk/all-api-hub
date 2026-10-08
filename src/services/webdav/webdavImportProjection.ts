@@ -1,7 +1,7 @@
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import type { RawBackupData } from "~/services/importExport/backupContracts"
-import { type UserPreferences } from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { restoreWebdavLocalOnlyPreferences } from "~/services/preferences/webdavSharedPreferences"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import {

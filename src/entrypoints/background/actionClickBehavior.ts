@@ -1,9 +1,9 @@
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import {
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
-  userPreferences,
   type ToolbarActionClickBehavior,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

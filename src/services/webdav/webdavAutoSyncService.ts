@@ -1,4 +1,6 @@
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { type PreferenceWriteFailure } from "~/services/preferences/preferencesStore"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -26,11 +28,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { ACCOUNT_STORAGE_KEYS } from "../core/storageKeys"
-import {
-  userPreferences,
-  type PreferenceWriteFailure,
-  type UserPreferences,
-} from "../preferences/userPreferences"
+import { userPreferences } from "../preferences/userPreferences"
 import { WebdavAutoSyncMessageTypes } from "../runtimeMessaging/messageTypes"
 import {
   createRuntimeMessageFailure,

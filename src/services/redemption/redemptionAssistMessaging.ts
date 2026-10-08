@@ -1,4 +1,4 @@
-import type { RedemptionAssistPreferences } from "~/services/preferences/userPreferences"
+import type { RedemptionAssistPreferences } from "~/services/preferences/preferencesSchema"
 import {
   defineExtensionMessaging,
   type Logger,

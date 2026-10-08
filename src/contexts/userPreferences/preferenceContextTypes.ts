@@ -2,15 +2,15 @@ import type { Dispatch, SetStateAction } from "react"
 
 import { type ManagedSiteType } from "~/constants/siteType"
 import {
-  type PreferenceWriteResult,
   type RedemptionAssistPreferences,
-  type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type ToolbarActionClickBehavior,
-  type userPreferences,
   type UserPreferences,
   type WebAiApiCheckPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { type userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ActiveSortField,
   CurrencyType,

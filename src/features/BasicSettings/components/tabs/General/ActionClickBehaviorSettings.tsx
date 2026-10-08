@@ -6,11 +6,11 @@ import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
-  DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ToolbarActionClickBehavior,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"

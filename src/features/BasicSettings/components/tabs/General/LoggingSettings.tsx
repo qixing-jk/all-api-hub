@@ -30,7 +30,7 @@ import {
   LOG_HISTORY_LIMIT,
   LOG_HISTORY_RETENTION_MS,
 } from "~/services/logging/logHistory"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { LOG_LEVELS, type LogLevel } from "~/types/logging"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 

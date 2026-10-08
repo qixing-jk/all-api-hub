@@ -13,10 +13,8 @@ import {
   readGptLoadFailureMessage,
   revealGptLoadGroupCredential,
 } from "~/services/apiService/gptLoad"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   normalizeGptLoadBaseUrl,

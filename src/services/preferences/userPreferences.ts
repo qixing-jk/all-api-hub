@@ -543,8 +543,3 @@ class UserPreferencesService extends PreferencesStore {
   }
 }
 export const userPreferences = new UserPreferencesService()
-
-export * from "./preferencesSchema"
-export * from "./preferencesDefaults"
-export * from "./preferencesStore"
-export type { TempWindowFallbackPreferences } from "./tempWindowFallbackPreferences"

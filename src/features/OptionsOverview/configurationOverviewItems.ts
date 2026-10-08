@@ -5,7 +5,7 @@ import {
   WEBDAV_AUTO_SYNC_TARGET_IDS,
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { SiteAccount } from "~/types"
 import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 

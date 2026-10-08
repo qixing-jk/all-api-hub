@@ -1,6 +1,6 @@
 import { normalizeBackupForMerge } from "~/services/importExport/backupCodec"
 import type { RawBackupData } from "~/services/importExport/backupContracts"
-import { type UserPreferences } from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 
 /**
  * Type guard for checking if a value is a non-null object (Record).

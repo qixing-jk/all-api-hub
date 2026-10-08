@@ -16,10 +16,8 @@ import {
   hasPermissions,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
-import {
-  TOOLBAR_ACTION_CLICK_BEHAVIORS,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { TOOLBAR_ACTION_CLICK_BEHAVIORS } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsPreferencesChangeListener,

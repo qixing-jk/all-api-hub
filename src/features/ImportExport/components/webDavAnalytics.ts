@@ -1,4 +1,4 @@
-import type { PreferenceWriteFailure } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteFailure } from "~/services/preferences/preferencesStore"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   type ProductAnalyticsActionContext,

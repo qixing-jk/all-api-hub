@@ -16,7 +16,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   SITE_ANNOUNCEMENT_NOTIFICATION_MAX_AGE_DAYS_RANGE,
   SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE,

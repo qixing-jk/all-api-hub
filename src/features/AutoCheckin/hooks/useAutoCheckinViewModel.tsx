@@ -10,7 +10,7 @@ import {
   sendAutoCheckinMessage,
   type AutoCheckinBasicResponse,
 } from "~/services/checkin/autoCheckin/messaging"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

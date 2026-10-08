@@ -1,4 +1,4 @@
-import { type UserPreferences } from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 

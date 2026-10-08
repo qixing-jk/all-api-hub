@@ -1,4 +1,5 @@
 import { mergeApiCredentialProfilesConfigs } from "~/services/apiCredentialProfiles/profileConfigCodec"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
@@ -19,8 +20,6 @@ import {
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
-
-import { type UserPreferences } from "../preferences/userPreferences"
 
 const logger = createLogger("WebdavAutoSync")
 

@@ -23,6 +23,7 @@ import {
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   createAutomaticProtectionBypassExecution,
   isManualModelSyncProtectionBypassExecution,
@@ -48,10 +49,7 @@ import { t } from "~/utils/i18n/core"
 
 import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "../../preferences/userPreferences"
+import { userPreferences } from "../../preferences/userPreferences"
 import { normalizeChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { saveModelSyncExecution } from "./executionResults"
 import { ModelSyncService } from "./modelSyncService"

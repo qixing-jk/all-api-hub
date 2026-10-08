@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { expect, it, vi } from "vitest"
 
 import { useAutoCheckinSettingsViewModel } from "~/features/BasicSettings/components/tabs/CheckinRedeem/useAutoCheckinSettingsViewModel"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 const mocks = vi.hoisted(() => ({
   update: vi.fn().mockResolvedValue({ ok: true }),

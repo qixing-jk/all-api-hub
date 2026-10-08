@@ -2,12 +2,10 @@ import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
 } from "~/services/preferences/contentScriptFeatureDefaults"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type TempWindowFallbackPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/contracts"
 import { trackSettingsSnapshotEvents } from "~/services/productAnalytics/settings"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"

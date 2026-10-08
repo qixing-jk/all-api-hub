@@ -10,7 +10,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { validateGptLoadCredential } from "~/services/managedSites/providers/gptLoad"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
 import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"

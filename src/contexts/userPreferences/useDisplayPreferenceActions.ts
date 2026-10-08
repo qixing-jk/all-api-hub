@@ -10,12 +10,12 @@ import {
   PreferencesMessageTypes,
   sendPreferencesMessage,
 } from "~/services/preferences/messaging"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
   type ToolbarActionClickBehavior,
   type UserPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ActiveSortField,
   CurrencyType,

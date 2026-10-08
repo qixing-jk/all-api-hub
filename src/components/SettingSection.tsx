@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingsResetButton } from "~/components/SettingsResetButton"
 import { BodySmall, ConfirmDialog, Heading3 } from "~/components/ui"
 import toast from "~/lib/notify"
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 

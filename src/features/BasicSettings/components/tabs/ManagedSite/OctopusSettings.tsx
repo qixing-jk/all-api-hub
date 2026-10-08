@@ -9,7 +9,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"

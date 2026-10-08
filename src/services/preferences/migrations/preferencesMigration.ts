@@ -9,6 +9,7 @@ import { DEFAULT_WEB_AI_API_CHECK_PREFERENCES } from "~/services/preferences/con
 import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
 import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
 import { migrateWebDavConfig } from "~/services/preferences/migrations/webDavConfigMigration"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
@@ -33,7 +34,6 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 import { normalizeTempWindowFallbackPreferences } from "../tempWindowFallbackPreferences"
-import type { UserPreferences } from "../userPreferences"
 import { normalizeSharedPreferencesMetadata } from "../webdavSharedPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 

@@ -25,8 +25,8 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { cn } from "~/lib/utils"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,

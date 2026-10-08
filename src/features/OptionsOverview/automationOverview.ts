@@ -3,7 +3,7 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import type {
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,

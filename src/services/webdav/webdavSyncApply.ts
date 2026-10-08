@@ -4,6 +4,7 @@ import {
   featureGuidanceState,
   type FeatureGuidanceState,
 } from "~/services/featureGuidance/featureGuidanceState"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   type AccountStorageConfig,
@@ -20,10 +21,7 @@ import { createLogger } from "~/utils/core/logger"
 import { STORAGE_LOCKS } from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "../preferences/userPreferences"
+import { userPreferences } from "../preferences/userPreferences"
 
 const logger = createLogger("WebdavAutoSync")
 

@@ -1,9 +1,8 @@
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import type { DeepPartial } from "~/types/utils"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { isPlainObject } from "~/utils/core/object"
-
-import type { UserPreferences } from "./userPreferences"
 
 type PreferenceTimestampLike = {
   lastUpdated?: number

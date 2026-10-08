@@ -15,7 +15,7 @@ import {
   resolveCurrentManagedSiteRuntimeConfig,
 } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { type UserPreferences } from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import type {
   ManagedModelChannel,
   ManagedModelMappingPreview,

@@ -9,7 +9,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"

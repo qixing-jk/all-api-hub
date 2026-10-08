@@ -1,11 +1,9 @@
 import { useCallback } from "react"
 
 import { type ManagedSiteType } from "~/constants/siteType"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { type AxonHubConfig } from "~/types/axonHubConfig"
 import { type ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import {

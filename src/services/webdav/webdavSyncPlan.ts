@@ -4,6 +4,7 @@ import {
 } from "~/services/featureGuidance/featureGuidanceState"
 import { normalizeBackupForMerge } from "~/services/importExport/backupCodec"
 import type { RawBackupData } from "~/services/importExport/backupContracts"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   getSharedPreferencesLastUpdated,
   restoreWebdavLocalOnlyPreferences,
@@ -34,7 +35,6 @@ import type { WebDAVSyncDataSelection } from "~/types/webdav"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 
-import { type UserPreferences } from "../preferences/userPreferences"
 import { mergeWebdavSyncData } from "./webdavSyncMerge"
 
 const logger = createLogger("WebdavAutoSync")

@@ -11,10 +11,8 @@ import {
   PreferencesMessageTypes,
   sendPreferencesMessage,
 } from "~/services/preferences/messaging"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   RedemptionAssistMessageTypes,
   sendRedemptionAssistMessage,

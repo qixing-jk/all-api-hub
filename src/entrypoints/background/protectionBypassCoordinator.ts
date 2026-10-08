@@ -7,10 +7,8 @@ import { type AuthorizeTempContextAtAcquire } from "~/services/browsingContext/t
 import { executeAuthorizedTempContextTask } from "~/services/browsingContext/tempPage/taskDispatch"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import {
-  userPreferences,
-  type TempWindowFallbackPreferences,
-} from "~/services/preferences/userPreferences"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION } from "~/services/productAnalytics/contracts"
 import {
   recordProtectionBypassDecision,

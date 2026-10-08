@@ -1,4 +1,4 @@
-import type { ToolbarActionClickBehavior } from "~/services/preferences/userPreferences"
+import type { ToolbarActionClickBehavior } from "~/services/preferences/preferencesSchema"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"

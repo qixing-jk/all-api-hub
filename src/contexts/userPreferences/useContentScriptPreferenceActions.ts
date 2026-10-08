@@ -5,14 +5,14 @@ import {
   PreferencesMessageTypes,
   sendPreferencesMessage,
 } from "~/services/preferences/messaging"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
   type RedemptionAssistPreferences,
-  type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type WebAiApiCheckPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   RedemptionAssistMessageTypes,
   sendRedemptionAssistMessage,

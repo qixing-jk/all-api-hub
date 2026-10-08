@@ -17,7 +17,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"

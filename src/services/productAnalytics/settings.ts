@@ -6,15 +6,17 @@ import {
   type TempContextPreferenceMode,
 } from "~/constants/tempContextMode"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type RedemptionAssistPreferences,
-  type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
   type WebAiApiCheckPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import {
+  normalizeTempWindowFallbackPreferences,
+  type TempWindowFallbackPreferences,
+} from "~/services/preferences/tempWindowFallbackPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import type { BalanceHistoryPreferences } from "~/types/dailyBalanceHistory"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
