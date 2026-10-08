@@ -1070,7 +1070,7 @@ describe("VerifyApiDialog", () => {
     const summary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      resolvedModelId: "gpt-restored",
+      preferredModelId: "gpt-restored",
       results: [
         {
           id: "text-generation",
