@@ -5,11 +5,9 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import { createDefaultPreferences } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
-import {
-  createDefaultPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,

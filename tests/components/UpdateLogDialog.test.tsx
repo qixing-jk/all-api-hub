@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { UpdateLogDialog } from "~/components/dialogs/UpdateLogDialog"
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { starPromotionState } from "~/services/starPromotion/state"
 import * as browserApi from "~/utils/browser/browserApi"

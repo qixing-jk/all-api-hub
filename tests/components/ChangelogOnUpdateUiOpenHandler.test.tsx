@@ -6,10 +6,8 @@ import {
   UpdateLogDialogProvider,
 } from "~/components/dialogs/UpdateLogDialog"
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 

@@ -4,11 +4,9 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE } from "~/constants"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type PreferenceWriteResult,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"

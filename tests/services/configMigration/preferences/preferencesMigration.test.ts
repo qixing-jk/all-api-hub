@@ -9,11 +9,9 @@ import {
   migratePreferences,
   needsPreferencesMigration,
 } from "~/services/preferences/migrations/preferencesMigration"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,

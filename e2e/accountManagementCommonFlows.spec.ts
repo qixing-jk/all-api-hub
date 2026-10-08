@@ -14,7 +14,7 @@ import {
 } from "~/services/accounts/accountDefaults"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

@@ -3,7 +3,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import enCheckin from "~/locales/en/autoCheckin.json" with { type: "json" }
 import zhCheckin from "~/locales/zh-CN/autoCheckin.json" with { type: "json" }
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,

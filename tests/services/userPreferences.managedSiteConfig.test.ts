@@ -4,11 +4,9 @@ import { Storage } from "@plasmohq/storage"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type PreferenceWriteResult,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_CLAUDE_CODE_HUB_CONFIG } from "~/types/claudeCodeHubConfig"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"

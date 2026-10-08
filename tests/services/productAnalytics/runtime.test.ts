@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createDefaultPreferences } from "~/services/preferences/userPreferences"
+import { createDefaultPreferences } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,

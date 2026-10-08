@@ -6,10 +6,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { buildAutomationOverview } from "~/features/OptionsOverview/automationOverview"
 import type { OptionsOverviewAutoCheckinPanel } from "~/features/OptionsOverview/types"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   ANNOUNCEMENT_SOURCE_SCOPES,
   type SiteAnnouncementRecord,

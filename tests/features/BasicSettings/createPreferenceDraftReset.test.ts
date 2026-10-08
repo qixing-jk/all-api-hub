@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 describe("createPreferenceDraftReset", () => {
   const defaults = { baseUrl: "", token: "" }

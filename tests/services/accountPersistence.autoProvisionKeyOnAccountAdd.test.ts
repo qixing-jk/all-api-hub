@@ -7,10 +7,8 @@ import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
 import type { AccountKeyResourceSession } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"

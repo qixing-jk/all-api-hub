@@ -10,10 +10,8 @@ import {
   PRODUCT_TOUR_OUTCOMES,
   PRODUCT_TOUR_VARIANTS,
 } from "~/services/featureGuidance/featureGuidanceState"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { setLoggingPreferences } from "~/utils/core/logger"
 
 const storage = new Storage({ area: "local" })

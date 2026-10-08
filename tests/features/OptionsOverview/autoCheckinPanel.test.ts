@@ -5,7 +5,7 @@ import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES,
 } from "~/features/OptionsOverview/ids"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
 
 describe("auto check-in overview panel builder", () => {

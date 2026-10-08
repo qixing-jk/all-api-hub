@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { useWebdavAutoSyncSettings } from "~/features/ImportExport/hooks/useWebdavAutoSyncSettings"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 const context = vi.hoisted(() => ({
   preferences: {} as typeof DEFAULT_PREFERENCES,

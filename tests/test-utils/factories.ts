@@ -9,13 +9,15 @@
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
-import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
+} from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import {
+  DEFAULT_TEMP_WINDOW_SIZE,
   type TempWindowFallbackPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/tempWindowFallbackPreferences"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,

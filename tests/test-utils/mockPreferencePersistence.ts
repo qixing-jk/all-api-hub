@@ -1,11 +1,9 @@
 import { type vi } from "vitest"
 
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import {
-  DEFAULT_PREFERENCES,
-  type PreferenceWriteResult,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { patchTouchesSharedPreferences } from "~/services/preferences/webdavSharedPreferences"
 import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"

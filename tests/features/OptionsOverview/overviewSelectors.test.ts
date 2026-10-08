@@ -16,10 +16,8 @@ import {
 } from "~/features/UnifiedApiGuidance"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

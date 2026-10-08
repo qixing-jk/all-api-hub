@@ -3,10 +3,8 @@ import { describe, expect, it, vi } from "vitest"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteConfigFields"
 import { useManagedSiteConfigDraft } from "~/features/BasicSettings/components/tabs/ManagedSite/useManagedSiteConfigDraft"
-import {
-  DEFAULT_PREFERENCES,
-  type PreferenceWriteResult,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 
 vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: ({

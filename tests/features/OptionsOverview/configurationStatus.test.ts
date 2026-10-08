@@ -10,7 +10,7 @@ import {
   summarizeConfigurationStatuses,
 } from "~/features/OptionsOverview/configurationStatus"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type { SiteAccount } from "~/types"
 
 const readyCheckinAccount = {

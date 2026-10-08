@@ -5,10 +5,8 @@ import { Storage } from "@plasmohq/storage"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"

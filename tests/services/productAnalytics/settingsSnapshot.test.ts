@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  DEFAULT_PREFERENCES,
-  type TempWindowFallbackPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   SETTINGS_SNAPSHOT_INTERVAL_MS,
   shouldSendSettingsSnapshot,

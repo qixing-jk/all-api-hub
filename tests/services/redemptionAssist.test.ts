@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 const messagingMocks = vi.hoisted(() => ({
   onRedemptionAssistMessage: vi.fn(() => vi.fn()),

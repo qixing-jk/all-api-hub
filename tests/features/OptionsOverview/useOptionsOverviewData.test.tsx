@@ -9,10 +9,8 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/a
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { SiteHealthStatus } from "~/types"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"

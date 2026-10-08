@@ -4,11 +4,9 @@ import {
   setupTempWindowListeners,
 } from "~/services/browsingContext/tempPage/runtime"
 import { executeAuthorizedTempContextTask as executeAuthorizedProductionTask } from "~/services/browsingContext/tempPage/taskDispatch"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type TempWindowFallbackPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   getTempContextTaskMetadata,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
