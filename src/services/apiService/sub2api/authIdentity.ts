@@ -1,13 +1,15 @@
-import { fetchApi } from "~/services/apiTransport/request"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
-
-import { parseSub2ApiEnvelope, parseSub2ApiUserIdentity } from "./parsing"
-import { decodeSub2ApiResponseError } from "./responseError"
+import {
+  parseSub2ApiEnvelope,
+  parseSub2ApiUserIdentity,
+} from "~/services/apiService/sub2api/parsing"
+import { decodeSub2ApiResponseError } from "~/services/apiService/sub2api/responseError"
 import {
   SUB2API_AUTH_ME_ENDPOINT,
   type Sub2ApiAuthMeData,
   type Sub2ApiAuthMeResponse,
-} from "./type"
+} from "~/services/apiService/sub2api/type"
+import { fetchApi } from "~/services/apiTransport/request"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 /** Reads Sub2API's canonical dashboard identity with an already-prepared request. */
 export async function fetchSub2ApiAuthIdentity(request: ApiServiceRequest) {

@@ -1,8 +1,13 @@
 import { vi } from "vitest"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock(
+  "~/services/managedSites/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+  }),
+)
 
 const mockFeatureGuidanceGetStateStrict = vi
   .fn()

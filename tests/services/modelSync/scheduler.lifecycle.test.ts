@@ -51,9 +51,14 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock(
+  "~/services/managedSites/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+  }),
+)
 
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),

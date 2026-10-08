@@ -1,15 +1,14 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_EXECUTION_KINDS,
   PROTECTION_BYPASS_USER_COMMANDS,
-  type TEMP_CONTEXT_TASK_KINDS,
   type ResolvedProtectionBypassExecution,
+  type TEMP_CONTEXT_TASK_KINDS,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
 import { OCTOPUS_API_RESOURCE_BINDINGS } from "~/types/tempWindowFetch"
-
-import { resolveCurrentManagedSiteRuntimeConfig } from "../runtimeConfig"
 
 type OctopusApiFetchTask = Extract<
   TempContextTask,

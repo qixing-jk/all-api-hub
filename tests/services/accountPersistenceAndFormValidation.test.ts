@@ -9,7 +9,10 @@ import {
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
-import { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
+import {
+  extractDomainPrefix,
+  getSiteName,
+} from "~/services/accounts/siteName"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
