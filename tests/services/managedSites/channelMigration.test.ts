@@ -7,8 +7,8 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHubNativeRuntime"
 import {
   executeManagedSiteMigrationCore,
   prepareManagedSiteMigrationPreviewCore,

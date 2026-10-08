@@ -13,13 +13,11 @@ import {
   type ResourceSecretState,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
-  AxonHubNativeError,
-  openAxonHubNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/axonHub"
-import {
   getAxonHubCredentialCandidates,
   isRegularAxonHubChannelType,
-} from "~/services/apiAdapters/managedResources/axonHubEditorProjection"
+} from "~/services/apiAdapters/managedResources/axonHubCredentialProjection"
+import { openAxonHubNativeResourceOperations } from "~/services/apiAdapters/managedResources/axonHubNativeOperations"
+import { AxonHubNativeError } from "~/services/apiAdapters/managedResources/axonHubNativeRuntime"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,

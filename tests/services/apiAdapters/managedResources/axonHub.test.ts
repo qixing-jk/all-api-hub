@@ -29,15 +29,15 @@ import {
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
+import { axonHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/axonHub"
+import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import {
-  axonHubManagedResourceRegistration,
-  AxonHubNativeError,
-  openAxonHubNativeResourceOperations,
   type AxonHubNativeFailure,
   type AxonHubNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/axonHub"
-import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+} from "~/services/apiAdapters/managedResources/axonHubNativeContracts"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHubNativeOperations"
+import { openAxonHubNativeResourceOperations } from "~/services/apiAdapters/managedResources/axonHubNativeOperations"
+import { AxonHubNativeError } from "~/services/apiAdapters/managedResources/axonHubNativeRuntime"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
