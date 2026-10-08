@@ -8,6 +8,7 @@ import {
   type CliProxyApiProvider,
   type CliProxyApiProviderKind,
 } from "~/services/apiService/cliProxyApi"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -83,6 +84,28 @@ beforeEach(() => {
 const workspace = () => cliProxyApiManagedResourceRegistration.open()
 
 describe("CLIProxyAPI native managed resources", () => {
+  it("contains configuration storage failure at the native workspace boundary", async () => {
+    const spy = vi
+      .spyOn(userPreferences, "getPreferences")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    try {
+      await expect(workspace()).rejects.toMatchObject({
+        failure: { code: "configuration_required" },
+      })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("reports a cancelled read without dispatching provider requests", async () => {
+    const view = await workspace()
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      view.list(undefined, { signal: controller.signal }),
+    ).rejects.toMatchObject({ failure: { code: "aborted" } })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
   it("projects native cleanup URLs independently of display fields", async () => {
     const api = await workspace()
     const page = await api.list()
@@ -159,6 +182,32 @@ describe("CLIProxyAPI native managed resources", () => {
     })
     expect(writes).toEqual([])
   })
+
+  it.each(
+    [undefined, { kind: "clear" }, { kind: "replace", value: " " }].map(
+      (key) => ({ key }),
+    ),
+  )(
+    "rejects scalar providers without a replacement key: $key",
+    async ({ key }) => {
+      const editor = await (await workspace()).openCreateEditor()
+      expect(
+        editor.validate({
+          ...editor.initialValues,
+          type: "gemini-api-key",
+          name: "Provider",
+          baseURL: "https://upstream.example",
+          key,
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          expect.objectContaining({ fieldId: "key" }),
+        ]),
+      })
+      expect(writes).toEqual([])
+    },
+  )
 
   it.each([400, 401, 403, 404, 500])(
     "maps HTTP %s into a controlled list failure",
@@ -596,6 +645,7 @@ describe("CLIProxyAPI multiple credentials", () => {
     "cleared-key",
     "fractional-weight",
     "excess-weight",
+    "non-string-field",
   ])("rejects %s before writing", async (invalidCase) => {
     const editor = await open()
     const value = structuredClone(
@@ -619,6 +669,8 @@ describe("CLIProxyAPI multiple credentials", () => {
     if (invalidCase === "cleared-key") row.secret = { kind: "clear" }
     if (invalidCase === "fractional-weight") row.fields.weight = "1.5"
     if (invalidCase === "excess-weight") row.fields.weight = "1000001"
+    if (invalidCase === "non-string-field")
+      row.fields.weight = 5 as unknown as string
     expect(
       (
         await editor.submit({
