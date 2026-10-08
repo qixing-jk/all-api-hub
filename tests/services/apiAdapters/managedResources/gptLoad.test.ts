@@ -241,6 +241,23 @@ describe("gpt-load native workspace", () => {
         [fields.BaseUrl]: "http://user:pass@bad.invalid",
       }),
     ).toMatchObject({ valid: false })
+    for (const baseUrl of [
+      "ftp://bad",
+      "invalid URL",
+      "http://user:pass@bad.invalid",
+    ]) {
+      expect(
+        await editor.validate({
+          ...editor.initialValues,
+          [fields.BaseUrl]: baseUrl,
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          expect.objectContaining({ fieldId: fields.BaseUrl }),
+        ]),
+      })
+    }
     expect(
       await editor.loadOptions!(fields.Models, editor.initialValues),
     ).toMatchObject([{ value: "gpt-new" }])
