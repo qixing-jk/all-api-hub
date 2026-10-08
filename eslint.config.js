@@ -233,7 +233,7 @@ const siteTypeImportOwners = [
   "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
   "src/services/accounts/migrations/sub2apiAuthMigration.ts", // Historical authentication format.
   "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
-  "src/services/productAnalytics/settings.ts", // Fixed analytics event schema.
+  "src/services/productAnalytics/settingsSnapshots/managedSite.ts", // Projection owns explicit managed-site configuration facts.
   "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.
   "src/features/DevPanel/keyProvisioningPreview.ts", // Development-only native provider editor fixtures.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
@@ -289,7 +289,9 @@ const siteTypeImportOwners = [
   "src/services/productAnalytics/contracts.ts", // Fixed event schema.
   "src/services/productAnalytics/siteEcosystem.ts", // Fixed event schema projection.
   "src/services/siteAnnouncements/announcementProjection.ts", // Unknown cached identity fallback.
-  "src/services/siteDetection/autoDetectSources.ts", // Unknown identity fallback belongs to source result assembly.
+  "src/services/siteDetection/sources/resultAssembly.ts", // Detection source owns unknown identity handling.
+  "src/services/siteDetection/sources/currentTab.ts", // Detection source owns unknown identity handling.
+  "src/services/siteDetection/sources/existingTab.ts", // Detection source owns unknown identity handling.
 ]
 
 export default defineConfig([

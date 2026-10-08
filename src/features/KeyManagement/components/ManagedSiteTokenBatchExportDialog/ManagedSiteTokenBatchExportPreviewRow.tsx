@@ -3,13 +3,8 @@ import { RefreshCcw } from "lucide-react"
 import { useId } from "react"
 
 import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
-import {
-  Badge,
-  Button,
-  Checkbox,
-  CompactMultiSelect,
-  type CompactMultiSelectOption,
-} from "~/components/ui"
+import { Badge, Button, Checkbox, CompactMultiSelect } from "~/components/ui"
+import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import type { ManagedSiteType } from "~/constants/siteType"
 import {
   getManagedSiteBatchExportRowSelectTestId,

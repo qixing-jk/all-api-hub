@@ -4,16 +4,18 @@ import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import {
-  API_CREDENTIAL_PROFILE_CAPTURE_STATUSES,
-  API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES,
-} from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
+import { API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import {
   addProfileLinkTombstones,
   coerceAccountRuntimeKeyLocator,
 } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkStorage"
 import {
-  assertDuplicateRequestHeaders,
+  planApiCredentialProfileCapture,
+  planApiCredentialProfileLink,
+  planApiCredentialProfileRelink,
+  planApiCredentialProfileUnlink,
+} from "~/services/apiCredentialProfiles/profileAssociationPlan"
+import {
   cloneConfig,
   clonePersistedValue,
   coerceApiCredentialProfilesConfigWithRemap,
@@ -27,6 +29,7 @@ import {
   mergeApiCredentialProfilesConfigsWithRemap,
 } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { readApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigReader"
+import { planApiCredentialProfileCreation } from "~/services/apiCredentialProfiles/profileCreationPlan"
 import type {
   ApiCredentialProfileCaptureInput,
   ApiCredentialProfileCaptureResult,
@@ -49,7 +52,6 @@ import { verificationResultHistoryStorage } from "~/services/verification/verifi
 import type {
   ApiCredentialProfile,
   ApiCredentialProfileLink,
-  ApiCredentialProfileLinkSource,
   ApiCredentialProfilesConfig,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
@@ -58,7 +60,6 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
 } from "~/types/apiCredentialProfiles"
 import { onStorageChanged } from "~/utils/browser/browserApi"
-import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -87,51 +88,6 @@ export function subscribeToApiCredentialProfilesChanges(
   }
 
   return onStorageChanged(listener)
-}
-
-const findProfileLinkForPair = (
-  links: readonly ApiCredentialProfileLink[],
-  profileId: string,
-  locator: AccountRuntimeKeyLocator,
-): ApiCredentialProfileLink | undefined => {
-  const locatorIdentity = getAccountRuntimeKeyLocatorIdentity(locator)
-  return links.find(
-    (link) =>
-      link.profileId === profileId &&
-      getAccountRuntimeKeyLocatorIdentity(link.locator) === locatorIdentity,
-  )
-}
-
-const createProfileLink = (params: {
-  links: readonly ApiCredentialProfileLink[]
-  profileId: string
-  locator: AccountRuntimeKeyLocator
-  linkedBy: ApiCredentialProfileLinkSource
-  now: number
-}): {
-  link: ApiCredentialProfileLink
-  hasLocatorConflict: boolean
-} => {
-  const locatorIdentity = getAccountRuntimeKeyLocatorIdentity(params.locator)
-  const hasLocatorConflict = params.links.some(
-    (link) =>
-      getAccountRuntimeKeyLocatorIdentity(link.locator) === locatorIdentity,
-  )
-
-  return {
-    link: {
-      id: safeRandomUUID("api-profile-link"),
-      profileId: params.profileId,
-      locator: params.locator,
-      state: hasLocatorConflict
-        ? API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation
-        : API_CREDENTIAL_PROFILE_LINK_STATES.Active,
-      linkedBy: params.linkedBy,
-      createdAt: params.now,
-      updatedAt: params.now,
-    },
-    hasLocatorConflict,
-  }
 }
 
 /**
@@ -296,77 +252,15 @@ class ApiCredentialProfilesStorageService {
 
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await readApiCredentialProfilesConfig())
-      const identityKey = getIdentityKey(candidateProfile)
-      const existing = config.profiles.find(
-        (profile) => getIdentityKey(profile) === identityKey,
-      )
-      assertDuplicateRequestHeaders(existing, candidateProfile)
-      const sourceUrlChanged =
-        existing !== undefined &&
-        candidateProfile.sourceUrl !== undefined &&
-        candidateProfile.sourceUrl !== existing.sourceUrl
-      const profile =
-        existing && sourceUrlChanged
-          ? {
-              ...existing,
-              sourceUrl: candidateProfile.sourceUrl,
-              updatedAt: now,
-            }
-          : existing ?? candidateProfile
-
-      const profiles = config.profiles.some(({ id }) => id === profile.id)
-        ? config.profiles.map((storedProfile) =>
-            storedProfile.id === profile.id ? profile : storedProfile,
-          )
-        : [...config.profiles, profile]
-      if (!locator) {
-        await this.saveConfig(
-          createNextConfig({ current: config, profiles, now }),
-        )
-        return {
-          status: API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.CapturedUnlinked,
-          profile,
-        }
-      }
-
-      const samePair = findProfileLinkForPair(config.links, profile.id, locator)
-      if (samePair) {
-        if (sourceUrlChanged) {
-          await this.saveConfig(
-            createNextConfig({ current: config, profiles, now }),
-          )
-        }
-        return {
-          status:
-            samePair.state ===
-            API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation
-              ? API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.AssociationConflict
-              : API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
-          profile,
-        }
-      }
-
-      const { link, hasLocatorConflict } = createProfileLink({
-        links: config.links,
-        profileId: profile.id,
+      const plan = planApiCredentialProfileCapture(
+        config,
+        candidateProfile,
         locator,
-        linkedBy: input.linkedBy,
+        input.linkedBy,
         now,
-      })
-      await this.saveConfig(
-        createNextConfig({
-          current: config,
-          profiles,
-          links: [...config.links, link],
-          now,
-        }),
       )
-      return {
-        status: hasLocatorConflict
-          ? API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.AssociationConflict
-          : API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
-        profile,
-      }
+      if (plan.config) await this.saveConfig(plan.config)
+      return plan.result
     })
   }
 
@@ -438,33 +332,9 @@ class ApiCredentialProfilesStorageService {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
       const config = cloneConfig(await readApiCredentialProfilesConfig())
-      if (!config.profiles.some(({ id }) => id === input.profileId)) {
-        throw new Error("Profile not found.")
-      }
-      const locator = coerceAccountRuntimeKeyLocator(input.locator)
-      if (!locator) throw new Error("Account runtime key locator is invalid.")
-
-      const existing = findProfileLinkForPair(
-        config.links,
-        input.profileId,
-        locator,
-      )
-      if (existing) return existing
-
-      const { link } = createProfileLink({
-        links: config.links,
-        profileId: input.profileId,
-        locator,
-        linkedBy: input.linkedBy,
-        now,
-      })
-      const next = createNextConfig({
-        current: config,
-        links: [...config.links, link],
-        now,
-      })
-      await this.saveConfig(next)
-      return next.links.find(({ id }) => id === link.id) ?? link
+      const plan = planApiCredentialProfileLink(config, input, now)
+      if (plan.config) await this.saveConfig(plan.config)
+      return plan.result
     })
   }
 
@@ -474,75 +344,18 @@ class ApiCredentialProfilesStorageService {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
       const config = cloneConfig(await readApiCredentialProfilesConfig())
-      const current = config.links.find(({ id }) => id === input.id)
-      if (!current) throw new Error("Credential profile link not found.")
-      if (!config.profiles.some(({ id }) => id === input.profileId)) {
-        throw new Error("Profile not found.")
-      }
-      const locator = coerceAccountRuntimeKeyLocator(input.locator)
-      if (!locator) throw new Error("Account runtime key locator is invalid.")
-      const locatorIdentity = getAccountRuntimeKeyLocatorIdentity(locator)
-      const removedLinks = config.links.filter(
-        (link) =>
-          link.id !== input.id &&
-          getAccountRuntimeKeyLocatorIdentity(link.locator) === locatorIdentity,
-      )
-      const links = config.links
-        .filter(
-          (link) =>
-            link.id === input.id ||
-            getAccountRuntimeKeyLocatorIdentity(link.locator) !==
-              locatorIdentity,
-        )
-        .map((link) =>
-          link.id === input.id
-            ? {
-                ...link,
-                profileId: input.profileId,
-                locator,
-                state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
-                linkedBy: input.linkedBy,
-                updatedAt: now,
-              }
-            : link,
-        )
-      const next = createNextConfig({
-        current: config,
-        links,
-        linkTombstones: addProfileLinkTombstones(
-          config.linkTombstones,
-          removedLinks,
-          now,
-        ),
-        now,
-      })
-      await this.saveConfig(next)
-      const relinked = next.links.find(({ id }) => id === input.id)
-      if (!relinked) throw new Error("Credential profile relink failed.")
-      return relinked
+      const plan = planApiCredentialProfileRelink(config, input, now)
+      if (plan.config) await this.saveConfig(plan.config)
+      return plan.result
     })
   }
 
   async unlinkProfile(id: string): Promise<boolean> {
     return this.withStorageWriteLock(async () => {
       const config = cloneConfig(await readApiCredentialProfilesConfig())
-      const removedLinks = config.links.filter((link) => link.id === id)
-      const links = config.links.filter((link) => link.id !== id)
-      if (links.length === config.links.length) return false
-      const now = Date.now()
-      await this.saveConfig(
-        createNextConfig({
-          current: config,
-          links,
-          linkTombstones: addProfileLinkTombstones(
-            config.linkTombstones,
-            removedLinks,
-            now,
-          ),
-          now,
-        }),
-      )
-      return true
+      const plan = planApiCredentialProfileUnlink(config, id, Date.now())
+      if (plan.config) await this.saveConfig(plan.config)
+      return plan.result
     })
   }
 
@@ -562,61 +375,17 @@ class ApiCredentialProfilesStorageService {
   ): Promise<{ profile: ApiCredentialProfile; isNew: boolean }> {
     const now = Date.now()
     const nextProfile = createNormalizedProfile(input, now)
-
-    const { created, isNew, profileIdRemap } = await this.withStorageWriteLock(
-      async () => {
-        const config = cloneConfig(await readApiCredentialProfilesConfig())
-
-        const identityKey = getIdentityKey(nextProfile)
-        const existing = config.profiles.find(
-          (p) => getIdentityKey(p) === identityKey,
-        )
-        if (existing) {
-          assertDuplicateRequestHeaders(existing, nextProfile)
-          const profile =
-            nextProfile.sourceUrl !== undefined &&
-            nextProfile.sourceUrl !== existing.sourceUrl
-              ? {
-                  ...existing,
-                  sourceUrl: nextProfile.sourceUrl,
-                  updatedAt: now,
-                }
-              : existing
-          if (profile !== existing) {
-            await this.saveConfig(
-              createNextConfig({
-                current: config,
-                profiles: config.profiles.map((p) =>
-                  p.id === existing.id ? profile : p,
-                ),
-                now,
-              }),
-            )
-          }
-          return { created: profile, isNew: false, profileIdRemap: null }
-        }
-
-        const { profiles: dedupedProfiles, profileIdRemap } = dedupeProfiles([
-          ...(Array.isArray(config.profiles) ? config.profiles : []),
-          nextProfile,
-        ])
-
-        const nextConfig = createNextConfig({
-          current: config,
-          profiles: dedupedProfiles,
-          now,
-        })
-
-        await this.saveConfig(nextConfig)
-        return { created: nextProfile, isNew: true, profileIdRemap }
-      },
-    )
-
-    if (profileIdRemap) {
-      await reconcileVerificationOwners({ remapProfileIds: profileIdRemap })
-    }
-
-    return { profile: created, isNew }
+    const plan = await this.withStorageWriteLock(async () => {
+      const config = cloneConfig(await readApiCredentialProfilesConfig())
+      const plan = planApiCredentialProfileCreation(config, nextProfile, now)
+      if (plan.config) await this.saveConfig(plan.config)
+      return plan
+    })
+    if (plan.profileIdRemap)
+      await reconcileVerificationOwners({
+        remapProfileIds: plan.profileIdRemap,
+      })
+    return plan.result
   }
 
   /**

@@ -4,10 +4,8 @@ import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/account
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { FREEMODEL_OPENAI_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import {
-  defineAccountKeyResourceCapability,
-  type AccountKeyResourceEditorDefinition,
-} from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
+import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,

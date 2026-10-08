@@ -14,8 +14,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  type CompactMultiSelectOption,
 } from "~/components/ui"
+import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { KiloCodeAccountExportCard } from "~/features/KiloCodeExport/components/KiloCodeAccountExportCard"
 import { useKiloCodeExportActions } from "~/features/KiloCodeExport/hooks/useKiloCodeExportActions"
 import { useKiloCodeTokenInventory } from "~/features/KiloCodeExport/hooks/useKiloCodeTokenInventory"
