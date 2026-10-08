@@ -80,6 +80,20 @@ wait for required key input or one-time-secret acknowledgement, and continue to
 managed-site configuration.
 _Avoid_: account save, Sub2API group selection
 
+**Account Draft**:
+Editable account facts and explicit user choices before persistence. Credentials
+and discovered check-in facts belong to the account identity they were obtained
+for; changing that identity may invalidate the evidence without changing the
+user's Automatic Check-in Intent.
+_Avoid_: saved account, detected account
+
+**Managed Site Batch Import Session**:
+A batch of Account Runtime Keys selected for import into one managed-site target,
+together with its preview, user edits and cumulative execution results. Retrying
+failed entries retains the successful results; changing the target invalidates
+the previous target's preview and pending feedback.
+_Avoid_: account save, single import attempt
+
 **Channel Verification Protocol**:
 The inference protocol used to verify models for a Managed Upstream Resource.
 It is derived from that resource's upstream-native channel type; identical type

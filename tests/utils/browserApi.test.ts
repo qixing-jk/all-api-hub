@@ -72,7 +72,6 @@ import {
   removeTab,
   removeWindow,
   requestPermissionsDetailed,
-  requestRuntimeUpdateCheck,
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
   setActionPopup,
@@ -82,6 +81,7 @@ import {
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
+import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
 
 const { loggerMock } = vi.hoisted(() => ({
   loggerMock: {

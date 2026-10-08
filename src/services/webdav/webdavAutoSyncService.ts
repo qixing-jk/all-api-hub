@@ -49,6 +49,7 @@ import {
   type WebdavAutoSyncUpdateSettingsRequest,
 } from "./webdavAutoSyncMessaging"
 import { applyWebdavSyncResult } from "./webdavSyncApply"
+import { WebdavSyncRunLifecycle } from "./webdavSyncRunLifecycle"
 
 const logger = createLogger("WebdavAutoSync")
 
@@ -114,12 +115,9 @@ class WebdavAutoSyncService {
   private removeAlarmListener: (() => void) | null = null
   private removeStorageChangeListener: (() => void) | null = null
   private isInitialized = false
-  private isSyncing = false
+  private readonly syncRuns = new WebdavSyncRunLifecycle()
   private isScheduled = false
   private suppressAccountStorageChangeHandling = false
-  private lastSyncTime = 0
-  private lastSyncStatus: "success" | "error" | "idle" = "idle"
-  private lastSyncError: string | null = null
 
   /**
    * Initialize auto-sync (idempotent).
@@ -269,48 +267,36 @@ class WebdavAutoSyncService {
    * Updates lastSyncTime/status and notifies frontend listeners.
    */
   private async performBackgroundSync() {
-    if (this.isSyncing) {
-      logger.debug("同步正在进行中，跳过本次执行")
-      return
-    }
-
-    this.isSyncing = true
-    try {
-      logger.info("开始执行后台同步")
-
-      await this.syncWithWebdav()
-      // A successful strategy-aware sync supersedes any queued snapshot upload.
-      // Running the section-level best-effort upload first can overwrite a
-      // newer remote addition before Smart Merge sees it.
-      await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
-
-      this.lastSyncTime = Date.now()
-      this.lastSyncStatus = "success"
-      this.lastSyncError = null
-
-      logger.info("后台同步完成")
-
-      // 通知前端更新（如果popup是打开的）
-      this.notifyFrontend("sync_completed", {
-        timestamp: this.lastSyncTime,
-      })
-      await notifyTaskResult({
-        task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-        status: TASK_NOTIFICATION_STATUSES.Success,
-      })
-    } catch (error) {
-      logger.error("后台同步失败", error)
-      this.lastSyncStatus = "error"
-      this.lastSyncError = getErrorMessage(error)
-      this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
-      await notifyTaskResult({
-        task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-        status: TASK_NOTIFICATION_STATUSES.Failure,
-        message: getErrorMessage(error),
-      })
-    } finally {
-      this.isSyncing = false
-    }
+    const outcome = await this.syncRuns.run(
+      async () => {
+        logger.info("开始执行后台同步")
+        await this.syncWithWebdav()
+        // Strategy-aware sync supersedes the queued snapshot upload.
+        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+      },
+      {
+        success: async () => {
+          logger.info("后台同步完成")
+          this.notifyFrontend("sync_completed", {
+            timestamp: this.syncRuns.getStatus().lastSyncTime,
+          })
+          await notifyTaskResult({
+            task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
+            status: TASK_NOTIFICATION_STATUSES.Success,
+          })
+        },
+        failure: async (error) => {
+          logger.error("后台同步失败", error)
+          this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
+          await notifyTaskResult({
+            task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
+            status: TASK_NOTIFICATION_STATUSES.Failure,
+            message: getErrorMessage(error),
+          })
+        },
+      },
+    )
+    if (outcome.kind === "busy") logger.debug("同步正在进行中，跳过本次执行")
   }
 
   private subscribeToAccountStorageChanges(): () => void {
@@ -433,29 +419,25 @@ class WebdavAutoSyncService {
   }
 
   private async performBestEffortUpload() {
-    if (this.isSyncing) {
+    const outcome = await this.syncRuns.run(
+      async () => {
+        logger.info("开始执行尽力而为的 WebDAV 主动上传")
+        await uploadLocalCloudSyncSnapshot()
+      },
+      {
+        success: () =>
+          this.notifyFrontend("sync_completed", {
+            timestamp: this.syncRuns.getStatus().lastSyncTime,
+          }),
+        failure: (error) => {
+          logger.warn("尽力而为的 WebDAV 主动上传失败", error)
+          this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
+        },
+      },
+    )
+    if (outcome.kind === "busy") {
       logger.debug("常规同步正在进行中，延后尽力而为上传")
       await this.scheduleBestEffortUpload("sync_in_progress")
-      return
-    }
-
-    this.isSyncing = true
-    try {
-      logger.info("开始执行尽力而为的 WebDAV 主动上传")
-      await uploadLocalCloudSyncSnapshot()
-      this.lastSyncTime = Date.now()
-      this.lastSyncStatus = "success"
-      this.lastSyncError = null
-      this.notifyFrontend("sync_completed", {
-        timestamp: this.lastSyncTime,
-      })
-    } catch (error) {
-      logger.warn("尽力而为的 WebDAV 主动上传失败", error)
-      this.lastSyncStatus = "error"
-      this.lastSyncError = getErrorMessage(error)
-      this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
-    } finally {
-      this.isSyncing = false
     }
   }
 
@@ -482,38 +464,26 @@ class WebdavAutoSyncService {
    * @returns Result with success flag and optional message.
    */
   async syncNow(): Promise<{ success: boolean; message?: string }> {
-    if (this.isSyncing) {
-      return {
-        success: false,
-        message: "同步正在进行中，请稍后再试",
-      }
-    }
-
-    this.isSyncing = true
-    try {
-      logger.info("执行立即同步")
-      await this.syncWithWebdav()
-      // The regular sync already reconciles the pending local change safely.
-      await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
-      this.lastSyncTime = Date.now()
-      this.lastSyncStatus = "success"
-      this.lastSyncError = null
-      logger.info("立即同步完成")
-      return {
-        success: true,
-        message: "同步成功",
-      }
-    } catch (error) {
-      logger.error("立即同步失败", error)
-      this.lastSyncStatus = "error"
-      this.lastSyncError = getErrorMessage(error)
-      return {
-        success: false,
-        message: getErrorMessage(error),
-      }
-    } finally {
-      this.isSyncing = false
-    }
+    const outcome = await this.syncRuns.run(
+      async () => {
+        logger.info("执行立即同步")
+        await this.syncWithWebdav()
+        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+      },
+      {
+        success: () => {
+          logger.info("立即同步完成")
+        },
+        failure: (error) => {
+          logger.error("立即同步失败", error)
+        },
+      },
+    )
+    if (outcome.kind === "busy")
+      return { success: false, message: "同步正在进行中，请稍后再试" }
+    if (outcome.kind === "error")
+      return { success: false, message: getErrorMessage(outcome.error) }
+    return { success: true, message: "同步成功" }
   }
 
   /**
@@ -586,10 +556,7 @@ class WebdavAutoSyncService {
     return {
       isRunning: this.isScheduled,
       isInitialized: this.isInitialized,
-      isSyncing: this.isSyncing,
-      lastSyncTime: this.lastSyncTime,
-      lastSyncStatus: this.lastSyncStatus,
-      lastSyncError: this.lastSyncError,
+      ...this.syncRuns.getStatus(),
     }
   }
 

@@ -37,7 +37,6 @@ interface PreparedRequestExecution {
   dispatch: () => Promise<Response>
   onDispatch: () => void
   onResponse: () => void
-  wasDispatched: () => boolean
 }
 
 const logger = createLogger("ApiTransportRequest")
@@ -100,7 +99,6 @@ export async function executePreparedRequest<T>(
             },
             onDispatch,
             onResponse,
-            wasDispatched: () => dispatchObserved,
           })
         } catch (error) {
           taskFailure = { error }

@@ -446,11 +446,19 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       .spyOn(cloudSyncTransaction, "uploadLocalCloudSyncSnapshot")
       .mockResolvedValue(undefined)
 
-    service.isSyncing = true
+    let finish!: () => void
+    vi.spyOn(service, "syncWithWebdav").mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const activeRun = service.syncNow()
     await service.performBestEffortUpload()
 
     expect(scheduleSpy).toHaveBeenCalledWith("sync_in_progress")
     expect(uploadSpy).not.toHaveBeenCalled()
+    finish()
+    await activeRun
   })
 
   it("updates sync state and notifies the frontend for successful and failed best-effort uploads", async () => {

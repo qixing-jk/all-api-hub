@@ -7194,17 +7194,25 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))
 
     const today = formatLocalDayKey(new Date())
-    ;(autoCheckinScheduler as any).dailyRunInFlightDay = today
-    ;(autoCheckinScheduler as any).dailyRunInFlightPromise = new Promise(
-      () => {},
+    let finish!: () => void
+    const work = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const runSpy = vi
+      .spyOn(autoCheckinScheduler as any, "runCheckins")
+      .mockReturnValueOnce(work)
+    vi.spyOn(autoCheckinScheduler as any, "scheduleNextRun").mockResolvedValue(
+      undefined,
     )
-
     alarmStore.autoCheckinDaily = {
       name: "autoCheckinDaily",
       scheduledTime: Date.now() + 60_000,
     }
-
-    const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
+    const activeRun = (autoCheckinScheduler as any).handleDailyAlarm(
+      alarmStore.autoCheckinDaily,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
 
     const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
@@ -7218,9 +7226,9 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
         dailyRunInFlightDay: today,
       }),
     })
-    expect(runSpy).not.toHaveBeenCalled()
-    ;(autoCheckinScheduler as any).dailyRunInFlightDay = null
-    ;(autoCheckinScheduler as any).dailyRunInFlightPromise = null
+    expect(runSpy).toHaveBeenCalledTimes(1)
+    finish()
+    await activeRun
     vi.useRealTimers()
   })
 
@@ -7388,21 +7396,36 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
   it("ignores duplicate daily alarms while a run for today is already in flight", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))
-    ;(autoCheckinScheduler as any).dailyRunInFlightDay = "2026-01-23"
-    ;(autoCheckinScheduler as any).dailyRunInFlightPromise =
-      Promise.resolve(undefined)
-    const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
-
+    storedStatus = { dailyAlarmTargetDay: "2026-01-23" }
+    let finish!: () => void
+    const work = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const runSpy = vi
+      .spyOn(autoCheckinScheduler as any, "runCheckins")
+      .mockReturnValueOnce(work)
+    vi.spyOn(autoCheckinScheduler as any, "scheduleNextRun").mockResolvedValue(
+      undefined,
+    )
+    const alarm = { name: "autoCheckinDaily", scheduledTime: Date.now() }
+    const activeRun = (autoCheckinScheduler as any).handleDailyAlarm(
+      alarm,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
     await expect(
-      (autoCheckinScheduler as any).handleDailyAlarm({
-        name: "autoCheckinDaily",
-        scheduledTime: Date.now(),
-      }),
+      (autoCheckinScheduler as any).handleDailyAlarm(alarm),
     ).resolves.toBeUndefined()
-
-    expect(runSpy).not.toHaveBeenCalled()
-    ;(autoCheckinScheduler as any).dailyRunInFlightDay = null
-    ;(autoCheckinScheduler as any).dailyRunInFlightPromise = null
+    expect(runSpy).toHaveBeenCalledTimes(1)
+    finish()
+    await activeRun
+    runSpy.mockResolvedValueOnce(undefined)
+    await (autoCheckinScheduler as any).handleDailyAlarm(
+      alarm,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
+    expect(runSpy).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
   })
 
@@ -7425,8 +7448,15 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
-    expect((autoCheckinScheduler as any).dailyRunInFlightDay).toBeNull()
-    expect((autoCheckinScheduler as any).dailyRunInFlightPromise).toBeNull()
+    storedStatus = { dailyAlarmTargetDay: formatLocalDayKey(new Date()) }
+    runSpy.mockResolvedValueOnce(undefined)
+    scheduleSpy.mockResolvedValueOnce(undefined)
+    await (autoCheckinScheduler as any).handleDailyAlarm(
+      { name: "autoCheckinDaily", scheduledTime: Date.now() },
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
+    expect(runSpy).toHaveBeenCalledTimes(1)
 
     vi.useRealTimers()
   })
@@ -7452,8 +7482,15 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
 
     expect(runSpy).not.toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
-    expect((autoCheckinScheduler as any).dailyRunInFlightDay).toBeNull()
-    expect((autoCheckinScheduler as any).dailyRunInFlightPromise).toBeNull()
+    storedStatus = { dailyAlarmTargetDay: formatLocalDayKey(new Date()) }
+    runSpy.mockResolvedValueOnce(undefined)
+    scheduleSpy.mockResolvedValueOnce(undefined)
+    await (autoCheckinScheduler as any).handleDailyAlarm(
+      { name: "autoCheckinDaily", scheduledTime: Date.now() },
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
+    expect(runSpy).toHaveBeenCalledTimes(1)
 
     vi.useRealTimers()
   })

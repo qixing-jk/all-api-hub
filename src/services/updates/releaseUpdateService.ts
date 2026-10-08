@@ -13,8 +13,8 @@ import {
   getRuntimeId,
   hasAlarmsAPI,
   onAlarm,
-  requestRuntimeUpdateCheck,
 } from "~/utils/browser/browserApi"
+import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
