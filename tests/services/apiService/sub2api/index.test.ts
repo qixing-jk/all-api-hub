@@ -322,6 +322,59 @@ describe("apiService sub2api parsing", () => {
     ).resolves.toBe(false)
   })
 
+  it.each([
+    {
+      data: { items: [{ id: 7, title: "Notice", content: "Body" }] },
+      expected: [{ id: 7, title: "Notice", content: "Body" }],
+    },
+    { data: { items: null }, expected: [] },
+  ])(
+    "reads all announcement list response shapes: %j",
+    async ({ data, expected }) => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      }
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data,
+      } as any)
+      await expect(fetchSub2ApiAnnouncements(request)).resolves.toEqual(
+        expected,
+      )
+      expect(fetchApi).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ endpoint: "/api/v1/announcements" }),
+      )
+    },
+  )
+
+  it("propagates announcement fetch failures and acknowledges encoded read ids", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+    }
+    const failure = new Error("announcement transport failed")
+    vi.mocked(fetchApi).mockRejectedValueOnce(failure)
+    await expect(fetchSub2ApiAnnouncements(request)).rejects.toBe(failure)
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: null,
+    } as any)
+    await expect(
+      markSub2ApiAnnouncementRead(request, "notice/7"),
+    ).resolves.toBe(true)
+    expect(fetchApi).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        endpoint: "/api/v1/announcements/notice%2F7/read",
+        options: expect.objectContaining({ method: "POST" }),
+      }),
+    )
+  })
+
   it("returns the fixed unsupported check-in and parses today usage", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -503,6 +556,16 @@ describe("apiService sub2api refreshAccountData", () => {
       },
       ...overrides,
     }) as Sub2ApiAuthSessionRequest<ApiServiceAccountRequest>
+
+  it("returns failed refresh health for a non-authentication request failure", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(new Error("upstream unavailable"))
+    const result = await refreshAccountData(createRequest())
+    expect(result.success).toBe(false)
+    expect(result.healthStatus).toBeDefined()
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
+  })
 
   it("returns success with today usage when /api/v1/auth/me and /api/v1/usage/stats succeed", async () => {
     vi.mocked(fetchApi)
@@ -2793,22 +2856,65 @@ describe("apiService sub2api exported operations", () => {
       ).resolves.toEqual([])
     })
 
-    it("rejects malformed runtime model payloads with a validation error", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ data: [{ id: "" }] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      )
-      vi.stubGlobal("fetch", fetchMock as any)
+    it.each(
+      [
+        null,
+        [],
+        {},
+        { data: null },
+        { data: [null] },
+        { data: [[]] },
+        { data: [{ id: "" }] },
+        { data: [{ id: 42 }] },
+      ].map((payload) => ({ payload })),
+    )(
+      "rejects malformed runtime model payloads with a validation error: %j",
+      async ({ payload }) => {
+        const fetchMock = vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(payload), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        vi.stubGlobal("fetch", fetchMock as any)
 
-      await expect(
-        fetchSub2ApiRuntimeModels(createRuntimeRequest()),
-      ).rejects.toMatchObject({
-        message: "messages:errors.api.invalidResponseFormat",
-        code: API_ERROR_CODES.BUSINESS_ERROR,
-      })
-    })
+        await expect(
+          fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+        ).rejects.toMatchObject({
+          message: "messages:errors.api.invalidResponseFormat",
+          code: API_ERROR_CODES.BUSINESS_ERROR,
+        })
+      },
+    )
+
+    it.each(
+      [
+        null,
+        [],
+        { code: 0, message: "ignored" },
+        { code: 1 },
+        { code: "blocked", message: " " },
+      ].map((payload) => ({ payload })),
+    )(
+      "retains HTTP auth failure when no valid business error is present: %j",
+      async ({ payload }) => {
+        vi.stubGlobal(
+          "fetch",
+          vi
+            .fn()
+            .mockResolvedValue(
+              new Response(JSON.stringify(payload), { status: 401 }),
+            ),
+        )
+        await expect(
+          fetchSub2ApiRuntimeModels(createRuntimeRequest()),
+        ).rejects.toMatchObject({
+          statusCode: 401,
+          code: API_ERROR_CODES.HTTP_401,
+          endpoint: "/v1/models",
+        })
+      },
+    )
 
     it("rejects invalid JSON runtime model responses with a validation error", async () => {
       const fetchMock = vi.fn().mockResolvedValue(

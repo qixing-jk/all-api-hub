@@ -1206,7 +1206,9 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
+    const { getSidePanelSupport, openSidePanel } = await import(
+      "~/utils/browser/sidePanel"
+    )
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -1216,6 +1218,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     expect(result.reason).toContain("browser.sidebarAction.open missing")
     expect(result.reason).toContain("chrome.sidePanel.open missing")
+    await expect(openSidePanel()).rejects.toThrow("Side panel is not supported")
   })
 
   it("recomputes support on each call", async () => {
@@ -1807,6 +1810,16 @@ describe("browserApi window and manifest helpers", () => {
     expect(addListenerMock).toHaveBeenCalledWith(callback)
     cleanup()
     expect(removeListenerMock).toHaveBeenCalledWith(callback)
+  })
+
+  it("returns safe window removal cleanup when window APIs are unavailable", () => {
+    ;(globalThis as any).browser.windows = undefined
+    const callback = vi.fn()
+    const cleanup = onWindowRemoved(callback)
+
+    expect(cleanup).toBeTypeOf("function")
+    expect(() => cleanup()).not.toThrow()
+    expect(callback).not.toHaveBeenCalled()
   })
 })
 

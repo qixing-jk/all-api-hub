@@ -819,6 +819,35 @@ describe("ServiceCredentialCard", () => {
       )
     })
 
+    it("reports a skipped import when the managed-site dialog does not open", async () => {
+      mockOpenWithAccount.mockResolvedValueOnce({ opened: false })
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith("skipped", undefined)
+    })
+
+    it("reports an import failure without leaving the action unresolved", async () => {
+      mockOpenWithAccount.mockRejectedValueOnce(new Error("connection failed"))
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      expect(mockShowResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith(
+        "failure",
+        expect.objectContaining({ errorCategory: "unknown" }),
+      )
+    })
+
     it("imports the managed-site credential resource", async () => {
       const { user, account } = renderExportCredential()
       await selectExportAction(

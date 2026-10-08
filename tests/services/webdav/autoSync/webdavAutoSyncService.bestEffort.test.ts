@@ -93,6 +93,13 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
 
     expect(
       service.accountChangeUpload.hasDeletedSharedEntries({
+        oldValue: { accounts: [{ id: "deleted-store-account" }] },
+        newValue: undefined,
+      }),
+    ).toBe(true)
+
+    expect(
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: {
           accounts: [{ id: "account-a" }, { id: "account-b" }],
           bookmarks: [{ id: "bookmark-a" }],
@@ -344,6 +351,36 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
 
     await service.accountChangeUpload.performBestEffortUpload()
     expect(uploadSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { ...basePreferences.webdav, autoSync: false },
+    { ...basePreferences.webdav, url: "" },
+  ])(
+    "does not schedule account-change uploads without an enabled configuration: %j",
+    async (webdav) => {
+      const service = createService() as any
+      mockGetPreferences.mockResolvedValueOnce({ webdav })
+      await service.accountChangeUpload.handleSharedAccountStorageChanged()
+      expect(mockCreateAlarm).not.toHaveBeenCalled()
+    },
+  )
+
+  it("handles actual account-change scheduling and contains preference read failures", async () => {
+    const service = createService() as any
+    await service.accountChangeUpload.handleSharedAccountStorageChanged()
+    expect(mockCreateAlarm).toHaveBeenCalledWith(
+      "webdavAutoSyncBestEffortUpload",
+      { delayInMinutes: 1 },
+    )
+    mockCreateAlarm.mockClear()
+    mockGetPreferences.mockRejectedValueOnce(
+      new Error("preferences unavailable"),
+    )
+    await expect(
+      service.accountChangeUpload.handleSharedAccountStorageChanged(),
+    ).resolves.toBeUndefined()
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
   })
 
   it("uploads selected local data while preserving unselected remote preferences", async () => {
