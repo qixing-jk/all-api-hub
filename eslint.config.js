@@ -131,7 +131,7 @@ const dynamicImportAllowlist = [
     ],
   },
   {
-    file: "src/features/BasicSettings/BasicSettings.tsx",
+    file: "src/features/BasicSettings/settingsTabRegistry.ts",
     imports: ["./components/tabs/"],
   },
   {
