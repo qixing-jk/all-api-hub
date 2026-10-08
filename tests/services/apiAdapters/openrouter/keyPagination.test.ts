@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest"
 
-import { createOpenRouterKeyPagination } from "~/services/apiAdapters/openrouter/keyPagination"
+import { createOpenRouterKeyPagination } from "~/services/apiAdapters/openrouter/keys/keyPagination"
 import type { OpenRouterKeyInfo } from "~/services/apiService/openrouter"
 
 const key = (hash: string, workspace = "workspace") =>

@@ -55,8 +55,8 @@ describe("site type import whitelist", () => {
   it.each([
     "src/services/apiAdapters/registry.ts",
     "src/services/siteDetection/detectSiteType.ts",
-    "src/services/accounts/accountDefaults.ts",
-    "src/services/managedSites/configRegistration.ts",
+    "src/services/accounts/editing/accountDefaults.ts",
+    "src/services/managedSites/configuration/configRegistration.ts",
     "src/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide.tsx",
     "src/features/AccountManagement/components/AccountDialog/form/AccountForm.tsx",
     "src/features/AccountManagement/components/AccountDialog/detection/autoDetectDraft.ts",
