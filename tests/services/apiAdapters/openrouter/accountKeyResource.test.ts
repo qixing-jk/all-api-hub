@@ -978,7 +978,8 @@ describe("openRouterAccountKeyResources", () => {
     await editor.submit({
       ...editor.initialValues,
       [OPENROUTER_KEY_FIELD_IDS.Workspace]: "workspace-selected-id",
-      [OPENROUTER_KEY_FIELD_IDS.Creator]: originalOptions?.[0]?.value,
+      [OPENROUTER_KEY_FIELD_IDS.Creator]: atIndex(originalOptions ?? [], 0)
+        .value,
     })
     expect(createOpenRouterKey).toHaveBeenCalledWith(
       expect.anything(),
