@@ -37,6 +37,7 @@ import {
   canAutomaticallyRetryCheckinResult,
   isRetryableCheckinResult,
 } from "~/services/checkin/autoCheckin/resultPolicy"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/runAccountWorkflow"
 import {
   mapRunSummaryToProductAnalyticsResult,
   notifyScheduledRunResult,
@@ -2075,7 +2076,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     resolveProviderForTest.mockReturnValue(provider)
 
     const runAccountCheckinSpy = vi
-      .spyOn((autoCheckinScheduler as any).runEngine, "runAccountCheckin")
+      .spyOn(accountCheckinRunWorkflow, "runAccountCheckin")
       .mockImplementation(async (...args: unknown[]) => {
         const account = args[0] as any
         const accountName = args[1] as string
@@ -2702,7 +2703,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.markAccountAsSiteCheckedIn.mockResolvedValueOnce(false)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "remote-success",
           site_name: "Remote Success",
@@ -2710,8 +2711,10 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Remote Success",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -3268,7 +3271,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     resolveProviderForTest.mockReturnValue(provider)
 
     const refreshSpy = vi.spyOn(
-      (autoCheckinScheduler as any).runEngine,
+      accountCheckinRunWorkflow,
       "refreshAccountsAfterSuccessfulCheckins",
     )
 
@@ -7769,13 +7772,12 @@ describe("autoCheckinScheduler private helpers", () => {
       () => atIndex(deferredRefreshes, refreshIndex++).promise,
     )
 
-    const refreshPromise = (
-      autoCheckinScheduler as any
-    ).runEngine.refreshAccountsAfterSuccessfulCheckins({
-      accountIds: ["a", "a", " ", "b", "c", "d"],
-      force: false,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-    })
+    const refreshPromise =
+      accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
+        accountIds: ["a", "a", " ", "b", "c", "d"],
+        force: false,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
     await vi.waitFor(() => {
       expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledTimes(4)
@@ -7828,9 +7830,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (
-        autoCheckinScheduler as any
-      ).runEngine.refreshAccountsAfterSuccessfulCheckins({
+      accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
         accountIds: ["account-1"],
       }),
     ).resolves.toBeUndefined()
@@ -7843,9 +7843,7 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("returns early when there are no valid accounts to refresh", async () => {
     await expect(
-      (
-        autoCheckinScheduler as any
-      ).runEngine.refreshAccountsAfterSuccessfulCheckins({
+      accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
         accountIds: ["", "   "],
       }),
     ).resolves.toBeUndefined()
@@ -8172,7 +8170,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "method-disabled-result",
           site_name: "Method Disabled",
@@ -8180,8 +8178,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Method Disabled",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8231,7 +8231,7 @@ describe("autoCheckinScheduler private helpers", () => {
       mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(error)
 
       await expect(
-        (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+        accountCheckinRunWorkflow.runAccountCheckin(
           {
             id: "crashed-execution",
             site_name: "Crashed Execution",
@@ -8239,8 +8239,10 @@ describe("autoCheckinScheduler private helpers", () => {
             disabled: false,
             account_info: {},
             checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-          },
+          } as any,
           "Crashed Execution",
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+          SCHEDULED_EXECUTION,
         ),
       ).resolves.toMatchObject({ result: expected })
     },
@@ -8270,7 +8272,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         account,
         account.site_name,
         TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -8346,7 +8348,7 @@ describe("autoCheckinScheduler private helpers", () => {
       })
 
       await expect(
-        (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+        accountCheckinRunWorkflow.runAccountCheckin(
           {
             id: domainReason,
             site_name: domainReason,
@@ -8354,8 +8356,10 @@ describe("autoCheckinScheduler private helpers", () => {
             disabled: false,
             account_info: {},
             checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-          },
+          } as any,
           domainReason,
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+          SCHEDULED_EXECUTION,
         ),
       ).resolves.toMatchObject({
         result: {
@@ -8372,7 +8376,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(null)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "missing-provider",
           site_name: "Missing Provider",
@@ -8380,8 +8384,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Missing Provider",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8401,7 +8407,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(failedProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "provider-failed",
           site_name: "Provider Failed",
@@ -8409,8 +8415,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Provider Failed",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8427,7 +8435,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(throwingProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "provider-threw",
           site_name: "Provider Threw",
@@ -8435,8 +8443,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Provider Threw",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8460,7 +8470,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "network-failure",
           site_name: "Network Failure",
@@ -8468,8 +8478,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Network Failure",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8486,7 +8498,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "uncaught-network-failure",
           site_name: "Uncaught Network Failure",
@@ -8494,8 +8506,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Uncaught Network Failure",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8513,7 +8527,7 @@ describe("autoCheckinScheduler private helpers", () => {
     )
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "uncaught-already-checked",
           site_name: "Uncaught Already Checked",
@@ -8521,8 +8535,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Uncaught Already Checked",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8557,19 +8573,22 @@ describe("autoCheckinScheduler private helpers", () => {
     }
     resolveProviderForTest.mockReturnValue(provider as any)
 
-    await (autoCheckinScheduler as any).runEngine.runAccountCheckins({
+    await accountCheckinRunWorkflow.runAccountCheckins({
       accounts,
       accountDisplayNameById: new Map([
         ["source-a", "Source A"],
         ["source-b", "Source B"],
       ]),
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: SCHEDULED_EXECUTION,
+      loginProviderOwners: new Map(),
     })
 
     expect(provider.checkIn).toHaveBeenCalledTimes(2)
     for (const call of provider.checkIn.mock.calls) {
       expect(call[1]).toEqual({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: SCHEDULED_EXECUTION,
       })
     }
   })
@@ -8585,27 +8604,25 @@ describe("autoCheckinScheduler private helpers", () => {
       checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
     } as any
     const runAccountCheckin = vi.spyOn(
-      (autoCheckinScheduler as any).runEngine,
+      accountCheckinRunWorkflow,
       "runAccountCheckin",
     )
     runAccountCheckin.mockRejectedValueOnce(new TypeError("Failed to fetch"))
     try {
-      const [outcome] = await (
-        autoCheckinScheduler as any
-      ).runEngine.runAccountCheckins({
+      const [outcome] = await accountCheckinRunWorkflow.runAccountCheckins({
         accounts: [account],
         accountDisplayNameById: new Map([[account.id, account.site_name]]),
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         protectionBypassExecution: SCHEDULED_EXECUTION,
         loginProviderOwners: new Map(),
       })
-      expect(outcome.result).toMatchObject({
+      expect(outcome!.result).toMatchObject({
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode: AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
         methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
         retryable: true,
       })
-      expectRecordedRetryDecision(outcome.result)
+      expectRecordedRetryDecision(outcome!.result)
     } finally {
       runAccountCheckin.mockRestore()
     }
@@ -8622,7 +8639,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(successProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "success-account",
           site_name: "Success Account",
@@ -8630,8 +8647,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Success Account",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {
@@ -8650,7 +8669,7 @@ describe("autoCheckinScheduler private helpers", () => {
     resolveProviderForTest.mockReturnValueOnce(alreadyCheckedProvider as any)
 
     await expect(
-      (autoCheckinScheduler as any).runEngine.runAccountCheckin(
+      accountCheckinRunWorkflow.runAccountCheckin(
         {
           id: "already-checked-account",
           site_name: "Already Checked",
@@ -8658,8 +8677,10 @@ describe("autoCheckinScheduler private helpers", () => {
           disabled: false,
           account_info: {},
           checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
-        },
+        } as any,
         "Already Checked",
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        SCHEDULED_EXECUTION,
       ),
     ).resolves.toMatchObject({
       result: {

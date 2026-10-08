@@ -2,7 +2,6 @@ import {
   NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
   parseNewApiDashboardAuthBundleResponse,
-  type NewApiDashboardAuthBundle,
 } from "~/services/apiService/newApi/dashboardAuth"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
@@ -22,14 +21,24 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
-import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
 import { generateNewApiTotpCode, hasNewApiTotpSecret } from "./newApiTotp"
+import {
+  NewApiTransientSessionRuntime,
+  normalizeSessionScopeKey,
+  type EnsureNewApiLoginResult,
+  type NewApiDashboardRefreshResult,
+  type VerifyNewApiSessionResult,
+} from "./newApiTransientSessionRuntime"
 
 const logger = createLogger("NewApiManagedSession")
 
 export const NEW_API_VERIFIED_SESSION_WINDOW_MS = 5 * 60 * 1000
+
+const sessionRuntime = new NewApiTransientSessionRuntime(
+  NEW_API_VERIFIED_SESSION_WINDOW_MS,
+)
 
 /**
  * Security-proof scopes introduced by New API's stateless dashboard auth.
@@ -137,36 +146,6 @@ interface NewApiVerifyResponse {
   scope?: string
 }
 
-interface NewApiSessionState {
-  hasLoggedInSession: boolean
-  verifiedUntil?: number
-  pendingLoginFlow?: {
-    unified?: boolean
-    token: string
-    expiresAt?: number
-  }
-  dashboardAuth?: {
-    token: string
-    /** Epoch seconds, matching the upstream AuthBundle `access_expires_at`. */
-    expiresAt: number
-    sessionId: string
-  }
-  securityProof?: {
-    token: string
-    /** Epoch milliseconds, matching the normalized verified-until timestamp. */
-    expiresAt: number
-    channelId?: number
-  }
-  channelKeyReadQueue?: { pending?: Promise<unknown> }
-  loginPromise?: Promise<EnsureNewApiLoginResult>
-  refreshPromise?: Promise<NewApiDashboardRefreshResult>
-  methodsPromise?: Promise<NewApiVerificationMethods | null>
-  verificationChannelId?: number
-  verificationPromise?: Promise<VerifyNewApiSessionResult>
-}
-
-type NewApiDashboardRefreshResult = "refreshed" | "unavailable"
-
 const NEW_API_DASHBOARD_REFRESH_CONTROLLED_STATUSES = new Set([409, 429])
 const NEW_API_DASHBOARD_REFRESH_REQUEST_ERROR =
   "New API session refresh request failed"
@@ -176,48 +155,6 @@ const NEW_API_SESSION_LIMIT_CODES = {
   ACTIVE: "AUTH_SESSION_LIMIT",
   ISSUANCE: "AUTH_SESSION_ISSUANCE_LIMIT",
 } as const
-
-type EnsureNewApiLoginResult =
-  | {
-      status: "logged-in"
-      methods: NewApiVerificationMethods
-    }
-  | {
-      status: "login-2fa-required"
-    }
-  | {
-      status: "credentials-missing"
-    }
-  | {
-      status: "passkey-manual-required"
-      methods: NewApiVerificationMethods
-    }
-
-interface VerifyNewApiSessionResult {
-  methods: NewApiVerificationMethods
-  verifiedUntil?: number
-}
-
-const sessionStates = new Map<string, NewApiSessionState>()
-
-const normalizeSessionScopeKey = (baseUrl: string) =>
-  normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: true }) ||
-  baseUrl.trim()
-
-const getSessionState = (baseUrl: string): NewApiSessionState => {
-  const scopeKey = normalizeSessionScopeKey(baseUrl)
-  const existing = sessionStates.get(scopeKey)
-
-  if (existing) {
-    return existing
-  }
-
-  const created: NewApiSessionState = {
-    hasLoggedInSession: false,
-  }
-  sessionStates.set(scopeKey, created)
-  return created
-}
 
 const createCookieAuthRequest = (
   baseUrl: string,
@@ -231,25 +168,11 @@ const createCookieAuthRequest = (
   },
 })
 
-const getActiveDashboardAuth = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  const dashboardAuth = state.dashboardAuth
-  if (!dashboardAuth) return undefined
-
-  if (dashboardAuth.expiresAt > Date.now() / 1000) {
-    return dashboardAuth
-  }
-
-  state.dashboardAuth = undefined
-  state.securityProof = undefined
-  state.hasLoggedInSession = false
-  state.verifiedUntil = undefined
-  return undefined
-}
-
 const createDashboardAuthRequest = (
   baseUrl: string,
-  dashboardAuth: NonNullable<NewApiSessionState["dashboardAuth"]>,
+  dashboardAuth: NonNullable<
+    ReturnType<NewApiTransientSessionRuntime["getActiveDashboardAuth"]>
+  >,
 ): ApiServiceRequest => ({
   baseUrl: baseUrl.trim(),
   accountId: `managed-site:new-api-session:${normalizeSessionScopeKey(baseUrl)}`,
@@ -265,7 +188,7 @@ const createManagedSessionRequest = (
   userId?: number | string,
   signal?: AbortSignal,
 ): ApiServiceRequest => {
-  const dashboardAuth = getActiveDashboardAuth(baseUrl)
+  const dashboardAuth = sessionRuntime.getActiveDashboardAuth(baseUrl)
   const request = dashboardAuth
     ? createDashboardAuthRequest(baseUrl, dashboardAuth)
     : createCookieAuthRequest(baseUrl, userId)
@@ -288,32 +211,6 @@ const sanitizeNewApiSessionError = (error: unknown, secrets: string[] = []) => {
   return toSanitizedErrorSummary(error, secrets)
 }
 
-const clearVerifiedState = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  state.verifiedUntil = undefined
-  state.securityProof = undefined
-}
-
-const clearLoggedInState = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  state.hasLoggedInSession = false
-  state.verifiedUntil = undefined
-  state.dashboardAuth = undefined
-  state.securityProof = undefined
-}
-
-const clearPendingLoginFlow = (baseUrl: string) => {
-  getSessionState(baseUrl).pendingLoginFlow = undefined
-}
-
-const toOptionalExpiryTimestamp = (expiresAt: unknown) => {
-  if (typeof expiresAt !== "number" || !Number.isFinite(expiresAt)) {
-    return undefined
-  }
-
-  return expiresAt > 1_000_000_000_000 ? expiresAt : expiresAt * 1000
-}
-
 const toVerifiedUntilTimestamp = (expiresAt?: number) => {
   if (!Number.isFinite(expiresAt)) {
     return Date.now() + NEW_API_VERIFIED_SESSION_WINDOW_MS
@@ -324,74 +221,6 @@ const toVerifiedUntilTimestamp = (expiresAt?: number) => {
     : (expiresAt as number) * 1000
 }
 
-const markLoggedIn = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  state.hasLoggedInSession = true
-}
-
-const storeDashboardAuth = (
-  baseUrl: string,
-  bundle: NewApiDashboardAuthBundle,
-) => {
-  const state = getSessionState(baseUrl)
-  state.dashboardAuth = {
-    token: bundle.token,
-    expiresAt: bundle.expiresAt,
-    sessionId: bundle.sessionId,
-  }
-  state.securityProof = undefined
-  state.verifiedUntil = undefined
-  state.pendingLoginFlow = undefined
-  state.hasLoggedInSession = true
-}
-
-const storePendingLoginFlow = (
-  baseUrl: string,
-  token: string,
-  expiresAt: unknown,
-  unified = false,
-) => {
-  const state = getSessionState(baseUrl)
-  state.pendingLoginFlow = {
-    unified,
-    token,
-    expiresAt: toOptionalExpiryTimestamp(expiresAt),
-  }
-}
-
-const getPendingLoginFlowForSubmission = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  const pending = state.pendingLoginFlow
-  if (!pending) return undefined
-
-  if (pending.expiresAt && pending.expiresAt <= Date.now()) {
-    state.pendingLoginFlow = undefined
-    throw new Error("New API login flow expired")
-  }
-
-  return pending
-}
-
-const hasActivePendingLoginFlow = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  const pending = state.pendingLoginFlow
-  if (!pending) return false
-  if (pending.expiresAt && pending.expiresAt <= Date.now()) {
-    state.pendingLoginFlow = undefined
-    return false
-  }
-  return true
-}
-
-const getTransientSessionSecrets = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  return [
-    state.pendingLoginFlow?.token ?? "",
-    state.dashboardAuth?.token ?? "",
-    state.securityProof?.token ?? "",
-  ]
-}
-
 /** Redacts transient session credentials while retaining error categories. */
 const sanitizeNewApiErrorForOrigin = (
   error: unknown,
@@ -399,7 +228,7 @@ const sanitizeNewApiErrorForOrigin = (
   extraSecrets: string[] = [],
 ) => {
   const secrets = [
-    ...getTransientSessionSecrets(baseUrl),
+    ...sessionRuntime.getTransientSessionSecrets(baseUrl),
     ...extraSecrets,
   ].filter(Boolean)
   if (!secrets.length) return error
@@ -426,37 +255,10 @@ const sanitizeNewApiErrorForOrigin = (
   return error
 }
 
-const markVerified = (
-  baseUrl: string,
-  verifiedUntil?: number,
-  securityProof?: { token: string; expiresAt: number; channelId?: number },
-) => {
-  const state = getSessionState(baseUrl)
-  state.hasLoggedInSession = true
-  state.verifiedUntil =
-    verifiedUntil ?? Date.now() + NEW_API_VERIFIED_SESSION_WINDOW_MS
-  // Successful reads confirm the session but do not issue a replacement proof.
-  if (securityProof) state.securityProof = securityProof
-}
-
-const getActiveSecurityProof = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  const securityProof = state.securityProof
-  if (!securityProof) return undefined
-
-  if (securityProof.expiresAt > Date.now()) {
-    return securityProof
-  }
-
-  state.securityProof = undefined
-  state.verifiedUntil = undefined
-  return undefined
-}
-
 const applyDashboardAuthBundleResponse = (baseUrl: string, body: unknown) => {
   const parsed = parseNewApiDashboardAuthBundleResponse(body)
   if (parsed.kind === "valid") {
-    storeDashboardAuth(baseUrl, parsed.bundle)
+    sessionRuntime.storeDashboardAuth(baseUrl, parsed.bundle)
   }
   return parsed.kind
 }
@@ -528,7 +330,9 @@ async function classifyNewApiSessionLimit(
 
 const toOwnedSessionBundle = (
   baseUrl: string,
-  dashboardAuth: NonNullable<NewApiSessionState["dashboardAuth"]>,
+  dashboardAuth: NonNullable<
+    ReturnType<NewApiTransientSessionRuntime["getActiveDashboardAuth"]>
+  >,
 ) => ({
   baseUrl,
   sessionId: dashboardAuth.sessionId,
@@ -585,7 +389,7 @@ async function postNewApiDashboardRefresh(
   if (body === undefined) return "unavailable"
   const parsedKind = applyDashboardAuthBundleResponse(baseUrl, body)
   if (parsedKind === "valid") {
-    const dashboardAuth = getActiveDashboardAuth(baseUrl)
+    const dashboardAuth = sessionRuntime.getActiveDashboardAuth(baseUrl)
     if (dashboardAuth) {
       await refreshNewApiOwnedSession(
         toOwnedSessionBundle(baseUrl, dashboardAuth),
@@ -604,15 +408,9 @@ async function postNewApiDashboardRefresh(
 async function refreshNewApiDashboardSession(
   baseUrl: string,
 ): Promise<NewApiDashboardRefreshResult> {
-  const state = getSessionState(baseUrl)
-  if (state.refreshPromise) return state.refreshPromise
-
-  state.refreshPromise = postNewApiDashboardRefresh(baseUrl)
-  try {
-    return await state.refreshPromise
-  } finally {
-    state.refreshPromise = undefined
-  }
+  return sessionRuntime.runDashboardRefresh(baseUrl, () =>
+    postNewApiDashboardRefresh(baseUrl),
+  )
 }
 
 /**
@@ -642,13 +440,8 @@ export async function hasNewApiAuthenticatedBrowserSession(
 /**
  * Checks the cached verified-session window for the current runtime.
  */
-export const isNewApiVerifiedSessionActive = (baseUrl: string) => {
-  const state = getSessionState(baseUrl)
-  if (state.dashboardAuth) getActiveDashboardAuth(baseUrl)
-  if (state.securityProof) getActiveSecurityProof(baseUrl)
-  const verifiedUntil = state.verifiedUntil
-  return Boolean(verifiedUntil && verifiedUntil > Date.now())
-}
+export const isNewApiVerifiedSessionActive = (baseUrl: string) =>
+  sessionRuntime.isVerifiedSessionActive(baseUrl)
 
 const getNewApiChannelKeyRequirementKind = (
   result: NewApiChannelKeyRequirementSessionResult,
@@ -680,8 +473,9 @@ async function ensureNewApiChannelKeyAccess(
 ): Promise<void> {
   if (
     isNewApiVerifiedSessionActive(config.baseUrl) &&
-    (!getActiveSecurityProof(config.baseUrl)?.channelId ||
-      getActiveSecurityProof(config.baseUrl)?.channelId === config.channelId)
+    (!sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ||
+      sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ===
+        config.channelId)
   ) {
     return
   }
@@ -705,12 +499,7 @@ async function readNewApiVerificationMethods(
   baseUrl: string,
   userId?: number | string,
 ): Promise<NewApiVerificationMethods | null> {
-  const state = getSessionState(baseUrl)
-  if (state.methodsPromise) {
-    return state.methodsPromise
-  }
-
-  state.methodsPromise = (async () => {
+  return sessionRuntime.runVerificationMethods(baseUrl, async () => {
     const request = createManagedSessionRequest(baseUrl, userId)
     const results = await Promise.allSettled([
       newApiFamilyRequests.data<NewApiTwoFactorStatusResponse>(request, {
@@ -743,7 +532,7 @@ async function readNewApiVerificationMethods(
     })
 
     if (!loggedIn) {
-      clearLoggedInState(baseUrl)
+      sessionRuntime.clearLoggedInState(baseUrl)
 
       if (unexpectedError) {
         throw unexpectedError
@@ -752,18 +541,12 @@ async function readNewApiVerificationMethods(
       return null
     }
 
-    markLoggedIn(baseUrl)
+    sessionRuntime.markLoggedIn(baseUrl)
     return {
       twoFactorEnabled,
       passkeyEnabled,
     }
-  })()
-
-  try {
-    return await state.methodsPromise
-  } finally {
-    state.methodsPromise = undefined
-  }
+  })
 }
 
 /**
@@ -800,7 +583,7 @@ async function readNewApiVerificationMethodsWithRefresh(
 async function postNewApiLogin(
   config: Pick<NewApiConfig, "baseUrl" | "userId" | "username" | "password">,
 ): Promise<EnsureNewApiLoginResult> {
-  if (hasActivePendingLoginFlow(config.baseUrl)) {
+  if (sessionRuntime.hasActivePendingLoginFlow(config.baseUrl)) {
     return { status: "login-2fa-required" }
   }
 
@@ -880,7 +663,7 @@ async function postNewApiLogin(
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
   if (authBundleKind === "valid") {
-    const dashboardAuth = getActiveDashboardAuth(config.baseUrl)
+    const dashboardAuth = sessionRuntime.getActiveDashboardAuth(config.baseUrl)
     if (dashboardAuth) {
       await captureNewApiOwnedSession(
         toOwnedSessionBundle(config.baseUrl, dashboardAuth),
@@ -918,7 +701,7 @@ async function postNewApiLogin(
           (method) => method.method === "2fa" && method.available,
         )
       ) {
-        clearPendingLoginFlow(config.baseUrl)
+        sessionRuntime.clearPendingLoginFlow(config.baseUrl)
         if (
           verificationMethods.some(
             (method) => method.method === "passkey" && method.available,
@@ -935,14 +718,14 @@ async function postNewApiLogin(
     // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
     const flowToken = trimToNull(responseData.flow_token)
     if (flowToken) {
-      storePendingLoginFlow(
+      sessionRuntime.storePendingLoginFlow(
         config.baseUrl,
         flowToken,
         responseData.expires_at,
         unified,
       )
     } else {
-      clearPendingLoginFlow(config.baseUrl)
+      sessionRuntime.clearPendingLoginFlow(config.baseUrl)
     }
 
     return {
@@ -950,9 +733,9 @@ async function postNewApiLogin(
     }
   }
 
-  clearPendingLoginFlow(config.baseUrl)
+  sessionRuntime.clearPendingLoginFlow(config.baseUrl)
   if (authBundleKind === "unrelated") {
-    markLoggedIn(config.baseUrl)
+    sessionRuntime.markLoggedIn(config.baseUrl)
   }
 
   return {
@@ -973,18 +756,7 @@ async function postNewApiLogin(
 async function ensureNewApiLoginSession(
   config: Pick<NewApiConfig, "baseUrl" | "userId" | "username" | "password">,
 ): Promise<EnsureNewApiLoginResult> {
-  const state = getSessionState(config.baseUrl)
-  if (state.loginPromise) {
-    return state.loginPromise
-  }
-
-  state.loginPromise = postNewApiLogin(config)
-
-  try {
-    return await state.loginPromise
-  } finally {
-    state.loginPromise = undefined
-  }
+  return sessionRuntime.runLogin(config.baseUrl, () => postNewApiLogin(config))
 }
 
 /**
@@ -997,77 +769,67 @@ async function verifyNewApiSession(
     code: string
   },
 ): Promise<VerifyNewApiSessionResult> {
-  const state = getSessionState(config.baseUrl)
-  if (state.verificationPromise) {
-    if (state.verificationChannelId === config.channelId)
-      return state.verificationPromise
-    await state.verificationPromise.catch(() => undefined)
-    return await verifyNewApiSession(config, params)
-  }
-
-  state.verificationChannelId = config.channelId
-  state.verificationPromise = (async () => {
-    const request = createManagedSessionRequest(config.baseUrl, config.userId)
-    const usesDashboardAuth = request.auth.authType === AuthTypeEnum.AccessToken
-    const requestParams = usesDashboardAuth
-      ? {
-          ...params,
-          // New API stateless dashboard auth issues a proof scoped to the
-          // sensitive channel-key read. Older Cookie-auth deployments do not
-          // receive this field, preserving their original request contract.
-          scope: NEW_API_SECURITY_PROOF_SCOPES.CHANNEL_KEY_READ,
-          ...(config.channelId
-            ? { context: { channel_id: config.channelId } }
-            : {}),
-        }
-      : params
-    let response: NewApiVerifyResponse
-    try {
-      response = await newApiFamilyRequests.data<NewApiVerifyResponse>(
-        request,
-        {
-          endpoint: "/api/verify",
-          options: {
-            method: "POST",
-            body: JSON.stringify(requestParams),
-          },
-        },
-      )
-    } catch (error) {
-      throw sanitizeNewApiErrorForOrigin(error, config.baseUrl)
-    }
-
-    const proofToken = trimToNull(response?.proof_token)
-    const verifiedUntil = toVerifiedUntilTimestamp(response?.expires_at)
-    markVerified(
-      config.baseUrl,
-      verifiedUntil,
-      usesDashboardAuth && proofToken
+  return sessionRuntime.runVerification(
+    config.baseUrl,
+    config.channelId,
+    async () => {
+      const request = createManagedSessionRequest(config.baseUrl, config.userId)
+      const usesDashboardAuth =
+        request.auth.authType === AuthTypeEnum.AccessToken
+      const requestParams = usesDashboardAuth
         ? {
-            token: proofToken,
-            expiresAt: verifiedUntil,
-            ...(config.channelId ? { channelId: config.channelId } : {}),
+            ...params,
+            // New API stateless dashboard auth issues a proof scoped to the
+            // sensitive channel-key read. Older Cookie-auth deployments do not
+            // receive this field, preserving their original request contract.
+            scope: NEW_API_SECURITY_PROOF_SCOPES.CHANNEL_KEY_READ,
+            ...(config.channelId
+              ? { context: { channel_id: config.channelId } }
+              : {}),
           }
-        : undefined,
-    )
+        : params
+      let response: NewApiVerifyResponse
+      try {
+        response = await newApiFamilyRequests.data<NewApiVerifyResponse>(
+          request,
+          {
+            endpoint: "/api/verify",
+            options: {
+              method: "POST",
+              body: JSON.stringify(requestParams),
+            },
+          },
+        )
+      } catch (error) {
+        throw sanitizeNewApiErrorForOrigin(error, config.baseUrl)
+      }
 
-    return {
-      methods: (await readNewApiVerificationMethods(
+      const proofToken = trimToNull(response?.proof_token)
+      const verifiedUntil = toVerifiedUntilTimestamp(response?.expires_at)
+      sessionRuntime.markVerified(
         config.baseUrl,
-        config.userId,
-      )) ?? {
-        twoFactorEnabled: false,
-        passkeyEnabled: false,
-      },
-      verifiedUntil,
-    }
-  })()
+        verifiedUntil,
+        usesDashboardAuth && proofToken
+          ? {
+              token: proofToken,
+              expiresAt: verifiedUntil,
+              ...(config.channelId ? { channelId: config.channelId } : {}),
+            }
+          : undefined,
+      )
 
-  try {
-    return await state.verificationPromise
-  } finally {
-    state.verificationPromise = undefined
-  }
+      return {
+        methods: (await readNewApiVerificationMethods(
+          config.baseUrl,
+          config.userId,
+        )) ?? {
+          twoFactorEnabled: false,
+          passkeyEnabled: false,
+        },
+        verifiedUntil,
+      }
+    },
+  )
 }
 
 /**
@@ -1082,13 +844,14 @@ async function continueFromLoggedInSession(
 ): Promise<EnsureNewApiManagedSessionResult> {
   if (
     isNewApiVerifiedSessionActive(config.baseUrl) &&
-    (!getActiveSecurityProof(config.baseUrl)?.channelId ||
-      getActiveSecurityProof(config.baseUrl)?.channelId === config.channelId)
+    (!sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ||
+      sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ===
+        config.channelId)
   ) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
       methods,
-      verifiedUntil: getSessionState(config.baseUrl).verifiedUntil,
+      verifiedUntil: sessionRuntime.getVerifiedUntil(config.baseUrl),
     }
   }
 
@@ -1111,7 +874,7 @@ async function continueFromLoggedInSession(
       const errorMessage = sanitizeNewApiSessionError(error, [
         config.totpSecret ?? "",
         generatedCode,
-        ...getTransientSessionSecrets(config.baseUrl),
+        ...sessionRuntime.getTransientSessionSecrets(config.baseUrl),
       ])
 
       logger.warn("Automatic New API secure verification failed", {
@@ -1188,7 +951,7 @@ export async function ensureNewApiManagedSession(
       const errorMessage = sanitizeNewApiSessionError(error, [
         config.totpSecret ?? "",
         generatedCode,
-        ...getTransientSessionSecrets(config.baseUrl),
+        ...sessionRuntime.getTransientSessionSecrets(config.baseUrl),
       ])
 
       logger.warn("Automatic New API login 2FA failed", {
@@ -1221,7 +984,9 @@ export async function submitNewApiLoginTwoFactorCode(
   },
 ): Promise<EnsureNewApiManagedSessionResult> {
   const trimmedCode = code.trim()
-  const pendingLoginFlow = getPendingLoginFlowForSubmission(config.baseUrl)
+  const pendingLoginFlow = sessionRuntime.getPendingLoginFlowForSubmission(
+    config.baseUrl,
+  )
 
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
   let response
@@ -1259,7 +1024,10 @@ export async function submitNewApiLoginTwoFactorCode(
       sanitizeNewApiSessionError(
         trimToNull(response.message) ??
           t("messages:errors.api.invalidResponseFormat"),
-        [trimmedCode, ...getTransientSessionSecrets(config.baseUrl)],
+        [
+          trimmedCode,
+          ...sessionRuntime.getTransientSessionSecrets(config.baseUrl),
+        ],
       ),
       undefined,
       "/api/user/login/2fa",
@@ -1274,7 +1042,7 @@ export async function submitNewApiLoginTwoFactorCode(
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
   if (authBundleKind === "valid") {
-    const dashboardAuth = getActiveDashboardAuth(config.baseUrl)
+    const dashboardAuth = sessionRuntime.getActiveDashboardAuth(config.baseUrl)
     if (dashboardAuth) {
       await captureNewApiOwnedSession(
         toOwnedSessionBundle(config.baseUrl, dashboardAuth),
@@ -1285,8 +1053,8 @@ export async function submitNewApiLoginTwoFactorCode(
   if (authBundleKind === "unrelated") {
     // A partially upgraded fork may accept flow_token but still keep the
     // legacy Cookie-auth success body; retain that compatibility path.
-    clearPendingLoginFlow(config.baseUrl)
-    markLoggedIn(config.baseUrl)
+    sessionRuntime.clearPendingLoginFlow(config.baseUrl)
+    sessionRuntime.markLoggedIn(config.baseUrl)
   }
 
   const methods = (await readNewApiVerificationMethods(
@@ -1340,8 +1108,7 @@ export async function submitNewApiSecureVerificationCode(
  * login, proof invalidation and transient credentials together.
  */
 export function getNewApiChannelKeyReadContext(baseUrl: string) {
-  const state = getSessionState(baseUrl)
-  const queue = (state.channelKeyReadQueue ??= {})
+  const queue = sessionRuntime.getChannelKeyReadQueue(baseUrl)
   return {
     queue,
     ensureAccess: (
@@ -1355,20 +1122,20 @@ export function getNewApiChannelKeyReadContext(baseUrl: string) {
       const usesDashboardAuth =
         request.auth.authType === AuthTypeEnum.AccessToken
       const securityProof = usesDashboardAuth
-        ? getActiveSecurityProof(baseUrl)
+        ? sessionRuntime.getActiveSecurityProof(baseUrl)
         : undefined
       // Consume channel-scoped proof before transport: even a failed/aborted read
       // may have consumed it upstream. Legacy Cookie verification remains cached.
-      if (securityProof?.channelId) clearVerifiedState(baseUrl)
+      if (securityProof?.channelId) sessionRuntime.clearVerifiedState(baseUrl)
       return { request, usesDashboardAuth, securityProof }
     },
     async recordSuccess(usedScopedProof: boolean, signal?: AbortSignal) {
-      if (!usedScopedProof) markVerified(baseUrl)
+      if (!usedScopedProof) sessionRuntime.markVerified(baseUrl)
       await runAbortableTask(
         () =>
           touchNewApiOwnedSession(
             baseUrl,
-            getActiveDashboardAuth(baseUrl)?.sessionId,
+            sessionRuntime.getActiveDashboardAuth(baseUrl)?.sessionId,
           ),
         { signals: [signal] },
       )
@@ -1378,14 +1145,14 @@ export function getNewApiChannelKeyReadContext(baseUrl: string) {
         consumedProofToken,
       ])
       if (isUnauthorizedError(error)) {
-        clearLoggedInState(baseUrl)
+        sessionRuntime.clearLoggedInState(baseUrl)
         return new NewApiChannelKeyRequirementError(
           NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED,
         )
       }
       if (isSecureVerificationError(error)) {
-        clearVerifiedState(baseUrl)
-        markLoggedIn(baseUrl)
+        sessionRuntime.clearVerifiedState(baseUrl)
+        sessionRuntime.markLoggedIn(baseUrl)
         return new NewApiChannelKeyRequirementError(
           NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
         )
@@ -1400,10 +1167,5 @@ export function getNewApiChannelKeyReadContext(baseUrl: string) {
  * all runtime login/verification markers.
  */
 export function clearNewApiManagedSessionState(baseUrl?: string) {
-  if (!baseUrl) {
-    sessionStates.clear()
-    return
-  }
-
-  sessionStates.delete(normalizeSessionScopeKey(baseUrl))
+  sessionRuntime.clear(baseUrl)
 }

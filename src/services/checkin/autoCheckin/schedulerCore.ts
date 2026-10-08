@@ -43,8 +43,11 @@ import {
 import { logger } from "./diagnostics"
 import { createAutomaticCheckinExecution } from "./executionIntent"
 import { pruneExhaustedPending } from "./retryQueue"
-import { AutoCheckinRunEngine } from "./runEngine"
+import { retryAccount, verifyAccountStatus } from "./runAccountActions"
+import { runCheckins } from "./runCheckins"
+import type { AutoCheckinRetryScheduling } from "./runContracts"
 import { recalculateSummaryFromResults } from "./runResults"
+import { runRetryCheckins } from "./runRetryCheckins"
 import { autoCheckinStorage } from "./storage"
 
 /**
@@ -113,34 +116,37 @@ interface AutoCheckinUiOpenPretriggerResult {
  * - A separate *retry* alarm retries only the accounts that failed in today's normal run.
  */
 class AutoCheckinScheduler {
-  private readonly runEngine = new AutoCheckinRunEngine({
+  private readonly retryScheduling: AutoCheckinRetryScheduling = {
     clearRetryAlarm: (maxAttempts) => this.clearRetryAlarm(maxAttempts),
     clearRetryAlarmAndState: () => this.clearRetryAlarmAndState(),
     scheduleRetryAlarm: (config) => this.scheduleRetryAlarm(config),
-  })
+  }
 
   /** Executes an authorized batch while this owner retains alarm and in-flight state. */
-  runCheckins(options: Parameters<AutoCheckinRunEngine["runCheckins"]>[0]) {
-    return this.runEngine.runCheckins(options)
+  runCheckins(options: Parameters<typeof runCheckins>[0]) {
+    return runCheckins(options)
   }
 
   /** Runs the current same-day retry queue. */
   private runRetryCheckins(
-    ...args: Parameters<AutoCheckinRunEngine["runRetryCheckins"]>
+    source: TempWindowRequestSource,
+    execution: ProtectionBypassExecution,
   ) {
-    return this.runEngine.runRetryCheckins(...args)
+    return runRetryCheckins(source, execution, this.retryScheduling)
   }
 
   /** Executes one authorized account retry and reconciles its persisted outcome. */
-  retryAccount(...args: Parameters<AutoCheckinRunEngine["retryAccount"]>) {
-    return this.runEngine.retryAccount(...args)
+  retryAccount(
+    accountId: string,
+    source: TempWindowRequestSource,
+    execution: ProtectionBypassExecution,
+  ) {
+    return retryAccount(accountId, source, execution, this.retryScheduling)
   }
 
   /** Reads and reconciles selected-method status without mutation. */
-  verifyAccountStatus(
-    ...args: Parameters<AutoCheckinRunEngine["verifyAccountStatus"]>
-  ) {
-    return this.runEngine.verifyAccountStatus(...args)
+  verifyAccountStatus(accountId: string) {
+    return verifyAccountStatus(accountId, this.retryScheduling)
   }
 
   /**

@@ -1,6 +1,3 @@
-import { Storage } from "@plasmohq/storage"
-
-import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
@@ -19,7 +16,6 @@ import {
   INVENTORY_SECRET_AVAILABILITIES,
 } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -37,10 +33,8 @@ import {
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
   ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
-  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -57,6 +51,7 @@ import {
   discardRepairCreatedRuntimeSecrets,
   resetRepairCreatedRuntimeSecrets,
 } from "./repairCreatedRuntimeSecrets"
+import { AccountKeyRepairProgressStore } from "./repairProgressStore"
 import {
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT,
   assertControlledManagedSiteImportRequest,
@@ -79,27 +74,6 @@ const getManagedSiteImportReceiptKey = (
     receipt.targetFingerprint,
     receipt.resourceRef,
   )
-
-const createEmptySummary = (): AccountKeyRepairProgress["summary"] => ({
-  complete: 0,
-  partial: 0,
-  blocked: 0,
-  skipped: 0,
-  failed: 0,
-  requirements: 0,
-  coveredRequirements: 0,
-  createdRequirements: 0,
-  blockedRequirements: 0,
-  rejectedRequirements: 0,
-  uncertainRequirements: 0,
-  invalidResources: 0,
-  renameApplied: 0,
-  renameRejected: 0,
-  renameUncertain: 0,
-  deleteApplied: 0,
-  deleteRejected: 0,
-  deleteUncertain: 0,
-})
 
 const createEmptyAccountItemResults = () => ({
   requirementResults: [],
@@ -167,26 +141,6 @@ const classifyReconciliationResult = (
 }
 
 /**
- * Creates a default idle progress snapshot used when no repair job has started
- * yet (or when the stored progress blob is missing).
- * @returns Idle `AccountKeyRepairProgress` payload.
- */
-function createIdleProgress(): AccountKeyRepairProgress {
-  return {
-    schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
-    jobId: "idle",
-    state: ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
-    totals: {
-      enabledAccounts: 0,
-      eligibleAccounts: 0,
-      processedAccounts: 0,
-    },
-    summary: createEmptySummary(),
-    results: [],
-  }
-}
-
-/**
  * Derives a stable queue key for a site URL so accounts on the same origin are
  * processed sequentially.
  * @param siteUrl - Raw site URL string.
@@ -229,20 +183,14 @@ function getSkipReason(
 }
 
 class AccountKeyRepairRunner {
-  private storage: Storage
-  private currentProgress: AccountKeyRepairProgress | null = null
+  private readonly progressStore = new AccountKeyRepairProgressStore()
   private currentRun: Promise<void> | null = null
   private currentRunProgress: AccountKeyRepairProgress | null = null
   private currentAbortController: AbortController | null = null
-  private progressQueue: Promise<void> = Promise.resolve()
-
-  constructor() {
-    this.storage = new Storage({ area: "local" })
-  }
 
   private getReservedRunProgress(): AccountKeyRepairProgress | null {
     return this.currentRunProgress &&
-      this.currentProgress?.jobId !== this.currentRunProgress.jobId
+      this.progressStore.current?.jobId !== this.currentRunProgress.jobId
       ? this.currentRunProgress
       : null
   }
@@ -253,20 +201,11 @@ class AccountKeyRepairRunner {
       return reservedRunProgress
     }
 
-    if (this.currentProgress) {
-      return this.currentProgress
+    if (this.progressStore.current) {
+      return this.progressStore.current
     }
 
-    const stored = (await this.storage.get(
-      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-    )) as AccountKeyRepairProgress | undefined
-
-    if (
-      !stored ||
-      stored.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION
-    ) {
-      return createIdleProgress()
-    }
+    const stored = await this.progressStore.read()
 
     return await this.terminalizeInactiveRunningProgress(stored)
   }
@@ -284,23 +223,11 @@ class AccountKeyRepairRunner {
 
     const abortController = new AbortController()
     const now = Date.now()
-    const progress: AccountKeyRepairProgress = {
-      schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
-      jobId: safeRandomUUID("accountKeyRepair"),
-      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
-      startedAt: now,
-      updatedAt: now,
-      totals: {
-        enabledAccounts: 0,
-        eligibleAccounts: 0,
-        processedAccounts: 0,
-      },
-      summary: createEmptySummary(),
-      results: [],
-    }
-
     this.currentAbortController = abortController
-    const initialPersist = this.queueProgressReplacement(progress)
+    const { progress, persisted: initialPersist } = this.progressStore.begin(
+      safeRandomUUID("accountKeyRepair"),
+      now,
+    )
     const runPromise = initialPersist
       .then(async () => {
         await resetRepairCreatedRuntimeSecrets(progress.jobId)
@@ -339,7 +266,7 @@ class AccountKeyRepairRunner {
 
     this.currentAbortController?.abort()
     this.currentAbortController = null
-    await this.queueProgressUpdate((prev) =>
+    await this.progressStore.update((prev) =>
       prev.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
         ? {
             ...prev,
@@ -352,15 +279,16 @@ class AccountKeyRepairRunner {
 
     return {
       success: true as const,
-      data: this.currentProgress ?? progress,
+      data: this.progressStore.current ?? progress,
     }
   }
 
   private isCurrentJobCancelled(jobId: string, abortSignal: AbortSignal) {
     return (
       abortSignal.aborted ||
-      (this.currentProgress?.jobId === jobId &&
-        this.currentProgress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
+      (this.progressStore.current?.jobId === jobId &&
+        this.progressStore.current?.state ===
+          ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
     )
   }
 
@@ -371,18 +299,16 @@ class AccountKeyRepairRunner {
       progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running ||
       this.currentRun
     ) {
-      this.currentProgress = progress
       return progress
     }
 
-    this.currentProgress = progress
-    await this.queueProgressUpdate((prev) => ({
+    await this.progressStore.update((prev) => ({
       ...prev,
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
       finishedAt: Date.now(),
     }))
     await resetRepairCreatedRuntimeSecrets(progress.jobId)
-    return this.currentProgress ?? progress
+    return this.progressStore.current ?? progress
   }
 
   private async run(
@@ -410,7 +336,7 @@ class AccountKeyRepairRunner {
 
       const eligibleAccounts: SiteAccount[] = []
 
-      await this.queueProgressUpdate((prev) => ({
+      await this.progressStore.update((prev) => ({
         ...prev,
         totals: {
           ...prev.totals,
@@ -424,7 +350,7 @@ class AccountKeyRepairRunner {
 
         const skipReason = getSkipReason(account)
         if (skipReason) {
-          await this.recordResult({
+          await this.progressStore.recordResult({
             accountId: account.id,
             accountName:
               displaySiteDataById.get(account.id)?.name ?? account.site_name,
@@ -441,7 +367,7 @@ class AccountKeyRepairRunner {
         eligibleAccounts.push(account)
       }
 
-      await this.queueProgressUpdate((prev) => ({
+      await this.progressStore.update((prev) => ({
         ...prev,
         totals: {
           ...prev.totals,
@@ -467,7 +393,7 @@ class AccountKeyRepairRunner {
         return
       }
 
-      await this.queueProgressUpdate((prev) => ({
+      await this.progressStore.update((prev) => ({
         ...prev,
         state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
         finishedAt: Date.now(),
@@ -478,7 +404,7 @@ class AccountKeyRepairRunner {
       }
 
       logger.error("Repair run failed", error)
-      await this.queueProgressUpdate((prev) => ({
+      await this.progressStore.update((prev) => ({
         ...prev,
         state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
         finishedAt: Date.now(),
@@ -515,7 +441,7 @@ class AccountKeyRepairRunner {
       const keyResourceManagement = getSiteTypeCapabilities(account.site_type)
         .account?.keyResourceManagement
       if (!keyResourceManagement) {
-        await this.recordResult({
+        await this.progressStore.recordResult({
           accountId: account.id,
           accountName,
           siteType: account.site_type,
@@ -546,7 +472,7 @@ class AccountKeyRepairRunner {
       }
 
       if (!session.provisioning) {
-        await this.recordResult({
+        await this.progressStore.recordResult({
           accountId: account.id,
           accountName,
           siteType: account.site_type,
@@ -584,7 +510,7 @@ class AccountKeyRepairRunner {
       )
       const requirementResults = stripCreatedSecrets(result.requirementResults)
 
-      await this.recordResult({
+      await this.progressStore.recordResult({
         accountId: account.id,
         accountName,
         siteType: account.site_type,
@@ -623,7 +549,7 @@ class AccountKeyRepairRunner {
 
       const failure = getControlledAccountKeyResourceFailure(error)
 
-      await this.recordResult({
+      await this.progressStore.recordResult({
         accountId: account.id,
         accountName,
         siteType: account.site_type,
@@ -634,105 +560,6 @@ class AccountKeyRepairRunner {
         finishedAt: Date.now(),
       })
     }
-  }
-
-  private async recordResult(
-    result: AccountKeyRepairAccountResult,
-  ): Promise<void> {
-    await this.queueProgressUpdate((prev) => {
-      const nextResults = [...prev.results, result]
-
-      const nextSummary = { ...prev.summary }
-      switch (result.outcome) {
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Covered:
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired:
-          nextSummary.complete += 1
-          break
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Partial:
-          nextSummary.partial += 1
-          break
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked:
-          nextSummary.blocked += 1
-          break
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped:
-          nextSummary.skipped += 1
-          break
-        case ACCOUNT_KEY_REPAIR_OUTCOMES.Failed:
-          nextSummary.failed += 1
-          break
-        default:
-          break
-      }
-
-      const isEligibleOutcome =
-        result.outcome !== ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped
-      const coveredRequirements = result.requirementResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Covered,
-      ).length
-      const createdRequirements = result.requirementResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
-      ).length
-      const blockedRequirements = result.requirementResults.filter(
-        ({ outcome }) =>
-          outcome ===
-            ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedIncompleteInventory ||
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedInputRequired,
-      ).length
-      const rejectedRequirements = result.requirementResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Rejected,
-      ).length
-      const uncertainRequirements = result.requirementResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Uncertain ||
-          outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.CoveredAfterUncertain,
-      ).length
-      const renameApplied = result.renameResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
-      ).length
-      const renameRejected = result.renameResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
-      ).length
-      const renameUncertain = result.renameResults.filter(
-        ({ outcome }) =>
-          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
-      ).length
-
-      return {
-        ...prev,
-        results: nextResults,
-        summary: {
-          ...nextSummary,
-          requirements:
-            prev.summary.requirements + result.requirementResults.length,
-          coveredRequirements:
-            prev.summary.coveredRequirements + coveredRequirements,
-          createdRequirements:
-            prev.summary.createdRequirements + createdRequirements,
-          blockedRequirements:
-            prev.summary.blockedRequirements + blockedRequirements,
-          rejectedRequirements:
-            prev.summary.rejectedRequirements + rejectedRequirements,
-          uncertainRequirements:
-            prev.summary.uncertainRequirements + uncertainRequirements,
-          invalidResources:
-            prev.summary.invalidResources + result.invalidResources.length,
-          renameApplied: prev.summary.renameApplied + renameApplied,
-          renameRejected: prev.summary.renameRejected + renameRejected,
-          renameUncertain: prev.summary.renameUncertain + renameUncertain,
-        },
-        totals: {
-          ...prev.totals,
-          processedAccounts: isEligibleOutcome
-            ? prev.totals.processedAccounts + 1
-            : prev.totals.processedAccounts,
-        },
-      }
-    })
   }
 
   async deleteInvalidResources(
@@ -762,7 +589,7 @@ class AccountKeyRepairRunner {
         outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
     ).length
 
-    await this.queueProgressUpdate((prev) => ({
+    await this.progressStore.update((prev) => ({
       ...prev,
       results: prev.results.map((accountResult) => ({
         ...accountResult,
@@ -797,7 +624,7 @@ class AccountKeyRepairRunner {
       return progress
     }
 
-    await this.queueProgressUpdate((prev) => {
+    await this.progressStore.update((prev) => {
       if (prev.jobId !== request.jobId) {
         return null
       }
@@ -847,91 +674,7 @@ class AccountKeyRepairRunner {
       ),
     )
 
-    return this.currentProgress ?? progress
-  }
-
-  private async queueProgressUpdate(
-    updater: (
-      progress: AccountKeyRepairProgress,
-    ) => AccountKeyRepairProgress | null,
-  ): Promise<void> {
-    const operation = this.enqueueProgressOperation(async () => {
-      const previousProgress = this.currentProgress
-      const base = previousProgress ?? createIdleProgress()
-      const nextProgress = updater(base)
-      if (!nextProgress) {
-        return
-      }
-      const pendingProgress = {
-        ...nextProgress,
-        // Preserve ordering when multiple updates share a millisecond or the
-        // wall clock moves backwards, without changing the persisted schema.
-        updatedAt: Math.max(Date.now(), (base.updatedAt ?? 0) + 1),
-      }
-      await this.persistProgressWithRollback(pendingProgress, previousProgress)
-    })
-
-    await operation
-  }
-
-  private async queueProgressReplacement(
-    progress: AccountKeyRepairProgress,
-  ): Promise<void> {
-    const operation = this.enqueueProgressOperation(async () => {
-      const previousProgress = this.currentProgress
-      await this.persistProgressWithRollback(progress, previousProgress)
-    })
-
-    await operation
-  }
-
-  private enqueueProgressOperation(
-    operation: () => Promise<void>,
-  ): Promise<void> {
-    const operationPromise = this.progressQueue.then(operation)
-    this.progressQueue = operationPromise.catch((error) => {
-      logger.error("Failed to persist repair progress update", error)
-    })
-    return operationPromise
-  }
-
-  private async persistProgressWithRollback(
-    progress: AccountKeyRepairProgress,
-    previousProgress: AccountKeyRepairProgress | null,
-  ): Promise<void> {
-    this.currentProgress = progress
-
-    try {
-      await this.persistAndNotify(progress)
-    } catch (error) {
-      if (this.currentProgress === progress) {
-        this.currentProgress = previousProgress
-      }
-      throw error
-    }
-  }
-
-  private async persistAndNotify(
-    progress: AccountKeyRepairProgress,
-  ): Promise<void> {
-    await this.storage.set(
-      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-      progress,
-    )
-
-    try {
-      void sendRuntimeMessage(
-        {
-          type: RuntimeMessageTypes.AccountKeyRepairProgress,
-          payload: progress,
-        },
-        { maxAttempts: 1 },
-      ).catch(() => {
-        // Silent: UI might not be open
-      })
-    } catch {
-      // Silent: UI might not be open
-    }
+    return this.progressStore.current ?? progress
   }
 }
 

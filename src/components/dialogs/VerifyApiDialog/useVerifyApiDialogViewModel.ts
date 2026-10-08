@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { useVerificationRunLifecycle } from "~/hooks/useVerificationRunLifecycle"
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
@@ -38,7 +39,6 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import {
@@ -100,7 +100,16 @@ export function useVerifyApiDialogViewModel({
   "isOpen" | "account" | "initialModelId" | "modelEnableGroups"
 >) {
   const { t } = useTranslation("aiApiVerification")
-  const [isRunning, setIsRunning] = useState(false)
+  const {
+    isRunning,
+    isStopped,
+    runSuite,
+    runProbe: runProbeTask,
+    runSequentialProbes,
+    stopSuite: stopRun,
+    stopProbe,
+    reset,
+  } = useVerificationRunLifecycle()
   const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
   const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
     AccountRuntimeKey[]
@@ -112,11 +121,6 @@ export function useVerifyApiDialogViewModel({
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
-  )
-  const shouldStopRef = useRef(false)
-  const suiteAbortControllerRef = useRef<AbortController | null>(null)
-  const probeAbortControllersRef = useRef(
-    new Map<ApiVerificationProbeId, AbortController>(),
   )
   const historyTarget = useMemo(() => {
     const trimmedModelId = initialModelId?.trim()
@@ -228,7 +232,7 @@ export function useVerifyApiDialogViewModel({
     probeId: ApiVerificationProbeId,
     abortSignal?: AbortSignal,
   ) => {
-    if (abortSignal?.aborted || shouldStopRef.current) return null
+    if (isStopped(abortSignal)) return null
     if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
     let resolvedRuntimeKey = selectedRuntimeKey
     let executedMode: ApiVerificationMode | undefined
@@ -246,7 +250,7 @@ export function useVerifyApiDialogViewModel({
         selectedRuntimeKey,
         { abortSignal },
       )
-      if (abortSignal?.aborted || shouldStopRef.current) {
+      if (isStopped(abortSignal)) {
         replaceProbes(withStoppedProbe(probesRef.current, probeId))
         return null
       }
@@ -262,7 +266,7 @@ export function useVerifyApiDialogViewModel({
         abortSignal,
       })
 
-      if (abortSignal?.aborted || shouldStopRef.current) {
+      if (isStopped(abortSignal)) {
         replaceProbes(
           withStoppedProbe(probesRef.current, probeId, executedMode),
         )
@@ -282,7 +286,7 @@ export function useVerifyApiDialogViewModel({
       )
       return result
     } catch (error) {
-      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+      if (isAbortError(error, abortSignal) || isStopped()) {
         replaceProbes(
           withStoppedProbe(probesRef.current, probeId, executedMode),
         )
@@ -348,92 +352,82 @@ export function useVerifyApiDialogViewModel({
   const runAll = async () => {
     if (!canRunAll) return
 
-    shouldStopRef.current = false
-    const abortController = new AbortController()
-    suiteAbortControllerRef.current = abortController
-    const tracker = startProductAnalyticsAction(analyticsContext)
-    let successCount = 0
-    let failureCount = 0
-    let hasExecutedProbe = false
-    let failedProbeResult: ApiVerificationProbeResult | undefined
-    setIsRunning(true)
-    replaceProbes(buildProbeState(apiType))
-    try {
-      // Run sequentially so each probe updates independently (and can be retried individually).
-      const ordered = getApiVerificationProbeDefinitions(apiType)
-      for (const probe of ordered) {
-        if (shouldStopRef.current || abortController.signal.aborted) break
-        if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
-          continue
+    return runSuite(async (signal) => {
+      const tracker = startProductAnalyticsAction(analyticsContext)
+      let successCount = 0
+      let failureCount = 0
+      let hasExecutedProbe = false
+      let failedProbeResult: ApiVerificationProbeResult | undefined
+      replaceProbes(buildProbeState(apiType))
+      try {
+        // Run sequentially so each probe updates independently (and can be retried individually).
+        await runSequentialProbes(
+          apiType,
+          async (probe) => {
+            if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
+              return
 
-        const result = await runProbe(probe.id, abortController.signal)
-        if (!result) continue
-        if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
-          hasExecutedProbe = true
-          successCount += 1
-        } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Fail) {
-          hasExecutedProbe = true
-          failureCount += 1
-          failedProbeResult ??= result
+            const result = await runProbe(probe.id, signal)
+            if (!result) return
+            if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
+              hasExecutedProbe = true
+              successCount += 1
+            } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Fail) {
+              hasExecutedProbe = true
+              failureCount += 1
+              failedProbeResult ??= result
+            }
+          },
+          signal,
+        )
+        if (isStopped(signal)) {
+          replaceProbes(withUnfinishedProbesStopped(probesRef.current))
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+            insights: {
+              successCount,
+              failureCount,
+            },
+          })
+          return
         }
-      }
-      if (shouldStopRef.current || abortController.signal.aborted) {
-        replaceProbes(withUnfinishedProbesStopped(probesRef.current))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+
+        const completionResult =
+          failureCount > 0
+            ? PRODUCT_ANALYTICS_RESULTS.Failure
+            : hasExecutedProbe
+              ? PRODUCT_ANALYTICS_RESULTS.Success
+              : PRODUCT_ANALYTICS_RESULTS.Skipped
+        tracker.complete(completionResult, {
+          ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
+            ? {
+                errorCategory:
+                  resolveProductAnalyticsErrorCategoryFromProbeResult(
+                    failedProbeResult,
+                  ),
+              }
+            : {}),
           insights: {
+            ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
+              ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+              : {}),
             successCount,
             failureCount,
           },
         })
-        return
+      } catch (error) {
+        logger.error("Model verification run failed", {
+          message: toSanitizedErrorSummary(error, []),
+        })
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+            successCount,
+            failureCount,
+          },
+        })
       }
-
-      const completionResult =
-        failureCount > 0
-          ? PRODUCT_ANALYTICS_RESULTS.Failure
-          : hasExecutedProbe
-            ? PRODUCT_ANALYTICS_RESULTS.Success
-            : PRODUCT_ANALYTICS_RESULTS.Skipped
-      tracker.complete(completionResult, {
-        ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? {
-              errorCategory:
-                resolveProductAnalyticsErrorCategoryFromProbeResult(
-                  failedProbeResult,
-                ),
-            }
-          : {}),
-        insights: {
-          ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
-            ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
-            : {}),
-          successCount,
-          failureCount,
-        },
-      })
-    } catch (error) {
-      logger.error("Model verification run failed", {
-        message: toSanitizedErrorSummary(error, []),
-      })
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
-        insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-          successCount,
-          failureCount,
-        },
-      })
-    } finally {
-      if (suiteAbortControllerRef.current === abortController) {
-        suiteAbortControllerRef.current = null
-      }
-      setIsRunning(false)
-    }
-  }
-
-  const stopRun = () => {
-    shouldStopRef.current = true
-    suiteAbortControllerRef.current?.abort()
+    })
   }
 
   useEffect(() => {
@@ -441,11 +435,7 @@ export function useVerifyApiDialogViewModel({
 
     let cancelled = false
     const trimmedModelId = initialModelId?.trim() ?? ""
-    shouldStopRef.current = false
-    suiteAbortControllerRef.current?.abort()
-    suiteAbortControllerRef.current = null
-    probeAbortControllersRef.current.forEach((controller) => controller.abort())
-    probeAbortControllersRef.current.clear()
+    reset()
     setAccountRuntimeKeys([])
     setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
@@ -496,19 +486,8 @@ export function useVerifyApiDialogViewModel({
     )
   }, [apiType, isOpen, persistedSummaryRef, replaceProbes])
 
-  const stopProbe = (probeId: ApiVerificationProbeId) => {
-    probeAbortControllersRef.current.get(probeId)?.abort()
-  }
-
   const runSingleProbe = (probeId: ApiVerificationProbeId) => {
-    const abortController = new AbortController()
-    probeAbortControllersRef.current.set(probeId, abortController)
-    shouldStopRef.current = false
-    void runProbe(probeId, abortController.signal).finally(() => {
-      if (probeAbortControllersRef.current.get(probeId) === abortController) {
-        probeAbortControllersRef.current.delete(probeId)
-      }
-    })
+    void runProbeTask(probeId, (signal) => runProbe(probeId, signal))
   }
 
   return {
