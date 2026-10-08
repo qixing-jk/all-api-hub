@@ -4,8 +4,8 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import { useAccountData } from "~/hooks/useAccountData"
+import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import toast from "~/lib/notify"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -18,7 +18,9 @@ const { complete, fetchCredential, rotateCredential } = vi.hoisted(() => ({
   fetchCredential: vi.fn(),
   rotateCredential: vi.fn(),
 }))
-vi.mock("~/hooks/useAccountData", () => ({ useAccountData: vi.fn() }))
+vi.mock("~/hooks/useAccountData", () => ({
+  useAccountData: vi.fn(),
+}))
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
 }))

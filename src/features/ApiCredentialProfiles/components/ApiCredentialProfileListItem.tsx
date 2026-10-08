@@ -29,6 +29,23 @@ import {
 } from "~/components/ui/collapsible"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { ApiCredentialProfileAllowanceBadge } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileAllowanceBadge"
+import {
+  ApiCredentialProfileTelemetryDetails,
+  hasApiCredentialTelemetryDetailData,
+} from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileTelemetryDetails"
+import { ApiCredentialProfileKeyAssociations } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileKeyAssociations"
+import {
+  type ApiCredentialProfileAssociatedKeyState,
+  type ApiCredentialProfileAssociationAvailability,
+  type ApiCredentialProfileExportAction,
+} from "~/features/ApiCredentialProfiles/contracts"
+import { ApiCredentialProfileRowActions } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileRowActions"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTargetId,
+  getApiCredentialProfileRowTestId,
+} from "~/features/ApiCredentialProfiles/testIds"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -53,24 +70,6 @@ import {
   getHealthStatusDisplay,
   getStatusIndicatorColor,
 } from "~/utils/healthStatus"
-
-import {
-  type ApiCredentialProfileAssociatedKeyState,
-  type ApiCredentialProfileAssociationAvailability,
-  type ApiCredentialProfileExportAction,
-} from "../contracts"
-import {
-  API_CREDENTIAL_PROFILES_TEST_IDS,
-  getApiCredentialProfileRowTargetId,
-  getApiCredentialProfileRowTestId,
-} from "../testIds"
-import { ApiCredentialProfileAllowanceBadge } from "./ApiCredentialProfileAllowanceBadge"
-import { ApiCredentialProfileKeyAssociations } from "./ApiCredentialProfileKeyAssociations"
-import { ApiCredentialProfileRowActions } from "./ApiCredentialProfileRowActions"
-import {
-  ApiCredentialProfileTelemetryDetails,
-  hasApiCredentialTelemetryDetailData,
-} from "./ApiCredentialProfileTelemetryDetails"
 
 interface ApiCredentialProfileListItemProps {
   profile: ApiCredentialProfile
@@ -534,7 +533,7 @@ export function ApiCredentialProfileListItem({
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group gap-density-2 py-density-1 h-auto min-h-0 min-w-0 flex-1 justify-start px-1.5 text-left"
+                        className="gap-density-2 py-density-1 group h-auto min-h-0 min-w-0 flex-1 justify-start px-1.5 text-left"
                         aria-label={t("apiCredentialProfiles:telemetry.title")}
                         aria-expanded={isTelemetryOpen}
                         aria-controls={telemetryContentId}

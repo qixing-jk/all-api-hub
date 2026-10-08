@@ -1,3 +1,4 @@
+import { globSync } from "node:fs"
 import { ESLint, Linter } from "eslint"
 import tseslint from "typescript-eslint"
 import { describe, expect, it } from "vitest"
@@ -24,6 +25,20 @@ async function check(code: string, file = page) {
 const siteImport = 'import { SITE_TYPES } from "~/constants/siteType"'
 
 describe("site type import whitelist", () => {
+  it("keeps the current Kilo Code dialog behind account capabilities", async () => {
+    const files = globSync([
+      "src/components/KiloCodeExportDialog.tsx",
+      "src/features/KiloCodeExport/**/KiloCodeExportDialog.tsx",
+    ])
+    expect(files).toHaveLength(1)
+    const messages = await check(
+      'import { getApiService } from "~/services/apiService"',
+      atIndex(files, 0).replaceAll("\\", "/"),
+    )
+    expect(messages).toHaveLength(1)
+    expect(atIndex(messages, 0).ruleId).toBe("no-restricted-imports")
+  })
+
   it.each([
     siteImport,
     'import { SITE_TYPES as types } from "~/constants/siteType"',
@@ -57,6 +72,14 @@ describe("site type import whitelist", () => {
     "src/services/siteDetection/detectSiteType.ts",
     "src/services/accounts/accountDefaults.ts",
     "src/services/managedSites/configRegistration.ts",
+    "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx",
+    "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx",
+    "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts",
+    "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts",
+    "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts",
+    "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogIdentityChanges.ts",
+    "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts",
+    "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts",
     "src/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings.tsx",
     "src/features/BasicSettings/components/tabs/ManagedSite/providers/DoneHubSettings.tsx",
     "src/features/BasicSettings/components/tabs/ManagedSite/providers/ClaudeCodeHubSettings.tsx",

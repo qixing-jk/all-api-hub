@@ -1,7 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
+  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS as requestSlots,
+} from "~/features/KeyManagement/constants"
+import type {
+  ActiveResourceBoundary,
+  ControllerMode,
+  DeleteState,
+  DetailState,
+  OpenAccountResources,
+  Options,
+  ResourceActionContext,
+} from "~/features/KeyManagement/controllers/accountKeyResourceControllerTypes"
+import {
+  AUTOMATIC_INVENTORY_EXECUTION,
+  awaitAbortable,
+  boundaryFromResourceRef,
+  keyManagementAnalyticsContext,
+  USER_KEY_MANAGEMENT_EXECUTION,
+} from "~/features/KeyManagement/controllers/accountKeyResourceWorkflowSupport"
+import { useAccountKeyResourceDeletionWorkflow } from "~/features/KeyManagement/controllers/useAccountKeyResourceDeletionWorkflow"
+import { useAccountKeyResourceDetailWorkflow } from "~/features/KeyManagement/controllers/useAccountKeyResourceDetailWorkflow"
+import { useAccountKeyResourceEditorState } from "~/features/KeyManagement/controllers/useAccountKeyResourceEditorState"
+import { useAccountKeyResourceEditorWorkflow } from "~/features/KeyManagement/controllers/useAccountKeyResourceEditorWorkflow"
+import { useAccountKeyResourceInventoryState } from "~/features/KeyManagement/controllers/useAccountKeyResourceInventoryState"
+import { useAccountKeyResourceInventoryWorkflow } from "~/features/KeyManagement/controllers/useAccountKeyResourceInventoryWorkflow"
+import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/controllers/useAccountKeyResourceRequestLifecycle"
+import { useAccountKeyResourceRouteCoordinator } from "~/features/KeyManagement/controllers/useAccountKeyResourceRouteCoordinator"
+import { useAccountKeyResourceRouteState } from "~/features/KeyManagement/controllers/useAccountKeyResourceRouteState"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   type AccountKeyResourceRef,
@@ -18,38 +48,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 
-import {
-  ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
-  ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
-  ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS as requestSlots,
-} from "../constants"
-import type {
-  ActiveResourceBoundary,
-  ControllerMode,
-  DeleteState,
-  DetailState,
-  OpenAccountResources,
-  Options,
-  ResourceActionContext,
-} from "./accountKeyResourceControllerTypes"
-import {
-  AUTOMATIC_INVENTORY_EXECUTION,
-  awaitAbortable,
-  boundaryFromResourceRef,
-  keyManagementAnalyticsContext,
-  USER_KEY_MANAGEMENT_EXECUTION,
-} from "./accountKeyResourceWorkflowSupport"
-import { useAccountKeyResourceDeletionWorkflow } from "./useAccountKeyResourceDeletionWorkflow"
-import { useAccountKeyResourceDetailWorkflow } from "./useAccountKeyResourceDetailWorkflow"
-import { useAccountKeyResourceEditorState } from "./useAccountKeyResourceEditorState"
-import { useAccountKeyResourceEditorWorkflow } from "./useAccountKeyResourceEditorWorkflow"
-import { useAccountKeyResourceInventoryState } from "./useAccountKeyResourceInventoryState"
-import { useAccountKeyResourceInventoryWorkflow } from "./useAccountKeyResourceInventoryWorkflow"
-import { useAccountKeyResourceRequestLifecycle } from "./useAccountKeyResourceRequestLifecycle"
-import { useAccountKeyResourceRouteCoordinator } from "./useAccountKeyResourceRouteCoordinator"
-import { useAccountKeyResourceRouteState } from "./useAccountKeyResourceRouteState"
-
-export type { AccountKeyResourceRouteTransition } from "./accountKeyResourceControllerTypes"
+export type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/controllers/accountKeyResourceControllerTypes"
 
 /** Owns native account-key resource loading and mutation state without exposing sessions. */
 export function useAccountKeyResourceController({

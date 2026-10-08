@@ -1,11 +1,13 @@
 import { useMemo } from "react"
 
+import type {
+  UseModelDataProps,
+  UseModelDataReturn,
+} from "~/features/ModelList/hooks/modelDataTypes"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
-
-import type { UseModelDataProps, UseModelDataReturn } from "./modelDataTypes"
-import { useAllAccountsModelData } from "./useAllAccountsModelData"
-import { useProfileModelData } from "./useProfileModelData"
-import { useSingleAccountModelData } from "./useSingleAccountModelData"
+import { useAllAccountsModelData } from "~/features/ModelList/hooks/useAllAccountsModelData"
+import { useProfileModelData } from "~/features/ModelList/hooks/useProfileModelData"
+import { useSingleAccountModelData } from "~/features/ModelList/hooks/useSingleAccountModelData"
 
 /**
  * Provides model pricing data for either a single account or all accounts.

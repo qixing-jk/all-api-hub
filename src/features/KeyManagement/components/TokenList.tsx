@@ -1,11 +1,25 @@
 import { ChevronDown, ChevronUp, Library, SendToBack } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { DeeplinkExportDialog } from "~/components/DeeplinkExportDialog"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Button, Card, Checkbox, Spinner } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { DeeplinkExportDialog } from "~/components/DeeplinkExportDialog"
+import { useTokenCredentialAssociations } from "~/features/KeyManagement/hooks/useTokenCredentialAssociations"
+import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
+import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
+import { KeyAccountGroups } from "~/features/KeyManagement/components/KeyAccountGroups"
+import { ServiceCredentialCard } from "~/features/KeyManagement/components/ServiceCredentialCard"
+import { TokenEmptyState } from "~/features/KeyManagement/components/TokenEmptyState"
+import type { TokenListProps } from "~/features/KeyManagement/components/TokenList.types"
 import { useBatchTokenActions } from "~/features/KeyManagement/hooks/useBatchTokenActions"
+import { useTokenListInventoryViewModel } from "~/features/KeyManagement/components/useTokenListInventoryViewModel"
+import { AccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import {
+  type KeyManagementEntry,
+  type NativeKeyManagementRow,
+} from "~/features/KeyManagement/types"
 import { cn } from "~/lib/utils"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
@@ -19,18 +33,6 @@ import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
   type ManagedSiteBatchImportIntent,
 } from "~/types/managedSiteTokenBatchExport"
-
-import { useTokenCredentialAssociations } from "../hooks/useTokenCredentialAssociations"
-import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
-import { type KeyManagementEntry, type NativeKeyManagementRow } from "../types"
-import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
-import { BatchSelectionControl } from "./BatchSelectionControl"
-import { KeyAccountGroups } from "./KeyAccountGroups"
-import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
-import { ServiceCredentialCard } from "./ServiceCredentialCard"
-import { TokenEmptyState } from "./TokenEmptyState"
-import type { TokenListProps } from "./TokenList.types"
-import { useTokenListInventoryViewModel } from "./useTokenListInventoryViewModel"
 
 const MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT = {
   source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,

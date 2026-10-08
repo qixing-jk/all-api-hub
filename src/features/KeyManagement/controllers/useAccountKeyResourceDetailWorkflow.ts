@@ -2,23 +2,25 @@ import { useCallback } from "react"
 import type { Dispatch, RefObject, SetStateAction } from "react"
 
 import {
-  type AccountKeyResourceRef,
-  type ResourceFailure,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
-
-import {
   ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
   ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS as requestSlots,
-} from "../constants"
+} from "~/features/KeyManagement/constants"
 import type {
   ControllerMode,
   DetailState,
   ResolveResourceActionContext,
-} from "./accountKeyResourceControllerTypes"
-import { awaitAbortable, toFailure } from "./accountKeyResourceWorkflowSupport"
-import type { AccountKeyResourceInventoryStateOwner } from "./useAccountKeyResourceInventoryState"
-import type { AccountKeyResourceRequestLifecycle } from "./useAccountKeyResourceRequestLifecycle"
-import type { AccountKeyResourceRouteStateOwner } from "./useAccountKeyResourceRouteState"
+} from "~/features/KeyManagement/controllers/accountKeyResourceControllerTypes"
+import {
+  awaitAbortable,
+  toFailure,
+} from "~/features/KeyManagement/controllers/accountKeyResourceWorkflowSupport"
+import type { AccountKeyResourceInventoryStateOwner } from "~/features/KeyManagement/controllers/useAccountKeyResourceInventoryState"
+import type { AccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/controllers/useAccountKeyResourceRequestLifecycle"
+import type { AccountKeyResourceRouteStateOwner } from "~/features/KeyManagement/controllers/useAccountKeyResourceRouteState"
+import {
+  type AccountKeyResourceRef,
+  type ResourceFailure,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 
 type WorkflowInputs = {
   runtime: { detailRequestEpoch: RefObject<number> }

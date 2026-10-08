@@ -2,9 +2,14 @@ import type { TFunction } from "i18next"
 
 import { type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
-import { type ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
-
-import type { ManagedChannelsColumn, ManagedChannelsSorting } from "./contracts"
+import {
+  getManagedResourceFieldPolicy,
+  MANAGED_RESOURCE_EDITOR_MODES,
+} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+import type {
+  ManagedChannelsColumn,
+  ManagedChannelsSorting,
+} from "~/features/ManagedSiteChannels/presentation/contracts"
 import {
   MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS,
   MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS,
@@ -15,19 +20,16 @@ import {
   MANAGED_CHANNELS_ROUTE_QUERY_KEYS,
   MANAGED_CHANNELS_SORT_DIRECTIONS,
   MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS,
-} from "./contracts"
-import {
-  getManagedResourceFieldPolicy,
-  MANAGED_RESOURCE_EDITOR_MODES,
-} from "./managedResourceFieldPolicy"
+} from "~/features/ManagedSiteChannels/presentation/contracts"
+import { managedSitePresentationDefinitions } from "~/features/ManagedSiteChannels/presentation/managedSitePresentationRegistry"
 import {
   CANONICAL_NATIVE_CHANNEL_FIELD_IDS,
   defaultNativeTablePresentationPolicy,
   NATIVE_TABLE_COLUMN_LAYOUTS,
   type NativeTablePresentationPolicy,
   type NumericChannelTableFieldIds,
-} from "./managedResourceTablePresentation"
-import { managedSitePresentationDefinitions } from "./managedSitePresentationRegistry"
+} from "~/features/ManagedSiteChannels/presentation/managedResourceTablePresentation"
+import { type ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 
 const nativeTablePresentationPolicies: Partial<
   Record<ManagedSiteType, NativeTablePresentationPolicy>

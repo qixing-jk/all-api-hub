@@ -109,29 +109,34 @@ vi.mock(
   }),
 )
 
-vi.mock("~/components/DeeplinkExportDialog", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/components/DeeplinkExportDialog")>()
-  return {
-    ...actual,
-    DeeplinkExportDialog: ({
-      request,
-      onClose,
-    }: {
-      request: { target: string; source: { providerName: string } }
-      onClose: () => void
-    }) => (
-      <div data-testid="deeplink-export-dialog">
-        <span>
-          {request.target} export for {request.source.providerName}
-        </span>
-        <button type="button" onClick={onClose}>
-          Close deeplink export
-        </button>
-      </div>
-    ),
-  }
-})
+vi.mock(
+  "~/components/DeeplinkExportDialog",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/components/DeeplinkExportDialog")
+      >()
+    return {
+      ...actual,
+      DeeplinkExportDialog: ({
+        request,
+        onClose,
+      }: {
+        request: { target: string; source: { providerName: string } }
+        onClose: () => void
+      }) => (
+        <div data-testid="deeplink-export-dialog">
+          <span>
+            {request.target} export for {request.source.providerName}
+          </span>
+          <button type="button" onClick={onClose}>
+            Close deeplink export
+          </button>
+        </div>
+      ),
+    }
+  },
+)
 
 vi.mock("~/services/managedSites/tokenBatchImportExecution", () => ({
   executeManagedSiteTokenBatchExport: (...args: unknown[]) =>

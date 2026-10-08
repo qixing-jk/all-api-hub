@@ -16,9 +16,9 @@ import {
   SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { MANAGED_RESOURCE_CHANNEL_FIELD_ROLES } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/ManagedSiteChannelsRoute"
 import type { ManagedChannelsRowViewModel } from "~/features/ManagedSiteChannels/presentation/contracts"
-import { MANAGED_RESOURCE_CHANNEL_FIELD_ROLES } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowSelectTestId,
@@ -96,23 +96,20 @@ vi.mock(
   }),
 )
 
-vi.mock(
-  "~/features/ManagedSiteChannels/components/ChannelFilterDialog",
-  () => ({
-    default: ({
-      channel,
-      open,
-    }: {
-      channel: { resourceRef: { resourceId: string }; name: string } | null
-      open: boolean
-    }) =>
-      open && channel ? (
-        <div data-testid="native-channel-filter-target">
-          {channel.resourceRef.resourceId}:{channel.name}
-        </div>
-      ) : null,
-  }),
-)
+vi.mock("~/features/ManagedSiteChannels/components/ChannelFilterDialog", () => ({
+  default: ({
+    channel,
+    open,
+  }: {
+    channel: { resourceRef: { resourceId: string }; name: string } | null
+    open: boolean
+  }) =>
+    open && channel ? (
+      <div data-testid="native-channel-filter-target">
+        {channel.resourceRef.resourceId}:{channel.name}
+      </div>
+    ) : null,
+}))
 
 vi.mock("~/services/productAnalytics/actions", async (importActual) => ({
   ...(await importActual()),
@@ -1710,9 +1707,7 @@ describe("ManagedSiteChannelsRoute", () => {
       ),
       vi.importActual<
         typeof import("~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy")
-      >(
-        "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy",
-      ),
+      >("~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"),
     ])
     const facts = Array.from({ length: 12 }, (_, index) => ({
       ...createManagedResourceFacts(
